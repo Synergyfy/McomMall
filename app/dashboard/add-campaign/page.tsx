@@ -17,7 +17,6 @@ import {
 import { SuccessCampaignDialog } from './components/SuccessCampaignDialog';
 import { useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
-import { SearchableSelectItem } from './types';
 
 const AddListingPage = () => {
   const [formData, setFormData] = useState<AdFormData>({
@@ -43,20 +42,10 @@ const AddListingPage = () => {
   } = useGetUserListings();
 
   const categories = useMemo(() => {
-    const allCategories: SearchableSelectItem[] = [];
-    businessCategories.forEach(mainCategory => {
-      allCategories.push({
-        value: mainCategory.name,
-        label: mainCategory.name,
-      });
-      mainCategory.subCategories.forEach(subCategory => {
-        allCategories.push({
-          value: subCategory.name,
-          label: `${mainCategory.name} > ${subCategory.name}`,
-        });
-      });
-    });
-    return allCategories;
+    return businessCategories.map(category => ({
+      value: category.name,
+      label: category.name,
+    }));
   }, []);
 
   const listingOptions = useMemo(() => {
