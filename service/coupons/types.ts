@@ -1,10 +1,16 @@
+interface CouponBusiness {
+  id: string;
+  businessName: string;
+  // Add other properties from the JSON if they are needed for display
+}
+
 export interface Coupon {
   id: string;
-  code: string;
-  description?: string;
+  couponCode: string;
+  couponDescription?: string;
   widgetBackgroundUrl?: string;
-  type: 'percentage' | 'fixed';
-  amount: number;
+  discountType: 'percentage' | 'fixed';
+  couponAmount: string;
   expiryDate: string;
   minSpend?: number;
   maxSpend?: number;
@@ -12,10 +18,10 @@ export interface Coupon {
   allowedEmails?: string;
   usageLimitPerCoupon?: number;
   usageLimitPerUser?: number;
-  usageCount: number;
-  businessIds: string[];
-  createdAt: string;
-  updatedAt: string;
+  usageCount?: number; // Not present in the new JSON, making it optional
+  businesses: CouponBusiness[];
+  created_at: string;
+  updated_at: string;
 }
 
 export interface CreateCouponDto {

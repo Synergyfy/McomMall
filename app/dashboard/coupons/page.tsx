@@ -65,17 +65,17 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
     >
       <td className="whitespace-nowrap px-6 py-4">
         <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
-          {coupon.code}
+          {coupon.couponCode}
         </div>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.type}
+        {coupon.discountType}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.amount}
+        {coupon.couponAmount}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.usageCount} / {formatLimit(coupon.usageLimitPerCoupon)}
+        {coupon.usageCount || 0} / {formatLimit(coupon.usageLimitPerCoupon)}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
         {new Date(coupon.expiryDate).toLocaleDateString() || '—'}

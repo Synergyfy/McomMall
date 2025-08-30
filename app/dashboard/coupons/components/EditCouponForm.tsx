@@ -89,10 +89,10 @@ export default function EditCouponForm({
   const [open, setOpen] = React.useState(false);
 
   const [formData, setFormData] = useState<FormData>({
-    couponCode: coupon.code,
-    couponDescription: coupon.description || '',
-    discountType: coupon.type,
-    couponAmount: coupon.amount.toString(),
+    couponCode: coupon.couponCode,
+    couponDescription: coupon.couponDescription || '',
+    discountType: coupon.discountType,
+    couponAmount: coupon.couponAmount.toString(),
     expiryDate: new Date(coupon.expiryDate).toISOString().split('T')[0],
     minSpend: coupon.minSpend?.toString() || '',
     maxSpend: coupon.maxSpend?.toString() || '',
@@ -100,7 +100,7 @@ export default function EditCouponForm({
     allowedEmails: coupon.allowedEmails || '',
     usageLimitPerCoupon: coupon.usageLimitPerCoupon?.toString() || '',
     usageLimitPerUser: coupon.usageLimitPerUser?.toString() || '',
-    businessIds: coupon.businessIds || [],
+    businessIds: coupon.businesses?.map(b => b.id) || [],
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
