@@ -10,9 +10,10 @@ import {
   UploadCloud,
   ArrowRight,
   X,
+  CheckCircle,
 } from 'lucide-react';
-
-// --- Proper ShadCN UI Imports ---
+import { motion } from 'framer-motion';
+import { useCoupons } from '@/service/coupons/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -26,6 +27,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
 
 // --- Main Coupon Form Component ---
 
@@ -53,6 +62,10 @@ interface FormErrors {
 }
 
 export default function CouponForm() {
+  const router = useRouter();
+  const { createCoupon } = useCoupons();
+  const [isSuccess, setIsSuccess] = useState(false);
+
   const [formData, setFormData] = useState<FormData>({
     couponCode: '',
     couponDescription: '',
@@ -138,14 +151,42 @@ export default function CouponForm() {
     return newErrors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     const validationErrors = validateForm();
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
-      console.log('Form submitted successfully:', formData);
-      // Here you would typically send the data to your API
+      try {
+        await createCoupon({
+          code: formData.couponCode,
+          description: formData.couponDescription,
+          type: formData.discountType as 'percentage' | 'fixed',
+          amount: parseFloat(formData.couponAmount),
+          expiryDate: new Date(formData.expiryDate).toISOString(),
+          minSpend: formData.minSpend
+            ? parseFloat(formData.minSpend)
+            : undefined,
+          maxSpend: formData.maxSpend
+            ? parseFloat(formData.maxSpend)
+            : undefined,
+          individualUseOnly: formData.individualUseOnly,
+          excludeSaleItems: false, // Assuming default
+          allowedEmails: formData.allowedEmails
+            ? formData.allowedEmails.split(',').map(e => e.trim())
+            : [],
+          usageLimitPerCoupon: formData.usageLimitPerCoupon
+            ? parseInt(formData.usageLimitPerCoupon)
+            : undefined,
+          usageLimitPerUser: formData.usageLimitPerUser
+            ? parseInt(formData.usageLimitPerUser)
+            : undefined,
+        });
+        setIsSuccess(true);
+      } catch (error) {
+        console.error('Failed to create coupon:', error);
+        // Handle error state in UI, e.g., show a toast notification
+      }
     } else {
       console.log('Form has validation errors:', validationErrors);
     }
@@ -439,6 +480,35 @@ export default function CouponForm() {
           </div>
         </form>
       </div>
+      <Dialog open={isSuccess} onOpenChange={setIsSuccess}>
+        <DialogContent>
+          <DialogHeader>
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{
+                type: 'spring',
+                stiffness: 260,
+                damping: 20,
+              }}
+              className="mx-auto flex h-12 w-12 items-center justify-center rounded-full bg-green-100"
+            >
+              <CheckCircle className="h-6 w-6 text-green-600" />
+            </motion.div>
+            <DialogTitle className="text-center">
+              Coupon Created!
+            </DialogTitle>
+            <DialogDescription className="text-center">
+              Your new coupon has been created successfully.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="mt-4 flex justify-center">
+            <Button onClick={() => router.push('/dashboard/coupons')}>
+              Go to Coupons Page
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

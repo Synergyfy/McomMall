@@ -1,92 +1,28 @@
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Edit, Trash2, PlusCircle } from 'lucide-react';
-
-// --- Type Definitions ---
-
-type Coupon = {
-  id: string;
-  code: string;
-  type: 'Percentage discount' | 'Fixed product discount';
-  amount: number;
-  usage: number;
-  limit: number | 'infinity';
-  expiryDate: string | null;
-};
-
-type CouponRowProps = {
-  coupon: Coupon;
-};
-
-// --- Mock Data ---
-
-const couponsData: Coupon[] = [
-  {
-    id: '1',
-    code: 'CCC20246',
-    type: 'Percentage discount',
-    amount: 10,
-    usage: 0,
-    limit: 'infinity',
-    expiryDate: 'December 31, 2024',
-  },
-  {
-    id: '2',
-    code: 'Discount summer',
-    type: 'Fixed product discount',
-    amount: 100,
-    usage: 0,
-    limit: 3,
-    expiryDate: null,
-  },
-  {
-    id: '3',
-    code: 'Fanswaves',
-    type: 'Percentage discount',
-    amount: 10,
-    usage: 0,
-    limit: 'infinity',
-    expiryDate: 'April 6, 2025',
-  },
-  {
-    id: '4',
-    code: 'Niño12',
-    type: 'Fixed product discount',
-    amount: 20,
-    usage: 0,
-    limit: 1,
-    expiryDate: null,
-  },
-  {
-    id: '5',
-    code: 'TopBR',
-    type: 'Percentage discount',
-    amount: 5,
-    usage: 0,
-    limit: 1,
-    expiryDate: 'December 31, 2024',
-  },
-  {
-    id: '6',
-    code: 'UC10',
-    type: 'Percentage discount',
-    amount: 25,
-    usage: 0,
-    limit: 1,
-    expiryDate: 'October 28, 2024',
-  },
-  {
-    id: '7',
-    code: 'Welcome',
-    type: 'Percentage discount',
-    amount: 10,
-    usage: 0,
-    limit: 'infinity',
-    expiryDate: null,
-  },
-];
+import { useCoupons } from '@/service/coupons/hook';
+import { Coupon } from '@/service/coupons/types';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
+import EditCouponForm from './components/EditCouponForm';
 
 // --- Reusable UI Components ---
 
@@ -108,14 +44,19 @@ const ActionButton: React.FC<{
   );
 };
 
-const CouponRow: React.FC<CouponRowProps> = ({ coupon }) => {
+type CouponRowProps = {
+  coupon: Coupon;
+  onEdit: (coupon: Coupon) => void;
+  onDelete: (couponId: string) => void;
+};
+
+const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
   const rowVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },
   };
 
-  const formatLimit = (limit: number | 'infinity') =>
-    limit === 'infinity' ? '∞' : limit;
+  const formatLimit = (limit?: number) => (limit === undefined ? '∞' : limit);
 
   return (
     <motion.tr
@@ -134,24 +75,18 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon }) => {
         {coupon.amount}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.usage} / {formatLimit(coupon.limit)}
+        {coupon.usageCount} / {formatLimit(coupon.usageLimitPerCoupon)}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.expiryDate || '—'}
+        {new Date(coupon.expiryDate).toLocaleDateString() || '—'}
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
-          <ActionButton
-            variant="edit"
-            onClick={() => alert(`Editing ${coupon.code}`)}
-          >
+          <ActionButton variant="edit" onClick={() => onEdit(coupon)}>
             <Edit className="h-3 w-3" />
             <span>Edit</span>
           </ActionButton>
-          <ActionButton
-            variant="delete"
-            onClick={() => alert(`Deleting ${coupon.code}`)}
-          >
+          <ActionButton variant="delete" onClick={() => onDelete(coupon.id)}>
             <Trash2 className="h-3 w-3" />
             <span>Delete</span>
           </ActionButton>
@@ -164,6 +99,36 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon }) => {
 // --- Main Page Component ---
 
 export default function CouponsPage() {
+  const router = useRouter();
+  const { coupons, isLoading, isError, deleteCoupon } = useCoupons();
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
+  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
+
+  const handleDeleteClick = (couponId: string) => {
+    setSelectedCouponId(couponId);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (selectedCouponId) {
+      await deleteCoupon(selectedCouponId);
+      setIsDeleteDialogOpen(false);
+      setSelectedCouponId(null);
+    }
+  };
+
+  const handleEditClick = (coupon: Coupon) => {
+    setEditingCoupon(coupon);
+    setIsEditDialogOpen(true);
+  };
+
+  const handleEditSuccess = () => {
+    setIsEditDialogOpen(false);
+    setEditingCoupon(null);
+  };
+
   const containerVariants = {
     hidden: { opacity: 1 },
     visible: {
@@ -211,8 +176,27 @@ export default function CouponsPage() {
                 animate="visible"
                 className="divide-y divide-slate-200"
               >
-                {couponsData.map(coupon => (
-                  <CouponRow key={coupon.id} coupon={coupon} />
+                {isLoading && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-4">
+                      Loading...
+                    </td>
+                  </tr>
+                )}
+                {isError && (
+                  <tr>
+                    <td colSpan={6} className="text-center py-4 text-red-500">
+                      Error loading coupons.
+                    </td>
+                  </tr>
+                )}
+                {coupons?.map(coupon => (
+                  <CouponRow
+                    key={coupon.id}
+                    coupon={coupon}
+                    onEdit={handleEditClick}
+                    onDelete={handleDeleteClick}
+                  />
                 ))}
               </motion.tbody>
             </table>
@@ -223,6 +207,7 @@ export default function CouponsPage() {
           <motion.button
             whileHover={{ scale: 1.05 }}
             whileTap={{ scale: 0.95 }}
+            onClick={() => router.push('/dashboard/coupons/new')}
             className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
           >
             <PlusCircle className="h-5 w-5" />
@@ -230,6 +215,36 @@ export default function CouponsPage() {
           </motion.button>
         </footer>
       </main>
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete the
+              coupon.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleConfirmDelete}>
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Edit Coupon</DialogTitle>
+          </DialogHeader>
+          {editingCoupon && (
+            <EditCouponForm
+              coupon={editingCoupon}
+              onSuccess={handleEditSuccess}
+            />
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
