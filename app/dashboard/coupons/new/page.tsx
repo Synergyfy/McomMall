@@ -430,7 +430,7 @@ export default function CouponForm() {
                           {isLoadingListings ? (
                             <CommandItem>Loading...</CommandItem>
                           ) : (
-                          listings?.results.map((listing: InHouseBusiness) => (
+                          listings?.map((listing: InHouseBusiness) => (
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {
