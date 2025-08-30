@@ -5,9 +5,10 @@ import { GeneralAdSettings } from './components/GeneralAdSettings';
 import { CampaignFilters } from './components/CampaignFilters';
 import { AdPlacementSelector } from './components/AdPlacementSelector';
 import { Button } from '@/components/ui/button';
-import { adPlacements, mockCategories, mockRegions } from './data';
+import { adPlacements, mockRegions } from './data';
 import { isAfter, startOfToday } from 'date-fns';
 import { useAddCampaign } from '@/service/campaigns/hook';
+import { businessCategories } from '@/lib/business-categories';
 import {
   AdPlacement,
   CampaignType,
@@ -16,6 +17,7 @@ import {
 import { SuccessCampaignDialog } from './components/SuccessCampaignDialog';
 import { useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
+import { SearchableSelectItem } from './types';
 
 const AddListingPage = () => {
   const [formData, setFormData] = useState<AdFormData>({
@@ -39,6 +41,23 @@ const AddListingPage = () => {
     isLoading: isLoadingListings,
     isError: isErrorListings,
   } = useGetUserListings();
+
+  const categories = useMemo(() => {
+    const allCategories: SearchableSelectItem[] = [];
+    businessCategories.forEach(mainCategory => {
+      allCategories.push({
+        value: mainCategory.name,
+        label: mainCategory.name,
+      });
+      mainCategory.subCategories.forEach(subCategory => {
+        allCategories.push({
+          value: subCategory.name,
+          label: `${mainCategory.name} > ${subCategory.name}`,
+        });
+      });
+    });
+    return allCategories;
+  }, []);
 
   const listingOptions = useMemo(() => {
     if (!userListings) return [];
@@ -138,7 +157,7 @@ const AddListingPage = () => {
             <CampaignFilters
               formData={formData}
               setFormData={setFormData}
-              categories={mockCategories}
+              categories={categories}
               regions={mockRegions}
             />
 
