@@ -1,4 +1,4 @@
-import useSWR from 'swr';
+import useSWR, { useSWRConfig } from 'swr';
 import { Coupon, CreateCouponDto, UpdateCouponDto } from './types';
 import api from '../api';
 import { useSelector } from 'react-redux';
@@ -6,39 +6,56 @@ import { RootState } from '../store/store';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
-export const useCoupons = () => {
+export const useGetCoupons = () => {
   const token = useSelector((state: RootState) => state.auth.accessToken);
-  const { data: coupons, error, mutate } = useSWR<Coupon[]>(token ? '/coupons/mine' : null, fetcher);
-
-  const createCoupon = async (couponData: CreateCouponDto) => {
-    const response = await api.post('/coupons', couponData);
-    mutate(); // Revalidate the list of coupons
-    return response.data;
-  };
-
-  const updateCoupon = async (id: string, couponData: UpdateCouponDto) => {
-    const response = await api.patch(`/coupons/${id}`, couponData);
-    mutate(); // Revalidate the list of coupons
-    return response.data;
-  };
-
-  const deleteCoupon = async (id: string) => {
-    await api.delete(`/coupons/${id}`);
-    mutate(); // Revalidate the list of coupons
-  };
-
-  const getCoupon = async (id: string) => {
-    const response = await api.get(`/coupons/${id}`);
-    return response.data;
-  };
+  const { data: coupons, error } = useSWR<Coupon[]>(
+    token ? '/coupons/mine' : null,
+    fetcher
+  );
 
   return {
     coupons,
     isLoading: !error && !coupons,
     isError: error,
-    createCoupon,
-    updateCoupon,
-    deleteCoupon,
-    getCoupon,
   };
+};
+
+export const useGetCoupon = (id: string) => {
+  const { data: coupon, error } = useSWR<Coupon>(`/coupons/${id}`, fetcher);
+
+  return {
+    coupon,
+    isLoading: !error && !coupon,
+    isError: error,
+  };
+};
+
+export const useAddCoupon = () => {
+  const { mutate } = useSWRConfig();
+  const addCoupon = async (couponData: CreateCouponDto) => {
+    const response = await api.post('/coupons', couponData);
+    mutate('/coupons/mine');
+    return response.data;
+  };
+  return addCoupon;
+};
+
+export const useEditCoupon = () => {
+  const { mutate } = useSWRConfig();
+  const editCoupon = async (id: string, couponData: UpdateCouponDto) => {
+    const response = await api.patch(`/coupons/${id}`, couponData);
+    mutate('/coupons/mine');
+    mutate(`/coupons/${id}`);
+    return response.data;
+  };
+  return editCoupon;
+};
+
+export const useDeleteCoupon = () => {
+  const { mutate } = useSWRConfig();
+  const deleteCoupon = async (id: string) => {
+    await api.delete(`/coupons/${id}`);
+    mutate('/coupons/mine');
+  };
+  return deleteCoupon;
 };

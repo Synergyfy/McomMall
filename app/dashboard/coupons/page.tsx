@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Edit, Trash2, PlusCircle } from 'lucide-react';
-import { useCoupons } from '@/service/coupons/hook';
+import { useGetCoupons, useDeleteCoupon } from '@/service/coupons/hook';
 import { Coupon } from '@/service/coupons/types';
 import {
   AlertDialog,
@@ -100,7 +100,8 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
 
 export default function CouponsPage() {
   const router = useRouter();
-  const { coupons, isLoading, isError, deleteCoupon } = useCoupons();
+  const { coupons, isLoading, isError } = useGetCoupons();
+  const deleteCoupon = useDeleteCoupon();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);

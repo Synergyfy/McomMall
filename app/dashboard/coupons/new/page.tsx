@@ -11,9 +11,11 @@ import {
   ArrowRight,
   X,
   CheckCircle,
+  ChevronsUpDown,
+  Check,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useCoupons } from '@/service/coupons/hook';
+import { useAddCoupon } from '@/service/coupons/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -35,6 +37,21 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
+import { useGetUserListings } from '@/service/listings/hook';
+import { InHouseBusiness } from '@/service/listings/types';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 // --- Main Coupon Form Component ---
 
@@ -47,7 +64,7 @@ interface FormData {
   expiryDate: string;
   minSpend: string;
   maxSpend: string;
-  products: string;
+  businessIds: string[];
   individualUseOnly: boolean;
   allowedEmails: string;
   usageLimitPerCoupon: string;
@@ -63,8 +80,10 @@ interface FormErrors {
 
 export default function CouponForm() {
   const router = useRouter();
-  const { createCoupon } = useCoupons();
+  const createCoupon = useAddCoupon();
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
   const [isSuccess, setIsSuccess] = useState(false);
+  const [open, setOpen] = React.useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     couponCode: '',
@@ -75,7 +94,7 @@ export default function CouponForm() {
     expiryDate: '',
     minSpend: '',
     maxSpend: '',
-    products: '',
+    businessIds: [],
     individualUseOnly: false,
     allowedEmails: '',
     usageLimitPerCoupon: '',
@@ -159,11 +178,11 @@ export default function CouponForm() {
     if (Object.keys(validationErrors).length === 0) {
       try {
         await createCoupon({
-          code: formData.couponCode,
-          description: formData.couponDescription,
-          type: formData.discountType as 'percentage' | 'fixed',
-          amount: parseFloat(formData.couponAmount),
-          expiryDate: new Date(formData.expiryDate).toISOString(),
+          couponCode: formData.couponCode,
+          couponDescription: formData.couponDescription,
+          discountType: formData.discountType as 'percentage' | 'fixed',
+          couponAmount: parseFloat(formData.couponAmount),
+          expiryDate: new Date(formData.expiryDate),
           minSpend: formData.minSpend
             ? parseFloat(formData.minSpend)
             : undefined,
@@ -171,16 +190,14 @@ export default function CouponForm() {
             ? parseFloat(formData.maxSpend)
             : undefined,
           individualUseOnly: formData.individualUseOnly,
-          excludeSaleItems: false, // Assuming default
-          allowedEmails: formData.allowedEmails
-            ? formData.allowedEmails.split(',').map(e => e.trim())
-            : [],
+          allowedEmails: formData.allowedEmails,
           usageLimitPerCoupon: formData.usageLimitPerCoupon
             ? parseInt(formData.usageLimitPerCoupon)
             : undefined,
           usageLimitPerUser: formData.usageLimitPerUser
             ? parseInt(formData.usageLimitPerUser)
             : undefined,
+          businessIds: formData.businessIds,
         });
         setIsSuccess(true);
       } catch (error) {
@@ -391,13 +408,58 @@ export default function CouponForm() {
                     For products{' '}
                     <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
                   </Label>
-                  <Input
-                    id="products"
-                    name="products"
-                    placeholder="Search for a listing"
-                    value={formData.products}
-                    onChange={handleInputChange}
-                  />
+                  <Popover open={open} onOpenChange={setOpen}>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant="outline"
+                        role="combobox"
+                        aria-expanded={open}
+                        className="w-full justify-between"
+                      >
+                        {formData.businessIds.length > 0
+                          ? `${formData.businessIds.length} listing(s) selected`
+                          : 'Select listings...'}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-full p-0">
+                      <Command>
+                        <CommandInput placeholder="Search listings..." />
+                        <CommandEmpty>No listings found.</CommandEmpty>
+                        <CommandGroup>
+                          {isLoadingListings ? (
+                            <CommandItem>Loading...</CommandItem>
+                          ) : (
+                          listings?.results.map((listing: InHouseBusiness) => (
+                              <CommandItem
+                                key={listing.id}
+                                onSelect={() => {
+                                  const businessIds = formData.businessIds.includes(
+                                    listing.id
+                                  )
+                                    ? formData.businessIds.filter(
+                                        id => id !== listing.id
+                                      )
+                                    : [...formData.businessIds, listing.id];
+                                  setFormData({ ...formData, businessIds });
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    formData.businessIds.includes(listing.id)
+                                      ? 'opacity-100'
+                                      : 'opacity-0'
+                                  )}
+                                />
+                              {listing.businessName}
+                              </CommandItem>
+                            ))
+                          )}
+                        </CommandGroup>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div className="grid gap-2">
                   <Label
