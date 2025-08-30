@@ -24,7 +24,7 @@ export interface CreateCouponDto {
   widgetBackgroundUrl?: string;
   discountType: 'percentage' | 'fixed';
   couponAmount: number;
-  expiryDate: string;
+  expiryDate: number;
   minSpend?: number;
   maxSpend?: number;
   products?: string;
