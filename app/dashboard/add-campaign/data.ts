@@ -8,13 +8,6 @@ export const mockListings: SearchableSelectItem[] = [
   { value: 'listing-4', label: 'Luxury Penthouse with View' },
 ];
 
-export const mockCategories: SearchableSelectItem[] = [
-  { value: 'cat-1', label: 'Apartments' },
-  { value: 'cat-2', label: 'Houses' },
-  { value: 'cat-3', label: 'Commercial' },
-  { value: 'cat-4', label: 'Land' },
-];
-
 export const mockRegions: SearchableSelectItem[] = [
   { value: 'reg-1', label: 'Zurich' },
   { value: 'reg-2', label: 'Geneva' },

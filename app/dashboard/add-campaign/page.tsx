@@ -5,9 +5,10 @@ import { GeneralAdSettings } from './components/GeneralAdSettings';
 import { CampaignFilters } from './components/CampaignFilters';
 import { AdPlacementSelector } from './components/AdPlacementSelector';
 import { Button } from '@/components/ui/button';
-import { adPlacements, mockCategories, mockRegions } from './data';
+import { adPlacements, mockRegions } from './data';
 import { isAfter, startOfToday } from 'date-fns';
 import { useAddCampaign } from '@/service/campaigns/hook';
+import { businessCategories } from '@/lib/business-categories';
 import {
   AdPlacement,
   CampaignType,
@@ -22,6 +23,7 @@ const AddListingPage = () => {
     listing: '',
     campaignType: 'ppv',
     startDate: undefined,
+    endDate: undefined,
     budget: '',
     category: '',
     region: '',
@@ -39,6 +41,13 @@ const AddListingPage = () => {
     isLoading: isLoadingListings,
     isError: isErrorListings,
   } = useGetUserListings();
+
+  const categories = useMemo(() => {
+    return businessCategories.map(category => ({
+      value: category.name,
+      label: category.name,
+    }));
+  }, []);
 
   const listingOptions = useMemo(() => {
     if (!userListings) return [];
@@ -65,9 +74,19 @@ const AddListingPage = () => {
     }
     if (!formData.startDate) {
       newErrors.startDate = 'A start date is required.';
-    } else if (!isAfter(formData.startDate, startOfToday())) {
+    } else if (!isAfter(formData.startDate, new Date())) {
       newErrors.startDate = 'Start date must be in the future.';
     }
+
+    if (!formData.endDate) {
+      newErrors.endDate = 'An end date is required.';
+    } else if (
+      formData.startDate &&
+      !isAfter(formData.endDate, formData.startDate)
+    ) {
+      newErrors.endDate = 'End date must be after the start date.';
+    }
+
     if (!formData.budget || Number(formData.budget) <= 0) {
       newErrors.budget = 'Budget must be a positive number.';
     }
@@ -97,6 +116,7 @@ const AddListingPage = () => {
         businessId: formData.listing,
         type: campaignTypeMapping[formData.campaignType],
         startDate: formData.startDate!,
+        endDate: formData.endDate,
         budget: Number(formData.budget),
         displayOnlyIfCategory: formData.category || undefined,
         displayOnlyIfRegion: formData.region || undefined,
@@ -138,7 +158,7 @@ const AddListingPage = () => {
             <CampaignFilters
               formData={formData}
               setFormData={setFormData}
-              categories={mockCategories}
+              categories={categories}
               regions={mockRegions}
             />
 

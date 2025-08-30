@@ -116,7 +116,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
     <div className="space-y-6">
       <div>
         <Label htmlFor="primaryCategory">
-          Primary Category
+          Sector
           {isFieldOptional(schema!, 'productData.primaryCategory') && (
             <span className="text-muted-foreground font-normal text-sm">
               {' '}
@@ -129,7 +129,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
           onValueChange={handlePrimaryCategoryChange}
         >
           <SelectTrigger id="primaryCategory">
-            <SelectValue placeholder="Select a primary category" />
+            <SelectValue placeholder="Select a sector" />
           </SelectTrigger>
           <SelectContent>
             {businessCategories.map(cat => (
@@ -146,7 +146,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
 
       <div>
         <Label htmlFor="subCategory">
-          Sub-Category
+          Sub-Section
         </Label>
         <Select
           value={selectedSubCategory}
@@ -154,7 +154,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
           disabled={!productData.primaryCategory}
         >
           <SelectTrigger id="subCategory">
-            <SelectValue placeholder="Select a sub-category" />
+            <SelectValue placeholder="Select a sub-section" />
           </SelectTrigger>
           <SelectContent>
             {availableSubCategories.map(sub => (
@@ -217,17 +217,17 @@ const ProductCategoryStep: React.FC<StepProps> = ({
         </div>
         {!productData.primaryCategory && (
           <p className="text-xs text-muted-foreground mt-1">
-            Please select a primary category to see available sub-categories.
+            Please select a sector to see available sub-sections.
           </p>
         )}
         {productData.primaryCategory && !selectedSubCategory && (
           <p className="text-xs text-muted-foreground mt-1">
-            Please select a sub-category to see available specialisms.
+            Please select a sub-section to see available specialisms.
           </p>
         )}
         {selectedSubCategory && availableItems.length === 0 && (
             <p className="text-xs text-muted-foreground mt-1">
-                No specialisms available for this sub-category.
+                No specialisms available for this sub-section.
             </p>
         )}
       </div>

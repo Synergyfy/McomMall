@@ -12,9 +12,10 @@ interface DayHoursEditorProps {
   day: string;
   hours: TimeRange[];
   onHoursChange: (day: string, hours: TimeRange[]) => void;
+  onCopy: (day: string) => void;
 };
 
-const DayHoursEditor: React.FC<DayHoursEditorProps> = ({ day, hours, onHoursChange }) => {
+const DayHoursEditor: React.FC<DayHoursEditorProps> = ({ day, hours, onHoursChange, onCopy }) => {
     const handleTimeChange = (index: number, field: 'start' | 'end', value: string) => {
         const newHours = [...hours];
         newHours[index] = { ...newHours[index], [field]: value };
@@ -71,9 +72,14 @@ const DayHoursEditor: React.FC<DayHoursEditorProps> = ({ day, hours, onHoursChan
                 </div>
                 ))}
                 {isDayOpen && (
-                    <Button variant="outline" size="sm" onClick={addTimeRange}>
-                        <PlusCircle className="w-4 h-4 mr-2" /> Add Split Time
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        <Button variant="outline" size="sm" onClick={addTimeRange}>
+                            <PlusCircle className="w-4 h-4 mr-2" /> Add Split Time
+                        </Button>
+                        <Button variant="outline" size="sm" onClick={() => onCopy(day)}>
+                            Copy for all
+                        </Button>
+                    </div>
                 )}
             </div>
         </div>
@@ -94,6 +100,15 @@ const WeeklyHoursEditor: React.FC<WeeklyHoursEditorProps> = ({ weeklyHours, onWe
         });
     };
 
+    const handleCopy = (dayToCopy: string) => {
+        const hoursToCopy = weeklyHours[dayToCopy as keyof typeof weeklyHours] || [];
+        const newWeeklyHours = { ...weeklyHours };
+        daysOfWeek.forEach(day => {
+            newWeeklyHours[day as keyof typeof newWeeklyHours] = JSON.parse(JSON.stringify(hoursToCopy));
+        });
+        onWeeklyHoursChange(newWeeklyHours);
+    }
+
     return (
         <div className="space-y-2 divide-y">
             {daysOfWeek.map(day => (
@@ -102,6 +117,7 @@ const WeeklyHoursEditor: React.FC<WeeklyHoursEditorProps> = ({ weeklyHours, onWe
                     day={day}
                     hours={weeklyHours[day as keyof typeof weeklyHours] || []}
                     onHoursChange={handleDayHoursChange}
+                    onCopy={handleCopy}
                 />
             ))}
         </div>

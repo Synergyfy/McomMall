@@ -41,6 +41,7 @@ export default function DashboardLayout({
           <TrialCountdownTimer
             trialEndDate={subscriptionStatus.trialEndDate}
             isPaused={subscriptionStatus.isPaused}
+            isTrialPausable={subscriptionStatus.isTrialPausable}
           />
         )}
       <section className="flex w-screen h-screen overflow-hidden bg-[#F6F6F6]">

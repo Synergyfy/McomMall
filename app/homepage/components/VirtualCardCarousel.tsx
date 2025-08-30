@@ -1,7 +1,7 @@
-import React from 'react';
+import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { motion, Variants } from 'framer-motion';
+import { motion, Variants, useMotionValue } from 'framer-motion';
 import Image from 'next/image';
 import { Mail, Phone, MapPin, Calendar, Share2, Download } from 'lucide-react';
 
@@ -78,259 +78,294 @@ const cardTilt: Variants = {
   },
 };
 
+const CARD_WIDTH = 380;
+const GAP = 20;
+
 export default function McomEgiftCard() {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const cardsRef = useRef<HTMLDivElement>(null);
+  const [dragConstraints, setDragConstraints] = useState(0);
+
+  useEffect(() => {
+    const calculateConstraints = () => {
+      const containerWidth = containerRef.current?.offsetWidth || 0;
+      const cardsWidth = cardsRef.current?.scrollWidth || 0;
+      const newDragConstraints = Math.min(0, containerWidth - cardsWidth - GAP);
+      setDragConstraints(newDragConstraints);
+    };
+
+    calculateConstraints();
+    window.addEventListener('resize', calculateConstraints);
+    return () => window.removeEventListener('resize', calculateConstraints);
+  }, []);
+
   return (
     <section>
       <header className="text-5xl font-bold text-center mb-5">
         Mcom VCards
       </header>
-      <div className="container mx-auto p-6 grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-10">
-        {people.map((p, i) => (
-          <motion.div
-            key={p.email}
-            initial={{ opacity: 0, y: 24 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: i * 0.12 }}
-            className="flex justify-center perspective-[1200px]"
-          >
+      <div
+        ref={containerRef}
+        className="container mx-auto p-6 sm:grid sm:grid-cols-2 xl:grid-cols-3 sm:gap-10 overflow-hidden"
+      >
+        <motion.div
+          ref={cardsRef}
+          drag="x"
+          dragConstraints={{ left: dragConstraints, right: 0 }}
+          dragTransition={{ bounceStiffness: 600, bounceDamping: 20 }}
+          className="flex gap-5 sm:contents"
+        >
+          {people.map((p, i) => (
             <motion.div
-              variants={cardTilt}
-              initial="rest"
-              whileHover="hover"
-              className="relative"
+              key={p.email}
+              initial={{ opacity: 0, y: 24 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: i * 0.12 }}
+              className="flex-shrink-0 sm:flex-shrink sm:justify-center sm:perspective-[1200px]"
             >
-              <Card className="relative w-[380px] h-[560px] xl:w-[400px] xl:h-[580px] rounded-[28px] overflow-hidden shadow-2xl border-0">
-                {/* BG LAYER 1: vibrant gradient */}
-                <div
-                  className={`absolute inset-0 bg-gradient-to-br ${p.gradient} opacity-95`}
-                />
-
-                {/* BG LAYER 2: subtle grid pattern using SVG */}
-                <svg
-                  className="absolute inset-0 opacity-25"
-                  xmlns="http://www.w3.org/2000/svg"
-                  preserveAspectRatio="none"
-                >
-                  <defs>
-                    <pattern
-                      id={`grid-${i}`}
-                      width="28"
-                      height="28"
-                      patternUnits="userSpaceOnUse"
-                    >
-                      <path
-                        d="M28 0H0v28"
-                        fill="none"
-                        stroke="white"
-                        strokeOpacity="0.15"
-                      />
-                    </pattern>
-                    <radialGradient
-                      id={`vignette-${i}`}
-                      cx="50%"
-                      cy="50%"
-                      r="70%"
-                    >
-                      <stop offset="60%" stopColor="black" stopOpacity="0" />
-                      <stop
-                        offset="100%"
-                        stopColor="black"
-                        stopOpacity="0.35"
-                      />
-                    </radialGradient>
-                  </defs>
-                  <rect width="100%" height="100%" fill={`url(#grid-${i})`} />
-                  <rect
-                    width="100%"
-                    height="100%"
-                    fill={`url(#vignette-${i})`}
+              <motion.div
+                variants={cardTilt}
+                initial="rest"
+                whileHover="hover"
+                className="relative"
+              >
+                <Card className="relative w-[380px] h-[560px] xl:w-[400px] xl:h-[580px] rounded-[28px] overflow-hidden shadow-2xl border-0">
+                  {/* BG LAYER 1: vibrant gradient */}
+                  <div
+                    className={`absolute inset-0 bg-gradient-to-br ${p.gradient} opacity-95`}
                   />
-                </svg>
 
-                {/* BG LAYER 3: animated blob */}
-                <motion.div
-                  className="absolute -top-20 -right-24 w-72 h-72 rounded-full blur-3xl"
-                  animate={{
-                    scale: [1, 1.15, 1],
-                    rotate: [0, 15, 0],
-                  }}
-                  transition={{
-                    duration: 8,
-                    repeat: Infinity,
-                    ease: 'easeInOut',
-                  }}
-                  style={{
-                    background:
-                      'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%)',
-                  }}
-                />
+                  {/* BG LAYER 2: subtle grid pattern using SVG */}
+                  <svg
+                    className="absolute inset-0 opacity-25"
+                    xmlns="http://www.w3.org/2000/svg"
+                    preserveAspectRatio="none"
+                  >
+                    <defs>
+                      <pattern
+                        id={`grid-${i}`}
+                        width="28"
+                        height="28"
+                        patternUnits="userSpaceOnUse"
+                      >
+                        <path
+                          d="M28 0H0v28"
+                          fill="none"
+                          stroke="white"
+                          strokeOpacity="0.15"
+                        />
+                      </pattern>
+                      <radialGradient
+                        id={`vignette-${i}`}
+                        cx="50%"
+                        cy="50%"
+                        r="70%"
+                      >
+                        <stop offset="60%" stopColor="black" stopOpacity="0" />
+                        <stop
+                          offset="100%"
+                          stopColor="black"
+                          stopOpacity="0.35"
+                        />
+                      </radialGradient>
+                    </defs>
+                    <rect
+                      width="100%"
+                      height="100%"
+                      fill={`url(#grid-${i})`}
+                    />
+                    <rect
+                      width="100%"
+                      height="100%"
+                      fill={`url(#vignette-${i})`}
+                    />
+                  </svg>
 
-                {/* SHINE SWEEP */}
-                <motion.div
-                  className="pointer-events-none absolute -top-10 -left-40 h-[140%] w-24 rotate-12 bg-white/25 blur-xl"
-                  initial={shineAnim.initial}
-                  animate={shineAnim.animate}
-                  transition={shineAnim.transition}
-                />
+                  {/* BG LAYER 3: animated blob */}
+                  <motion.div
+                    className="absolute -top-20 -right-24 w-72 h-72 rounded-full blur-3xl"
+                    animate={{
+                      scale: [1, 1.15, 1],
+                      rotate: [0, 15, 0],
+                    }}
+                    transition={{
+                      duration: 8,
+                      repeat: Infinity,
+                      ease: 'easeInOut',
+                    }}
+                    style={{
+                      background:
+                        'radial-gradient(circle at 30% 30%, rgba(255,255,255,0.35), rgba(255,255,255,0) 60%)',
+                    }}
+                  />
 
-                {/* HEADER */}
-                <CardContent className="relative z-10 pt-8">
-                  <div className="flex items-start justify-between px-6">
-                    <span
-                      className={`px-3 py-1 rounded-full text-xs tracking-wide ${accentChip(
-                        p.accent
-                      )}`}
-                    >
-                      {p.role}
-                    </span>
-                    <span className="text-white/80 text-xs">vCard</span>
-                  </div>
+                  {/* SHINE SWEEP */}
+                  <motion.div
+                    className="pointer-events-none absolute -top-10 -left-40 h-[140%] w-24 rotate-12 bg-white/25 blur-xl"
+                    initial={shineAnim.initial}
+                    animate={shineAnim.animate}
+                    transition={shineAnim.transition}
+                  />
 
-                  {/* Avatar with glow ring */}
-                  <div className="mt-6 flex justify-center">
-                    <div className="relative">
-                      <div
-                        className={`p-[3px] rounded-full bg-gradient-to-r ${accentRing(
+                  {/* HEADER */}
+                  <CardContent className="relative z-10 pt-8">
+                    <div className="flex items-start justify-between px-6">
+                      <span
+                        className={`px-3 py-1 rounded-full text-xs tracking-wide ${accentChip(
                           p.accent
                         )}`}
                       >
-                        <div className="rounded-full bg-white/20 p-[2px]">
-                          <Image
-                            src={p.image}
-                            alt={p.name}
-                            className="w-28 h-28 rounded-full object-cover shadow-xl"
-                            width={112}
-                            height={112}
-                          />
+                        {p.role}
+                      </span>
+                      <span className="text-white/80 text-xs">vCard</span>
+                    </div>
+
+                    {/* Avatar with glow ring */}
+                    <div className="mt-6 flex justify-center">
+                      <div className="relative">
+                        <div
+                          className={`p-[3px] rounded-full bg-gradient-to-r ${accentRing(
+                            p.accent
+                          )}`}
+                        >
+                          <div className="rounded-full bg-white/20 p-[2px]">
+                            <Image
+                              src={p.image}
+                              alt={p.name}
+                              className="w-28 h-28 rounded-full object-cover shadow-xl"
+                              width={112}
+                              height={112}
+                            />
+                          </div>
                         </div>
+                        {/* corner sparkle */}
+                        <svg
+                          className="absolute -top-2 -right-2 w-6 h-6"
+                          viewBox="0 0 24 24"
+                        >
+                          <path
+                            d="M12 2l2.2 4.6L19 8l-4.3 2.2L12 15l-2.7-4.8L5 8l4.8-1.4L12 2z"
+                            fill="white"
+                            opacity="0.7"
+                          />
+                        </svg>
                       </div>
-                      {/* corner sparkle */}
+                    </div>
+
+                    {/* Name / Tagline */}
+                    <div className="mt-5 text-center px-6">
+                      <h3 className="text-white text-2xl font-extrabold drop-shadow-sm leading-tight">
+                        {p.name}
+                      </h3>
+                      <p className="mt-1 text-white/90 text-sm">{p.tagline}</p>
+                    </div>
+
+                    {/* Divider with fancy SVG wave */}
+                    <div className="relative mt-6 h-10">
                       <svg
-                        className="absolute -top-2 -right-2 w-6 h-6"
-                        viewBox="0 0 24 24"
+                        className="absolute inset-0 w-full h-10"
+                        viewBox="0 0 400 40"
+                        preserveAspectRatio="none"
                       >
                         <path
-                          d="M12 2l2.2 4.6L19 8l-4.3 2.2L12 15l-2.7-4.8L5 8l4.8-1.4L12 2z"
-                          fill="white"
-                          opacity="0.7"
+                          d="M0,20 C100,40 300,0 400,20 L400,40 L0,40 Z"
+                          fill="rgba(255,255,255,0.15)"
                         />
                       </svg>
                     </div>
-                  </div>
 
-                  {/* Name / Tagline */}
-                  <div className="mt-5 text-center px-6">
-                    <h3 className="text-white text-2xl font-extrabold drop-shadow-sm leading-tight">
-                      {p.name}
-                    </h3>
-                    <p className="mt-1 text-white/90 text-sm">{p.tagline}</p>
-                  </div>
-
-                  {/* Divider with fancy SVG wave */}
-                  <div className="relative mt-6 h-10">
-                    <svg
-                      className="absolute inset-0 w-full h-10"
-                      viewBox="0 0 400 40"
-                      preserveAspectRatio="none"
-                    >
-                      <path
-                        d="M0,20 C100,40 300,0 400,20 L400,40 L0,40 Z"
-                        fill="rgba(255,255,255,0.15)"
+                    {/* INFO GRID */}
+                    <div className="px-6 mt-2 grid grid-cols-1 gap-2 text-[13px] text-white/95">
+                      <InfoRow
+                        icon={<Mail className="w-4 h-4" />}
+                        label="Email"
+                        value={p.email}
                       />
-                    </svg>
-                  </div>
+                      <InfoRow
+                        icon={<Phone className="w-4 h-4" />}
+                        label="Phone"
+                        value={p.phone}
+                      />
+                      <InfoRow
+                        icon={<MapPin className="w-4 h-4" />}
+                        label="Location"
+                        value={p.location}
+                      />
+                      <InfoRow
+                        icon={<Calendar className="w-4 h-4" />}
+                        label="DOB"
+                        value={p.dob}
+                      />
+                    </div>
 
-                  {/* INFO GRID */}
-                  <div className="px-6 mt-2 grid grid-cols-1 gap-2 text-[13px] text-white/95">
-                    <InfoRow
-                      icon={<Mail className="w-4 h-4" />}
-                      label="Email"
-                      value={p.email}
-                    />
-                    <InfoRow
-                      icon={<Phone className="w-4 h-4" />}
-                      label="Phone"
-                      value={p.phone}
-                    />
-                    <InfoRow
-                      icon={<MapPin className="w-4 h-4" />}
-                      label="Location"
-                      value={p.location}
-                    />
-                    <InfoRow
-                      icon={<Calendar className="w-4 h-4" />}
-                      label="DOB"
-                      value={p.dob}
-                    />
-                  </div>
+                    {/* BADGES */}
+                    <div className="px-6 mt-4 flex flex-wrap gap-2">
+                      {p.role === 'Programmer' && <Badge text="TypeScript" />}
+                      {p.role === 'Lawyer' && <Badge text="Corporate" />}
+                      {p.role === 'Salon Owner' && <Badge text="Styling" />}
+                      <Badge text="Available" />
+                      <Badge text="Verified" />
+                    </div>
+                  </CardContent>
 
-                  {/* BADGES */}
-                  <div className="px-6 mt-4 flex flex-wrap gap-2">
-                    {p.role === 'Programmer' && <Badge text="TypeScript" />}
-                    {p.role === 'Lawyer' && <Badge text="Corporate" />}
-                    {p.role === 'Salon Owner' && <Badge text="Styling" />}
-                    <Badge text="Available" />
-                    <Badge text="Verified" />
-                  </div>
-                </CardContent>
-
-                {/* FOOTER ACTIONS + QR */}
-                <CardFooter className="relative z-10 mt-auto px-6 pb-6">
-                  <div className="w-full flex items-center gap-3">
-                    <Button className="flex-1 rounded-xl bg-white/95 text-gray-900 font-semibold shadow hover:bg-white">
-                      <Download className="mr-2 h-4 w-4" /> Save Contact
-                    </Button>
-                    <Button
-                      variant="secondary"
-                      className="rounded-xl bg-black/20 text-white border border-white/20 hover:bg-black/30"
-                    >
-                      <Share2 className="h-4 w-4" />
-                    </Button>
-                    {/* Minimal QR placeholder */}
-                    <div className="ml-auto shrink-0 rounded-md p-[2px] bg-white/30">
-                      <div className="w-14 h-14 bg-white/90 grid grid-cols-3 gap-[2px] p-[3px]">
-                        <div className="bg-black" />
-                        <div className="bg-black/0" />
-                        <div className="bg-black" />
-                        <div className="bg-black/0" />
-                        <div className="bg-black" />
-                        <div className="bg-black/0" />
-                        <div className="bg-black" />
-                        <div className="bg-black/0" />
-                        <div className="bg-black" />
+                  {/* FOOTER ACTIONS + QR */}
+                  <CardFooter className="relative z-10 mt-auto px-6 pb-6">
+                    <div className="w-full flex items-center gap-3">
+                      <Button className="flex-1 rounded-xl bg-white/95 text-gray-900 font-semibold shadow hover:bg-white">
+                        <Download className="mr-2 h-4 w-4" /> Save Contact
+                      </Button>
+                      <Button
+                        variant="secondary"
+                        className="rounded-xl bg-black/20 text-white border border-white/20 hover:bg-black/30"
+                      >
+                        <Share2 className="h-4 w-4" />
+                      </Button>
+                      {/* Minimal QR placeholder */}
+                      <div className="ml-auto shrink-0 rounded-md p-[2px] bg-white/30">
+                        <div className="w-14 h-14 bg-white/90 grid grid-cols-3 gap-[2px] p-[3px]">
+                          <div className="bg-black" />
+                          <div className="bg-black/0" />
+                          <div className="bg-black" />
+                          <div className="bg-black/0" />
+                          <div className="bg-black" />
+                          <div className="bg-black/0" />
+                          <div className="bg-black" />
+                          <div className="bg-black/0" />
+                          <div className="bg-black" />
+                        </div>
                       </div>
                     </div>
-                  </div>
-                </CardFooter>
+                  </CardFooter>
 
-                {/* Decorative corner arcs */}
-                <svg
-                  className="absolute -bottom-12 -left-12 w-40 h-40 opacity-30"
-                  viewBox="0 0 200 200"
-                >
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="70"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="10"
-                    opacity="0.2"
-                  />
-                  <circle
-                    cx="100"
-                    cy="100"
-                    r="90"
-                    fill="none"
-                    stroke="white"
-                    strokeWidth="6"
-                    opacity="0.15"
-                  />
-                </svg>
-              </Card>
+                  {/* Decorative corner arcs */}
+                  <svg
+                    className="absolute -bottom-12 -left-12 w-40 h-40 opacity-30"
+                    viewBox="0 0 200 200"
+                  >
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="70"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="10"
+                      opacity="0.2"
+                    />
+                    <circle
+                      cx="100"
+                      cy="100"
+                      r="90"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="6"
+                      opacity="0.15"
+                    />
+                  </svg>
+                </Card>
+              </motion.div>
             </motion.div>
-          </motion.div>
-        ))}
+          ))}
+        </motion.div>
       </div>
     </section>
   );

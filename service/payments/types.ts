@@ -35,6 +35,7 @@ export interface SubscriptionStatusResponse {
   paygOption: PaygOption | null;
   trialEndDate: string | null;
   isPaused: boolean;
+  isTrialPausable: boolean;
 }
 
 export enum TrialAction {

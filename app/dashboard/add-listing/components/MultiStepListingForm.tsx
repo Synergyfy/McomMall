@@ -1,17 +1,7 @@
 'use client';
 
 import { useState, useMemo } from 'react';
-import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-} from '@/components/ui/alert-dialog';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -29,14 +19,28 @@ import {
   type ListingType,
   type ProductSellerProfilePayload,
   type SellingMode,
-  type ServiceModel,
   type ServiceProviderProfilePayload,
   type SocialLinkPayload,
   type SpecialDayPayload,
   type StorefrontLinkPayload,
 } from '@/service/listings/types';
 import { Separator } from '@/components/ui/separator';
-import { Check, Loader2 } from 'lucide-react';
+import {
+  Check,
+  Loader2,
+  Building2,
+  LayoutGrid,
+  MapPin,
+  Clock,
+  Store,
+  Wrench,
+  Map,
+  CalendarDays,
+  CalendarCheck,
+  Award,
+  Camera,
+  Star,
+} from 'lucide-react';
 import {
   isNotEmpty,
   isLength,
@@ -89,6 +93,7 @@ const validationRules = {
     'socials.website': {
       validate: isValidUrl,
       message: 'A valid website URL is required.',
+      optional: true,
     },
     'socials.facebook': {
       validate: isValidUrl,
@@ -182,7 +187,11 @@ const StepIndicator = ({
   steps,
 }: {
   currentStep: number;
-  steps: { title: string; component: React.ElementType }[];
+  steps: {
+    title: string;
+    component: React.ElementType;
+    icon: React.ElementType;
+  }[];
 }) => (
   <div className="flex justify-center items-center mb-8 overflow-x-auto py-2">
     {steps.map((step, index) => (
@@ -197,7 +206,11 @@ const StepIndicator = ({
                 : 'bg-muted text-muted-foreground'
             }`}
           >
-            {currentStep > index + 1 ? <Check /> : index + 1}
+            {currentStep > index + 1 ? (
+              <Check />
+            ) : (
+              <step.icon className="w-5 h-5" />
+            )}
           </div>
           <p
             className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${
@@ -273,7 +286,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     return initialData;
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const router = useRouter();
   const { mutate: addListing, isPending: isAdding } = useAddListing();
   const { mutate: editListing, isPending: isEditing } = useEditListing();
   const isPending = isAdding || isEditing;
@@ -282,6 +294,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     const sharedInitial = [
       {
         title: 'Business Info',
+        icon: Building2,
         component: BusinessInfoStep,
         validationRules: validationRules.businessInfo,
       },
@@ -289,17 +302,25 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     const productSteps = [
       {
         title: 'Product Categories',
+        icon: LayoutGrid,
         component: ProductCategoryStep,
         validationRules: validationRules.productCategory,
       },
       {
         title: 'Location',
+        icon: MapPin,
         component: ProductLocationStep,
         validationRules: validationRules.productLocation,
       },
-      { title: 'Hours', component: ProductHoursStep, validationRules: {} },
+      {
+        title: 'Hours',
+        icon: Clock,
+        component: ProductHoursStep,
+        validationRules: {},
+      },
       {
         title: 'Selling Modes',
+        icon: Store,
         component: SellingModesStep,
         validationRules: validationRules.sellingModes,
       },
@@ -307,26 +328,31 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     const serviceSteps = [
       {
         title: 'Service Categories',
+        icon: Wrench,
         component: ServiceCategoryStep,
         validationRules: validationRules.serviceCategory,
       },
       {
         title: 'Service Area',
+        icon: Map,
         component: ServiceAreaStep,
         validationRules: {},
       },
       {
         title: 'Availability',
+        icon: CalendarDays,
         component: ServiceHoursStep,
         validationRules: {},
       },
       {
         title: 'Booking',
+        icon: CalendarCheck,
         component: BookingStep,
         validationRules: validationRules.booking,
       },
       {
         title: 'Credentials',
+        icon: Award,
         component: CredentialsStep,
         validationRules: {},
       },
@@ -334,11 +360,13 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     const sharedFinal = [
       {
         title: 'Media',
+        icon: Camera,
         component: MediaStep,
         validationRules: validationRules.media,
       },
       {
         title: 'Review & Publish',
+        icon: Star,
         component: ReviewStep,
         validationRules: {},
       },
@@ -346,6 +374,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     let flowSteps: {
       title: string;
+      icon: React.ElementType;
       component: React.ElementType;
       validationRules: object;
     }[] = [];

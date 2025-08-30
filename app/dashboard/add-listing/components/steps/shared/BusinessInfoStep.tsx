@@ -118,7 +118,7 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         label="Legal Name"
         tooltip="Your official business name, if different from your trading name."
         error={errors.legalName}
-          isOptional={isFieldOptional(validationRules, 'legalName')}
+        isOptional={isFieldOptional(validationRules, 'legalName')}
       >
         <Input
           id="legalName"
@@ -133,7 +133,7 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         label="Company Reg. No."
         tooltip="Your official company registration number."
         error={errors.companyRegNo}
-          isOptional={isFieldOptional(validationRules, 'companyRegNo')}
+        isOptional={isFieldOptional(validationRules, 'companyRegNo')}
       >
         <Input
           id="companyRegNo"
@@ -185,30 +185,30 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         label="Phone Number"
         tooltip="Enter a valid phone number for your business."
         error={errors.phone}
-          isOptional={isFieldOptional(validationRules, 'phone')}
+        isOptional={isFieldOptional(validationRules, 'phone')}
       >
         <Input
           id="phone"
           type="tel"
           value={formData.phone}
           onChange={handleChange}
-          placeholder="+447123456789"
+          placeholder="Business phone number"
         />
       </FormField>
 
       <FormField
         id="email"
-        label="Public Email"
+        label="Business Email"
         tooltip="The email address customers can contact you on."
         error={errors.email}
-          isOptional={isFieldOptional(validationRules, 'email')}
+        isOptional={isFieldOptional(validationRules, 'email')}
       >
         <Input
           id="email"
           type="email"
           value={formData.email || ''}
           onChange={handleChange}
-          placeholder="contact@yourbusiness.com"
+          placeholder="Your business email"
         />
       </FormField>
 
@@ -217,7 +217,7 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         label="VAT No."
         tooltip="Your business VAT number, if applicable."
         error={errors.vatNo}
-          isOptional={isFieldOptional(validationRules, 'vatNo')}
+        isOptional={isFieldOptional(validationRules, 'vatNo')}
       >
         <Input
           id="vatNo"

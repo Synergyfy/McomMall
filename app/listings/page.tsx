@@ -19,7 +19,6 @@ import {
 import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
 import { categories, listings } from '@/lib/listing-data';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
-import CategoryFilter from '@/components/CategoryFilter';
 import ListingCard from '@/components/listingCard';
 import {
   useGetGoogleListings,
@@ -35,7 +34,8 @@ function isGoogleResult(
 
 const initialFilters: FilterState = {
   searchTerm: '',
-  category: 'all',
+  category: '',
+  subCategories: [],
   location: '',
   radius: 100,
   priceRange: [0, 1000],
@@ -116,7 +116,6 @@ function ListingsPageContent() {
   const [filtersVisible, setFiltersVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
-  const [selectedCategory, setSelectedCategory] = useState('All');
   const listingsPerPage = 4;
 
   const MapComponent = useMemo(
@@ -153,11 +152,20 @@ function ListingsPageContent() {
   }, [listingsForMap, coords]);
 
   const handleFilterChange = (newFilters: FilterState) => {
-    setActiveFilters(newFilters);
+    let combinedQuery = newFilters.searchTerm;
+    if (newFilters.category) {
+      combinedQuery = `${combinedQuery} ${newFilters.category}`;
+    }
+    if (newFilters.subCategories.length > 0) {
+      combinedQuery = `${combinedQuery} ${newFilters.subCategories.join(' ')}`;
+    }
+
+    const updatedFilters = { ...newFilters, searchTerm: combinedQuery };
+    setActiveFilters(updatedFilters);
     setCurrentPage(1);
     const params = new URLSearchParams();
-    if (newFilters.searchTerm) {
-      params.set('queryText', newFilters.searchTerm);
+    if (updatedFilters.searchTerm) {
+      params.set('queryText', updatedFilters.searchTerm);
     }
     window.history.pushState(null, '', `?${params.toString()}`);
   };
@@ -217,13 +225,6 @@ function ListingsPageContent() {
                 </SelectContent>
               </Select>
             </div>
-            <CategoryFilter
-              categories={categories}
-              onCategoryChange={category => {
-                setSelectedCategory(category);
-                setCurrentPage(1);
-              }}
-            />
           </div>
 
           <div className="flex-1 flex overflow-hidden">

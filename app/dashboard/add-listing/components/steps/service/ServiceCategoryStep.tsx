@@ -77,7 +77,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
     <div className="space-y-6">
       <div>
         <Label htmlFor="primaryCategory">
-            Primary Category
+            Sector
             {isFieldOptional(schema!, 'serviceData.primaryCategory') && (
                 <span className="text-muted-foreground font-normal text-sm">
                     {' '}
@@ -90,7 +90,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
           onValueChange={handlePrimaryCategoryChange}
         >
           <SelectTrigger id="primaryCategory">
-            <SelectValue placeholder="Select a primary category" />
+            <SelectValue placeholder="Select a sector" />
           </SelectTrigger>
           <SelectContent>
             {businessCategories.map(cat => (
@@ -107,7 +107,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
 
       <div>
         <Label htmlFor="tradeCategory">
-            Trade/Industry Category
+            Trade/Industry Section
             {isFieldOptional(schema!, 'serviceData.tradeCategory') && (
                 <span className="text-muted-foreground font-normal text-sm">
                     {' '}
