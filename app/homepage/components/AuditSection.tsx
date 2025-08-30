@@ -168,7 +168,7 @@ export function AuditSection() {
 
         {/* Tab Navigation */}
         <div className="mt-16 flex justify-center border-b border-slate-200">
-          <div className="flex flex-wrap justify-center gap-x-2 sm:gap-x-8">
+          <div className="flex justify-center gap-x-2 sm:gap-x-8">
             {auditTabsData.map(tab => (
               <button
                 key={tab.id}
