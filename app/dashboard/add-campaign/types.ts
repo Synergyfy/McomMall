@@ -4,6 +4,7 @@ export interface AdFormData {
   listing: string;
   campaignType: 'ppv' | 'ppc';
   startDate: Date | undefined;
+  endDate: Date | undefined;
   budget: number | string;
   category: string;
   region: string;

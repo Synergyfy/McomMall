@@ -15,6 +15,7 @@ export interface CreateCampaignDto {
   businessId: string;
   type: CampaignType;
   startDate: Date;
+  endDate?: Date;
   budget: number;
   displayOnlyIfCategory?: string;
   displayOnlyIfRegion?: string;

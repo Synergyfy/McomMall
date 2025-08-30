@@ -37,7 +37,7 @@ import {
   HelpCircle,
 } from 'lucide-react';
 import { format } from 'date-fns';
-import React from 'react';
+import React, { useState } from 'react';
 
 interface GeneralAdSettingsProps {
   formData: AdFormData;
@@ -133,6 +133,89 @@ const SearchableSelect = ({
   </Popover>
 );
 
+const DateTimePicker = ({
+  selected,
+  onSelect,
+}: {
+  selected: Date | undefined;
+  onSelect: (date: Date | undefined) => void;
+}) => {
+  const [date, setDate] = useState<Date | undefined>(selected);
+  const [time, setTime] = useState(
+    selected ? format(selected, 'HH:mm') : ''
+  );
+
+  const handleDateChange = (newDate: Date | undefined) => {
+    if (!newDate) {
+      setDate(undefined);
+      onSelect(undefined);
+      return;
+    }
+    const [h, m] = time.split(':').map(Number);
+    newDate.setHours(h || 0);
+    newDate.setMinutes(m || 0);
+    setDate(newDate);
+    onSelect(newDate);
+  };
+
+  const handleTimeChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setTime(e.target.value);
+    if (!date) {
+      // If no date is set, create a new one for today
+      const newDate = new Date();
+      const [h, m] = e.target.value.split(':').map(Number);
+      newDate.setHours(h || 0);
+      newDate.setMinutes(m || 0);
+      setDate(newDate);
+      onSelect(newDate);
+      return;
+    }
+    const [h, m] = e.target.value.split(':').map(Number);
+    const newDate = new Date(date);
+    newDate.setHours(h || 0);
+    newDate.setMinutes(m || 0);
+    setDate(newDate);
+    onSelect(newDate);
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button
+          variant={'outline'}
+          className={cn(
+            'w-full justify-start text-left font-normal',
+            !selected && 'text-muted-foreground'
+          )}
+        >
+          <CalendarIcon className="mr-2 h-4 w-4" />
+          {selected ? (
+            format(selected, 'PPP p')
+          ) : (
+            <span>YYYY-MM-DD HH:mm</span>
+          )}
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-0">
+        <Calendar
+          mode="single"
+          selected={date}
+          onSelect={handleDateChange}
+          initialFocus
+        />
+        <div className="p-2 border-t border-border">
+          <Input
+            type="time"
+            value={time}
+            onChange={handleTimeChange}
+            className="w-full"
+          />
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
+};
+
 export const GeneralAdSettings = ({
   formData,
   setFormData,
@@ -216,38 +299,33 @@ export const GeneralAdSettings = ({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
             Campaign start date{' '}
-            <InfoTooltip message="The date your campaign will go live. Cannot be in the past." />
+            <InfoTooltip message="The date and time your campaign will go live. Cannot be in the past." />
           </label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                variant={'outline'}
-                className={cn(
-                  'w-full justify-start text-left font-normal',
-                  !formData.startDate && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {formData.startDate ? (
-                  format(formData.startDate, 'PPP')
-                ) : (
-                  <span>YYYY-MM-DD</span>
-                )}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={formData.startDate}
-                onSelect={date =>
-                  setFormData(prev => ({ ...prev, startDate: date }))
-                }
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
+          <DateTimePicker
+            selected={formData.startDate}
+            onSelect={date =>
+              setFormData(prev => ({ ...prev, startDate: date }))
+            }
+          />
           {errors.startDate && (
             <p className="text-red-500 text-xs mt-1">{errors.startDate}</p>
+          )}
+        </div>
+
+        {/* Campaign End Date */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+            Campaign end date{' '}
+            <InfoTooltip message="The date and time your campaign will end. Must be after the start date." />
+          </label>
+          <DateTimePicker
+            selected={formData.endDate}
+            onSelect={date =>
+              setFormData(prev => ({ ...prev, endDate: date }))
+            }
+          />
+          {errors.endDate && (
+            <p className="text-red-500 text-xs mt-1">{errors.endDate}</p>
           )}
         </div>
 
