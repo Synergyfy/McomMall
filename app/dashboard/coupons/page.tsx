@@ -15,14 +15,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-} from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
-import EditCouponForm from './components/EditCouponForm';
 
 // --- Reusable UI Components ---
 
@@ -104,8 +97,6 @@ export default function CouponsPage() {
   const deleteCoupon = useDeleteCoupon();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
-  const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null);
 
   const handleDeleteClick = (couponId: string) => {
     setSelectedCouponId(couponId);
@@ -121,13 +112,7 @@ export default function CouponsPage() {
   };
 
   const handleEditClick = (coupon: Coupon) => {
-    setEditingCoupon(coupon);
-    setIsEditDialogOpen(true);
-  };
-
-  const handleEditSuccess = () => {
-    setIsEditDialogOpen(false);
-    setEditingCoupon(null);
+    router.push(`/dashboard/coupons/edit/${coupon.id}`);
   };
 
   const containerVariants = {
@@ -233,19 +218,6 @@ export default function CouponsPage() {
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
-      <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-4xl">
-          <DialogHeader>
-            <DialogTitle>Edit Coupon</DialogTitle>
-          </DialogHeader>
-          {editingCoupon && (
-            <EditCouponForm
-              coupon={editingCoupon}
-              onSuccess={handleEditSuccess}
-            />
-          )}
-        </DialogContent>
-      </Dialog>
     </div>
   );
 }
