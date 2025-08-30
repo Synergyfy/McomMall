@@ -149,7 +149,7 @@ export default function EditCouponForm({
           couponDescription: formData.couponDescription,
           discountType: formData.discountType as 'percentage' | 'fixed',
           couponAmount: parseFloat(formData.couponAmount),
-          expiryDate: new Date(formData.expiryDate),
+          expiryDate: new Date(formData.expiryDate).toISOString(),
           minSpend: formData.minSpend
             ? parseFloat(formData.minSpend)
             : undefined,
