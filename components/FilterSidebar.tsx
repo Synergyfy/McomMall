@@ -5,19 +5,14 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { Slider } from '@/components/ui/slider';
 import { MapPin, Search, X } from 'lucide-react';
+import CategoryFilterSidebar from './CategoryFilterSidebar';
 
 export type FilterState = {
   searchTerm: string;
   category: string;
+  subCategories: string[];
   location: string;
   radius: number;
   priceRange: [number, number];
@@ -33,7 +28,8 @@ export default function FilterSidebar({
   onClose,
 }: FilterSidebarProps) {
   const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('all');
+  const [category, setCategory] = useState('');
+  const [subCategories, setSubCategories] = useState<string[]>([]);
   const [location, setLocation] = useState('');
   const [radius, setRadius] = useState([50]);
   const [priceRange, setPriceRange] = useState([20, 500]);
@@ -46,6 +42,7 @@ export default function FilterSidebar({
     onFilterChange({
       searchTerm: query,
       category,
+      subCategories,
       location,
       radius: radius[0],
       priceRange: [priceRange[0] ?? 0, priceRange[1] ?? 0] as [number, number],
@@ -88,25 +85,10 @@ export default function FilterSidebar({
           </div>
 
           {/* Category */}
-          <div>
-            <Label
-              htmlFor="category"
-              className="text-sm font-medium text-gray-600"
-            >
-              All Categories
-            </Label>
-            <Select value={category} onValueChange={setCategory}>
-              <SelectTrigger id="category" className="mt-2 focus:ring-red-500">
-                <SelectValue placeholder="Select a category" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Categories</SelectItem>
-                <SelectItem value="apartments">Apartments</SelectItem>
-                <SelectItem value="cars">Cars</SelectItem>
-                <SelectItem value="services">Services</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
+          <CategoryFilterSidebar
+            onCategoryChange={setCategory}
+            onSubCategoryChange={setSubCategories}
+          />
 
           {/* Location */}
           <div>
