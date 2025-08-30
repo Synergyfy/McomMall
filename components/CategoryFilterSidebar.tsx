@@ -28,9 +28,10 @@ export default function CategoryFilterSidebar({
   );
 
   const handleCategoryChange = (category: string) => {
-    setSelectedCategory(category);
+    const newCategory = category === 'all' ? '' : category;
+    setSelectedCategory(newCategory);
     setSelectedSubCategories([]);
-    onCategoryChange(category);
+    onCategoryChange(newCategory);
     onSubCategoryChange([]);
   };
 
@@ -57,7 +58,7 @@ export default function CategoryFilterSidebar({
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="">All Categories</SelectItem>
+            <SelectItem value="all">All Categories</SelectItem>
             {businessCategories.map(cat => (
               <SelectItem key={cat.name} value={cat.name}>
                 {cat.name}
