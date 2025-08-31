@@ -17,9 +17,6 @@ import { useRouter } from 'next/navigation';
 import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
 import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
 import { LoyaltyProgramSection } from '../homepage/components/LoyaltyProgramSection';
-import { StockAuditSection } from '../homepage/components/StockAuditSection';
-import { McomVCardEGiftCardsSection } from '../homepage/components/McomVCardEGiftCardsSection';
-import { McomVouchersCouponsSection } from '../homepage/components/McomVouchersCouponsSection';
 import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
 import { PopularCategoriesSection } from '../homepage/components/PopularCategoriesSection';
 import Winter from '@/public/homepage/WinterSale.png';
@@ -31,6 +28,10 @@ import { McomEgiftCard } from '../homepage/components/McomEgiftCard';
 import VirtualCardCarousel from '../homepage/components/VirtualCardCarousel';
 import HowItWorks from '../homepage/components/HowItWorks';
 import { AuditSection } from '../homepage/components/AuditSection';
+import VCardFeaturesSection from '../homepage/components/VCardFeatures';
+import { BusinessTrustSection } from '../homepage/components/BusinessTrustSection';
+import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
+import McomSolutions from '../homepage/components/McomSolutions';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -414,13 +415,15 @@ export default function HomePage() {
         <McomFeatureSection />
         <SeasonalMarketingSection />
         <AuditSection />
-        {/* <BusinessTrustSection /> */}
+        <BusinessTrustSection />
         <LoyaltyProgramSection />
-        <StockAuditSection />
+        {/* <StockAuditSection /> */}
         <McomEgiftCard />
         <VirtualCardCarousel />
-        {/* <McomVCardEGiftCardsSection /> */}
-        <McomVouchersCouponsSection />
+        <VCardFeaturesSection />
+        <McomVouchersCoupons />
+        <McomSolutions />
+
         <McomMallBrandsSection />
         {/* NEW SECTION ENDS */}
       </main>
