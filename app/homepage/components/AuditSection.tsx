@@ -5,6 +5,8 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BarChart, PackageCheck, Wrench } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
 
 // --- Data for each audit tab (Adjusted for Light Theme) ---
 const auditTabsData = [
@@ -64,92 +66,12 @@ const VideoPlayer = ({ videoId }: { videoId: string }) => (
   </div>
 );
 
-// --- Audit Calculator Component (Light Theme) ---
-const AuditCalculator = () => {
-  const [cost, setCost] = useState(5000);
-  const [inefficiency, setInefficiency] = useState(15);
-  const [potentialSavings, setPotentialSavings] = useState(0);
-
-  const calculateSavings = (e: React.FormEvent) => {
-    e.preventDefault();
-    const savings = (cost * inefficiency) / 100;
-    setPotentialSavings(savings);
-  };
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, scale: 0.95 }}
-      animate={{ opacity: 1, scale: 1 }}
-      transition={{ delay: 0.4, duration: 0.5 }}
-      className="mt-12 rounded-xl border border-slate-200 bg-slate-50 p-8"
-    >
-      <h4 className="text-center text-2xl font-bold text-slate-800">
-        Estimate Your Potential Savings
-      </h4>
-      <form
-        onSubmit={calculateSavings}
-        className="mt-6 grid grid-cols-1 items-end gap-6 sm:grid-cols-3"
-      >
-        <div>
-          <label
-            htmlFor="monthly-cost"
-            className="block text-sm font-medium text-slate-600"
-          >
-            Monthly Operational Cost ($)
-          </label>
-          <input
-            type="number"
-            id="monthly-cost"
-            value={cost}
-            onChange={e => setCost(Number(e.target.value))}
-            className="mt-2 block w-full rounded-md border-slate-300 bg-white p-3 text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500"
-          />
-        </div>
-        <div>
-          <label
-            htmlFor="inefficiency"
-            className="block text-sm font-medium text-slate-600"
-          >
-            Estimated Inefficiency (%)
-          </label>
-          <input
-            type="number"
-            id="inefficiency"
-            value={inefficiency}
-            onChange={e => setInefficiency(Number(e.target.value))}
-            className="mt-2 block w-full rounded-md border-slate-300 bg-white p-3 text-slate-900 shadow-sm focus:border-cyan-500 focus:ring-cyan-500"
-          />
-        </div>
-        <button
-          type="submit"
-          className="rounded-md bg-slate-800 px-6 py-3 text-base font-semibold text-white shadow-sm transition-colors hover:bg-slate-700"
-        >
-          Calculate
-        </button>
-      </form>
-      {potentialSavings > 0 && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mt-6 rounded-lg bg-white p-4 text-center"
-        >
-          <p className="text-lg text-slate-600">
-            You could be saving up to
-            <span className="mx-2 text-2xl font-bold text-cyan-600">
-              ${potentialSavings.toLocaleString()}
-            </span>
-            per month!
-          </p>
-        </motion.div>
-      )}
-    </motion.div>
-  );
-};
-
 // --- Main Section Component (Light Theme) ---
 export function AuditSection() {
   const [activeTab, setActiveTab] = useState(auditTabsData[0].id);
   const activeTabData = auditTabsData.find(tab => tab.id === activeTab);
+
+  const router = useRouter();
 
   return (
     <div className="bg-white py-20 sm:py-24">
@@ -233,8 +155,12 @@ export function AuditSection() {
           </AnimatePresence>
         </div>
 
-        {/* Audit Calculator */}
-        <AuditCalculator />
+        <Button
+          className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-6 py-7 text-lg md:text-2xl mt-16 mx-auto flex items-center gap-2 "
+          onClick={() => router.push('/audit-calculator')}
+        >
+          Try our audit calculator
+        </Button>
       </div>
     </div>
   );

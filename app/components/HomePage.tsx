@@ -16,7 +16,6 @@ import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
 import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
-import { LoyaltyProgramSection } from '../homepage/components/LoyaltyProgramSection';
 import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
 import { PopularCategoriesSection } from '../homepage/components/PopularCategoriesSection';
 import Winter from '@/public/homepage/WinterSale.png';
@@ -32,6 +31,7 @@ import VCardFeaturesSection from '../homepage/components/VCardFeatures';
 import { BusinessTrustSection } from '../homepage/components/BusinessTrustSection';
 import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
 import McomSolutions from '../homepage/components/McomSolutions';
+import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
