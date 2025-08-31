@@ -15,6 +15,7 @@ import {
   Settings,
   LucideIcon,
   UserPen,
+  Heart,
   LogOut,
   Megaphone,
 } from 'lucide-react';
@@ -83,14 +84,12 @@ export const storeMenuItems: MenuItem[] = [
     href: '/dashboard/store/withdraw',
     icon: BanknoteArrowDown,
   },
+  { title: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
     title: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
-    subMenu: [
-      { title: 'Store', href: '/dashboard/settings' },
-      { title: 'Payment', href: '/dashboard/settings/payment' },
-    ],
+    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
   },
 ];
 
