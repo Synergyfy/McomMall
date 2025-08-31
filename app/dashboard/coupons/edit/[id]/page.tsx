@@ -1,21 +1,24 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useEffect } from 'react';
+import { useParams, useRouter } from 'next/navigation';
 import {
   FileText,
   Tag,
-  ChevronRight,
   HelpCircle,
-  UploadCloud,
   ArrowRight,
-  X,
   CheckCircle,
   ChevronsUpDown,
   Check,
+  ChevronRight,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAddCoupon } from '@/service/coupons/hook';
+import {
+  useGetCoupon,
+  useEditCoupon,
+} from '@/service/coupons/hook';
+import { UpdateCouponDto } from '@/service/coupons/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -36,7 +39,6 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useRouter } from 'next/navigation';
 import { useGetUserListings } from '@/service/listings/hook';
 import { InHouseBusiness } from '@/service/listings/types';
 import {
@@ -53,22 +55,19 @@ import {
 } from '@/components/ui/popover';
 import { cn } from '@/lib/utils';
 
-// --- Main Coupon Form Component ---
-
 interface FormData {
   couponCode: string;
   couponDescription: string;
-  widgetBackground: File | null;
   discountType: 'percentage' | 'fixed' | '';
   couponAmount: string;
   expiryDate: string;
   minSpend: string;
   maxSpend: string;
-  businessIds: string[];
   individualUseOnly: boolean;
   allowedEmails: string;
   usageLimitPerCoupon: string;
   usageLimitPerUser: string;
+  businessIds: string[];
 }
 
 interface FormErrors {
@@ -78,81 +77,57 @@ interface FormErrors {
   expiryDate?: string;
 }
 
-export default function CouponForm() {
+function EditCouponPage() {
   const router = useRouter();
-  const createCoupon = useAddCoupon();
+  const params = useParams();
+  const id = params.id as string;
+
+  const { coupon, isLoading: isLoadingCoupon } = useGetCoupon(id);
   const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
+  const editCoupon = useEditCoupon();
+
+  const [formData, setFormData] = useState<FormData | null>(null);
+  const [errors, setErrors] = useState<FormErrors>({});
   const [isSuccess, setIsSuccess] = useState(false);
   const [open, setOpen] = React.useState(false);
 
-  const [formData, setFormData] = useState<FormData>({
-    couponCode: '',
-    couponDescription: '',
-    widgetBackground: null,
-    discountType: '',
-    couponAmount: '0',
-    expiryDate: '',
-    minSpend: '',
-    maxSpend: '',
-    businessIds: [],
-    individualUseOnly: false,
-    allowedEmails: '',
-    usageLimitPerCoupon: '',
-    usageLimitPerUser: '',
-  });
-
-  const [errors, setErrors] = useState<FormErrors>({});
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (coupon) {
+      setFormData({
+        couponCode: coupon.couponCode,
+        couponDescription: coupon.couponDescription || '',
+        discountType: coupon.discountType,
+        couponAmount: coupon.couponAmount.toString(),
+        expiryDate: new Date(coupon.expiryDate).toISOString().split('T')[0],
+        minSpend: coupon.minSpend?.toString() || '',
+        maxSpend: coupon.maxSpend?.toString() || '',
+        individualUseOnly: coupon.individualUseOnly,
+        allowedEmails: coupon.allowedEmails || '',
+        usageLimitPerCoupon: coupon.usageLimitPerCoupon?.toString() || '',
+        usageLimitPerUser: coupon.usageLimitPerUser?.toString() || '',
+        businessIds: coupon.businesses?.map(b => b.id) || [],
+      });
+    }
+  }, [coupon]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => (prev ? { ...prev, [name]: value } : null));
   };
 
   const handleSelectChange = (name: keyof FormData, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(prev => (prev ? { ...prev, [name]: value } : null));
   };
 
   const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => ({ ...prev, individualUseOnly: checked }));
-  };
-
-  const handleFileChange = (file: File | null) => {
-    if (file) {
-      // You can add validation for file type and size here if needed
-      setFormData(prev => ({ ...prev, widgetBackground: file }));
-    }
-  };
-
-  const handleUploadAreaClick = () => {
-    fileInputRef.current?.click();
-  };
-
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-  };
-
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
-    e.preventDefault();
-    e.stopPropagation();
-    const { files } = e.dataTransfer;
-    if (files && files.length > 0) {
-      handleFileChange(files[0]);
-    }
-  };
-
-  const handleRemoveImage = () => {
-    setFormData(prev => ({ ...prev, widgetBackground: null }));
-    if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset the file input so the same file can be re-added
-    }
+    setFormData(prev => (prev ? { ...prev, individualUseOnly: checked } : null));
   };
 
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
+    if (!formData) return {};
     if (!formData.couponCode.trim()) {
       newErrors.couponCode = 'Coupon code is required.';
     }
@@ -164,64 +139,65 @@ export default function CouponForm() {
     }
     if (!formData.expiryDate) {
       newErrors.expiryDate = 'Expiry date is required.';
-    } else if (new Date(formData.expiryDate) <= new Date()) {
-      newErrors.expiryDate = 'Expiry date must be in the future.';
     }
     return newErrors;
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (!formData) return;
+
     const validationErrors = validateForm();
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
       try {
-        await createCoupon({
+        const couponData: UpdateCouponDto = {
           couponCode: formData.couponCode,
           couponDescription: formData.couponDescription,
           discountType: formData.discountType as 'percentage' | 'fixed',
           couponAmount: parseFloat(formData.couponAmount),
           expiryDate: new Date(formData.expiryDate).getTime(),
-          minSpend: formData.minSpend
-            ? parseFloat(formData.minSpend)
-            : undefined,
-          maxSpend: formData.maxSpend
-            ? parseFloat(formData.maxSpend)
-            : undefined,
+          minSpend: formData.minSpend ? parseFloat(formData.minSpend) : undefined,
+          maxSpend: formData.maxSpend ? parseFloat(formData.maxSpend) : undefined,
           individualUseOnly: formData.individualUseOnly,
           allowedEmails: formData.allowedEmails,
-          usageLimitPerCoupon: formData.usageLimitPerCoupon
-            ? parseInt(formData.usageLimitPerCoupon)
-            : undefined,
-          usageLimitPerUser: formData.usageLimitPerUser
-            ? parseInt(formData.usageLimitPerUser)
-            : undefined,
+          usageLimitPerCoupon: formData.usageLimitPerCoupon ? parseInt(formData.usageLimitPerCoupon) : undefined,
+          usageLimitPerUser: formData.usageLimitPerUser ? parseInt(formData.usageLimitPerUser) : undefined,
           businessIds: formData.businessIds,
-        });
+        };
+        await editCoupon(id, couponData);
         setIsSuccess(true);
       } catch (error) {
-        console.error('Failed to create coupon:', error);
-        // Handle error state in UI, e.g., show a toast notification
+        console.error('Failed to update coupon:', error);
       }
     } else {
       console.log('Form has validation errors:', validationErrors);
     }
   };
 
+  if (isLoadingCoupon) {
+    return <div>Loading coupon data...</div>;
+  }
+
+  if (!formData) {
+    return <div>Coupon not found or data could not be loaded.</div>;
+  }
+
   return (
     <div className="bg-gray-50/50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
-        {/* Header */}
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between">
             <h1 className="text-4xl font-bold text-gray-800 mb-2 sm:mb-0">
-              Coupons
+              Edit Coupon
             </h1>
             <div className="text-base text-gray-500 flex items-center space-x-1">
               <span>Home</span>
               <ChevronRight className="h-4 w-4" />
               <span className="text-gray-700">Dashboard</span>
+              <ChevronRight className="h-4 w-4" />
+              <span className="text-gray-700">Coupons</span>
             </div>
           </div>
         </header>
@@ -259,56 +235,6 @@ export default function CouponForm() {
                   value={formData.couponDescription}
                   onChange={handleInputChange}
                 />
-              </div>
-              <div className="grid gap-2">
-                <Label>Upload Widget Background</Label>
-                <input
-                  type="file"
-                  ref={fileInputRef}
-                  onChange={e =>
-                    handleFileChange(e.target.files ? e.target.files[0] : null)
-                  }
-                  className="hidden"
-                  accept="image/png, image/jpeg, image/gif"
-                />
-                {formData.widgetBackground ? (
-                  <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 flex items-center justify-between">
-                    <div className="flex items-center gap-3 overflow-hidden">
-                      <img
-                        src={URL.createObjectURL(formData.widgetBackground)}
-                        alt="Preview"
-                        className="h-16 w-16 object-cover rounded-md flex-shrink-0"
-                      />
-                      <span className="text-base text-gray-700 truncate">
-                        {formData.widgetBackground.name}
-                      </span>
-                    </div>
-                    <Button
-                      type="button"
-                      variant="ghost"
-                      size="icon"
-                      onClick={handleRemoveImage}
-                      className="flex-shrink-0"
-                    >
-                      <X className="h-5 w-5" />
-                    </Button>
-                  </div>
-                ) : (
-                  <div
-                    className="border-2 border-dashed border-gray-300 rounded-lg p-10 flex flex-col items-center justify-center text-center text-gray-500 hover:border-gray-400 transition-colors cursor-pointer"
-                    onClick={handleUploadAreaClick}
-                    onDragOver={handleDragOver}
-                    onDrop={handleDrop}
-                  >
-                    <UploadCloud className="h-12 w-12 mb-3 text-gray-400" />
-                    <span className="text-base">
-                      Drag & drop or click to upload
-                    </span>
-                    <span className="text-sm mt-1">
-                      PNG, JPG, GIF up to 10MB
-                    </span>
-                  </div>
-                )}
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="grid gap-2">
@@ -380,7 +306,7 @@ export default function CouponForm() {
               </h2>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="minSpend">Minimum spend</Label>
                   <Input
@@ -403,7 +329,7 @@ export default function CouponForm() {
                 </div>
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                <div className="grid gap-2">
+                 <div className="grid gap-2">
                   <Label htmlFor="products" className="flex items-center">
                     For products{' '}
                     <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
@@ -430,7 +356,7 @@ export default function CouponForm() {
                           {isLoadingListings ? (
                             <CommandItem>Loading...</CommandItem>
                           ) : (
-                          listings?.map((listing: InHouseBusiness) => (
+                            listings?.map((listing: InHouseBusiness) => (
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {
@@ -452,7 +378,7 @@ export default function CouponForm() {
                                       : 'opacity-0'
                                   )}
                                 />
-                              {listing.businessName}
+                                {listing.businessName}
                               </CommandItem>
                             ))
                           )}
@@ -531,13 +457,12 @@ export default function CouponForm() {
             </CardContent>
           </Card>
 
-          {/* Submit Button */}
           <div className="flex justify-end">
             <Button
               type="submit"
               className="bg-orange-600 text-white hover:bg-orange-700 px-8 py-3 w-full sm:w-auto text-lg"
             >
-              Submit Coupon <ArrowRight className="h-5 w-5 ml-2" />
+              Save Changes <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </div>
         </form>
@@ -558,15 +483,15 @@ export default function CouponForm() {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </motion.div>
             <DialogTitle className="text-center">
-              Coupon Created!
+              Coupon Updated!
             </DialogTitle>
             <DialogDescription className="text-center">
-              Your new coupon has been created successfully.
+              The coupon has been updated successfully.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-center">
             <Button onClick={() => router.push('/dashboard/coupons')}>
-              Go to Coupons Page
+              Go to Coupons
             </Button>
           </div>
         </DialogContent>
@@ -574,3 +499,5 @@ export default function CouponForm() {
     </div>
   );
 }
+
+export default EditCouponPage;
