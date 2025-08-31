@@ -137,7 +137,7 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Dashboard', href: '/dashboard/gift-card' },
       { title: 'Admin', href: '/dashboard/gift-card/admin' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
-      { title: 'Offers', href: '/dashboard/loyalty/offers' },
+      { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
       { title: 'Settings', href: '/dashboard/gift-card/settings' },
     ],
   },
