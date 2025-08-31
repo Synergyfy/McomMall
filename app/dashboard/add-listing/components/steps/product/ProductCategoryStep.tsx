@@ -8,16 +8,6 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Command,
-  CommandInput,
-  CommandItem,
-  CommandList,
-} from '@/components/ui/command';
-import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
-import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { Button } from '@/components/ui/button';
 import { z } from 'zod';
 import { businessCategories } from '@/lib/business-categories';
 
@@ -49,7 +39,6 @@ const ProductCategoryStep: React.FC<StepProps> = ({
   const [selectedSubCategory, setSelectedSubCategory] = useState(formData.productData?.subCategory || '');
 
   const productData = formData.productData || {};
-  const selectedItems = productData.subCategories || [];
 
   const handlePrimaryCategoryChange = (value: string) => {
     setFormData(prev => ({
@@ -71,31 +60,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
       productData: {
         ...prev.productData,
         subCategory: value,
-        subCategories: [], // Reset items
-      },
-    }));
-  };
-
-  const handleItemSelect = (item: string) => {
-    if (selectedItems.length < 5 && !selectedItems.includes(item)) {
-      const newItems = [...selectedItems, item];
-      setFormData(prev => ({
-        ...prev,
-        productData: {
-          ...prev.productData,
-          subCategories: newItems,
-        },
-      }));
-    }
-  };
-
-  const handleItemRemove = (item: string) => {
-    const newItems = selectedItems.filter(s => s !== item);
-    setFormData(prev => ({
-      ...prev,
-      productData: {
-        ...prev.productData,
-        subCategories: newItems,
+        subCategories: [], // Reset items, as they are no longer used
       },
     }));
   };
@@ -105,12 +70,6 @@ const ProductCategoryStep: React.FC<StepProps> = ({
     const category = businessCategories.find(c => c.name === productData.primaryCategory);
     return category ? category.subCategories : [];
   }, [productData.primaryCategory]);
-
-  const availableItems = useMemo(() => {
-    if (!selectedSubCategory) return [];
-    const subCategory = availableSubCategories.find(s => s.name === selectedSubCategory);
-    return subCategory ? subCategory.items || [] : [];
-  }, [selectedSubCategory, availableSubCategories]);
 
   return (
     <div className="space-y-6">
@@ -166,71 +125,11 @@ const ProductCategoryStep: React.FC<StepProps> = ({
         </Select>
       </div>
 
-      <div>
-        <Label>
-          Services / Specialisms
-          <span className="text-muted-foreground font-normal text-sm">
-            {' '}
-            (optional, up to 5)
-          </span>
-        </Label>
-        <Popover>
-          <PopoverTrigger asChild>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal"
-              disabled={!selectedSubCategory || availableItems.length === 0}
-            >
-              Select services or specialisms...
-            </Button>
-          </PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-            <Command>
-              <CommandInput placeholder="Search..." />
-              <CommandList>
-                {availableItems.map(item => (
-                  <CommandItem
-                    key={item}
-                    onSelect={() => handleItemSelect(item)}
-                    disabled={selectedItems.includes(item)}
-                    className="cursor-pointer"
-                  >
-                    {item}
-                  </CommandItem>
-                ))}
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
-        <div className="mt-2 flex flex-wrap gap-2">
-          {selectedItems.map(item => (
-            <Badge key={item} variant="secondary">
-              {item}
-              <button
-                onClick={() => handleItemRemove(item)}
-                className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-              >
-                <X className="h-3 w-3 text-muted-foreground hover:text-foreground" />
-              </button>
-            </Badge>
-          ))}
-        </div>
         {!productData.primaryCategory && (
           <p className="text-xs text-muted-foreground mt-1">
             Please select a sector to see available sub-sections.
           </p>
         )}
-        {productData.primaryCategory && !selectedSubCategory && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Please select a sub-section to see available specialisms.
-          </p>
-        )}
-        {selectedSubCategory && availableItems.length === 0 && (
-            <p className="text-xs text-muted-foreground mt-1">
-                No specialisms available for this sub-section.
-            </p>
-        )}
-      </div>
     </div>
   );
 };

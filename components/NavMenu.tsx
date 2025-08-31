@@ -36,102 +36,27 @@ const ListItem = ({
 
 // --- Business Category Menu Component ---
 const BusinessCategoryMenu = () => {
-  const [activeCategory, setActiveCategory] = useState<string | null>(null);
-  const [activeSubCategory, setActiveSubCategory] = useState<string | null>(
-    null
-  );
-
-  const handleCategoryHover = (category: string) => {
-    setActiveCategory(category);
-    setActiveSubCategory(null); // Reset sub-category when main category changes
-  };
-
-  const currentCategory = businessCategories.find(
-    c => c.name === activeCategory
-  );
-  const currentSubCategory = currentCategory?.subCategories.find(
-    sc => sc.name === activeSubCategory
-  );
-
   return (
-    <div className="flex" onMouseLeave={() => setActiveCategory(null)}>
-      {/* Panel 1: Main Categories */}
-      <div className="w-64 border-r border-gray-200 p-4">
-        <ul className="space-y-2">
-          {businessCategories.map(category => (
-            <li key={category.name}>
-              <button
-                className="flex w-full items-center justify-between rounded-md p-2 text-left font-semibold text-gray-800 hover:bg-gray-100"
-                onMouseEnter={() => handleCategoryHover(category.name)}
-              >
-                <span>{category.name}</span>
-                <ChevronDown className="h-4 w-4 -rotate-90" />
-              </button>
-            </li>
-          ))}
-        </ul>
-      </div>
-
-      {/* Panel 2: Sub-categories */}
-      <AnimatePresence>
-        {currentCategory && (
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="w-64 border-r border-gray-200 p-4"
-          >
-            <h3 className="mb-4 text-lg font-bold text-gray-900">
-              {currentCategory.name}
-            </h3>
-            <ul className="space-y-2">
-              {currentCategory.subCategories.map(subCategory => (
-                <li key={subCategory.name}>
-                  <button
-                    className="flex w-full items-center justify-between rounded-md p-2 text-left font-semibold text-gray-800 hover:bg-gray-100"
-                    onMouseEnter={() => setActiveSubCategory(subCategory.name)}
-                  >
-                    <span>{subCategory.name}</span>
-                    {subCategory.items.length > 0 && (
-                      <ChevronDown className="h-4 w-4 -rotate-90" />
-                    )}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
-
-      {/* Panel 3: Items */}
-      <AnimatePresence>
-        {currentSubCategory && currentSubCategory.items.length > 0 && (
-          <motion.div
-            initial={{ opacity: 0, x: -10 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -10 }}
-            className="w-64 p-4"
-          >
-            <h3 className="mb-4 text-lg font-bold text-gray-900">
-              {currentSubCategory.name}
-            </h3>
-            <ul className="space-y-2">
-              {currentSubCategory.items.map(item => (
-                <li key={item}>
-                  <Link
-                    href={`/categories/${item
-                      .toLowerCase()
-                      .replace(/ /g, '-')}`}
-                    className="block rounded-md p-2 text-sm text-gray-500 hover:bg-gray-100 hover:text-gray-900"
-                  >
-                    {item}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </motion.div>
-        )}
-      </AnimatePresence>
+    <div className="grid w-[calc(100vw-20rem)] max-w-7xl grid-cols-6 gap-x-4 gap-y-6 p-6">
+      {businessCategories.map(category => (
+        <div key={category.name} className="space-y-3">
+          <h3 className="font-bold text-gray-900">{category.name}</h3>
+          <ul className="space-y-2">
+            {category.subCategories.map(subCategory => (
+              <li key={subCategory.name}>
+                <Link
+                  href={`/categories/${subCategory.name
+                    .toLowerCase()
+                    .replace(/ /g, '-')}`}
+                  className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
+                >
+                  {subCategory.name}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </div>
+      ))}
     </div>
   );
 };
@@ -348,7 +273,7 @@ export function NavMenu() {
                 className={`absolute top-full z-20 mt-2 rounded-lg bg-white text-gray-900 shadow-lg
                   ${
                     item.title === 'Business Category'
-                      ? 'left-1/2 -translate-x-1/2'
+                      ? 'left-1/2 w-screen max-w-7xl -translate-x-1/2'
                       : index === menuItems.length - 1
                       ? 'right-0'
                       : 'left-0'
