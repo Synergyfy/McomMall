@@ -1,5 +1,3 @@
-// components/promotions-manager.tsx
-
 'use client';
 
 import * as React from 'react';
@@ -54,6 +52,12 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 // TypeScript Types
 type PromotionStatus = 'Active' | 'Inactive';
@@ -69,7 +73,12 @@ export type Promotion = {
   endDate: string | null;
   multiplier?: number;
   bonusPoints?: number;
-  // Add other form fields as needed for a complete model
+  products?: string;
+  excludeProducts?: string;
+  categories?: string;
+  excludeCategories?: string;
+  limitPerCustomer?: number;
+  minimumSpend?: number;
 };
 
 // Mock Data
@@ -137,9 +146,13 @@ const defaultFormState = {
   endDate: '',
   promotionType: 'Multiplier' as PromotionType,
   multiplier: 2,
-  bonusPoints: 0,
+  bonusPoints: 500,
   products: '',
+  excludeProducts: '',
   categories: 'Bookings',
+  excludeCategories: '',
+  limitPerCustomer: 1,
+  minimumSpend: 0,
 };
 
 // Main Component
@@ -177,6 +190,12 @@ export function PromotionsManager() {
         formState.promotionType === 'Bonus points'
           ? formState.bonusPoints
           : undefined,
+      products: formState.products,
+      excludeProducts: formState.excludeProducts,
+      categories: formState.categories,
+      excludeCategories: formState.excludeCategories,
+      limitPerCustomer: formState.limitPerCustomer,
+      minimumSpend: formState.minimumSpend,
     };
 
     setPromotions(prev => [newPromotion, ...prev]);
@@ -370,7 +389,7 @@ export function PromotionsManager() {
                     <Label htmlFor="beginDate">Begin date (YYYY-MM-DD)</Label>
                     <Input
                       id="beginDate"
-                      type="date"
+                      type="datetime-local"
                       value={formState.beginDate}
                       onChange={e =>
                         handleFormChange('beginDate', e.target.value)
@@ -381,7 +400,7 @@ export function PromotionsManager() {
                     <Label htmlFor="endDate">End date (YYYY-MM-DD)</Label>
                     <Input
                       id="endDate"
-                      type="date"
+                      type="datetime-local"
                       value={formState.endDate}
                       onChange={e =>
                         handleFormChange('endDate', e.target.value)
@@ -400,7 +419,7 @@ export function PromotionsManager() {
                     onValueChange={(value: PromotionType) =>
                       handleFormChange('promotionType', value)
                     }
-                    className="mt-2 grid grid-cols-2 gap-4"
+                    className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4"
                   >
                     <div>
                       <RadioGroupItem
@@ -438,52 +457,238 @@ export function PromotionsManager() {
                   </RadioGroup>
                 </div>
 
-                {formState.promotionType === 'Multiplier' && (
-                  <div>
-                    <Label htmlFor="multiplierValue">Multiplier</Label>
-                    <Input
-                      id="multiplierValue"
-                      type="number"
-                      value={formState.multiplier}
-                      onChange={e =>
-                        handleFormChange(
-                          'multiplier',
-                          parseFloat(e.target.value)
-                        )
-                      }
-                    />
-                  </div>
-                )}
-                {formState.promotionType === 'Bonus points' && (
-                  <div>
-                    <Label htmlFor="bonusPointsValue">Bonus Points</Label>
-                    <Input
-                      id="bonusPointsValue"
-                      type="number"
-                      value={formState.bonusPoints}
-                      onChange={e =>
-                        handleFormChange(
-                          'bonusPoints',
-                          parseInt(e.target.value)
-                        )
-                      }
-                    />
-                  </div>
-                )}
+                {/* Conditional Inputs for Promotion Type */}
+                <AnimatePresence>
+                  {formState.promotionType === 'Multiplier' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4">
+                        <Label htmlFor="multiplierValue">Multiplier</Label>
+                        <Input
+                          id="multiplierValue"
+                          type="number"
+                          value={formState.multiplier}
+                          onChange={e =>
+                            handleFormChange(
+                              'multiplier',
+                              parseFloat(e.target.value) || 0
+                            )
+                          }
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                  {formState.promotionType === 'Bonus points' && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: 'auto' }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.3 }}
+                      className="overflow-hidden"
+                    >
+                      <div className="pt-4">
+                        <Label htmlFor="bonusPointsValue">Bonus Points</Label>
+                        <Input
+                          id="bonusPointsValue"
+                          type="number"
+                          value={formState.bonusPoints}
+                          onChange={e =>
+                            handleFormChange(
+                              'bonusPoints',
+                              parseInt(e.target.value) || 0
+                            )
+                          }
+                        />
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
 
-                <div>
-                  <Label htmlFor="categories">Categories</Label>
-                  <Input
-                    id="categories"
-                    value={formState.categories}
-                    onChange={e =>
-                      handleFormChange('categories', e.target.value)
-                    }
-                    placeholder="e.g., Bookings"
-                  />
+                {/* Conditions Section */}
+                <div className="space-y-4 pt-6 border-t">
+                  <h3 className="text-lg font-semibold mb-2">Conditions</h3>
+                  {/* Products */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label htmlFor="products">Products</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Apply promotion to specific products.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="products"
+                      value={formState.products}
+                      onChange={e =>
+                        handleFormChange('products', e.target.value)
+                      }
+                      placeholder="Search for a product..."
+                    />
+                  </div>
+
+                  {/* Exclude Products */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label htmlFor="excludeProducts">Exclude products</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Exclude specific products from this promotion.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="excludeProducts"
+                      value={formState.excludeProducts}
+                      onChange={e =>
+                        handleFormChange('excludeProducts', e.target.value)
+                      }
+                      placeholder="Search for a product..."
+                    />
+                  </div>
+
+                  {/* Categories */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label htmlFor="categories">Categories</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>Apply promotion to specific categories.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="categories"
+                      value={formState.categories}
+                      onChange={e =>
+                        handleFormChange('categories', e.target.value)
+                      }
+                      placeholder="e.g., Bookings"
+                    />
+                  </div>
+
+                  {/* Exclude Categories */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1.5">
+                      <Label htmlFor="excludeCategories">
+                        Exclude categories
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              Exclude specific categories from this promotion.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                    <Input
+                      id="excludeCategories"
+                      value={formState.excludeCategories}
+                      onChange={e =>
+                        handleFormChange('excludeCategories', e.target.value)
+                      }
+                      placeholder="Any category"
+                    />
+                  </div>
+
+                  <div className="grid grid-cols-2 gap-4">
+                    {/* Limit per customer */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label htmlFor="limitPerCustomer">
+                          Limit per customer
+                        </Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                Maximum number of times a single customer can
+                                use this promotion.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        id="limitPerCustomer"
+                        type="number"
+                        min="1"
+                        value={formState.limitPerCustomer}
+                        onChange={e =>
+                          handleFormChange(
+                            'limitPerCustomer',
+                            parseInt(e.target.value) || 1
+                          )
+                        }
+                      />
+                    </div>
+
+                    {/* Minimum spend */}
+                    <div>
+                      <div className="flex items-center justify-between mb-1.5">
+                        <Label htmlFor="minimumSpend">Minimum spend</Label>
+                        <TooltipProvider>
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
+                            </TooltipTrigger>
+                            <TooltipContent>
+                              <p>
+                                The minimum amount a customer must spend to
+                                qualify.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        </TooltipProvider>
+                      </div>
+                      <Input
+                        id="minimumSpend"
+                        type="number"
+                        min="0"
+                        value={formState.minimumSpend}
+                        onChange={e =>
+                          handleFormChange(
+                            'minimumSpend',
+                            parseInt(e.target.value) || 0
+                          )
+                        }
+                      />
+                    </div>
+                  </div>
                 </div>
               </div>
 
+              {/* Right Column: Preview */}
               <div className="md:col-span-1">
                 <div className="sticky top-0 rounded-lg border bg-gray-50 p-6">
                   <div className="flex items-center gap-4">

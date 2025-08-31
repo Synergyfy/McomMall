@@ -120,7 +120,7 @@ export default function PayYourPriceSettings() {
             </Select>
           </SettingRow>
           <SettingRow
-            title="Recommended Price (₹)"
+            title="Recommended Price (£)"
             description="The recommended price prompts users to enter that amount."
           >
             <PriceInput
@@ -132,7 +132,7 @@ export default function PayYourPriceSettings() {
             />
           </SettingRow>
           <SettingRow
-            title="Minimum Price (₹)"
+            title="Minimum Price (£)"
             description="The minimum price prevents products from being sold for less than you are willing to accept."
           >
             <PriceInput
@@ -153,7 +153,7 @@ export default function PayYourPriceSettings() {
             />
           </SettingRow>
           <SettingRow
-            title="Maximum Price (₹)"
+            title="Maximum Price (£)"
             description="The maximum price prevents products from being sold for more than you are willing to accept."
           >
             <PriceInput

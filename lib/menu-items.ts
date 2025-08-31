@@ -15,6 +15,7 @@ import {
   Settings,
   LucideIcon,
   UserPen,
+  Heart,
   LogOut,
   Megaphone,
 } from 'lucide-react';
@@ -83,14 +84,12 @@ export const storeMenuItems: MenuItem[] = [
     href: '/dashboard/store/withdraw',
     icon: BanknoteArrowDown,
   },
+  { title: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
     title: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
-    subMenu: [
-      { title: 'Store', href: '/dashboard/settings' },
-      { title: 'Payment', href: '/dashboard/settings/payment' },
-    ],
+    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
   },
 ];
 
@@ -125,6 +124,7 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Customer view', href: '/dashboard/loyalty/customer' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
       { title: 'Promotion', href: '/dashboard/loyalty/promotion' },
+      { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },
       { title: 'Offers', href: '/dashboard/loyalty/offers' },
       { title: 'Settings', href: '/dashboard/loyalty/settings' },
     ],
@@ -137,7 +137,7 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Dashboard', href: '/dashboard/gift-card' },
       { title: 'Admin', href: '/dashboard/gift-card/admin' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
-      { title: 'Offers', href: '/dashboard/loyalty/offers' },
+      { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
       { title: 'Settings', href: '/dashboard/gift-card/settings' },
     ],
   },
@@ -152,6 +152,7 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Reports', href: '/dashboard/voucher/reports' },
       { title: 'Offers', href: '/dashboard/loyalty/offers' },
       { title: 'Pay your price', href: '/dashboard/voucher/pay-your-price' },
+      { title: 'Vendor', href: '/dashboard/voucher/vendor-settings' },
       { title: 'Settings', href: '/dashboard/voucher/settings' },
       { title: 'Notification', href: '/dashboard/voucher/notification' },
     ],
