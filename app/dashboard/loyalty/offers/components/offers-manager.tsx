@@ -467,7 +467,7 @@ export function OffersManager() {
                       <Label htmlFor="beginDate">Begin date</Label>
                       <Input
                         id="beginDate"
-                        type="date"
+                        type="datetime-local"
                         value={formState.beginDate}
                         onChange={e =>
                           handleFormChange('beginDate', e.target.value)
@@ -478,7 +478,7 @@ export function OffersManager() {
                       <Label htmlFor="endDate">End date</Label>
                       <Input
                         id="endDate"
-                        type="date"
+                        type="datetime-local"
                         value={formState.endDate}
                         onChange={e =>
                           handleFormChange('endDate', e.target.value)

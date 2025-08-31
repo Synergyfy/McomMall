@@ -389,7 +389,7 @@ export function PromotionsManager() {
                     <Label htmlFor="beginDate">Begin date (YYYY-MM-DD)</Label>
                     <Input
                       id="beginDate"
-                      type="date"
+                      type="datetime-local"
                       value={formState.beginDate}
                       onChange={e =>
                         handleFormChange('beginDate', e.target.value)
@@ -400,7 +400,7 @@ export function PromotionsManager() {
                     <Label htmlFor="endDate">End date (YYYY-MM-DD)</Label>
                     <Input
                       id="endDate"
-                      type="date"
+                      type="datetime-local"
                       value={formState.endDate}
                       onChange={e =>
                         handleFormChange('endDate', e.target.value)

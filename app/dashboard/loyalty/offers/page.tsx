@@ -1,5 +1,5 @@
 import React from 'react';
-import { OffersManager } from './components/offers-manager.tsx';
+import { OffersManager } from './components/offers-manager';
 const Offer = () => {
   return (
     <div>
