@@ -123,7 +123,7 @@ export default function StoreDashboard() {
       tempProducts = tempProducts.filter(
         p =>
           p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          p.sku.toLowerCase().includes(searchTerm.toLowerCase())
+           (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 

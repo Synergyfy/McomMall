@@ -23,6 +23,7 @@ function isGoogleResult(
 // You would create more detailed components for each tab
 import { useState } from 'react';
 
+import { useRouter } from 'next/navigation';
 function OverviewSection({
   listing,
 }: {
@@ -30,10 +31,15 @@ function OverviewSection({
 }) {
   const [isCopied, setIsCopied] = useState(false);
   const dispatch = useDispatch();
+  const router = useRouter();
 
   const handleAddToCart = (product: Product) => {
     dispatch(addProduct(product));
     toast.success(`${product.title} has been added to your cart.`);
+  };
+
+  const handleOrderNow = (product: Product) => {
+    router.push(`/checkout?productId=${product.id}`);
   };
   const isGoogle = isGoogleResult(listing);
 
@@ -234,7 +240,10 @@ function OverviewSection({
                 >
                   Add to Cart
                 </Button>
-                <Button className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white">
+                <Button
+                  className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => handleOrderNow(product)}
+                >
                   Order Now
                 </Button>
               </div>

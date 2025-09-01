@@ -305,28 +305,35 @@ export interface ServiceProviderProfile {
 
 export interface Product {
   id: string;
+  bussinessId?: string;
   title: string;
+  category: string;
   productType: string;
   price: number;
+  salePrice?: number;
   shortDescription?: string;
   description: string;
   imageUrl?: string;
   productUrl?: string;
   fileUrls?: string[];
-  downloadLimit: number;
-  downloadExpiry: number;
+  downloadLimit?: number;
+  downloadExpiry?: number;
   sku?: string;
-  enableStockManagement: boolean;
-  weight: number;
-  length: number;
-  width: number;
-  height: number;
+  enableStockManagement?: boolean;
+  stock?: number;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
   productStatus: string;
   visibility: string;
   purchaseNote?: string;
-  enableReviews: boolean;
+  enableReviews?: boolean;
   tags?: string[];
-  category: string;
+  brand?: string;
+  views?: number;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export type CampaignType = string;
