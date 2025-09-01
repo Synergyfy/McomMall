@@ -1,99 +1,16 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Button } from '@/components/ui/button';
-import { loadStripe } from '@stripe/stripe-js';
-import {
-  Elements,
-  CardElement,
-  useStripe,
-  useElements,
-} from '@stripe/react-stripe-js';
-import api from '@/service/api';
-import PayPalButtonWrapper from '@/components/PayPalButtonWrapper';
-import { toast } from 'sonner';
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
+import StripeCheckoutForm from '@/components/StripeCheckoutForm';
+import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
 
 interface PaymentFormProps {
   totalPrice: number;
 }
 
-function StripeForm({ totalPrice }: { totalPrice: number }) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-
-  useEffect(() => {
-    const createPaymentIntent = async () => {
-      try {
-        const { data } = await api.post('/payment/create-payment-intent', {
-          amount: totalPrice * 100, // amount in cents
-          currency: 'gbp',
-        });
-        setClientSecret(data.clientSecret);
-      } catch (error) {
-        console.error('Error creating payment intent', error);
-        toast.error('Could not initialize payment. Please try again.');
-      }
-    };
-    createPaymentIntent();
-  }, [totalPrice]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-
-    if (!stripe || !elements || !clientSecret) {
-      return;
-    }
-
-    const cardElement = elements.getElement(CardElement);
-
-    if (cardElement == null) {
-      return;
-    }
-
-    const { error, paymentIntent } = await stripe.confirmCardPayment(
-      clientSecret,
-      {
-        payment_method: {
-          card: cardElement,
-        },
-      }
-    );
-
-    if (error) {
-      toast.error(error.message);
-    } else if (paymentIntent.status === 'succeeded') {
-      toast.success('Payment successful!');
-      // TODO: Redirect to a success page or show a success message
-    }
-  };
-
-  return (
-    <form onSubmit={handleSubmit}>
-      <CardElement />
-      <Button
-        type="submit"
-        disabled={!stripe || !clientSecret}
-        className="w-full mt-6 bg-orange-600 hover:bg-orange-700 text-white"
-      >
-        Pay Now
-      </Button>
-    </form>
-  );
-}
-
 export default function PaymentForm({ totalPrice }: PaymentFormProps) {
   const [paymentMethod, setPaymentMethod] = useState('stripe');
-
-  const handlePaymentSuccess = () => {
-    toast.success('Payment successful!');
-    // TODO: Redirect to a success page or show a success message
-  };
 
   return (
     <div className="border rounded-lg p-6">
@@ -109,17 +26,12 @@ export default function PaymentForm({ totalPrice }: PaymentFormProps) {
         </TabsList>
         <TabsContent value="stripe">
           <div className="mt-4">
-            <Elements stripe={stripePromise}>
-              <StripeForm totalPrice={totalPrice} />
-            </Elements>
+            <StripeCheckoutForm totalPrice={totalPrice} />
           </div>
         </TabsContent>
         <TabsContent value="paypal">
           <div className="mt-4">
-            <PayPalButtonWrapper
-              paypalAmount={String(totalPrice)}
-              handleSuccess={handlePaymentSuccess}
-            />
+            <PayPalCheckoutButton totalPrice={totalPrice} />
           </div>
         </TabsContent>
       </Tabs>
