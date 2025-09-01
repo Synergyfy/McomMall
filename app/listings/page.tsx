@@ -85,6 +85,24 @@ function ListingsPageContent() {
 
   const [activeFilters, setActiveFilters] =
     useState<FilterState>(initialFilters);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const subcategory = searchParams.get('subcategory');
+
+    if (category || subcategory) {
+      const newFilters: Partial<FilterState> = {};
+      if (category) newFilters.category = category;
+      if (subcategory) newFilters.subCategories = [subcategory];
+
+      setActiveFilters(prevFilters => ({
+        ...prevFilters,
+        ...newFilters,
+      }));
+      setFiltersVisible(true);
+    }
+  }, [searchParams]);
 
   const {
     isLoading: isInHouseLoading,
@@ -113,7 +131,6 @@ function ListingsPageContent() {
   const isLoading = isInHouseLoading || isGoogleLoading;
   const isSuccess = isInHouseSuccess || isGoogleSuccess;
 
-  const [filtersVisible, setFiltersVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const listingsPerPage = 4;
@@ -187,6 +204,7 @@ function ListingsPageContent() {
               className="fixed inset-0 z-40 md:relative md:w-80 md:h-full md:flex-shrink-0"
             >
               <FilterSidebar
+                initialState={activeFilters}
                 onFilterChange={handleFilterChange}
                 onClose={() => setFiltersVisible(false)}
               />

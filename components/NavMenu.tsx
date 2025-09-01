@@ -40,14 +40,20 @@ const BusinessCategoryMenu = () => {
     <div className="grid w-[calc(100vw-20rem)] max-w-7xl grid-cols-6 gap-x-4 gap-y-6 p-6">
       {businessCategories.map(category => (
         <div key={category.name} className="space-y-3">
-          <h3 className="font-bold text-gray-900">{category.name}</h3>
+          <Link
+            href={`/listings?category=${encodeURIComponent(category.name)}`}
+          >
+            <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
+              {category.name}
+            </h3>
+          </Link>
           <ul className="space-y-2">
             {category.subCategories.map(subCategory => (
               <li key={subCategory.name}>
                 <Link
-                  href={`/categories/${subCategory.name
-                    .toLowerCase()
-                    .replace(/ /g, '-')}`}
+                  href={`/listings?category=${encodeURIComponent(
+                    category.name
+                  )}&subcategory=${encodeURIComponent(subCategory.name)}`}
                   className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
                 >
                   {subCategory.name}

@@ -1,7 +1,7 @@
 // components/CategoryFilterSidebar.tsx
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
@@ -14,18 +14,27 @@ import {
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface CategoryFilterSidebarProps {
+  initialCategory?: string;
+  initialSubCategories?: string[];
   onCategoryChange: (category: string) => void;
   onSubCategoryChange: (subCategories: string[]) => void;
 }
 
 export default function CategoryFilterSidebar({
+  initialCategory = '',
+  initialSubCategories = [],
   onCategoryChange,
   onSubCategoryChange,
 }: CategoryFilterSidebarProps) {
-  const [selectedCategory, setSelectedCategory] = useState('');
-  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>(
-    []
-  );
+  const [selectedCategory, setSelectedCategory] =
+    useState(initialCategory);
+  const [selectedSubCategories, setSelectedSubCategories] =
+    useState<string[]>(initialSubCategories);
+
+  useEffect(() => {
+    setSelectedCategory(initialCategory);
+    setSelectedSubCategories(initialSubCategories);
+  }, [initialCategory, initialSubCategories]);
 
   const handleCategoryChange = (category: string) => {
     const newCategory = category === 'all' ? '' : category;
