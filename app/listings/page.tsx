@@ -96,6 +96,14 @@ function ListingsPageContent() {
       if (category) newFilters.category = category;
       if (subcategory) newFilters.subCategories = [subcategory];
 
+      let searchTerm = '';
+      if (subcategory) {
+        searchTerm = subcategory;
+      } else if (category) {
+        searchTerm = category;
+      }
+      newFilters.searchTerm = searchTerm;
+
       setActiveFilters(prevFilters => ({
         ...prevFilters,
         ...newFilters,
@@ -170,19 +178,24 @@ function ListingsPageContent() {
 
   const handleFilterChange = (newFilters: FilterState) => {
     let combinedQuery = newFilters.searchTerm;
-    if (newFilters.category) {
-      combinedQuery = `${combinedQuery} ${newFilters.category}`;
-    }
     if (newFilters.subCategories.length > 0) {
       combinedQuery = `${combinedQuery} ${newFilters.subCategories.join(' ')}`;
+    } else if (newFilters.category) {
+      combinedQuery = `${combinedQuery} ${newFilters.category}`;
     }
 
-    const updatedFilters = { ...newFilters, searchTerm: combinedQuery };
+    const updatedFilters = { ...newFilters, searchTerm: combinedQuery.trim() };
     setActiveFilters(updatedFilters);
     setCurrentPage(1);
     const params = new URLSearchParams();
     if (updatedFilters.searchTerm) {
       params.set('queryText', updatedFilters.searchTerm);
+    }
+    if (newFilters.category) {
+      params.set('category', newFilters.category);
+    }
+    if (newFilters.subCategories.length > 0) {
+      params.set('subcategory', newFilters.subCategories.join(','));
     }
     window.history.pushState(null, '', `?${params.toString()}`);
   };
