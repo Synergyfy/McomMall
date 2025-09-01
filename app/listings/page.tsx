@@ -20,6 +20,7 @@ import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
 import { categories, listings } from '@/lib/listing-data';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
 import ListingCard from '@/components/listingCard';
+import ListingCardSkeleton from '@/components/ListingCardSkeleton';
 import {
   useGetGoogleListings,
   useGetInHouseBusiness,
@@ -202,7 +203,22 @@ function ListingsPageContent() {
 
   const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-white overflow-hidden">
+        <div className="flex-1 p-4 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <ListingCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+        <div className="w-1/3 h-full flex-shrink-0 hidden lg:block">
+          <div className="bg-gray-200 w-full h-full animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess)
     return (
@@ -258,7 +274,7 @@ function ListingsPageContent() {
             </div>
           </div>
 
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex">
             <div className="flex-1 p-4 overflow-y-auto">
               {combinedListings && combinedListings.length === 0 ? (
                 <div className="text-center">
@@ -277,7 +293,7 @@ function ListingsPageContent() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {combinedListings &&
                       combinedListings.map(listing => (
                         <ListingCard
@@ -311,7 +327,7 @@ function ListingsPageContent() {
                 </>
               )}
             </div>
-            <div className="w-1/3 h-full flex-shrink-0 hidden lg:block">
+            <div className="w-1/3 h-screen sticky top-0 flex-shrink-0 hidden lg:block">
               <MapComponent listings={listingsForMap} center={mapCenter} />
             </div>
           </div>
