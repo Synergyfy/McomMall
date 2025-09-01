@@ -38,14 +38,14 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
 
   useEffect(() => {
-    if (isPaused) return;
+    if (isPaused && isTrialPausable) return;
 
     const interval = setInterval(() => {
       setTimeLeft(calculateTimeLeft());
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPaused, calculateTimeLeft]);
+  }, [isPaused, isTrialPausable, calculateTimeLeft]);
 
   const timerComponents = Object.entries(timeLeft).map(([interval, value]) => {
     if ((value as number) < 0) {
