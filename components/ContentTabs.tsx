@@ -7,8 +7,12 @@ import LocationSection from './locationSection';
 import {
   GooglePlaceResult,
   InHouseBusiness,
+  Product,
 } from '@/service/listings/types';
 import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabContent';
+import { useDispatch } from 'react-redux';
+import { addProduct } from '@/service/store/cartSlice';
+import { toast } from 'sonner';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -25,6 +29,12 @@ function OverviewSection({
   listing: GooglePlaceResult | InHouseBusiness;
 }) {
   const [isCopied, setIsCopied] = useState(false);
+  const dispatch = useDispatch();
+
+  const handleAddToCart = (product: Product) => {
+    dispatch(addProduct(product));
+    toast.success(`${product.title} has been added to your cart.`);
+  };
   const isGoogle = isGoogleResult(listing);
 
   const handleCopy = () => {
@@ -217,6 +227,12 @@ function OverviewSection({
                     </p>
                   )}
                 </div>
+                <Button
+                  className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white"
+                  onClick={() => handleAddToCart(product)}
+                >
+                  Add to Cart
+                </Button>
                 <Button className="w-full mt-2 bg-red-500 hover:bg-red-600 text-white">
                   Order Now
                 </Button>
