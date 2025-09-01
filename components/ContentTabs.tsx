@@ -228,12 +228,13 @@ function OverviewSection({
                   )}
                 </div>
                 <Button
-                  className="w-full mt-2 bg-blue-500 hover:bg-blue-600 text-white"
+                  variant="outline"
+                  className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
                   onClick={() => handleAddToCart(product)}
                 >
                   Add to Cart
                 </Button>
-                <Button className="w-full mt-2 bg-red-500 hover:bg-red-600 text-white">
+                <Button className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white">
                   Order Now
                 </Button>
               </div>
