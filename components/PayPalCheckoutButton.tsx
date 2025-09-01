@@ -7,8 +7,7 @@ import {
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { toast } from 'sonner';
 
-const PAYPAL_CLIENT_ID =
-  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'sb'; // Fallback to 'sb' for sandbox
+const PAYPAL_CLIENT_ID = 'sb'; // Force sandbox mode for testing
 
 interface PayPalCheckoutButtonProps {
   totalPrice: number;
