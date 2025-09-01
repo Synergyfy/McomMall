@@ -69,7 +69,7 @@ export default function StripeCheckoutForm({
 
   useEffect(() => {
     if (totalPrice > 0) {
-      createPaymentIntent(totalPrice * 100);
+      createPaymentIntent(totalPrice);
     }
   }, [totalPrice, createPaymentIntent]);
 
