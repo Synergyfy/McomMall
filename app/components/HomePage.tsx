@@ -32,6 +32,7 @@ import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
 import McomSolutions from '../homepage/components/McomSolutions';
 import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
 import { businessCategories } from '@/lib/business-categories';
+import Newsletter from './Newsletter';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -500,8 +501,9 @@ export default function HomePage() {
       </ScrollAnimatedSection>
 
       {/* --- Footer Section --- */}
-      <footer className="bg-slate-900 text-slate-300 py-16 px-4 md:px-8 lg:px-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <footer className="bg-slate-900 text-slate-300">
+        <Newsletter />
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 py-16 px-4 md:px-8 lg:px-16">
           {/* Column 1: McomMall Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white">

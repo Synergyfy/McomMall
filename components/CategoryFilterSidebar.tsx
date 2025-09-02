@@ -5,12 +5,11 @@ import { useState, useMemo, useEffect } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from '@/components/ui/accordion';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface CategoryFilterSidebarProps {
@@ -37,7 +36,7 @@ export default function CategoryFilterSidebar({
   }, [initialCategory, initialSubCategories]);
 
   const handleCategoryChange = (category: string) => {
-    const newCategory = category === 'all' ? '' : category;
+    const newCategory = category === selectedCategory ? '' : category;
     setSelectedCategory(newCategory);
     setSelectedSubCategories([]);
     onCategoryChange(newCategory);
@@ -52,50 +51,40 @@ export default function CategoryFilterSidebar({
     onSubCategoryChange(newSubCategories);
   };
 
-  const subCategories = useMemo(() => {
-    if (!selectedCategory) return [];
-    const category = businessCategories.find(c => c.name === selectedCategory);
-    return category ? category.subCategories : [];
-  }, [selectedCategory]);
-
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="category">All Categories</Label>
-        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-          <SelectTrigger id="category" className="mt-2 focus:ring-red-500">
-            <SelectValue placeholder="Select a category" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
-            {businessCategories.map(cat => (
-              <SelectItem key={cat.name} value={cat.name}>
-                {cat.name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
+        <Label>All Categories</Label>
+        <Accordion
+          type="single"
+          collapsible
+          className="w-full"
+          value={selectedCategory}
+          onValueChange={handleCategoryChange}
+        >
+          {businessCategories.map(cat => (
+            <AccordionItem key={cat.name} value={cat.name}>
+              <AccordionTrigger>{cat.name}</AccordionTrigger>
+              <AccordionContent>
+                <div className="space-y-2 mt-2">
+                  {cat.subCategories.map(sub => (
+                    <div key={sub.name} className="flex items-center space-x-2">
+                      <Checkbox
+                        id={sub.name}
+                        checked={selectedSubCategories.includes(sub.name)}
+                        onCheckedChange={() => handleSubCategoryChange(sub.name)}
+                      />
+                      <Label htmlFor={sub.name} className="font-normal">
+                        {sub.name}
+                      </Label>
+                    </div>
+                  ))}
+                </div>
+              </AccordionContent>
+            </AccordionItem>
+          ))}
+        </Accordion>
       </div>
-
-      {selectedCategory && (
-        <div>
-          <Label>Sub Categories</Label>
-          <div className="space-y-2 mt-2">
-            {subCategories.map(sub => (
-              <div key={sub.name} className="flex items-center space-x-2">
-                <Checkbox
-                  id={sub.name}
-                  checked={selectedSubCategories.includes(sub.name)}
-                  onCheckedChange={() => handleSubCategoryChange(sub.name)}
-                />
-                <Label htmlFor={sub.name} className="font-normal">
-                  {sub.name}
-                </Label>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
     </div>
   );
 }

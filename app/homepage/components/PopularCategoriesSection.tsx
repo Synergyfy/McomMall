@@ -25,12 +25,12 @@ import {
 // New, updated list of categories
 const categories = [
   {
-    name: 'Food & Drink',
+    name: 'Hospitality',
     count: 42,
     icon: <UtensilsCrossed />,
   },
   {
-    name: 'Trades & Home',
+    name: 'Trades & Home Services',
     count: 58,
     icon: <Wrench />,
   },
@@ -45,53 +45,13 @@ const categories = [
     icon: <Stethoscope />,
   },
   {
-    name: 'Education & Training',
+    name: 'Shopping & Retail',
     count: 15,
     icon: <BookOpen />,
   },
   {
-    name: 'Fitness & Sports',
-    count: 22,
-    icon: <Dumbbell />,
-  },
-  {
-    name: 'Arts & Events',
-    count: 19,
-    icon: <Ticket />,
-  },
-  {
-    name: 'Automotive',
-    count: 31,
-    icon: <Car />,
-  },
-  {
-    name: 'Property & Real Estate',
-    count: 45,
-    icon: <Building2 />,
-  },
-  {
-    name: 'Professional Services',
+    name: 'Others',
     count: 62,
-    icon: <Megaphone />,
-  },
-  {
-    name: 'Pets & Animals',
-    count: 12,
-    icon: <Dog />,
-  },
-  {
-    name: 'Accommodation & Travel',
-    count: 27,
-    icon: <Plane />,
-  },
-  {
-    name: 'Manufacturing',
-    count: 14,
-    icon: <Factory />,
-  },
-  {
-    name: 'Non-Profit & Community',
-    count: 9,
     icon: <Users />,
   },
 ];
@@ -101,7 +61,9 @@ export function PopularCategoriesSection() {
   const router = useRouter();
 
   const handleCategoryClick = (categoryName: string) => {
-    router.push(`/listings?category=${encodeURIComponent(categoryName)}`);
+    router.push(
+      `/listings?category=${encodeURIComponent(categoryName)}&showFilters=true`
+    );
   };
 
   const scroll = (direction: 'left' | 'right') => {
