@@ -1,7 +1,10 @@
 'use client';
 
 import * as React from 'react';
+import { useMemo } from 'react';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
+import { useGetOrders } from '@/hooks/useGetOrders';
+import { type Order as ApiOrder } from '@/types/order';
 
 // In a real Next.js app with shadcn/ui, you would import components like this:
 import { Button } from '@/components/ui/button';
@@ -35,82 +38,6 @@ type Order = {
   total: number;
   date: string;
 };
-
-// --- MOCK DATA ---
-const allOrders: Order[] = [
-  {
-    id: '#ORD-001',
-    customerName: 'John Doe',
-    customerEmail: 'john.d@example.com',
-    status: 'Delivered',
-    itemCount: 3,
-    total: 150.75,
-    date: '2025-08-10',
-  },
-  {
-    id: '#ORD-002',
-    customerName: 'Jane Smith',
-    customerEmail: 'jane.s@example.com',
-    status: 'Shipped',
-    itemCount: 1,
-    total: 89.99,
-    date: '2025-08-09',
-  },
-  {
-    id: '#ORD-003',
-    customerName: 'Michael Brown',
-    customerEmail: 'michael.b@example.com',
-    status: 'Processing',
-    itemCount: 5,
-    total: 240.0,
-    date: '2025-08-09',
-  },
-  {
-    id: '#ORD-004',
-    customerName: 'Emily White',
-    customerEmail: 'emily.w@example.com',
-    status: 'Cancelled',
-    itemCount: 2,
-    total: 45.5,
-    date: '2025-08-08',
-  },
-  {
-    id: '#ORD-005',
-    customerName: 'David Green',
-    customerEmail: 'david.g@example.com',
-    status: 'Delivered',
-    itemCount: 2,
-    total: 199.5,
-    date: '2025-08-07',
-  },
-  {
-    id: '#ORD-006',
-    customerName: 'Sarah Black',
-    customerEmail: 'sarah.b@example.com',
-    status: 'Delivered',
-    itemCount: 4,
-    total: 76.2,
-    date: '2025-08-06',
-  },
-  {
-    id: '#ORD-007',
-    customerName: 'Chris Wilson',
-    customerEmail: 'chris.w@example.com',
-    status: 'Shipped',
-    itemCount: 1,
-    total: 310.0,
-    date: '2025-08-05',
-  },
-  {
-    id: '#ORD-008',
-    customerName: 'Patricia Taylor',
-    customerEmail: 'patricia.t@example.com',
-    status: 'Processing',
-    itemCount: 1,
-    total: 55.0,
-    date: '2025-08-04',
-  },
-];
 
 // --- HELPER COMPONENTS ---
 const formatDate = (dateString: string) => {
@@ -150,10 +77,24 @@ const StatusBadge: React.FC<{ status: Order['status'] }> = ({ status }) => {
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function OrdersDashboard() {
-  const [orders, setOrders] = React.useState(allOrders);
+  const { data: apiOrders, isLoading } = useGetOrders();
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
+
+  const orders = useMemo(() => {
+    if (!apiOrders) return [];
+    return apiOrders.map((order: ApiOrder) => ({
+      id: order.id,
+      customerName: order.user?.name || 'N/A',
+      customerEmail: order.user?.email || 'N/A',
+      // TODO: The API does not provide an order status. Defaulting to 'Processing'.
+      status: 'Processing',
+      itemCount: order.quantity,
+      total: order.payment?.amount || 0,
+      date: order.created_at,
+    }));
+  }, [apiOrders]);
 
   const filteredOrders = React.useMemo(() => {
     let tempOrders = [...orders];
@@ -186,7 +127,7 @@ export default function OrdersDashboard() {
       return;
     }
     if (action === 'delete') {
-      setOrders(prev => prev.filter(o => !selectedRows.includes(o.id)));
+      // setOrders(prev => prev.filter(o => !selectedRows.includes(o.id)));
       setSelectedRows([]);
     }
     console.log(`Performing '${action}' on orders:`, selectedRows);
@@ -297,11 +238,13 @@ export default function OrdersDashboard() {
                     <SelectValue placeholder="Bulk Actions" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="delete">Delete Selected</SelectItem>
-                    <SelectItem value="mark-shipped">
+                    <SelectItem value="delete" disabled>
+                      Delete Selected
+                    </SelectItem>
+                    <SelectItem value="mark-shipped" disabled>
                       Mark as Shipped
                     </SelectItem>
-                    <SelectItem value="mark-delivered">
+                    <SelectItem value="mark-delivered" disabled>
                       Mark as Delivered
                     </SelectItem>
                   </SelectContent>
@@ -341,7 +284,16 @@ export default function OrdersDashboard() {
                   </TableRow>
                 </TableHeader>
                 <TableBody className="block md:table-row-group">
-                  {filteredOrders.length > 0 ? (
+                  {isLoading ? (
+                    <TableRow>
+                      <TableCell
+                        colSpan={8}
+                        className="h-24 text-center block md:table-cell"
+                      >
+                        Loading...
+                      </TableCell>
+                    </TableRow>
+                  ) : filteredOrders.length > 0 ? (
                     filteredOrders.map(order => (
                       <TableRow
                         key={order.id}
