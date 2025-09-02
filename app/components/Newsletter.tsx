@@ -7,15 +7,16 @@ import { Mail } from 'lucide-react';
 
 export default function Newsletter() {
   return (
-    <div className="py-12 px-4 sm:px-6 lg:px-8 border-b border-slate-700">
-      <div className="max-w-3xl mx-auto text-center">
-        <h2 className="text-3xl font-extrabold text-white sm:text-4xl">
-          Join Our Newsletter
+    <div className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
+      <div className="max-w-4xl mx-auto text-center">
+        <h2 className="text-4xl font-extrabold text-white sm:text-5xl">
+          Stay in the Loop
         </h2>
-        <p className="mt-4 text-lg text-slate-400">
-          Stay up to date with our latest news, offers, and promotions.
+        <p className="mt-4 text-xl text-slate-400">
+          Join our newsletter to get the latest news, offers, and promotions
+          delivered right to your inbox.
         </p>
-        <form className="mt-8 sm:flex">
+        <form className="mt-10 max-w-lg mx-auto sm:flex">
           <div className="min-w-0 flex-1">
             <label htmlFor="name" className="sr-only">
               Name
@@ -24,11 +25,11 @@ export default function Newsletter() {
               type="text"
               name="name"
               id="name"
-              placeholder="Enter your name"
-              className="block w-full px-5 py-3 text-base text-gray-900 placeholder-gray-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Your Name"
+              className="block w-full h-14 px-5 py-3 text-lg text-white placeholder-slate-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
             />
           </div>
-          <div className="mt-3 sm:mt-0 sm:ml-3 min-w-0 flex-1">
+          <div className="mt-4 sm:mt-0 sm:ml-4 min-w-0 flex-1">
             <label htmlFor="email" className="sr-only">
               Email address
             </label>
@@ -36,17 +37,17 @@ export default function Newsletter() {
               type="email"
               name="email"
               id="email"
-              placeholder="Enter your email"
-              className="block w-full px-5 py-3 text-base text-gray-900 placeholder-gray-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
+              placeholder="Your Email"
+              className="block w-full h-14 px-5 py-3 text-lg text-white placeholder-slate-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
             />
           </div>
-          <div className="mt-3 sm:mt-0 sm:ml-3">
+          <div className="mt-4 sm:mt-0 sm:ml-4">
             <Button
               type="submit"
-              className="block w-full px-5 py-3 text-base font-medium text-white bg-orange-600 border border-transparent rounded-md shadow hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+              className="block w-full h-14 px-6 py-3 text-lg font-bold text-white bg-orange-600 border border-transparent rounded-md shadow-lg transform transition-transform duration-200 hover:scale-105 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
             >
-              <Mail className="mr-2 h-5 w-5" />
-              Join Newsletter
+              <Mail className="mr-3 h-6 w-6" />
+              Subscribe
             </Button>
           </div>
         </form>
