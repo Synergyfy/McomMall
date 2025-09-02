@@ -29,7 +29,7 @@ export interface OrderPayment {
 
 export interface Order {
   id: string;
-  user: User;
+  user?: User;
   product: Product;
   quantity: number;
   payment?: OrderPayment;
