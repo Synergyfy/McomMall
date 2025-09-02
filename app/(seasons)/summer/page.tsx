@@ -25,7 +25,7 @@ const summerTheme = {
   primaryColor: 'orange-500',
   secondaryColor: 'orange-400',
   textColor: 'amber-100',
-  bannerImage: '/homepage/SummerBanner.png',
+  bannerImage: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e',
   animation: ShiningSun,
   texts: {
     mainTitle: 'Summer Virtual Exhibition',

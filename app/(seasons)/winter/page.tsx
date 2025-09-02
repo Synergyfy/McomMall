@@ -39,7 +39,7 @@ const winterTheme = {
   primaryColor: 'sky-500',
   secondaryColor: 'sky-400',
   textColor: 'slate-200',
-  bannerImage: '/homepage/WinterSale.png',
+  bannerImage: 'https://images.unsplash.com/photo-1423145406370-2b342ae5b597',
   animation: FallingSnow,
   texts: {
     mainTitle: 'Winter Virtual Exhibition',

@@ -41,7 +41,7 @@ const autumnTheme = {
   primaryColor: 'red-500',
   secondaryColor: 'red-400',
   textColor: 'stone-100',
-  bannerImage: '/homepage/AutumnBanner.png',
+  bannerImage: 'https://images.unsplash.com/photo-1523712999610-f77fbcfc3843',
   animation: FallingLeaves,
   texts: {
     mainTitle: 'Autumn Virtual Exhibition',

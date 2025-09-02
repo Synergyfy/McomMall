@@ -40,7 +40,7 @@ const springTheme = {
   primaryColor: 'pink-500',
   secondaryColor: 'pink-400',
   textColor: 'emerald-100',
-  bannerImage: '/homepage/SpringBanner.png',
+  bannerImage: 'https://images.unsplash.com/photo-1568150129334-31fbe6db6dec',
   animation: FallingPetals,
   texts: {
     mainTitle: 'Spring Virtual Exhibition',
