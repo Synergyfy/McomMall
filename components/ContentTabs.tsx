@@ -7,8 +7,12 @@ import LocationSection from './locationSection';
 import {
   GooglePlaceResult,
   InHouseBusiness,
+  Product,
 } from '@/service/listings/types';
 import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabContent';
+import { useDispatch } from 'react-redux';
+import { addProduct } from '@/service/store/cartSlice';
+import { toast } from 'sonner';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -19,12 +23,24 @@ function isGoogleResult(
 // You would create more detailed components for each tab
 import { useState } from 'react';
 
+import { useRouter } from 'next/navigation';
 function OverviewSection({
   listing,
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
 }) {
   const [isCopied, setIsCopied] = useState(false);
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const handleAddToCart = (product: Product) => {
+    dispatch(addProduct(product));
+    toast.success(`${product.title} has been added to your cart.`);
+  };
+
+  const handleOrderNow = (product: Product) => {
+    router.push(`/checkout?productId=${product.id}`);
+  };
   const isGoogle = isGoogleResult(listing);
 
   const handleCopy = () => {
@@ -217,7 +233,17 @@ function OverviewSection({
                     </p>
                   )}
                 </div>
-                <Button className="w-full mt-2 bg-red-500 hover:bg-red-600 text-white">
+                <Button
+                  variant="outline"
+                  className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                  onClick={() => handleAddToCart(product)}
+                >
+                  Add to Cart
+                </Button>
+                <Button
+                  className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+                  onClick={() => handleOrderNow(product)}
+                >
                   Order Now
                 </Button>
               </div>

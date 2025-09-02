@@ -24,39 +24,10 @@ export interface CreateProductDto {
   tags?: string[];
 }
 
+import { Product } from '@/service/listings/types';
+
 export interface UpdateProductDto extends Partial<CreateProductDto> {
   id: string;
 }
 
-export interface Product {
-  id: string;
-  bussinessId: string;
-  title: string;
-  category: string;
-  productType: string;
-  price: number;
-  salePrice?: number;
-  description: string;
-  shortDescription?: string;
-  sku: string;
-  imageUrl?: string;
-  productUrl?: string;
-  fileUrls?: string[];
-  downloadLimit?: number;
-  downloadExpiry?: number;
-  enableStockManagement?: boolean;
-  stock?: number;
-  weight?: number;
-  length?: number;
-  width?: number;
-  height?: number;
-  productStatus: string;
-  visibility: string;
-  purchaseNote?: string;
-  enableReviews?: boolean;
-  tags?: string[];
-  brand?: string;
-  views?: number;
-  createdAt?: string;
-  updatedAt?: string;
-}
+export type { Product };

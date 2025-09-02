@@ -1,7 +1,7 @@
 // app/components/FilterSidebar.tsx
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -19,20 +19,37 @@ export type FilterState = {
 };
 
 interface FilterSidebarProps {
+  initialState?: Partial<FilterState>;
   onFilterChange: (filters: FilterState) => void;
   onClose: () => void;
 }
 
 export default function FilterSidebar({
+  initialState,
   onFilterChange,
   onClose,
 }: FilterSidebarProps) {
-  const [searchTerm, setSearchTerm] = useState('');
-  const [category, setCategory] = useState('');
-  const [subCategories, setSubCategories] = useState<string[]>([]);
-  const [location, setLocation] = useState('');
-  const [radius, setRadius] = useState([50]);
-  const [priceRange, setPriceRange] = useState([20, 500]);
+  const [searchTerm, setSearchTerm] = useState(initialState?.searchTerm || '');
+  const [category, setCategory] = useState(initialState?.category || '');
+  const [subCategories, setSubCategories] = useState(
+    initialState?.subCategories || []
+  );
+  const [location, setLocation] = useState(initialState?.location || '');
+  const [radius, setRadius] = useState([initialState?.radius || 50]);
+  const [priceRange, setPriceRange] = useState(
+    initialState?.priceRange || [20, 500]
+  );
+
+  useEffect(() => {
+    if (initialState) {
+      setSearchTerm(initialState.searchTerm || '');
+      setCategory(initialState.category || '');
+      setSubCategories(initialState.subCategories || []);
+      setLocation(initialState.location || '');
+      setRadius([initialState.radius || 50]);
+      setPriceRange(initialState.priceRange || [20, 500]);
+    }
+  }, [initialState]);
 
   const handleApplyFilters = () => {
     let query = searchTerm;
@@ -86,6 +103,8 @@ export default function FilterSidebar({
 
           {/* Category */}
           <CategoryFilterSidebar
+            initialCategory={category}
+            initialSubCategories={subCategories}
             onCategoryChange={setCategory}
             onSubCategoryChange={setSubCategories}
           />

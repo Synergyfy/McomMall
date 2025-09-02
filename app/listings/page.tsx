@@ -20,6 +20,7 @@ import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
 import { categories, listings } from '@/lib/listing-data';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
 import ListingCard from '@/components/listingCard';
+import ListingCardSkeleton from '@/components/ListingCardSkeleton';
 import {
   useGetGoogleListings,
   useGetInHouseBusiness,
@@ -85,6 +86,32 @@ function ListingsPageContent() {
 
   const [activeFilters, setActiveFilters] =
     useState<FilterState>(initialFilters);
+  const [filtersVisible, setFiltersVisible] = useState(false);
+
+  useEffect(() => {
+    const category = searchParams.get('category');
+    const subcategory = searchParams.get('subcategory');
+
+    if (category || subcategory) {
+      const newFilters: Partial<FilterState> = {};
+      if (category) newFilters.category = category;
+      if (subcategory) newFilters.subCategories = [subcategory];
+
+      let searchTerm = '';
+      if (subcategory) {
+        searchTerm = subcategory;
+      } else if (category) {
+        searchTerm = category;
+      }
+      newFilters.searchTerm = searchTerm;
+
+      setActiveFilters(prevFilters => ({
+        ...prevFilters,
+        ...newFilters,
+      }));
+      setFiltersVisible(true);
+    }
+  }, [searchParams]);
 
   const {
     isLoading: isInHouseLoading,
@@ -113,7 +140,6 @@ function ListingsPageContent() {
   const isLoading = isInHouseLoading || isGoogleLoading;
   const isSuccess = isInHouseSuccess || isGoogleSuccess;
 
-  const [filtersVisible, setFiltersVisible] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
   const listingsPerPage = 4;
@@ -153,26 +179,46 @@ function ListingsPageContent() {
 
   const handleFilterChange = (newFilters: FilterState) => {
     let combinedQuery = newFilters.searchTerm;
-    if (newFilters.category) {
-      combinedQuery = `${combinedQuery} ${newFilters.category}`;
-    }
     if (newFilters.subCategories.length > 0) {
       combinedQuery = `${combinedQuery} ${newFilters.subCategories.join(' ')}`;
+    } else if (newFilters.category) {
+      combinedQuery = `${combinedQuery} ${newFilters.category}`;
     }
 
-    const updatedFilters = { ...newFilters, searchTerm: combinedQuery };
+    const updatedFilters = { ...newFilters, searchTerm: combinedQuery.trim() };
     setActiveFilters(updatedFilters);
     setCurrentPage(1);
     const params = new URLSearchParams();
     if (updatedFilters.searchTerm) {
       params.set('queryText', updatedFilters.searchTerm);
     }
+    if (newFilters.category) {
+      params.set('category', newFilters.category);
+    }
+    if (newFilters.subCategories.length > 0) {
+      params.set('subcategory', newFilters.subCategories.join(','));
+    }
     window.history.pushState(null, '', `?${params.toString()}`);
   };
 
   const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
 
-  if (isLoading) return <p>Loading...</p>;
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-white overflow-hidden">
+        <div className="flex-1 p-4 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {[...Array(4)].map((_, i) => (
+              <ListingCardSkeleton key={i} />
+            ))}
+          </div>
+        </div>
+        <div className="w-1/3 h-full flex-shrink-0 hidden lg:block">
+          <div className="bg-gray-200 w-full h-full animate-pulse" />
+        </div>
+      </div>
+    );
+  }
 
   if (isSuccess)
     return (
@@ -187,6 +233,7 @@ function ListingsPageContent() {
               className="fixed inset-0 z-40 md:relative md:w-80 md:h-full md:flex-shrink-0"
             >
               <FilterSidebar
+                initialState={activeFilters}
                 onFilterChange={handleFilterChange}
                 onClose={() => setFiltersVisible(false)}
               />
@@ -227,7 +274,7 @@ function ListingsPageContent() {
             </div>
           </div>
 
-          <div className="flex-1 flex overflow-hidden">
+          <div className="flex-1 flex">
             <div className="flex-1 p-4 overflow-y-auto">
               {combinedListings && combinedListings.length === 0 ? (
                 <div className="text-center">
@@ -246,7 +293,7 @@ function ListingsPageContent() {
                 </div>
               ) : (
                 <>
-                  <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {combinedListings &&
                       combinedListings.map(listing => (
                         <ListingCard
@@ -280,7 +327,7 @@ function ListingsPageContent() {
                 </>
               )}
             </div>
-            <div className="w-1/3 h-full flex-shrink-0 hidden lg:block">
+            <div className="w-1/3 h-screen sticky top-0 flex-shrink-0 hidden lg:block">
               <MapComponent listings={listingsForMap} center={mapCenter} />
             </div>
           </div>

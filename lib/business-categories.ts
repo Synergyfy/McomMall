@@ -10,6 +10,7 @@ export const businessCategories = [
       { name: 'Breweries, Wineries & Distilleries' },
       { name: 'Catering Services' },
       { name: 'Dessert Shops' },
+      { name: 'Accommodation & Travel' },
     ],
   },
   {
@@ -77,13 +78,11 @@ export const businessCategories = [
       { name: 'Fitness & Sports' },
       { name: 'Automotive & Transport' },
       { name: 'Pets & Animal Services' },
-      { name: 'Accommodation & Travel' },
       { name: 'Manufacturing & Industrial' },
       { name: 'Non-Profit & Community' },
       { name: 'Education & Training' },
       { name: 'Arts, Entertainment & Events' },
       { name: 'Media, Marketing & Professional Services' },
-      { name: 'Hospitality (?)' },
     ],
   },
 ];
