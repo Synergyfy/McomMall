@@ -7,9 +7,13 @@ import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
 
 interface PaymentFormProps {
   totalPrice: number;
+  onPaymentSuccess: () => void;
 }
 
-export default function PaymentForm({ totalPrice }: PaymentFormProps) {
+export default function PaymentForm({
+  totalPrice,
+  onPaymentSuccess,
+}: PaymentFormProps) {
   const [paymentMethod, setPaymentMethod] = useState('stripe');
 
   return (
@@ -31,7 +35,10 @@ export default function PaymentForm({ totalPrice }: PaymentFormProps) {
         </TabsContent>
         <TabsContent value="paypal">
           <div className="mt-4">
-            <PayPalCheckoutButton totalPrice={totalPrice} />
+            <PayPalCheckoutButton
+              totalPrice={totalPrice}
+              onSuccess={onPaymentSuccess}
+            />
           </div>
         </TabsContent>
       </Tabs>
