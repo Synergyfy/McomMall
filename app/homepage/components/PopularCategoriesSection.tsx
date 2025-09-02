@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useRef } from 'react';
+import { useRouter } from 'next/navigation';
 import { motion } from 'framer-motion';
 import {
   UtensilsCrossed,
@@ -97,6 +98,11 @@ const categories = [
 
 export function PopularCategoriesSection() {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const router = useRouter();
+
+  const handleCategoryClick = (categoryName: string) => {
+    router.push(`/listings?category=${encodeURIComponent(categoryName)}`);
+  };
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -162,6 +168,7 @@ export function PopularCategoriesSection() {
             {categories.map((category, index) => (
               <motion.div
                 key={index}
+                onClick={() => handleCategoryClick(category.name)}
                 className="group flex h-48 w-48 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
                 variants={cardVariants}
                 whileHover="hover"

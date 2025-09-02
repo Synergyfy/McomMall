@@ -189,6 +189,7 @@ export default function HomePage() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
+  const [searchError, setSearchError] = useState('');
   const router = useRouter();
 
   const backgroundImages = [Autumn, Summer, Spring, Winter];
@@ -223,6 +224,11 @@ export default function HomePage() {
       : allFeaturedAds.filter(ad => ad.category === activeAdFilter);
 
   const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setSearchError('Please enter something to search for.');
+      return;
+    }
+    setSearchError(''); // Clear error if search is valid
     let query = searchQuery;
     if (location) {
       query = `${searchQuery} in ${location}`;
@@ -311,6 +317,17 @@ export default function HomePage() {
                 Search Now <ArrowRight size={20} />
               </motion.button>
             </motion.div>
+
+            {searchError && (
+              <motion.p
+                className="mt-2 text-red-400 bg-white/20 backdrop-blur-sm p-2 rounded-md font-semibold"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+              >
+                {searchError}
+              </motion.p>
+            )}
 
             <motion.div
               className="mt-4 text-sm text-white"
