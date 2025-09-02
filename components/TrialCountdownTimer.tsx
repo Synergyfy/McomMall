@@ -11,12 +11,14 @@ interface TrialCountdownTimerProps {
   trialEndDate: string;
   isPaused: boolean;
   isTrialPausable: boolean;
+  remainingPauses: number;
 }
 
 const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   trialEndDate,
   isPaused,
   isTrialPausable,
+  remainingPauses,
 }) => {
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const calculateTimeLeft = useCallback(() => {
@@ -82,23 +84,28 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
         <div className="flex space-x-2">{timerComponents}</div>
       </div>
       {isTrialPausable && (
-        <Button
-          onClick={() =>
-            pauseOrPlay({
-              action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
-            })
-          }
-          disabled={isPending}
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-        >
-          {isPaused ? (
-            <PlayIcon className="w-6 h-6" />
-          ) : (
-            <PauseIcon className="w-6 h-6" />
-          )}
-        </Button>
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={() =>
+              pauseOrPlay({
+                action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+              })
+            }
+            disabled={isPending || remainingPauses === 0}
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+          >
+            {isPaused ? (
+              <PlayIcon className="w-6 h-6" />
+            ) : (
+              <PauseIcon className="w-6 h-6" />
+            )}
+          </Button>
+          <div className="text-sm">
+            <p>Pauses Left: {remainingPauses}</p>
+          </div>
+        </div>
       )}
     </motion.div>
   );

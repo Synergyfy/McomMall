@@ -305,11 +305,10 @@ export default function AddProductPage() {
       description: data.description,
       sku: data.sku,
       shortDescription: data.shortDescription,
-      imageUrls: Array.from(data.productImages as FileList).map(
+      fileUrls: Array.from(data.productImages as FileList).map(
         () => `https://source.unsplash.com/random/800x600?sig=${Math.random()}`
       ),
       productUrl: data.productUrl,
-      fileUrls: [], // Note: file uploads not handled in this implementation
       downloadLimit: data.downloadLimit
         ? Number(data.downloadLimit)
         : undefined,

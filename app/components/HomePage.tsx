@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
 import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
 import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
@@ -338,21 +339,21 @@ export default function HomePage() {
             >
               <span className="font-semibold">Popular:</span>
               {businessCategories.slice(0, 5).map((category, index) => (
-                <a
+                <Link
                   key={index}
                   href={`/listings?category=${encodeURIComponent(category.name)}`}
                   className="underline hover:text-orange-300 mx-1"
                 >
                   {category.name}
                   {index < 4 && ','}
-                </a>
+                </Link>
               ))}
-              <a
+              <Link
                 href="/listings?showFilters=true"
                 className="underline hover:text-orange-300 ml-1"
               >
                 View All
-              </a>
+              </Link>
             </motion.div>
           </div>
         </section>
@@ -487,12 +488,12 @@ export default function HomePage() {
                   <h3 className="font-bold text-lg mt-2 mb-4 h-14">
                     {post.title}
                   </h3>
-                  <a
+                  <Link
                     href="#"
                     className="text-[#f58220] font-semibold hover:underline"
                   >
                     Read More &rarr;
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}

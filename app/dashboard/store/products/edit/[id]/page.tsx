@@ -320,7 +320,7 @@ export default function EditProductPage() {
         enableReviews: product.enableReviews,
         businessId: product.bussinessId,
         productImages: null, // Not handled
-        imageUrls: product.imageUrls || [],
+        imageUrls: product.fileUrls || [],
       });
     }
   }, [product, form]);
@@ -347,9 +347,8 @@ export default function EditProductPage() {
       description: data.description,
       sku: data.sku,
       shortDescription: data.shortDescription,
-      imageUrls: data.imageUrls,
+      fileUrls: data.imageUrls,
       productUrl: data.productUrl,
-      fileUrls: [], // Note: file uploads not handled in this implementation
       downloadLimit: data.downloadLimit
         ? Number(data.downloadLimit)
         : undefined,

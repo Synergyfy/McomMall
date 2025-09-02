@@ -29,6 +29,7 @@ import {
 
 // --- Type Definitions ---
 type OrderStatus = 'All' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+type BadgeStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 type Order = {
   id: string;
   customerName: string;
@@ -52,9 +53,9 @@ const formatDate = (dateString: string) => {
   };
 };
 
-const StatusBadge: React.FC<{ status: Order['status'] }> = ({ status }) => {
+const StatusBadge: React.FC<{ status: BadgeStatus }> = ({ status }) => {
   const variants: Record<
-    Order['status'],
+    BadgeStatus,
     'default' | 'secondary' | 'destructive' | 'outline'
   > = {
     Delivered: 'default',
@@ -62,7 +63,7 @@ const StatusBadge: React.FC<{ status: Order['status'] }> = ({ status }) => {
     Processing: 'outline',
     Cancelled: 'destructive',
   };
-  const classNames: Record<Order['status'], string> = {
+  const classNames: Record<BadgeStatus, string> = {
     Delivered: 'bg-green-100 text-green-800 border-green-200',
     Shipped: 'bg-yellow-100 text-yellow-800 border-yellow-200',
     Processing: 'bg-blue-100 text-blue-800 border-blue-200',
@@ -334,7 +335,7 @@ export default function OrdersDashboard() {
                           data-label="Status"
                           className="responsive-cell"
                         >
-                          <StatusBadge status={order.status} />
+                          <StatusBadge status={order.status as BadgeStatus} />
                         </TableCell>
                         <TableCell
                           data-label="Items"
