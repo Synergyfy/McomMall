@@ -91,8 +91,9 @@ function ListingsPageContent() {
   useEffect(() => {
     const category = searchParams.get('category');
     const subcategory = searchParams.get('subcategory');
+    const showFilters = searchParams.get('showFilters');
 
-    if (category || subcategory) {
+    if (category || subcategory || showFilters) {
       const newFilters: Partial<FilterState> = {};
       if (category) newFilters.category = category;
       if (subcategory) newFilters.subCategories = [subcategory];

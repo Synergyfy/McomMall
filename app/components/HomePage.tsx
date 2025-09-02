@@ -28,10 +28,10 @@ import VirtualCardCarousel from '../homepage/components/VirtualCardCarousel';
 import HowItWorks from '../homepage/components/HowItWorks';
 import { AuditSection } from '../homepage/components/AuditSection';
 import VCardFeaturesSection from '../homepage/components/VCardFeatures';
-import { BusinessTrustSection } from '../homepage/components/BusinessTrustSection';
 import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
 import McomSolutions from '../homepage/components/McomSolutions';
 import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
+import { businessCategories } from '@/lib/business-categories';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -335,10 +335,21 @@ export default function HomePage() {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <span className="font-semibold">
-                Car, Pet, Place, Education, Restaurant,{' '}
-              </span>
-              <a href="#" className="underline hover:text-orange-300">
+              <span className="font-semibold">Popular:</span>
+              {businessCategories.slice(0, 5).map((category, index) => (
+                <a
+                  key={index}
+                  href={`/listings?category=${encodeURIComponent(category.name)}`}
+                  className="underline hover:text-orange-300 mx-1"
+                >
+                  {category.name}
+                  {index < 4 && ','}
+                </a>
+              ))}
+              <a
+                href="/listings?showFilters=true"
+                className="underline hover:text-orange-300 ml-1"
+              >
                 View All
               </a>
             </motion.div>
@@ -432,7 +443,6 @@ export default function HomePage() {
         <McomFeatureSection />
         <SeasonalMarketingSection />
         <AuditSection />
-        <BusinessTrustSection />
         <LoyaltyProgramSection />
         {/* <StockAuditSection /> */}
         <McomEgiftCard />
@@ -560,11 +570,6 @@ export default function HomePage() {
               <li>
                 <a href="#" className="hover:text-[#f58220] transition-colors">
                   Add Listing
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-[#f58220] transition-colors">
-                  Author Profile
                 </a>
               </li>
             </ul>
