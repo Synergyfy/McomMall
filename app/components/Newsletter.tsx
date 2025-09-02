@@ -3,54 +3,68 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Mail } from 'lucide-react';
+import { Send } from 'lucide-react';
 
 export default function Newsletter() {
   return (
-    <div className="py-16 sm:py-20 px-4 sm:px-6 lg:px-8 border-b border-slate-800">
-      <div className="max-w-4xl mx-auto text-center">
-        <h2 className="text-4xl font-extrabold text-white sm:text-5xl">
-          Stay in the Loop
-        </h2>
-        <p className="mt-4 text-xl text-slate-400">
-          Join our newsletter to get the latest news, offers, and promotions
-          delivered right to your inbox.
-        </p>
-        <form className="mt-10 max-w-2xl mx-auto sm:flex">
-          <div className="min-w-0 flex-1">
-            <label htmlFor="name" className="sr-only">
-              Name
-            </label>
-            <Input
-              type="text"
-              name="name"
-              id="name"
-              placeholder="Your Name"
-              className="block w-full h-14 px-5 py-3 text-lg text-white placeholder-slate-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="mt-4 sm:mt-0 sm:ml-4 min-w-0 flex-1">
-            <label htmlFor="email" className="sr-only">
-              Email address
-            </label>
-            <Input
-              type="email"
-              name="email"
-              id="email"
-              placeholder="Your Email"
-              className="block w-full h-14 px-5 py-3 text-lg text-white placeholder-slate-500 bg-slate-800 border-slate-700 rounded-md shadow-sm focus:ring-orange-500 focus:border-orange-500"
-            />
-          </div>
-          <div className="mt-4 sm:mt-0 sm:ml-4">
-            <Button
-              type="submit"
-              className="block w-full h-14 px-6 py-3 text-lg font-bold text-white bg-orange-600 border border-transparent rounded-md shadow-lg transform transition-transform duration-200 hover:scale-105 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
-            >
-              <Mail className="mr-3 h-6 w-6" />
-              Subscribe
-            </Button>
-          </div>
-        </form>
+    // Section container with a bottom border
+    <div className="border-b border-slate-800 bg-slate-900">
+      {/* Inner container with padding and a subtle background glow effect */}
+      <div className="relative py-16 sm:py-20 px-4 sm:px-6 lg:px-8">
+        <div aria-hidden="true" className="absolute inset-0 top-60">
+          <div className="mx-auto max-w-7xl h-96 bg-gradient-to-r from-orange-600/20 to-purple-600/20 blur-3xl" />
+        </div>
+
+        <div className="max-w-3xl mx-auto text-center">
+          {/* Main heading with a striking gradient text effect */}
+          <h2 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500 sm:text-5xl">
+            Get Notified First
+          </h2>
+
+          {/* Subheading with improved-readability text color */}
+          <p className="mt-4 text-lg max-w-2xl mx-auto text-slate-400">
+            Join our exclusive newsletter for early access to new features,
+            special offers, and insider updates.
+          </p>
+
+          {/* Form with a more compact and modern layout */}
+          <form className="mt-10 max-w-lg mx-auto">
+            <div className="relative">
+              {/* Added an icon inside the input for better visual guidance */}
+              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
+                <Send className="h-5 w-5 text-slate-500" />
+              </div>
+
+              {/* Input field with padding adjusted for the icon and button */}
+              <Input
+                type="email"
+                name="email"
+                id="email"
+                placeholder="Enter your email"
+                className="block w-full h-14 pl-12 pr-36 py-3 text-base text-white placeholder-slate-500 bg-slate-800/80 border border-slate-700 rounded-full shadow-sm focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
+              />
+
+              {/* Button is now absolutely positioned inside the input container */}
+              <div className="absolute inset-y-0 right-0 flex items-center pr-2">
+                <Button
+                  type="submit"
+                  className="h-10 px-6 text-sm font-bold text-white bg-orange-600 rounded-full shadow-lg transform transition-transform duration-200 hover:scale-105 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-orange-500"
+                >
+                  Subscribe
+                </Button>
+              </div>
+            </div>
+          </form>
+
+          {/* A small note to build trust and reassure users */}
+          <p className="mt-5 text-sm text-slate-500">
+            We care about your data. Read our{' '}
+            <a href="#" className="underline hover:text-slate-400">
+              privacy policy
+            </a>
+            .
+          </p>
+        </div>
       </div>
     </div>
   );
