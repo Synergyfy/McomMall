@@ -12,7 +12,7 @@ const PAYPAL_CLIENT_ID =
 
 interface PayPalCheckoutButtonProps {
   totalPrice: number;
-  onSuccess: () => void;
+  onSuccess: (orderId: string) => void;
 }
 
 export default function PayPalCheckoutButton({
@@ -34,7 +34,7 @@ export default function PayPalCheckoutButton({
   const onApprove = async (data: { orderID: string }) => {
     try {
       await captureOrderMutation.mutateAsync(data.orderID);
-      onSuccess();
+      onSuccess(data.orderID);
     } catch (_error) {
       toast.error('Could not capture PayPal payment. Please try again.');
     }

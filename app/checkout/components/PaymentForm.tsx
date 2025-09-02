@@ -7,7 +7,7 @@ import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
 
 interface PaymentFormProps {
   totalPrice: number;
-  onPaymentSuccess: () => void;
+  onPaymentSuccess: (orderId: string) => void;
 }
 
 export default function PaymentForm({
