@@ -91,16 +91,23 @@ const OrderCard: FC<{ order: Order }> = ({ order }) => (
         <p className="font-semibold">{order.user.name}</p>
       </InfoBlock>
 
-      <InfoBlock icon={<DollarSign className="h-4 w-4" />} title="Total Price">
-        <p className="font-bold text-green-600">
-          £{order.payment.amount.toFixed(2)}
-        </p>
-      </InfoBlock>
+      {order.payment && (
+        <>
+          <InfoBlock
+            icon={<DollarSign className="h-4 w-4" />}
+            title="Total Price"
+          >
+            <p className="font-bold text-green-600">
+              £{order.payment.amount.toFixed(2)}
+            </p>
+          </InfoBlock>
 
-      <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-2 pt-4 border-t">
-        <p>Transaction ID: {order.payment.transactionId}</p>
-        <p>Payment Method: {order.payment.paymentMethod}</p>
-      </div>
+          <div className="text-xs text-gray-500 flex flex-wrap gap-x-4 gap-y-2 pt-4 border-t">
+            <p>Transaction ID: {order.payment.transactionId}</p>
+            <p>Payment Method: {order.payment.paymentMethod}</p>
+          </div>
+        </>
+      )}
     </CardContent>
   </Card>
 );

@@ -32,6 +32,6 @@ export interface Order {
   user: User;
   product: Product;
   quantity: number;
-  payment: OrderPayment;
+  payment?: OrderPayment;
   created_at: string;
 }
