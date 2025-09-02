@@ -76,7 +76,6 @@ interface ProductFormValues {
   category: string;
   price: number;
   discountedPrice?: number;
-  brand: string;
   tags: string;
   shortDescription: string;
   description: string;
@@ -127,9 +126,6 @@ const customResolver = (data: ProductFormValues) => {
       type: 'min',
       message: 'Price must be a positive number.',
     };
-  }
-  if (!data.brand?.trim()) {
-    errors.brand = { type: 'required', message: 'Brand is required.' };
   }
   if (!data.tags?.trim()) {
     errors.tags = { type: 'required', message: 'Tags are required.' };
@@ -257,7 +253,6 @@ export default function AddProductPage() {
       category: '',
       price: 0,
       discountedPrice: undefined,
-      brand: '',
       tags: '',
       shortDescription: '',
       description: '',
@@ -465,7 +460,7 @@ export default function AddProductPage() {
                                 error && 'text-red-500'
                               )}
                             >
-                              Price ($)
+                              Price (£)
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -485,7 +480,7 @@ export default function AddProductPage() {
                         render={({ field }) => (
                           <FormItem>
                             <FormLabel className="text-base">
-                              Discounted Price ($)
+                              Discounted Price (£)
                             </FormLabel>
                             <FormControl>
                               <Input
@@ -1263,48 +1258,6 @@ export default function AddProductPage() {
                               </Command>
                             </PopoverContent>
                           </Popover>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Brand */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Brand</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="brand"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="text-base py-6">
-                                <SelectValue placeholder="Select brand" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              <SelectItem value="apple" className="text-base">
-                                Apple
-                              </SelectItem>
-                              <SelectItem value="samsung" className="text-base">
-                                Samsung
-                              </SelectItem>
-                              <SelectItem value="nike" className="text-base">
-                                Nike
-                              </SelectItem>
-                              <SelectItem value="adidas" className="text-base">
-                                Adidas
-                              </SelectItem>
-                            </SelectContent>
-                          </Select>
                           <FormMessage className="text-red-500 text-base font-medium" />
                         </FormItem>
                       )}
