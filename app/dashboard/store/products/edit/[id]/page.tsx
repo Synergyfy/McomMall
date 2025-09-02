@@ -98,8 +98,9 @@ interface ProductFormValues {
   visibility: 'public' | 'private' | 'password-protected';
   purchaseNote?: string;
   enableReviews: boolean;
-  productImage: FileList | null;
+  productImages: FileList | null;
   businessId?: string;
+  imageUrls?: string[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -177,6 +178,12 @@ const customResolver = (data: ProductFormValues) => {
   }
   // On the edit page, we don't want to force the user to re-upload an image.
   // The backend should handle keeping the old image if a new one isn't provided.
+  if (data.productImages && data.productImages.length > 5) {
+    errors.productImages = {
+      type: 'max',
+      message: 'You can upload a maximum of 5 images.',
+    };
+  }
   if (!data.businessId) {
     errors.businessId = {
       type: 'required',
@@ -274,8 +281,9 @@ export default function EditProductPage() {
       visibility: 'public',
       purchaseNote: '',
       enableReviews: true,
-      productImage: null,
+      productImages: null,
       businessId: '',
+      imageUrls: [],
     },
   });
 
@@ -311,7 +319,8 @@ export default function EditProductPage() {
         purchaseNote: product.purchaseNote,
         enableReviews: product.enableReviews,
         businessId: product.bussinessId,
-        productImage: null, // Not handled
+        productImages: null, // Not handled
+        imageUrls: product.imageUrls || [],
       });
     }
   }, [product, form]);
@@ -338,7 +347,7 @@ export default function EditProductPage() {
       description: data.description,
       sku: data.sku,
       shortDescription: data.shortDescription,
-      imageUrl: `https://source.unsplash.com/random/800x600?sig=${Math.random()}`,
+      imageUrls: data.imageUrls,
       productUrl: data.productUrl,
       fileUrls: [], // Note: file uploads not handled in this implementation
       downloadLimit: data.downloadLimit
@@ -1194,46 +1203,38 @@ export default function EditProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Product Image */}
+                {/* Product Images */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Product Image</CardTitle>
+                    <CardTitle className="text-2xl">Product Images</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
-                      name="productImage"
+                      name="productImages"
                       render={({ field: { onChange, value, ...rest } }) => (
                         <>
                           <div className="flex items-center justify-center w-full">
                             <label
                               htmlFor="dropzone-file"
-                              className="relative flex flex-col items-center justify-center w-full h-64 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                              className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
                             >
-                              {value?.[0] ? (
-                                <Image
-                                  src={URL.createObjectURL(value[0])}
-                                  alt="Product preview"
-                                  fill
-                                  className="object-cover rounded-lg"
-                                />
-                              ) : (
-                                <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                  <UploadCloud className="w-12 h-12 mb-4 text-gray-400" />
-                                  <p className="mb-2 text-base text-gray-500">
-                                    <span className="font-semibold">
-                                      Click to upload
-                                    </span>{' '}
-                                    or drag and drop
-                                  </p>
-                                  <p className="text-sm text-gray-500">
-                                    SVG, PNG, JPG or GIF (MAX. 800x400px)
-                                  </p>
-                                </div>
-                              )}
+                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                <UploadCloud className="w-8 h-8 mb-2 text-gray-400" />
+                                <p className="mb-1 text-sm text-gray-500">
+                                  <span className="font-semibold">
+                                    Click to upload
+                                  </span>{' '}
+                                  or drag and drop
+                                </p>
+                                <p className="text-xs text-gray-500">
+                                  SVG, PNG, JPG or GIF (MAX. 800x400px)
+                                </p>
+                              </div>
                               <input
                                 id="dropzone-file"
                                 type="file"
+                                multiple
                                 className="hidden"
                                 {...rest}
                                 onChange={event => {
@@ -1246,6 +1247,31 @@ export default function EditProductPage() {
                         </>
                       )}
                     />
+                    <div className="grid grid-cols-3 gap-4 mt-4">
+                      {form.watch('imageUrls')?.map((url, index) => (
+                        <div key={index} className="relative h-24">
+                          <Image
+                            src={url}
+                            alt={`Product image ${index + 1}`}
+                            fill
+                            className="object-cover rounded-lg"
+                          />
+                        </div>
+                      ))}
+                      {form.watch('productImages') &&
+                        Array.from(form.watch('productImages') as FileList).map(
+                          (file, index) => (
+                            <div key={index} className="relative h-24">
+                              <Image
+                                src={URL.createObjectURL(file)}
+                                alt={`New product image ${index + 1}`}
+                                fill
+                                className="object-cover rounded-lg"
+                              />
+                            </div>
+                          )
+                        )}
+                    </div>
                   </CardContent>
                 </Card>
 
