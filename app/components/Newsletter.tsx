@@ -16,7 +16,7 @@ export default function Newsletter() {
           Join our newsletter to get the latest news, offers, and promotions
           delivered right to your inbox.
         </p>
-        <form className="mt-10 max-w-lg mx-auto sm:flex">
+        <form className="mt-10 max-w-2xl mx-auto sm:flex">
           <div className="min-w-0 flex-1">
             <label htmlFor="name" className="sr-only">
               Name
