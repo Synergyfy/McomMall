@@ -51,6 +51,13 @@ const springTheme = {
   },
 };
 
+import Footer from '@/components/Footer';
+
 export default function SpringPage() {
-  return <SeasonalPage theme={springTheme} />;
+  return (
+    <>
+      <SeasonalPage theme={springTheme} />
+      <Footer />
+    </>
+  );
 }

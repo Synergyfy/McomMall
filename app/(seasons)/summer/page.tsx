@@ -36,6 +36,13 @@ const summerTheme = {
   },
 };
 
+import Footer from '@/components/Footer';
+
 export default function SummerPage() {
-  return <SeasonalPage theme={summerTheme} />;
+  return (
+    <>
+      <SeasonalPage theme={summerTheme} />
+      <Footer />
+    </>
+  );
 }
