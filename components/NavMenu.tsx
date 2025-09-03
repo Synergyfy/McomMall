@@ -34,11 +34,101 @@ const ListItem = ({
   );
 };
 
+// --- Popular Categories Data ---
+const popularCategories = [
+  {
+    name: 'Hospitality',
+    subCategories: [
+      'Restaurants',
+      'Cafés / Coffee Shops',
+      'Takeaways / Delivery',
+      'Bakeries',
+      'Bars & Pubs',
+      'Breweries, Wineries & Distilleries',
+      'Catering Services',
+      'Dessert Shops',
+      'Accommodation & Travel',
+    ],
+  },
+  {
+    name: 'Shopping & Retail',
+    subCategories: [
+      'Clothing & Fashion',
+      'Beauty & Cosmetics',
+      'Home & Garden',
+      'Electronics & Appliances',
+      'Books, Stationery & Gifts',
+      'Health Food / Organic',
+      'Pet Supplies',
+      'Toys & Hobbies',
+    ],
+  },
+  {
+    name: 'Trades & Home Services',
+    subCategories: [
+      'Plumbing & Heating',
+      'Electrical Services',
+      'Builders & Construction',
+      'Carpentry & Joinery',
+      'Roofing & Guttering',
+      'Flooring & Tiling',
+      'Cleaning Services',
+      'Gardening & Landscaping',
+      'Pest Control',
+      'Locksmith & Security',
+      'Handyman Services',
+      'Decorators (Painters, Wallpapering)',
+    ],
+  },
+  {
+    name: 'Beauty & Wellness',
+    subCategories: [
+      'Hairdressers & Barbers',
+      'Nail Salons',
+      'Beauty Salons',
+      'Spas & Wellness Centres',
+      'Massage Therapists',
+      'Tattoo & Piercing',
+      'Skincare Clinics',
+      'Tanning (Spray, Beds)',
+    ],
+  },
+  {
+    name: 'Health & Medical',
+    subCategories: [
+      'General Practitioners (GP)',
+      'Dentists',
+      'Opticians',
+      'Physiotherapists',
+      'Massage Therapy',
+      'Counselling & Mental Health',
+      'Chiropractors',
+      'Diagnostic Services',
+      'Hospitals & Clinics',
+      'Weight Loss & Nutrition',
+    ],
+  },
+  {
+    name: 'Others',
+    subCategories: [
+      'Property & Real Estate',
+      'Fitness & Sports',
+      'Automotive & Transport',
+      'Pets & Animal Services',
+      'Manufacturing & Industrial',
+      'Non-Profit & Community',
+      'Education & Training',
+      'Arts, Entertainment & Events',
+      'Media, Marketing & Professional Services',
+    ],
+  },
+];
+
 // --- Business Category Menu Component ---
 const BusinessCategoryMenu = () => {
   return (
     <div className="grid w-[calc(100vw-20rem)] max-w-7xl grid-cols-6 gap-x-4 gap-y-6 p-6">
-      {businessCategories.map(category => (
+      {popularCategories.map(category => (
         <div key={category.name} className="space-y-3">
           <Link
             href={`/listings?category=${encodeURIComponent(category.name)}`}
@@ -49,14 +139,14 @@ const BusinessCategoryMenu = () => {
           </Link>
           <ul className="space-y-2">
             {category.subCategories.map(subCategory => (
-              <li key={subCategory.name}>
+              <li key={subCategory}>
                 <Link
                   href={`/listings?category=${encodeURIComponent(
                     category.name
-                  )}&subcategory=${encodeURIComponent(subCategory.name)}`}
+                  )}&subcategory=${encodeURIComponent(subCategory)}`}
                   className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
                 >
-                  {subCategory.name}
+                  {subCategory}
                 </Link>
               </li>
             ))}

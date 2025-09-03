@@ -42,6 +42,7 @@ export default function DashboardLayout({
             trialEndDate={subscriptionStatus.trialEndDate}
             isPaused={subscriptionStatus.isPaused}
             isTrialPausable={subscriptionStatus.isTrialPausable}
+            remainingPauses={subscriptionStatus.remainingPauses}
           />
         )}
       <section className="flex w-screen h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">

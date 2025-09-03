@@ -1,7 +1,7 @@
 // components/CategoryFilterSidebar.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
@@ -26,8 +26,7 @@ export default function CategoryFilterSidebar({
   onCategoryChange,
   onSubCategoryChange,
 }: CategoryFilterSidebarProps) {
-  const [selectedCategory, setSelectedCategory] =
-    useState(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedSubCategories, setSelectedSubCategories] =
     useState<string[]>(initialSubCategories);
 
@@ -37,10 +36,9 @@ export default function CategoryFilterSidebar({
   }, [initialCategory, initialSubCategories]);
 
   const handleCategoryChange = (category: string) => {
-    const newCategory = category === 'all' ? '' : category;
-    setSelectedCategory(newCategory);
+    setSelectedCategory(category);
     setSelectedSubCategories([]);
-    onCategoryChange(newCategory);
+    onCategoryChange(category);
     onSubCategoryChange([]);
   };
 
@@ -52,22 +50,23 @@ export default function CategoryFilterSidebar({
     onSubCategoryChange(newSubCategories);
   };
 
-  const subCategories = useMemo(() => {
+  const currentSubCategories = useMemo(() => {
     if (!selectedCategory) return [];
-    const category = businessCategories.find(c => c.name === selectedCategory);
+    const category = businessCategories.find(
+      cat => cat.name === selectedCategory
+    );
     return category ? category.subCategories : [];
   }, [selectedCategory]);
 
   return (
     <div className="space-y-4">
       <div>
-        <Label htmlFor="category">All Categories</Label>
+        <Label>Category</Label>
         <Select value={selectedCategory} onValueChange={handleCategoryChange}>
-          <SelectTrigger id="category" className="mt-2 focus:ring-red-500">
+          <SelectTrigger>
             <SelectValue placeholder="Select a category" />
           </SelectTrigger>
           <SelectContent>
-            <SelectItem value="all">All Categories</SelectItem>
             {businessCategories.map(cat => (
               <SelectItem key={cat.name} value={cat.name}>
                 {cat.name}
@@ -79,9 +78,9 @@ export default function CategoryFilterSidebar({
 
       {selectedCategory && (
         <div>
-          <Label>Sub Categories</Label>
+          <Label>Sub-categories</Label>
           <div className="space-y-2 mt-2">
-            {subCategories.map(sub => (
+            {currentSubCategories.map(sub => (
               <div key={sub.name} className="flex items-center space-x-2">
                 <Checkbox
                   id={sub.name}

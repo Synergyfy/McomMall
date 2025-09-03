@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
 import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
 import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
@@ -28,10 +29,11 @@ import VirtualCardCarousel from '../homepage/components/VirtualCardCarousel';
 import HowItWorks from '../homepage/components/HowItWorks';
 import { AuditSection } from '../homepage/components/AuditSection';
 import VCardFeaturesSection from '../homepage/components/VCardFeatures';
-import { BusinessTrustSection } from '../homepage/components/BusinessTrustSection';
 import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
 import McomSolutions from '../homepage/components/McomSolutions';
 import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
+import { businessCategories } from '@/lib/business-categories';
+import Newsletter from './Newsletter';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -189,6 +191,7 @@ export default function HomePage() {
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
+  const [searchError, setSearchError] = useState('');
   const router = useRouter();
 
   const backgroundImages = [Autumn, Summer, Spring, Winter];
@@ -223,6 +226,11 @@ export default function HomePage() {
       : allFeaturedAds.filter(ad => ad.category === activeAdFilter);
 
   const handleSearch = () => {
+    if (!searchQuery.trim()) {
+      setSearchError('Please enter something to search for.');
+      return;
+    }
+    setSearchError(''); // Clear error if search is valid
     let query = searchQuery;
     if (location) {
       query = `${searchQuery} in ${location}`;
@@ -312,18 +320,40 @@ export default function HomePage() {
               </motion.button>
             </motion.div>
 
+            {searchError && (
+              <motion.p
+                className="mt-2 text-red-400 bg-white/20 backdrop-blur-sm p-2 rounded-md font-semibold"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: 10 }}
+              >
+                {searchError}
+              </motion.p>
+            )}
+
             <motion.div
               className="mt-4 text-sm text-white"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <span className="font-semibold">
-                Car, Pet, Place, Education, Restaurant,{' '}
-              </span>
-              <a href="#" className="underline hover:text-orange-300">
+              <span className="font-semibold">Popular:</span>
+              {businessCategories.slice(0, 5).map((category, index) => (
+                <Link
+                  key={index}
+                  href={`/listings?category=${encodeURIComponent(category.name)}`}
+                  className="underline hover:text-orange-300 mx-1"
+                >
+                  {category.name}
+                  {index < 4 && ','}
+                </Link>
+              ))}
+              <Link
+                href="/listings?showFilters=true"
+                className="underline hover:text-orange-300 ml-1"
+              >
                 View All
-              </a>
+              </Link>
             </motion.div>
           </div>
         </section>
@@ -415,7 +445,6 @@ export default function HomePage() {
         <McomFeatureSection />
         <SeasonalMarketingSection />
         <AuditSection />
-        <BusinessTrustSection />
         <LoyaltyProgramSection />
         {/* <StockAuditSection /> */}
         <McomEgiftCard />
@@ -459,12 +488,12 @@ export default function HomePage() {
                   <h3 className="font-bold text-lg mt-2 mb-4 h-14">
                     {post.title}
                   </h3>
-                  <a
+                  <Link
                     href="#"
                     className="text-[#f58220] font-semibold hover:underline"
                   >
                     Read More &rarr;
-                  </a>
+                  </Link>
                 </div>
               </div>
             ))}
@@ -473,8 +502,9 @@ export default function HomePage() {
       </ScrollAnimatedSection>
 
       {/* --- Footer Section --- */}
-      <footer className="bg-slate-900 text-slate-300 py-16 px-4 md:px-8 lg:px-16">
-        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <footer className="bg-slate-900 text-slate-300">
+        <Newsletter />
+        <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 py-16 px-4 md:px-8 lg:px-16">
           {/* Column 1: McomMall Info */}
           <div className="space-y-4">
             <div className="flex items-center gap-2 text-white">
@@ -543,11 +573,6 @@ export default function HomePage() {
               <li>
                 <a href="#" className="hover:text-[#f58220] transition-colors">
                   Add Listing
-                </a>
-              </li>
-              <li>
-                <a href="#" className="hover:text-[#f58220] transition-colors">
-                  Author Profile
                 </a>
               </li>
             </ul>
