@@ -1,11 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '@/service/api';
-
-export enum PaymentMethod {
-  STRIPE = 'STRIPE',
-  PAYPAL = 'PAYPAL',
-  WALLET = 'WALLET',
-}
+import { PaymentMethod } from '@/types/order';
 
 export interface PaymentDto {
   paymentMethod: PaymentMethod;

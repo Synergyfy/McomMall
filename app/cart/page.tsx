@@ -134,7 +134,7 @@ export default function CartPage() {
               <span>Total</span>
               <span>£{total.toFixed(2)}</span>
             </div>
-            <Link href="/checkout">
+            <Link href="/checkout?from=cart">
               <Button className="w-full mt-6">Proceed to Checkout</Button>
             </Link>
             <Button
