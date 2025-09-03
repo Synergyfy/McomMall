@@ -1,15 +1,16 @@
 // components/CategoryFilterSidebar.tsx
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from '@/components/ui/accordion';
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
 
 interface CategoryFilterSidebarProps {
@@ -35,10 +36,9 @@ export default function CategoryFilterSidebar({
   }, [initialCategory, initialSubCategories]);
 
   const handleCategoryChange = (category: string) => {
-    const newCategory = category === selectedCategory ? '' : category;
-    setSelectedCategory(newCategory);
+    setSelectedCategory(category);
     setSelectedSubCategories([]);
-    onCategoryChange(newCategory);
+    onCategoryChange(category);
     onSubCategoryChange([]);
   };
 
@@ -50,54 +50,51 @@ export default function CategoryFilterSidebar({
     onSubCategoryChange(newSubCategories);
   };
 
+  const currentSubCategories = useMemo(() => {
+    if (!selectedCategory) return [];
+    const category = businessCategories.find(
+      cat => cat.name === selectedCategory
+    );
+    return category ? category.subCategories : [];
+  }, [selectedCategory]);
+
   return (
     <div className="space-y-4">
       <div>
-        <Label>All Categories</Label>
-        <Accordion
-          type="single"
-          collapsible
-          className="w-full"
-          value={selectedCategory}
-          onValueChange={handleCategoryChange}
-        >
-          {businessCategories.map(cat => (
-            <AccordionItem key={cat.name} value={cat.name}>
-              <AccordionTrigger>{cat.name}</AccordionTrigger>
-              <AccordionContent>
-                <Accordion type="multiple" className="w-full">
-                  {cat.subCategories.map(sub => (
-                    <AccordionItem key={sub.name} value={sub.name}>
-                      <AccordionTrigger>{sub.name}</AccordionTrigger>
-                      <AccordionContent>
-                        <div className="space-y-2 mt-2 pl-4">
-                          {sub.items.map(item => (
-                            <div
-                              key={item}
-                              className="flex items-center space-x-2"
-                            >
-                              <Checkbox
-                                id={item}
-                                checked={selectedSubCategories.includes(item)}
-                                onCheckedChange={() =>
-                                  handleSubCategoryChange(item)
-                                }
-                              />
-                              <Label htmlFor={item} className="font-normal">
-                                {item}
-                              </Label>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  ))}
-                </Accordion>
-              </AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
+        <Label>Category</Label>
+        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+          <SelectTrigger>
+            <SelectValue placeholder="Select a category" />
+          </SelectTrigger>
+          <SelectContent>
+            {businessCategories.map(cat => (
+              <SelectItem key={cat.name} value={cat.name}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
       </div>
+
+      {selectedCategory && (
+        <div>
+          <Label>Sub-categories</Label>
+          <div className="space-y-2 mt-2">
+            {currentSubCategories.map(sub => (
+              <div key={sub.name} className="flex items-center space-x-2">
+                <Checkbox
+                  id={sub.name}
+                  checked={selectedSubCategories.includes(sub.name)}
+                  onCheckedChange={() => handleSubCategoryChange(sub.name)}
+                />
+                <Label htmlFor={sub.name} className="font-normal">
+                  {sub.name}
+                </Label>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
