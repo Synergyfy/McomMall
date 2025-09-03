@@ -1,7 +1,7 @@
 // components/CategoryFilterSidebar.tsx
 'use client';
 
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
@@ -25,8 +25,7 @@ export default function CategoryFilterSidebar({
   onCategoryChange,
   onSubCategoryChange,
 }: CategoryFilterSidebarProps) {
-  const [selectedCategory, setSelectedCategory] =
-    useState(initialCategory);
+  const [selectedCategory, setSelectedCategory] = useState(initialCategory);
   const [selectedSubCategories, setSelectedSubCategories] =
     useState<string[]>(initialSubCategories);
 
@@ -66,20 +65,34 @@ export default function CategoryFilterSidebar({
             <AccordionItem key={cat.name} value={cat.name}>
               <AccordionTrigger>{cat.name}</AccordionTrigger>
               <AccordionContent>
-                <div className="space-y-2 mt-2">
+                <Accordion type="multiple" className="w-full">
                   {cat.subCategories.map(sub => (
-                    <div key={sub.name} className="flex items-center space-x-2">
-                      <Checkbox
-                        id={sub.name}
-                        checked={selectedSubCategories.includes(sub.name)}
-                        onCheckedChange={() => handleSubCategoryChange(sub.name)}
-                      />
-                      <Label htmlFor={sub.name} className="font-normal">
-                        {sub.name}
-                      </Label>
-                    </div>
+                    <AccordionItem key={sub.name} value={sub.name}>
+                      <AccordionTrigger>{sub.name}</AccordionTrigger>
+                      <AccordionContent>
+                        <div className="space-y-2 mt-2 pl-4">
+                          {sub.items.map(item => (
+                            <div
+                              key={item}
+                              className="flex items-center space-x-2"
+                            >
+                              <Checkbox
+                                id={item}
+                                checked={selectedSubCategories.includes(item)}
+                                onCheckedChange={() =>
+                                  handleSubCategoryChange(item)
+                                }
+                              />
+                              <Label htmlFor={item} className="font-normal">
+                                {item}
+                              </Label>
+                            </div>
+                          ))}
+                        </div>
+                      </AccordionContent>
+                    </AccordionItem>
                   ))}
-                </div>
+                </Accordion>
               </AccordionContent>
             </AccordionItem>
           ))}
