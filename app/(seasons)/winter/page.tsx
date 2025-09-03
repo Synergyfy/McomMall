@@ -50,6 +50,13 @@ const winterTheme = {
   },
 };
 
+import Footer from '@/components/Footer';
+
 export default function WinterPage() {
-  return <SeasonalPage theme={winterTheme} />;
+  return (
+    <>
+      <SeasonalPage theme={winterTheme} />
+      <Footer />
+    </>
+  );
 }

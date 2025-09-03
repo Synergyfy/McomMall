@@ -24,10 +24,84 @@ function isGoogleResult(
 import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
-function OverviewSection({
+function ProductPage({
   listing,
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
+}) {
+  const dispatch = useDispatch();
+  const router = useRouter();
+
+  const handleAddToCart = (product: Product) => {
+    dispatch(addProduct(product));
+    toast.success(`${product.title} has been added to your cart.`);
+  };
+
+  const handleOrderNow = (product: Product) => {
+    router.push(`/checkout?productId=${product.id}`);
+  };
+
+  const isGoogle = isGoogleResult(listing);
+
+  if (isGoogle) {
+    return <p>No products available for this listing.</p>;
+  }
+
+  return (
+    <div>
+      <h3 className="text-xl font-bold border-t pt-6">Products</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+        {(listing as InHouseBusiness).products?.map(product => (
+          <div
+            key={product.id}
+            className="border rounded-lg p-4 flex flex-col"
+          >
+            <div className="relative w-full h-32 mb-2">
+              <Image
+                src={
+                  product.imageUrl ||
+                  'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                }
+                alt={product.title}
+                layout="fill"
+                className="object-cover rounded-md"
+              />
+            </div>
+            <div className="flex-grow">
+              <h4 className="font-semibold">{product.title}</h4>
+              <p className="text-gray-600">£{product.price.toFixed(2)}</p>
+              {product.shortDescription && (
+                <p className="text-sm text-gray-500 mt-1">
+                  {product.shortDescription}
+                </p>
+              )}
+            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              onClick={() => handleAddToCart(product)}
+            >
+              Add to Cart
+            </Button>
+            <Button
+              className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => handleOrderNow(product)}
+            >
+              Order Now
+            </Button>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function OverviewSection({
+  listing,
+  isLoading,
+}: {
+  listing: GooglePlaceResult | InHouseBusiness;
+  isLoading: boolean;
 }) {
   const [isCopied, setIsCopied] = useState(false);
   const dispatch = useDispatch();
@@ -75,6 +149,12 @@ function OverviewSection({
     'Saturday',
   ];
 
+  const location = isGoogle ? listing.geometry : listing.location;
+  const address = isGoogle
+    ? listing.formatted_address || listing.vicinity
+    : `${listing.location.addressLine1}, ${listing.location.city}`;
+  const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
+
   if (isGoogle) {
     return (
       <div className="space-y-4">
@@ -94,6 +174,15 @@ function OverviewSection({
             </p>
           </div>
         )}
+        <hr className="my-6" />
+        <LocationSection listing={location} address={address} />
+        <hr className="my-6" />
+        <div>
+          <h3 className="text-xl font-bold border-t pt-6">FAQ</h3>
+          <p>FAQ content goes here.</p>
+        </div>
+        <hr className="my-6" />
+        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
       </div>
     );
   }
@@ -204,54 +293,6 @@ function OverviewSection({
         </div>
       )}
 
-      {listing.products && listing.products.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">Products</h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-            {listing.products.map(product => (
-              <div
-                key={product.id}
-                className="border rounded-lg p-4 flex flex-col"
-              >
-                <div className="relative w-full h-32 mb-2">
-                  <Image
-                    src={
-                      product.imageUrl ||
-                      'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-                    }
-                    alt={product.title}
-                    layout="fill"
-                    className="object-cover rounded-md"
-                  />
-                </div>
-                <div className="flex-grow">
-                  <h4 className="font-semibold">{product.title}</h4>
-                  <p className="text-gray-600">£{product.price.toFixed(2)}</p>
-                  {product.shortDescription && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      {product.shortDescription}
-                    </p>
-                  )}
-                </div>
-                <Button
-                  variant="outline"
-                  className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                  onClick={() => handleAddToCart(product)}
-                >
-                  Add to Cart
-                </Button>
-                <Button
-                  className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
-                  onClick={() => handleOrderNow(product)}
-                >
-                  Order Now
-                </Button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
-
       {(listing.website || listing.businessEmail) && (
         <div>
           <h3 className="text-xl font-bold border-t pt-6">
@@ -271,6 +312,15 @@ function OverviewSection({
           </div>
         </div>
       )}
+      <hr className="my-6" />
+      <LocationSection listing={location} address={address} />
+      <hr className="my-6" />
+      <div>
+        <h3 className="text-xl font-bold border-t pt-6">FAQ</h3>
+        <p>FAQ content goes here.</p>
+      </div>
+      <hr className="my-6" />
+      <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
     </div>
   );
 }
@@ -290,21 +340,35 @@ export default function ContentTabs({
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-3 md:grid-cols-5 mb-6">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="location">Location</TabsTrigger>
-        <TabsTrigger value="faq">FAQ</TabsTrigger>
-        <TabsTrigger value="reviews">Reviews</TabsTrigger>
+    <Tabs defaultValue="product-page" className="w-full">
+      <TabsList className="grid w-full grid-cols-2 mb-6">
+        <TabsTrigger value="product-page">Product page</TabsTrigger>
+        <TabsTrigger value="about-business">About this business</TabsTrigger>
       </TabsList>
-      <TabsContent value="overview">
-        <OverviewSection listing={listing} />
+      <TabsContent value="product-page">
+        <ProductPage listing={listing} />
       </TabsContent>
-      <TabsContent value="location">
-        <LocationSection listing={location} address={address} />
-      </TabsContent>
-      <TabsContent value="reviews">
-        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+      <TabsContent value="about-business">
+        <Tabs defaultValue="overview" className="w-full">
+          <TabsList className="grid w-full grid-cols-4 mb-6">
+            <TabsTrigger value="overview">Overview</TabsTrigger>
+            <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+            <TabsTrigger value="voucher">Voucher</TabsTrigger>
+            <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
+          </TabsList>
+          <TabsContent value="overview">
+            <OverviewSection listing={listing} isLoading={isLoading} />
+          </TabsContent>
+          <TabsContent value="loyalty">
+            <p>Loyalty & Reward content goes here.</p>
+          </TabsContent>
+          <TabsContent value="voucher">
+            <p>Voucher content goes here.</p>
+          </TabsContent>
+          <TabsContent value="gift-card">
+            <p>Gift Card content goes here.</p>
+          </TabsContent>
+        </Tabs>
       </TabsContent>
     </Tabs>
   );

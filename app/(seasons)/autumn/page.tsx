@@ -52,6 +52,13 @@ const autumnTheme = {
   },
 };
 
+import Footer from '@/components/Footer';
+
 export default function AutumnPage() {
-  return <SeasonalPage theme={autumnTheme} />;
+  return (
+    <>
+      <SeasonalPage theme={autumnTheme} />
+      <Footer />
+    </>
+  );
 }
