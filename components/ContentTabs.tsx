@@ -10,9 +10,8 @@ import {
   Product,
 } from '@/service/listings/types';
 import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabContent';
-import { useDispatch } from 'react-redux';
-import { addProduct } from '@/service/store/cartSlice';
 import { toast } from 'sonner';
+import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -29,11 +28,11 @@ function ProductPage({
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
 }) {
-  const dispatch = useDispatch();
   const router = useRouter();
+  const { addItemToCart } = useCart(); // Use the useCart hook
 
   const handleAddToCart = (product: Product) => {
-    dispatch(addProduct(product));
+    addItemToCart({ productId: product.id, quantity: 1 });
     toast.success(`${product.title} has been added to your cart.`);
   };
 
@@ -104,17 +103,8 @@ function OverviewSection({
   isLoading: boolean;
 }) {
   const [isCopied, setIsCopied] = useState(false);
-  const dispatch = useDispatch();
   const router = useRouter();
 
-  const handleAddToCart = (product: Product) => {
-    dispatch(addProduct(product));
-    toast.success(`${product.title} has been added to your cart.`);
-  };
-
-  const handleOrderNow = (product: Product) => {
-    router.push(`/checkout?productId=${product.id}`);
-  };
   const isGoogle = isGoogleResult(listing);
 
   const handleCopy = () => {
