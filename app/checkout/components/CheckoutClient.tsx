@@ -5,10 +5,11 @@ import { useState, useEffect, useCallback } from 'react';
 import OrderSummary from './OrderSummary';
 import PaymentForm from './PaymentForm';
 import { useGetProductById } from '@/service/store/products/hook';
-import PaymentSuccessModal from '@/components/PaymentSuccessModal';
 import { loadStripe } from '@stripe/stripe-js';
-import { useRecordOrder } from '@/hooks/useRecordOrder';
-import { PaymentMethod } from '@/types/order';
+import { useCheckout } from '@/hooks/useCheckout';
+import { PaymentMethod } from '@/hooks/useCheckout';
+import { SuccessDialog } from '@/components/ui/SuccessDialog';
+import { useRouter } from 'next/navigation';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -23,24 +24,29 @@ export default function CheckoutClient() {
   const { data: product, isLoading } = useGetProductById(productId || '');
   const [quantity, setQuantity] = useState(1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
-  const { mutate: recordOrder } = useRecordOrder();
+  const router = useRouter();
+  const { mutate: checkout } = useCheckout();
   const totalPrice = product ? product.price * quantity : 0;
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
       if (!product) return;
-      recordOrder({
-        productId: product.id,
-        quantity,
-        payment: {
-          paymentMethod,
-          amount: totalPrice,
-          transactionId,
+      checkout(
+        {
+          payment: {
+            paymentMethod,
+            amount: totalPrice,
+            transactionId,
+          },
         },
-      });
-      setSuccessModalOpen(true);
+        {
+          onSuccess: () => {
+            setSuccessModalOpen(true);
+          },
+        }
+      );
     },
-    [product, quantity, totalPrice, recordOrder]
+    [product, totalPrice, checkout]
   );
 
   useEffect(() => {
@@ -93,9 +99,12 @@ export default function CheckoutClient() {
           </div>
         </div>
       </div>
-      <PaymentSuccessModal
+      <SuccessDialog
         isOpen={isSuccessModalOpen}
-        onClose={() => setSuccessModalOpen(false)}
+        onClose={() => {
+          setSuccessModalOpen(false);
+          router.push('/dashboard/orders');
+        }}
       />
     </>
   );
