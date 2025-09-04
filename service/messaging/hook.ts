@@ -29,8 +29,19 @@ export const useSendMessage = () => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: async (message: CreateMessageDto) => {
-      const { data } = await api.post('/messaging', message);
-      return data;
+      if (message.conversationId) {
+        const { data } = await api.post(
+          `/messaging/conversations/${message.conversationId}`,
+          { content: message.content }
+        );
+        return data;
+      } else {
+        const { data } = await api.post('/messaging', {
+          content: message.content,
+          receiverId: message.receiverId,
+        });
+        return data;
+      }
     },
     onSuccess: (data: Message) => {
       queryClient.invalidateQueries({

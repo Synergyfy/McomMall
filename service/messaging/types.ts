@@ -30,4 +30,5 @@ export interface Conversation {
 export interface CreateMessageDto {
   content: string;
   receiverId: string;
+  conversationId?: string;
 }

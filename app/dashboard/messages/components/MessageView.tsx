@@ -50,6 +50,7 @@ export default function MessageView({ conversation }: MessageViewProps) {
     sendMessage({
       content: newMessage,
       receiverId: receiver.id,
+      conversationId: conversation.id,
     });
     setNewMessage('');
   };
