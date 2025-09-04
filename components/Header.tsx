@@ -8,9 +8,10 @@ import { ShoppingCart, User, ChevronDown } from 'lucide-react';
 import Auth from './auth';
 import { NavMenu } from './NavMenu';
 import { usePathname } from 'next/navigation';
+import { useLogout } from '@/service/auth/hook';
+import { useCart } from '@/hooks/useCart'; // Import useCart
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import { useLogout } from '@/service/auth/hook';
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -21,6 +22,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
 export default function Header() {
   const pathname = usePathname();
+  const { cartItemCount } = useCart();
   const { accessToken, userName } = useSelector(
     (state: RootState) => state.auth
   );
@@ -49,19 +51,21 @@ export default function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 md:space-x-4">
-            <Button
-              variant="ghost"
-              size="sm"
-              className="relative text-white hover:text-red-400"
-            >
-              <ShoppingCart className="w-5 h-5" />
-              <Badge
-                variant="destructive"
-                className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs bg-red-500"
+            <Link href="/cart">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative text-white hover:text-red-400"
               >
-                0
-              </Badge>
-            </Button>
+                <ShoppingCart className="w-5 h-5" />
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs bg-red-500"
+                >
+                  {cartItemCount}
+                </Badge>
+              </Button>
+            </Link>
             {accessToken ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
