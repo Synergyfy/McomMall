@@ -27,7 +27,11 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   );
 
   const customerListingMenu = listingMenuItems.filter(item =>
-    ['My Bookings', 'Messages', 'Reviews', 'Bookmarks'].includes(item.title)
+    ['Reviews', 'Bookmarks'].includes(item.title)
+  );
+
+  const customerMainMenu = mainMenuItems.filter(item =>
+    ['My Bookings', 'Messages', 'Wallet'].includes(item.title)
   );
 
   const customerAccountMenu = accountMenuItems.filter(item =>
@@ -129,6 +133,12 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
       {userRole === 'customer' && (
         <>
+          <nav>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Main
+            </h3>
+            {renderMenuItems(customerMainMenu)}
+          </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
               Listing
