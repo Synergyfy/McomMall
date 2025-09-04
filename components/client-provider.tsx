@@ -9,6 +9,7 @@ import { Provider, useDispatch } from 'react-redux';
 import { store } from '@/service/store/store';
 import { loadAuthFromCookies } from '@/service/store/authSlice';
 import { useTokenRefresh } from '@/service/auth/useTokenRefresh';
+import { SocketProvider } from '@/context/SocketContext';
 
 const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch();
@@ -35,7 +36,9 @@ export default function ClientProviders({
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <AuthLoader>{children}</AuthLoader>
+        <SocketProvider>
+          <AuthLoader>{children}</AuthLoader>
+        </SocketProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </Provider>

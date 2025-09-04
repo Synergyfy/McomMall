@@ -1,6 +1,7 @@
 import { useMutation } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import api, { setBearerToken } from '../api';
+import { useSelector } from 'react-redux';
 import {
   UserInterface,
   AuthInterface,
@@ -44,6 +45,11 @@ export const useCreateUser = () => {
   });
   return mutation;
 };
+
+export const useAuth = () => {
+  const { user, token } = useSelector((state: any) => state.auth);
+  return { user, token };
+}
 
 export const useLogin = () => {
   const dispatch: AppDispatch = useDispatch();

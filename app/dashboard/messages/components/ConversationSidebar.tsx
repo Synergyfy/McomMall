@@ -1,4 +1,5 @@
-import { Conversation } from '../data';
+import { Conversation } from '@/service/messaging/types';
+import { useAuth } from '@/service/auth/hook';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -11,6 +12,13 @@ export default function ConversationSidebar({
   selectedConversation,
   onConversationSelect,
 }: ConversationSidebarProps) {
+  const { user: currentUser } = useAuth();
+
+  const getContactName = (conversation: Conversation) => {
+    const participant = conversation.participants.find(p => p.id !== currentUser?.id);
+    return participant?.name || 'Unknown';
+  };
+
   return (
     <div className="h-full overflow-y-auto">
       <h2 className="p-4 text-xl font-semibold border-b">Conversations</h2>
@@ -27,9 +35,9 @@ export default function ConversationSidebar({
               {/* Avatar placeholder */}
               <div className="w-10 h-10 rounded-full bg-gray-300 mr-3"></div>
               <div>
-                <p className="font-semibold">{conversation.contactName}</p>
+                <p className="font-semibold">{getContactName(conversation)}</p>
                 <p className="text-sm text-gray-500 truncate">
-                  {conversation.messages[conversation.messages.length - 1].text}
+                  {conversation.messages[conversation.messages.length - 1]?.content}
                 </p>
               </div>
             </div>

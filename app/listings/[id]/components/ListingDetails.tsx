@@ -143,6 +143,7 @@ export default function ClientListingDetail({
                   }
                   priceDisplay={String(listing?.price_level ?? '')}
                   author={{
+                    id: isGoogle ? '' : listing?.user?.id ?? '',
                     name: isGoogle
                       ? listing?.name ?? ''
                       : listing?.user?.name ?? listing.businessName,
