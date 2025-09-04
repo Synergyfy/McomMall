@@ -11,9 +11,9 @@ import {
   User,
   Badge,
 } from 'lucide-react';
-import { useSendMessage } from './../service/messaging/hook';
+import { useSendMessage } from '@/service/messaging/hook';
 import { useRouter } from 'next/navigation';
-import { useAuth } from './../service/auth/hook';
+import { useAuth } from '@/service/auth/hook';
 
 interface BookingSidebarProps {
   priceDisplay: string;

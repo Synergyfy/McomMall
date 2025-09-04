@@ -47,8 +47,14 @@ export const useCreateUser = () => {
 };
 
 export const useAuth = () => {
-  const { user, token } = useSelector((state: any) => state.auth);
-  return { user, token };
+  const { accessToken, userId, userName, userRole } = useSelector(
+    (state: any) => state.auth
+  );
+
+  const user = userId
+    ? { id: userId, name: userName, role: userRole }
+    : null;
+  return { user, token: accessToken };
 };
 
 export const useLogin = () => {
