@@ -38,6 +38,8 @@ export default function ConversationSidebar({
   }, [onNewMessage, onConversationUpdate, queryClient]);
 
   const getContactName = (conversation: Conversation) => {
+    // The backend should return both participants in the conversation.
+    // If it only returns the current user, we won't be able to find the other participant.
     const participant = conversation.participants.find(p => p.id !== currentUser?.id);
     return participant?.name || 'Unknown';
   };

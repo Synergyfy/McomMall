@@ -50,6 +50,7 @@ export default function MessageView({ conversation }: MessageViewProps) {
       sendMessage({
         content: newMessage,
         receiverId: receiver.id,
+        conversationId: conversation.id,
       });
       setNewMessage('');
     } catch (error) {
@@ -92,7 +93,7 @@ export default function MessageView({ conversation }: MessageViewProps) {
             >
               <p>{message.content}</p>
               <p className="text-xs text-right mt-1 opacity-75">
-                {new Date(message.createdAt).toLocaleTimeString()}
+                {new Date(message.created_at).toLocaleTimeString()}
               </p>
             </div>
           </div>
