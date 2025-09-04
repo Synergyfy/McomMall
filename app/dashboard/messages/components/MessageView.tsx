@@ -1,20 +1,21 @@
 import { useState, useEffect, useRef } from 'react';
 import { Conversation } from '@/service/messaging/types';
-import { useGetConversationMessages, useSendMessage } from '@/service/messaging/hook';
+import { useGetConversationMessages } from '@/service/messaging/hook';
 import { useAuth } from '@/service/auth/hook';
-import { useSocket } from '@/context/SocketContext';
 import { useQueryClient } from '@tanstack/react-query';
+import { useMessaging } from '@/hooks/useMessaging';
 
 interface MessageViewProps {
   conversation: Conversation | null;
 }
 
+import { Message } from '@/service/messaging/types';
+
 export default function MessageView({ conversation }: MessageViewProps) {
   const { data: messages, isLoading } = useGetConversationMessages(conversation?.id || '');
-  const { mutate: sendMessage } = useSendMessage();
-  const { user: currentUser } = useAuth();
+  const { user: currentUser, token } = useAuth();
+  const { sendMessage, onNewMessage } = useMessaging(token, currentUser?.id || null);
   const [newMessage, setNewMessage] = useState('');
-  const socket = useSocket();
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
@@ -24,18 +25,16 @@ export default function MessageView({ conversation }: MessageViewProps) {
   };
 
   useEffect(() => {
-    if (conversation) {
-      socket.on('newMessage', (message) => {
-        if (message.conversation.id === conversation.id) {
-          queryClient.invalidateQueries({ queryKey: ['messaging', 'conversations', conversation.id] });
-        }
-      });
+    const cleanup = onNewMessage((message: Message) => {
+      if (message.conversation.id === conversation?.id) {
+        queryClient.invalidateQueries({
+          queryKey: ['messaging', 'conversations', conversation.id],
+        });
+      }
+    });
 
-      return () => {
-        socket.off('newMessage');
-      };
-    }
-  }, [conversation, socket, queryClient]);
+    return cleanup;
+  }, [onNewMessage, conversation, queryClient]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -47,12 +46,15 @@ export default function MessageView({ conversation }: MessageViewProps) {
     const receiver = conversation.participants.find(p => p.id !== currentUser.id);
     if (!receiver) return;
 
-    sendMessage({
-      content: newMessage,
-      receiverId: receiver.id,
-      conversationId: conversation.id,
-    });
-    setNewMessage('');
+    try {
+      sendMessage({
+        content: newMessage,
+        receiverId: receiver.id,
+      });
+      setNewMessage('');
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
   };
 
   if (!conversation) {

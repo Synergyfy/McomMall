@@ -25,31 +25,3 @@ export const useGetConversationMessages = (conversationId: string) => {
   });
 };
 
-export const useSendMessage = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: async (message: CreateMessageDto) => {
-      if (message.conversationId) {
-        const { data } = await api.post(
-          `/messaging/conversations/${message.conversationId}`,
-          { content: message.content }
-        );
-        return data;
-      } else {
-        const { data } = await api.post('/messaging', {
-          content: message.content,
-          receiverId: message.receiverId,
-        });
-        return data;
-      }
-    },
-    onSuccess: (data: Message) => {
-      queryClient.invalidateQueries({
-        queryKey: [MESSAGING_QUERY_KEY, 'conversations', data.conversation.id],
-      });
-      queryClient.invalidateQueries({
-        queryKey: [MESSAGING_QUERY_KEY, 'conversations'],
-      });
-    },
-  });
-};
