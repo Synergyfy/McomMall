@@ -21,9 +21,10 @@ export interface AuthInterface {
 
 export interface LoginResponse {
   auth: {
-    refreshToken: string;
+    refreshToken:string;
     accessToken: string;
   };
+  id: string;
   name: string;
   role: UserRole;
 }

@@ -80,10 +80,12 @@ export const useLogin = () => {
       );
       dispatch(
         setUserData({
+          id: data.id,
           userName: data.name,
           userRole: String(data.role),
         })
       );
+      Cookies.set('userId', data.id, { expires: 7 });
       setBearerToken(data.auth.accessToken);
     },
   });

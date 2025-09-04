@@ -7,6 +7,7 @@ import {
   useGetBusinessData,
   useGetGoogleListing,
 } from '@/service/listings/hook';
+import { useAuth } from '@/service/auth/hook';
 import { Photo } from '@/service/listings/types';
 import { Button } from '@/components/ui/button';
 import { VerificationFeeDialog } from '@/components/VerificationFeeDialog';
@@ -39,6 +40,8 @@ export default function ClientListingDetail({
     isSuccess,
     isLoading,
   } = isGoogle ? googleListingQuery : inHouseListingQuery;
+
+  const { user: currentUser } = useAuth();
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -150,6 +153,7 @@ export default function ClientListingDetail({
                     avatarUrl: '', // Provide a default or actual avatar URL if available
                     bio: '', // Provide a default or actual bio if available
                   }}
+                  currentUserId={currentUser?.id}
                   isVerified={listing.isGoogleVerified}
                 />
               </div>

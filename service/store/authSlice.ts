@@ -3,12 +3,14 @@ import Cookies from 'js-cookie';
 
 interface AuthState {
   accessToken: string | null;
+  userId: string | null;
   userName: string | null;
   userRole: string | null;
 }
 
 const initialState: AuthState = {
   accessToken: null,
+  userId: null,
   userName: null,
   userRole: null,
 };
@@ -33,30 +35,39 @@ const authSlice = createSlice({
     setUserData: (
       state,
       action: PayloadAction<{
+        id: string;
         userName: string;
         userRole: string;
       }>
     ) => {
+      state.userId = action.payload.id;
       state.userName = action.payload.userName;
       state.userRole = action.payload.userRole;
+      Cookies.set('userId', action.payload.id, { expires: 7 });
       localStorage.setItem('user-name', action.payload.userName);
       localStorage.setItem('user-type', action.payload.userRole);
     },
     logout: state => {
       state.accessToken = null;
+      state.userId = null;
       state.userName = null;
       state.userRole = null;
       Cookies.remove('access');
       Cookies.remove('refresh');
+      Cookies.remove('userId');
       localStorage.removeItem('user-name');
       localStorage.removeItem('user-type');
     },
     loadAuthFromCookies: state => {
       const accessToken = Cookies.get('access');
+      const userId = Cookies.get('userId');
       const userName = localStorage.getItem('user-name');
       const userRole = localStorage.getItem('user-type');
       if (accessToken) {
         state.accessToken = accessToken;
+      }
+      if (userId) {
+        state.userId = userId;
       }
       if (userName) {
         state.userName = userName;

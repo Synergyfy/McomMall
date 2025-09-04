@@ -20,6 +20,7 @@ interface BookingSidebarProps {
   phoneNumber: string;
   author: { id: string; name: string; avatarUrl: string; bio: string };
   isVerified?: boolean;
+  currentUserId?: string;
 }
 
 export default function BookingSidebar({
@@ -27,6 +28,7 @@ export default function BookingSidebar({
   phoneNumber,
   author,
   isVerified,
+  currentUserId,
 }: BookingSidebarProps) {
   const router = useRouter();
   const { mutate: sendMessage } = useSendMessage();
@@ -113,12 +115,14 @@ export default function BookingSidebar({
             </p>
           </div>
           <div className="mt-6 space-y-3">
-            <Button
-              className="w-full bg-red-500 hover:bg-red-600"
-              onClick={handleStartConversation}
-            >
-              Chat Business Owner
-            </Button>
+            {author.id !== currentUserId && (
+              <Button
+                className="w-full bg-red-500 hover:bg-red-600"
+                onClick={handleStartConversation}
+              >
+                Chat Business Owner
+              </Button>
+            )}
             <Button
               variant="outline"
               className="w-full border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600"
