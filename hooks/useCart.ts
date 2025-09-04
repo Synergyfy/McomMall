@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
-import api from '../service/api';
+import api from '@/service/api';
+import { useAuth } from '@/service/auth/hook';
 
 // DTOs
 export interface AddItemToCartDto {
@@ -36,6 +37,7 @@ const CART_STORAGE_KEY = 'mcom_cart';
 export const useCart = () => {
   const [cart, setCart] = useState<Cart | null>(null);
   const [loading, setLoading] = useState(true);
+  const { token } = useAuth();
 
   useEffect(() => {
     const fetchCart = async () => {
@@ -55,8 +57,12 @@ export const useCart = () => {
       }
     };
 
-    fetchCart();
-  }, []);
+    if (token) {
+      fetchCart();
+    } else {
+      setLoading(false);
+    }
+  }, [token]);
 
   const addItemToCart = async (item: AddItemToCartDto) => {
     try {

@@ -37,7 +37,9 @@ export default function ConversationSidebar({
               <div>
                 <p className="font-semibold">{getContactName(conversation)}</p>
                 <p className="text-sm text-gray-500 truncate">
-                  {conversation.messages[conversation.messages.length - 1]?.content}
+                  {conversation.messages && conversation.messages.length > 0
+                    ? conversation.messages[conversation.messages.length - 1]?.content
+                    : 'No messages yet'}
                 </p>
               </div>
             </div>
