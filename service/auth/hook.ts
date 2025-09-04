@@ -49,7 +49,7 @@ export const useCreateUser = () => {
 export const useAuth = () => {
   const { user, token } = useSelector((state: any) => state.auth);
   return { user, token };
-}
+};
 
 export const useLogin = () => {
   const dispatch: AppDispatch = useDispatch();
@@ -80,12 +80,12 @@ export const useLogin = () => {
       );
       dispatch(
         setUserData({
-          id: data.id,
+          id: data.userId,
           userName: data.name,
           userRole: String(data.role),
         })
       );
-      Cookies.set('userId', data.id, { expires: 7 });
+      Cookies.set('userId', data.userId, { expires: 7 });
       setBearerToken(data.auth.accessToken);
     },
   });
@@ -105,9 +105,7 @@ export const useRefreshToken = () => {
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to refresh token'
+        err.response?.data?.message || err.message || 'Failed to refresh token'
       );
     }
   };
