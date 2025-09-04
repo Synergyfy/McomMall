@@ -43,8 +43,22 @@ export default function MessageView({ conversation }: MessageViewProps) {
   const handleSendMessage = () => {
     if (newMessage.trim() === '' || !conversation || !currentUser) return;
 
-    const receiver = conversation.participants.find(p => p.id !== currentUser.id);
-    if (!receiver) return;
+    let receiver = conversation.participants.find(p => p.id !== currentUser.id);
+
+    // Workaround for backend bug where participants array is incomplete.
+    // If we can't find the receiver in the participants list,
+    // try to find them from the message history.
+    if (!receiver && messages && messages.length > 0) {
+      const otherMessage = messages.find(m => m.sender.id !== currentUser.id);
+      if (otherMessage) {
+        receiver = otherMessage.sender;
+      }
+    }
+
+    if (!receiver) {
+      console.error("Could not determine the receiver of the message.");
+      return;
+    }
 
     try {
       sendMessage({
