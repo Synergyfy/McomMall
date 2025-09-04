@@ -194,9 +194,12 @@ export const useAddListing = () => {
 
 export const useGetGoogleListing = ({ place_id }: { place_id: string }) => {
   const fetch = async () => {
+    if (!place_id) {
+      return null;
+    }
     try {
       const response = await api.get(`google/google-business/${place_id}`);
-      return response.data.result as GooglePlaceResult;
+      return (response.data.result as GooglePlaceResult) || null;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
@@ -210,6 +213,7 @@ export const useGetGoogleListing = ({ place_id }: { place_id: string }) => {
     queryKey: ['FETCH_GOOGLE_BUSINESS', place_id],
     refetchOnMount: false,
     staleTime: Infinity,
+    enabled: !!place_id,
   });
   return query;
 };
