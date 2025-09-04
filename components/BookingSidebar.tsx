@@ -45,11 +45,6 @@ export default function BookingSidebar({
       {
         content: `Hi, I'm interested in your listing.`,
         receiverId: author.id,
-      },
-      {
-        onSuccess: (data) => {
-          router.push(`/dashboard/messages?conversationId=${data.conversation.id}`);
-        },
       }
     );
   };

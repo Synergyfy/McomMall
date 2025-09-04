@@ -25,3 +25,24 @@ export const useGetConversationMessages = (conversationId: string) => {
   });
 };
 
+import { useRouter } from 'next/navigation';
+
+export const useSendMessage = () => {
+  const queryClient = useQueryClient();
+  const router = useRouter();
+  return useMutation({
+    mutationFn: async (message: CreateMessageDto) => {
+      const { data } = await api.post('/messaging', {
+        content: message.content,
+        receiverId: message.receiverId,
+      });
+      return data;
+    },
+    onSuccess: (data: Message) => {
+      queryClient.invalidateQueries({
+        queryKey: [MESSAGING_QUERY_KEY, 'conversations'],
+      });
+      router.push(`/dashboard/messages?conversationId=${data.conversation.id}`);
+    },
+  });
+};

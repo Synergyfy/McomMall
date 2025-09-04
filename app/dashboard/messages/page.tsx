@@ -8,14 +8,12 @@ import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
-import { useSocket } from '@/context/SocketContext';
 import { useQueryClient } from '@tanstack/react-query';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const socket = useSocket();
   const queryClient = useQueryClient();
 
   useEffect(() => {
@@ -23,21 +21,6 @@ export default function MessagesPage() {
       setSelectedConversation(conversations[0]);
     }
   }, [conversations, selectedConversation]);
-
-  useEffect(() => {
-    socket.on('newMessage', () => {
-      queryClient.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
-    });
-
-    socket.on('conversationUpdated', () => {
-      queryClient.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
-    });
-
-    return () => {
-      socket.off('newMessage');
-      socket.off('conversationUpdated');
-    };
-  }, [socket, queryClient]);
 
 
   const handleConversationSelect = (conversation: Conversation) => {
