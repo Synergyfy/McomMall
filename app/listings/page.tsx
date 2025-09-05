@@ -223,7 +223,7 @@ function ListingsPageContent() {
 
   if (isSuccess)
     return (
-      <div className="flex h-screen bg-white overflow-hidden">
+      <div className="flex h-screen bg-white">
         <AnimatePresence>
           {filtersVisible && (
             <motion.div
@@ -328,7 +328,7 @@ function ListingsPageContent() {
                 </>
               )}
             </div>
-            <div className="w-1/3 h-screen sticky top-0 flex-shrink-0 hidden lg:block">
+            <div className="w-1/3 h-full sticky top-0 flex-shrink-0 hidden lg:block">
               <MapComponent listings={listingsForMap} center={mapCenter} />
             </div>
           </div>
