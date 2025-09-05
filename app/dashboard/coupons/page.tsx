@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, PlusCircle, Copy } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Copy, Download } from 'lucide-react';
 import { useGetCoupons, useDeleteCoupon } from '@/service/coupons/hook';
 import { toast } from 'sonner';
 import { Coupon } from '@/service/coupons/types';
@@ -140,11 +140,73 @@ export default function CouponsPage() {
     },
   };
 
+  const handleExport = () => {
+    if (!coupons) return;
+
+    const escapeCsvValue = (value: string | number | boolean | null | undefined): string => {
+      const stringValue = String(value ?? '');
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const headers = [
+      'ID', 'Coupon Code', 'Description', 'Discount Type', 'Amount',
+      'Expiry Date', 'Min Spend', 'Max Spend', 'Individual Use',
+      'Allowed Emails', 'Usage Limit', 'Per User Limit', 'Usage Count',
+      'Created At', 'Updated At'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...coupons.map(c => [
+        escapeCsvValue(c.id),
+        escapeCsvValue(c.couponCode),
+        escapeCsvValue(c.couponDescription),
+        escapeCsvValue(c.discountType),
+        escapeCsvValue(c.couponAmount),
+        escapeCsvValue(new Date(c.expiryDate).toISOString()),
+        escapeCsvValue(c.minSpend),
+        escapeCsvValue(c.maxSpend),
+        escapeCsvValue(c.individualUseOnly),
+        escapeCsvValue(c.allowedEmails),
+        escapeCsvValue(c.usageLimitPerCoupon),
+        escapeCsvValue(c.usageLimitPerUser),
+        escapeCsvValue(c.usageCount),
+        escapeCsvValue(c.created_at),
+        escapeCsvValue(c.updated_at),
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'coupons.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <h1 className="text-4xl font-bold text-slate-800">Coupons</h1>
+          <div className="flex items-center gap-4">
+            <h1 className="text-4xl font-bold text-slate-800">Coupons</h1>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleExport}
+              disabled={!coupons || coupons.length === 0}
+              className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export</span>
+            </motion.button>
+          </div>
           <p className="text-sm text-slate-500">Home &gt; Dashboard</p>
         </header>
 
