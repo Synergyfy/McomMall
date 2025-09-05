@@ -18,6 +18,7 @@ import {
   Heart,
   LogOut,
   Megaphone,
+  CreditCard,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -112,6 +113,11 @@ export const businessCategories = [
 
 export const accountMenuItems: MenuItem[] = [
   { title: 'My Profile', href: '/dashboard/my-profile', icon: UserPen },
+  {
+    title: 'My Subscription',
+    href: '/dashboard/my-subscription',
+    icon: CreditCard,
+  },
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 
