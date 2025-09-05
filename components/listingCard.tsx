@@ -48,7 +48,7 @@ const amenityTooltips: Record<Amenity, string> = {
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'place_id' in listing;
+  return 'placeId' in listing;
 }
 
 export default function ListingCard({
@@ -77,29 +77,27 @@ export default function ListingCard({
   }
 
   const name = isGoogle ? listing.name : listing.businessName;
-  const place_id = isGoogle ? listing.place_id : listing.id;
+  const placeId = isGoogle ? listing.placeId : listing.id;
   const category =
     (isGoogle
       ? listing.types?.[0]
       : (listing as InHouseBusiness).categories?.[0]?.name) || 'Business';
   const vicinity = isGoogle
-    ? (listing as GooglePlaceResult).formattedAddress ||
-      (listing as GooglePlaceResult).formatted_address ||
-      listing.vicinity
+    ? listing.formattedAddress || listing.vicinity
     : (listing as InHouseBusiness).location
     ? `${(listing as InHouseBusiness).location.addressLine1}, ${
         (listing as InHouseBusiness).location.city
       }`
     : '';
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
-  const ratingCount = isGoogle ? listing.user_ratings_total : undefined;
-  const priceLevel = isGoogle ? listing.price_level : undefined;
+  const ratingCount = isGoogle ? listing.userRatingsTotal : undefined;
+  const priceLevel = isGoogle ? listing.priceLevel : undefined;
   const isVerified = isGoogle ? false : listing.isGoogleVerified;
   const altText = isGoogle
     ? listing.name
     : listing.logoAltText || listing.businessName;
 
-  const listingId = isGoogle ? place_id : listing.id;
+  const listingId = isGoogle ? placeId : listing.id;
   const href = isGoogle
     ? `/listings/${listingId}`
     : `/listings/${listingId}?source=in-house`;

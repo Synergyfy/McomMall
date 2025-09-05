@@ -18,7 +18,7 @@ import { Heart } from 'lucide-react';
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'place_id' in listing;
+  return 'placeId' in listing;
 }
 
 // You would create more detailed components for each tab
@@ -170,7 +170,7 @@ function OverviewSection({
 
   const location = isGoogle ? listing.geometry : listing.location;
   const address = isGoogle
-    ? listing.formattedAddress || listing.formatted_address || listing.vicinity
+    ? listing.formattedAddress || listing.vicinity
     : `${listing.location.addressLine1}, ${listing.location.city}`;
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 
@@ -179,17 +179,17 @@ function OverviewSection({
       <div className="space-y-4">
         <div>
           <h3 className="text-lg font-semibold">Business Status</h3>
-          <p className="text-gray-600">{listing.business_status}</p>
+          <p className="text-gray-600">{listing.businessStatus}</p>
         </div>
         <div>
           <h3 className="text-lg font-semibold">Types</h3>
           <p className="text-gray-600">{listing.types?.join(', ')}</p>
         </div>
-        {listing.opening_hours && (
+        {listing.openingHours && (
           <div>
             <h3 className="text-lg font-semibold">Availability</h3>
             <p className="text-gray-600">
-              {listing.opening_hours.open_now ? 'Open Now' : 'Closed'}
+              {listing.openingHours.openNow ? 'Open Now' : 'Closed'}
             </p>
           </div>
         )}
@@ -354,7 +354,7 @@ export default function ContentTabs({
   const isGoogle = isGoogleResult(listing);
   const location = isGoogle ? listing.geometry : listing.location;
   const address = isGoogle
-    ? listing.formattedAddress || listing.formatted_address || listing.vicinity
+    ? listing.formattedAddress || listing.vicinity
     : `${listing.location.addressLine1}, ${listing.location.city}`;
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 
