@@ -83,9 +83,13 @@ export default function ListingCard({
       ? listing.types?.[0]
       : (listing as InHouseBusiness).categories?.[0]?.name) || 'Business';
   const vicinity = isGoogle
-    ? listing.vicinity
-    : listing.location
-    ? `${listing.location.addressLine1}, ${listing.location.city}`
+    ? (listing as GooglePlaceResult).formattedAddress ||
+      (listing as GooglePlaceResult).formatted_address ||
+      listing.vicinity
+    : (listing as InHouseBusiness).location
+    ? `${(listing as InHouseBusiness).location.addressLine1}, ${
+        (listing as InHouseBusiness).location.city
+      }`
     : '';
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
   const ratingCount = isGoogle ? listing.user_ratings_total : undefined;

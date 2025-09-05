@@ -63,6 +63,7 @@ export interface GooglePlaceResult {
   vicinity: string;
 
   formatted_address?: string;
+  formattedAddress?: string;
   formatted_phone_number?: string;
 }
 

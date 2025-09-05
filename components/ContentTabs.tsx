@@ -170,7 +170,7 @@ function OverviewSection({
 
   const location = isGoogle ? listing.geometry : listing.location;
   const address = isGoogle
-    ? listing.formatted_address || listing.vicinity
+    ? listing.formattedAddress || listing.formatted_address || listing.vicinity
     : `${listing.location.addressLine1}, ${listing.location.city}`;
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 
@@ -354,7 +354,7 @@ export default function ContentTabs({
   const isGoogle = isGoogleResult(listing);
   const location = isGoogle ? listing.geometry : listing.location;
   const address = isGoogle
-    ? listing.formatted_address || listing.vicinity
+    ? listing.formattedAddress || listing.formatted_address || listing.vicinity
     : `${listing.location.addressLine1}, ${listing.location.city}`;
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 

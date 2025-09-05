@@ -103,7 +103,9 @@ export default function ClientListingDetail({
                 </h1>
                 <p className="text-md text-gray-500 mt-1">
                   {isGoogle
-                    ? listing?.formatted_address || listing?.vicinity
+                    ? listing?.formattedAddress ||
+                      listing?.formatted_address ||
+                      listing?.vicinity
                     : `${listing.location.addressLine1}, ${listing.location.city}`}
                 </p>
                 {isGoogle && (
