@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import api, { setBearerToken } from '../api';
@@ -51,10 +52,11 @@ export const useAuth = () => {
     (state: any) => state.auth
   );
 
-  const user = userId
-    ? { id: userId, name: userName, role: userRole }
-    : null;
-  return { user, token: accessToken };
+  const user = useMemo(() => {
+    return userId ? { id: userId, name: userName, role: userRole } : null;
+  }, [userId, userName, userRole]);
+
+  return useMemo(() => ({ user, token: accessToken }), [user, accessToken]);
 };
 
 export const useLogin = () => {
