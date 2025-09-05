@@ -22,6 +22,7 @@ export const useGetConversationMessages = (conversationId: string) => {
       return data;
     },
     enabled: !!conversationId,
+    refetchInterval: 5000,
   });
 };
 

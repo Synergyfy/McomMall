@@ -1,40 +1,23 @@
 import { useState, useEffect, useRef } from 'react';
 import { Conversation } from '@/service/messaging/types';
-import { useGetConversationMessages } from '@/service/messaging/hook';
+import { useGetConversationMessages, useSendMessage } from '@/service/messaging/hook';
 import { useAuth } from '@/service/auth/hook';
-import { useQueryClient } from '@tanstack/react-query';
-import { useMessaging } from '@/hooks/useMessaging';
 
 interface MessageViewProps {
   conversation: Conversation | null;
 }
 
-import { Message } from '@/service/messaging/types';
-
 export default function MessageView({ conversation }: MessageViewProps) {
   const { data: messages, isLoading } = useGetConversationMessages(conversation?.id || '');
-  const { user: currentUser, token } = useAuth();
-  const { sendMessage, onNewMessage, isConnected } = useMessaging(token, currentUser?.id || null);
+  const { user: currentUser } = useAuth();
+  const { mutate: sendMessage } = useSendMessage();
   const [newMessage, setNewMessage] = useState('');
-  const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getContactName = (conversation: Conversation) => {
     const participant = conversation.participants.find(p => p.id !== currentUser?.id);
     return participant?.name || 'Unknown';
   };
-
-  useEffect(() => {
-    const cleanup = onNewMessage((message: Message) => {
-      if (message.conversation && message.conversation.id === conversation?.id) {
-        queryClient.invalidateQueries({
-          queryKey: ['messaging', 'conversations', conversation.id],
-        });
-      }
-    });
-
-    return cleanup;
-  }, [onNewMessage, conversation, queryClient]);
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -50,16 +33,11 @@ export default function MessageView({ conversation }: MessageViewProps) {
       return;
     }
 
-    try {
-      sendMessage({
-        content: newMessage,
-        receiverId: receiver.id,
-        conversationId: conversation.id,
-      });
-      setNewMessage('');
-    } catch (error) {
-      console.error('Failed to send message:', error);
-    }
+    sendMessage({
+      content: newMessage,
+      receiverId: receiver.id,
+    });
+    setNewMessage('');
   };
 
   if (!conversation) {
@@ -108,17 +86,15 @@ export default function MessageView({ conversation }: MessageViewProps) {
         <div className="relative">
           <input
             type="text"
-            placeholder={isConnected ? "Type a message..." : "Connecting..."}
-            className="w-full p-3 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
+            placeholder="Type a message..."
+            className="w-full p-3 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
-            disabled={!isConnected}
           />
           <button
             onClick={handleSendMessage}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 disabled:bg-blue-300"
-            disabled={!isConnected}
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
