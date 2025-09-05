@@ -6,25 +6,25 @@ export interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   role: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Message {
-  id: string;
+  id:string;
   content: string;
   sender: User;
-  conversation?: Conversation;
-  created_at: string;
-  updated_at: string;
+  conversation: Conversation;
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface Conversation {
   id: string;
   participants: User[];
-  messages?: Message[];
-  created_at: string;
-  updated_at: string;
+  messages: Message[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export interface CreateMessageDto {

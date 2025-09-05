@@ -42,7 +42,9 @@ export const useSendMessage = () => {
       queryClient.invalidateQueries({
         queryKey: [MESSAGING_QUERY_KEY, 'conversations'],
       });
-      router.push(`/dashboard/messages?conversationId=${data.conversation.id}`);
+      if (data.conversation) {
+        router.push(`/dashboard/messages?conversationId=${data.conversation.id}`);
+      }
     },
   });
 };

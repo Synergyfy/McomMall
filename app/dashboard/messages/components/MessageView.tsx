@@ -26,7 +26,7 @@ export default function MessageView({ conversation }: MessageViewProps) {
 
   useEffect(() => {
     const cleanup = onNewMessage((message: Message) => {
-      if (message.conversation.id === conversation?.id) {
+      if (message.conversation && message.conversation.id === conversation?.id) {
         queryClient.invalidateQueries({
           queryKey: ['messaging', 'conversations', conversation.id],
         });
@@ -43,20 +43,10 @@ export default function MessageView({ conversation }: MessageViewProps) {
   const handleSendMessage = () => {
     if (newMessage.trim() === '' || !conversation || !currentUser) return;
 
-    let receiver = conversation.participants.find(p => p.id !== currentUser.id);
-
-    // Workaround for backend bug where participants array is incomplete.
-    // If we can't find the receiver in the participants list,
-    // try to find them from the message history.
-    if (!receiver && messages && messages.length > 0) {
-      const otherMessage = messages.find(m => m.sender.id !== currentUser.id);
-      if (otherMessage) {
-        receiver = otherMessage.sender;
-      }
-    }
+    const receiver = conversation.participants.find(p => p.id !== currentUser.id);
 
     if (!receiver) {
-      console.error("Could not determine the receiver of the message.");
+      console.error("Could not determine the receiver of the message. The participants array may be incomplete.");
       return;
     }
 
@@ -107,7 +97,7 @@ export default function MessageView({ conversation }: MessageViewProps) {
             >
               <p>{message.content}</p>
               <p className="text-xs text-right mt-1 opacity-75">
-                {new Date(message.created_at).toLocaleTimeString()}
+                {new Date(message.createdAt).toLocaleTimeString()}
               </p>
             </div>
           </div>
