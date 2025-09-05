@@ -11,6 +11,7 @@ export const useGetConversations = () => {
       const { data } = await api.get('/messaging/conversations');
       return data;
     },
+    refetchInterval: 5000,
   });
 };
 
@@ -22,6 +23,7 @@ export const useGetConversationMessages = (conversationId: string) => {
       return data;
     },
     enabled: !!conversationId,
+    refetchInterval: 5000,
   });
 };
 
