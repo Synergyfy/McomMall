@@ -598,6 +598,7 @@ export default function WinterExhibitionPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }

@@ -38,6 +38,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
+  { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
     title: 'Bookings',
     href: '/dashboard/bookings',
@@ -69,6 +70,7 @@ export const listingMenuItems: MenuItem[] = [
   { title: 'Coupons', href: '/dashboard/coupons', icon: ShoppingCart },
   { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
   { title: 'Bookmarks', href: '/dashboard/bookmarks', icon: Bookmark }, // Typo corrected: "Boomarks" -> "Bookmarks"
+  { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
 ];
 
 export const storeMenuItems: MenuItem[] = [
@@ -84,7 +86,6 @@ export const storeMenuItems: MenuItem[] = [
     href: '/dashboard/store/withdraw',
     icon: BanknoteArrowDown,
   },
-  { title: 'Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
     title: 'Settings',
     href: '/dashboard/settings',

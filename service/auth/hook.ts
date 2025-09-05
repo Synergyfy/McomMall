@@ -1,6 +1,8 @@
+import { useMemo } from 'react';
 import { useMutation } from '@tanstack/react-query';
 import Cookies from 'js-cookie';
 import api, { setBearerToken } from '../api';
+import { useSelector } from 'react-redux';
 import {
   UserInterface,
   AuthInterface,
@@ -45,6 +47,18 @@ export const useCreateUser = () => {
   return mutation;
 };
 
+export const useAuth = () => {
+  const { accessToken, userId, userName, userRole } = useSelector(
+    (state: any) => state.auth
+  );
+
+  const user = useMemo(() => {
+    return userId ? { id: userId, name: userName, role: userRole } : null;
+  }, [userId, userName, userRole]);
+
+  return useMemo(() => ({ user, token: accessToken }), [user, accessToken]);
+};
+
 export const useLogin = () => {
   const dispatch: AppDispatch = useDispatch();
   const login = async (payload: AuthInterface): Promise<LoginResponse> => {
@@ -74,10 +88,12 @@ export const useLogin = () => {
       );
       dispatch(
         setUserData({
+          id: data.userId,
           userName: data.name,
           userRole: String(data.role),
         })
       );
+      Cookies.set('userId', data.userId, { expires: 7 });
       setBearerToken(data.auth.accessToken);
     },
   });
@@ -97,9 +113,7 @@ export const useRefreshToken = () => {
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to refresh token'
+        err.response?.data?.message || err.message || 'Failed to refresh token'
       );
     }
   };

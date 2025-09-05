@@ -117,6 +117,7 @@ const BookingCard: React.FC<BookingCardProps> = ({
         />
         <PhoneSection phone={booking.phoneNumber} />
         <LocationSection location={booking.location} />
+        hello
       </div>
       <div className="text-sm text-gray-600 mb-4">{booking.requestedOn}</div>
       <div className="flex justify-end space-x-4">

@@ -16,126 +16,143 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { User, ShoppingCart, Calendar, Eye } from 'lucide-react';
+import {
+  ShoppingCart,
+  Calendar,
+  Trash2,
+  Heart,
+  DollarSign,
+  Info,
+} from 'lucide-react';
+import { useWishlist } from '@/hooks/useWishlist';
+import Image from 'next/image';
 import Link from 'next/link';
-
-const wishlistItems = [
-  {
-    product: 'Classic Leather Jacket',
-    sku: 'P-000453',
-    customer: 'John Doe',
-    customerId: 'C-001',
-    dateAdded: '2023-05-15',
-    productUrl: '/dashboard/store/products/edit/1',
-  },
-  {
-    product: 'Wireless Bluetooth Headphones',
-    sku: 'P-000876',
-    customer: 'Jane Smith',
-    customerId: 'C-002',
-    dateAdded: '2023-05-20',
-    productUrl: '/dashboard/store/products/edit/2',
-  },
-  {
-    product: 'Stainless Steel Water Bottle',
-    sku: 'P-001234',
-    customer: 'Peter Jones',
-    customerId: 'C-003',
-    dateAdded: '2023-06-01',
-    productUrl: '/dashboard/store/products/edit/3',
-  },
-  {
-    product: 'Smart Watch',
-    sku: 'P-001567',
-    customer: 'Alice Williams',
-    customerId: 'C-004',
-    dateAdded: '2023-06-05',
-    productUrl: '/dashboard/store/products/edit/4',
-  },
-  {
-    product: 'Yoga Mat',
-    sku: 'P-001987',
-    customer: 'Bob Brown',
-    customerId: 'C-005',
-    dateAdded: '2023-06-10',
-    productUrl: '/dashboard/store/products/edit/5',
-  },
-  {
-    product: 'Electric Kettle',
-    sku: 'P-002345',
-    customer: 'Charlie Davis',
-    customerId: 'C-006',
-    dateAdded: '2023-06-15',
-    productUrl: '/dashboard/store/products/edit/6',
-  },
-];
+import { Badge } from '@/components/ui/badge';
 
 const WishlistPage = () => {
+  const { wishlist, loading, removeItemFromWishlist } = useWishlist();
+
+  if (loading) {
+    return (
+      <div className="space-y-6">
+        <h1 className="text-3xl font-bold tracking-tight">My Wishlist</h1>
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold tracking-tight">Wishlist</h1>
+        <h1 className="text-3xl font-bold tracking-tight">My Wishlist</h1>
         <p className="text-muted-foreground">
-          Products that customers have added to their wishlist.
+          Products that you have added to your wishlist.
         </p>
       </div>
       <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
         <CardHeader>
-          <CardTitle>Wishlisted Products</CardTitle>
+          <CardTitle>Your Wishlisted Products</CardTitle>
           <CardDescription>
-            A list of all products currently in customers&apos; wishlists.
+            A list of all products currently in your wishlist.
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>
-                  <div className="flex items-center gap-2">
-                    <ShoppingCart className="h-4 w-4" />
-                    <span>Product</span>
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-2">
-                    <User className="h-4 w-4" />
-                    <span>Customer</span>
-                  </div>
-                </TableHead>
-                <TableHead>
-                  <div className="flex items-center gap-2">
-                    <Calendar className="h-4 w-4" />
-                    <span>Date Added</span>
-                  </div>
-                </TableHead>
-                <TableHead>Actions</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {wishlistItems.map(item => (
-                <TableRow key={item.sku}>
-                  <TableCell className="font-medium">{item.product}</TableCell>
-                  <TableCell>
-                    <Link
-                      href={`/dashboard/customers/${item.customerId}`}
-                      className="text-blue-600 hover:underline"
-                    >
-                      {item.customer}
-                    </Link>
-                  </TableCell>
-                  <TableCell>{item.dateAdded}</TableCell>
-                  <TableCell>
-                    <Link href={item.productUrl}>
-                      <Button variant="outline" size="sm">
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Product
-                      </Button>
-                    </Link>
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+          {!wishlist || wishlist.items.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-12 text-center">
+              <Heart className="w-16 h-16 text-gray-300 mb-4" />
+              <h3 className="text-xl font-semibold">Your wishlist is empty</h3>
+              <p className="text-muted-foreground mt-2">
+                Start adding products you love to your wishlist.
+              </p>
+              <Button asChild className="mt-6">
+                <Link href="/">Continue Shopping</Link>
+              </Button>
+            </div>
+          ) : (
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead>
+                      <div className="flex items-center gap-2">
+                        <ShoppingCart className="h-4 w-4" />
+                        <span>Product</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <DollarSign className="h-4 w-4" />
+                        <span>Price</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden md:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Info className="h-4 w-4" />
+                        <span>Status</span>
+                      </div>
+                    </TableHead>
+                    <TableHead className="hidden lg:table-cell">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4" />
+                        <span>Date Added</span>
+                      </div>
+                    </TableHead>
+                    <TableHead>Actions</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {wishlist.items.map(item => (
+                    <TableRow key={item.id}>
+                      <TableCell>
+                        <div className="flex items-center gap-4">
+                          <Image
+                            src={item.product.imageUrl || '/placeholder.svg'}
+                            alt={item.product.title}
+                            width={64}
+                            height={64}
+                            className="rounded-md object-cover"
+                          />
+                          <Link
+                            href={`/listings/${item.product.id}`}
+                            className="font-medium hover:underline"
+                          >
+                            {item.product.title}
+                          </Link>
+                        </div>
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        £{item.product.price.toFixed(2)}
+                      </TableCell>
+                      <TableCell className="hidden md:table-cell">
+                        <Badge
+                          variant={
+                            item.product.productStatus === 'published'
+                              ? 'default'
+                              : 'destructive'
+                          }
+                        >
+                          {item.product.productStatus}
+                        </Badge>
+                      </TableCell>
+                      <TableCell className="hidden lg:table-cell">
+                        {new Date(item.createdAt).toLocaleDateString()}
+                      </TableCell>
+                      <TableCell>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          onClick={() => removeItemFromWishlist(item.product.id)}
+                        >
+                          <Trash2 className="h-4 w-4 mr-2" />
+                          Remove
+                        </Button>
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>

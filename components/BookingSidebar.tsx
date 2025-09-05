@@ -11,12 +11,16 @@ import {
   User,
   Badge,
 } from 'lucide-react';
+import { useSendMessage } from '@/service/messaging/hook';
+import { useRouter } from 'next/navigation';
+import { useAuth } from '@/service/auth/hook';
 
 interface BookingSidebarProps {
   priceDisplay: string;
   phoneNumber: string;
-  author: { name: string; avatarUrl: string; bio: string };
+  author: { id: string; name: string; avatarUrl: string; bio: string };
   isVerified?: boolean;
+  currentUserId?: string;
 }
 
 export default function BookingSidebar({
@@ -24,7 +28,27 @@ export default function BookingSidebar({
   phoneNumber,
   author,
   isVerified,
+  currentUserId,
 }: BookingSidebarProps) {
+  const router = useRouter();
+  const { mutate: sendMessage } = useSendMessage();
+  const { user } = useAuth();
+
+  const handleStartConversation = () => {
+    if (!user) {
+      // Handle case where user is not logged in
+      router.push('/login');
+      return;
+    }
+
+    sendMessage(
+      {
+        content: `Hi, I'm interested in your listing.`,
+        receiverId: author.id,
+      }
+    );
+  };
+
   return (
     <div className="w-full space-y-6">
       {isVerified && (
@@ -86,9 +110,14 @@ export default function BookingSidebar({
             </p>
           </div>
           <div className="mt-6 space-y-3">
-            <Button className="w-full bg-red-500 hover:bg-red-600">
-              Send Message
-            </Button>
+            {author.id !== currentUserId && (
+              <Button
+                className="w-full bg-red-500 hover:bg-red-600"
+                onClick={handleStartConversation}
+              >
+                Chat Business Owner
+              </Button>
+            )}
             <Button
               variant="outline"
               className="w-full border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600"

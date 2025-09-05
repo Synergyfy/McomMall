@@ -621,6 +621,7 @@ export default function AutumnExhibitionPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }

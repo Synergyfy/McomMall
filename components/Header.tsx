@@ -4,12 +4,13 @@
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, User, ChevronDown } from 'lucide-react';
+import { ShoppingCart, User, ChevronDown, Heart } from 'lucide-react';
 import Auth from './auth';
 import { NavMenu } from './NavMenu';
 import { usePathname } from 'next/navigation';
 import { useLogout } from '@/service/auth/hook';
 import { useCart } from '@/hooks/useCart'; // Import useCart
+import { useWishlist } from '@/hooks/useWishlist';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import {
@@ -23,6 +24,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 export default function Header() {
   const pathname = usePathname();
   const { cartItemCount } = useCart();
+  const { wishlistCount } = useWishlist();
   const { accessToken, userName } = useSelector(
     (state: RootState) => state.auth
   );
@@ -66,6 +68,21 @@ export default function Header() {
                 </Badge>
               </Button>
             </Link>
+            <Link href="/dashboard/wishlist">
+              <Button
+                variant="ghost"
+                size="sm"
+                className="relative text-white hover:text-red-400"
+              >
+                <Heart className="w-5 h-5" />
+                <Badge
+                  variant="destructive"
+                  className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs bg-red-500"
+                >
+                  {wishlistCount}
+                </Badge>
+              </Button>
+            </Link>
             {accessToken ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -83,6 +100,9 @@ export default function Header() {
                 <DropdownMenuContent>
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/wishlist">My Wishlist</Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     Log out

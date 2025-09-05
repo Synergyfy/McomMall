@@ -12,6 +12,8 @@ import {
 import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabContent';
 import { toast } from 'sonner';
 import { useCart } from '@/hooks/useCart'; // Import the useCart hook
+import { useWishlist } from '@/hooks/useWishlist';
+import { Heart } from 'lucide-react';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -30,10 +32,24 @@ function ProductPage({
 }) {
   const router = useRouter();
   const { addItemToCart } = useCart(); // Use the useCart hook
+  const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
 
   const handleAddToCart = (product: Product) => {
     addItemToCart({ productId: product.id, quantity: 1 });
     toast.success(`${product.title} has been added to your cart.`);
+  };
+
+  const handleWishlistToggle = (product: Product) => {
+    const isWishlisted = wishlist?.items?.some(
+      item => item.product.id === product.id
+    );
+    if (isWishlisted) {
+      removeItemFromWishlist(product.id);
+      toast.success(`${product.title} has been removed from your wishlist.`);
+    } else {
+      addItemToWishlist({ productId: product.id });
+      toast.success(`${product.title} has been added to your wishlist.`);
+    }
   };
 
   const handleOrderNow = (product: Product) => {
@@ -65,6 +81,19 @@ function ProductPage({
                 layout="fill"
                 className="object-cover rounded-md"
               />
+              <Button
+                size="icon"
+                className="absolute top-2 right-2 bg-white/70 hover:bg-white"
+                onClick={() => handleWishlistToggle(product)}
+              >
+                <Heart
+                  className={`h-5 w-5 ${
+                    wishlist?.items?.some(item => item.product.id === product.id)
+                      ? 'text-red-500 fill-current'
+                      : 'text-gray-500'
+                  }`}
+                />
+              </Button>
             </div>
             <div className="flex-grow">
               <h4 className="font-semibold">{product.title}</h4>

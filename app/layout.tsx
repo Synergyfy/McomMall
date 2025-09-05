@@ -6,6 +6,7 @@ import ClientProviders from '@/components/client-provider';
 import { Toaster } from 'sonner';
 import Header from '@/components/Header';
 import Auth from '@/components/auth';
+import AuthInitializer from '@/components/AuthInitializer';
 
 const opensans = Open_Sans({
   variable: '--font-geist-mono',
@@ -26,9 +27,11 @@ export default function RootLayout({
     <html lang="en">
       <body className={`${opensans.variable} antialiased `}>
         <ClientProviders>
-          <Header />
-          {/* <Auth /> */}
-          {children}
+          <AuthInitializer>
+            <Header />
+            {/* <Auth /> */}
+            {children}
+          </AuthInitializer>
         </ClientProviders>
         <Toaster />
       </body>

@@ -1,44 +1,41 @@
 'use client';
 
-import { useState } from 'react';
-import { conversations as initialConversations, Conversation, Message } from './data';
+'use client';
+
+import { useEffect, useState } from 'react';
+import { useGetConversations } from '@/service/messaging/hook';
+import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
+import { useQueryClient } from '@tanstack/react-query';
 
 export default function MessagesPage() {
-  const [conversations, setConversations] = useState(initialConversations);
-  const [selectedConversationId, setSelectedConversationId] = useState<number | null>(conversations[0]?.id || null);
+  const { data: conversations, isLoading } = useGetConversations();
+  const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
+  const queryClient = useQueryClient();
 
-  const selectedConversation = conversations.find(c => c.id === selectedConversationId) || null;
+  useEffect(() => {
+    if (conversations && conversations.length > 0 && !selectedConversation) {
+      setSelectedConversation(conversations[0]);
+    }
+  }, [conversations, selectedConversation]);
+
 
   const handleConversationSelect = (conversation: Conversation) => {
-    setSelectedConversationId(conversation.id);
+    setSelectedConversation(conversation);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
   };
 
-  const handleSendMessage = (message: Message) => {
-    if (!selectedConversation) return;
-
-    const updatedConversations = conversations.map(conv => {
-      if (conv.id === selectedConversation.id) {
-        return {
-          ...conv,
-          messages: [...conv.messages, message],
-        };
-      }
-      return conv;
-    });
-
-    setConversations(updatedConversations);
-  };
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="flex h-[calc(100vh-100px)] bg-gray-100">
-      {/* Mobile Sidebar Toggle Button */}
       <div className="md:hidden absolute top-4 right-4 z-20">
         <button
           onClick={() => setIsSidebarOpen(!isSidebarOpen)}
@@ -48,7 +45,6 @@ export default function MessagesPage() {
         </button>
       </div>
 
-      {/* Conversation Sidebar */}
       <div
         className={`
           w-full md:w-1/4 bg-white border-r border-gray-200
@@ -60,15 +56,16 @@ export default function MessagesPage() {
         `}
       >
         <ConversationSidebar
-          conversations={conversations}
+          conversations={conversations || []}
           selectedConversation={selectedConversation}
           onConversationSelect={handleConversationSelect}
         />
       </div>
 
-      {/* Main Message View */}
       <div className="flex-1 flex flex-col w-full md:w-3/4">
-        <MessageView conversation={selectedConversation} onSendMessage={handleSendMessage} />
+        <MessageView
+          conversation={selectedConversation}
+        />
       </div>
     </div>
   );
