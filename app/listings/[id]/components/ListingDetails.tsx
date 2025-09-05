@@ -1,13 +1,14 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { Star, Bookmark, CheckCircle } from 'lucide-react';
+import { Star, CheckCircle, Heart } from 'lucide-react';
 
 import {
   useGetBusinessData,
   useGetGoogleListing,
 } from '@/service/listings/hook';
 import { useAuth } from '@/service/auth/hook';
+import { useWishlist } from '@/hooks/useWishlist';
 import { Photo } from '@/service/listings/types';
 import { Button } from '@/components/ui/button';
 import { VerificationFeeDialog } from '@/components/VerificationFeeDialog';
@@ -42,6 +43,19 @@ export default function ClientListingDetail({
   } = isGoogle ? googleListingQuery : inHouseListingQuery;
 
   const { user: currentUser } = useAuth();
+  const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
+
+  const isWishlisted = wishlist?.items?.some(
+    item => item.product.id === placeId
+  );
+
+  const handleWishlistToggle = () => {
+    if (isWishlisted) {
+      removeItemFromWishlist(placeId);
+    } else {
+      addItemToWishlist(placeId);
+    }
+  };
 
   if (isLoading) return <p>Loading...</p>;
 
@@ -105,9 +119,15 @@ export default function ClientListingDetail({
                 )}
               </div>
               <div className="flex flex-col items-end gap-4">
-                <Button variant="outline">
-                  <Bookmark className="mr-2 h-4 w-4" />
-                  Bookmark this listing
+                <Button variant="outline" onClick={handleWishlistToggle}>
+                  <Heart
+                    className={`mr-2 h-4 w-4 ${
+                      isWishlisted ? 'text-red-500 fill-current' : ''
+                    }`}
+                  />
+                  {isWishlisted
+                    ? 'Remove from Wishlist'
+                    : 'Add to Wishlist'}
                 </Button>
                 {listing?.isClaimed ? (
                   <div className="flex items-center space-x-2">
