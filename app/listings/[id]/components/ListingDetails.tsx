@@ -29,7 +29,7 @@ export default function ClientListingDetail({
   const isGoogle = source !== 'in-house';
 
   const googleListingQuery = useGetGoogleListing({
-    place_id: placeId,
+    placeId: placeId,
   });
 
   const inHouseListingQuery = useGetBusinessData({
@@ -69,7 +69,7 @@ export default function ClientListingDetail({
         .slice(0, 5)
         .map(
           (photo: Photo) =>
-            `${API_URL}/google/google-business/photo/${photo.photo_reference}`
+            `${API_URL}/google/google-business/photo/${photo.photoReference}`
         );
     } else if (!isGoogle && listing.logoUrl) {
       imageUrls.push(listing.logoUrl);

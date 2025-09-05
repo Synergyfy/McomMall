@@ -18,8 +18,8 @@ export interface Geometry {
 export interface Photo {
   height: number;
   width: number;
-  html_attributions: string[];
-  photo_reference: string;
+  htmlAttributions: string[];
+  photoReference: string;
 }
 
 interface PlusCode {

@@ -61,11 +61,16 @@ export default function ListingCard({
   let imgUrl;
   if (isGoogle) {
     if (listing.photos && listing.photos.length > 0) {
-      const { photo_reference } = listing.photos[0];
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL ||
-        'https://mcom-mall-api.vercel.app/api/v1';
-      imgUrl = `${API_URL}/google/google-business/photo/${photo_reference}`;
+      const { photoReference } = listing.photos[0];
+      if (photoReference) {
+        const API_URL =
+          process.env.NEXT_PUBLIC_API_URL ||
+          'https://mcom-mall-api.vercel.app/api/v1';
+        imgUrl = `${API_URL}/google/google-business/photo/${photoReference}`;
+      } else {
+        imgUrl =
+          'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
+      }
     } else {
       imgUrl =
         'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
