@@ -60,8 +60,8 @@ export default function ListingCard({
 
   let imgUrl;
   if (isGoogle) {
-    if (listing.photos) {
-      const { photo_reference } = listing?.photos[0];
+    if (listing.photos && listing.photos.length > 0) {
+      const { photo_reference } = listing.photos[0];
       const API_URL =
         process.env.NEXT_PUBLIC_API_URL ||
         'https://mcom-mall-api.vercel.app/api/v1';
@@ -78,7 +78,10 @@ export default function ListingCard({
 
   const name = isGoogle ? listing.name : listing.businessName;
   const place_id = isGoogle ? listing.place_id : listing.id;
-  const category = isGoogle ? listing.types[0] : listing.categories[0]?.name;
+  const category =
+    (isGoogle
+      ? listing.types?.[0]
+      : (listing as InHouseBusiness).categories?.[0]?.name) || 'Business';
   const vicinity = isGoogle
     ? listing.vicinity
     : listing.location
