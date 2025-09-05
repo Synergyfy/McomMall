@@ -13,11 +13,14 @@ import {
   CheckCircle,
   ChevronsUpDown,
   Check,
+  Calendar as CalendarIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAddCoupon } from '@/service/coupons/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Calendar } from '@/components/ui/calendar';
+import { format } from 'date-fns';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader } from '@/components/ui/card';
@@ -353,14 +356,41 @@ export default function CouponForm() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="expiryDate">Coupon expiry date</Label>
-                  <Input
-                    id="expiryDate"
-                    name="expiryDate"
-                    type="date"
-                    placeholder="YYYY-MM-DD"
-                    value={formData.expiryDate}
-                    onChange={handleInputChange}
-                  />
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={'outline'}
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-12',
+                          !formData.expiryDate && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.expiryDate ? (
+                          format(new Date(formData.expiryDate), 'PPP')
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          formData.expiryDate
+                            ? new Date(formData.expiryDate)
+                            : undefined
+                        }
+                        onSelect={date =>
+                          handleSelectChange(
+                            'expiryDate',
+                            date ? format(date, 'yyyy-MM-dd') : ''
+                          )
+                        }
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
                   {errors.expiryDate && (
                     <p className="text-base text-red-600 mt-1">
                       {errors.expiryDate}
