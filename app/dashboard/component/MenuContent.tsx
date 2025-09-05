@@ -31,7 +31,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   );
 
   const customerMainMenu = mainMenuItems.filter(item =>
-    ['My Bookings', 'Messages', 'Wallet'].includes(item.title)
+    ['My Bookings', 'Messages', 'Wallet', 'My Wishlist'].includes(item.title)
   );
 
   const customerAccountMenu = accountMenuItems.filter(item =>
