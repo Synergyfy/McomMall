@@ -1,16 +1,16 @@
 export interface WishlistItem {
   id: string;
   product: any; // Replace with a proper Product interface
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface Wishlist {
-  id: string;
+  id:string;
   items: WishlistItem[];
   user: any; // Replace with a proper User interface
-  created_at: Date;
-  updated_at: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 export interface AddToWishlistDto {
