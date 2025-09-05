@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { ListingFormData } from '../../../types';
 import { Label } from '@/components/ui/label';
 import {
@@ -44,6 +44,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
   errors,
   schema,
 }) => {
+  const [open, setOpen] = useState(false);
   const serviceData = formData.serviceData || {};
 
   const handlePrimaryCategoryChange = (value: string) => {
@@ -115,7 +116,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
                 </span>
             )}
         </Label>
-        <Popover>
+        <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
@@ -132,7 +133,10 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
                         {availableSubCategories.map(sub => (
                             <CommandItem
                                 key={sub.name}
-                                onSelect={() => handleSubCategoryChange(sub.name)}
+                                onSelect={() => {
+                                    handleSubCategoryChange(sub.name);
+                                    setOpen(false);
+                                }}
                                 className="cursor-pointer"
                             >
                                 {sub.name}
