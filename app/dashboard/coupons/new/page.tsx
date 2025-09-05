@@ -367,7 +367,7 @@ export default function CouponForm() {
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
                         {formData.expiryDate ? (
-                          format(new Date(formData.expiryDate), 'PPP')
+                          format(new Date(formData.expiryDate), 'PPP p')
                         ) : (
                           <span>Pick a date</span>
                         )}
@@ -381,14 +381,67 @@ export default function CouponForm() {
                             ? new Date(formData.expiryDate)
                             : undefined
                         }
-                        onSelect={date =>
+                        onSelect={date => {
+                          const newDate = date ? new Date(date) : new Date();
+                          const oldDate = formData.expiryDate
+                            ? new Date(formData.expiryDate)
+                            : new Date();
+                          newDate.setHours(oldDate.getHours());
+                          newDate.setMinutes(oldDate.getMinutes());
                           handleSelectChange(
                             'expiryDate',
-                            date ? format(date, 'yyyy-MM-dd') : ''
-                          )
-                        }
+                            newDate.toISOString()
+                          );
+                        }}
                         initialFocus
                       />
+                      <div className="p-2 border-t border-border">
+                        <div className="flex items-center justify-center space-x-2">
+                          <Input
+                            type="number"
+                            min="0"
+                            max="23"
+                            value={
+                              formData.expiryDate
+                                ? new Date(formData.expiryDate).getHours()
+                                : '00'
+                            }
+                            onChange={e => {
+                              const newDate = formData.expiryDate
+                                ? new Date(formData.expiryDate)
+                                : new Date();
+                              newDate.setHours(parseInt(e.target.value));
+                              handleSelectChange(
+                                'expiryDate',
+                                newDate.toISOString()
+                              );
+                            }}
+                            className="w-16"
+                          />
+                          <span>:</span>
+                          <Input
+                            type="number"
+                            min="0"
+                            max="59"
+                            value={
+                              formData.expiryDate
+                                ? new Date(formData.expiryDate).getMinutes()
+                                : '00'
+                            }
+                            onChange={e => {
+                              const newDate = formData.expiryDate
+                                ? new Date(formData.expiryDate)
+                                : new Date();
+                              newDate.setMinutes(parseInt(e.target.value));
+                              handleSelectChange(
+                                'expiryDate',
+                                newDate.toISOString()
+                              );
+                            }}
+                            className="w-16"
+                          />
+                        </div>
+                      </div>
                     </PopoverContent>
                   </Popover>
                   {errors.expiryDate && (
