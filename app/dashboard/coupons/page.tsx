@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, PlusCircle } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Copy } from 'lucide-react';
 import { useGetCoupons, useDeleteCoupon } from '@/service/coupons/hook';
+import { toast } from 'sonner';
 import { Coupon } from '@/service/coupons/types';
 import {
   AlertDialog,
@@ -51,14 +52,28 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
 
   const formatLimit = (limit?: number) => (limit === undefined ? '∞' : limit);
 
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Copied to clipboard!');
+  };
+
   return (
     <motion.tr
       variants={rowVariants}
       className="border-b border-slate-200 bg-white"
     >
       <td className="whitespace-nowrap px-6 py-4">
-        <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
-          {coupon.couponCode}
+        <div className="flex items-center gap-2">
+          <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
+            {coupon.couponCode}
+          </div>
+          <button
+            onClick={() => handleCopy(coupon.couponCode)}
+            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Copy coupon code"
+          >
+            <Copy className="h-4 w-4" />
+          </button>
         </div>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
