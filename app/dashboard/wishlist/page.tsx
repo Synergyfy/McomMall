@@ -16,13 +16,14 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { ShoppingCart, Calendar, Trash2 } from 'lucide-react';
-import { useWishlist } from '@/hooks/useWishlist';
+import { User, ShoppingCart, Calendar, Eye } from 'lucide-react';
+import Link from 'next/link';
+import { useAdminWishlist } from '@/service/wishlist/admin-hook';
 
 const WishlistPage = () => {
-  const { wishlist, loading, removeItemFromWishlist } = useWishlist();
+  const { wishlistItems, isLoading } = useAdminWishlist();
 
-  if (loading) {
+  if (isLoading) {
     return <p>Loading...</p>;
   }
 
@@ -31,14 +32,14 @@ const WishlistPage = () => {
       <div>
         <h1 className="text-3xl font-bold tracking-tight">Wishlist</h1>
         <p className="text-muted-foreground">
-          Products that you have added to your wishlist.
+          Products that customers have added to their wishlist.
         </p>
       </div>
       <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
         <CardHeader>
-          <CardTitle>Your Wishlisted Products</CardTitle>
+          <CardTitle>Wishlisted Products</CardTitle>
           <CardDescription>
-            A list of all products currently in your wishlist.
+            A list of all products currently in customers&apos; wishlists.
           </CardDescription>
         </CardHeader>
         <CardContent>
@@ -53,6 +54,12 @@ const WishlistPage = () => {
                 </TableHead>
                 <TableHead>
                   <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span>Customer</span>
+                  </div>
+                </TableHead>
+                <TableHead>
+                  <div className="flex items-center gap-2">
                     <Calendar className="h-4 w-4" />
                     <span>Date Added</span>
                   </div>
@@ -61,23 +68,29 @@ const WishlistPage = () => {
               </TableRow>
             </TableHeader>
             <TableBody>
-              {wishlist?.items?.map(item => (
+              {wishlistItems?.map(item => (
                 <TableRow key={item.id}>
                   <TableCell className="font-medium">
                     {item.product.name}
                   </TableCell>
                   <TableCell>
+                    <Link
+                      href={`/dashboard/customers/${item.user.id}`}
+                      className="text-blue-600 hover:underline"
+                    >
+                      {item.user.name}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
                     {new Date(item.created_at).toLocaleDateString()}
                   </TableCell>
                   <TableCell>
-                    <Button
-                      variant="outline"
-                      size="sm"
-                      onClick={() => removeItemFromWishlist(item.product.id)}
-                    >
-                      <Trash2 className="h-4 w-4 mr-2" />
-                      Remove
-                    </Button>
+                    <Link href={`/dashboard/store/products/edit/${item.product.id}`}>
+                      <Button variant="outline" size="sm">
+                        <Eye className="h-4 w-4 mr-2" />
+                        View Product
+                      </Button>
+                    </Link>
                   </TableCell>
                 </TableRow>
               ))}

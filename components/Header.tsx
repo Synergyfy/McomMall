@@ -84,6 +84,9 @@ export default function Header() {
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/wishlist">My Wishlist</Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem onClick={logout}>
                     Log out
                   </DropdownMenuItem>
