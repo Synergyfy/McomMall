@@ -38,6 +38,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
+  { title: 'My Wishlist', href: '/wishlist', icon: Heart },
   {
     title: 'Bookings',
     href: '/dashboard/bookings',
