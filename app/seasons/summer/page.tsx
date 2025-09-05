@@ -613,6 +613,7 @@ export default function SummerExhibitionPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }

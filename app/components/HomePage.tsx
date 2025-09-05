@@ -1,17 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import {
-  Search,
-  MapPin,
-  ArrowRight,
-  Heart,
-  Phone,
-  Mail,
-  Facebook,
-  Twitter,
-  Instagram,
-  Linkedin,
-  ArrowUp,
-} from 'lucide-react';
+import { Search, MapPin, ArrowRight, Heart, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
@@ -342,7 +330,9 @@ export default function HomePage() {
               {businessCategories.slice(0, 5).map((category, index) => (
                 <Link
                   key={index}
-                  href={`/listings?category=${encodeURIComponent(category.name)}`}
+                  href={`/listings?category=${encodeURIComponent(
+                    category.name
+                  )}`}
                   className="underline hover:text-orange-300 mx-1"
                 >
                   {category.name}

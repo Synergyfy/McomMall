@@ -620,6 +620,7 @@ export default function SpringExhibitionPage() {
           </div>
         </motion.div>
       </section>
+      <Footer />
     </div>
   );
 }
