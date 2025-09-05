@@ -1,8 +1,5 @@
-import { useEffect } from 'react';
 import { Conversation } from '@/service/messaging/types';
 import { useAuth } from '@/service/auth/hook';
-import { useMessaging } from '@/hooks/useMessaging';
-import { useQueryClient } from '@tanstack/react-query';
 
 interface ConversationSidebarProps {
   conversations: Conversation[];
@@ -15,27 +12,7 @@ export default function ConversationSidebar({
   selectedConversation,
   onConversationSelect,
 }: ConversationSidebarProps) {
-  const { user: currentUser, token } = useAuth();
-  const { onNewMessage, onConversationUpdate } = useMessaging(
-    token,
-    currentUser?.id || null
-  );
-  const queryClient = useQueryClient();
-
-  useEffect(() => {
-    const cleanupNewMessage = onNewMessage(() => {
-      queryClient.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
-    });
-
-    const cleanupConversationUpdate = onConversationUpdate(() => {
-      queryClient.invalidateQueries({ queryKey: ['messaging', 'conversations'] });
-    });
-
-    return () => {
-      cleanupNewMessage?.();
-      cleanupConversationUpdate?.();
-    };
-  }, [onNewMessage, onConversationUpdate, queryClient]);
+  const { user: currentUser } = useAuth();
 
   const getContactName = (conversation: Conversation) => {
     const participant = conversation.participants.find(p => p.id !== currentUser?.id);
