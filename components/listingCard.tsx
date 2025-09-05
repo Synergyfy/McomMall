@@ -48,7 +48,7 @@ const amenityTooltips: Record<Amenity, string> = {
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'place_id' in listing;
+  return 'placeId' in listing;
 }
 
 export default function ListingCard({
@@ -60,12 +60,17 @@ export default function ListingCard({
 
   let imgUrl;
   if (isGoogle) {
-    if (listing.photos) {
-      const { photo_reference } = listing?.photos[0];
-      const API_URL =
-        process.env.NEXT_PUBLIC_API_URL ||
-        'https://mcom-mall-api.vercel.app/api/v1';
-      imgUrl = `${API_URL}/google/google-business/photo/${photo_reference}`;
+    if (listing.photos && listing.photos.length > 0) {
+      const { photoReference } = listing.photos[0];
+      if (photoReference) {
+        const API_URL =
+          process.env.NEXT_PUBLIC_API_URL ||
+          'https://mcom-mall-api.vercel.app/api/v1';
+        imgUrl = `${API_URL}/google/google-business/photo/${photoReference}`;
+      } else {
+        imgUrl =
+          'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
+      }
     } else {
       imgUrl =
         'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
@@ -77,22 +82,27 @@ export default function ListingCard({
   }
 
   const name = isGoogle ? listing.name : listing.businessName;
-  const place_id = isGoogle ? listing.place_id : listing.id;
-  const category = isGoogle ? listing.types[0] : listing.categories[0]?.name;
+  const placeId = isGoogle ? listing.placeId : listing.id;
+  const category =
+    (isGoogle
+      ? listing.types?.[0]
+      : (listing as InHouseBusiness).categories?.[0]?.name) || 'Business';
   const vicinity = isGoogle
-    ? listing.vicinity
-    : listing.location
-    ? `${listing.location.addressLine1}, ${listing.location.city}`
+    ? listing.formattedAddress || listing.vicinity
+    : (listing as InHouseBusiness).location
+    ? `${(listing as InHouseBusiness).location.addressLine1}, ${
+        (listing as InHouseBusiness).location.city
+      }`
     : '';
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
-  const ratingCount = isGoogle ? listing.user_ratings_total : undefined;
-  const priceLevel = isGoogle ? listing.price_level : undefined;
+  const ratingCount = isGoogle ? listing.userRatingsTotal : undefined;
+  const priceLevel = isGoogle ? listing.priceLevel : undefined;
   const isVerified = isGoogle ? false : listing.isGoogleVerified;
   const altText = isGoogle
     ? listing.name
     : listing.logoAltText || listing.businessName;
 
-  const listingId = isGoogle ? place_id : listing.id;
+  const listingId = isGoogle ? placeId : listing.id;
   const href = isGoogle
     ? `/listings/${listingId}`
     : `/listings/${listingId}?source=in-house`;

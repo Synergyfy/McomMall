@@ -192,13 +192,13 @@ export const useAddListing = () => {
   return mutation;
 };
 
-export const useGetGoogleListing = ({ place_id }: { place_id: string }) => {
+export const useGetGoogleListing = ({ placeId }: { placeId: string }) => {
   const fetch = async () => {
-    if (!place_id) {
+    if (!placeId) {
       return null;
     }
     try {
-      const response = await api.get(`google/google-business/${place_id}`);
+      const response = await api.get(`google/google-business/${placeId}`);
       return (response.data.result as GooglePlaceResult) || null;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -210,10 +210,10 @@ export const useGetGoogleListing = ({ place_id }: { place_id: string }) => {
 
   const query = useQuery({
     queryFn: fetch,
-    queryKey: ['FETCH_GOOGLE_BUSINESS', place_id],
+    queryKey: ['FETCH_GOOGLE_BUSINESS', placeId],
     refetchOnMount: false,
     staleTime: Infinity,
-    enabled: !!place_id,
+    enabled: !!placeId,
   });
   return query;
 };

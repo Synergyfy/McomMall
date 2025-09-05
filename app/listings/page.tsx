@@ -30,7 +30,7 @@ import { InHouseBusiness, GooglePlaceResult } from '@/service/listings/types';
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'place_id' in listing;
+  return 'placeId' in listing;
 }
 
 const initialFilters: FilterState = {
@@ -300,7 +300,7 @@ function ListingsPageContent() {
                         <ListingCard
                           key={
                             isGoogleResult(listing)
-                              ? listing.place_id
+                              ? listing.placeId
                               : listing.id
                           }
                           listing={listing}

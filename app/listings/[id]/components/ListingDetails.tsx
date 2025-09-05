@@ -29,7 +29,7 @@ export default function ClientListingDetail({
   const isGoogle = source !== 'in-house';
 
   const googleListingQuery = useGetGoogleListing({
-    place_id: placeId,
+    placeId: placeId,
   });
 
   const inHouseListingQuery = useGetBusinessData({
@@ -69,7 +69,7 @@ export default function ClientListingDetail({
         .slice(0, 5)
         .map(
           (photo: Photo) =>
-            `${API_URL}/google/google-business/photo/${photo.photo_reference}`
+            `${API_URL}/google/google-business/photo/${photo.photoReference}`
         );
     } else if (!isGoogle && listing.logoUrl) {
       imageUrls.push(listing.logoUrl);
@@ -92,9 +92,9 @@ export default function ClientListingDetail({
                       ? listing.types?.[0]
                       : listing.categories?.[0]?.name}
                   </span>
-                  {listing.price_level && (
+                  {listing.priceLevel && (
                     <span className="px-3 py-1 text-xs text-green-700 bg-green-100 rounded-md">
-                      {listing?.price_level}
+                      {listing?.priceLevel}
                     </span>
                   )}
                 </div>
@@ -103,7 +103,7 @@ export default function ClientListingDetail({
                 </h1>
                 <p className="text-md text-gray-500 mt-1">
                   {isGoogle
-                    ? listing?.formatted_address || listing?.vicinity
+                    ? listing?.formattedAddress || listing?.vicinity
                     : `${listing.location.addressLine1}, ${listing.location.city}`}
                 </p>
                 {isGoogle && (
@@ -113,7 +113,7 @@ export default function ClientListingDetail({
                       {listing?.rating?.toFixed(1)}
                     </span>
                     <span className="text-gray-500">
-                      ({listing?.user_ratings_total} reviews)
+                      ({listing?.userRatingsTotal} reviews)
                     </span>
                   </div>
                 )}
@@ -161,10 +161,10 @@ export default function ClientListingDetail({
                 <BookingSidebar
                   phoneNumber={
                     isGoogle
-                      ? listing.formatted_phone_number || ''
+                      ? listing.formattedPhoneNumber || ''
                       : listing.businessPhone
                   }
-                  priceDisplay={String(listing?.price_level ?? '')}
+                  priceDisplay={String(listing?.priceLevel ?? '')}
                   author={{
                     id: isGoogle ? '' : listing?.user?.id ?? '',
                     name: isGoogle

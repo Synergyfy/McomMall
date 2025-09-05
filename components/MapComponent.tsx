@@ -9,7 +9,7 @@ import { GooglePlaceResult, InHouseBusiness } from '@/service/listings/types';
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'place_id' in listing;
+  return 'placeId' in listing;
 }
 
 // Function to create custom numbered icons using a string with Tailwind classes
@@ -54,7 +54,7 @@ export default function MapComponent({
       />
       {listings.map((listing, index) => {
         const isGoogle = isGoogleResult(listing);
-        const key = isGoogle ? listing.place_id : listing.id;
+        const key = isGoogle ? listing.placeId : listing.id;
         const position: [number, number] = isGoogle
           ? [listing.geometry.location.lat, listing.geometry.location.lng]
           : [listing.location.lat, listing.location.lng];

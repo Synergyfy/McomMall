@@ -18,8 +18,8 @@ export interface Geometry {
 export interface Photo {
   height: number;
   width: number;
-  html_attributions: string[];
-  photo_reference: string;
+  htmlAttributions: string[];
+  photoReference: string;
 }
 
 interface PlusCode {
@@ -28,7 +28,7 @@ interface PlusCode {
 }
 
 interface OpeningHours {
-  open_now: boolean;
+  openNow: boolean;
 }
 
 export interface Review {
@@ -43,27 +43,26 @@ export interface Review {
 }
 
 export interface GooglePlaceResult {
-  business_status: string;
+  businessStatus: string;
   geometry: Geometry;
   icon: string;
-  icon_background_color: string;
-  icon_mask_base_uri: string;
+  iconBackgroundColor: string;
+  iconMaskBaseUri: string;
   name: string;
-  opening_hours?: OpeningHours;
+  openingHours?: OpeningHours;
   photos?: Photo[];
   reviews?: Review[];
-  place_id: string;
-  plus_code: PlusCode;
-  price_level?: number;
+  placeId: string;
+  plusCode: PlusCode;
+  priceLevel?: number;
   rating?: number;
   reference: string;
   scope: string;
   types: string[];
-  user_ratings_total?: number;
+  userRatingsTotal?: number;
   vicinity: string;
-
-  formatted_address?: string;
-  formatted_phone_number?: string;
+  formattedAddress?: string;
+  formattedPhoneNumber?: string;
 }
 
 export type GooglePlaceResults = GooglePlaceResult[];
