@@ -194,20 +194,20 @@ export default function CouponsPage() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <h1 className="text-4xl font-bold text-slate-800">Coupons</h1>
           <div className="flex items-center gap-4">
-            <h1 className="text-4xl font-bold text-slate-800">Coupons</h1>
+            <p className="text-sm text-slate-500">Home &gt; Dashboard</p>
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               onClick={handleExport}
               disabled={!coupons || coupons.length === 0}
-              className="flex items-center gap-2 rounded-md bg-blue-500 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-blue-600 disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Download className="h-4 w-4" />
               <span>Export</span>
             </motion.button>
           </div>
-          <p className="text-sm text-slate-500">Home &gt; Dashboard</p>
         </header>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
