@@ -14,7 +14,7 @@ import { Message } from '@/service/messaging/types';
 export default function MessageView({ conversation }: MessageViewProps) {
   const { data: messages, isLoading } = useGetConversationMessages(conversation?.id || '');
   const { user: currentUser, token } = useAuth();
-  const { sendMessage, onNewMessage } = useMessaging(token, currentUser?.id || null);
+  const { sendMessage, onNewMessage, isConnected } = useMessaging(token, currentUser?.id || null);
   const [newMessage, setNewMessage] = useState('');
   const queryClient = useQueryClient();
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -108,15 +108,17 @@ export default function MessageView({ conversation }: MessageViewProps) {
         <div className="relative">
           <input
             type="text"
-            placeholder="Type a message..."
-            className="w-full p-3 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            placeholder={isConnected ? "Type a message..." : "Connecting..."}
+            className="w-full p-3 pr-12 rounded-full border border-gray-300 focus:outline-none focus:ring-2 focus:ring-blue-500 disabled:bg-gray-100"
             value={newMessage}
             onChange={e => setNewMessage(e.target.value)}
             onKeyDown={e => e.key === 'Enter' && handleSendMessage()}
+            disabled={!isConnected}
           />
           <button
             onClick={handleSendMessage}
-            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600"
+            className="absolute right-3 top-1/2 transform -translate-y-1/2 bg-blue-500 text-white p-2 rounded-full hover:bg-blue-600 disabled:bg-blue-300"
+            disabled={!isConnected}
           >
             <svg
               xmlns="http://www.w3.org/2000/svg"
