@@ -16,8 +16,7 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { User, ShoppingCart, Calendar, Trash2 } from 'lucide-react';
-import Link from 'next/link';
+import { ShoppingCart, Calendar, Trash2 } from 'lucide-react';
 import { useWishlist } from '@/hooks/useWishlist';
 
 const WishlistPage = () => {

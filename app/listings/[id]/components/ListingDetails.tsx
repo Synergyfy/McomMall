@@ -53,7 +53,7 @@ export default function ClientListingDetail({
     if (isWishlisted) {
       removeItemFromWishlist(placeId);
     } else {
-      addItemToWishlist(placeId);
+      addItemToWishlist({ productId: placeId });
     }
   };
 
