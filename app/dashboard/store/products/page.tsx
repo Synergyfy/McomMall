@@ -31,6 +31,7 @@ import {
 } from 'lucide-react';
 import { useGetMyProducts, useDeleteProduct } from '@/service/store/products/hook';
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -445,23 +446,30 @@ export default function StoreDashboard() {
                           data-label="Image"
                           className="mobile-table-cell md:table-cell"
                         >
-                          <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center">
-                            {product.imageUrl ? (
-                              <img
-                                src={product.imageUrl}
-                                alt={product.title}
-                                className="w-full h-full object-cover rounded-md"
-                              />
-                            ) : (
-                              <PlaceholderImage className="w-8 h-8 text-gray-400" />
-                            )}
-                          </div>
+                          <Link href={`/products/${product.id}`} passHref>
+                            <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
+                              {product.imageUrl ? (
+                                <img
+                                  src={product.imageUrl}
+                                  alt={product.title}
+                                  className="w-full h-full object-cover rounded-md"
+                                />
+                              ) : (
+                                <PlaceholderImage className="w-8 h-8 text-gray-400" />
+                              )}
+                            </div>
+                          </Link>
                         </TableCell>
                         <TableCell
                           data-label="Name"
                           className="mobile-table-cell md:table-cell font-medium text-gray-800"
                         >
-                          {product.title}
+                          <Link
+                            href={`/products/${product.id}`}
+                            className="hover:underline"
+                          >
+                            {product.title}
+                          </Link>
                         </TableCell>
                         <TableCell
                           data-label="Status"

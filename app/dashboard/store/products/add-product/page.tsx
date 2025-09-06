@@ -15,6 +15,7 @@ import {
   Trash2,
   Link as LinkIcon,
   Download,
+  X,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState } from 'react';
@@ -24,6 +25,7 @@ import { useAddProduct } from '@/service/store/products/hook';
 import { SuccessDialog } from '../components/SuccessDialog';
 import { CreateProductDto } from '@/service/store/products/types';
 
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
   Form,
@@ -249,6 +251,7 @@ const customResolver = (data: ProductFormValues) => {
 
 export default function AddProductPage() {
   const router = useRouter();
+  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const form = useForm<ProductFormValues>({
     resolver: customResolver,
@@ -295,6 +298,11 @@ export default function AddProductPage() {
 
   const productType = form.watch('productType');
 
+  const category = form.watch('category');
+  React.useEffect(() => {
+    setSelectedSubCategories([]);
+  }, [category]);
+
   async function onSubmit(data: ProductFormValues) {
     const productData: CreateProductDto = {
       bussinessId: data.businessId as string,
@@ -328,7 +336,7 @@ export default function AddProductPage() {
       visibility: data.visibility,
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
-      tags: data.tags.split(',').map(tag => tag.trim()),
+      tags: selectedSubCategories,
     };
 
     addProduct(productData, {
@@ -1278,27 +1286,85 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Tags */}
+                {/* Sub-categories (as Tags) */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardTitle className="text-2xl">Sub-categories</CardTitle>
+                    <CardDescription>
+                      Select sub-categories that will act as tags for your product.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
                       name="tags"
-                      render={({ field }) => (
+                      render={() => (
                         <FormItem>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., summer, new, sale"
-                              {...field}
-                              className="text-base py-6"
-                            />
-                          </FormControl>
-                          <FormDescription className="text-sm">
-                            Separate tags with commas.
-                          </FormDescription>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-base py-6"
+                                disabled={!form.watch('category')}
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                {selectedSubCategories.length > 0
+                                  ? 'Add more sub-categories'
+                                  : 'Select sub-categories'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search sub-category..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    No sub-category found.
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {businessCategories
+                                      .find(c => c.name === form.watch('category'))
+                                      ?.subCategories.map(sc => (
+                                        <CommandItem
+                                          key={sc.name}
+                                          value={sc.name}
+                                          onSelect={() => {
+                                            if (!selectedSubCategories.includes(sc.name)) {
+                                              setSelectedSubCategories([...selectedSubCategories, sc.name]);
+                                            }
+                                          }}
+                                        >
+                                          {sc.name}
+                                        </CommandItem>
+                                      ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {selectedSubCategories.map(subCategory => (
+                              <Badge
+                                key={subCategory}
+                                variant="secondary"
+                                className="text-base"
+                              >
+                                {subCategory}
+                                <button
+                                  type="button"
+                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() =>
+                                    setSelectedSubCategories(
+                                      selectedSubCategories.filter(
+                                        s => s !== subCategory
+                                      )
+                                    )
+                                  }
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
                           <FormMessage className="text-red-500 text-base font-medium" />
                         </FormItem>
                       )}

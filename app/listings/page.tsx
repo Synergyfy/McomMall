@@ -275,7 +275,7 @@ function ListingsPageContent() {
             </div>
           </div>
 
-          <div className="flex-1 flex">
+          <div className="flex-1 flex overflow-hidden">
             <div className="flex-1 p-4 overflow-y-auto">
               {combinedListings && combinedListings.length === 0 ? (
                 <div className="text-center">

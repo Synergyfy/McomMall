@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, PlusCircle } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Copy, Download } from 'lucide-react';
 import { useGetCoupons, useDeleteCoupon } from '@/service/coupons/hook';
+import { toast } from 'sonner';
 import { Coupon } from '@/service/coupons/types';
 import {
   AlertDialog,
@@ -51,14 +52,28 @@ const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
 
   const formatLimit = (limit?: number) => (limit === undefined ? '∞' : limit);
 
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code);
+    toast.success('Copied to clipboard!');
+  };
+
   return (
     <motion.tr
       variants={rowVariants}
       className="border-b border-slate-200 bg-white"
     >
       <td className="whitespace-nowrap px-6 py-4">
-        <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
-          {coupon.couponCode}
+        <div className="flex items-center gap-2">
+          <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
+            {coupon.couponCode}
+          </div>
+          <button
+            onClick={() => handleCopy(coupon.couponCode)}
+            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
+            aria-label="Copy coupon code"
+          >
+            <Copy className="h-4 w-4" />
+          </button>
         </div>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
@@ -125,12 +140,74 @@ export default function CouponsPage() {
     },
   };
 
+  const handleExport = () => {
+    if (!coupons) return;
+
+    const escapeCsvValue = (value: string | number | boolean | null | undefined): string => {
+      const stringValue = String(value ?? '');
+      if (stringValue.includes(',') || stringValue.includes('"') || stringValue.includes('\n')) {
+        return `"${stringValue.replace(/"/g, '""')}"`;
+      }
+      return stringValue;
+    };
+
+    const headers = [
+      'ID', 'Coupon Code', 'Description', 'Discount Type', 'Amount',
+      'Expiry Date', 'Min Spend', 'Max Spend', 'Individual Use',
+      'Allowed Emails', 'Usage Limit', 'Per User Limit', 'Usage Count',
+      'Created At', 'Updated At'
+    ];
+
+    const csvContent = [
+      headers.join(','),
+      ...coupons.map(c => [
+        escapeCsvValue(c.id),
+        escapeCsvValue(c.couponCode),
+        escapeCsvValue(c.couponDescription),
+        escapeCsvValue(c.discountType),
+        escapeCsvValue(c.couponAmount),
+        escapeCsvValue(new Date(c.expiryDate).toISOString()),
+        escapeCsvValue(c.minSpend),
+        escapeCsvValue(c.maxSpend),
+        escapeCsvValue(c.individualUseOnly),
+        escapeCsvValue(c.allowedEmails),
+        escapeCsvValue(c.usageLimitPerCoupon),
+        escapeCsvValue(c.usageLimitPerUser),
+        escapeCsvValue(c.usageCount),
+        escapeCsvValue(c.created_at),
+        escapeCsvValue(c.updated_at),
+      ].join(','))
+    ].join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const link = document.createElement('a');
+    const url = URL.createObjectURL(blob);
+    link.setAttribute('href', url);
+    link.setAttribute('download', 'coupons.csv');
+    link.style.visibility = 'hidden';
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
           <h1 className="text-4xl font-bold text-slate-800">Coupons</h1>
-          <p className="text-sm text-slate-500">Home &gt; Dashboard</p>
+          <div className="flex items-center gap-4">
+            <p className="text-sm text-slate-500">Home &gt; Dashboard</p>
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={handleExport}
+              disabled={!coupons || coupons.length === 0}
+              className="flex items-center gap-2 rounded-md bg-orange-600 px-4 py-2 text-sm font-semibold text-white shadow-sm transition-colors hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              <Download className="h-4 w-4" />
+              <span>Export</span>
+            </motion.button>
+          </div>
         </header>
 
         <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">

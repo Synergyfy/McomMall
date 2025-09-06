@@ -60,18 +60,24 @@ export default function CartPage() {
                 className="flex items-center justify-between p-4 border rounded-lg"
               >
                 <div className="flex items-center space-x-4">
-                  <Image
-                    src={
-                      item.product.imageUrl ||
-                      'https://via.placeholder.com/100'
-                    }
-                    alt={item.product.title}
-                    width={100}
-                    height={100}
-                    className="rounded-md"
-                  />
+                  <Link href={`/products/${item.product.id}`}>
+                    <Image
+                      src={
+                        item.product.imageUrl ||
+                        'https://via.placeholder.com/100'
+                      }
+                      alt={item.product.title}
+                      width={100}
+                      height={100}
+                      className="rounded-md"
+                    />
+                  </Link>
                   <div>
-                    <h2 className="font-semibold">{item.product.title}</h2>
+                    <Link href={`/products/${item.product.id}`}>
+                      <h2 className="font-semibold hover:underline">
+                        {item.product.title}
+                      </h2>
+                    </Link>
                     <p className="text-gray-500">
                       £{item.product.price.toFixed(2)}
                     </p>
