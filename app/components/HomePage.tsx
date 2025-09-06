@@ -23,7 +23,6 @@ import McomSolutions from '../homepage/components/McomSolutions';
 import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
 import { businessCategories } from '@/lib/business-categories';
 import Footer from '@/components/Footer';
-import Newsletter from './Newsletter';
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -149,34 +148,9 @@ const SwirlArrow = () => (
   </svg>
 );
 
-const McomMallLogo = ({ className = '' }) => (
-  <svg
-    width="40"
-    height="40"
-    viewBox="0 0 50 50"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <path
-      d="M10 10 L 25 25 L 40 10 L 40 40 L 25 25 L 10 40 Z"
-      stroke="#f58220"
-      strokeWidth="4"
-      fill="none"
-    />
-    <path
-      d="M10 10 L 25 25 L 40 10"
-      stroke="currentColor"
-      strokeWidth="4"
-      fill="none"
-    />
-  </svg>
-);
-
 // --- Main App Component ---
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeAdFilter, setActiveAdFilter] = useState('All');
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');

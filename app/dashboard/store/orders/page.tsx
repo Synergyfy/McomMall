@@ -3,8 +3,8 @@
 import * as React from 'react';
 import { useMemo } from 'react';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
-import { useGetOrders } from '@/hooks/useGetOrders';
-import { type Order as ApiOrder } from '@/types/order';
+import { useGetStoreOrders } from '@/service/store/orders/hook';
+import { type Order as ApiOrder } from '@/service/store/orders/types';
 
 // In a real Next.js app with shadcn/ui, you would import components like this:
 import { Button } from '@/components/ui/button';
@@ -30,15 +30,6 @@ import {
 // --- Type Definitions ---
 type OrderStatus = 'All' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 type BadgeStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-type Order = {
-  id: string;
-  customerName: string;
-  customerEmail: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-  itemCount: number;
-  total: number;
-  date: string;
-};
 
 // --- HELPER COMPONENTS ---
 const formatDate = (dateString: string) => {
@@ -78,7 +69,7 @@ const StatusBadge: React.FC<{ status: BadgeStatus }> = ({ status }) => {
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function OrdersDashboard() {
-  const { data: apiOrders, isLoading } = useGetOrders();
+  const { data: apiOrders, isLoading } = useGetStoreOrders();
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);

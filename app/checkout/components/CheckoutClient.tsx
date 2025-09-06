@@ -9,7 +9,7 @@ import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useRecordOrder } from '@/hooks/useRecordOrder';
-import { PaymentMethod } from '@/types/order';
+import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
 

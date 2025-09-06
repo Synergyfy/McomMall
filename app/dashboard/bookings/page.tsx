@@ -1,4 +1,3 @@
-// app/my-bookings/page.tsx
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -30,13 +29,11 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { useGetCustomerBookings } from '@/service/bookings/hook';
-import MyBookingCard from './component/MyBookingCard';
+import { useGetBusinessBookings } from '@/service/bookings/hook';
+import BookingCard from './component/BookingCard';
 
-// --- 4. MAIN PAGE COMPONENT ---
-
-const MyBookingsPage: FC = () => {
-  const { data: bookings, isLoading } = useGetCustomerBookings();
+const BookingsPage: FC = () => {
+  const { data: bookings, isLoading } = useGetBusinessBookings();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 4;
 
@@ -62,7 +59,7 @@ const MyBookingsPage: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">My Bookings</h1>
+        <h1 className="text-3xl font-bold text-gray-800">Business Bookings</h1>
         <Breadcrumb className="mt-2 sm:mt-0">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -78,7 +75,7 @@ const MyBookingsPage: FC = () => {
 
       <Card className="mb-8 shadow-sm">
         <CardContent className="p-4 flex justify-between items-center">
-          <h2 className="font-semibold text-gray-700">Your Bookings</h2>
+          <h2 className="font-semibold text-gray-700">Your Customer Bookings</h2>
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
@@ -98,7 +95,7 @@ const MyBookingsPage: FC = () => {
       <main className="space-y-6">
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
           {paginatedBookings.map(booking => (
-            <MyBookingCard key={booking.id} booking={booking} />
+            <BookingCard key={booking.id} booking={booking} />
           ))}
         </div>
 
@@ -158,4 +155,4 @@ const MyBookingsPage: FC = () => {
   );
 };
 
-export default MyBookingsPage;
+export default BookingsPage;

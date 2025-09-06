@@ -1,6 +1,6 @@
 import { useMutation } from '@tanstack/react-query';
 import api from '@/service/api';
-import { PaymentMethod } from '@/types/order';
+import { PaymentMethod } from '@/service/bookings/types';
 
 export interface PaymentDto {
   paymentMethod: PaymentMethod;
