@@ -115,10 +115,6 @@ const HowItWorksRedesigned = () => {
             Start Exploring
             <ArrowRight className="ml-2 h-5 w-5" />
           </button>
-          <button className="w-full sm:w-auto flex items-center justify-center text-lg font-semibold text-gray-800 bg-white border-2 border-gray-300 rounded-lg px-8 py-4 transition-all duration-300 hover:bg-gray-100 hover:border-gray-400 hover:shadow-xl transform hover:scale-105">
-            List Your Business
-            <Briefcase className="ml-2 h-5 w-5" />
-          </button>
         </motion.div>
       </div>
     </section>
