@@ -7,6 +7,7 @@ import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
 import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
 import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
 import { PopularCategoriesSection } from '../homepage/components/PopularCategoriesSection';
+import { BusinessCategoriesSection } from '../homepage/components/BusinessCategoriesSection';
 import Winter from '@/public/homepage/WinterSale.png';
 import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
@@ -354,6 +355,7 @@ export default function HomePage() {
         {/* --- Categories Section --- */}
 
         <PopularCategoriesSection />
+        <BusinessCategoriesSection />
 
         {/* --- Featured Ads Section --- */}
         <ScrollAnimatedSection>
