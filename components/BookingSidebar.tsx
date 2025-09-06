@@ -8,12 +8,22 @@ import {
   CheckCircle,
   MessageSquare,
   Phone,
-  User,
   Badge,
 } from 'lucide-react';
 import { useSendMessage } from '@/service/messaging/hook';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/service/auth/hook';
+import { useCreateBooking } from '@/service/bookings/hook';
+import { useState } from 'react';
+import { Calendar } from '@/components/ui/calendar';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { format } from 'date-fns';
+import { ListingType } from '@/service/listings/types';
+import { SuccessDialog } from './ui/SuccessDialog';
 
 interface BookingSidebarProps {
   priceDisplay: string;
@@ -21,6 +31,8 @@ interface BookingSidebarProps {
   author: { id: string; name: string; avatarUrl: string; bio: string };
   isVerified?: boolean;
   currentUserId?: string;
+  businessId: string;
+  listingType: ListingType[];
 }
 
 export default function BookingSidebar({
@@ -29,63 +41,149 @@ export default function BookingSidebar({
   author,
   isVerified,
   currentUserId,
+  businessId,
+  listingType,
 }: BookingSidebarProps) {
   const router = useRouter();
   const { mutate: sendMessage } = useSendMessage();
   const { user } = useAuth();
+  const createBookingMutation = useCreateBooking();
+  const [date, setDate] = useState<Date | undefined>(new Date());
+  const [startTime, setStartTime] = useState('09:00');
+  const [endTime, setEndTime] = useState('10:00');
+  const [isSuccess, setIsSuccess] = useState(false);
 
   const handleStartConversation = () => {
     if (!user) {
-      // Handle case where user is not logged in
       router.push('/login');
       return;
     }
+    sendMessage({
+      content: `Hi, I'm interested in your listing.`,
+      receiverId: author.id,
+    });
+  };
 
-    sendMessage(
+  const handleBooking = () => {
+    if (!date) return;
+    const startDateTime = new Date(date);
+    const [startHour, startMinute] = startTime.split(':').map(Number);
+    startDateTime.setHours(startHour, startMinute);
+
+    const endDateTime = new Date(date);
+    const [endHour, endMinute] = endTime.split(':').map(Number);
+    endDateTime.setHours(endHour, endMinute);
+
+    createBookingMutation.mutate(
       {
-        content: `Hi, I'm interested in your listing.`,
-        receiverId: author.id,
+        businessId,
+        startTime: startDateTime.toISOString(),
+        endTime: endDateTime.toISOString(),
+      },
+      {
+        onSuccess: () => {
+          setIsSuccess(true);
+        },
       }
     );
   };
 
+  const isService =
+    listingType?.includes('service') ||
+    listingType?.includes('product' as ListingType);
+
   return (
     <div className="w-full space-y-6">
+       <SuccessDialog
+        isOpen={isSuccess}
+        onClose={() => setIsSuccess(false)}
+        title="Booking Successful!"
+        description="Your booking has been confirmed. You will receive a confirmation email shortly."
+      />
       {isVerified && (
         <Badge className="w-full justify-center py-3 text-md bg-green-600 hover:bg-green-700">
           <CheckCircle className="mr-2 h-5 w-5" />
           Verified Listing
         </Badge>
       )}
-      <Card className="shadow-lg">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="text-xl font-bold">Booking</h3>
-            <p className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full">
-              {priceDisplay}
-            </p>
-          </div>
-          <div className="space-y-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal"
-            >
-              <CalendarDays className="mr-2 h-4 w-4" />
-              Select Dates
-            </Button>
-            <Button
-              variant="outline"
-              className="w-full justify-start text-left font-normal"
-            >
-              <User className="mr-2 h-4 w-4" />
-              Guests
-            </Button>
-            <Button className="w-full bg-red-500 hover:bg-red-600 text-lg py-6">
-              Book Now
-            </Button>
-          </div>
-        </CardContent>
-      </Card>
+      {isService && (
+        <Card className="shadow-lg">
+          <CardContent className="p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-xl font-bold">Booking</h3>
+              <p className="px-3 py-1 text-sm bg-green-100 text-green-700 rounded-full">
+                {priceDisplay}
+              </p>
+            </div>
+            <div className="space-y-4">
+              <Popover>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    className="w-full justify-start text-left font-normal"
+                  >
+                    <CalendarDays className="mr-2 h-4 w-4" />
+                    {date ? format(date, 'PPP') : <span>Pick a date</span>}
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-auto p-0">
+                  <Calendar
+                    mode="single"
+                    selected={date}
+                    onSelect={setDate}
+                    initialFocus
+                  />
+                </PopoverContent>
+              </Popover>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label
+                    htmlFor="start-time"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    Start Time
+                  </label>
+                  <select
+                    id="start-time"
+                    value={startTime}
+                    onChange={e => setStartTime(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                  >
+                    {Array.from({ length: 13 }, (_, i) => i + 8).map(hour => (
+                      <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label
+                    htmlFor="end-time"
+                    className="block text-sm font-medium text-gray-700"
+                  >
+                    End Time
+                  </label>
+                  <select
+                    id="end-time"
+                    value={endTime}
+                    onChange={e => setEndTime(e.target.value)}
+                    className="mt-1 block w-full pl-3 pr-10 py-2 text-base border-gray-300 focus:outline-none focus:ring-red-500 focus:border-red-500 sm:text-sm rounded-md"
+                  >
+                    {Array.from({ length: 13 }, (_, i) => i + 9).map(hour => (
+                      <option key={hour} value={`${hour}:00`}>{`${hour}:00`}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+              <Button
+                className="w-full bg-red-500 hover:bg-red-600 text-lg py-6"
+                onClick={handleBooking}
+                disabled={createBookingMutation.isPending}
+              >
+                {createBookingMutation.isPending ? 'Booking...' : 'Book Now'}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardContent className="p-6">

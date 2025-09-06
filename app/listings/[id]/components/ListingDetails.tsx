@@ -175,6 +175,8 @@ export default function ClientListingDetail({
                   }}
                   currentUserId={currentUser?.id}
                   isVerified={listing.isGoogleVerified}
+                  businessId={placeId}
+                  listingType={isGoogle ? [] : listing.listingType}
                 />
               </div>
             </div>
