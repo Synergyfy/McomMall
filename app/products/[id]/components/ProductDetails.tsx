@@ -106,8 +106,8 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             </div>
 
             <div>
-              <p className="text-3xl text-gray-900">
-                ${product.price.toFixed(2)}
+              <p className="text-4xl font-bold text-gray-900">
+                £{product.price.toFixed(2)}
               </p>
             </div>
 
@@ -136,7 +136,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               </div>
               <Button
                 size="lg"
-                className="flex-1 bg-indigo-600 hover:bg-indigo-700"
+                className="flex-1 bg-orange-600 hover:bg-orange-700"
                 onClick={handleAddToCart}
               >
                 Add to Cart
@@ -165,7 +165,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               {product.category && (
                 <p>
                   <span className="font-semibold text-gray-700">Category:</span>{' '}
-                  <a href="#" className="text-indigo-600 hover:underline">
+                  <a href="#" className="text-orange-600 hover:underline">
                     {product.category}
                   </a>
                 </p>
