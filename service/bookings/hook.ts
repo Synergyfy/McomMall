@@ -33,6 +33,11 @@ const checkAvailability = async (payload: {
   return data;
 };
 
+const approveBooking = async (bookingId: string): Promise<Booking> => {
+  const { data } = await api.put(`/bookings/${bookingId}/approve`);
+  return data;
+};
+
 const declineBooking = async (bookingId: string): Promise<Booking> => {
   const { data } = await api.put(`/bookings/${bookingId}/decline`);
   return data;
@@ -44,36 +49,6 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
 };
 
 // --- Custom Hooks ---
-
-export const useCancelBooking = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-        mutationFn: cancelBooking,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
-            toast.success('Booking cancelled successfully!');
-        },
-        onError: (error: any) => {
-            const errorMessage = error?.response?.data?.message || 'Failed to cancel booking. Please try again.';
-            toast.error(errorMessage);
-        },
-    });
-};
-
-export const useDeclineBooking = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: declineBooking,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
-      toast.success('Booking declined successfully!');
-    },
-    onError: (error: any) => {
-      const errorMessage = error?.response?.data?.message || 'Failed to decline booking. Please try again.';
-      toast.error(errorMessage);
-    },
-  });
-};
 
 export const useCreateBooking = () => {
   const queryClient = useQueryClient();
@@ -116,4 +91,49 @@ export const useCheckAvailability = () => {
       }
     }
   });
+};
+
+export const useApproveBooking = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: approveBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      toast.success('Booking approved successfully!');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to approve booking. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useDeclineBooking = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: declineBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      toast.success('Booking declined successfully!');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to decline booking. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useCancelBooking = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: cancelBooking,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+            toast.success('Booking cancelled successfully!');
+        },
+        onError: (error: any) => {
+            const errorMessage = error?.response?.data?.message || 'Failed to cancel booking. Please try again.';
+            toast.error(errorMessage);
+        },
+    });
 };

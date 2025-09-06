@@ -9,3 +9,5 @@ export interface CreateOrderDto {
         transactionId: string;
     };
 }
+
+export { PaymentMethod };

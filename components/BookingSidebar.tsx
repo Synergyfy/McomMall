@@ -8,6 +8,7 @@ import {
   CheckCircle,
   MessageSquare,
   Phone,
+  User,
   Badge,
 } from 'lucide-react';
 import { useSendMessage } from '@/service/messaging/hook';
@@ -90,11 +91,11 @@ export default function BookingSidebar({
 
   const isService =
     listingType?.includes('service') ||
-    listingType?.includes('product' as ListingType);
+    listingType?.includes('product-and-service' as ListingType);
 
   return (
     <div className="w-full space-y-6">
-       <SuccessDialog
+      <SuccessDialog
         isOpen={isSuccess}
         onClose={() => setIsSuccess(false)}
         title="Booking Successful!"

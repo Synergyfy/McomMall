@@ -1,7 +1,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { Calendar, User, Clock, MoreHorizontal, XCircle } from 'lucide-react';
+import { Calendar, User, Clock, MoreHorizontal, XCircle, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Booking } from '@/service/bookings/types';
-import { useDeclineBooking } from '@/service/bookings/hook';
+import { useDeclineBooking, useApproveBooking } from '@/service/bookings/hook';
 
 const InfoBlock: FC<{
   icon: React.ReactNode;
@@ -30,9 +30,14 @@ const InfoBlock: FC<{
 
 const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const declineBookingMutation = useDeclineBooking();
+  const approveBookingMutation = useApproveBooking();
 
   const handleDecline = () => {
     declineBookingMutation.mutate(booking.id);
+  };
+
+  const handleApprove = () => {
+    approveBookingMutation.mutate(booking.id);
   };
 
   const getStatusBadge = (status: string) => {
@@ -71,6 +76,10 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
+                <DropdownMenuItem onClick={handleApprove} disabled={booking.status !== 'PENDING'}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve Booking
+                </DropdownMenuItem>
                 <DropdownMenuItem onClick={handleDecline} disabled={booking.status !== 'PENDING'}>
                   <XCircle className="mr-2 h-4 w-4" />
                   Decline Booking

@@ -1,4 +1,5 @@
 import { notFound } from 'next/navigation';
+import { getListingById } from '@/lib/listing-data';
 import ClientListingDetail from './components/ListingDetails';
 
 type PageProps = {

@@ -30,6 +30,15 @@ import {
 // --- Type Definitions ---
 type OrderStatus = 'All' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 type BadgeStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+type Order = {
+  id: string;
+  customerName: string;
+  customerEmail: string;
+  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  itemCount: number;
+  total: number;
+  date: string;
+};
 
 // --- HELPER COMPONENTS ---
 const formatDate = (dateString: string) => {
