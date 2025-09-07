@@ -39,12 +39,13 @@ const BookingsPage: FC = () => {
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 4;
   const searchParams = useSearchParams();
-  const statusFilter = searchParams.get('status')?.toUpperCase() as BookingStatus | undefined;
+  const statusFilter = searchParams.get('status')?.toUpperCase();
 
   const filteredBookings = useMemo(() => {
     if (!bookings) return [];
     if (statusFilter) {
-      return bookings.filter(booking => booking.status === statusFilter);
+      const filterStatus = statusFilter === 'APPROVED' ? 'CONFIRMED' : statusFilter;
+      return bookings.filter(booking => booking.status === filterStatus);
     }
     return bookings;
   }, [bookings, statusFilter]);
