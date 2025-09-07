@@ -3,17 +3,26 @@ import React from 'react';
 const AnniversaryHearts = ({ className }: { className?: string }) => (
   <svg
     className={className}
+    viewBox="0 0 120 40"
     xmlns="http://www.w3.org/2000/svg"
-    viewBox="0 0 24 24"
-    fill="none"
-    stroke="currentColor"
-    strokeWidth="2"
-    strokeLinecap="round"
-    strokeLinejoin="round"
   >
-    <path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z" />
-    <path d="M7 13l-4.5 4.5" />
-    <path d="M17 13l4.5 4.5" />
+    <defs>
+      <linearGradient id="hearts-gradient" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" style={{ stopColor: '#ff9a9e', stopOpacity: 1 }} />
+        <stop offset="100%" style={{ stopColor: '#fecfef', stopOpacity: 1 }} />
+      </linearGradient>
+       <filter id="hearts-shadow" x="-30%" y="-30%" width="160%" height="160%">
+        <feDropShadow dx="1" dy="1" stdDeviation="1" floodColor="#000000" floodOpacity="0.1" />
+      </filter>
+    </defs>
+    <rect width="120" height="40" rx="5" fill="url(#hearts-gradient)" />
+    <g transform="translate(50 10)" filter="url(#hearts-shadow)">
+       <path d="M10 10 C 0 0, 30 0, 20 10 C 10 20, 0 15, 10 10 Z" fill="#FF4747" />
+    </g>
+    <g transform="translate(70 15)" filter="url(#hearts-shadow)">
+       <path d="M12 12 C 2 2, 32 2, 22 12 C 12 22, 2 17, 12 12 Z" fill="#FF1C1C" opacity="0.8" />
+    </g>
+     <text x="10" y="28" fontFamily="Lucida Handwriting, cursive" fontSize="9" fill="white">With Love</text>
   </svg>
 );
 

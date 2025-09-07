@@ -275,7 +275,7 @@ const CardPreview = ({
         <CardContent className="space-y-4 pt-6">
           <div className="text-center">
             {SelectedSvg ? (
-              <SelectedSvg className="mx-auto h-16 w-16 text-orange-500" />
+              <SelectedSvg className="mx-auto w-full h-auto rounded-lg" />
             ) : (
               <Gift className="mx-auto h-12 w-12 text-gray-400" />
             )}
@@ -398,20 +398,20 @@ export default function GiftCardEditorPage() {
           {selectedTheme && themes[selectedTheme] && (
             <div className="mt-6">
               <Label>Select a design</Label>
-              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 mt-2">
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2">
                 {themes[selectedTheme].map((Svg, index) => (
                   <div
                     key={index}
                     onClick={() => handleSvgSelect(Svg)}
                     className={cn(
-                      'cursor-pointer rounded-lg border-2 p-4 transition-all',
+                      'cursor-pointer rounded-lg border-2 transition-all',
                       'hover:border-orange-500 hover:shadow-lg',
                       selectedSvg === Svg
-                        ? 'border-orange-600 bg-orange-50'
-                        : 'border-gray-200 bg-white'
+                        ? 'border-orange-600'
+                        : 'border-transparent'
                     )}
                   >
-                    <Svg className="w-full h-auto" />
+                    <Svg className="w-full h-auto rounded-lg" />
                   </div>
                 ))}
               </div>
