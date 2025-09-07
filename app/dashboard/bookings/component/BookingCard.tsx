@@ -76,11 +76,11 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleApprove} disabled={booking.status !== 'PENDING'}>
+                <DropdownMenuItem onClick={handleApprove} disabled={booking.status.toUpperCase() !== 'PENDING'}>
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Approve Booking
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDecline} disabled={booking.status !== 'PENDING'}>
+                <DropdownMenuItem onClick={handleDecline} disabled={booking.status.toUpperCase() !== 'PENDING'}>
                   <XCircle className="mr-2 h-4 w-4" />
                   Decline Booking
                 </DropdownMenuItem>

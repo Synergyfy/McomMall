@@ -71,7 +71,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCancel} disabled={booking.status !== 'PENDING' && booking.status !== 'CONFIRMED'}>
+                <DropdownMenuItem onClick={handleCancel} disabled={booking.status.toUpperCase() !== 'PENDING' && booking.status.toUpperCase() !== 'CONFIRMED'}>
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Booking
                 </DropdownMenuItem>
