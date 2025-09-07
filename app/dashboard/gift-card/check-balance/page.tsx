@@ -71,7 +71,7 @@ export default function CheckBalancePage() {
                 className="text-center my-6"
               >
                 <p className="text-5xl font-bold text-green-600 dark:text-green-400">
-                  ${balance.toFixed(2)}
+                  £{balance.toFixed(2)}
                 </p>
                 <Button
                   variant="link"
