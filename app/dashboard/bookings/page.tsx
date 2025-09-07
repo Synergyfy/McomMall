@@ -176,7 +176,7 @@ const BookingsPage: FC = () => {
           <div className="text-center py-12">
             <h3 className="text-lg font-semibold">No bookings found</h3>
             <p className="text-gray-500">
-              There are no bookings with the status &apos;{statusFilter}&apos;.
+              There are no bookings with the status &apos;{statusParam}&apos;.
             </p>
           </div>
         )}
