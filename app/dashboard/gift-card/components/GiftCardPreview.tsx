@@ -66,9 +66,6 @@ export function GiftCardPreview({ design, amount }: GiftCardPreviewProps) {
           </div>
         </motion.div>
       </AnimatePresence>
-      <div className="mt-4 text-center text-gray-500 text-sm">
-        <p>£1.00 – £999.00</p>
-      </div>
     </div>
   );
 }

@@ -35,23 +35,51 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
     cancelBookingMutation.mutate(booking.id);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-        case 'PENDING':
-            return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">{status}</Badge>;
-        case 'CONFIRMED':
-            return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">{status}</Badge>;
-        case 'DECLINED':
-            return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">{status}</Badge>;
-        case 'CANCELLED':
-            return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">{status}</Badge>;
-        default:
-            return <Badge variant="outline">{status}</Badge>;
-    }
+  const statusStyles: { [key: string]: { badge: string; border: string } } = {
+    PENDING: {
+      badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      border: 'border-t-4 border-yellow-400',
+    },
+    CONFIRMED: {
+      badge: 'bg-green-100 text-green-800 border-green-200',
+      border: 'border-t-4 border-green-400',
+    },
+    APPROVED: {
+        badge: 'bg-green-100 text-green-800 border-green-200',
+        border: 'border-t-4 border-green-400',
+    },
+    DECLINED: {
+      badge: 'bg-red-100 text-red-800 border-red-200',
+      border: 'border-t-4 border-red-400',
+    },
+    CANCELLED: {
+      badge: 'bg-blue-100 text-blue-800 border-blue-200',
+      border: 'border-t-4 border-blue-400',
+    },
+    default: {
+      badge: 'bg-gray-100 text-gray-800 border-gray-200',
+      border: 'border-t-4 border-gray-400',
+    },
   };
 
+  const getStatusBadge = (status: string) => {
+    const upperCaseStatus = status.toUpperCase();
+    const style = statusStyles[upperCaseStatus] || statusStyles.default;
+    return (
+      <Badge variant="outline" className={style.badge}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const cardBorderStyle =
+    statusStyles[booking.status.toUpperCase()]?.border ||
+    statusStyles.default.border;
+
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow duration-300 w-full">
+    <Card
+      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle}`}
+    >
       <CardContent className="p-6 space-y-4">
         <div className="flex justify-between items-start">
           <div>
@@ -71,7 +99,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCancel} disabled={booking.status !== 'PENDING' && booking.status !== 'CONFIRMED'}>
+                <DropdownMenuItem onClick={handleCancel} disabled={booking.status.toUpperCase() !== 'PENDING' && booking.status.toUpperCase() !== 'CONFIRMED'}>
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Booking
                 </DropdownMenuItem>

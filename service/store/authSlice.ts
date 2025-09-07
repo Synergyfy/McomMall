@@ -6,6 +6,9 @@ interface AuthState {
   userId: string | null;
   userName: string | null;
   userRole: string | null;
+  packageInfo: {
+    planType: string;
+  } | null;
 }
 
 const initialState: AuthState = {
@@ -13,6 +16,7 @@ const initialState: AuthState = {
   userId: null,
   userName: null,
   userRole: null,
+  packageInfo: null,
 };
 
 const authSlice = createSlice({
@@ -38,23 +42,32 @@ const authSlice = createSlice({
         id: string;
         userName: string;
         userRole: string;
+        packageInfo: {
+          planType: string;
+        } | null;
       }>
     ) => {
       state.userId = action.payload.id;
       state.userName = action.payload.userName;
       state.userRole = action.payload.userRole;
+      state.packageInfo = action.payload.packageInfo;
       Cookies.set('userId', action.payload.id, { expires: 7 });
       localStorage.setItem('user-name', action.payload.userName);
       localStorage.setItem('user-type', action.payload.userRole);
+      if (action.payload.packageInfo) {
+        Cookies.set('packageInfo', JSON.stringify(action.payload.packageInfo), { expires: 7 });
+      }
     },
     logout: state => {
       state.accessToken = null;
       state.userId = null;
       state.userName = null;
       state.userRole = null;
+      state.packageInfo = null;
       Cookies.remove('access');
       Cookies.remove('refresh');
       Cookies.remove('userId');
+      Cookies.remove('packageInfo');
       localStorage.removeItem('user-name');
       localStorage.removeItem('user-type');
     },
@@ -63,6 +76,8 @@ const authSlice = createSlice({
       const userId = Cookies.get('userId');
       const userName = localStorage.getItem('user-name');
       const userRole = localStorage.getItem('user-type');
+      const packageInfo = Cookies.get('packageInfo');
+
       if (accessToken) {
         state.accessToken = accessToken;
       }
@@ -74,6 +89,9 @@ const authSlice = createSlice({
       }
       if (userRole) {
         state.userRole = userRole;
+      }
+      if (packageInfo) {
+        state.packageInfo = JSON.parse(packageInfo);
       }
     },
   },

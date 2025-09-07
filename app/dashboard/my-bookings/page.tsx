@@ -6,6 +6,7 @@ import type { FC } from 'react';
 import { MoreHorizontal } from 'lucide-react';
 
 // Import Shadcn UI Components
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import {

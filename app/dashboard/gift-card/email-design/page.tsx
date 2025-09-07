@@ -3,6 +3,18 @@
 import React, { useState } from 'react';
 import { Gift, Mail, Info, PlusCircle } from 'lucide-react';
 
+import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
+import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
+import AnniversaryRings from '@/components/svgs/gift-card/AnniversaryRings';
+import BirthdayBalloons from '@/components/svgs/gift-card/BirthdayBalloons';
+import BirthdayCake from '@/components/svgs/gift-card/BirthdayCake';
+import BirthdayGift from '@/components/svgs/gift-card/BirthdayGift';
+import HolidayPresents from '@/components/svgs/gift-card/HolidayPresents';
+import HolidaySnowman from '@/components/svgs/gift-card/HolidaySnowman';
+import HolidayTree from '@/components/svgs/gift-card/HolidayTree';
+import OtherCelebration from '@/components/svgs/gift-card/OtherCelebration';
+import OtherCongrats from '@/components/svgs/gift-card/OtherCongrats';
+import OtherThankYou from '@/components/svgs/gift-card/OtherThankYou';
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +33,16 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+type SvgComponent = React.ComponentType<{ className?: string }>;
+
+const themes: Record<string, SvgComponent[]> = {
+  birthday: [BirthdayCake, BirthdayBalloons, BirthdayGift],
+  anniversary: [AnniversaryRings, AnniversaryChampagne, AnniversaryHearts],
+  holiday: [HolidaySnowman, HolidayTree, HolidayPresents],
+  default: [OtherThankYou, OtherCongrats, OtherCelebration],
+};
 
 type GiftCardDesign = {
   designName: string;
@@ -86,7 +108,7 @@ const DesignForm = ({
           <AccordionContent>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="designName">
+                <Label htmlFor="designName" className="text-sm font-medium mb-2 block">
                   Design name (visible to customers)
                 </Label>
                 <Input
@@ -94,43 +116,45 @@ const DesignForm = ({
                   name="designName"
                   value={design.designName}
                   onChange={handleInputChange}
+                  className="text-base p-2.5"
                 />
               </div>
               <div>
-                <Label htmlFor="title">Gift card title</Label>
+                <Label htmlFor="title" className="text-sm font-medium mb-2 block">Gift card title</Label>
                 <Input
                   id="title"
                   name="title"
                   value={design.title}
                   onChange={handleInputChange}
+                  className="text-base p-2.5"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="titleColor">Gift card title color</Label>
+                  <Label htmlFor="titleColor" className="text-sm font-medium mb-2 block">Gift card title color</Label>
                   <Input
                     id="titleColor"
                     name="titleColor"
                     type="color"
                     value={design.titleColor}
                     onChange={handleInputChange}
-                    className="h-10 p-1"
+                    className="h-12 p-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="cardColor">Gift card color</Label>
+                  <Label htmlFor="cardColor" className="text-sm font-medium mb-2 block">Gift card color</Label>
                   <Input
                     id="cardColor"
                     name="cardColor"
                     type="color"
                     value={design.cardColor}
                     onChange={handleInputChange}
-                    className="h-10 p-1"
+                    className="h-12 p-1"
                   />
                 </div>
               </div>
               <div>
-                <Label htmlFor="additionalContent">
+                <Label htmlFor="additionalContent" className="text-sm font-medium mb-2 block">
                   Additional content (HTML allowed)
                 </Label>
                 <Textarea
@@ -138,16 +162,17 @@ const DesignForm = ({
                   name="additionalContent"
                   value={design.additionalContent}
                   onChange={handleInputChange}
+                  className="text-base p-2.5"
                 />
               </div>
               <div>
-                <Label>Additional content location</Label>
-                <div className="grid grid-cols-2 gap-4">
+                <Label className="text-sm font-medium mb-2 block">Additional content location</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <Select
                     value={design.contentLocation}
                     onValueChange={handleSelectChange('contentLocation')}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-base p-2.5 h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -159,7 +184,7 @@ const DesignForm = ({
                     value={design.contentAlignment}
                     onValueChange={handleSelectChange('contentAlignment')}
                   >
-                    <SelectTrigger>
+                    <SelectTrigger className="text-base p-2.5 h-12">
                       <SelectValue />
                     </SelectTrigger>
                     <SelectContent>
@@ -179,28 +204,29 @@ const DesignForm = ({
           <AccordionContent>
             <div className="space-y-4">
               <div>
-                <Label htmlFor="redeemButtonText">Button Text</Label>
+                <Label htmlFor="redeemButtonText" className="text-sm font-medium mb-2 block">Button Text</Label>
                 <Input
                   id="redeemButtonText"
                   name="redeemButtonText"
                   value={design.redeemButtonText}
                   onChange={handleInputChange}
+                  className="text-base p-2.5"
                 />
               </div>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="redeemButtonColor">Button color</Label>
+                  <Label htmlFor="redeemButtonColor" className="text-sm font-medium mb-2 block">Button color</Label>
                   <Input
                     id="redeemButtonColor"
                     name="redeemButtonColor"
                     type="color"
                     value={design.redeemButtonColor}
                     onChange={handleInputChange}
-                    className="h-10 p-1"
+                    className="h-12 p-1"
                   />
                 </div>
                 <div>
-                  <Label htmlFor="redeemButtonTextColor">
+                  <Label htmlFor="redeemButtonTextColor" className="text-sm font-medium mb-2 block">
                     Button text color
                   </Label>
                   <Input
@@ -209,7 +235,7 @@ const DesignForm = ({
                     type="color"
                     value={design.redeemButtonTextColor}
                     onChange={handleInputChange}
-                    className="h-10 p-1"
+                    className="h-12 p-1"
                   />
                 </div>
               </div>
@@ -225,7 +251,13 @@ const DesignForm = ({
   );
 };
 
-const CardPreview = ({ design }: { design: GiftCardDesign }) => {
+const CardPreview = ({
+  design,
+  selectedSvg: SelectedSvg,
+}: {
+  design: GiftCardDesign;
+  selectedSvg: SvgComponent | null;
+}) => {
   const alignmentClasses = {
     Left: 'text-left',
     Center: 'text-center',
@@ -254,7 +286,11 @@ const CardPreview = ({ design }: { design: GiftCardDesign }) => {
       <Card className="bg-gray-50">
         <CardContent className="space-y-4 pt-6">
           <div className="text-center">
-            <Gift className="mx-auto h-12 w-12 text-gray-400" />
+            {SelectedSvg ? (
+              <SelectedSvg className="mx-auto w-full h-auto rounded-lg" />
+            ) : (
+              <Gift className="mx-auto h-12 w-12 text-gray-400" />
+            )}
           </div>
           <div className="text-sm text-gray-600 space-y-1">
             <p>
@@ -323,26 +359,45 @@ const CardPreview = ({ design }: { design: GiftCardDesign }) => {
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardEditorPage() {
   const [design, setDesign] = useState<GiftCardDesign>(initialDesign);
+  const [selectedTheme, setSelectedTheme] = useState<string>('birthday');
+  const [selectedSvg, setSelectedSvg] = useState<SvgComponent | null>(
+    () => BirthdayCake
+  );
+
+  const handleThemeChange = (theme: string) => {
+    setSelectedTheme(theme);
+    setSelectedSvg(null);
+  };
+
+  const handleSvgSelect = (svg: SvgComponent) => {
+    setSelectedSvg(() => svg);
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans">
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
         {/* Header Section */}
         <div className="mb-6">
-          <div className="flex items-center gap-4">
+          <div className="flex flex-wrap items-center gap-4">
             <div className="flex-grow">
-              <Label htmlFor="design-select">
-                Select a design to edit or add a new design.
+              <Label htmlFor="design-select" className="mb-2 block">
+                Select a theme for your gift card.
               </Label>
               <div className="flex items-center gap-2">
-                <Select defaultValue="default">
+                <Select
+                  value={selectedTheme}
+                  onValueChange={handleThemeChange}
+                >
                   <SelectTrigger id="design-select" className="max-w-xs">
-                    <SelectValue />
+                    <SelectValue placeholder="Select a theme" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="holiday">Holiday Special</SelectItem>
                     <SelectItem value="birthday">Birthday Theme</SelectItem>
+                    <SelectItem value="anniversary">
+                      Anniversary Theme
+                    </SelectItem>
+                    <SelectItem value="holiday">Holiday Special</SelectItem>
+                    <SelectItem value="default">Other</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline">
@@ -352,6 +407,28 @@ export default function GiftCardEditorPage() {
               </div>
             </div>
           </div>
+          {selectedTheme && themes[selectedTheme] && (
+            <div className="mt-6">
+              <Label>Select a design</Label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 mt-2">
+                {themes[selectedTheme].map((Svg, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSvgSelect(Svg)}
+                    className={cn(
+                      'cursor-pointer rounded-lg border-2 transition-all',
+                      'hover:border-orange-500 hover:shadow-lg',
+                      selectedSvg === Svg
+                        ? 'border-orange-600'
+                        : 'border-transparent'
+                    )}
+                  >
+                    <Svg className="w-full h-auto rounded-lg" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-2 flex items-center text-sm text-gray-500 gap-2">
             <Info className="w-4 h-4" />
             <span>
@@ -370,7 +447,7 @@ export default function GiftCardEditorPage() {
 
           {/* Right Column: Preview */}
           <div>
-            <CardPreview design={design} />
+            <CardPreview design={design} selectedSvg={selectedSvg} />
           </div>
         </div>
       </div>

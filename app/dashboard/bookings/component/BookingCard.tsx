@@ -1,7 +1,7 @@
 'use client';
 
 import type { FC } from 'react';
-import { Calendar, User, Clock, MoreHorizontal, XCircle } from 'lucide-react';
+import { Calendar, User, Clock, MoreHorizontal, XCircle, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -12,7 +12,7 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Booking } from '@/service/bookings/types';
-import { useDeclineBooking } from '@/service/bookings/hook';
+import { useDeclineBooking, useApproveBooking } from '@/service/bookings/hook';
 
 const InfoBlock: FC<{
   icon: React.ReactNode;
@@ -30,28 +30,59 @@ const InfoBlock: FC<{
 
 const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const declineBookingMutation = useDeclineBooking();
+  const approveBookingMutation = useApproveBooking();
 
   const handleDecline = () => {
     declineBookingMutation.mutate(booking.id);
   };
 
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case 'PENDING':
-        return <Badge variant="outline" className="bg-yellow-100 text-yellow-800 border-yellow-200">{status}</Badge>;
-      case 'CONFIRMED':
-        return <Badge variant="outline" className="bg-green-100 text-green-800 border-green-200">{status}</Badge>;
-      case 'DECLINED':
-        return <Badge variant="outline" className="bg-red-100 text-red-800 border-red-200">{status}</Badge>;
-      case 'CANCELLED':
-        return <Badge variant="outline" className="bg-gray-100 text-gray-800 border-gray-200">{status}</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
+  const handleApprove = () => {
+    approveBookingMutation.mutate(booking.id);
   };
 
+  const statusStyles: { [key: string]: { badge: string; border: string } } = {
+    pending: {
+      badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
+      border: 'border-t-4 border-yellow-400',
+    },
+    confirmed: {
+      badge: 'bg-green-100 text-green-800 border-green-200',
+      border: 'border-t-4 border-green-400',
+    },
+    approved: {
+      badge: 'bg-green-100 text-green-800 border-green-200',
+      border: 'border-t-4 border-green-400',
+    },
+    declined: {
+      badge: 'bg-red-100 text-red-800 border-red-200',
+      border: 'border-t-4 border-red-400',
+    },
+    cancelled: {
+      badge: 'bg-blue-100 text-blue-800 border-blue-200',
+      border: 'border-t-4 border-blue-400',
+    },
+    default: {
+      badge: 'bg-gray-100 text-gray-800 border-gray-200',
+      border: 'border-t-4 border-gray-400',
+    },
+  };
+
+  const getStatusBadge = (status: string) => {
+    const style = statusStyles[status] || statusStyles.default;
+    return (
+      <Badge variant="outline" className={style.badge}>
+        {status}
+      </Badge>
+    );
+  };
+
+  const cardBorderStyle =
+    statusStyles[booking.status]?.border || statusStyles.default.border;
+
   return (
-    <Card className="shadow-sm hover:shadow-md transition-shadow duration-300 w-full">
+    <Card
+      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle}`}
+    >
       <CardContent className="p-6 space-y-4">
         <div className="flex justify-between items-start">
           <div>
@@ -71,7 +102,11 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleDecline} disabled={booking.status !== 'PENDING'}>
+                <DropdownMenuItem onClick={handleApprove} disabled={booking.status.toUpperCase() !== 'PENDING'}>
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Approve Booking
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={handleDecline} disabled={booking.status.toUpperCase() !== 'PENDING'}>
                   <XCircle className="mr-2 h-4 w-4" />
                   Decline Booking
                 </DropdownMenuItem>

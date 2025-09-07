@@ -45,11 +45,11 @@ export const mainMenuItems: MenuItem[] = [
     href: '/dashboard/bookings',
     icon: BookOpen,
     subMenu: [
-      { title: 'Calendar View', href: '/dashboard/bookings/calendar' },
+      { title: 'Calendar View', href: '/dashboard/bookings/calendar-view' },
       { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner' },
-      { title: 'Pending', href: '/dashboard/bookings/pending' },
-      { title: 'Approved', href: '/dashboard/bookings/approved' },
-      { title: 'Cancelled', href: '/dashboard/bookings/cancelled' },
+      { title: 'Pending', href: '/dashboard/bookings?status=pending' },
+      { title: 'Approved', href: '/dashboard/bookings?status=approved' },
+      { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
     ],
   },
 ];
