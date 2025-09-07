@@ -3,6 +3,12 @@
 import React, { useState } from 'react';
 import { Gift, Mail, Info, PlusCircle } from 'lucide-react';
 
+import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
+import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
+import AnniversaryRings from '@/components/svgs/gift-card/AnniversaryRings';
+import BirthdayBalloons from '@/components/svgs/gift-card/BirthdayBalloons';
+import BirthdayCake from '@/components/svgs/gift-card/BirthdayCake';
+import BirthdayGift from '@/components/svgs/gift-card/BirthdayGift';
 import {
   Accordion,
   AccordionContent,
@@ -21,6 +27,14 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
+import { cn } from '@/lib/utils';
+
+type SvgComponent = React.ComponentType<{ className?: string }>;
+
+const themes: Record<string, SvgComponent[]> = {
+  birthday: [BirthdayCake, BirthdayBalloons, BirthdayGift],
+  anniversary: [AnniversaryRings, AnniversaryChampagne, AnniversaryHearts],
+};
 
 type GiftCardDesign = {
   designName: string;
@@ -225,7 +239,13 @@ const DesignForm = ({
   );
 };
 
-const CardPreview = ({ design }: { design: GiftCardDesign }) => {
+const CardPreview = ({
+  design,
+  selectedSvg: SelectedSvg,
+}: {
+  design: GiftCardDesign;
+  selectedSvg: SvgComponent | null;
+}) => {
   const alignmentClasses = {
     Left: 'text-left',
     Center: 'text-center',
@@ -254,7 +274,11 @@ const CardPreview = ({ design }: { design: GiftCardDesign }) => {
       <Card className="bg-gray-50">
         <CardContent className="space-y-4 pt-6">
           <div className="text-center">
-            <Gift className="mx-auto h-12 w-12 text-gray-400" />
+            {SelectedSvg ? (
+              <SelectedSvg className="mx-auto h-16 w-16 text-orange-500" />
+            ) : (
+              <Gift className="mx-auto h-12 w-12 text-gray-400" />
+            )}
           </div>
           <div className="text-sm text-gray-600 space-y-1">
             <p>
@@ -323,6 +347,19 @@ const CardPreview = ({ design }: { design: GiftCardDesign }) => {
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardEditorPage() {
   const [design, setDesign] = useState<GiftCardDesign>(initialDesign);
+  const [selectedTheme, setSelectedTheme] = useState<string>('birthday');
+  const [selectedSvg, setSelectedSvg] = useState<SvgComponent | null>(
+    () => BirthdayCake
+  );
+
+  const handleThemeChange = (theme: string) => {
+    setSelectedTheme(theme);
+    setSelectedSvg(null);
+  };
+
+  const handleSvgSelect = (svg: SvgComponent) => {
+    setSelectedSvg(() => svg);
+  };
 
   return (
     <div className="bg-gray-100 min-h-screen font-sans">
@@ -332,17 +369,23 @@ export default function GiftCardEditorPage() {
           <div className="flex items-center gap-4">
             <div className="flex-grow">
               <Label htmlFor="design-select">
-                Select a design to edit or add a new design.
+                Select a theme for your gift card.
               </Label>
               <div className="flex items-center gap-2">
-                <Select defaultValue="default">
+                <Select
+                  value={selectedTheme}
+                  onValueChange={handleThemeChange}
+                >
                   <SelectTrigger id="design-select" className="max-w-xs">
-                    <SelectValue />
+                    <SelectValue placeholder="Select a theme" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="default">Default</SelectItem>
-                    <SelectItem value="holiday">Holiday Special</SelectItem>
                     <SelectItem value="birthday">Birthday Theme</SelectItem>
+                    <SelectItem value="anniversary">
+                      Anniversary Theme
+                    </SelectItem>
+                    <SelectItem value="holiday">Holiday Special</SelectItem>
+                    <SelectItem value="default">Other</SelectItem>
                   </SelectContent>
                 </Select>
                 <Button variant="outline">
@@ -352,6 +395,28 @@ export default function GiftCardEditorPage() {
               </div>
             </div>
           </div>
+          {selectedTheme && themes[selectedTheme] && (
+            <div className="mt-6">
+              <Label>Select a design</Label>
+              <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 lg:grid-cols-6 gap-4 mt-2">
+                {themes[selectedTheme].map((Svg, index) => (
+                  <div
+                    key={index}
+                    onClick={() => handleSvgSelect(Svg)}
+                    className={cn(
+                      'cursor-pointer rounded-lg border-2 p-4 transition-all',
+                      'hover:border-orange-500 hover:shadow-lg',
+                      selectedSvg === Svg
+                        ? 'border-orange-600 bg-orange-50'
+                        : 'border-gray-200 bg-white'
+                    )}
+                  >
+                    <Svg className="w-full h-auto" />
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
           <div className="mt-2 flex items-center text-sm text-gray-500 gap-2">
             <Info className="w-4 h-4" />
             <span>
@@ -370,7 +435,7 @@ export default function GiftCardEditorPage() {
 
           {/* Right Column: Preview */}
           <div>
-            <CardPreview design={design} />
+            <CardPreview design={design} selectedSvg={selectedSvg} />
           </div>
         </div>
       </div>
