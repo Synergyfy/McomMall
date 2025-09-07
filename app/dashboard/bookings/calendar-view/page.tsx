@@ -159,8 +159,8 @@ const CalendarView: FC = () => {
                     transition={{ duration: 0.3 }}
                     className={cn(
                       'p-1 rounded-md text-xs',
-                      bookingStatusColors[booking.status].background,
-                      bookingStatusColors[booking.status].text
+                      bookingStatusColors[booking.status]?.background ?? 'bg-gray-100',
+                      bookingStatusColors[booking.status]?.text ?? 'text-gray-800'
                     )}
                   >
                     <p className="font-semibold">{booking.user.name}</p>
