@@ -3,8 +3,17 @@
 import React, { useState, useMemo } from 'react';
 
 import { Button } from '@/components/ui/button';
+import { Calendar } from '@/components/ui/calendar';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
+import { format } from 'date-fns';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import {
   Select,
   SelectContent,
@@ -182,8 +191,8 @@ export default function ExportReportsPage() {
   const [voucherCode, setVoucherCode] = useState('');
   const [productName, setProductName] = useState('');
   const [customerName, setCustomerName] = useState('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
+  const [startDate, setStartDate] = useState<Date | undefined>();
+  const [endDate, setEndDate] = useState<Date | undefined>();
   const [status, setStatus] = useState('');
   const [expandedRow, setExpandedRow] = useState<string | null>(null);
 
@@ -293,7 +302,7 @@ export default function ExportReportsPage() {
           <strong>Product:</strong> {voucher.productName}
         </p>
         <p>
-          <strong>Price:</strong> ${voucher.price.toFixed(2)}
+          <strong>Price:</strong> £{voucher.price.toFixed(2)}
         </p>
       </div>
       <div>
@@ -323,10 +332,10 @@ export default function ExportReportsPage() {
           <strong>Payment:</strong> {voucher.order.paymentMethod}
         </p>
         <p>
-          <strong>Total:</strong> ${voucher.order.total.toFixed(2)}
+          <strong>Total:</strong> £{voucher.order.total.toFixed(2)}
         </p>
         <p>
-          <strong>Discount:</strong> ${voucher.order.discount.toFixed(2)}
+          <strong>Discount:</strong> £{voucher.order.discount.toFixed(2)}
         </p>
       </div>
     </div>
@@ -370,23 +379,59 @@ export default function ExportReportsPage() {
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="start-date">Start Date</Label>
-            <Input
-              id="start-date"
-              type="date"
-              value={startDate}
-              onChange={e => setStartDate(e.target.value)}
-              className="text-base py-5"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="start-date"
+                  variant={'outline'}
+                  className={cn(
+                    'w-full justify-start text-left font-normal text-base py-5 h-auto',
+                    !startDate && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {startDate ? (
+                    format(startDate, 'PPP')
+                  ) : (
+                    <span>Pick a date</span>
+                  )}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={startDate}
+                  onSelect={setStartDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-1.5">
             <Label htmlFor="end-date">End Date</Label>
-            <Input
-              id="end-date"
-              type="date"
-              value={endDate}
-              onChange={e => setEndDate(e.target.value)}
-              className="text-base py-5"
-            />
+            <Popover>
+              <PopoverTrigger asChild>
+                <Button
+                  id="end-date"
+                  variant={'outline'}
+                  className={cn(
+                    'w-full justify-start text-left font-normal text-base py-5 h-auto',
+                    !endDate && 'text-muted-foreground'
+                  )}
+                >
+                  <CalendarIcon className="mr-2 h-4 w-4" />
+                  {endDate ? format(endDate, 'PPP') : <span>Pick a date</span>}
+                </Button>
+              </PopoverTrigger>
+              <PopoverContent className="w-auto p-0">
+                <Calendar
+                  mode="single"
+                  selected={endDate}
+                  onSelect={setEndDate}
+                  initialFocus
+                />
+              </PopoverContent>
+            </Popover>
           </div>
           <div className="space-y-1.5">
             <Label>Status</Label>
@@ -449,7 +494,7 @@ export default function ExportReportsPage() {
                       {voucher.code}
                     </TableCell>
                     <TableCell>
-                      {voucher.productName} (${voucher.price.toFixed(2)})
+                      {voucher.productName} (£{voucher.price.toFixed(2)})
                     </TableCell>
                     <TableCell>
                       {voucher.customer.name} ({voucher.customer.email})
