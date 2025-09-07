@@ -38,23 +38,23 @@ const bookingStatusColors: Record<
   BookingStatus,
   { background: string; text: string }
 > = {
-  CONFIRMED: {
+  confirmed: {
     background: 'bg-blue-100',
     text: 'text-blue-800',
   },
-  APPROVED: {
+  approved: {
     background: 'bg-blue-100',
     text: 'text-blue-800',
   },
-  PENDING: {
+  pending: {
     background: 'bg-yellow-100',
     text: 'text-yellow-800',
   },
-  CANCELLED: {
+  cancelled: {
     background: 'bg-red-100',
     text: 'text-red-800',
   },
-  DECLINED: {
+  declined: {
     background: 'bg-red-100',
     text: 'text-red-800',
   },

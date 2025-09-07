@@ -47,11 +47,10 @@ const BookingsPage: FC = () => {
       if (statusParam === 'approved') {
         return bookings.filter(
           booking =>
-            booking.status === 'CONFIRMED' || booking.status === 'APPROVED'
+            booking.status === 'confirmed' || booking.status === 'approved'
         );
       }
-      const upperCaseStatus = statusParam.toUpperCase();
-      return bookings.filter(booking => booking.status === upperCaseStatus);
+      return bookings.filter(booking => booking.status === statusParam);
     }
     return bookings;
   }, [bookings, statusParam]);

@@ -41,23 +41,23 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const statusStyles: { [key: string]: { badge: string; border: string } } = {
-    PENDING: {
+    pending: {
       badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       border: 'border-t-4 border-yellow-400',
     },
-    CONFIRMED: {
+    confirmed: {
       badge: 'bg-green-100 text-green-800 border-green-200',
       border: 'border-t-4 border-green-400',
     },
-    APPROVED: {
-        badge: 'bg-green-100 text-green-800 border-green-200',
-        border: 'border-t-4 border-green-400',
+    approved: {
+      badge: 'bg-green-100 text-green-800 border-green-200',
+      border: 'border-t-4 border-green-400',
     },
-    DECLINED: {
+    declined: {
       badge: 'bg-red-100 text-red-800 border-red-200',
       border: 'border-t-4 border-red-400',
     },
-    CANCELLED: {
+    cancelled: {
       badge: 'bg-blue-100 text-blue-800 border-blue-200',
       border: 'border-t-4 border-blue-400',
     },
@@ -68,8 +68,7 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const getStatusBadge = (status: string) => {
-    const upperCaseStatus = status.toUpperCase();
-    const style = statusStyles[upperCaseStatus] || statusStyles.default;
+    const style = statusStyles[status] || statusStyles.default;
     return (
       <Badge variant="outline" className={style.badge}>
         {status}
@@ -78,8 +77,7 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const cardBorderStyle =
-    statusStyles[booking.status.toUpperCase()]?.border ||
-    statusStyles.default.border;
+    statusStyles[booking.status]?.border || statusStyles.default.border;
 
   return (
     <Card

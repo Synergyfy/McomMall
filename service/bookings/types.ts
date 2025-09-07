@@ -1,11 +1,11 @@
 import { InHouseBusiness, User } from '../listings/types';
 
 export type BookingStatus =
-  | 'PENDING'
-  | 'CONFIRMED'
-  | 'DECLINED'
-  | 'CANCELLED'
-  | 'APPROVED';
+  | 'pending'
+  | 'confirmed'
+  | 'declined'
+  | 'cancelled'
+  | 'approved';
 export enum PaymentMethod {
     CREDIT_CARD = 'CREDIT_CARD',
     PAYPAL = 'PAYPAL',
