@@ -42,6 +42,10 @@ const bookingStatusColors: Record<
     background: 'bg-blue-100',
     text: 'text-blue-800',
   },
+  APPROVED: {
+    background: 'bg-blue-100',
+    text: 'text-blue-800',
+  },
   PENDING: {
     background: 'bg-yellow-100',
     text: 'text-yellow-800',

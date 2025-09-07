@@ -44,8 +44,13 @@ const BookingsPage: FC = () => {
   const filteredBookings = useMemo(() => {
     if (!bookings) return [];
     if (statusFilter) {
-      const filterStatus = statusFilter === 'APPROVED' ? 'CONFIRMED' : statusFilter;
-      return bookings.filter(booking => booking.status === filterStatus);
+      if (statusFilter === 'APPROVED') {
+        return bookings.filter(
+          booking =>
+            booking.status === 'CONFIRMED' || booking.status === 'APPROVED'
+        );
+      }
+      return bookings.filter(booking => booking.status === statusFilter);
     }
     return bookings;
   }, [bookings, statusFilter]);
