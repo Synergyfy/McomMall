@@ -33,6 +33,7 @@ import {
   add,
   sub,
 } from 'date-fns';
+import { BookingDetailsDialog } from './components/BookingDetailsDialog';
 
 const bookingStatusColors: Record<
   BookingStatus,
@@ -63,6 +64,7 @@ const bookingStatusColors: Record<
 const CalendarView: FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
   const { data: bookings = [], isLoading } = useGetBusinessBookings();
+  const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const firstDayOfMonth = startOfMonth(currentDate);
   const lastDayOfMonth = endOfMonth(currentDate);
@@ -162,10 +164,12 @@ const CalendarView: FC = () => {
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
                     className={cn(
-                      'p-1 rounded-md text-xs',
-                      bookingStatusColors[booking.status]?.background ?? 'bg-gray-100',
+                      'p-1 rounded-md text-xs cursor-pointer hover:bg-opacity-80',
+                      bookingStatusColors[booking.status]?.background ??
+                        'bg-gray-100',
                       bookingStatusColors[booking.status]?.text ?? 'text-gray-800'
                     )}
+                    onClick={() => setSelectedBooking(booking)}
                   >
                     <p className="font-semibold">{booking.user.name}</p>
                     <p>{format(new Date(booking.startTime), 'p')}</p>
@@ -176,6 +180,15 @@ const CalendarView: FC = () => {
           ))}
         </div>
       </CardContent>
+      <BookingDetailsDialog
+        booking={selectedBooking}
+        isOpen={!!selectedBooking}
+        onOpenChange={isOpen => {
+          if (!isOpen) {
+            setSelectedBooking(null);
+          }
+        }}
+      />
     </Card>
   );
 };
