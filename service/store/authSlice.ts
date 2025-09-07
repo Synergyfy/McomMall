@@ -44,7 +44,7 @@ const authSlice = createSlice({
         userRole: string;
         packageInfo: {
           planType: string;
-        };
+        } | null;
       }>
     ) => {
       state.userId = action.payload.id;

@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from 'react';
 import type { FC } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MoreHorizontal } from 'lucide-react';
 
 // Import Shadcn UI Components
@@ -31,20 +32,31 @@ import {
 } from '@/components/ui/pagination';
 import { useGetBusinessBookings } from '@/service/bookings/hook';
 import BookingCard from './component/BookingCard';
+import { BookingStatus } from '@/service/bookings/types';
 
 const BookingsPage: FC = () => {
   const { data: bookings, isLoading } = useGetBusinessBookings();
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 4;
+  const searchParams = useSearchParams();
+  const statusFilter = searchParams.get('status')?.toUpperCase() as BookingStatus | undefined;
 
-  const totalPages: number = Math.ceil((bookings?.length || 0) / itemsPerPage);
+  const filteredBookings = useMemo(() => {
+    if (!bookings) return [];
+    if (statusFilter) {
+      return bookings.filter(booking => booking.status === statusFilter);
+    }
+    return bookings;
+  }, [bookings, statusFilter]);
+
+  const totalPages: number = Math.ceil((filteredBookings?.length || 0) / itemsPerPage);
 
   const paginatedBookings = useMemo(() => {
-    if (!bookings) return [];
+    if (!filteredBookings) return [];
     const startIndex = (currentPage - 1) * itemsPerPage;
     const endIndex = startIndex + itemsPerPage;
-    return bookings.slice(startIndex, endIndex);
-  }, [currentPage, bookings]);
+    return filteredBookings.slice(startIndex, endIndex);
+  }, [currentPage, filteredBookings]);
 
   const handlePageChange = (page: number): void => {
     if (page >= 1 && page <= totalPages) {
@@ -93,63 +105,74 @@ const BookingsPage: FC = () => {
       </Card>
 
       <main className="space-y-6">
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-          {paginatedBookings.map(booking => (
-            <BookingCard key={booking.id} booking={booking} />
-          ))}
-        </div>
-
-        <Pagination>
-          <PaginationContent>
-            <PaginationItem>
-              <PaginationPrevious
-                href="#"
-                onClick={e => {
-                  e.preventDefault();
-                  handlePageChange(currentPage - 1);
-                }}
-                className={
-                  currentPage === 1 ? 'pointer-events-none text-gray-400' : ''
-                }
-              />
-            </PaginationItem>
-            <div className="hidden sm:flex">
-              {[...Array(totalPages)].map((_, i) => (
-                <PaginationItem key={i}>
-                  <PaginationLink
-                    href="#"
-                    isActive={currentPage === i + 1}
-                    onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
-                      e.preventDefault();
-                      handlePageChange(i + 1);
-                    }}
-                  >
-                    {i + 1}
-                  </PaginationLink>
-                </PaginationItem>
+        {paginatedBookings.length > 0 ? (
+          <>
+            <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+              {paginatedBookings.map(booking => (
+                <BookingCard key={booking.id} booking={booking} />
               ))}
             </div>
-            <div className="sm:hidden">
-              <PaginationItem>
-                <PaginationLink isActive>{currentPage}</PaginationLink>
-              </PaginationItem>
-            </div>
-            <PaginationItem>
-              <PaginationNext
-                href="#"
-                onClick={e => {
-                  e.preventDefault();
-                  handlePageChange(currentPage + 1);
-                }}
-                className={
-                  currentPage === totalPages
-                    ? 'pointer-events-none text-gray-400'
-                    : ''
-                }
-              />
-            </PaginationItem>
-          </PaginationContent>
-        </Pagination>
+
+            <Pagination>
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    href="#"
+                    onClick={e => {
+                      e.preventDefault();
+                      handlePageChange(currentPage - 1);
+                    }}
+                    className={
+                      currentPage === 1 ? 'pointer-events-none text-gray-400' : ''
+                    }
+                  />
+                </PaginationItem>
+                <div className="hidden sm:flex">
+                  {[...Array(totalPages)].map((_, i) => (
+                    <PaginationItem key={i}>
+                      <PaginationLink
+                        href="#"
+                        isActive={currentPage === i + 1}
+                        onClick={(e: React.MouseEvent<HTMLAnchorElement>) => {
+                          e.preventDefault();
+                          handlePageChange(i + 1);
+                        }}
+                      >
+                        {i + 1}
+                      </PaginationLink>
+                    </PaginationItem>
+                  ))}
+                </div>
+                <div className="sm:hidden">
+                  <PaginationItem>
+                    <PaginationLink isActive>{currentPage}</PaginationLink>
+                  </PaginationItem>
+                </div>
+                <PaginationItem>
+                  <PaginationNext
+                    href="#"
+                    onClick={e => {
+                      e.preventDefault();
+                      handlePageChange(currentPage + 1);
+                    }}
+                    className={
+                      currentPage === totalPages
+                        ? 'pointer-events-none text-gray-400'
+                        : ''
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
+          </>
+        ) : (
+          <div className="text-center py-12">
+            <h3 className="text-lg font-semibold">No bookings found</h3>
+            <p className="text-gray-500">
+              There are no bookings with the status &apos;{statusFilter}&apos;.
+            </p>
+          </div>
+        )}
       </main>
     </div>
   );
