@@ -1,15 +1,7 @@
 'use client';
 
-import { format } from 'date-fns';
-import { Calendar as CalendarIcon } from 'lucide-react';
 import { cn } from '@/lib/utils'; // Assumes utils file is set up
 import { Button } from '@/components/ui/button';
-import { Calendar } from '@/components/ui/calendar';
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from '@/components/ui/popover';
 import {
   Select,
   SelectContent,
@@ -47,7 +39,9 @@ export function GiftCardForm({
   const [recipientName, setRecipientName] = React.useState('Mom');
   const [fromName, setFromName] = React.useState('Son');
   const [message, setMessage] = React.useState('I love you!');
-  const [date, setDate] = React.useState<Date | undefined>(new Date());
+  const [date, setDate] = React.useState<string>(
+    new Date().toISOString().slice(0, 16)
+  );
 
   const handleClearAmount = () => {
     onAmountChange('');
@@ -157,32 +151,18 @@ export function GiftCardForm({
             htmlFor="delivery-date"
             className="font-semibold text-gray-700"
           >
-            Delivery Date
+            Delivery Date & Time
           </Label>
-          <Popover>
-            <PopoverTrigger asChild>
-              <Button
-                id="delivery-date"
-                variant={'outline'}
-                className={cn(
-                  'w-full justify-start text-left font-normal mt-2',
-                  !date && 'text-muted-foreground'
-                )}
-              >
-                <CalendarIcon className="mr-2 h-4 w-4" />
-                {date ? format(date, 'PPP') : <span>Pick a date</span>}
-              </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-auto p-0">
-              <Calendar
-                mode="single"
-                selected={date}
-                onSelect={setDate}
-                initialFocus
-              />
-            </PopoverContent>
-          </Popover>
-          <p className="text-xs text-gray-500 mt-1">Up to a year from today.</p>
+          <Input
+            id="delivery-date"
+            type="datetime-local"
+            value={date}
+            onChange={e => setDate(e.target.value)}
+            className="mt-2"
+          />
+          <p className="text-xs text-gray-500 mt-1">
+            Up to a year from today.
+          </p>
         </div>
 
         {/* Email Design Selector */}
