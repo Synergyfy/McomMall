@@ -25,7 +25,7 @@ export default function Header() {
   const pathname = usePathname();
   const { cartItemCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { accessToken, userName } = useSelector(
+  const { accessToken, userName, userRole, packageInfo } = useSelector(
     (state: RootState) => state.auth
   );
   const logout = useLogout();
@@ -93,18 +93,25 @@ export default function Header() {
                         {userName?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <span>{userName}</span>
+                    <div>
+                      <div className="text-lg">{userName}</div>
+                      <div className="text-xs">
+                        {userRole === 'customer'
+                          ? 'Customer'
+                          : packageInfo?.planType}
+                      </div>
+                    </div>
                     <ChevronDown className="w-4 h-4 ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem className="text-lg" asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
+                  <DropdownMenuItem className="text-lg" asChild>
                     <Link href="/wishlist">My Wishlist</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout}>
+                  <DropdownMenuItem className="text-lg" onClick={logout}>
                     Log out
                   </DropdownMenuItem>
                 </DropdownMenuContent>
