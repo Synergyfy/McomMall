@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, Variants } from 'framer-motion';
+import {
+  motion,
+  Variants,
+  useMotionValue,
+  animate,
+  AnimationPlaybackControls,
+} from 'framer-motion';
 import {
   UtensilsCrossed,
   Wrench,
@@ -75,14 +81,17 @@ const MarqueeItem = ({
 }) => (
   <motion.div
     onClick={() => onClick(item.name)}
-    className="group flex h-36 w-44 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border bg-white p-4 text-center shadow-sm transition-colors hover:bg-orange-500 hover:text-white"
+    className="group flex h-48 w-48 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
     variants={cardVariants}
     whileHover="hover"
   >
-    <div className="mb-2 text-orange-500 transition-colors group-hover:text-white">
-      {React.cloneElement(item.icon, { size: 32, strokeWidth: 1.5 })}
+    <div className="mb-3 text-orange-600 transition-colors group-hover:text-white">
+      {React.cloneElement(item.icon, {
+        size: 40,
+        strokeWidth: 1.5,
+      })}
     </div>
-    <p className="text-sm font-semibold text-gray-800 transition-colors group-hover:text-white">
+    <p className="text-xl font-semibold text-gray-800 transition-colors group-hover:text-white">
       {item.name}
     </p>
   </motion.div>
@@ -90,6 +99,10 @@ const MarqueeItem = ({
 
 export function BusinessCategoriesSection() {
   const router = useRouter();
+  const x = useMotionValue(0);
+  const [controls, setControls] = useState<AnimationPlaybackControls | null>(
+    null
+  );
 
   const allSubcategories = useMemo(() => {
     const subcategories = businessCategories.flatMap(category =>
@@ -113,34 +126,39 @@ export function BusinessCategoriesSection() {
     );
   };
 
-  const marqueeVariants: Variants = {
-    animate: {
-      x: [0, -200 * allSubcategories.length],
-      transition: {
-        x: {
-          repeat: Infinity,
-          repeatType: 'loop' as const,
-          duration: 150,
-          ease: 'linear',
-        },
-      },
-    },
-  };
+  useEffect(() => {
+    const newControls = animate(x, [0, -208 * allSubcategories.length], {
+      repeat: Infinity,
+      repeatType: 'loop',
+      duration: 350,
+      ease: 'linear',
+      repeatDelay: 5,
+    });
+    setControls(newControls);
+
+    return () => {
+      newControls.stop();
+    };
+  }, [x, allSubcategories]);
 
   return (
-    <div className="bg-white py-16 sm:py-20 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+    <div
+      className="bg-white py-20 sm:py-24 overflow-hidden"
+      onMouseEnter={() => controls?.pause()}
+      onMouseLeave={() => controls?.play()}
+    >
+      <div className="mx-auto max-w-full px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
             Explore Business Categories
           </h2>
-          <div className="mt-4 flex justify-center">
-            <div className="h-1 w-24 rounded-full bg-orange-500" />
+          <div className="mt-6 flex justify-center">
+            <div className="h-1.5 w-32 rounded-full bg-orange-500" />
           </div>
         </div>
       </div>
-      <motion.div className="w-full" variants={marqueeVariants} animate="animate">
-        <motion.div className="flex gap-4">
+      <motion.div className="w-full">
+        <motion.div className="flex gap-4" style={{ x }}>
           {duplicatedCategories.map((item, index) => (
             <MarqueeItem
               key={index}

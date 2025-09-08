@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 import { useWishlist } from '@/hooks/useWishlist';
 import { Heart } from 'lucide-react';
+import ChatIcon from './ChatIcon';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -94,6 +95,12 @@ function ProductPage({
                   }`}
                 />
               </Button>
+              <ChatIcon
+                receiverId={(listing as InHouseBusiness).user.id}
+                listingName={product.title}
+                buttonClassName="absolute top-14 right-2 bg-white/70 hover:bg-white"
+                iconClassName="text-orange-600"
+              />
             </div>
             <div className="flex-grow">
               <h4 className="font-semibold">{product.title}</h4>

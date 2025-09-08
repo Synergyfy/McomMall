@@ -32,7 +32,6 @@ import {
 } from '@/components/ui/pagination';
 import { useGetBusinessBookings } from '@/service/bookings/hook';
 import BookingCard from './component/BookingCard';
-import { BookingStatus } from '@/service/bookings/types';
 
 const BookingsPage: FC = () => {
   const { data: bookings, isLoading } = useGetBusinessBookings();

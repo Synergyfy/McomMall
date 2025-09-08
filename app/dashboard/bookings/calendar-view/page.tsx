@@ -14,7 +14,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader } from '@/components/ui/card';
 
 // Custom Components
 import { useGetBusinessBookings } from '@/service/bookings/hook';
@@ -28,7 +28,6 @@ import {
   endOfMonth,
   eachDayOfInterval,
   getDay,
-  isSameMonth,
   isToday,
   add,
   sub,
@@ -63,7 +62,7 @@ const bookingStatusColors: Record<
 
 const CalendarView: FC = () => {
   const [currentDate, setCurrentDate] = useState(new Date());
-  const { data: bookings = [], isLoading } = useGetBusinessBookings();
+  const { data: bookings = [] } = useGetBusinessBookings();
   const [selectedBooking, setSelectedBooking] = useState<Booking | null>(null);
 
   const firstDayOfMonth = startOfMonth(currentDate);
