@@ -145,28 +145,28 @@ export default function SummerExhibitionPage() {
       title: 'Discover Gifts & Deals',
       text: 'Perfect discounts for the holidays and beyond. Explore a wide variety of products from local and international sellers, all at your fingertips.',
       image:
-        'https://images.unsplash.com/photo-1521702335365-b6c01d1198dd?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1587127964224-ee5b0a61933d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       icon: HeartHandshake,
       title: 'Support Local',
       text: 'Find and shop from nearby businesses in your community. Help small businesses thrive and discover unique, handcrafted items.',
       image:
-        'https://images.unsplash.com/photo-1521702335365-b6c01d1198dd?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1587127964224-ee5b0a61933d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       icon: Trophy,
       title: 'Exclusive Rewards',
       text: 'Collect loyalty points and redeem special offers across partners. Enjoy member-only perks, early access to sales, and personalized recommendations.',
       image:
-        'https://images.unsplash.com/photo-1521702335365-b6c01d1198dd?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1587127964224-ee5b0a61933d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
     {
       icon: Sparkles,
       title: 'Interactive Experiences',
       text: 'Participate in virtual workshops, live demos, and engaging events. Learn new skills, get inspired, and connect with creators directly.',
       image:
-        'https://images.unsplash.com/photo-1521702335365-b6c01d1198dd?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
+        'https://images.unsplash.com/photo-1587127964224-ee5b0a61933d?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D',
     },
   ];
 
@@ -227,7 +227,7 @@ export default function SummerExhibitionPage() {
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
         <Image
-          src="https://images.unsplash.com/photo-1445543949571-ffc3e0e2f55e?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+          src="https://images.unsplash.com/photo-1580737123512-b720ac34049a?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
           alt="Summer city lights at night"
           layout="fill"
           objectFit="cover"
@@ -333,7 +333,7 @@ export default function SummerExhibitionPage() {
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
             <Image
-              src="https://images.unsplash.com/photo-1576562331281-d09e46af9854?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
+              src="https://images.unsplash.com/photo-1553426971-e1937d26f49b?q=80&w=1331&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
               alt="Digital marketplace illustration"
               width={800}
               height={600}
