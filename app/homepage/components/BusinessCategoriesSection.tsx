@@ -75,14 +75,17 @@ const MarqueeItem = ({
 }) => (
   <motion.div
     onClick={() => onClick(item.name)}
-    className="group flex h-48 w-60 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border bg-white p-6 text-center shadow-md transition-colors hover:bg-orange-500 hover:text-white"
+    className="group flex h-48 w-48 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
     variants={cardVariants}
     whileHover="hover"
   >
-    <div className="mb-4 text-orange-500 transition-colors group-hover:text-white">
-      {React.cloneElement(item.icon, { size: 48, strokeWidth: 1.5 })}
+    <div className="mb-3 text-orange-600 transition-colors group-hover:text-white">
+      {React.cloneElement(item.icon, {
+        size: 40,
+        strokeWidth: 1.5,
+      })}
     </div>
-    <p className="text-lg font-semibold text-gray-800 transition-colors group-hover:text-white">
+    <p className="text-xl font-semibold text-gray-800 transition-colors group-hover:text-white">
       {item.name}
     </p>
   </motion.div>
@@ -120,7 +123,7 @@ export function BusinessCategoriesSection() {
         x: {
           repeat: Infinity,
           repeatType: 'loop' as const,
-          duration: 250, // Slower animation
+          duration: 500, // Slower animation
           ease: 'linear',
           repeatDelay: 5, // Pause for 5 seconds
         },
