@@ -1,8 +1,14 @@
 'use client';
 
-import React, { useMemo } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import { motion, Variants } from 'framer-motion';
+import {
+  motion,
+  Variants,
+  useMotionValue,
+  animate,
+  AnimationPlaybackControls,
+} from 'framer-motion';
 import {
   UtensilsCrossed,
   Wrench,
@@ -93,6 +99,10 @@ const MarqueeItem = ({
 
 export function BusinessCategoriesSection() {
   const router = useRouter();
+  const x = useMotionValue(0);
+  const [controls, setControls] = useState<AnimationPlaybackControls | null>(
+    null
+  );
 
   const allSubcategories = useMemo(() => {
     const subcategories = businessCategories.flatMap(category =>
@@ -116,23 +126,27 @@ export function BusinessCategoriesSection() {
     );
   };
 
-  const marqueeVariants: Variants = {
-    animate: {
-      x: [0, -200 * allSubcategories.length],
-      transition: {
-        x: {
-          repeat: Infinity,
-          repeatType: 'loop' as const,
-          duration: 500, // Slower animation
-          ease: 'linear',
-          repeatDelay: 5, // Pause for 5 seconds
-        },
-      },
-    },
-  };
+  useEffect(() => {
+    const newControls = animate(x, [0, -208 * allSubcategories.length], {
+      repeat: Infinity,
+      repeatType: 'loop',
+      duration: 500,
+      ease: 'linear',
+      repeatDelay: 5,
+    });
+    setControls(newControls);
+
+    return () => {
+      newControls.stop();
+    };
+  }, [x, allSubcategories]);
 
   return (
-    <div className="bg-white py-20 sm:py-24 overflow-hidden">
+    <div
+      className="bg-white py-20 sm:py-24 overflow-hidden"
+      onMouseEnter={() => controls?.pause()}
+      onMouseLeave={() => controls?.play()}
+    >
       <div className="mx-auto max-w-full px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
@@ -143,8 +157,8 @@ export function BusinessCategoriesSection() {
           </div>
         </div>
       </div>
-      <motion.div className="w-full" variants={marqueeVariants} animate="animate">
-        <motion.div className="flex gap-4">
+      <motion.div className="w-full">
+        <motion.div className="flex gap-4" style={{ x }}>
           {duplicatedCategories.map((item, index) => (
             <MarqueeItem
               key={index}
