@@ -8,6 +8,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import ChatIcon from '@/components/ChatIcon';
 import { Booking } from '@/service/bookings/types';
 import { Badge } from '@/components/ui/badge';
 import { format } from 'date-fns';
@@ -41,15 +42,19 @@ export const BookingDetailsDialog: FC<BookingDetailsDialogProps> = ({
     <Dialog open={isOpen} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[525px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center">
-            Booking Details
-            <Badge variant="secondary" className="ml-3">
-              {booking.status}
-            </Badge>
+          <DialogTitle className="flex items-center justify-between">
+            <div className="flex items-center">
+              Booking Details
+              <Badge variant="secondary" className="ml-3">
+                {booking.status}
+              </Badge>
+            </div>
+            <ChatIcon
+              receiverId={booking.user.id}
+              listingName={booking.business.businessName}
+            />
           </DialogTitle>
-          <DialogDescription>
-            ID: {booking.id}
-          </DialogDescription>
+          <DialogDescription>ID: {booking.id}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-6 py-4">
           <div className="p-4 border rounded-lg bg-gray-50/50">

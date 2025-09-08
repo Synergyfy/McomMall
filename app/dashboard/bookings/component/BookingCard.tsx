@@ -4,6 +4,7 @@ import type { FC } from 'react';
 import { Calendar, User, Clock, MoreHorizontal, XCircle, CheckCircle } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import ChatIcon from '@/components/ChatIcon';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   DropdownMenu,
@@ -95,6 +96,10 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
           </div>
           <div className="flex items-center space-x-2">
             {getStatusBadge(booking.status)}
+            <ChatIcon
+              receiverId={booking.user.id}
+              listingName={booking.business.businessName}
+            />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
                 <Button variant="ghost" size="icon">
@@ -102,11 +107,17 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleApprove} disabled={booking.status.toUpperCase() !== 'PENDING'}>
+                <DropdownMenuItem
+                  onClick={handleApprove}
+                  disabled={booking.status.toUpperCase() !== 'PENDING'}
+                >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Approve Booking
                 </DropdownMenuItem>
-                <DropdownMenuItem onClick={handleDecline} disabled={booking.status.toUpperCase() !== 'PENDING'}>
+                <DropdownMenuItem
+                  onClick={handleDecline}
+                  disabled={booking.status.toUpperCase() !== 'PENDING'}
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   Decline Booking
                 </DropdownMenuItem>
