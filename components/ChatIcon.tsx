@@ -9,9 +9,16 @@ import { Button } from './ui/button';
 interface ChatIconProps {
   receiverId: string;
   listingName: string;
+  buttonClassName?: string;
+  iconClassName?: string;
 }
 
-export default function ChatIcon({ receiverId, listingName }: ChatIconProps) {
+export default function ChatIcon({
+  receiverId,
+  listingName,
+  buttonClassName,
+  iconClassName,
+}: ChatIconProps) {
   const router = useRouter();
   const { mutate: sendMessage } = useSendMessage();
   const { user } = useAuth();
@@ -28,8 +35,13 @@ export default function ChatIcon({ receiverId, listingName }: ChatIconProps) {
   };
 
   return (
-    <Button variant="outline" size="icon" onClick={handleStartConversation}>
-      <MessageSquare className="h-4 w-4" />
+    <Button
+      variant="outline"
+      size="icon"
+      onClick={handleStartConversation}
+      className={buttonClassName}
+    >
+      <MessageSquare className={`h-4 w-4 ${iconClassName}`} />
     </Button>
   );
 }

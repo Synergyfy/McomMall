@@ -95,6 +95,12 @@ function ProductPage({
                   }`}
                 />
               </Button>
+              <ChatIcon
+                receiverId={(listing as InHouseBusiness).user.id}
+                listingName={product.title}
+                buttonClassName="absolute top-14 right-2 bg-white/70 hover:bg-white"
+                iconClassName="text-orange-600"
+              />
             </div>
             <div className="flex-grow">
               <h4 className="font-semibold">{product.title}</h4>
@@ -105,19 +111,13 @@ function ProductPage({
                 </p>
               )}
             </div>
-            <div className="flex items-center gap-2 mt-2">
-              <Button
-                variant="outline"
-                className="w-full border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                onClick={() => handleAddToCart(product)}
-              >
-                Add to Cart
-              </Button>
-              <ChatIcon
-                receiverId={(listing as InHouseBusiness).user.id}
-                listingName={product.title}
-              />
-            </div>
+            <Button
+              variant="outline"
+              className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+              onClick={() => handleAddToCart(product)}
+            >
+              Add to Cart
+            </Button>
             <Button
               className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
               onClick={() => handleOrderNow(product)}
