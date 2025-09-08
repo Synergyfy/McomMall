@@ -14,6 +14,7 @@ import { toast } from 'sonner';
 import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 import { useWishlist } from '@/hooks/useWishlist';
 import { Heart } from 'lucide-react';
+import ChatIcon from './ChatIcon';
 
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
@@ -104,13 +105,19 @@ function ProductPage({
                 </p>
               )}
             </div>
-            <Button
-              variant="outline"
-              className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-              onClick={() => handleAddToCart(product)}
-            >
-              Add to Cart
-            </Button>
+            <div className="flex items-center gap-2 mt-2">
+              <Button
+                variant="outline"
+                className="w-full border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                onClick={() => handleAddToCart(product)}
+              >
+                Add to Cart
+              </Button>
+              <ChatIcon
+                receiverId={(listing as InHouseBusiness).user.id}
+                listingName={product.title}
+              />
+            </div>
             <Button
               className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
               onClick={() => handleOrderNow(product)}
