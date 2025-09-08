@@ -130,7 +130,7 @@ export function BusinessCategoriesSection() {
     const newControls = animate(x, [0, -208 * allSubcategories.length], {
       repeat: Infinity,
       repeatType: 'loop',
-      duration: 500,
+      duration: 350,
       ease: 'linear',
       repeatDelay: 5,
     });
