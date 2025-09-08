@@ -1,29 +1,31 @@
 import React, { useState, useEffect, useRef } from 'react';
+import dynamic from 'next/dynamic';
 import { Search, MapPin, ArrowRight, Heart, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { McomFeatureSection } from '../homepage/components/McomFeatureSection';
-import { SeasonalMarketingSection } from '../homepage/components/SeasonalMarketingSection';
-import { McomMallBrandsSection } from '../homepage/components/McomMallBrandsSection';
-import { PopularCategoriesSection } from '../homepage/components/PopularCategoriesSection';
-import { BusinessCategoriesSection } from '../homepage/components/BusinessCategoriesSection';
 import Winter from '@/public/homepage/WinterSale.png';
 import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
 import Image from 'next/image';
-import { McomEgiftCard } from '../homepage/components/McomEgiftCard';
-import VirtualCardCarousel from '../homepage/components/VirtualCardCarousel';
-import HowItWorks from '../homepage/components/HowItWorks';
-import { AuditSection } from '../homepage/components/AuditSection';
-import VCardFeaturesSection from '../homepage/components/VCardFeatures';
-import McomVouchersCoupons from '../homepage/components/McomVouchersCoupons';
-import McomSolutions from '../homepage/components/McomSolutions';
-import LoyaltyProgramSection from '../homepage/components/LoyaltyProgramSection';
 import { businessCategories } from '@/lib/business-categories';
-import Footer from '@/components/Footer';
-import Newsletter from './Newsletter';
+
+// Dynamically import components
+const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
+const SeasonalMarketingSection = dynamic(() => import('../homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
+const McomMallBrandsSection = dynamic(() => import('../homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
+const PopularCategoriesSection = dynamic(() => import('../homepage/components/PopularCategoriesSection').then(mod => mod.PopularCategoriesSection));
+const BusinessCategoriesSection = dynamic(() => import('../homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
+const McomEgiftCard = dynamic(() => import('../homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
+const VirtualCardCarousel = dynamic(() => import('../homepage/components/VirtualCardCarousel'));
+const HowItWorks = dynamic(() => import('../homepage/components/HowItWorks'));
+const AuditSection = dynamic(() => import('../homepage/components/AuditSection').then(mod => mod.AuditSection));
+const VCardFeaturesSection = dynamic(() => import('../homepage/components/VCardFeatures'));
+const McomVouchersCoupons = dynamic(() => import('../homepage/components/McomVouchersCoupons'));
+const McomSolutions = dynamic(() => import('../homepage/components/McomSolutions'));
+const LoyaltyProgramSection = dynamic(() => import('../homepage/components/LoyaltyProgramSection'));
+const Footer = dynamic(() => import('@/components/Footer'));
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -400,6 +402,7 @@ export default function HomePage() {
                       alt={ad.title}
                       width={100}
                       height={100}
+                      loading="lazy"
                       className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
                     />
                     <div className="flex flex-col justify-between w-full">
@@ -468,6 +471,7 @@ export default function HomePage() {
                     alt={post.title}
                     width={100}
                     height={100}
+                    loading="lazy"
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />
                   <div className="absolute top-4 right-4 bg-gray-800 text-white text-xs px-3 py-1 rounded-full">

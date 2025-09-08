@@ -75,14 +75,14 @@ const MarqueeItem = ({
 }) => (
   <motion.div
     onClick={() => onClick(item.name)}
-    className="group flex h-36 w-44 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border bg-white p-4 text-center shadow-sm transition-colors hover:bg-orange-500 hover:text-white"
+    className="group flex h-48 w-60 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border bg-white p-6 text-center shadow-md transition-colors hover:bg-orange-500 hover:text-white"
     variants={cardVariants}
     whileHover="hover"
   >
-    <div className="mb-2 text-orange-500 transition-colors group-hover:text-white">
-      {React.cloneElement(item.icon, { size: 32, strokeWidth: 1.5 })}
+    <div className="mb-4 text-orange-500 transition-colors group-hover:text-white">
+      {React.cloneElement(item.icon, { size: 48, strokeWidth: 1.5 })}
     </div>
-    <p className="text-sm font-semibold text-gray-800 transition-colors group-hover:text-white">
+    <p className="text-lg font-semibold text-gray-800 transition-colors group-hover:text-white">
       {item.name}
     </p>
   </motion.div>
@@ -120,22 +120,23 @@ export function BusinessCategoriesSection() {
         x: {
           repeat: Infinity,
           repeatType: 'loop' as const,
-          duration: 150,
+          duration: 250, // Slower animation
           ease: 'linear',
+          repeatDelay: 5, // Pause for 5 seconds
         },
       },
     },
   };
 
   return (
-    <div className="bg-white py-16 sm:py-20 overflow-hidden">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
-        <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+    <div className="bg-white py-20 sm:py-24 overflow-hidden">
+      <div className="mx-auto max-w-full px-6 lg:px-8">
+        <div className="text-center mb-16">
+          <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
             Explore Business Categories
           </h2>
-          <div className="mt-4 flex justify-center">
-            <div className="h-1 w-24 rounded-full bg-orange-500" />
+          <div className="mt-6 flex justify-center">
+            <div className="h-1.5 w-32 rounded-full bg-orange-500" />
           </div>
         </div>
       </div>
