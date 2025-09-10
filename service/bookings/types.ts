@@ -88,4 +88,5 @@ export interface CreateBookingPayload {
   serviceId: string;
   startTime: string;
   endTime: string;
+  addonIds?: string[];
 }

@@ -158,6 +158,19 @@ function ServicePage({
     setSelectedService(null);
   };
 
+  const getPriceDisplay = (service: Service) => {
+    switch (service.pricingModel) {
+      case 'FIXED':
+        return `£${service.fixedPrice}`;
+      case 'HOURLY':
+        return `£${service.pricePerHour}/hour`;
+      case 'PER_UNIT':
+        return `£${service.pricePerUnit}/${service.unitName}`;
+      default:
+        return 'Price not available';
+    }
+  };
+
   if (isGoogle) {
     return <p>No services available for this listing.</p>;
   }
@@ -181,12 +194,9 @@ function ServicePage({
           >
             <div className="flex-grow">
               <h4 className="font-semibold">{service.name}</h4>
-              <p className="text-gray-600">£{service.price.toFixed(2)}</p>
+              <p className="text-gray-600">{getPriceDisplay(service)}</p>
               <p className="text-sm text-gray-500 mt-1">
                 {service.description}
-              </p>
-              <p className="text-sm text-gray-500 mt-1">
-                Duration: {service.duration} minutes
               </p>
             </div>
             <Button

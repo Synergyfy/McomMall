@@ -20,6 +20,7 @@ import { Service } from '@/service/services/types';
 import { useCreateBooking } from '@/service/bookings/hook';
 import { useState } from 'react';
 import { toast } from 'sonner';
+import { Checkbox } from './ui/checkbox';
 
 interface BookingModalProps {
   service: Service | null;
@@ -36,6 +37,15 @@ export function BookingModal({
   const [date, setDate] = useState<Date | undefined>(new Date());
   const [startTime, setStartTime] = useState<string>('');
   const [endTime, setEndTime] = useState<string>('');
+  const [selectedAddons, setSelectedAddons] = useState<string[]>([]);
+
+  const handleAddonToggle = (addonId: string) => {
+    setSelectedAddons(prev =>
+      prev.includes(addonId)
+        ? prev.filter(id => id !== addonId)
+        : [...prev, addonId]
+    );
+  };
 
   const handleSubmit = () => {
     if (!service || !date || !startTime || !endTime) {
@@ -55,7 +65,21 @@ export function BookingModal({
       serviceId: service.id,
       startTime: startDateTime.toISOString(),
       endTime: endDateTime.toISOString(),
+      addonIds: selectedAddons,
     });
+  };
+
+  const getPriceDisplay = (service: Service) => {
+    switch (service.pricingModel) {
+      case 'FIXED':
+        return `£${service.fixedPrice}`;
+      case 'HOURLY':
+        return `£${service.pricePerHour}/hour`;
+      case 'PER_UNIT':
+        return `£${service.pricePerUnit}/${service.unitName}`;
+      default:
+        return 'Price not available';
+    }
   };
 
   if (!service) {
@@ -70,8 +94,36 @@ export function BookingModal({
           <DialogDescription>{service.description}</DialogDescription>
         </DialogHeader>
         <div className="grid gap-4 py-4">
-          <p>Price: £{service.price.toFixed(2)}</p>
-          <p>Duration: {service.duration} minutes</p>
+          <p>Price: {getPriceDisplay(service)}</p>
+
+          {service.bundledServices.length > 0 && (
+            <div>
+              <h4 className="font-semibold">Bundled Services</h4>
+              <ul className="list-disc list-inside">
+                {service.bundledServices.map(bundled => (
+                  <li key={bundled.id}>{bundled.name}</li>
+                ))}
+              </ul>
+            </div>
+          )}
+
+          {service.configurableAddons.length > 0 && (
+            <div>
+              <h4 className="font-semibold">Add-ons</h4>
+              {service.configurableAddons.map(addon => (
+                <div key={addon.id} className="flex items-center space-x-2">
+                  <Checkbox
+                    id={addon.id}
+                    onCheckedChange={() => handleAddonToggle(addon.id)}
+                  />
+                  <label htmlFor={addon.id}>
+                    {addon.name} (+£{addon.price})
+                  </label>
+                </div>
+              ))}
+            </div>
+          )}
+
           <div className="grid grid-cols-2 gap-4">
             <Calendar
               mode="single"
