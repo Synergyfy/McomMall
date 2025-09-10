@@ -85,7 +85,8 @@ export interface Booking {
 }
 
 export interface CreateBookingPayload {
-  serviceId: string;
+  serviceId?: string;
+  businessId?: string;
   startTime: string;
   endTime: string;
   addonIds?: string[];

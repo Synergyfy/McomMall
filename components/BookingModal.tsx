@@ -150,7 +150,7 @@ export function BookingModal({
                   <SelectTrigger>
                     <SelectValue placeholder="Start time" />
                   </SelectTrigger>
-                  <SelectContent position="fixed" className="z-[1001]">
+                <SelectContent className="z-[1001]">
                     <SelectItem value="09:00">09:00</SelectItem>
                     <SelectItem value="10:00">10:00</SelectItem>
                     <SelectItem value="11:00">11:00</SelectItem>
@@ -166,7 +166,7 @@ export function BookingModal({
                   <SelectTrigger>
                     <SelectValue placeholder="End time" />
                   </SelectTrigger>
-                  <SelectContent position="fixed" className="z-[1001]">
+                <SelectContent className="z-[1001]">
                     <SelectItem value="10:00">10:00</SelectItem>
                     <SelectItem value="11:00">11:00</SelectItem>
                     <SelectItem value="12:00">12:00</SelectItem>
