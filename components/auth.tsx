@@ -57,12 +57,6 @@ const Auth = ({
 
   const router = useRouter();
 
-  const isValidRedirect = (path: string | null) => {
-    if (!path) return false;
-    // Basic validation: path should start with '/' and not contain '://' or '//' to prevent open redirects.
-    return path.startsWith('/') && !path.includes('://') && !path.startsWith('//');
-  };
-
   const handleToggleMode = (mode: boolean) => {
     setNewAccount(mode);
     setSelectedRole(null);
@@ -238,11 +232,6 @@ const Auth = ({
         });
         handleToggleMode(false); // Switch to login mode after successful signup
         dispatch(setLoginModalOpen(false)); // Close the modal
-        if (isValidRedirect(redirect)) {
-          router.push(redirect as string);
-        } else {
-          router.push('/dashboard'); // Redirect to dashboard after login
-        }
       } catch (error: unknown) {
         const err = error as ErrorResponse;
         toast.error('Failed to login', {
