@@ -131,6 +131,46 @@ function ProductPage({
   );
 }
 
+function ServicePage({
+  listing,
+}: {
+  listing: GooglePlaceResult | InHouseBusiness;
+}) {
+  const isGoogle = isGoogleResult(listing);
+
+  if (isGoogle || !(listing as InHouseBusiness).serviceProviderProfile) {
+    return <p>No services available for this listing.</p>;
+  }
+
+  const { serviceProviderProfile } = listing as InHouseBusiness;
+
+  return (
+    <div>
+      <h3 className="text-xl font-bold border-t pt-6">Services</h3>
+      <div className="text-gray-700 mt-2 space-y-2">
+        {serviceProviderProfile?.bookingMethod && (
+          <p>
+            <strong>Booking Method:</strong> {serviceProviderProfile.bookingMethod}
+          </p>
+        )}
+        {serviceProviderProfile?.bookingUrl && (
+          <p>
+            <strong>Book Online:</strong>{' '}
+            <a
+              href={serviceProviderProfile.bookingUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="text-red-500 hover:underline"
+            >
+              {serviceProviderProfile.bookingUrl}
+            </a>
+          </p>
+        )}
+      </div>
+    </div>
+  );
+}
+
 function OverviewSection({
   listing,
   isLoading,
@@ -292,33 +332,6 @@ function OverviewSection({
         </div>
       )}
 
-      {listing.serviceProviderProfile && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">
-            Service Information
-          </h3>
-          <div className="text-gray-700 mt-2 space-y-2">
-            <p>
-              <strong>Booking Method:</strong>{' '}
-              {listing.serviceProviderProfile.bookingMethod}
-            </p>
-            {listing.serviceProviderProfile.bookingUrl && (
-              <p>
-                <strong>Book Online:</strong>{' '}
-                <a
-                  href={listing.serviceProviderProfile.bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-500 hover:underline"
-                >
-                  {listing.serviceProviderProfile.bookingUrl}
-                </a>
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
       {(listing.website || listing.businessEmail) && (
         <div>
           <h3 className="text-xl font-bold border-t pt-6">
@@ -351,6 +364,37 @@ function OverviewSection({
   );
 }
 
+function AboutBusinessTabs({
+  listing,
+  isLoading,
+}: {
+  listing: GooglePlaceResult | InHouseBusiness;
+  isLoading: boolean;
+}) {
+  return (
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+        <TabsTrigger value="voucher">Voucher</TabsTrigger>
+        <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">
+        <OverviewSection listing={listing} isLoading={isLoading} />
+      </TabsContent>
+      <TabsContent value="loyalty">
+        <p>Loyalty & Reward content goes here.</p>
+      </TabsContent>
+      <TabsContent value="voucher">
+        <p>Voucher content goes here.</p>
+      </TabsContent>
+      <TabsContent value="gift-card">
+        <p>Gift Card content goes here.</p>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export default function ContentTabs({
   listing,
   isLoading,
@@ -359,43 +403,52 @@ export default function ContentTabs({
   isLoading: boolean;
 }) {
   const isGoogle = isGoogleResult(listing);
-  const location = isGoogle ? listing.geometry : listing.location;
-  const address = isGoogle
-    ? listing.formattedAddress || listing.vicinity
-    : `${listing.location.addressLine1}, ${listing.location.city}`;
-  const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
+
+  if (isGoogle) {
+    // For Google listings, we can keep a simpler or different tab structure
+    // if required. For now, let's keep it similar to the old "About" tab.
+    return <AboutBusinessTabs listing={listing} isLoading={isLoading} />;
+  }
+
+  const inHouseListing = listing as InHouseBusiness;
+  const hasProduct = inHouseListing.listingType.includes('product');
+  const hasService = inHouseListing.listingType.includes('service');
+
+  const tabs = [];
+  if (hasProduct) {
+    tabs.push({
+      value: 'product-page',
+      label: 'Products',
+      component: <ProductPage listing={listing} />,
+    });
+  }
+  if (hasService) {
+    tabs.push({
+      value: 'service-page',
+      label: 'Services',
+      component: <ServicePage listing={listing} />,
+    });
+  }
+  tabs.push({
+    value: 'about-business',
+    label: 'About this business',
+    component: <AboutBusinessTabs listing={listing} isLoading={isLoading} />,
+  });
 
   return (
-    <Tabs defaultValue="product-page" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="product-page">Product page</TabsTrigger>
-        <TabsTrigger value="about-business">About this business</TabsTrigger>
+    <Tabs defaultValue={tabs[0].value} className="w-full">
+      <TabsList className={`grid w-full grid-cols-${tabs.length} mb-6`}>
+        {tabs.map(tab => (
+          <TabsTrigger key={tab.value} value={tab.value}>
+            {tab.label}
+          </TabsTrigger>
+        ))}
       </TabsList>
-      <TabsContent value="product-page">
-        <ProductPage listing={listing} />
-      </TabsContent>
-      <TabsContent value="about-business">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
-            <TabsTrigger value="voucher">Voucher</TabsTrigger>
-            <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview">
-            <OverviewSection listing={listing} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="loyalty">
-            <p>Loyalty & Reward content goes here.</p>
-          </TabsContent>
-          <TabsContent value="voucher">
-            <p>Voucher content goes here.</p>
-          </TabsContent>
-          <TabsContent value="gift-card">
-            <p>Gift Card content goes here.</p>
-          </TabsContent>
-        </Tabs>
-      </TabsContent>
+      {tabs.map(tab => (
+        <TabsContent key={tab.value} value={tab.value}>
+          {tab.component}
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }
