@@ -8,7 +8,6 @@ import {
   Edit,
   Copy,
   Trash2,
-  Calendar,
   Coins,
   Info,
 } from 'lucide-react';
@@ -58,6 +57,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { DateTimePicker } from '@/components/ui/date-time-picker';
 
 // TypeScript Types
 type PromotionStatus = 'Active' | 'Inactive';
@@ -89,8 +89,8 @@ const initialPromotions: Promotion[] = [
     name: 'Earn 2X points',
     description: 'On all Bookings',
     type: 'Multiplier',
-    beginDate: '2024-08-01',
-    endDate: '2024-08-31',
+    beginDate: new Date('2024-08-01').toISOString(),
+    endDate: new Date('2024-08-31').toISOString(),
     multiplier: 2,
   },
   {
@@ -99,8 +99,8 @@ const initialPromotions: Promotion[] = [
     name: '500 Bonus Points on Shoes',
     description: 'Any shoe purchase over $100',
     type: 'Bonus points',
-    beginDate: '2024-09-01',
-    endDate: '2024-09-15',
+    beginDate: new Date('2024-09-01').toISOString(),
+    endDate: new Date('2024-09-15').toISOString(),
     bonusPoints: 500,
   },
   {
@@ -109,8 +109,8 @@ const initialPromotions: Promotion[] = [
     name: 'Weekend Triple Points',
     description: 'For all weekend stays',
     type: 'Multiplier',
-    beginDate: '2024-07-01',
-    endDate: '2024-07-31',
+    beginDate: new Date('2024-07-01').toISOString(),
+    endDate: new Date('2024-07-31').toISOString(),
     multiplier: 3,
   },
   {
@@ -129,21 +129,40 @@ const initialPromotions: Promotion[] = [
     name: 'Summer Sale 1.5X',
     description: 'On selected summer items',
     type: 'Multiplier',
-    beginDate: '2024-06-10',
-    endDate: '2024-06-24',
+    beginDate: new Date('2024-06-10').toISOString(),
+    endDate: new Date('2024-06-24').toISOString(),
     multiplier: 1.5,
   },
 ];
 
+type FormState = {
+  isActive: boolean;
+  name: string;
+  description: string;
+  terms: string;
+  image: string;
+  beginDate: Date | undefined;
+  endDate: Date | undefined;
+  promotionType: PromotionType;
+  multiplier: number;
+  bonusPoints: number;
+  products: string;
+  excludeProducts: string;
+  categories: string;
+  excludeCategories: string;
+  limitPerCustomer: number;
+  minimumSpend: number;
+};
+
 // Default state for the form
-const defaultFormState = {
+const defaultFormState: FormState = {
   isActive: true,
   name: '',
   description: '',
   terms: '',
   image: 'coins_dark',
-  beginDate: '',
-  endDate: '',
+  beginDate: undefined,
+  endDate: undefined,
   promotionType: 'Multiplier' as PromotionType,
   multiplier: 2,
   bonusPoints: 500,
@@ -163,11 +182,11 @@ export function PromotionsManager() {
   const [promotionToDelete, setPromotionToDelete] = useState<number | null>(
     null
   );
-  const [formState, setFormState] = useState(defaultFormState);
+  const [formState, setFormState] = useState<FormState>(defaultFormState);
 
-  const handleFormChange = <K extends keyof typeof defaultFormState>(
+  const handleFormChange = <K extends keyof FormState>(
     field: K,
-    value: (typeof defaultFormState)[K]
+    value: FormState[K]
   ) => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
@@ -180,8 +199,8 @@ export function PromotionsManager() {
       name: formState.name,
       description: formState.description,
       type: formState.promotionType,
-      beginDate: formState.beginDate || null,
-      endDate: formState.endDate || null,
+      beginDate: formState.beginDate?.toISOString() || null,
+      endDate: formState.endDate?.toISOString() || null,
       multiplier:
         formState.promotionType === 'Multiplier'
           ? formState.multiplier
@@ -284,7 +303,13 @@ export function PromotionsManager() {
                     <TableCell>{promo.description}</TableCell>
                     <TableCell>{promo.type}</TableCell>
                     <TableCell>
-                      {promo.beginDate || 'N/A'} - {promo.endDate || 'N/A'}
+                      {promo.beginDate
+                        ? new Date(promo.beginDate).toLocaleString()
+                        : 'N/A'}{' '}
+                      -{' '}
+                      {promo.endDate
+                        ? new Date(promo.endDate).toLocaleString()
+                        : 'N/A'}
                     </TableCell>
                     <TableCell>
                       <div className="flex gap-2">
@@ -386,25 +411,17 @@ export function PromotionsManager() {
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <Label htmlFor="beginDate">Begin date (YYYY-MM-DD)</Label>
-                    <Input
-                      id="beginDate"
-                      type="datetime-local"
-                      value={formState.beginDate}
-                      onChange={e =>
-                        handleFormChange('beginDate', e.target.value)
-                      }
+                    <Label htmlFor="beginDate">Begin date</Label>
+                    <DateTimePicker
+                      date={formState.beginDate}
+                      setDate={date => handleFormChange('beginDate', date)}
                     />
                   </div>
                   <div>
-                    <Label htmlFor="endDate">End date (YYYY-MM-DD)</Label>
-                    <Input
-                      id="endDate"
-                      type="datetime-local"
-                      value={formState.endDate}
-                      onChange={e =>
-                        handleFormChange('endDate', e.target.value)
-                      }
+                    <Label htmlFor="endDate">End date</Label>
+                    <DateTimePicker
+                      date={formState.endDate}
+                      setDate={date => handleFormChange('endDate', date)}
                     />
                   </div>
                 </div>
