@@ -10,6 +10,7 @@ import {
   Trash2,
   Coins,
   Info,
+  Loader2,
 } from 'lucide-react';
 
 import {
@@ -26,13 +27,6 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   Dialog,
   DialogContent,
@@ -58,100 +52,31 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { CustomDateTimePicker } from '@/components/ui/custom-date-time-picker';
+import {
+  Promotion,
+  CreatePromotionDto,
+} from '@/service/promotions/types';
+import { usePromotions } from '@/service/promotions/hook';
+import { toast } from 'sonner';
 
-// TypeScript Types
-type PromotionStatus = 'Active' | 'Inactive';
-type PromotionType = 'Multiplier' | 'Bonus points';
-
-export type Promotion = {
-  id: number;
-  status: PromotionStatus;
-  name: string;
-  description: string;
-  type: PromotionType;
-  beginDate: string | null;
-  endDate: string | null;
-  multiplier?: number;
-  bonusPoints?: number;
-  products?: string;
-  excludeProducts?: string;
-  categories?: string;
-  excludeCategories?: string;
-  limitPerCustomer?: number;
-  minimumSpend?: number;
-};
-
-// Mock Data
-const initialPromotions: Promotion[] = [
-  {
-    id: 1,
-    status: 'Active',
-    name: 'Earn 2X points',
-    description: 'On all Bookings',
-    type: 'Multiplier',
-    beginDate: new Date('2024-08-01').toISOString(),
-    endDate: new Date('2024-08-31').toISOString(),
-    multiplier: 2,
-  },
-  {
-    id: 2,
-    status: 'Active',
-    name: '500 Bonus Points on Shoes',
-    description: 'Any shoe purchase over $100',
-    type: 'Bonus points',
-    beginDate: new Date('2024-09-01').toISOString(),
-    endDate: new Date('2024-09-15').toISOString(),
-    bonusPoints: 500,
-  },
-  {
-    id: 3,
-    status: 'Inactive',
-    name: 'Weekend Triple Points',
-    description: 'For all weekend stays',
-    type: 'Multiplier',
-    beginDate: new Date('2024-07-01').toISOString(),
-    endDate: new Date('2024-07-31').toISOString(),
-    multiplier: 3,
-  },
-  {
-    id: 4,
-    status: 'Active',
-    name: 'New Member Bonus',
-    description: '1,000 points on sign-up',
-    type: 'Bonus points',
-    beginDate: null,
-    endDate: null,
-    bonusPoints: 1000,
-  },
-  {
-    id: 5,
-    status: 'Inactive',
-    name: 'Summer Sale 1.5X',
-    description: 'On selected summer items',
-    type: 'Multiplier',
-    beginDate: new Date('2024-06-10').toISOString(),
-    endDate: new Date('2024-06-24').toISOString(),
-    multiplier: 1.5,
-  },
-];
+// Form-specific types
+type FormPromotionType = 'Multiplier' | 'Bonus points';
 
 type FormState = {
   isActive: boolean;
   name: string;
   description: string;
-  terms: string;
-  image: string;
+  termsAndConditions: string;
   beginDate: Date | undefined;
   endDate: Date | undefined;
-  promotionType: PromotionType;
+  promotionType: FormPromotionType;
   multiplier: number;
   bonusPoints: number;
-  products: string;
-  excludeProducts: string;
-  categories: string;
-  excludeCategories: string;
   limitPerCustomer: number;
-  minimumSpend: number;
+  minimumSpend: string;
+  // These fields are not fully implemented in the form, but are part of the DTO
+  includedProductIds: string[];
+  excludedProductIds: string[];
 };
 
 // Default state for the form
@@ -159,27 +84,31 @@ const defaultFormState: FormState = {
   isActive: true,
   name: '',
   description: '',
-  terms: '',
-  image: 'coins_dark',
+  termsAndConditions: '',
   beginDate: undefined,
   endDate: undefined,
-  promotionType: 'Multiplier' as PromotionType,
+  promotionType: 'Multiplier',
   multiplier: 2,
   bonusPoints: 500,
-  products: '',
-  excludeProducts: '',
-  categories: 'Bookings',
-  excludeCategories: '',
   limitPerCustomer: 1,
-  minimumSpend: 0,
+  minimumSpend: '0.00',
+  includedProductIds: [],
+  excludedProductIds: [],
 };
 
 // Main Component
 export function PromotionsManager() {
-  const [promotions, setPromotions] = useState<Promotion[]>(initialPromotions);
+  const {
+    promotions,
+    isLoading,
+    error,
+    createPromotion,
+    deletePromotion,
+  } = usePromotions();
+
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
-  const [promotionToDelete, setPromotionToDelete] = useState<number | null>(
+  const [promotionToDelete, setPromotionToDelete] = useState<string | null>(
     null
   );
   const [formState, setFormState] = useState<FormState>(defaultFormState);
@@ -191,48 +120,59 @@ export function PromotionsManager() {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
-  // Simulate saving a new promotion
-  const handleSavePromotion = () => {
-    const newPromotion: Promotion = {
-      id: Math.max(...promotions.map(p => p.id), 0) + 1,
-      status: formState.isActive ? 'Active' : 'Inactive',
-      name: formState.name,
-      description: formState.description,
-      type: formState.promotionType,
-      beginDate: formState.beginDate?.toISOString() || null,
-      endDate: formState.endDate?.toISOString() || null,
-      multiplier:
+  const handleSavePromotion = async () => {
+    const promoData: CreatePromotionDto = {
+      ...formState,
+      promotionType:
         formState.promotionType === 'Multiplier'
-          ? formState.multiplier
-          : undefined,
+          ? 'MULTIPLIER'
+          : 'BONUS_POINTS',
+      multiplier:
+        formState.promotionType === 'Multiplier' ? formState.multiplier : null,
       bonusPoints:
         formState.promotionType === 'Bonus points'
           ? formState.bonusPoints
-          : undefined,
-      products: formState.products,
-      excludeProducts: formState.excludeProducts,
-      categories: formState.categories,
-      excludeCategories: formState.excludeCategories,
-      limitPerCustomer: formState.limitPerCustomer,
-      minimumSpend: formState.minimumSpend,
+          : null,
+      beginDate: formState.beginDate?.toISOString(),
+      endDate: formState.endDate?.toISOString(),
+      minimumSpend: parseFloat(formState.minimumSpend).toFixed(2),
     };
 
-    setPromotions(prev => [newPromotion, ...prev]);
-    setCreateModalOpen(false);
-    setFormState(defaultFormState); // Reset form
+    try {
+      await createPromotion(promoData);
+      toast.success('Promotion created successfully!');
+      setCreateModalOpen(false);
+      setFormState(defaultFormState);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to create promotion'
+      );
+    }
   };
 
-  // Handle deleting a promotion
-  const handleDeletePromotion = () => {
+  const handleDeletePromotion = async () => {
     if (promotionToDelete === null) return;
-    setPromotions(prev => prev.filter(p => p.id !== promotionToDelete));
-    setDeleteAlertOpen(false);
-    setPromotionToDelete(null);
+    try {
+      await deletePromotion(promotionToDelete);
+      toast.success('Promotion deleted successfully!');
+      setDeleteAlertOpen(false);
+      setPromotionToDelete(null);
+    } catch (err) {
+      toast.error(
+        err instanceof Error ? err.message : 'Failed to delete promotion'
+      );
+    }
   };
 
-  const openDeleteConfirmation = (id: number) => {
+  const openDeleteConfirmation = (id: string) => {
     setPromotionToDelete(id);
     setDeleteAlertOpen(true);
+  };
+
+  const formatPromotionType = (type: 'MULTIPLIER' | 'BONUS_POINTS') => {
+    if (type === 'MULTIPLIER') return 'Multiplier';
+    if (type === 'BONUS_POINTS') return 'Bonus Points';
+    return 'N/A';
   };
 
   return (
@@ -242,7 +182,10 @@ export function PromotionsManager() {
         promotions to drive sales for specific products or categories.
       </p>
       <Button
-        onClick={() => setCreateModalOpen(true)}
+        onClick={() => {
+          setFormState(defaultFormState);
+          setCreateModalOpen(true);
+        }}
         className="mb-6 bg-blue-900 hover:bg-blue-950"
       >
         <PlusCircle className="h-4 w-4 mr-2" /> Create Promotion
@@ -269,68 +212,87 @@ export function PromotionsManager() {
               </TableRow>
             </TableHeader>
             <TableBody>
-              <AnimatePresence>
-                {promotions.map(promo => (
-                  <motion.tr
-                    key={promo.id}
-                    layout
-                    initial={{ opacity: 0 }}
-                    animate={{ opacity: 1 }}
-                    exit={{ opacity: 0, x: -50 }}
-                    transition={{ duration: 0.3 }}
-                    className="hover:bg-gray-50"
+              {isLoading ? (
+                <TableRow>
+                  <TableCell colSpan={6} className="text-center">
+                    <div className="flex justify-center items-center p-8">
+                      <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ) : error ? (
+                <TableRow>
+                  <TableCell
+                    colSpan={6}
+                    className="text-center text-red-500"
                   >
-                    <TableCell>
-                      <div className="flex items-center gap-2">
-                        <span
-                          className={`h-3 w-3 rounded-full ${
-                            promo.status === 'Active'
-                              ? 'bg-green-500'
-                              : 'bg-gray-400'
-                          }`}
-                        ></span>
-                        {promo.status}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <a
-                        href="#"
-                        className="font-medium text-blue-600 hover:underline"
-                      >
-                        {promo.name}
-                      </a>
-                    </TableCell>
-                    <TableCell>{promo.description}</TableCell>
-                    <TableCell>{promo.type}</TableCell>
-                    <TableCell>
-                      {promo.beginDate
-                        ? new Date(promo.beginDate).toLocaleString()
-                        : 'N/A'}{' '}
-                      -{' '}
-                      {promo.endDate
-                        ? new Date(promo.endDate).toLocaleString()
-                        : 'N/A'}
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex gap-2">
-                        <Button variant="outline" size="sm">
-                          <Edit className="h-4 w-4 mr-1" /> Edit
-                        </Button>
-                        <Button variant="outline" size="sm">
-                          <Copy className="h-4 w-4 mr-1" /> Copy
-                        </Button>
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => openDeleteConfirmation(promo.id)}
+                    Error loading promotions: {error.message}
+                  </TableCell>
+                </TableRow>
+              ) : (
+                <AnimatePresence>
+                  {promotions?.map((promo: Promotion) => (
+                    <motion.tr
+                      key={promo.id}
+                      layout
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0, x: -50 }}
+                      transition={{ duration: 0.3 }}
+                      className="hover:bg-gray-50"
+                    >
+                      <TableCell>
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`h-3 w-3 rounded-full ${
+                              promo.isActive ? 'bg-green-500' : 'bg-gray-400'
+                            }`}
+                          ></span>
+                          {promo.isActive ? 'Active' : 'Inactive'}
+                        </div>
+                      </TableCell>
+                      <TableCell>
+                        <a
+                          href="#"
+                          className="font-medium text-blue-600 hover:underline"
                         >
-                          <Trash2 className="h-4 w-4 mr-1" /> Delete
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </motion.tr>
-                ))}
-              </AnimatePresence>
+                          {promo.name}
+                        </a>
+                      </TableCell>
+                      <TableCell>{promo.description}</TableCell>
+                      <TableCell>
+                        {formatPromotionType(promo.promotionType)}
+                      </TableCell>
+                      <TableCell>
+                        {promo.beginDate
+                          ? new Date(promo.beginDate).toLocaleString()
+                          : 'N/A'}{' '}
+                        -{' '}
+                        {promo.endDate
+                          ? new Date(promo.endDate).toLocaleString()
+                          : 'N/A'}
+                      </TableCell>
+                      <TableCell>
+                        <div className="flex gap-2">
+                          <Button variant="outline" size="sm" disabled>
+                            <Edit className="h-4 w-4 mr-1" /> Edit
+                          </Button>
+                          <Button variant="outline" size="sm" disabled>
+                            <Copy className="h-4 w-4 mr-1" /> Copy
+                          </Button>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => openDeleteConfirmation(promo.id)}
+                          >
+                            <Trash2 className="h-4 w-4 mr-1" /> Delete
+                          </Button>
+                        </div>
+                      </TableCell>
+                    </motion.tr>
+                  ))}
+                </AnimatePresence>
+              )}
             </TableBody>
           </Table>
         </div>
@@ -389,25 +351,11 @@ export function PromotionsManager() {
                   <Label htmlFor="terms">Terms and conditions</Label>
                   <Textarea
                     id="terms"
-                    value={formState.terms}
-                    onChange={e => handleFormChange('terms', e.target.value)}
+                    value={formState.termsAndConditions}
+                    onChange={e =>
+                      handleFormChange('termsAndConditions', e.target.value)
+                    }
                   />
-                </div>
-                <div>
-                  <Label htmlFor="image">Image</Label>
-                  <Select
-                    value={formState.image}
-                    onValueChange={value => handleFormChange('image', value)}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="coins_dark">Coins (Dark)</SelectItem>
-                      <SelectItem value="coins_light">Coins (Light)</SelectItem>
-                      <SelectItem value="gift_box">Gift Box</SelectItem>
-                    </SelectContent>
-                  </Select>
                 </div>
                 <div className="grid grid-cols-2 gap-4">
                   <div>
@@ -433,7 +381,7 @@ export function PromotionsManager() {
                   </Label>
                   <RadioGroup
                     value={formState.promotionType}
-                    onValueChange={(value: PromotionType) =>
+                    onValueChange={(value: FormPromotionType) =>
                       handleFormChange('promotionType', value)
                     }
                     className="mt-2 grid grid-cols-1 sm:grid-cols-2 gap-4"
@@ -529,111 +477,6 @@ export function PromotionsManager() {
                 {/* Conditions Section */}
                 <div className="space-y-4 pt-6 border-t">
                   <h3 className="text-lg font-semibold mb-2">Conditions</h3>
-                  {/* Products */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label htmlFor="products">Products</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Apply promotion to specific products.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="products"
-                      value={formState.products}
-                      onChange={e =>
-                        handleFormChange('products', e.target.value)
-                      }
-                      placeholder="Search for a product..."
-                    />
-                  </div>
-
-                  {/* Exclude Products */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label htmlFor="excludeProducts">Exclude products</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              Exclude specific products from this promotion.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="excludeProducts"
-                      value={formState.excludeProducts}
-                      onChange={e =>
-                        handleFormChange('excludeProducts', e.target.value)
-                      }
-                      placeholder="Search for a product..."
-                    />
-                  </div>
-
-                  {/* Categories */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label htmlFor="categories">Categories</Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>Apply promotion to specific categories.</p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="categories"
-                      value={formState.categories}
-                      onChange={e =>
-                        handleFormChange('categories', e.target.value)
-                      }
-                      placeholder="e.g., Bookings"
-                    />
-                  </div>
-
-                  {/* Exclude Categories */}
-                  <div>
-                    <div className="flex items-center justify-between mb-1.5">
-                      <Label htmlFor="excludeCategories">
-                        Exclude categories
-                      </Label>
-                      <TooltipProvider>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              Exclude specific categories from this promotion.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </TooltipProvider>
-                    </div>
-                    <Input
-                      id="excludeCategories"
-                      value={formState.excludeCategories}
-                      onChange={e =>
-                        handleFormChange('excludeCategories', e.target.value)
-                      }
-                      placeholder="Any category"
-                    />
-                  </div>
 
                   <div className="grid grid-cols-2 gap-4">
                     {/* Limit per customer */}
@@ -691,13 +534,11 @@ export function PromotionsManager() {
                       <Input
                         id="minimumSpend"
                         type="number"
+                        step="0.01"
                         min="0"
                         value={formState.minimumSpend}
                         onChange={e =>
-                          handleFormChange(
-                            'minimumSpend',
-                            parseInt(e.target.value) || 0
-                          )
+                          handleFormChange('minimumSpend', e.target.value)
                         }
                       />
                     </div>
