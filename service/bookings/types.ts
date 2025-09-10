@@ -83,3 +83,9 @@ export interface Booking {
   service: Service;
   payment: Payment;
 }
+
+export interface CreateBookingPayload {
+  serviceId: string;
+  startTime: string;
+  endTime: string;
+}

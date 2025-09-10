@@ -5,11 +5,9 @@ import { toast } from 'sonner';
 
 // --- API Functions ---
 
-const createBooking = async (bookingData: {
-  businessId: string;
-  startTime: string;
-  endTime: string;
-}): Promise<Booking> => {
+import { CreateBookingPayload } from './types';
+
+const createBooking = async (bookingData: CreateBookingPayload): Promise<Booking> => {
   const { data } = await api.post('/bookings', bookingData);
   return data;
 };

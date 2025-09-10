@@ -131,42 +131,78 @@ function ProductPage({
   );
 }
 
+import { useGetServicesByBusiness } from '@/service/services/hook';
+import { BookingModal } from './BookingModal';
+import { Service } from '@/service/services/types';
+
 function ServicePage({
   listing,
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
 }) {
   const isGoogle = isGoogleResult(listing);
+  const businessId = isGoogle ? '' : (listing as InHouseBusiness).id;
 
-  if (isGoogle || !(listing as InHouseBusiness).serviceProviderProfile) {
+  const {
+    data: services,
+    isLoading,
+    isError,
+  } = useGetServicesByBusiness(businessId);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  const handleBookNow = (service: Service) => {
+    setSelectedService(service);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedService(null);
+  };
+
+  if (isGoogle) {
     return <p>No services available for this listing.</p>;
   }
 
-  const { serviceProviderProfile } = listing as InHouseBusiness;
+  if (isLoading) {
+    return <p>Loading services...</p>;
+  }
+
+  if (isError || !services || services.length === 0) {
+    return <p>No services available for this listing.</p>;
+  }
 
   return (
     <div>
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
-      <div className="text-gray-700 mt-2 space-y-2">
-        {serviceProviderProfile?.bookingMethod && (
-          <p>
-            <strong>Booking Method:</strong> {serviceProviderProfile.bookingMethod}
-          </p>
-        )}
-        {serviceProviderProfile?.bookingUrl && (
-          <p>
-            <strong>Book Online:</strong>{' '}
-            <a
-              href={serviceProviderProfile.bookingUrl}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-red-500 hover:underline"
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+        {services.map(service => (
+          <div
+            key={service.id}
+            className="border rounded-lg p-4 flex flex-col"
+          >
+            <div className="flex-grow">
+              <h4 className="font-semibold">{service.name}</h4>
+              <p className="text-gray-600">£{service.price.toFixed(2)}</p>
+              <p className="text-sm text-gray-500 mt-1">
+                {service.description}
+              </p>
+              <p className="text-sm text-gray-500 mt-1">
+                Duration: {service.duration} minutes
+              </p>
+            </div>
+            <Button
+              className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => handleBookNow(service)}
             >
-              {serviceProviderProfile.bookingUrl}
-            </a>
-          </p>
-        )}
+              Book Now
+            </Button>
+          </div>
+        ))}
       </div>
+      <BookingModal
+        service={selectedService}
+        isOpen={!!selectedService}
+        onClose={handleCloseModal}
+      />
     </div>
   );
 }
@@ -332,6 +368,33 @@ function OverviewSection({
         </div>
       )}
 
+      {listing.serviceProviderProfile && (
+        <div>
+          <h3 className="text-xl font-bold border-t pt-6">
+            Service Information
+          </h3>
+          <div className="text-gray-700 mt-2 space-y-2">
+            <p>
+              <strong>Booking Method:</strong>{' '}
+              {listing.serviceProviderProfile.bookingMethod}
+            </p>
+            {listing.serviceProviderProfile.bookingUrl && (
+              <p>
+                <strong>Book Online:</strong>{' '}
+                <a
+                  href={listing.serviceProviderProfile.bookingUrl}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-red-500 hover:underline"
+                >
+                  {listing.serviceProviderProfile.bookingUrl}
+                </a>
+              </p>
+            )}
+          </div>
+        </div>
+      )}
+
       {(listing.website || listing.businessEmail) && (
         <div>
           <h3 className="text-xl font-bold border-t pt-6">
@@ -435,9 +498,16 @@ export default function ContentTabs({
     component: <AboutBusinessTabs listing={listing} isLoading={isLoading} />,
   });
 
+  const gridColsClass =
+    tabs.length === 1
+      ? 'grid-cols-1'
+      : tabs.length === 2
+      ? 'grid-cols-2'
+      : 'grid-cols-3';
+
   return (
     <Tabs defaultValue={tabs[0].value} className="w-full">
-      <TabsList className={`grid w-full grid-cols-${tabs.length} mb-6`}>
+      <TabsList className={`grid w-full ${gridColsClass} mb-6`}>
         {tabs.map(tab => (
           <TabsTrigger key={tab.value} value={tab.value}>
             {tab.label}
