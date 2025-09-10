@@ -57,7 +57,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
-import { DateTimePicker } from '@/components/ui/date-time-picker';
+import { CustomDateTimePicker } from '@/components/ui/custom-date-time-picker';
 
 // TypeScript Types
 type PromotionStatus = 'Active' | 'Inactive';
@@ -412,14 +412,14 @@ export function PromotionsManager() {
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <Label htmlFor="beginDate">Begin date</Label>
-                    <DateTimePicker
+                    <CustomDateTimePicker
                       date={formState.beginDate}
                       setDate={date => handleFormChange('beginDate', date)}
                     />
                   </div>
                   <div>
                     <Label htmlFor="endDate">End date</Label>
-                    <DateTimePicker
+                    <CustomDateTimePicker
                       date={formState.endDate}
                       setDate={date => handleFormChange('endDate', date)}
                     />
