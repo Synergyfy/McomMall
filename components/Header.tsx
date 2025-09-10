@@ -5,7 +5,8 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { ShoppingCart, User, ChevronDown, Heart } from 'lucide-react';
-import Auth from './auth';
+import AuthWithRedirect from './AuthWithRedirect';
+import { Suspense } from 'react';
 import { NavMenu } from './NavMenu';
 import { usePathname } from 'next/navigation';
 import { useLogout } from '@/service/auth/hook';
@@ -117,10 +118,12 @@ export default function Header() {
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
-              <Auth>
-                <User className="w-4 h-4 mr-2" />
-                Sign In
-              </Auth>
+              <Suspense fallback={<div>Loading...</div>}>
+                <AuthWithRedirect>
+                  <User className="w-4 h-4 mr-2" />
+                  Sign In
+                </AuthWithRedirect>
+              </Suspense>
             )}
 
             {/* Mobile Nav Trigger is now inside NavMenu */}

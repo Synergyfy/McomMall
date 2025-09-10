@@ -24,7 +24,13 @@ import { useDispatch, useSelector } from 'react-redux';
 import { RootState, AppDispatch } from '@/service/store/store';
 import { setLoginModalOpen } from '@/service/store/uiSlice';
 
-const Auth = ({ children }: { children?: React.ReactNode }) => {
+const Auth = ({
+  children,
+  redirect,
+}: {
+  children?: React.ReactNode;
+  redirect: string | null;
+}) => {
   const dispatch: AppDispatch = useDispatch();
   const { isLoginModalOpen } = useSelector((state: RootState) => state.ui);
   const [newAccount, setNewAccount] = useState(false);
@@ -50,6 +56,12 @@ const Auth = ({ children }: { children?: React.ReactNode }) => {
   const { isPending: loginPending, mutateAsync: loginAsync } = useLogin();
 
   const router = useRouter();
+
+  const isValidRedirect = (path: string | null) => {
+    if (!path) return false;
+    // Basic validation: path should start with '/' and not contain '://' or '//' to prevent open redirects.
+    return path.startsWith('/') && !path.includes('://') && !path.startsWith('//');
+  };
 
   const handleToggleMode = (mode: boolean) => {
     setNewAccount(mode);
@@ -205,10 +217,9 @@ const Auth = ({ children }: { children?: React.ReactNode }) => {
         const response = await mutateAsync(payload);
 
         toast.success('Account created successfully!', {
-          description: `Welcome, ${response.name}!`,
+          description: `Welcome, ${response.name}! Please log in to continue.`,
         });
         handleToggleMode(false); // Switch to login mode after successful signup
-        dispatch(setLoginModalOpen(false)); // Close the modal
       } catch (error: unknown) {
         const err = error as ErrorResponse;
         toast.error('Failed to create account', {
@@ -227,7 +238,11 @@ const Auth = ({ children }: { children?: React.ReactNode }) => {
         });
         handleToggleMode(false); // Switch to login mode after successful signup
         dispatch(setLoginModalOpen(false)); // Close the modal
-        router.push('/dashboard'); // Redirect to dashboard after login
+        if (isValidRedirect(redirect)) {
+          router.push(redirect as string);
+        } else {
+          router.push('/dashboard'); // Redirect to dashboard after login
+        }
       } catch (error: unknown) {
         const err = error as ErrorResponse;
         toast.error('Failed to login', {
