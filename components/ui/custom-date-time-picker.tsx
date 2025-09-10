@@ -42,7 +42,7 @@ export function CustomDateTimePicker({
         onClick={() => setIsOpen(!isOpen)}
       >
         <CalendarIcon className="mr-2 h-4 w-4" />
-        {date ? format(date, "PPP HH:mm:ss") : <span>Pick a date</span>}
+          {date ? format(date, "PPP HH:mm") : <span>Pick a date</span>}
       </Button>
       {isOpen && (
         <div className="absolute z-[1001] w-auto bg-white rounded-md border shadow-md top-10">

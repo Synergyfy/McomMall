@@ -136,7 +136,7 @@ const TimePickerInput = React.forwardRef<
         onBlur={onBlur}
         onKeyDown={handleKeyDown}
         className={cn(
-          "w-[48px] text-center font-mono text-base tabular-nums caret-transparent selection:bg-transparent focus:bg-accent focus:text-accent-foreground",
+          "w-[60px] text-center font-mono text-base tabular-nums caret-transparent selection:bg-transparent focus:bg-accent focus:text-accent-foreground",
           className
         )}
         {...props}
