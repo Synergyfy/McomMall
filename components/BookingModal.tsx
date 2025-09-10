@@ -95,6 +95,13 @@ export function BookingModal({
         </DialogHeader>
         <div className="grid gap-4 py-4">
           <p>Price: {getPriceDisplay(service)}</p>
+          {service.enableGuestPricing && (
+            <div>
+              <p>Guest pricing: £{service.pricePerGuest} per guest</p>
+              <p>Min guests: {service.minGuests}</p>
+              <p>Max guests: {service.maxGuests}</p>
+            </div>
+          )}
 
           {service.bundledServices.length > 0 && (
             <div>
@@ -135,7 +142,7 @@ export function BookingModal({
                 <SelectTrigger>
                   <SelectValue placeholder="Start time" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="fixed" className="z-[1001]">
                   <SelectItem value="09:00">09:00</SelectItem>
                   <SelectItem value="10:00">10:00</SelectItem>
                   <SelectItem value="11:00">11:00</SelectItem>
@@ -151,7 +158,7 @@ export function BookingModal({
                 <SelectTrigger>
                   <SelectValue placeholder="End time" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent position="fixed" className="z-[1001]">
                   <SelectItem value="10:00">10:00</SelectItem>
                   <SelectItem value="11:00">11:00</SelectItem>
                   <SelectItem value="12:00">12:00</SelectItem>
