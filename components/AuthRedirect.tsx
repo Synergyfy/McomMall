@@ -23,7 +23,7 @@ const AuthRedirect = () => {
     if (!token && refresh) {
       refreshTokenFn(refresh);
     } else if (!token && !refresh && pathname.startsWith('/dashboard')) {
-      router.push('/');
+      router.push(`/?redirect=${pathname}`);
       dispatch(setLoginModalOpen(true));
     } else if (token && !accessToken) {
       dispatch(loadAuthFromCookies());

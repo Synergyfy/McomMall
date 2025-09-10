@@ -8,6 +8,7 @@ import {
   Instagram,
   Linkedin,
 } from 'lucide-react';
+import Link from 'next/link';
 import Newsletter from '@/app/components/Newsletter';
 
 const McomMallLogo = ({ className = '' }) => (
@@ -62,25 +63,34 @@ export default function Footer() {
         </div>
 
         {/* Column 2: Popular Categories */}
-        <div>
+        <div className="z-50">
           <h3 className="text-xl font-bold mb-4 text-white">
             Popular Categories
           </h3>
           <ul className="space-y-2">
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
+              <Link
+                href="/contact-us"
+                className="hover:text-[#f58220] transition-colors"
+              >
                 Contact Us
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
+              <Link
+                href="/faq"
+                className="hover:text-[#f58220] transition-colors"
+              >
                 Our FAQ
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
+              <Link
+                href="/privacy-policy"
+                className="hover:text-[#f58220] transition-colors"
+              >
                 Privacy Policy
-              </a>
+              </Link>
             </li>
             <li>
               <a href="#" className="hover:text-[#f58220] transition-colors">
@@ -91,18 +101,24 @@ export default function Footer() {
         </div>
 
         {/* Column 3: Quick Links */}
-        <div>
+        <div className="z-50">
           <h3 className="text-xl font-bold mb-4 text-white">Quick Links</h3>
           <ul className="space-y-2">
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
+              <Link
+                href="/about-us"
+                className="hover:text-[#f58220] transition-colors"
+              >
                 About Us
-              </a>
+              </Link>
             </li>
             <li>
-              <a href="#" className="hover:text-[#f58220] transition-colors">
+              <Link
+                href="/blog"
+                className="hover:text-[#f58220] transition-colors"
+              >
                 Our Blog
-              </a>
+              </Link>
             </li>
             <li>
               <a href="#" className="hover:text-[#f58220] transition-colors">

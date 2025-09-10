@@ -27,6 +27,7 @@ export interface LoginResponse {
   userId: string;
   name: string;
   role: UserRole;
+  packageInfo: { planType: string };
 }
 
 export interface ClaimInterface {

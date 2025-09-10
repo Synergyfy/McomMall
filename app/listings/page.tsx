@@ -95,13 +95,20 @@ function ListingsPageContent() {
 
     if (category || subcategory || showFilters) {
       const newFilters: Partial<FilterState> = {};
-      if (category) newFilters.category = category;
-      if (subcategory) newFilters.subCategories = [subcategory];
 
-      newFilters.searchTerm = ''; // Explicitly clear the search term
+      let combinedQuery = '';
+      if (subcategory) {
+        combinedQuery = subcategory;
+        newFilters.subCategories = [subcategory];
+      } else if (category) {
+        combinedQuery = category;
+        newFilters.category = category;
+      }
+
+      newFilters.searchTerm = combinedQuery;
 
       setActiveFilters(prevFilters => ({
-        ...prevFilters,
+        ...initialFilters,
         ...newFilters,
       }));
       setFiltersVisible(true);

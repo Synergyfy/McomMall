@@ -12,3 +12,14 @@ export const useGetServicesByBusiness = (businessId: string) => {
     enabled: !!businessId,
   });
 };
+
+export const useGetServiceById = (serviceId: string) => {
+  return useQuery<Service, Error>({
+    queryKey: ['service', serviceId],
+    queryFn: async () => {
+      const { data } = await api.get(`/services/${serviceId}`);
+      return data;
+    },
+    enabled: !!serviceId,
+  });
+};

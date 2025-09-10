@@ -15,7 +15,6 @@ import { businessCategories } from '@/lib/business-categories';
 const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
 const SeasonalMarketingSection = dynamic(() => import('../homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
 const McomMallBrandsSection = dynamic(() => import('../homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
-const PopularCategoriesSection = dynamic(() => import('../homepage/components/PopularCategoriesSection').then(mod => mod.PopularCategoriesSection));
 const BusinessCategoriesSection = dynamic(() => import('../homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
 const McomEgiftCard = dynamic(() => import('../homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
 const VirtualCardCarousel = dynamic(() => import('../homepage/components/VirtualCardCarousel'));
@@ -151,34 +150,9 @@ const SwirlArrow = () => (
   </svg>
 );
 
-const McomMallLogo = ({ className = '' }) => (
-  <svg
-    width="40"
-    height="40"
-    viewBox="0 0 50 50"
-    fill="none"
-    xmlns="http://www.w3.org/2000/svg"
-    className={className}
-  >
-    <path
-      d="M10 10 L 25 25 L 40 10 L 40 40 L 25 25 L 10 40 Z"
-      stroke="#f58220"
-      strokeWidth="4"
-      fill="none"
-    />
-    <path
-      d="M10 10 L 25 25 L 40 10"
-      stroke="currentColor"
-      strokeWidth="4"
-      fill="none"
-    />
-  </svg>
-);
-
 // --- Main App Component ---
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const scrollContainerRef = useRef<HTMLDivElement>(null);
   const [activeAdFilter, setActiveAdFilter] = useState('All');
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -356,7 +330,6 @@ export default function HomePage() {
 
         {/* --- Categories Section --- */}
 
-        <PopularCategoriesSection />
         <BusinessCategoriesSection />
 
         {/* --- Featured Ads Section --- */}

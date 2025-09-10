@@ -91,7 +91,7 @@ export const useLogin = () => {
           id: data.userId,
           userName: data.name,
           userRole: String(data.role),
-          packageInfo: null,
+          packageInfo: { planType: data.packageInfo.planType },
         })
       );
       Cookies.set('userId', data.userId, { expires: 7 });
