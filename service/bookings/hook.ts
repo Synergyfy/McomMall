@@ -48,7 +48,7 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
 
 // --- Custom Hooks ---
 
-export const useCreateBooking = () => {
+export const useCreateBooking = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createBooking,
@@ -56,6 +56,7 @@ export const useCreateBooking = () => {
       queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
       queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
       toast.success('Booking created successfully!');
+      onSuccess?.();
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message || 'Failed to create booking. Please try again.';
