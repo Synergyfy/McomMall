@@ -49,6 +49,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { CustomDateTimePicker } from '@/components/ui/custom-date-time-picker';
 
 // TypeScript Types
 type OfferStatus = 'Active' | 'Inactive';
@@ -123,8 +124,8 @@ const initialOffers: Offer[] = [
     points: 1500,
     couponType: 'Free product(s)',
     couponDetails: '1 item',
-    beginDate: '2025-09-01',
-    endDate: '2025-09-30',
+    beginDate: new Date('2025-09-01').toISOString(),
+    endDate: new Date('2025-09-30').toISOString(),
     claimed: 10,
     redeemed: 5,
   },
@@ -159,7 +160,28 @@ const initialOffers: Offer[] = [
 ];
 
 // Default state for the form, updated with new fields
-const defaultFormState = {
+const defaultFormState: {
+  isActive: boolean;
+  name: string;
+  description: string;
+  points: number;
+  category: string;
+  terms: string;
+  image: string;
+  beginDate?: Date;
+  endDate?: Date;
+  couponType: CouponType;
+  limitUsageToXProducts: number;
+  allowFreeShipping: boolean;
+  individualUseOnly: boolean;
+  excludeSaleItems: boolean;
+  couponExpiryDays: number;
+  products: string;
+  excludeProducts: string;
+  excludeCategories: string;
+  limitPerCustomer: number;
+  allowLimitToReset: boolean;
+} = {
   isActive: true,
   name: '1 Free Soft Drink',
   description: 'any flavor',
@@ -167,8 +189,8 @@ const defaultFormState = {
   category: 'Appetizers',
   terms: '',
   image: 'award_dark',
-  beginDate: '',
-  endDate: '',
+  beginDate: undefined,
+  endDate: undefined,
   couponType: 'Free product(s)' as CouponType,
   // New fields from image
   limitUsageToXProducts: 1,
@@ -214,8 +236,8 @@ export function OffersManager() {
       points: Number(formState.points),
       couponType: formState.couponType,
       couponDetails: 'Details here', // Placeholder
-      beginDate: formState.beginDate || null,
-      endDate: formState.endDate || null,
+      beginDate: formState.beginDate?.toISOString() || null,
+      endDate: formState.endDate?.toISOString() || null,
       claimed: 0,
       redeemed: 0,
       // Add new fields to the saved object
@@ -360,7 +382,13 @@ export function OffersManager() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {offer.beginDate || 'N/A'} - {offer.endDate || 'N/A'}
+                        {offer.beginDate
+                          ? new Date(offer.beginDate).toLocaleString()
+                          : 'N/A'}{' '}
+                        -{' '}
+                        {offer.endDate
+                          ? new Date(offer.endDate).toLocaleString()
+                          : 'N/A'}
                       </TableCell>
                       <TableCell>
                         {offer.claimed} / {offer.redeemed}
@@ -464,24 +492,16 @@ export function OffersManager() {
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <Label htmlFor="beginDate">Begin date</Label>
-                      <Input
-                        id="beginDate"
-                        type="datetime-local"
-                        value={formState.beginDate}
-                        onChange={e =>
-                          handleFormChange('beginDate', e.target.value)
-                        }
+                      <CustomDateTimePicker
+                        date={formState.beginDate}
+                        setDate={date => handleFormChange('beginDate', date)}
                       />
                     </div>
                     <div>
                       <Label htmlFor="endDate">End date</Label>
-                      <Input
-                        id="endDate"
-                        type="datetime-local"
-                        value={formState.endDate}
-                        onChange={e =>
-                          handleFormChange('endDate', e.target.value)
-                        }
+                      <CustomDateTimePicker
+                        date={formState.endDate}
+                        setDate={date => handleFormChange('endDate', date)}
                       />
                     </div>
                   </div>
