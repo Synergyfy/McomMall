@@ -63,7 +63,7 @@ export default function Footer() {
         </div>
 
         {/* Column 2: Popular Categories */}
-        <div>
+        <div className="z-50">
           <h3 className="text-xl font-bold mb-4 text-white">
             Popular Categories
           </h3>
@@ -101,7 +101,7 @@ export default function Footer() {
         </div>
 
         {/* Column 3: Quick Links */}
-        <div>
+        <div className="z-50">
           <h3 className="text-xl font-bold mb-4 text-white">Quick Links</h3>
           <ul className="space-y-2">
             <li>
