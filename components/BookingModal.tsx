@@ -70,7 +70,7 @@ export function BookingModal({
   };
 
   const getPriceDisplay = (service: Service) => {
-    switch (service.pricingModel) {
+    switch (service.pricingModel.toUpperCase()) {
       case 'FIXED':
         return `£${service.fixedPrice}`;
       case 'HOURLY':

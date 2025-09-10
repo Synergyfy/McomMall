@@ -159,7 +159,7 @@ function ServicePage({
   };
 
   const getPriceDisplay = (service: Service) => {
-    switch (service.pricingModel) {
+    switch (service.pricingModel.toUpperCase()) {
       case 'FIXED':
         return `£${service.fixedPrice}`;
       case 'HOURLY':
@@ -192,9 +192,22 @@ function ServicePage({
             key={service.id}
             className="border rounded-lg p-4 flex flex-col"
           >
+            <div className="relative w-full h-32 mb-2">
+              <Image
+                src={`https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
+                alt={service.name}
+                layout="fill"
+                className="object-cover rounded-md"
+              />
+            </div>
             <div className="flex-grow">
               <h4 className="font-semibold">{service.name}</h4>
               <p className="text-gray-600">{getPriceDisplay(service)}</p>
+              {service.enableGuestPricing && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Guest pricing: £{service.pricePerGuest} per guest
+                </p>
+              )}
               <p className="text-sm text-gray-500 mt-1">
                 {service.description}
               </p>
