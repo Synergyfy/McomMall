@@ -26,6 +26,8 @@ function isGoogleResult(
 import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
+import Link from 'next/link';
+
 function ProductPage({
   listing,
 }: {
@@ -35,12 +37,16 @@ function ProductPage({
   const { addItemToCart } = useCart(); // Use the useCart hook
   const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
 
-  const handleAddToCart = (product: Product) => {
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
     addItemToCart({ productId: product.id, quantity: 1 });
     toast.success(`${product.title} has been added to your cart.`);
   };
 
-  const handleWishlistToggle = (product: Product) => {
+  const handleWishlistToggle = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
     const isWishlisted = wishlist?.items?.some(
       item => item.product.id === product.id
     );
@@ -53,7 +59,9 @@ function ProductPage({
     }
   };
 
-  const handleOrderNow = (product: Product) => {
+  const handleOrderNow = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
     router.push(`/checkout?productId=${product.id}`);
   };
 
@@ -68,9 +76,10 @@ function ProductPage({
       <h3 className="text-xl font-bold border-t pt-6">Products</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
         {(listing as InHouseBusiness).products?.map(product => (
-          <div
+          <Link
+            href={`/products/${product.id}`}
             key={product.id}
-            className="border rounded-lg p-4 flex flex-col"
+            className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
           >
             <div className="relative w-full h-32 mb-2">
               <Image
@@ -85,7 +94,7 @@ function ProductPage({
               <Button
                 size="icon"
                 className="absolute top-2 right-2 bg-white/70 hover:bg-white"
-                onClick={() => handleWishlistToggle(product)}
+                onClick={e => handleWishlistToggle(e, product)}
               >
                 <Heart
                   className={`h-5 w-5 ${
@@ -114,17 +123,17 @@ function ProductPage({
             <Button
               variant="outline"
               className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-              onClick={() => handleAddToCart(product)}
+              onClick={e => handleAddToCart(e, product)}
             >
               Add to Cart
             </Button>
             <Button
               className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => handleOrderNow(product)}
+              onClick={e => handleOrderNow(e, product)}
             >
               Order Now
             </Button>
-          </div>
+          </Link>
         ))}
       </div>
     </div>
@@ -150,7 +159,9 @@ function ServicePage({
   } = useGetServicesByBusiness(businessId);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
-  const handleBookNow = (service: Service) => {
+  const handleBookNow = (e: React.MouseEvent, service: Service) => {
+    e.preventDefault();
+    e.stopPropagation();
     setSelectedService(service);
   };
 
@@ -188,9 +199,10 @@ function ServicePage({
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
         {services.map(service => (
-          <div
+          <Link
+            href={`/services/${service.id}`}
             key={service.id}
-            className="border rounded-lg p-4 flex flex-col"
+            className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
           >
             <div className="relative w-full h-32 mb-2">
               <Image
@@ -214,11 +226,11 @@ function ServicePage({
             </div>
             <Button
               className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={() => handleBookNow(service)}
+              onClick={e => handleBookNow(e, service)}
             >
               Book Now
             </Button>
-          </div>
+          </Link>
         ))}
       </div>
       <BookingModal
