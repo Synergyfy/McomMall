@@ -29,6 +29,8 @@ const InfoBlock: FC<{
   </div>
 );
 
+import { DollarSign, Briefcase } from 'lucide-react';
+
 const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const declineBookingMutation = useDeclineBooking();
   const approveBookingMutation = useApproveBooking();
@@ -91,14 +93,14 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
               Booking #{booking.id.slice(0, 8)}
             </h2>
             <p className="text-sm text-gray-500">
-              with {booking.business.businessName}
+              for {booking.service.name}
             </p>
           </div>
           <div className="flex items-center space-x-2">
             {getStatusBadge(booking.status)}
             <ChatIcon
               receiverId={booking.user.id}
-              listingName={booking.business.businessName}
+              listingName={booking.service.name}
             />
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
@@ -132,8 +134,15 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
           </InfoBlock>
           <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
             <p>
-              {new Date(booking.startTime).toLocaleTimeString()} -{' '}
-              {new Date(booking.endTime).toLocaleTimeString()}
+              {new Date(booking.startTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              -{' '}
+              {new Date(booking.endTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </InfoBlock>
         </div>
@@ -142,6 +151,30 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
           <InfoBlock icon={<User className="h-4 w-4" />} title="Customer">
             <p className="font-semibold">{booking.user.name}</p>
             <p className="text-xs text-gray-500">{booking.user.email}</p>
+          </InfoBlock>
+        )}
+        {booking.service && (
+          <InfoBlock icon={<Briefcase className="h-4 w-4" />} title="Service">
+            <p className="font-semibold">{booking.service.name}</p>
+            <p className="text-xs text-gray-500">
+              {booking.service.description}
+            </p>
+          </InfoBlock>
+        )}
+        {booking.payment && (
+          <InfoBlock
+            icon={<DollarSign className="h-4 w-4" />}
+            title="Payment"
+          >
+            <p className="font-semibold">
+              {new Intl.NumberFormat('en-GB', {
+                style: 'currency',
+                currency: booking.payment.currency,
+              }).format(booking.payment.amount)}
+            </p>
+            <p className="text-xs text-gray-500">
+              via {booking.payment.paymentMethod}
+            </p>
           </InfoBlock>
         )}
       </CardContent>

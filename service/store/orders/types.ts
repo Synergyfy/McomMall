@@ -1,10 +1,10 @@
 import { User } from '@/service/listings/types';
-import { ServicePayment } from '@/service/bookings/types';
+import { Payment } from '@/service/bookings/types';
 
 export interface Order {
   id: string;
   user: User;
   quantity: number;
-  payment: ServicePayment;
+  payment: Payment;
   created_at: string;
 }

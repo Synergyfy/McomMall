@@ -131,6 +131,105 @@ function ProductPage({
   );
 }
 
+import { useGetServicesByBusiness } from '@/service/services/hook';
+import { BookingModal } from './BookingModal';
+import { Service } from '@/service/services/types';
+
+function ServicePage({
+  listing,
+}: {
+  listing: GooglePlaceResult | InHouseBusiness;
+}) {
+  const isGoogle = isGoogleResult(listing);
+  const businessId = isGoogle ? '' : (listing as InHouseBusiness).id;
+
+  const {
+    data: services,
+    isLoading,
+    isError,
+  } = useGetServicesByBusiness(businessId);
+  const [selectedService, setSelectedService] = useState<Service | null>(null);
+
+  const handleBookNow = (service: Service) => {
+    setSelectedService(service);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedService(null);
+  };
+
+  const getPriceDisplay = (service: Service) => {
+    switch (service.pricingModel.toUpperCase()) {
+      case 'FIXED':
+        return `£${service.fixedPrice}`;
+      case 'HOURLY':
+        return `£${service.pricePerHour}/hour`;
+      case 'PER_UNIT':
+        return `£${service.pricePerUnit}/${service.unitName}`;
+      default:
+        return 'Price not available';
+    }
+  };
+
+  if (isGoogle) {
+    return <p>No services available for this listing.</p>;
+  }
+
+  if (isLoading) {
+    return <p>Loading services...</p>;
+  }
+
+  if (isError || !services || services.length === 0) {
+    return <p>No services available for this listing.</p>;
+  }
+
+  return (
+    <div>
+      <h3 className="text-xl font-bold border-t pt-6">Services</h3>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
+        {services.map(service => (
+          <div
+            key={service.id}
+            className="border rounded-lg p-4 flex flex-col"
+          >
+            <div className="relative w-full h-32 mb-2">
+              <Image
+                src={`https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
+                alt={service.name}
+                layout="fill"
+                className="object-cover rounded-md"
+              />
+            </div>
+            <div className="flex-grow">
+              <h4 className="font-semibold">{service.name}</h4>
+              <p className="text-gray-600">{getPriceDisplay(service)}</p>
+              {service.enableGuestPricing && (
+                <p className="text-sm text-gray-500 mt-1">
+                  Guest pricing: £{service.pricePerGuest} per guest
+                </p>
+              )}
+              <p className="text-sm text-gray-500 mt-1">
+                {service.description}
+              </p>
+            </div>
+            <Button
+              className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+              onClick={() => handleBookNow(service)}
+            >
+              Book Now
+            </Button>
+          </div>
+        ))}
+      </div>
+      <BookingModal
+        service={selectedService}
+        isOpen={!!selectedService}
+        onClose={handleCloseModal}
+      />
+    </div>
+  );
+}
+
 function OverviewSection({
   listing,
   isLoading,
@@ -351,6 +450,37 @@ function OverviewSection({
   );
 }
 
+function AboutBusinessTabs({
+  listing,
+  isLoading,
+}: {
+  listing: GooglePlaceResult | InHouseBusiness;
+  isLoading: boolean;
+}) {
+  return (
+    <Tabs defaultValue="overview" className="w-full">
+      <TabsList className="grid w-full grid-cols-4 mb-6">
+        <TabsTrigger value="overview">Overview</TabsTrigger>
+        <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+        <TabsTrigger value="voucher">Voucher</TabsTrigger>
+        <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
+      </TabsList>
+      <TabsContent value="overview">
+        <OverviewSection listing={listing} isLoading={isLoading} />
+      </TabsContent>
+      <TabsContent value="loyalty">
+        <p>Loyalty & Reward content goes here.</p>
+      </TabsContent>
+      <TabsContent value="voucher">
+        <p>Voucher content goes here.</p>
+      </TabsContent>
+      <TabsContent value="gift-card">
+        <p>Gift Card content goes here.</p>
+      </TabsContent>
+    </Tabs>
+  );
+}
+
 export default function ContentTabs({
   listing,
   isLoading,
@@ -359,43 +489,59 @@ export default function ContentTabs({
   isLoading: boolean;
 }) {
   const isGoogle = isGoogleResult(listing);
-  const location = isGoogle ? listing.geometry : listing.location;
-  const address = isGoogle
-    ? listing.formattedAddress || listing.vicinity
-    : `${listing.location.addressLine1}, ${listing.location.city}`;
-  const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
+
+  if (isGoogle) {
+    // For Google listings, we can keep a simpler or different tab structure
+    // if required. For now, let's keep it similar to the old "About" tab.
+    return <AboutBusinessTabs listing={listing} isLoading={isLoading} />;
+  }
+
+  const inHouseListing = listing as InHouseBusiness;
+  const hasProduct = inHouseListing.listingType.includes('product');
+  const hasService = inHouseListing.listingType.includes('service');
+
+  const tabs = [];
+  if (hasProduct) {
+    tabs.push({
+      value: 'product-page',
+      label: 'Products',
+      component: <ProductPage listing={listing} />,
+    });
+  }
+  if (hasService) {
+    tabs.push({
+      value: 'service-page',
+      label: 'Services',
+      component: <ServicePage listing={listing} />,
+    });
+  }
+  tabs.push({
+    value: 'about-business',
+    label: 'About this business',
+    component: <AboutBusinessTabs listing={listing} isLoading={isLoading} />,
+  });
+
+  const gridColsClass =
+    tabs.length === 1
+      ? 'grid-cols-1'
+      : tabs.length === 2
+      ? 'grid-cols-2'
+      : 'grid-cols-3';
 
   return (
-    <Tabs defaultValue="product-page" className="w-full">
-      <TabsList className="grid w-full grid-cols-2 mb-6">
-        <TabsTrigger value="product-page">Product page</TabsTrigger>
-        <TabsTrigger value="about-business">About this business</TabsTrigger>
+    <Tabs defaultValue={tabs[0].value} className="w-full">
+      <TabsList className={`grid w-full ${gridColsClass} mb-6`}>
+        {tabs.map(tab => (
+          <TabsTrigger key={tab.value} value={tab.value}>
+            {tab.label}
+          </TabsTrigger>
+        ))}
       </TabsList>
-      <TabsContent value="product-page">
-        <ProductPage listing={listing} />
-      </TabsContent>
-      <TabsContent value="about-business">
-        <Tabs defaultValue="overview" className="w-full">
-          <TabsList className="grid w-full grid-cols-4 mb-6">
-            <TabsTrigger value="overview">Overview</TabsTrigger>
-            <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
-            <TabsTrigger value="voucher">Voucher</TabsTrigger>
-            <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
-          </TabsList>
-          <TabsContent value="overview">
-            <OverviewSection listing={listing} isLoading={isLoading} />
-          </TabsContent>
-          <TabsContent value="loyalty">
-            <p>Loyalty & Reward content goes here.</p>
-          </TabsContent>
-          <TabsContent value="voucher">
-            <p>Voucher content goes here.</p>
-          </TabsContent>
-          <TabsContent value="gift-card">
-            <p>Gift Card content goes here.</p>
-          </TabsContent>
-        </Tabs>
-      </TabsContent>
+      {tabs.map(tab => (
+        <TabsContent key={tab.value} value={tab.value}>
+          {tab.component}
+        </TabsContent>
+      ))}
     </Tabs>
   );
 }

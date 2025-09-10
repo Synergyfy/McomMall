@@ -51,7 +51,7 @@ export const BookingDetailsDialog: FC<BookingDetailsDialogProps> = ({
             </div>
             <ChatIcon
               receiverId={booking.user.id}
-              listingName={booking.business.businessName}
+              listingName={booking.service.name}
             />
           </DialogTitle>
           <DialogDescription>ID: {booking.id}</DialogDescription>
@@ -62,6 +62,10 @@ export const BookingDetailsDialog: FC<BookingDetailsDialogProps> = ({
             <div className="grid grid-cols-2 gap-4">
               <DetailItem label="Name" value={booking.user.name} />
               <DetailItem label="Email" value={booking.user.email} />
+              <DetailItem
+                label="Phone Number"
+                value={booking.user.phoneNumber}
+              />
             </div>
           </div>
 
@@ -79,9 +83,10 @@ export const BookingDetailsDialog: FC<BookingDetailsDialogProps> = ({
                   'p'
                 )} - ${format(new Date(booking.endTime), 'p')}`}
               />
+              <DetailItem label="Service" value={booking.service.name} />
               <DetailItem
-                label="Business"
-                value={booking.business.businessName}
+                label="Description"
+                value={booking.service.description}
               />
             </div>
           </div>
@@ -92,13 +97,18 @@ export const BookingDetailsDialog: FC<BookingDetailsDialogProps> = ({
               <div className="grid grid-cols-2 gap-4">
                 <DetailItem
                   label="Amount"
-                  value={`${booking.payment.amount} ${booking.payment.currency.toUpperCase()}`}
+                  value={new Intl.NumberFormat('en-GB', {
+                    style: 'currency',
+                    currency: booking.payment.currency,
+                  }).format(booking.payment.amount)}
                 />
                 <DetailItem
                   label="Method"
                   value={booking.payment.paymentMethod
                     .split('_')
-                    .map(w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase())
+                    .map(
+                      w => w.charAt(0).toUpperCase() + w.slice(1).toLowerCase()
+                    )
                     .join(' ')}
                 />
                 <DetailItem

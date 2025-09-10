@@ -164,9 +164,10 @@ const CalendarView: FC = () => {
                     transition={{ duration: 0.3 }}
                     className={cn(
                       'p-1 rounded-md text-xs cursor-pointer hover:bg-opacity-80',
-                      bookingStatusColors[booking.status]?.background ??
-                        'bg-gray-100',
-                      bookingStatusColors[booking.status]?.text ?? 'text-gray-800'
+                      bookingStatusColors[booking.status as BookingStatus]
+                        ?.background ?? 'bg-gray-100',
+                      bookingStatusColors[booking.status as BookingStatus]?.text ??
+                        'text-gray-800'
                     )}
                     onClick={() => setSelectedBooking(booking)}
                   >

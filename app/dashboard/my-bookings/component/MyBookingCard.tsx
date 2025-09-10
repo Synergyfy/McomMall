@@ -28,6 +28,8 @@ const InfoBlock: FC<{
   </div>
 );
 
+import { DollarSign, Briefcase } from 'lucide-react';
+
 const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const cancelBookingMutation = useCancelBooking();
 
@@ -36,23 +38,23 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const statusStyles: { [key: string]: { badge: string; border: string } } = {
-    PENDING: {
+    pending: {
       badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
       border: 'border-t-4 border-yellow-400',
     },
-    CONFIRMED: {
+    confirmed: {
       badge: 'bg-green-100 text-green-800 border-green-200',
       border: 'border-t-4 border-green-400',
     },
-    APPROVED: {
-        badge: 'bg-green-100 text-green-800 border-green-200',
-        border: 'border-t-4 border-green-400',
+    approved: {
+      badge: 'bg-green-100 text-green-800 border-green-200',
+      border: 'border-t-4 border-green-400',
     },
-    DECLINED: {
+    declined: {
       badge: 'bg-red-100 text-red-800 border-red-200',
       border: 'border-t-4 border-red-400',
     },
-    CANCELLED: {
+    cancelled: {
       badge: 'bg-blue-100 text-blue-800 border-blue-200',
       border: 'border-t-4 border-blue-400',
     },
@@ -63,8 +65,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const getStatusBadge = (status: string) => {
-    const upperCaseStatus = status.toUpperCase();
-    const style = statusStyles[upperCaseStatus] || statusStyles.default;
+    const style = statusStyles[status] || statusStyles.default;
     return (
       <Badge variant="outline" className={style.badge}>
         {status}
@@ -73,8 +74,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   };
 
   const cardBorderStyle =
-    statusStyles[booking.status.toUpperCase()]?.border ||
-    statusStyles.default.border;
+    statusStyles[booking.status]?.border || statusStyles.default.border;
 
   return (
     <Card
@@ -87,7 +87,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
               Booking #{booking.id.slice(0, 8)}
             </h2>
             <p className="text-sm text-gray-500">
-              with {booking.business.businessName}
+              for {booking.service.name}
             </p>
           </div>
           <div className="flex items-center space-x-2">
@@ -99,7 +99,13 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end">
-                <DropdownMenuItem onClick={handleCancel} disabled={booking.status.toUpperCase() !== 'PENDING' && booking.status.toUpperCase() !== 'CONFIRMED'}>
+                <DropdownMenuItem
+                  onClick={handleCancel}
+                  disabled={
+                    booking.status !== 'pending' &&
+                    booking.status !== 'confirmed'
+                  }
+                >
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Booking
                 </DropdownMenuItem>
@@ -114,17 +120,43 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
           </InfoBlock>
           <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
             <p>
-              {new Date(booking.startTime).toLocaleTimeString()} -{' '}
-              {new Date(booking.endTime).toLocaleTimeString()}
+              {new Date(booking.startTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}{' '}
+              -{' '}
+              {new Date(booking.endTime).toLocaleTimeString([], {
+                hour: '2-digit',
+                minute: '2-digit',
+              })}
             </p>
           </InfoBlock>
         </div>
 
-        <InfoBlock icon={<Building className="h-4 w-4" />} title="Business">
-            <p className="font-semibold">{booking.business.businessName}</p>
-            <p className="text-xs text-gray-500">{booking.business.businessEmail}</p>
-        </InfoBlock>
-
+        {booking.service && (
+          <InfoBlock icon={<Briefcase className="h-4 w-4" />} title="Service">
+            <p className="font-semibold">{booking.service.name}</p>
+            <p className="text-xs text-gray-500">
+              {booking.service.description}
+            </p>
+          </InfoBlock>
+        )}
+        {booking.payment && (
+          <InfoBlock
+            icon={<DollarSign className="h-4 w-4" />}
+            title="Payment"
+          >
+            <p className="font-semibold">
+              {new Intl.NumberFormat('en-GB', {
+                style: 'currency',
+                currency: booking.payment.currency,
+              }).format(booking.payment.amount)}
+            </p>
+            <p className="text-xs text-gray-500">
+              via {booking.payment.paymentMethod}
+            </p>
+          </InfoBlock>
+        )}
       </CardContent>
     </Card>
   );
