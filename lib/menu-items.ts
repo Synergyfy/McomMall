@@ -81,6 +81,11 @@ export const storeMenuItems: MenuItem[] = [
     href: '/dashboard/store/products',
     icon: SquareDashedKanban,
   },
+  {
+    title: 'Services',
+    href: '/dashboard/services',
+    icon: SquareDashedKanban,
+  },
   { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   {
     title: 'Withdraw',

@@ -40,7 +40,7 @@ const coBrandedTiers: PricingTier[] = [
     accent: 'purple',
   },
   {
-    name: 'Mcom Plus',
+    name: 'Mcom Pro Plus',
     price: '£900 / year',
     inherits: 'Pro',
     primaryFeatures: [
@@ -57,7 +57,7 @@ const coBrandedTiers: PricingTier[] = [
   },
 ];
 
-const coBrandedPlans = ['Standard', 'Pro', 'Plus'];
+const coBrandedPlans = ['Standard', 'Pro', 'Pro Plus'];
 
 const coBrandedFeatures: TableFeature[] = [
   {

@@ -5,6 +5,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRightCircle } from 'lucide-react';
+import Link from 'next/link';
 
 // --- Data Structure with Theming and Video IDs ---
 const seasonsData = [
@@ -89,13 +90,13 @@ const SeasonContent: React.FC<SeasonContentProps> = ({ season }) => {
         <p className="mt-6 text-lg leading-relaxed text-gray-300">
           {season.description}
         </p>
-        <a
-          href="#"
+        <Link
+          href={`/seasons/${season.id}`}
           className={`mt-8 inline-flex items-center gap-3 rounded-full px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 ${season.buttonClasses}`}
         >
           <span>Get Started</span>
           <ArrowRightCircle className="h-6 w-6" />
-        </a>
+        </Link>
       </div>
       <div className="order-1 lg:order-2">
         <VideoPlayer videoId={season.videoId} />

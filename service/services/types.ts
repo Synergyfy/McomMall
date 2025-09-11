@@ -8,12 +8,47 @@ export interface BundledService {
   updated_at: string;
 }
 
+export interface CreateServiceDto {
+  name: string;
+  description?: string;
+  images?: string[];
+  isActive?: boolean;
+  businessId: string;
+  pricingModel: 'fixed' | 'perHour' | 'perUnit';
+  fixedPrice?: number;
+  pricePerHour?: number;
+  pricePerUnit?: number;
+  unitName?: string;
+  enableGuestPricing?: boolean;
+  guestPricingModel?: 'perGuest' | 'fixedGroup' | 'baseWithAdditional';
+  minGuests?: number;
+  maxGuests?: number;
+  pricePerGuest?: number;
+  fixedGroupPrice?: number;
+  basePrice?: number;
+  baseGuests?: number;
+  additionalGuestPrice?: number;
+  isQuoteModel?: boolean;
+  bookingFee?: number;
+  bundledServices?: { name: string; price?: number }[];
+  configurableAddons?: {
+    name:string;
+    price?: number;
+    pricingType: 'oneTime' | 'perGuest' | 'perUnit';
+    unitName?: string;
+  }[];
+}
+
+export interface UpdateServiceDto extends CreateServiceDto {
+  id: string;
+}
+
 export interface ConfigurableAddon {
   id: string;
   serviceId: string;
   name: string;
   price: string;
-  pricingType: 'FIXED' | 'PER_UNIT';
+  pricingType: 'oneTime' | 'perGuest' | 'perUnit';
   unitName: string;
   deletedAt: string | null;
   created_at: string;
@@ -27,7 +62,7 @@ export interface Service {
   description?: string;
   images: string[];
   isActive: boolean;
-  pricingModel: 'FIXED' | 'HOURLY' | 'PER_UNIT';
+  pricingModel: 'fixed' | 'perHour' | 'perUnit';
   fixedPrice: string;
   pricePerHour: string | null;
   pricePerUnit: string | null;

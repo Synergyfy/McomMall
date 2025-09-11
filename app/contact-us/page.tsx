@@ -2,6 +2,12 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Phone, Mail, MapPin } from 'lucide-react';
+import Footer from '@/components/Footer';
+import dynamic from 'next/dynamic';
+
+const ContactMap = dynamic(() => import('@/components/ContactMap'), {
+  ssr: false,
+});
 
 const ContactUsPage = () => {
   const fadeIn = {
@@ -109,10 +115,14 @@ const ContactUsPage = () => {
                   <p>7011 Vermont Ave, Los Angeles, CA 90044</p>
                 </div>
               </div>
+              <div className="mt-8">
+                <ContactMap />
+              </div>
             </div>
           </motion.div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

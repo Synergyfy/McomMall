@@ -125,6 +125,14 @@ export default function Footer() {
                 Add Listing
               </a>
             </li>
+            <li>
+              <Link
+                href="/terms-and-conditions"
+                className="hover:text-[#f58220] transition-colors"
+              >
+                Terms and Conditions
+              </Link>
+            </li>
           </ul>
         </div>
 
