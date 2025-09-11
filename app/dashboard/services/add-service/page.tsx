@@ -167,7 +167,7 @@ const AddServicePage = () => {
   const businesses =
     listings?.filter(
       (listing: UserListing) =>
-        listing.listingType.includes('SERVICE')
+        listing.listingType.includes('service')
     ) || [];
 
   return (
