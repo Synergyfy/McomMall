@@ -13,7 +13,15 @@ import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabCont
 import { toast } from 'sonner';
 import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 import { useWishlist } from '@/hooks/useWishlist';
-import { Heart } from 'lucide-react';
+import {
+  Heart,
+  Clock,
+  Info,
+  Truck,
+  Phone,
+  Mail,
+  Globe,
+} from 'lucide-react';
 import ChatIcon from './ChatIcon';
 
 function isGoogleResult(
@@ -253,6 +261,7 @@ function OverviewSection({
   const router = useRouter();
 
   const isGoogle = isGoogleResult(listing);
+  const today = new Date().getDay();
 
   const handleCopy = () => {
     navigator.clipboard.writeText(window.location.href).then(
@@ -293,78 +302,99 @@ function OverviewSection({
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
 
   if (isGoogle) {
+    // Keeping Google result view simpler as requested
     return (
-      <div className="space-y-4">
-        <div>
-          <h3 className="text-lg font-semibold">Business Status</h3>
-          <p className="text-gray-600">{listing.businessStatus}</p>
-        </div>
-        <div>
-          <h3 className="text-lg font-semibold">Types</h3>
-          <p className="text-gray-600">{listing.types?.join(', ')}</p>
-        </div>
-        {listing.openingHours && (
-          <div>
-            <h3 className="text-lg font-semibold">Availability</h3>
-            <p className="text-gray-600">
-              {listing.openingHours.openNow ? 'Open Now' : 'Closed'}
+      <div className="space-y-6">
+        <div className="bg-gray-50 p-6 rounded-lg">
+          <h3 className="text-xl font-bold text-gray-800 mb-4">
+            Business Details
+          </h3>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
+            <p>
+              <strong>Status:</strong> {listing.businessStatus}
             </p>
+            <p>
+              <strong>Types:</strong> {listing.types?.join(', ')}
+            </p>
+            {listing.openingHours && (
+              <p>
+                <strong>Availability:</strong>{' '}
+                {listing.openingHours.openNow ? 'Open Now' : 'Closed'}
+              </p>
+            )}
           </div>
-        )}
-        <hr className="my-6" />
-        <LocationSection listing={location} address={address} />
-        <hr className="my-6" />
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">FAQ</h3>
-          <p>FAQ content goes here.</p>
         </div>
-        <hr className="my-6" />
-        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+        <div className="py-8">
+          <LocationSection listing={location} address={address} />
+        </div>
+        <div className="bg-gray-50 py-8 px-6 rounded-lg">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">FAQ</h3>
+          <p className="text-gray-600">FAQ content goes here.</p>
+        </div>
+        <div className="py-8">
+          <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+        </div>
       </div>
     );
   }
 
   // InHouseBusiness
   return (
-    <div className="space-y-6">
+    <div className="-mx-6">
       {!isGoogle && !(listing as InHouseBusiness).isClaimed && (
-        <div className="border-t pt-6">
-          <h3 className="text-xl font-bold">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mx-6 mb-8 rounded-r-lg">
+          <h3 className="text-xl font-bold text-yellow-800">
             Do you know the owner of this business?
           </h3>
-          <p className="text-gray-700 mt-2">
+          <p className="text-yellow-700 mt-2">
             Tell them to claim this listing to unlock more features and manage
             their business information.
           </p>
           <Button
             onClick={handleCopy}
-            className="mt-4 bg-red-500 hover:bg-red-600 text-white"
+            className="mt-4 bg-yellow-500 hover:bg-yellow-600 text-white"
           >
             {isCopied ? 'Copied!' : 'Copy Listing URL'}
           </Button>
         </div>
       )}
-      <div>
-        <h3 className="text-xl font-bold">
+
+      {/* About Section */}
+      <div className="py-8 px-6">
+        <h3 className="text-2xl font-bold text-gray-800 mb-3">
           About {listing.businessName}
         </h3>
-        <p className="text-gray-700 leading-relaxed mt-2">
+        <p className="text-gray-600 leading-relaxed">
           {listing.about || listing.shortDescription}
         </p>
       </div>
 
+      {/* Opening Hours Section */}
       {listing.businessHours && listing.businessHours.length > 0 && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">
+        <div className="bg-slate-50 py-8 px-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">
             Opening Hours
           </h3>
-          <ul className="text-gray-700 mt-2 space-y-1">
+          <ul className="space-y-2">
             {listing.businessHours
               .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
               .map(hour => (
-                <li key={hour.id} className="flex justify-between">
-                  <span>{daysOfWeek[hour.dayOfWeek]}</span>
-                  <span>
+                <li
+                  key={hour.id}
+                  className={`flex justify-between p-3 rounded-lg ${
+                    hour.dayOfWeek === today
+                      ? 'bg-red-100 text-red-800'
+                      : 'text-gray-700'
+                  }`}
+                >
+                  <span className="font-semibold">
+                    {daysOfWeek[hour.dayOfWeek]}
+                  </span>
+                  <span
+                    className={
+                      hour.dayOfWeek === today ? 'font-bold' : ''
+                    }
+                  >
                     {hour.is24h
                       ? '24 Hours'
                       : `${formatTime(hour.openTime)} - ${formatTime(
@@ -377,87 +407,86 @@ function OverviewSection({
         </div>
       )}
 
-      {listing.productSellerProfile && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">
-            Seller Information
+      {/* Amenities Section */}
+      {(listing.productSellerProfile || listing.serviceProviderProfile) && (
+        <div className="py-8 px-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">
+            Amenities & Services
           </h3>
-          <div className="text-gray-700 mt-2 space-y-2">
-            <p>
-              <strong>Selling Modes:</strong>{' '}
-              {listing.productSellerProfile.sellingModes.join(', ')}
-            </p>
-            {listing.productSellerProfile.returnsPolicy && (
-              <p>
-                <strong>Returns Policy:</strong>{' '}
-                {listing.productSellerProfile.returnsPolicy}
-              </p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {listing.productSellerProfile && (
+              <>
+                <div className="flex items-start space-x-3">
+                  <Truck className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
+                  <div>
+                    <h4 className="font-semibold">Selling Modes</h4>
+                    <p className="text-gray-600">
+                      {listing.productSellerProfile.sellingModes.join(', ')}
+                    </p>
+                  </div>
+                </div>
+                {listing.productSellerProfile.returnsPolicy && (
+                  <div className="flex items-start space-x-3">
+                    <Info className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
+                    <div>
+                      <h4 className="font-semibold">Returns Policy</h4>
+                      <p className="text-gray-600">
+                        {listing.productSellerProfile.returnsPolicy}
+                      </p>
+                    </div>
+                  </div>
+                )}
+              </>
             )}
-            {listing.productSellerProfile.fulfilmentNotes && (
-              <p>
-                <strong>Fulfilment Notes:</strong>{' '}
-                {listing.productSellerProfile.fulfilmentNotes}
-              </p>
+            {listing.serviceProviderProfile && (
+              <div className="flex items-start space-x-3">
+                <Clock className="h-6 w-6 text-red-500 flex-shrink-0 mt-1" />
+                <div>
+                  <h4 className="font-semibold">Booking Method</h4>
+                  <p className="text-gray-600">
+                    {listing.serviceProviderProfile.bookingMethod}
+                  </p>
+                </div>
+              </div>
             )}
           </div>
         </div>
       )}
 
-      {listing.serviceProviderProfile && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">
-            Service Information
-          </h3>
-          <div className="text-gray-700 mt-2 space-y-2">
-            <p>
-              <strong>Booking Method:</strong>{' '}
-              {listing.serviceProviderProfile.bookingMethod}
-            </p>
-            {listing.serviceProviderProfile.bookingUrl && (
-              <p>
-                <strong>Book Online:</strong>{' '}
-                <a
-                  href={listing.serviceProviderProfile.bookingUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="text-red-500 hover:underline"
-                >
-                  {listing.serviceProviderProfile.bookingUrl}
-                </a>
-              </p>
-            )}
-          </div>
-        </div>
-      )}
-
+      {/* Contact Info Section */}
       {(listing.website || listing.businessEmail) && (
-        <div>
-          <h3 className="text-xl font-bold border-t pt-6">
-            Contact Information
+        <div className="bg-slate-50 py-8 px-6">
+          <h3 className="text-2xl font-bold text-gray-800 mb-4">
+            Contact
           </h3>
-          <div className="flex flex-col space-y-2 mt-2">
+          <div className="space-y-3">
             {listing.website && (
               <a
                 href={listing.website}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-red-500 hover:underline"
+                className="flex items-center text-red-500 hover:underline"
               >
+                <Globe className="mr-2 h-5 w-5" />
                 {listing.website}
               </a>
             )}
           </div>
         </div>
       )}
-      <hr className="my-6" />
-      <LocationSection listing={location} address={address} />
-      <hr className="my-6" />
-      <div>
-        <h3 className="text-xl font-bold border-t pt-6">FAQ</h3>
-        <p>FAQ content goes here.</p>
+
+      <div className="py-8 px-6">
+        <LocationSection listing={location} address={address} />
       </div>
-      <hr className="my-6" />
-      <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+
+      <div className="bg-slate-50 py-8 px-6">
+        <h3 className="text-2xl font-bold text-gray-800 mb-4">FAQ</h3>
+        <p className="text-gray-600">FAQ content goes here.</p>
+      </div>
+
+      <div className="py-8 px-6">
+        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+      </div>
     </div>
   );
 }

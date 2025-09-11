@@ -29,7 +29,13 @@ import { SuccessDialog } from './ui/SuccessDialog';
 interface BookingSidebarProps {
   priceDisplay: string;
   phoneNumber: string;
-  author: { id: string; name: string; avatarUrl: string; bio: string };
+  author: {
+    id: string;
+    name: string;
+    email: string;
+    avatarUrl: string;
+    bio: string;
+  };
   isVerified?: boolean;
   currentUserId?: string;
   businessId: string;
@@ -205,7 +211,8 @@ export default function BookingSidebar({
             </p>
             <p className="flex items-center">
               <MessageSquare className="mr-2 h-4 w-4 text-gray-400" />{' '}
-              {author.name.toLowerCase().replace(' ', '.')}@listedemo.pro
+              {author.email ||
+                `${author.name.toLowerCase().replace(' ', '.')}@listedemo.pro`}
             </p>
           </div>
           <div className="mt-6 space-y-3">
@@ -217,12 +224,6 @@ export default function BookingSidebar({
                 Chat Business Owner
               </Button>
             )}
-            <Button
-              variant="outline"
-              className="w-full border-green-500 text-green-500 hover:bg-green-50 hover:text-green-600"
-            >
-              Chat via WhatsApp
-            </Button>
           </div>
         </CardContent>
       </Card>
