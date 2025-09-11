@@ -47,12 +47,12 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   }
 
   const getPriceDisplay = (service: Service) => {
-    switch (service.pricingModel.toUpperCase()) {
-      case 'FIXED':
+    switch (service.pricingModel) {
+      case 'fixed':
         return `£${service.fixedPrice}`;
-      case 'HOURLY':
+      case 'perHour':
         return `£${service.pricePerHour}/hour`;
-      case 'PER_UNIT':
+      case 'perUnit':
         return `£${service.pricePerUnit}/${service.unitName}`;
       default:
         return 'Price not available';
@@ -123,7 +123,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
 
             {/* Service Details */}
             <div className="text-sm text-gray-500 space-y-2 pt-4 border-t">
-              {service.pricingModel === 'HOURLY' && (
+              {service.pricingModel === 'perHour' && (
                   <p className="flex items-center"><Clock className="h-4 w-4 mr-2" /> Billed hourly</p>
               )}
               {service.enableGuestPricing && (
