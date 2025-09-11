@@ -3,6 +3,7 @@ import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import Image from 'next/image';
+import Footer from '@/components/Footer';
 
 const blogPosts = [
   {
@@ -137,6 +138,7 @@ const BlogPage = () => {
           ))}
         </div>
       </motion.section>
+      <Footer />
     </div>
   );
 };

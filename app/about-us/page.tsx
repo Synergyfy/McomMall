@@ -2,6 +2,7 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import { Users, Target, Eye } from 'lucide-react';
+import Footer from '@/components/Footer';
 
 const AboutUsPage = () => {
   const fadeIn = {
@@ -87,6 +88,7 @@ const AboutUsPage = () => {
           </div>
         </div>
       </section>
+      <Footer />
     </div>
   );
 };

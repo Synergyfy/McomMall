@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { motion } from 'framer-motion';
+import Footer from '@/components/Footer';
 
 const PrivacyPolicyPage = () => {
   const sectionVariant = {
@@ -100,6 +101,7 @@ const PrivacyPolicyPage = () => {
           </p>
         </motion.div>
       </motion.section>
+      <Footer />
     </div>
   );
 };
