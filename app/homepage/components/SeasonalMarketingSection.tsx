@@ -91,7 +91,7 @@ const SeasonContent: React.FC<SeasonContentProps> = ({ season }) => {
           {season.description}
         </p>
         <Link
-          href={`/${season.id}`}
+          href={`/seasons/${season.id}`}
           className={`mt-8 inline-flex items-center gap-3 rounded-full px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 ${season.buttonClasses}`}
         >
           <span>Get Started</span>
