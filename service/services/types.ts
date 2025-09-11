@@ -30,10 +30,10 @@ export interface CreateServiceDto {
   additionalGuestPrice?: number;
   isQuoteModel?: boolean;
   bookingFee?: number;
-  bundledServices?: { name: string; price: number }[];
+  bundledServices?: { name: string; price?: number }[];
   configurableAddons?: {
     name:string;
-    price: number;
+    price?: number;
     pricingType: 'oneTime' | 'perGuest' | 'perUnit';
     unitName?: string;
   }[];

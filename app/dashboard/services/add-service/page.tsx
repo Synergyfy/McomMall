@@ -54,21 +54,21 @@ const AddServicePage = () => {
     isActive: true,
     businessId: '',
     pricingModel: 'fixed',
-    fixedPrice: 0,
-    pricePerHour: 0,
-    pricePerUnit: 0,
+    fixedPrice: undefined,
+    pricePerHour: undefined,
+    pricePerUnit: undefined,
     unitName: '',
     enableGuestPricing: false,
     guestPricingModel: 'perGuest',
-    minGuests: 0,
-    maxGuests: 0,
-    pricePerGuest: 0,
-    fixedGroupPrice: 0,
-    basePrice: 0,
-    baseGuests: 0,
-    additionalGuestPrice: 0,
+    minGuests: undefined,
+    maxGuests: undefined,
+    pricePerGuest: undefined,
+    fixedGroupPrice: undefined,
+    basePrice: undefined,
+    baseGuests: undefined,
+    additionalGuestPrice: undefined,
     isQuoteModel: false,
-    bookingFee: 0,
+    bookingFee: undefined,
     bundledServices: [],
     configurableAddons: [],
   });
@@ -103,46 +103,84 @@ const AddServicePage = () => {
       newErrors.businessId = 'Please select a business.';
 
     // Pricing model validation
-    if (formData.pricingModel === 'fixed' && !formData.fixedPrice) {
+    if (formData.pricingModel === 'fixed' && formData.fixedPrice == null) {
       newErrors.fixedPrice = 'Fixed price is required.';
+    } else if (formData.fixedPrice != null && formData.fixedPrice < 0) {
+      newErrors.fixedPrice = 'Price must not be less than 0.';
     }
-    if (formData.pricingModel === 'perHour' && !formData.pricePerHour) {
+
+    if (formData.pricingModel === 'perHour' && formData.pricePerHour == null) {
       newErrors.pricePerHour = 'Price per hour is required.';
+    } else if (formData.pricePerHour != null && formData.pricePerHour < 0) {
+      newErrors.pricePerHour = 'Price must not be less than 0.';
     }
+
     if (formData.pricingModel === 'perUnit') {
-      if (!formData.pricePerUnit)
+      if (formData.pricePerUnit == null)
         newErrors.pricePerUnit = 'Price per unit is required.';
+      else if (formData.pricePerUnit < 0)
+        newErrors.pricePerUnit = 'Price must not be less than 0.';
       if (!formData.unitName) newErrors.unitName = 'Unit name is required.';
     }
 
     // Guest pricing validation
     if (formData.enableGuestPricing) {
-      if (!formData.minGuests) newErrors.minGuests = 'Min guests is required.';
-      if (!formData.maxGuests) newErrors.maxGuests = 'Max guests is required.';
+      if (formData.minGuests == null) {
+        newErrors.minGuests = 'Min guests is required.';
+      } else if (formData.minGuests < 1) {
+        newErrors.minGuests = 'Min guests must not be less than 1.';
+      }
+
+      if (formData.maxGuests == null) {
+        newErrors.maxGuests = 'Max guests is required.';
+      } else if (formData.maxGuests < 1) {
+        newErrors.maxGuests = 'Max guests must not be less than 1.';
+      }
+
       if (
         formData.guestPricingModel === 'perGuest' &&
-        !formData.pricePerGuest
+        formData.pricePerGuest == null
       ) {
         newErrors.pricePerGuest = 'Price per guest is required.';
+      } else if (formData.pricePerGuest != null && formData.pricePerGuest < 0) {
+        newErrors.pricePerGuest = 'Price must not be less than 0.';
       }
+
       if (
         formData.guestPricingModel === 'fixedGroup' &&
-        !formData.fixedGroupPrice
+        formData.fixedGroupPrice == null
       ) {
         newErrors.fixedGroupPrice = 'Fixed group price is required.';
+      } else if (
+        formData.fixedGroupPrice != null &&
+        formData.fixedGroupPrice < 0
+      ) {
+        newErrors.fixedGroupPrice = 'Price must not be less than 0.';
       }
+
       if (formData.guestPricingModel === 'baseWithAdditional') {
-        if (!formData.basePrice) newErrors.basePrice = 'Base price is required.';
-        if (!formData.baseGuests)
+        if (formData.basePrice == null)
+          newErrors.basePrice = 'Base price is required.';
+        else if (formData.basePrice < 0)
+          newErrors.basePrice = 'Price must not be less than 0.';
+
+        if (formData.baseGuests == null)
           newErrors.baseGuests = 'Base guests number is required.';
-        if (!formData.additionalGuestPrice)
+        else if (formData.baseGuests < 1)
+          newErrors.baseGuests = 'Base guests must not be less than 1.';
+
+        if (formData.additionalGuestPrice == null)
           newErrors.additionalGuestPrice = 'Additional guest price is required.';
+        else if (formData.additionalGuestPrice < 0)
+          newErrors.additionalGuestPrice = 'Price must not be less than 0.';
       }
     }
 
     // Quote model validation
-    if (formData.isQuoteModel && !formData.bookingFee) {
+    if (formData.isQuoteModel && formData.bookingFee == null) {
       newErrors.bookingFee = 'Booking fee is required.';
+    } else if (formData.bookingFee != null && formData.bookingFee < 0) {
+      newErrors.bookingFee = 'Booking fee must not be less than 0.';
     }
 
     setErrors(newErrors);
@@ -153,7 +191,12 @@ const AddServicePage = () => {
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    const isNumber = e.target.type === 'number';
+
+    setFormData(prev => ({
+      ...prev,
+      [name]: isNumber ? (value === '' ? undefined : Number(value)) : value,
+    }));
   };
 
   const handleSelectChange = (name: string, value: string) => {
@@ -583,7 +626,7 @@ const AddServicePage = () => {
                     ...prev,
                     bundledServices: [
                       ...(prev.bundledServices ?? []),
-                      { name: '', price: 0 },
+                      { name: '', price: undefined },
                     ],
                   }));
                 }}
@@ -690,7 +733,7 @@ const AddServicePage = () => {
                       ...(prev.configurableAddons ?? []),
                       {
                         name: '',
-                        price: 0,
+                        price: undefined,
                         pricingType: 'oneTime',
                         unitName: '',
                       },
