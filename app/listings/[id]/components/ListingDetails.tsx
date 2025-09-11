@@ -170,6 +170,7 @@ export default function ClientListingDetail({
                     name: isGoogle
                       ? listing?.name ?? ''
                       : listing?.user?.name ?? listing.businessName,
+                    email: isGoogle ? '' : listing?.user?.email ?? '',
                     avatarUrl: '', // Provide a default or actual avatar URL if available
                     bio: '', // Provide a default or actual bio if available
                   }}
