@@ -324,21 +324,25 @@ function OverviewSection({
             )}
           </div>
         </div>
-        <LocationSection listing={location} address={address} />
-        <div className="border-t pt-6">
+        <div className="py-8">
+          <LocationSection listing={location} address={address} />
+        </div>
+        <div className="bg-gray-50 py-8 px-6 rounded-lg">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">FAQ</h3>
           <p className="text-gray-600">FAQ content goes here.</p>
         </div>
-        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+        <div className="py-8">
+          <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+        </div>
       </div>
     );
   }
 
   // InHouseBusiness
   return (
-    <div className="space-y-10">
+    <div className="-mx-6">
       {!isGoogle && !(listing as InHouseBusiness).isClaimed && (
-        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-4 rounded-r-lg">
+        <div className="bg-yellow-50 border-l-4 border-yellow-400 p-6 mx-6 mb-8 rounded-r-lg">
           <h3 className="text-xl font-bold text-yellow-800">
             Do you know the owner of this business?
           </h3>
@@ -356,7 +360,7 @@ function OverviewSection({
       )}
 
       {/* About Section */}
-      <div>
+      <div className="py-8 px-6">
         <h3 className="text-2xl font-bold text-gray-800 mb-3">
           About {listing.businessName}
         </h3>
@@ -367,7 +371,7 @@ function OverviewSection({
 
       {/* Opening Hours Section */}
       {listing.businessHours && listing.businessHours.length > 0 && (
-        <div className="border-t pt-6">
+        <div className="bg-slate-50 py-8 px-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">
             Opening Hours
           </h3>
@@ -379,7 +383,7 @@ function OverviewSection({
                   key={hour.id}
                   className={`flex justify-between p-3 rounded-lg ${
                     hour.dayOfWeek === today
-                      ? 'bg-red-50 text-red-800'
+                      ? 'bg-red-100 text-red-800'
                       : 'text-gray-700'
                   }`}
                 >
@@ -405,11 +409,11 @@ function OverviewSection({
 
       {/* Amenities Section */}
       {(listing.productSellerProfile || listing.serviceProviderProfile) && (
-        <div className="border-t pt-6">
+        <div className="py-8 px-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">
             Amenities & Services
           </h3>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {listing.productSellerProfile && (
               <>
                 <div className="flex items-start space-x-3">
@@ -451,7 +455,7 @@ function OverviewSection({
 
       {/* Contact Info Section */}
       {(listing.website || listing.businessEmail) && (
-        <div className="border-t pt-6">
+        <div className="bg-slate-50 py-8 px-6">
           <h3 className="text-2xl font-bold text-gray-800 mb-4">
             Contact
           </h3>
@@ -471,14 +475,18 @@ function OverviewSection({
         </div>
       )}
 
-      <LocationSection listing={location} address={address} />
+      <div className="py-8 px-6">
+        <LocationSection listing={location} address={address} />
+      </div>
 
-      <div className="border-t pt-6">
+      <div className="bg-slate-50 py-8 px-6">
         <h3 className="text-2xl font-bold text-gray-800 mb-4">FAQ</h3>
         <p className="text-gray-600">FAQ content goes here.</p>
       </div>
 
-      <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+      <div className="py-8 px-6">
+        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+      </div>
     </div>
   );
 }
