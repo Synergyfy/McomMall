@@ -366,7 +366,7 @@ export function NavMenu() {
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
-                className={`absolute top-full z-20 mt-2 rounded-lg bg-white text-gray-900 shadow-lg
+                className={`absolute top-full z-50 mt-2 rounded-lg bg-white text-gray-900 shadow-lg
                   ${
                     item.title === 'Business Category'
                       ? 'left-1/2 w-screen max-w-7xl -translate-x-1/2'
