@@ -25,8 +25,8 @@ export interface CreatePromotionDto {
   description?: string;
   termsAndConditions?: string;
   isActive: boolean;
-  beginDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  beginDate?: string;
+  endDate?: string;
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
   promotionScope:
     | 'ALL_LISTINGS'

@@ -168,12 +168,8 @@ export default function OfferForm() {
           name: formData.name,
           description: formData.description,
           points: parseInt(formData.points, 10),
-          beginDate: formData.beginDate
-            ? new Date(formData.beginDate).toISOString()
-            : undefined,
-          endDate: formData.endDate
-            ? new Date(formData.endDate).toISOString()
-            : undefined,
+          beginDate: formData.beginDate || undefined,
+          endDate: formData.endDate || undefined,
           rewardCouponType: formData.rewardCouponType as
             | 'FIXED_CART_DISCOUNT'
             | 'PERCENTAGE_DISCOUNT'
