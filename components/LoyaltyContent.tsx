@@ -1,7 +1,5 @@
 'use client';
 
-import { InHouseBusiness } from '@/service/listings/types';
-import { GooglePlaceResult } from '@/service/listings/types';
 import {
   useCheckPromotions,
   useParticipateInPromotion,
@@ -12,24 +10,19 @@ import { format } from 'date-fns';
 import { Calendar, Tag, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
-const LoyaltyContent = ({
-  listing,
-}: {
-  listing: GooglePlaceResult | InHouseBusiness;
-}) => {
-  function isGoogleResult(
-    listing: GooglePlaceResult | InHouseBusiness
-  ): listing is GooglePlaceResult {
-    return 'placeId' in listing;
-  }
-  const isGoogle = isGoogleResult(listing);
+type LoyaltyContentProps = {
+  businessId?: string;
+  productId?: string;
+};
 
+const LoyaltyContent = ({ businessId, productId }: LoyaltyContentProps) => {
   const {
     data: promotions,
     isLoading,
     isError,
   } = useCheckPromotions({
-    businessId: isGoogle ? undefined : listing.id,
+    businessId,
+    productId,
   });
 
   const participateMutation = useParticipateInPromotion();
@@ -49,10 +42,6 @@ const LoyaltyContent = ({
     if (!dateString) return 'N/A';
     return format(new Date(dateString), 'PPP');
   };
-
-  if (isGoogle) {
-    return null;
-  }
 
   if (isLoading) {
     return (
@@ -83,11 +72,11 @@ const LoyaltyContent = ({
   return (
     <div>
       <h3 className="text-2xl font-bold border-t pt-6 text-gray-800">
-        Loyalty & Reward Program
+        Promotions
       </h3>
       {promotions && promotions.length > 0 ? (
         <div className="space-y-6 mt-6">
-          {promotions.map(promotion => (
+          {promotions.map((promotion) => (
             <div
               key={promotion.id}
               className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
@@ -122,12 +111,16 @@ const LoyaltyContent = ({
                   <div className="flex items-center text-sm text-gray-600">
                     <ShieldCheck className="h-5 w-5 mr-3 text-red-500" />
                     <span className="font-semibold mr-2">Scope:</span>
-                    <Badge variant="outline">{promotion.promotionScope}</Badge>
+                    <Badge variant="outline">
+                      {promotion.promotionScope}
+                    </Badge>
                   </div>
                 )}
                 <div className="flex items-center text-sm text-gray-600">
                   <Calendar className="h-5 w-5 mr-3 text-red-500" />
-                  <span className="font-semibold mr-2">Promotion Period:</span>
+                  <span className="font-semibold mr-2">
+                    Promotion Period:
+                  </span>
                   <span>
                     {formatDate(promotion.beginDate)} -{' '}
                     {formatDate(promotion.endDate)}
@@ -152,7 +145,7 @@ const LoyaltyContent = ({
             No Promotions Available
           </h4>
           <p className="text-gray-500 mt-2">
-            This business does not have any active promotions at the moment.
+            This product does not have any active promotions at the moment.
             Check back later!
           </p>
         </div>

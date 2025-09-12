@@ -9,6 +9,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
+import LoyaltyContent from '@/components/LoyaltyContent';
 
 type ProductDetailsProps = {
   productId: string;
@@ -183,10 +184,11 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
         {/* Description, Reviews, etc. */}
         <div className="mt-16">
           <Tabs defaultValue="description">
-            <TabsList className="grid w-full grid-cols-3">
+            <TabsList className="grid w-full grid-cols-4">
               <TabsTrigger value="description">Description</TabsTrigger>
               <TabsTrigger value="reviews">Reviews</TabsTrigger>
               <TabsTrigger value="shipping">Shipping & Returns</TabsTrigger>
+              <TabsTrigger value="promotions">Promotions</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-4 p-6 border rounded-md">
               <p className="text-gray-700 whitespace-pre-wrap">
@@ -202,6 +204,9 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 business days. Returns are accepted within 30 days of
                 purchase.
               </p>
+            </TabsContent>
+            <TabsContent value="promotions" className="mt-4">
+              <LoyaltyContent productId={productId} />
             </TabsContent>
           </Tabs>
         </div>

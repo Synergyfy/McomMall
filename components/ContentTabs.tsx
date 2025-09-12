@@ -499,6 +499,9 @@ function AboutBusinessTabs({
   listing: GooglePlaceResult | InHouseBusiness;
   isLoading: boolean;
 }) {
+  const isGoogle = isGoogleResult(listing);
+  const businessId = isGoogle ? undefined : listing.id;
+
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -511,7 +514,7 @@ function AboutBusinessTabs({
         <OverviewSection listing={listing} isLoading={isLoading} />
       </TabsContent>
       <TabsContent value="loyalty">
-        <LoyaltyContent listing={listing} />
+        <LoyaltyContent businessId={businessId} />
       </TabsContent>
       <TabsContent value="voucher">
         <p>Voucher content goes here.</p>
