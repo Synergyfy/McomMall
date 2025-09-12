@@ -6,7 +6,7 @@ import {
 } from '@/service/promotions/hook';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { format } from 'date-fns';
+import { format, isFuture } from 'date-fns';
 import { Calendar, Tag, ShieldCheck } from 'lucide-react';
 import { toast } from 'sonner';
 
@@ -76,68 +76,79 @@ const LoyaltyContent = ({ businessId, productId }: LoyaltyContentProps) => {
       </h3>
       {promotions && promotions.length > 0 ? (
         <div className="space-y-6 mt-6">
-          {promotions.map((promotion) => (
-            <div
-              key={promotion.id}
-              className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
-            >
-              <div className="flex flex-col md:flex-row justify-between items-start">
-                <div className="flex-grow">
-                  <h4 className="font-bold text-xl text-gray-900">
-                    {promotion.name}
-                  </h4>
-                  <p className="text-gray-600 mt-2">
-                    {promotion.description}
-                  </p>
-                </div>
-                <Button
-                  className="mt-4 md:mt-0 md:ml-6 shrink-0"
-                  onClick={() => handleParticipate(promotion.id)}
-                  disabled={participateMutation.isPending}
-                >
-                  {participateMutation.isPending
-                    ? 'Registering...'
-                    : 'Participate'}
-                </Button>
-              </div>
+          {promotions.map((promotion) => {
+            const isFuturePromotion =
+              promotion.beginDate && isFuture(new Date(promotion.beginDate));
 
-              <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
-                <div className="flex items-center text-sm text-gray-600">
-                  <Tag className="h-5 w-5 mr-3 text-red-500" />
-                  <span className="font-semibold mr-2">Type:</span>
-                  <Badge variant="secondary">{promotion.promotionType}</Badge>
+            return (
+              <div
+                key={promotion.id}
+                className="bg-white border border-gray-200 p-6 rounded-xl shadow-sm hover:shadow-md transition-shadow duration-300"
+              >
+                <div className="flex flex-col md:flex-row justify-between items-start">
+                  <div className="flex-grow">
+                    <h4 className="font-bold text-xl text-gray-900">
+                      {promotion.name}
+                    </h4>
+                    <p className="text-gray-600 mt-2">
+                      {promotion.description}
+                    </p>
+                  </div>
+                  <Button
+                    className="mt-4 md:mt-0 md:ml-6 shrink-0"
+                    onClick={() => handleParticipate(promotion.id)}
+                    disabled={
+                      participateMutation.isPending || !!isFuturePromotion
+                    }
+                  >
+                    {isFuturePromotion
+                      ? 'Coming soon'
+                      : participateMutation.isPending
+                      ? 'Registering...'
+                      : 'Participate'}
+                  </Button>
                 </div>
-                {promotion.promotionScope && (
+
+                <div className="mt-4 pt-4 border-t border-gray-100 space-y-4">
                   <div className="flex items-center text-sm text-gray-600">
-                    <ShieldCheck className="h-5 w-5 mr-3 text-red-500" />
-                    <span className="font-semibold mr-2">Scope:</span>
-                    <Badge variant="outline">
-                      {promotion.promotionScope}
+                    <Tag className="h-5 w-5 mr-3 text-red-500" />
+                    <span className="font-semibold mr-2">Type:</span>
+                    <Badge variant="secondary">
+                      {promotion.promotionType}
                     </Badge>
                   </div>
-                )}
-                <div className="flex items-center text-sm text-gray-600">
-                  <Calendar className="h-5 w-5 mr-3 text-red-500" />
-                  <span className="font-semibold mr-2">
-                    Promotion Period:
-                  </span>
-                  <span>
-                    {formatDate(promotion.beginDate)} -{' '}
-                    {formatDate(promotion.endDate)}
-                  </span>
+                  {promotion.promotionScope && (
+                    <div className="flex items-center text-sm text-gray-600">
+                      <ShieldCheck className="h-5 w-5 mr-3 text-red-500" />
+                      <span className="font-semibold mr-2">Scope:</span>
+                      <Badge variant="outline">
+                        {promotion.promotionScope}
+                      </Badge>
+                    </div>
+                  )}
+                  <div className="flex items-center text-sm text-gray-600">
+                    <Calendar className="h-5 w-5 mr-3 text-red-500" />
+                    <span className="font-semibold mr-2">
+                      Promotion Period:
+                    </span>
+                    <span>
+                      {formatDate(promotion.beginDate)} -{' '}
+                      {formatDate(promotion.endDate)}
+                    </span>
+                  </div>
                 </div>
-              </div>
 
-              {promotion.termsAndConditions && (
-                <div className="mt-4">
-                  <p className="text-xs text-gray-500">
-                    <strong>Terms & Conditions:</strong>{' '}
-                    {promotion.termsAndConditions}
-                  </p>
-                </div>
-              )}
-            </div>
-          ))}
+                {promotion.termsAndConditions && (
+                  <div className="mt-4">
+                    <p className="text-xs text-gray-500">
+                      <strong>Terms & Conditions:</strong>{' '}
+                      {promotion.termsAndConditions}
+                    </p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       ) : (
         <div className="text-center py-12 px-6 bg-gray-50 rounded-lg mt-6">
