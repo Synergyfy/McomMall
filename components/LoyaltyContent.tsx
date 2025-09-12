@@ -2,11 +2,15 @@
 
 import { InHouseBusiness } from '@/service/listings/types';
 import { GooglePlaceResult } from '@/service/listings/types';
-import { useCheckPromotions } from '@/service/promotions/hook';
+import {
+  useCheckPromotions,
+  useParticipateInPromotion,
+} from '@/service/promotions/hook';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
 import { format } from 'date-fns';
 import { Calendar, Tag, ShieldCheck } from 'lucide-react';
+import { toast } from 'sonner';
 
 const LoyaltyContent = ({
   listing,
@@ -27,6 +31,19 @@ const LoyaltyContent = ({
   } = useCheckPromotions({
     businessId: isGoogle ? undefined : listing.id,
   });
+
+  const participateMutation = useParticipateInPromotion();
+
+  const handleParticipate = (promotionId: string) => {
+    participateMutation.mutate(promotionId, {
+      onSuccess: () => {
+        toast.success('Successfully registered for promotion!');
+      },
+      onError: (error) => {
+        toast.error(`Failed to register: ${error.message}`);
+      },
+    });
+  };
 
   const formatDate = (dateString: string | null | undefined) => {
     if (!dateString) return 'N/A';
@@ -86,14 +103,12 @@ const LoyaltyContent = ({
                 </div>
                 <Button
                   className="mt-4 md:mt-0 md:ml-6 shrink-0"
-                  onClick={() =>
-                    console.log(
-                      'Participate button clicked for promotion:',
-                      promotion.id
-                    )
-                  }
+                  onClick={() => handleParticipate(promotion.id)}
+                  disabled={participateMutation.isPending}
                 >
-                  Participate
+                  {participateMutation.isPending
+                    ? 'Registering...'
+                    : 'Participate'}
                 </Button>
               </div>
 

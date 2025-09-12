@@ -53,6 +53,10 @@ const checkPromotions = async (
   return data;
 };
 
+const participateInPromotion = async (promotionId: string): Promise<void> => {
+  await api.post(`/promotions/${promotionId}/participate`);
+};
+
 // React Query Hooks
 
 export const useGetPromotions = () => {
@@ -67,6 +71,17 @@ export const useAddPromotion = () => {
   return useMutation<Promotion, Error, CreatePromotionDto>({
     mutationFn: addPromotion,
     onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+    },
+  });
+};
+
+export const useParticipateInPromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: participateInPromotion,
+    onSuccess: () => {
+      // Invalidate queries that should be updated after participation
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
   });
