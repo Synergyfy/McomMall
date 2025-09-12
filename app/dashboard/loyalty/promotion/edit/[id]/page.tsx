@@ -134,7 +134,7 @@ export default function PromotionEditForm() {
         beginDate: promotion.beginDate ? new Date(promotion.beginDate) : undefined,
         endDate: promotion.endDate ? new Date(promotion.endDate) : undefined,
         promotionType: promotion.promotionType,
-        promotionScope: promotion.promotionScope,
+        promotionScope: promotion.promotionScope || '',
         multiplier: promotion.multiplier?.toString() || '',
         bonusPoints: promotion.bonusPoints?.toString() || '',
         limitPerCustomer: promotion.limitPerCustomer?.toString() || '',
