@@ -5,8 +5,8 @@ import { GooglePlaceResult } from '@/service/listings/types';
 import { useCheckPromotions } from '@/service/promotions/hook';
 import { Button } from './ui/button';
 import { Badge } from './ui/badge';
-import { format }s from 'date-fns';
-import { Calendar, Tag, Scope } from 'lucide-react';
+import { format } from 'date-fns';
+import { Calendar, Tag, ShieldCheck } from 'lucide-react';
 
 const LoyaltyContent = ({
   listing,
@@ -105,7 +105,7 @@ const LoyaltyContent = ({
                 </div>
                 {promotion.promotionScope && (
                   <div className="flex items-center text-sm text-gray-600">
-                    <Scope className="h-5 w-5 mr-3 text-red-500" />
+                    <ShieldCheck className="h-5 w-5 mr-3 text-red-500" />
                     <span className="font-semibold mr-2">Scope:</span>
                     <Badge variant="outline">{promotion.promotionScope}</Badge>
                   </div>
