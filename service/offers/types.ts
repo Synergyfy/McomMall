@@ -47,8 +47,8 @@ export interface CreateOfferDto {
   name: string;
   description?: string;
   points: number;
-  beginDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  beginDate?: string;
+  endDate?: string;
   rewardCouponType:
     | 'FIXED_CART_DISCOUNT'
     | 'PERCENTAGE_DISCOUNT'
@@ -61,8 +61,6 @@ export interface CreateOfferDto {
   excludeSaleItems?: boolean;
   limitPerCustomer?: number;
   allowLimitToReset?: boolean;
-  categoryId: string; // uuid
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs
-  excludedCategoryIds?: string[]; // Array of category UUIDs
 }

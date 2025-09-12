@@ -25,13 +25,19 @@ export interface CreatePromotionDto {
   description?: string;
   termsAndConditions?: string;
   isActive: boolean;
-  beginDate?: string; // ISO date string
-  endDate?: string; // ISO date string
+  beginDate?: string;
+  endDate?: string;
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
+  promotionScope:
+    | 'ALL_LISTINGS'
+    | 'SPECIFIC_LISTINGS'
+    | 'ALL_PRODUCTS'
+    | 'SPECIFIC_PRODUCTS';
   multiplier?: number | null;
   bonusPoints?: number | null;
   limitPerCustomer?: number;
   minimumSpend: string;
+  businessIds?: string[];
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs
 }
