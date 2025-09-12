@@ -58,7 +58,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { CustomDateTimePicker } from '@/components/ui/custom-date-time-picker';
-import { useOffers } from '@/service/offers/hook';
+import { useGetOffers, useAddOffer, useDeleteOffer } from '@/service/offers/hook';
 import { CreateOfferDto, Offer } from '@/service/offers/types';
 import { toast } from 'sonner';
 
@@ -102,7 +102,9 @@ const defaultFormState: FormState = {
 
 // Main Component
 export function OffersManager() {
-  const { offers, isLoading, error, createOffer, deleteOffer } = useOffers();
+  const { data: offers, isLoading, error } = useGetOffers();
+  const { mutateAsync: createOffer } = useAddOffer();
+  const { mutateAsync: deleteOffer } = useDeleteOffer();
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);

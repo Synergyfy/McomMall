@@ -11,7 +11,7 @@ const fetchOffers = async (): Promise<Offer[]> => {
 };
 
 // Create an offer
-const createOffer = async (offerData: CreateOfferDto): Promise<Offer> => {
+const addOffer = async (offerData: CreateOfferDto): Promise<Offer> => {
   const { data } = await api.post<Offer>('/offer', offerData);
   return data;
 };
@@ -21,43 +21,31 @@ const deleteOffer = async (id: string): Promise<void> => {
   await api.delete(`/offer/${id}`);
 };
 
-// React Query Hook
-export const useOffers = () => {
-  const queryClient = useQueryClient();
+// React Query Hooks
 
-  // Query to fetch all offers
-  const {
-    data: offers,
-    isLoading,
-    error,
-  } = useQuery<Offer[]>({
+export const useGetOffers = () => {
+  return useQuery<Offer[], Error>({
     queryKey: ['offers'],
     queryFn: fetchOffers,
   });
+};
 
-  // Mutation to create an offer
-  const createOfferMutation = useMutation<Offer, Error, CreateOfferDto>({
-    mutationFn: createOffer,
+export const useAddOffer = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Offer, Error, CreateOfferDto>({
+    mutationFn: addOffer,
     onSuccess: () => {
-      // Invalidate and refetch the offers query to update the list
       queryClient.invalidateQueries({ queryKey: ['offers'] });
     },
   });
+};
 
-  // Mutation to delete an offer
-  const deleteOfferMutation = useMutation<void, Error, string>({
+export const useDeleteOffer = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
     mutationFn: deleteOffer,
     onSuccess: () => {
-      // Invalidate and refetch the offers query
       queryClient.invalidateQueries({ queryKey: ['offers'] });
     },
   });
-
-  return {
-    offers,
-    isLoading,
-    error,
-    createOffer: createOfferMutation.mutateAsync,
-    deleteOffer: deleteOfferMutation.mutateAsync,
-  };
 };

@@ -11,7 +11,7 @@ const fetchPromotions = async (): Promise<Promotion[]> => {
 };
 
 // Create a promotion
-const createPromotion = async (
+const addPromotion = async (
   promotionData: CreatePromotionDto
 ): Promise<Promotion> => {
   const { data } = await api.post<Promotion>('/promotions', promotionData);
@@ -23,47 +23,31 @@ const deletePromotion = async (id: string): Promise<void> => {
   await api.delete(`/promotions/${id}`);
 };
 
-// React Query Hook
-export const usePromotions = () => {
-  const queryClient = useQueryClient();
+// React Query Hooks
 
-  // Query to fetch all promotions
-  const {
-    data: promotions,
-    isLoading,
-    error,
-  } = useQuery<Promotion[]>({
+export const useGetPromotions = () => {
+  return useQuery<Promotion[], Error>({
     queryKey: ['promotions'],
     queryFn: fetchPromotions,
   });
+};
 
-  // Mutation to create a promotion
-  const createPromotionMutation = useMutation<
-    Promotion,
-    Error,
-    CreatePromotionDto
-  >({
-    mutationFn: createPromotion,
+export const useAddPromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Promotion, Error, CreatePromotionDto>({
+    mutationFn: addPromotion,
     onSuccess: () => {
-      // Invalidate and refetch the promotions query to update the list
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
   });
+};
 
-  // Mutation to delete a promotion
-  const deletePromotionMutation = useMutation<void, Error, string>({
+export const useDeletePromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
     mutationFn: deletePromotion,
     onSuccess: () => {
-      // Invalidate and refetch the promotions query
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
   });
-
-  return {
-    promotions,
-    isLoading,
-    error,
-    createPromotion: createPromotionMutation.mutateAsync,
-    deletePromotion: deletePromotionMutation.mutateAsync,
-  };
 };

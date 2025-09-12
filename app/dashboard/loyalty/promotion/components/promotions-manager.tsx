@@ -56,7 +56,7 @@ import {
   Promotion,
   CreatePromotionDto,
 } from '@/service/promotions/types';
-import { usePromotions } from '@/service/promotions/hook';
+import { useGetPromotions, useAddPromotion, useDeletePromotion } from '@/service/promotions/hook';
 import { toast } from 'sonner';
 
 // Form-specific types
@@ -70,6 +70,7 @@ type FormState = {
   beginDate: Date | undefined;
   endDate: Date | undefined;
   promotionType: FormPromotionType;
+  promotionScope: CreatePromotionDto['promotionScope'];
   multiplier: number;
   bonusPoints: number;
   limitPerCustomer: number;
@@ -88,6 +89,7 @@ const defaultFormState: FormState = {
   beginDate: undefined,
   endDate: undefined,
   promotionType: 'Multiplier',
+  promotionScope: 'ALL_LISTINGS',
   multiplier: 2,
   bonusPoints: 500,
   limitPerCustomer: 1,
@@ -99,12 +101,12 @@ const defaultFormState: FormState = {
 // Main Component
 export function PromotionsManager() {
   const {
-    promotions,
+    data: promotions,
     isLoading,
     error,
-    createPromotion,
-    deletePromotion,
-  } = usePromotions();
+  } = useGetPromotions();
+  const createPromotion = useAddPromotion();
+  const deletePromotion = useDeletePromotion();
 
   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
@@ -139,7 +141,7 @@ export function PromotionsManager() {
     };
 
     try {
-      await createPromotion(promoData);
+      await createPromotion.mutateAsync(promoData);
       toast.success('Promotion created successfully!');
       setCreateModalOpen(false);
       setFormState(defaultFormState);
@@ -153,7 +155,7 @@ export function PromotionsManager() {
   const handleDeletePromotion = async () => {
     if (promotionToDelete === null) return;
     try {
-      await deletePromotion(promotionToDelete);
+      await deletePromotion.mutateAsync(promotionToDelete);
       toast.success('Promotion deleted successfully!');
       setDeleteAlertOpen(false);
       setPromotionToDelete(null);
