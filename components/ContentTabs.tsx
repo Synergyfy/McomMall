@@ -35,6 +35,7 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LoyaltyContent from './LoyaltyContent';
 
 function ProductPage({
   listing,
@@ -510,7 +511,7 @@ function AboutBusinessTabs({
         <OverviewSection listing={listing} isLoading={isLoading} />
       </TabsContent>
       <TabsContent value="loyalty">
-        <p>Loyalty & Reward content goes here.</p>
+        <LoyaltyContent listing={listing} />
       </TabsContent>
       <TabsContent value="voucher">
         <p>Voucher content goes here.</p>

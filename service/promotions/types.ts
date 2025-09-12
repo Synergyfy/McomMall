@@ -50,10 +50,15 @@ export interface CreatePromotionDto {
 
 export interface UpdatePromotionDto extends Partial<CreatePromotionDto> {}
 
+export interface CheckPromotionDto {
+  businessId?: string;
+  productId?: string;
+}
+
 // A placeholder for the Product type.
 // In a real application, this might be imported from another module.
 export interface Product {
   id: string; // uuid
-  name:string;
+  name: string;
   // other product fields...
 }

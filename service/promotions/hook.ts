@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { Promotion, CreatePromotionDto, UpdatePromotionDto } from './types';
+import {
+  Promotion,
+  CreatePromotionDto,
+  UpdatePromotionDto,
+  CheckPromotionDto,
+} from './types';
 
 // API Functions
 
@@ -41,6 +46,13 @@ const deletePromotion = async (id: string): Promise<void> => {
   await api.delete(`/promotions/${id}`);
 };
 
+const checkPromotions = async (
+  params: CheckPromotionDto
+): Promise<Promotion[]> => {
+  const { data } = await api.get<Promotion[]>('/promotions/check', { params });
+  return data;
+};
+
 // React Query Hooks
 
 export const useGetPromotions = () => {
@@ -57,6 +69,14 @@ export const useAddPromotion = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
+  });
+};
+
+export const useCheckPromotions = (params: CheckPromotionDto) => {
+  return useQuery<Promotion[], Error>({
+    queryKey: ['promotions', 'check', params],
+    queryFn: () => checkPromotions(params),
+    enabled: !!params.businessId || !!params.productId,
   });
 };
 
