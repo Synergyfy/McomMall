@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import {
   FileText,
   Tag,
@@ -120,6 +120,16 @@ export default function PromotionForm() {
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
+
+  const includedProductsOptions = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => !formData.excludedProductIds.includes(p.id));
+  }, [products, formData.excludedProductIds]);
+
+  const excludedProductsOptions = useMemo(() => {
+    if (!products) return [];
+    return products.filter(p => !formData.includedProductIds.includes(p.id));
+  }, [products, formData.includedProductIds]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -493,7 +503,7 @@ export default function PromotionForm() {
                             {isLoadingProducts ? (
                               <CommandItem>Loading...</CommandItem>
                             ) : (
-                              products?.map((product: Product) => (
+                              includedProductsOptions?.map((product: Product) => (
                                 <CommandItem
                                   key={product.id}
                                   onSelect={() =>
@@ -551,7 +561,7 @@ export default function PromotionForm() {
                             {isLoadingProducts ? (
                               <CommandItem>Loading...</CommandItem>
                             ) : (
-                              products?.map((product: Product) => (
+                              excludedProductsOptions?.map((product: Product) => (
                                 <CommandItem
                                   key={product.id}
                                   onSelect={() =>
