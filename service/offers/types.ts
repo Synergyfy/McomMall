@@ -47,8 +47,8 @@ export interface CreateOfferDto {
   name: string;
   description?: string;
   points: number;
-  beginDate?: string;
-  endDate?: string;
+  beginDate?: Date;
+  endDate?: Date;
   rewardCouponType:
     | 'FIXED_CART_DISCOUNT'
     | 'PERCENTAGE_DISCOUNT'

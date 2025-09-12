@@ -194,8 +194,12 @@ export default function PromotionForm() {
           description: formData.description,
           termsAndConditions: formData.termsAndConditions,
           isActive: formData.isActive,
-          beginDate: formData.beginDate || undefined,
-          endDate: formData.endDate || undefined,
+          beginDate: formData.beginDate
+            ? new Date(formData.beginDate)
+            : undefined,
+          endDate: formData.endDate
+            ? new Date(formData.endDate)
+            : undefined,
           promotionType: formData.promotionType as
             | 'MULTIPLIER'
             | 'BONUS_POINTS',
