@@ -53,7 +53,6 @@ import {
 import { cn } from '@/lib/utils';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { Product } from '@/service/store/products/types';
-import { businessCategories } from '@/lib/business-categories';
 
 interface FormData {
   name: string;
@@ -74,33 +73,24 @@ interface FormData {
   excludeSaleItems: boolean;
   limitPerCustomer: string;
   allowLimitToReset: boolean;
-  categoryId: string;
   includedProductIds: string[];
   excludedProductIds: string[];
-  excludedCategoryIds: string[];
 }
 
 interface FormErrors {
   name?: string;
   points?: string;
   rewardCouponType?: string;
-  categoryId?: string;
 }
 
 export default function OfferForm() {
   const router = useRouter();
   const createOffer = useAddOffer();
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
-  const categories = businessCategories.flatMap(main =>
-    main.subCategories.map(sub => ({ id: sub.name, name: sub.name }))
-  );
-  const isLoadingCategories = false;
   const [isSuccess, setIsSuccess] = useState(false);
   const [openIncludedProducts, setOpenIncludedProducts] =
     React.useState(false);
   const [openExcludedProducts, setOpenExcludedProducts] =
-    React.useState(false);
-  const [openExcludedCategories, setOpenExcludedCategories] =
     React.useState(false);
 
   const [formData, setFormData] = useState<FormData>({
@@ -117,10 +107,8 @@ export default function OfferForm() {
     excludeSaleItems: false,
     limitPerCustomer: '',
     allowLimitToReset: false,
-    categoryId: '',
     includedProductIds: [],
     excludedProductIds: [],
-    excludedCategoryIds: [],
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -150,9 +138,6 @@ export default function OfferForm() {
     }
     if (!formData.rewardCouponType) {
       newErrors.rewardCouponType = 'Reward coupon type is required.';
-    }
-    if (!formData.categoryId) {
-      newErrors.categoryId = 'Category is required.';
     }
     return newErrors;
   };
@@ -188,10 +173,8 @@ export default function OfferForm() {
             ? parseInt(formData.limitPerCustomer, 10)
             : undefined,
           allowLimitToReset: formData.allowLimitToReset,
-          categoryId: formData.categoryId,
           includedProductIds: formData.includedProductIds,
           excludedProductIds: formData.excludedProductIds,
-          excludedCategoryIds: formData.excludedCategoryIds,
         });
         setIsSuccess(true);
       } catch (error) {
@@ -203,7 +186,7 @@ export default function OfferForm() {
   };
 
   const handleMultiSelectChange = (
-    field: 'includedProductIds' | 'excludedProductIds' | 'excludedCategoryIds',
+    field: 'includedProductIds' | 'excludedProductIds',
     id: string
   ) => {
     setFormData(prev => {
@@ -323,40 +306,6 @@ export default function OfferForm() {
                   {errors.rewardCouponType && (
                     <p className="text-base text-red-600 mt-1">
                       {errors.rewardCouponType}
-                    </p>
-                  )}
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="categoryId">Category</Label>
-                  <Select
-                    name="categoryId"
-                    value={formData.categoryId}
-                    onValueChange={value =>
-                      handleSelectChange('categoryId', value)
-                    }
-                  >
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a category" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isLoadingCategories ? (
-                        <SelectItem value="loading" disabled>
-                          Loading...
-                        </SelectItem>
-                      ) : (
-                        categories?.map(
-                          (category: { id: string; name: string }) => (
-                            <SelectItem key={category.id} value={category.id}>
-                              {category.name}
-                            </SelectItem>
-                          )
-                        )
-                      )}
-                    </SelectContent>
-                  </Select>
-                  {errors.categoryId && (
-                    <p className="text-base text-red-600 mt-1">
-                      {errors.categoryId}
                     </p>
                   )}
                 </div>
@@ -564,66 +513,6 @@ export default function OfferForm() {
                               {product.title}
                             </CommandItem>
                           ))
-                        )}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="excludedCategoryIds">
-                  Excluded Categories
-                </Label>
-                <Popover
-                  open={openExcludedCategories}
-                  onOpenChange={setOpenExcludedCategories}
-                >
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={openExcludedCategories}
-                      className="w-full justify-between"
-                    >
-                      {formData.excludedCategoryIds.length > 0
-                        ? `${formData.excludedCategoryIds.length} category(s) selected`
-                        : 'Select categories...'}
-                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search categories..." />
-                      <CommandEmpty>No categories found.</CommandEmpty>
-                      <CommandGroup>
-                        {isLoadingCategories ? (
-                          <CommandItem>Loading...</CommandItem>
-                        ) : (
-                          categories?.map(
-                            (category: { id: string; name: string }) => (
-                              <CommandItem
-                                key={category.id}
-                                onSelect={() =>
-                                  handleMultiSelectChange(
-                                    'excludedCategoryIds',
-                                    category.id
-                                  )
-                                }
-                              >
-                                <Check
-                                  className={cn(
-                                    'mr-2 h-4 w-4',
-                                    formData.excludedCategoryIds.includes(
-                                      category.id
-                                    )
-                                      ? 'opacity-100'
-                                      : 'opacity-0'
-                                  )}
-                                />
-                                {category.name}
-                              </CommandItem>
-                            )
-                          )
                         )}
                       </CommandGroup>
                     </Command>

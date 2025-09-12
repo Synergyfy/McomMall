@@ -61,8 +61,6 @@ export interface CreateOfferDto {
   excludeSaleItems?: boolean;
   limitPerCustomer?: number;
   allowLimitToReset?: boolean;
-  categoryId: string; // uuid
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs
-  excludedCategoryIds?: string[]; // Array of category UUIDs
 }
