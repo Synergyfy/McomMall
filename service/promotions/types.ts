@@ -36,7 +36,7 @@ export interface CreatePromotionDto {
   multiplier?: number | null;
   bonusPoints?: number | null;
   limitPerCustomer?: number;
-  minimumSpend: string;
+  minimumSpend: number;
   businessIds?: string[];
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs

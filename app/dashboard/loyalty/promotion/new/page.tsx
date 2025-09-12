@@ -219,7 +219,7 @@ export default function PromotionForm() {
           limitPerCustomer: formData.limitPerCustomer
             ? parseInt(formData.limitPerCustomer, 10)
             : undefined,
-          minimumSpend: formData.minimumSpend,
+          minimumSpend: parseFloat(formData.minimumSpend),
           businessIds: formData.businessIds,
           includedProductIds: formData.includedProductIds,
           excludedProductIds: formData.excludedProductIds,
