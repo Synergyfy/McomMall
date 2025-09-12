@@ -8,12 +8,6 @@ export interface Product {
   // other product fields...
 }
 
-export interface Category {
-  id: string; // uuid
-  name: string;
-  // other category fields...
-}
-
 export interface Offer {
   id: string; // uuid
   isActive: boolean;
@@ -34,10 +28,8 @@ export interface Offer {
   excludeSaleItems?: boolean;
   limitPerCustomer?: number;
   allowLimitToReset?: boolean;
-  category: Category; // eager on entity
   includedProducts?: Product[];
   excludedProducts?: Product[];
-  excludedCategories?: Category[];
   created_at: string; // ISO
   updated_at: string; // ISO
 }
@@ -64,3 +56,5 @@ export interface CreateOfferDto {
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs
 }
+
+export interface UpdateOfferDto extends Partial<CreateOfferDto> {}

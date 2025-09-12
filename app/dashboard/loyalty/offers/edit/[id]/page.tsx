@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import {
   FileText,
   Tag,
@@ -14,7 +14,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useAddOffer } from '@/service/offers/hook';
+import { useGetOfferById, useUpdateOffer } from '@/service/offers/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,7 +37,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useRouter } from 'next/navigation';
+import { useRouter, useParams } from 'next/navigation';
 import {
   Command,
   CommandEmpty,
@@ -83,9 +83,14 @@ interface FormErrors {
   rewardCouponType?: string;
 }
 
-export default function OfferForm() {
+export default function OfferEditForm() {
   const router = useRouter();
-  const createOffer = useAddOffer();
+  const params = useParams();
+  const offerId = params.id as string;
+
+  const { data: offer, isLoading: isLoadingOffer } = useGetOfferById(offerId);
+  const updateOffer = useUpdateOffer();
+
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
   const [isSuccess, setIsSuccess] = useState(false);
   const [openIncludedProducts, setOpenIncludedProducts] =
@@ -110,6 +115,28 @@ export default function OfferForm() {
     includedProductIds: [],
     excludedProductIds: [],
   });
+
+  useEffect(() => {
+    if (offer) {
+      setFormData({
+        name: offer.name || '',
+        description: offer.description || '',
+        points: offer.points.toString(),
+        beginDate: offer.beginDate ? new Date(offer.beginDate) : undefined,
+        endDate: offer.endDate ? new Date(offer.endDate) : undefined,
+        rewardCouponType: offer.rewardCouponType,
+        limitUsageToXProducts: offer.limitUsageToXProducts?.toString() || '',
+        expireAfterXDays: offer.expireAfterXDays?.toString() || '',
+        allowFreeShipping: offer.allowFreeShipping || false,
+        individualUseOnly: offer.individualUseOnly || false,
+        excludeSaleItems: offer.excludeSaleItems || false,
+        limitPerCustomer: offer.limitPerCustomer?.toString() || '',
+        allowLimitToReset: offer.allowLimitToReset || false,
+        includedProductIds: offer.includedProducts?.map(p => p.id) || [],
+        excludedProductIds: offer.excludedProducts?.map(p => p.id) || [],
+      });
+    }
+  }, [offer]);
 
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -159,7 +186,8 @@ export default function OfferForm() {
 
     if (Object.keys(validationErrors).length === 0) {
       try {
-        await createOffer.mutateAsync({
+        await updateOffer.mutateAsync({
+          id: offerId,
           name: formData.name,
           description: formData.description,
           points: parseInt(formData.points, 10),
@@ -188,7 +216,7 @@ export default function OfferForm() {
         });
         setIsSuccess(true);
       } catch (error) {
-        console.error('Failed to create offer:', error);
+        console.error('Failed to update offer:', error);
       }
     } else {
       console.log('Form has validation errors:', validationErrors);
@@ -208,13 +236,17 @@ export default function OfferForm() {
     });
   };
 
+  if (isLoadingOffer) {
+    return <div>Loading...</div>;
+  }
+
   return (
     <div className="bg-gray-50/50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between">
             <h1 className="text-4xl font-bold text-gray-800 mb-2 sm:mb-0">
-              Create Offer
+              Edit Offer
             </h1>
             <div className="text-base text-gray-500 flex items-center space-x-1">
               <span>Home</span>
@@ -596,9 +628,9 @@ export default function OfferForm() {
             <Button
               type="submit"
               className="bg-orange-600 text-white hover:bg-orange-700 px-8 py-3 w-full sm:w-auto text-lg"
-              disabled={createOffer.isPending}
+              disabled={updateOffer.isPending}
             >
-              {createOffer.isPending ? 'Creating...' : 'Create Offer'}
+              {updateOffer.isPending ? 'Updating...' : 'Update Offer'}
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </div>
@@ -619,9 +651,9 @@ export default function OfferForm() {
             >
               <CheckCircle className="h-6 w-6 text-green-600" />
             </motion.div>
-            <DialogTitle className="text-center">Offer Created!</DialogTitle>
+            <DialogTitle className="text-center">Offer Updated!</DialogTitle>
             <DialogDescription className="text-center">
-              Your new offer has been created successfully.
+              The offer has been updated successfully.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-center">
