@@ -1,4 +1,4 @@
-import type { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
@@ -20,6 +20,30 @@ export default function manifest(): MetadataRoute.Manifest {
         sizes: '512x512',
         type: 'image/png',
       },
+      // This "maskable" icon is a best-practice for Android
+      {
+        src: '/icon-512x512.png',
+        sizes: '512x512',
+        type: 'image/png',
+        purpose: 'maskable',
+      },
     ],
-  }
+    // Add this screenshots array to fix the other warnings
+    screenshots: [
+      {
+        src: '/screenshot-desktop.png', // Create this screenshot and add to /public
+        type: 'image/png',
+        sizes: '1280x720',
+        form_factor: 'wide',
+        label: 'MCOM Mall Desktop View',
+      },
+      {
+        src: '/screenshot-mobile.png', // Create this screenshot and add to /public
+        type: 'image/png',
+        sizes: '540x720',
+        form_factor: 'narrow',
+        label: 'MCOM Mall Mobile View',
+      },
+    ],
+  };
 }
