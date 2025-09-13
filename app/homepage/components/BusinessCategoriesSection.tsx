@@ -75,12 +75,15 @@ interface SubCategory {
 const MarqueeItem = ({
   item,
   onClick,
+  onMouseEnter,
 }: {
   item: SubCategory;
   onClick: (name: string) => void;
+  onMouseEnter: () => void;
 }) => (
   <motion.div
     onClick={() => onClick(item.name)}
+    onMouseEnter={onMouseEnter}
     className="group flex h-48 w-48 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
     variants={cardVariants}
     whileHover="hover"
@@ -178,18 +181,19 @@ export function BusinessCategoriesSection() {
           </div>
         </div>
       </div>
-      <div
-        className="hidden md:block"
-        onMouseEnter={() => controls?.pause()}
-        onMouseLeave={() => controls?.play()}
-      >
+      <div className="hidden md:block">
         <motion.div className="w-full">
-          <motion.div className="flex gap-4" style={{ x }}>
+          <motion.div
+            className="flex gap-4"
+            style={{ x }}
+            onMouseLeave={() => controls?.play()}
+          >
             {duplicatedCategories.map((item, index) => (
               <MarqueeItem
                 key={index}
                 item={item}
                 onClick={handleCategoryClick}
+                onMouseEnter={() => controls?.pause()}
               />
             ))}
           </motion.div>
