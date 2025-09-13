@@ -7,10 +7,10 @@ export type BookingStatus =
   | 'cancelled'
   | 'approved';
 export enum PaymentMethod {
-  CREDIT_CARD = 'CREDIT_CARD',
-  PAYPAL = 'PAYPAL',
-  BANK_TRANSFER = 'BANK_TRANSFER',
-  STRIPE = 'STRIPE',
+  CREDIT_CARD = 'credit_card',
+  PAYPAL = 'paypal',
+  BANK_TRANSFER = 'bank_transfer',
+  STRIPE = 'stripe',
 }
 
 export interface Service {
