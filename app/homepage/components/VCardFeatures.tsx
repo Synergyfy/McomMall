@@ -52,11 +52,11 @@ const FeatureCard = ({
   description,
   imageUrl,
 }: {
-  title: string;
+  title:string;
   description: string;
   imageUrl: string;
 }) => (
-  <div className="flex-shrink-0 w-64 text-center bg-white p-6 rounded-2xl shadow-sm hover:shadow-lg transition-shadow duration-300">
+  <div className="w-[80vw] flex-shrink-0 rounded-2xl bg-white p-6 text-center shadow-sm transition-shadow duration-300 hover:shadow-lg sm:w-64">
     <div className="flex justify-center mb-4">
       <img
         src={imageUrl}

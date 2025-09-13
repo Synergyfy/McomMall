@@ -173,7 +173,7 @@ export function McomEgiftCard() {
 
         {/* "See More" Button */}
         <div className="mt-8 flex justify-center">
-          <Button className="bg-orange-600 hover:bg-orange-700 text-white font-bold py-10 px-6 shadow-md transition-transform duration-200 hover:scale-105 text-xl rounded-none">
+          <Button className="rounded-lg bg-orange-600 px-6 py-4 text-base font-bold text-white shadow-md transition-transform duration-200 hover:scale-105 hover:bg-orange-700 sm:px-8 sm:py-6 sm:text-lg">
             See more eGift Cards
           </Button>
         </div>

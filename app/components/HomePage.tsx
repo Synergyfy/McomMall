@@ -221,7 +221,7 @@ export default function HomePage() {
     <div className="bg-[#fafafa] font-sans relative">
       <main>
         {/* --- Hero Section with Animated Background --- */}
-        <section className="relative h-[60vh] md:h-[70vh] w-full text-white overflow-hidden">
+        <section className="relative h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
           <AnimatePresence>
             <motion.div
               key={currentImageIndex}
@@ -239,17 +239,18 @@ export default function HomePage() {
 
           <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
             <motion.h1
-              className="text-4xl md:text-6xl font-bold leading-tight relative"
+              className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Find The Best Amenity In <br /> Your Neighbourhood
+              Find The Best Amenity In <br className="hidden sm:block" /> Your
+              Neighbourhood
               <SwirlArrow />
             </motion.h1>
 
             <motion.div
-              className="mt-12 bg-white rounded-lg p-2 md:p-4 w-full max-w-3xl flex flex-col md:flex-row items-center gap-2 md:gap-4 shadow-lg"
+              className="mt-8 bg-white rounded-lg p-2 md:p-4 w-full max-w-3xl flex flex-col md:flex-row items-center gap-2 md:gap-4 shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
@@ -258,8 +259,8 @@ export default function HomePage() {
                 <Search className="text-gray-400 mr-2" size={20} />
                 <input
                   type="text"
-                  placeholder="Type what are you looking for..."
-                  className="w-full bg-transparent focus:outline-none text-black"
+                  placeholder="What are you looking for?"
+                  className="w-full bg-transparent focus:outline-none text-black placeholder:text-sm"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -269,8 +270,8 @@ export default function HomePage() {
                 <MapPin className="text-gray-400 mr-2" size={20} />
                 <input
                   type="text"
-                  placeholder="Enter Location (e.g. Canasa)"
-                  className="w-full bg-transparent focus:outline-none text-black"
+                  placeholder="Location"
+                  className="w-full bg-transparent focus:outline-none text-black placeholder:text-sm"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -282,7 +283,10 @@ export default function HomePage() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSearch}
               >
-                Search Now <ArrowRight size={20} />
+                <span className="md:hidden">
+                  <ArrowRight size={20} />
+                </span>
+                <span className="hidden md:block">Search Now</span>
               </motion.button>
             </motion.div>
 
@@ -298,30 +302,31 @@ export default function HomePage() {
             )}
 
             <motion.div
-              className="mt-4 text-sm text-white"
+              className="mt-6 text-sm text-white"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <span className="font-semibold">Popular:</span>
-              {businessCategories.slice(0, 5).map((category, index) => (
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
+                <span className="font-semibold">Popular:</span>
+                {businessCategories.slice(0, 4).map(category => (
+                  <Link
+                    key={category.name}
+                    href={`/listings?category=${encodeURIComponent(
+                      category.name
+                    )}`}
+                    className="underline hover:text-orange-300"
+                  >
+                    {category.name}
+                  </Link>
+                ))}
                 <Link
-                  key={index}
-                  href={`/listings?category=${encodeURIComponent(
-                    category.name
-                  )}`}
-                  className="underline hover:text-orange-300 mx-1"
+                  href="/listings?showFilters=true"
+                  className="font-bold hover:text-orange-300"
                 >
-                  {category.name}
-                  {index < 4 && ','}
+                  + See All
                 </Link>
-              ))}
-              <Link
-                href="/listings?showFilters=true"
-                className="underline hover:text-orange-300 ml-1"
-              >
-                View All
-              </Link>
+              </div>
             </motion.div>
           </div>
         </section>
@@ -335,16 +340,16 @@ export default function HomePage() {
         {/* --- Featured Ads Section --- */}
         <ScrollAnimatedSection>
           <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
-            <h2 className="text-4xl font-bold text-center mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
               Featured Ads
             </h2>
-            <div className="flex justify-center gap-4 mb-8">
+            <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mb-8">
               {['All', 'Place', 'Restaurant', 'Real Estate', 'Others'].map(
                 tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveAdFilter(tab)}
-                    className={`py-2 px-5 rounded-lg font-semibold transition-colors ${
+                    className={`py-2 px-4 text-sm sm:text-base sm:px-5 rounded-lg font-semibold transition-colors ${
                       activeAdFilter === tab
                         ? 'bg-gray-800 text-white'
                         : 'bg-white text-gray-600 hover:bg-gray-200'
@@ -429,7 +434,7 @@ export default function HomePage() {
       {/* --- Our Latest Blog Post Section --- */}
       <ScrollAnimatedSection>
         <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
-          <h2 className="text-4xl font-bold text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Our Latest Blog Post
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">

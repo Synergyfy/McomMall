@@ -101,7 +101,7 @@ export default function McomEgiftCard() {
 
   return (
     <section>
-      <header className="text-5xl font-bold text-center mb-5">
+      <header className="text-3xl font-bold text-center mb-5 sm:text-5xl">
         Mcom VCards
       </header>
       <div
@@ -121,7 +121,7 @@ export default function McomEgiftCard() {
               initial={{ opacity: 0, y: 24 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: i * 0.12 }}
-              className="flex-shrink-0 sm:flex-shrink sm:justify-center sm:perspective-[1200px]"
+              className="w-[90vw] flex-shrink-0 sm:w-auto sm:flex-shrink sm:justify-center sm:perspective-[1200px]"
             >
               <motion.div
                 variants={cardTilt}
@@ -129,7 +129,7 @@ export default function McomEgiftCard() {
                 whileHover="hover"
                 className="relative"
               >
-                <Card className="relative w-[380px] h-[560px] xl:w-[400px] xl:h-[580px] rounded-[28px] overflow-hidden shadow-2xl border-0">
+                <Card className="relative h-[560px] w-full overflow-hidden rounded-[28px] border-0 shadow-2xl xl:h-[580px]">
                   {/* BG LAYER 1: vibrant gradient */}
                   <div
                     className={`absolute inset-0 bg-gradient-to-br ${p.gradient} opacity-95`}

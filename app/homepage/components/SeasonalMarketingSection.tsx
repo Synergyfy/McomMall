@@ -92,7 +92,7 @@ const SeasonContent: React.FC<SeasonContentProps> = ({ season }) => {
         </p>
         <Link
           href={`/seasons/${season.id}`}
-          className={`mt-8 inline-flex items-center gap-3 rounded-full px-8 py-3 text-lg font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 ${season.buttonClasses}`}
+          className={`mt-8 inline-flex items-center gap-3 rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 sm:px-8 sm:text-lg ${season.buttonClasses}`}
         >
           <span>Get Started</span>
           <ArrowRightCircle className="h-6 w-6" />
@@ -132,7 +132,7 @@ export function SeasonalMarketingSection() {
               <button
                 key={tab.id}
                 onClick={() => setActiveSeason(tab.id)}
-                className={`relative rounded-t-md px-3 py-3 text-sm md:text-2xl font-bold transition-colors duration-300 sm:px-4 sm:text-base ${
+                className={`relative rounded-t-md px-3 py-2 text-sm font-bold transition-colors duration-300 sm:px-4 sm:py-3 sm:text-base md:text-lg ${
                   activeSeason === tab.id
                     ? 'text-white'
                     : 'text-gray-400 hover:text-white'

@@ -62,6 +62,15 @@ const HowItWorksRedesigned = () => {
   return (
     <section className="bg-gray-50 font-sans py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+            How MCOM Mall Works
+          </h2>
+          <p className="mt-4 text-lg text-gray-600">
+            Whether you are a business, a consumer, or a service provider, MCOM
+            Mall has something for you.
+          </p>
+        </div>
         {/* Steps Container */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"

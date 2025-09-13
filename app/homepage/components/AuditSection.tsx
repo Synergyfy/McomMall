@@ -136,12 +136,12 @@ export function AuditSection() {
                   >
                     {activeTabData.title}
                   </h3>
-                  <p className="mt-6 text-xl leading-relaxed text-slate-600">
+                  <p className="mt-6 text-lg leading-relaxed text-slate-600 sm:text-xl">
                     {activeTabData.description}
                   </p>
                   <a
                     href="#"
-                    className={`mt-10 inline-flex items-center gap-3 rounded-full px-10 py-4 text-xl font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 ${activeTabData.buttonClasses}`}
+                    className={`mt-8 inline-flex items-center gap-3 rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 sm:px-10 sm:py-4 sm:text-lg ${activeTabData.buttonClasses}`}
                   >
                     <span>{activeTabData.buttonText}</span>
                     <ArrowRight className="h-6 w-6" />
@@ -156,7 +156,7 @@ export function AuditSection() {
         </div>
 
         <Button
-          className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-6 py-7 text-lg md:text-2xl mt-16 mx-auto flex items-center gap-2 "
+          className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 mt-16 mx-auto flex items-center gap-2 text-base md:text-lg"
           onClick={() => router.push('/audit-calculator')}
         >
           Try our audit calculator

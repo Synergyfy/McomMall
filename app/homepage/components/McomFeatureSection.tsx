@@ -130,12 +130,12 @@ export function McomFeatureSection() {
 
         {/* Tab Navigation */}
         <div className="mt-12 flex justify-center border-b border-slate-700">
-          <div className="flex space-x-4">
+          <div className="flex space-x-2 sm:space-x-4">
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`relative rounded-t-md px-4 py-3 text-sm md:text-2xl font-bold transition-colors duration-300 sm:px-6 sm:text-base ${
+                className={`relative rounded-t-md px-3 py-2 text-sm font-bold transition-colors duration-300 sm:px-6 sm:py-3 sm:text-base md:text-lg ${
                   activeTab === tab.id
                     ? 'text-white'
                     : 'text-gray-400 hover:text-white'
