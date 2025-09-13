@@ -74,3 +74,7 @@ export interface Participant {
   user: User;
   promotion: Promotion;
 }
+
+export interface UpdatePointsDto {
+  amount: number;
+}

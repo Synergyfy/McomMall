@@ -10,7 +10,10 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { useGetParticipants } from '@/service/promotions/hook';
+import {
+  useGetParticipants,
+  useUpdateParticipantPoints,
+} from '@/service/promotions/hook';
 import { Participant } from '@/service/promotions/types';
 import {
   Dialog,
@@ -18,8 +21,17 @@ import {
   DialogHeader,
   DialogTitle,
   DialogDescription,
+  DialogFooter,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { User, Award, Info } from 'lucide-react';
+import { toast } from 'sonner';
+
+type EditState = {
+  participant: Participant;
+  action: 'add' | 'subtract';
+};
 
 export function MembersTable() {
   const {
@@ -29,6 +41,35 @@ export function MembersTable() {
   } = useGetParticipants();
   const [selectedParticipant, setSelectedParticipant] =
     React.useState<Participant | null>(null);
+  const [editingState, setEditingState] = React.useState<EditState | null>(
+    null
+  );
+  const [pointsAmount, setPointsAmount] = React.useState(0);
+
+  const updatePointsMutation = useUpdateParticipantPoints();
+
+  const handleUpdatePoints = () => {
+    if (!editingState) return;
+
+    const amount =
+      editingState.action === 'add'
+        ? pointsAmount
+        : -pointsAmount;
+
+    updatePointsMutation.mutate(
+      { participantId: editingState.participant.id, amount },
+      {
+        onSuccess: () => {
+          toast.success('Points updated successfully!');
+          setEditingState(null);
+          setPointsAmount(0);
+        },
+        onError: (error) => {
+          toast.error(`Failed to update points: ${error.message}`);
+        },
+      }
+    );
+  };
 
   if (isLoading) return <p>Loading members...</p>;
   if (isError) return <p>Error loading members.</p>;
@@ -81,7 +122,12 @@ export function MembersTable() {
                           variant="outline"
                           size="sm"
                           className="text-blue-600 border-blue-600 hover:bg-blue-50 hover:text-blue-700"
-                          onClick={() => console.log('Add points clicked')}
+                          onClick={() =>
+                            setEditingState({
+                              participant,
+                              action: 'add',
+                            })
+                          }
                         >
                           + Add points
                         </Button>
@@ -90,7 +136,10 @@ export function MembersTable() {
                           size="sm"
                           className="text-orange-600 border-orange-600 hover:bg-red-50 hover:text-orange-700"
                           onClick={() =>
-                            console.log('Subtract points clicked')
+                            setEditingState({
+                              participant,
+                              action: 'subtract',
+                            })
                           }
                         >
                           - Subtract points
@@ -111,6 +160,7 @@ export function MembersTable() {
         </div>
       </div>
 
+      {/* Details Modal */}
       <Dialog
         open={!!selectedParticipant}
         onOpenChange={isOpen => !isOpen && setSelectedParticipant(null)}
@@ -152,6 +202,53 @@ export function MembersTable() {
                   {selectedParticipant.promotion.description}
                 </p>
               </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Edit Points Modal */}
+      <Dialog
+        open={!!editingState}
+        onOpenChange={isOpen => !isOpen && setEditingState(null)}
+      >
+        <DialogContent className="sm:max-w-[425px]">
+          {editingState && (
+            <>
+              <DialogHeader>
+                <DialogTitle className="text-2xl capitalize">
+                  {editingState.action} Points
+                </DialogTitle>
+                <DialogDescription>
+                  {`Enter the number of points to ${editingState.action} for ${editingState.participant.user.name}.`}
+                </DialogDescription>
+              </DialogHeader>
+              <div className="grid gap-4 py-4">
+                <Label htmlFor="points">Points Amount</Label>
+                <Input
+                  id="points"
+                  type="number"
+                  value={pointsAmount}
+                  onChange={e => setPointsAmount(Number(e.target.value))}
+                  placeholder="e.g., 50"
+                />
+              </div>
+              <DialogFooter>
+                <Button
+                  variant="outline"
+                  onClick={() => setEditingState(null)}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  onClick={handleUpdatePoints}
+                  disabled={updatePointsMutation.isPending}
+                >
+                  {updatePointsMutation.isPending
+                    ? 'Updating...'
+                    : 'Confirm'}
+                </Button>
+              </DialogFooter>
             </>
           )}
         </DialogContent>

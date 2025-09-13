@@ -6,6 +6,7 @@ import {
   UpdatePromotionDto,
   CheckPromotionDto,
   Participant,
+  UpdatePointsDto,
 } from './types';
 
 // API Functions
@@ -63,6 +64,20 @@ const getParticipants = async (): Promise<Participant[]> => {
   return data;
 };
 
+const updateParticipantPoints = async ({
+  participantId,
+  amount,
+}: {
+  participantId: string;
+  amount: number;
+}): Promise<Participant> => {
+  const { data } = await api.patch<Participant>(
+    `/promotions/participants/${participantId}/points`,
+    { amount }
+  );
+  return data;
+};
+
 // React Query Hooks
 
 export const useGetPromotions = () => {
@@ -78,6 +93,20 @@ export const useAddPromotion = () => {
     mutationFn: addPromotion,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
+    },
+  });
+};
+
+export const useUpdateParticipantPoints = () => {
+  const queryClient = useQueryClient();
+  return useMutation<
+    Participant,
+    Error,
+    { participantId: string; amount: number }
+  >({
+    mutationFn: updateParticipantPoints,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['promotion-participants'] });
     },
   });
 };
