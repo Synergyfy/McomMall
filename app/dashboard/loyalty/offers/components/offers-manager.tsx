@@ -21,14 +21,6 @@ import {
   TableRow,
 } from '@/components/ui/table';
 import { Button } from '@/components/ui/button';
-import { Label } from '@/components/ui/label';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -57,7 +49,6 @@ export function OffersManager() {
   const router = useRouter();
   const { data: offers, isLoading, error } = useGetOffers();
   const { mutateAsync: deleteOffer } = useDeleteOffer();
-  const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [isDeleteAlertOpen, setDeleteAlertOpen] = useState(false);
   const [offerToDelete, setOfferToDelete] = useState<string | null>(null);
 
@@ -95,17 +86,6 @@ export function OffersManager() {
     setDeleteAlertOpen(true);
   };
 
-  const categories = useMemo(
-    () => ['all', ...new Set(offers?.map(o => o.category.name) || [])],
-    [offers]
-  );
-
-  const filteredOffers = useMemo(() => {
-    if (!offers) return [];
-    if (categoryFilter === 'all') return offers;
-    return offers.filter(o => o.category.name === categoryFilter);
-  }, [offers, categoryFilter]);
-
   return (
     <TooltipProvider>
       <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
@@ -121,25 +101,6 @@ export function OffersManager() {
           >
             <PlusCircle className="h-4 w-4 mr-2" /> Create Offer
           </Button>
-          <div className="flex items-center gap-2">
-            <Label htmlFor="category-filter">Filter by category</Label>
-            <Select
-              value={categoryFilter}
-              onValueChange={setCategoryFilter}
-              disabled={isLoading || !!error}
-            >
-              <SelectTrigger id="category-filter" className="w-[180px]">
-                <SelectValue placeholder="All categories" />
-              </SelectTrigger>
-              <SelectContent>
-                {categories.map(cat => (
-                  <SelectItem key={cat} value={cat}>
-                    {cat === 'all' ? 'All categories' : cat}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
         </div>
 
         {/* Offers Table */}
@@ -149,9 +110,6 @@ export function OffersManager() {
               <TableHeader className="bg-orange-600">
                 <TableRow className="hover:bg-orange-600">
                   <TableHead className="text-white font-bold">Status</TableHead>
-                  <TableHead className="text-white font-bold">
-                    Category
-                  </TableHead>
                   <TableHead className="text-white font-bold">
                     Offer name
                   </TableHead>
@@ -171,7 +129,7 @@ export function OffersManager() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={8} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       <div className="flex justify-center items-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                       </div>
@@ -180,7 +138,7 @@ export function OffersManager() {
                 ) : error ? (
                   <TableRow>
                     <TableCell
-                      colSpan={8}
+                      colSpan={7}
                       className="text-center text-red-500"
                     >
                       Error loading offers: {error.message}
@@ -188,7 +146,7 @@ export function OffersManager() {
                   </TableRow>
                 ) : (
                   <AnimatePresence>
-                    {filteredOffers.map(offer => (
+                    {offers?.map(offer => (
                       <motion.tr
                         key={offer.id}
                         layout
@@ -208,7 +166,6 @@ export function OffersManager() {
                             {offer.isActive ? 'Active' : 'Inactive'}
                           </div>
                         </TableCell>
-                        <TableCell>{offer.category.name}</TableCell>
                         <TableCell>
                           <a
                             href="#"
@@ -233,7 +190,11 @@ export function OffersManager() {
                         </TableCell>
                         <TableCell>
                           <div className="flex gap-2">
-                            <Button variant="outline" size="sm" disabled>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => router.push(`/dashboard/loyalty/offers/edit/${offer.id}`)}
+                            >
                               <Edit className="h-4 w-4 mr-1" /> Edit
                             </Button>
                             <Button variant="outline" size="sm" disabled>

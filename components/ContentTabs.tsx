@@ -35,6 +35,7 @@ import { useState } from 'react';
 
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import LoyaltyContent from './LoyaltyContent';
 
 function ProductPage({
   listing,
@@ -498,6 +499,9 @@ function AboutBusinessTabs({
   listing: GooglePlaceResult | InHouseBusiness;
   isLoading: boolean;
 }) {
+  const isGoogle = isGoogleResult(listing);
+  const businessId = isGoogle ? undefined : listing.id;
+
   return (
     <Tabs defaultValue="overview" className="w-full">
       <TabsList className="grid w-full grid-cols-4 mb-6">
@@ -510,7 +514,7 @@ function AboutBusinessTabs({
         <OverviewSection listing={listing} isLoading={isLoading} />
       </TabsContent>
       <TabsContent value="loyalty">
-        <p>Loyalty & Reward content goes here.</p>
+        <LoyaltyContent businessId={businessId} />
       </TabsContent>
       <TabsContent value="voucher">
         <p>Voucher content goes here.</p>

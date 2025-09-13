@@ -1,6 +1,11 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { Promotion, CreatePromotionDto } from './types';
+import {
+  Promotion,
+  CreatePromotionDto,
+  UpdatePromotionDto,
+  CheckPromotionDto,
+} from './types';
 
 // API Functions
 
@@ -18,9 +23,38 @@ const addPromotion = async (
   return data;
 };
 
+// Get a single promotion by ID
+const getPromotionById = async (id: string): Promise<Promotion> => {
+  const { data } = await api.get<Promotion>(`/promotions/${id}`);
+  return data;
+};
+
+// Update a promotion
+const updatePromotion = async ({
+  id,
+  ...promotionData
+}: UpdatePromotionDto & { id: string }): Promise<Promotion> => {
+  const { data } = await api.patch<Promotion>(
+    `/promotions/${id}`,
+    promotionData
+  );
+  return data;
+};
+
 // Delete a promotion
 const deletePromotion = async (id: string): Promise<void> => {
   await api.delete(`/promotions/${id}`);
+};
+
+const checkPromotions = async (
+  params: CheckPromotionDto
+): Promise<Promotion[]> => {
+  const { data } = await api.get<Promotion[]>('/promotions/check', { params });
+  return data;
+};
+
+const participateInPromotion = async (promotionId: string): Promise<void> => {
+  await api.post(`/promotions/${promotionId}/participate`);
 };
 
 // React Query Hooks
@@ -38,6 +72,44 @@ export const useAddPromotion = () => {
     mutationFn: addPromotion,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
+    },
+  });
+};
+
+export const useParticipateInPromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: participateInPromotion,
+    onSuccess: () => {
+      // Invalidate queries that should be updated after participation
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+    },
+  });
+};
+
+export const useCheckPromotions = (params: CheckPromotionDto) => {
+  return useQuery<Promotion[], Error>({
+    queryKey: ['promotions', 'check', params],
+    queryFn: () => checkPromotions(params),
+    enabled: !!params.businessId || !!params.productId,
+  });
+};
+
+export const useGetPromotionById = (id: string) => {
+  return useQuery<Promotion, Error>({
+    queryKey: ['promotions', id],
+    queryFn: () => getPromotionById(id),
+    enabled: !!id,
+  });
+};
+
+export const useUpdatePromotion = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Promotion, Error, UpdatePromotionDto & { id: string }>({
+    mutationFn: updatePromotion,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: ['promotions'] });
+      queryClient.invalidateQueries({ queryKey: ['promotions', data.id] });
     },
   });
 };

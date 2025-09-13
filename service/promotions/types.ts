@@ -9,6 +9,12 @@ export interface Promotion {
   beginDate?: string; // ISO timestamp
   endDate?: string; // ISO timestamp
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
+  promotionScope:
+    | 'ALL_LISTINGS'
+    | 'SPECIFIC_LISTINGS'
+    | 'ALL_PRODUCTS'
+    | 'SPECIFIC_PRODUCTS';
+  businessIds?: string[];
   multiplier?: number;
   bonusPoints?: number;
   limitPerCustomer?: number;
@@ -25,8 +31,8 @@ export interface CreatePromotionDto {
   description?: string;
   termsAndConditions?: string;
   isActive: boolean;
-  beginDate?: string;
-  endDate?: string;
+  beginDate?: Date;
+  endDate?: Date;
   promotionType: 'MULTIPLIER' | 'BONUS_POINTS';
   promotionScope:
     | 'ALL_LISTINGS'
@@ -36,16 +42,23 @@ export interface CreatePromotionDto {
   multiplier?: number | null;
   bonusPoints?: number | null;
   limitPerCustomer?: number;
-  minimumSpend: string;
+  minimumSpend: number;
   businessIds?: string[];
   includedProductIds?: string[]; // Array of product UUIDs
   excludedProductIds?: string[]; // Array of product UUIDs
+}
+
+export interface UpdatePromotionDto extends Partial<CreatePromotionDto> {}
+
+export interface CheckPromotionDto {
+  businessId?: string;
+  productId?: string;
 }
 
 // A placeholder for the Product type.
 // In a real application, this might be imported from another module.
 export interface Product {
   id: string; // uuid
-  name:string;
+  name: string;
   // other product fields...
 }

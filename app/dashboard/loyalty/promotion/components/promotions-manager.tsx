@@ -173,7 +173,11 @@ export function PromotionsManager() {
                       </TableCell>
                       <TableCell>
                         <div className="flex gap-2">
-                          <Button variant="outline" size="sm" disabled>
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => router.push(`/dashboard/loyalty/promotion/edit/${promo.id}`)}
+                          >
                             <Edit className="h-4 w-4 mr-1" /> Edit
                           </Button>
                           <Button variant="outline" size="sm" disabled>
