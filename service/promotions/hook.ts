@@ -5,6 +5,7 @@ import {
   CreatePromotionDto,
   UpdatePromotionDto,
   CheckPromotionDto,
+  Participant,
 } from './types';
 
 // API Functions
@@ -57,6 +58,11 @@ const participateInPromotion = async (promotionId: string): Promise<void> => {
   await api.post(`/promotions/${promotionId}/participate`);
 };
 
+const getParticipants = async (): Promise<Participant[]> => {
+  const { data } = await api.get<Participant[]>('/promotions/participants/all');
+  return data;
+};
+
 // React Query Hooks
 
 export const useGetPromotions = () => {
@@ -73,6 +79,13 @@ export const useAddPromotion = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['promotions'] });
     },
+  });
+};
+
+export const useGetParticipants = () => {
+  return useQuery<Participant[], Error>({
+    queryKey: ['promotion-participants'],
+    queryFn: getParticipants,
   });
 };
 
