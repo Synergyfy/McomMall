@@ -3,22 +3,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import { Building, ShoppingBag, Users } from 'lucide-react';
-
-// --- Reusable Video Player Component ---
-const VideoPlayer = ({ videoId }: { videoId: string }) => (
-  <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-700 bg-black shadow-2xl">
-    <iframe
-      src={`https://www.youtube.com/embed/dQw4w9WgXcQ`}
-      title="YouTube video player"
-      frameBorder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      className="h-full w-full"
-    ></iframe>
-  </div>
-);
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // --- Business Content Component ---
 const BusinessContent = () => (
@@ -47,14 +34,14 @@ const BusinessContent = () => (
         </p>
       </div>
       <div className="order-1 md:order-2">
-        <VideoPlayer videoId="wT345_g7g3I" />
+        <LazyYouTubeVideo videoId="wT345_g7g3I" title="Product Seller" />
       </div>
     </div>
 
     {/* Service Provider Section */}
     <div className="grid items-center gap-12 md:grid-cols-2">
       <div>
-        <VideoPlayer videoId="bK_3d1eAgHM" />
+        <LazyYouTubeVideo videoId="bK_3d1eAgHM" title="Service Provider" />
       </div>
       <div>
         <div className="mb-4 flex items-center gap-3">
@@ -101,7 +88,7 @@ const ConsumerContent = () => (
         </p>
       </div>
       <div>
-        <VideoPlayer videoId="Yq_xWpXF2AY" />
+        <LazyYouTubeVideo videoId="Yq_xWpXF2AY" title="Consumer" />
       </div>
     </div>
   </motion.div>

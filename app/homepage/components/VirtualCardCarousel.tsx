@@ -1,7 +1,7 @@
 import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
-import { motion, Variants, useMotionValue } from 'framer-motion';
+import { motion, Variants } from 'framer-motion';
 import Image from 'next/image';
 import { Mail, Phone, MapPin, Calendar, Share2, Download } from 'lucide-react';
 
@@ -78,7 +78,6 @@ const cardTilt: Variants = {
   },
 };
 
-const CARD_WIDTH = 380;
 const GAP = 20;
 
 export default function McomEgiftCard() {

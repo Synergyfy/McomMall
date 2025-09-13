@@ -52,7 +52,7 @@ const allFeaturedAds = [
     category: 'Place',
     price: '$156,245.00',
     image:
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Pizza Point',
@@ -62,7 +62,7 @@ const allFeaturedAds = [
     category: 'Restaurant',
     price: '$300.00',
     image:
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Modern Apartment',
@@ -72,7 +72,7 @@ const allFeaturedAds = [
     category: 'Real Estate',
     price: '$2,500,000.00',
     image:
-      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Cozy Cafe',
@@ -82,7 +82,7 @@ const allFeaturedAds = [
     category: 'Restaurant',
     price: '$500.00',
     image:
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300&auto=format&fit=crop',
   },
 ];
 
@@ -92,28 +92,28 @@ const blogPosts = [
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Winter Collection In AdlinIn 2022',
     category: 'Collection',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1572804013427-4d714e280592?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1572804013427-4d714e280592?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Watch Listed In 2022',
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Racing Car Listed In 2022',
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1553440569-99424e1bf07c?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1553440569-99424e1bf07c?q=80&w=300&auto=format&fit=crop',
   },
 ];
 
@@ -225,15 +225,20 @@ export default function HomePage() {
           <AnimatePresence>
             <motion.div
               key={currentImageIndex}
-              className="absolute inset-0 w-full h-full bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${backgroundImages[currentImageIndex].src})`,
-              }}
+              className="absolute inset-0 w-full h-full"
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
-            />
+            >
+              <Image
+                src={backgroundImages[currentImageIndex]}
+                layout="fill"
+                objectFit="cover"
+                priority
+                alt="Seasonal background"
+              />
+            </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
 
@@ -378,8 +383,8 @@ export default function HomePage() {
                     <Image
                       src={ad.image}
                       alt={ad.title}
-                      width={100}
-                      height={100}
+                      width={300}
+                      height={200}
                       loading="lazy"
                       className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
                     />
@@ -447,8 +452,8 @@ export default function HomePage() {
                   <Image
                     src={post.image}
                     alt={post.title}
-                    width={100}
-                    height={100}
+                    width={300}
+                    height={200}
                     loading="lazy"
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />

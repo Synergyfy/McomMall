@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowRight, Briefcase } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // Main data for the cards, with YouTube video URLs
 const cardsData = [
@@ -85,16 +86,10 @@ const HowItWorksRedesigned = () => {
               className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
               variants={itemVariants}
             >
-              <div className="aspect-video relative bg-black">
-                <iframe
-                  src={card.videoUrl}
-                  title={card.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute top-0 left-0 w-full h-full"
-                ></iframe>
-              </div>
+              <LazyYouTubeVideo
+                videoId={card.videoUrl.split('/').pop() || ''}
+                title={card.title}
+              />
               <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-xl font-bold text-orange-600 mb-4">
                   {card.title}

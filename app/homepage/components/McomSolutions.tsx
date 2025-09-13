@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // Tab data for the new component
 const tabs = [
@@ -99,14 +100,10 @@ export default function McomSolutions() {
           {/* Right Side: YouTube Video */}
           <div className="w-full h-[300px] md:h-[450px]">
             <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl">
-              <iframe
-                src={currentContent.videoUrl}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              ></iframe>
+              <LazyYouTubeVideo
+                videoId={currentContent.videoUrl.split('/').pop() || ''}
+                title={currentContent.title}
+              />
             </div>
           </div>
         </div>

@@ -140,9 +140,8 @@ export function McomEgiftCard() {
                   <Image
                     src={card.imageUrl}
                     alt={card.title}
-                    objectFit="cover"
-                    width={100}
-                    height={100}
+                    width={400}
+                    height={250}
                     className="w-full h-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
                     onError={e => {
                       const target = e.target as HTMLImageElement;

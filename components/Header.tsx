@@ -28,9 +28,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { motion, AnimatePresence } from 'framer-motion';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
 
-const mobileMenuVariants = {
+const mobileMenuVariants: Variants = {
   closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
   open: { x: '0%', transition: { duration: 0.3, ease: 'easeInOut' } },
 };

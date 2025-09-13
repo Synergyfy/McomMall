@@ -6,6 +6,7 @@ import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRightCircle } from 'lucide-react';
 import Link from 'next/link';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // --- Data Structure with Theming and Video IDs ---
 const seasonsData = [
@@ -51,21 +52,6 @@ const seasonsData = [
   },
 ];
 
-// --- Reusable Video Player Component ---
-const VideoPlayer = ({ videoId }: { videoId: string }) => (
-  <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-700 bg-black shadow-2xl">
-    <iframe
-      // src={`https://www.youtube.com/embed/${videoId}`}
-      src={`https://www.youtube.com/embed/dQw4w9WgXcQ`}
-      title="YouTube video player"
-      frameBorder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      className="h-full w-full"
-    ></iframe>
-  </div>
-);
-
 // --- Content Component for a Single Season ---
 interface SeasonContentProps {
   season: (typeof seasonsData)[0];
@@ -99,7 +85,10 @@ const SeasonContent: React.FC<SeasonContentProps> = ({ season }) => {
         </Link>
       </div>
       <div className="order-1 lg:order-2">
-        <VideoPlayer videoId={season.videoId} />
+        <LazyYouTubeVideo
+          videoId={season.videoId}
+          title={`${season.season} Marketing`}
+        />
       </div>
     </motion.div>
   );

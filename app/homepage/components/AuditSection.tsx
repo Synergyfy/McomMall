@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BarChart, PackageCheck, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // --- Data for each audit tab (Adjusted for Light Theme) ---
 const auditTabsData = [
@@ -50,21 +51,6 @@ const auditTabsData = [
     buttonClasses: 'bg-orange-600 hover:bg-orange-700',
   },
 ];
-
-// --- Reusable Video Player ---
-const VideoPlayer = ({ videoId }: { videoId: string }) => (
-  <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-black shadow-lg">
-    <iframe
-      // src={`https://www.youtube.com/embed/${videoId}`}
-      src={'https://www.youtube.com/embed/dQw4w9WgXcQ'}
-      title="YouTube video player"
-      frameBorder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      className="h-full w-full"
-    ></iframe>
-  </div>
-);
 
 // --- Main Section Component (Light Theme) ---
 export function AuditSection() {
@@ -148,7 +134,10 @@ export function AuditSection() {
                   </a>
                 </div>
                 <div className="order-1 lg:order-2">
-                  <VideoPlayer videoId={activeTabData.videoId} />
+                  <LazyYouTubeVideo
+                    videoId={activeTabData.videoId}
+                    title={activeTabData.title}
+                  />
                 </div>
               </motion.div>
             )}
