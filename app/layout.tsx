@@ -27,7 +27,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${opensans.variable} antialiased pt-16`}>
+      <body className={`${opensans.variable} antialiased `}>
         <ClientProviders>
           <AuthInitializer>
             <Header />
