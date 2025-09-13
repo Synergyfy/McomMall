@@ -33,14 +33,14 @@ export default function manifest(): MetadataRoute.Manifest {
       {
         src: '/screenshot-desktop.png', // Create this screenshot and add to /public
         type: 'image/png',
-        sizes: '1280x720',
+        sizes: '1565x808',
         form_factor: 'wide',
         label: 'MCOM Mall Desktop View',
       },
       {
         src: '/screenshot-mobile.png', // Create this screenshot and add to /public
         type: 'image/png',
-        sizes: '540x720',
+        sizes: '405x721',
         form_factor: 'narrow',
         label: 'MCOM Mall Mobile View',
       },
