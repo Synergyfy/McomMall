@@ -108,7 +108,7 @@ const LoyaltyProgramSection = () => {
             <div className="flex flex-nowrap items-center justify-center space-x-4 sm:space-x-8 whitespace-nowrap">
               <button
                 onClick={() => setActiveTab('evergreen')}
-                className={`py-3 px-4 text-base sm:text-lg font-semibold transition-colors duration-300 ${
+                className={`py-2 px-2 sm:py-3 sm:px-4 text-sm sm:text-base font-semibold transition-colors duration-300 ${
                   activeTab === 'evergreen'
                     ? 'border-b-2 border-orange-600 text-orange-600'
                     : 'text-gray-500 hover:text-gray-800'
@@ -118,7 +118,7 @@ const LoyaltyProgramSection = () => {
               </button>
               <button
                 onClick={() => setActiveTab('internal')}
-                className={`py-3 px-4 text-base sm:text-lg font-semibold transition-colors duration-300 ${
+                className={`py-2 px-2 sm:py-3 sm:px-4 text-sm sm:text-base font-semibold transition-colors duration-300 ${
                   activeTab === 'internal'
                     ? 'border-b-2 border-orange-600 text-orange-600'
                     : 'text-gray-500 hover:text-gray-800'
@@ -159,7 +159,7 @@ const LoyaltyProgramSection = () => {
 
               <div className="mt-6 text-gray-600 space-y-6">
                 {activeContent.mainTitle && (
-                  <h3 className="text-2xl font-semibold text-gray-700">
+                  <h3 className="text-xl sm:text-2xl font-semibold text-gray-700">
                     {activeContent.mainTitle}
                   </h3>
                 )}
@@ -186,7 +186,7 @@ const LoyaltyProgramSection = () => {
               </ul>
 
               <div className="mt-10">
-                <button className="flex items-center justify-center text-lg font-semibold text-white bg-orange-600 rounded-lg px-8 py-4 transition-all duration-300 hover:bg-orange-700 hover:shadow-xl transform hover:scale-105 shadow-orange-300">
+                <button className="flex items-center justify-center text-base sm:text-lg font-semibold text-white bg-orange-600 rounded-lg px-6 py-3 sm:px-8 sm:py-4 transition-all duration-300 hover:bg-orange-700 hover:shadow-xl transform hover:scale-105 shadow-orange-300">
                   Learn More
                   <ArrowRight className="ml-2 h-5 w-5" />
                 </button>

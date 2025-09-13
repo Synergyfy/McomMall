@@ -75,12 +75,15 @@ interface SubCategory {
 const MarqueeItem = ({
   item,
   onClick,
+  onMouseEnter,
 }: {
   item: SubCategory;
   onClick: (name: string) => void;
+  onMouseEnter: () => void;
 }) => (
   <motion.div
     onClick={() => onClick(item.name)}
+    onMouseEnter={onMouseEnter}
     className="group flex h-48 w-48 flex-shrink-0 cursor-pointer flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
     variants={cardVariants}
     whileHover="hover"
@@ -92,6 +95,31 @@ const MarqueeItem = ({
       })}
     </div>
     <p className="text-xl font-semibold text-gray-800 transition-colors group-hover:text-white">
+      {item.name}
+    </p>
+  </motion.div>
+);
+
+const GridItem = ({
+  item,
+  onClick,
+}: {
+  item: SubCategory;
+  onClick: (name: string) => void;
+}) => (
+  <motion.div
+    onClick={() => onClick(item.name)}
+    className="group flex h-40 w-full flex-col items-center justify-center rounded-lg border border-gray-200 bg-gray-50 p-4 text-center text-orange-600 transition-colors hover:bg-orange-500 hover:text-white"
+    variants={cardVariants}
+    whileHover="hover"
+  >
+    <div className="mb-3 text-orange-600 transition-colors group-hover:text-white">
+      {React.cloneElement(item.icon, {
+        size: 32,
+        strokeWidth: 1.5,
+      })}
+    </div>
+    <p className="font-semibold text-gray-800 transition-colors group-hover:text-white">
       {item.name}
     </p>
   </motion.div>
@@ -142,11 +170,7 @@ export function BusinessCategoriesSection() {
   }, [x, allSubcategories]);
 
   return (
-    <div
-      className="bg-white py-20 sm:py-24 overflow-hidden"
-      onMouseEnter={() => controls?.pause()}
-      onMouseLeave={() => controls?.play()}
-    >
+    <div className="bg-white py-20 sm:py-24 overflow-hidden">
       <div className="mx-auto max-w-full px-6 lg:px-8">
         <div className="text-center mb-16">
           <h2 className="text-4xl font-bold tracking-tight text-gray-900 sm:text-5xl">
@@ -157,17 +181,40 @@ export function BusinessCategoriesSection() {
           </div>
         </div>
       </div>
-      <motion.div className="w-full">
-        <motion.div className="flex gap-4" style={{ x }}>
-          {duplicatedCategories.map((item, index) => (
-            <MarqueeItem
-              key={index}
-              item={item}
-              onClick={handleCategoryClick}
-            />
-          ))}
+      <div className="hidden md:block">
+        <motion.div className="w-full">
+          <motion.div
+            className="flex gap-4"
+            style={{ x }}
+            onMouseLeave={() => controls?.play()}
+          >
+            {duplicatedCategories.map((item, index) => (
+              <MarqueeItem
+                key={index}
+                item={item}
+                onClick={handleCategoryClick}
+                onMouseEnter={() => controls?.pause()}
+              />
+            ))}
+          </motion.div>
         </motion.div>
-      </motion.div>
+      </div>
+
+      <div className="md:hidden px-6">
+        <div className="grid grid-cols-2 gap-4">
+          {allSubcategories.slice(0, 6).map((item, index) => (
+            <GridItem key={index} item={item} onClick={handleCategoryClick} />
+          ))}
+        </div>
+        <div className="mt-8 text-center">
+          <button
+            onClick={() => router.push('/listings?showFilters=true')}
+            className="bg-orange-500 text-white font-bold py-3 px-6 rounded-lg"
+          >
+            View All Categories
+          </button>
+        </div>
+      </div>
     </div>
   );
 }

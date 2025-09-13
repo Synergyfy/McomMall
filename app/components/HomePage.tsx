@@ -52,7 +52,7 @@ const allFeaturedAds = [
     category: 'Place',
     price: '$156,245.00',
     image:
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Pizza Point',
@@ -62,7 +62,7 @@ const allFeaturedAds = [
     category: 'Restaurant',
     price: '$300.00',
     image:
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Modern Apartment',
@@ -72,7 +72,7 @@ const allFeaturedAds = [
     category: 'Real Estate',
     price: '$2,500,000.00',
     image:
-      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Cozy Cafe',
@@ -82,7 +82,7 @@ const allFeaturedAds = [
     category: 'Restaurant',
     price: '$500.00',
     image:
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300&auto=format&fit=crop',
   },
 ];
 
@@ -92,28 +92,28 @@ const blogPosts = [
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Winter Collection In AdlinIn 2022',
     category: 'Collection',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1572804013427-4d714e280592?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1572804013427-4d714e280592?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Watch Listed In 2022',
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto=format&fit=crop',
   },
   {
     title: 'Best Racing Car Listed In 2022',
     category: 'Listing',
     date: '16 Nov, 2022',
     image:
-      'https://images.unsplash.com/photo-1553440569-99424e1bf07c?q=80&w=300&auto-format&fit=crop',
+      'https://images.unsplash.com/photo-1553440569-99424e1bf07c?q=80&w=300&auto=format&fit=crop',
   },
 ];
 
@@ -221,35 +221,41 @@ export default function HomePage() {
     <div className="bg-[#fafafa] font-sans relative">
       <main>
         {/* --- Hero Section with Animated Background --- */}
-        <section className="relative h-[60vh] md:h-[70vh] w-full text-white overflow-hidden">
+        <section className="relative h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
           <AnimatePresence>
             <motion.div
               key={currentImageIndex}
-              className="absolute inset-0 w-full h-full bg-cover bg-center"
-              style={{
-                backgroundImage: `url(${backgroundImages[currentImageIndex].src})`,
-              }}
+              className="absolute inset-0 w-full h-full"
               initial={{ opacity: 0, scale: 1.05 }}
               animate={{ opacity: 1, scale: 1 }}
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
-            />
+            >
+              <Image
+                src={backgroundImages[currentImageIndex]}
+                layout="fill"
+                objectFit="cover"
+                priority
+                alt="Seasonal background"
+              />
+            </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
 
           <div className="relative z-10 flex flex-col items-center justify-center h-full text-center px-4">
             <motion.h1
-              className="text-4xl md:text-6xl font-bold leading-tight relative"
+              className="text-3xl sm:text-4xl md:text-6xl font-bold leading-tight relative"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.2 }}
             >
-              Find The Best Amenity In <br /> Your Neighbourhood
+              Find The Best Amenity In <br className="hidden sm:block" /> Your
+              Neighbourhood
               <SwirlArrow />
             </motion.h1>
 
             <motion.div
-              className="mt-12 bg-white rounded-lg p-2 md:p-4 w-full max-w-3xl flex flex-col md:flex-row items-center gap-2 md:gap-4 shadow-lg"
+              className="mt-8 bg-white rounded-lg p-2 md:p-4 w-full max-w-3xl flex flex-col md:flex-row items-center gap-2 md:gap-4 shadow-lg"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.4 }}
@@ -258,8 +264,8 @@ export default function HomePage() {
                 <Search className="text-gray-400 mr-2" size={20} />
                 <input
                   type="text"
-                  placeholder="Type what are you looking for..."
-                  className="w-full bg-transparent focus:outline-none text-black"
+                  placeholder="What are you looking for?"
+                  className="w-full bg-transparent focus:outline-none text-black placeholder:text-sm"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -269,8 +275,8 @@ export default function HomePage() {
                 <MapPin className="text-gray-400 mr-2" size={20} />
                 <input
                   type="text"
-                  placeholder="Enter Location (e.g. Canasa)"
-                  className="w-full bg-transparent focus:outline-none text-black"
+                  placeholder="Location"
+                  className="w-full bg-transparent focus:outline-none text-black placeholder:text-sm"
                   value={location}
                   onChange={e => setLocation(e.target.value)}
                   onKeyDown={handleKeyDown}
@@ -282,7 +288,10 @@ export default function HomePage() {
                 whileTap={{ scale: 0.95 }}
                 onClick={handleSearch}
               >
-                Search Now <ArrowRight size={20} />
+                <span className="md:hidden">
+                  <ArrowRight size={20} />
+                </span>
+                <span className="hidden md:block">Search Now</span>
               </motion.button>
             </motion.div>
 
@@ -298,30 +307,31 @@ export default function HomePage() {
             )}
 
             <motion.div
-              className="mt-4 text-sm text-white"
+              className="mt-6 text-sm text-white"
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.8, delay: 0.6 }}
             >
-              <span className="font-semibold">Popular:</span>
-              {businessCategories.slice(0, 5).map((category, index) => (
+              <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
+                <span className="font-semibold">Popular:</span>
+                {businessCategories.slice(0, 4).map(category => (
+                  <Link
+                    key={category.name}
+                    href={`/listings?category=${encodeURIComponent(
+                      category.name
+                    )}`}
+                    className="underline hover:text-orange-300"
+                  >
+                    {category.name}
+                  </Link>
+                ))}
                 <Link
-                  key={index}
-                  href={`/listings?category=${encodeURIComponent(
-                    category.name
-                  )}`}
-                  className="underline hover:text-orange-300 mx-1"
+                  href="/listings?showFilters=true"
+                  className="font-bold hover:text-orange-300"
                 >
-                  {category.name}
-                  {index < 4 && ','}
+                  + See All
                 </Link>
-              ))}
-              <Link
-                href="/listings?showFilters=true"
-                className="underline hover:text-orange-300 ml-1"
-              >
-                View All
-              </Link>
+              </div>
             </motion.div>
           </div>
         </section>
@@ -335,16 +345,16 @@ export default function HomePage() {
         {/* --- Featured Ads Section --- */}
         <ScrollAnimatedSection>
           <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
-            <h2 className="text-4xl font-bold text-center mb-4">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
               Featured Ads
             </h2>
-            <div className="flex justify-center gap-4 mb-8">
+            <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mb-8">
               {['All', 'Place', 'Restaurant', 'Real Estate', 'Others'].map(
                 tab => (
                   <button
                     key={tab}
                     onClick={() => setActiveAdFilter(tab)}
-                    className={`py-2 px-5 rounded-lg font-semibold transition-colors ${
+                    className={`py-2 px-4 text-sm sm:text-base sm:px-5 rounded-lg font-semibold transition-colors ${
                       activeAdFilter === tab
                         ? 'bg-gray-800 text-white'
                         : 'bg-white text-gray-600 hover:bg-gray-200'
@@ -373,8 +383,8 @@ export default function HomePage() {
                     <Image
                       src={ad.image}
                       alt={ad.title}
-                      width={100}
-                      height={100}
+                      width={300}
+                      height={200}
                       loading="lazy"
                       className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
                     />
@@ -429,7 +439,7 @@ export default function HomePage() {
       {/* --- Our Latest Blog Post Section --- */}
       <ScrollAnimatedSection>
         <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
-          <h2 className="text-4xl font-bold text-center mb-12">
+          <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Our Latest Blog Post
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
@@ -442,8 +452,8 @@ export default function HomePage() {
                   <Image
                     src={post.image}
                     alt={post.title}
-                    width={100}
-                    height={100}
+                    width={300}
+                    height={200}
                     loading="lazy"
                     className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
                   />

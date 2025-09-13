@@ -1,13 +1,20 @@
-// components/Header.tsx (Updated)
+// components/Header.tsx
 'use client';
 
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { ShoppingCart, User, ChevronDown, Heart } from 'lucide-react';
+import {
+  ShoppingCart,
+  User,
+  ChevronDown,
+  Heart,
+  Menu as MenuIcon,
+  X as XIcon,
+} from 'lucide-react';
 import AuthWithRedirect from './AuthWithRedirect';
-import { Suspense } from 'react';
-import { NavMenu } from './NavMenu';
+import { Suspense, useState } from 'react';
+import { NavMenu, menuItems, ListItem } from './NavMenu';
 import { usePathname } from 'next/navigation';
 import { useLogout } from '@/service/auth/hook';
 import { useCart } from '@/hooks/useCart'; // Import useCart
@@ -21,6 +28,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import { motion, AnimatePresence, Variants } from 'framer-motion';
+
+const mobileMenuVariants: Variants = {
+  closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
+  open: { x: '0%', transition: { duration: 0.3, ease: 'easeInOut' } },
+};
 
 export default function Header() {
   const pathname = usePathname();
@@ -30,10 +43,102 @@ export default function Header() {
     (state: RootState) => state.auth
   );
   const logout = useLogout();
+  const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [openMobileSubMenu, setOpenMobileSubMenu] = useState<string | null>(
+    null
+  );
 
   if (pathname.startsWith('/dashboard')) {
     return null;
   }
+
+  const MobileMenu = () => (
+    <>
+      <button
+        onClick={() => setMobileMenuOpen(true)}
+        className="p-2 text-white transition-colors hover:text-red-400"
+      >
+        <MenuIcon className="h-6 w-6" />
+      </button>
+
+      <AnimatePresence>
+        {isMobileMenuOpen && (
+          <motion.div
+            variants={mobileMenuVariants}
+            initial="closed"
+            animate="open"
+            exit="closed"
+            className="fixed inset-0 z-50 flex flex-col bg-white p-4"
+          >
+            <div className="flex items-center justify-between">
+              <Link href="/" className="text-xl font-semibold text-gray-900">
+                McomMall
+              </Link>
+              <button
+                onClick={() => setMobileMenuOpen(false)}
+                className="p-2 text-gray-900"
+              >
+                <XIcon className="h-6 w-6" />
+              </button>
+            </div>
+            <nav className="mt-8 flex flex-col space-y-2">
+              {menuItems.map(item => {
+                const isSubMenuOpen = openMobileSubMenu === item.title;
+
+                if (item.href) {
+                  return (
+                    <Link
+                      key={item.title}
+                      href={item.href}
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                    >
+                      {item.title}
+                    </Link>
+                  );
+                }
+
+                return (
+                  <div key={item.title}>
+                    <button
+                      onClick={() =>
+                        setOpenMobileSubMenu(isSubMenuOpen ? null : item.title)
+                      }
+                      className="flex w-full items-center justify-between rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                    >
+                      <span>{item.title}</span>
+                      <ChevronDown
+                        className={`h-5 w-5 transition-transform ${
+                          isSubMenuOpen ? 'rotate-180' : ''
+                        }`}
+                      />
+                    </button>
+                    <AnimatePresence>
+                      {isSubMenuOpen && (
+                        <motion.div
+                          initial={{ height: 0, opacity: 0 }}
+                          animate={{ height: 'auto', opacity: 1 }}
+                          exit={{ height: 0, opacity: 0 }}
+                          className="overflow-hidden pl-4"
+                        >
+                          <div
+                            className="mt-2 border-l-2 border-gray-200 pl-4"
+                            onClick={() => setMobileMenuOpen(false)}
+                          >
+                            {item.content}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                );
+              })}
+            </nav>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </>
+  );
 
   return (
     <header className="bg-slate-800 text-white fixed top-0 left-0 right-0 w-full z-50">
@@ -69,7 +174,7 @@ export default function Header() {
                 </Badge>
               </Button>
             </Link>
-            <Link href="/dashboard/wishlist">
+            <Link href="/wishlist">
               <Button
                 variant="ghost"
                 size="sm"
@@ -94,41 +199,44 @@ export default function Header() {
                         {userName?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div>
-                      <div className="text-lg">{userName}</div>
-                      <div className="text-xs">
+                    <div className="hidden md:block">
+                      <div className="text-sm font-semibold">{userName}</div>
+                      <div className="text-xs text-gray-400">
                         {userRole === 'customer'
                           ? 'Customer'
                           : packageInfo?.planType}
                       </div>
                     </div>
-                    <ChevronDown className="w-4 h-4 ml-1" />
+                    <ChevronDown className="hidden h-4 w-4 md:block ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent>
-                  <DropdownMenuItem className="text-lg" asChild>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-lg" asChild>
+                  <DropdownMenuItem asChild>
                     <Link href="/wishlist">My Wishlist</Link>
                   </DropdownMenuItem>
-                  <DropdownMenuItem className="text-lg" onClick={logout}>
-                    Log out
-                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
             ) : (
               <Suspense fallback={<div>Loading...</div>}>
                 <AuthWithRedirect>
-                  <User className="w-4 h-4 mr-2" />
-                  Sign In
+                  <div className="hidden md:flex items-center">
+                    <User className="w-4 h-4 mr-2" />
+                    Sign In
+                  </div>
+                  <div className="md:hidden">
+                    <User className="w-5 h-5" />
+                  </div>
                 </AuthWithRedirect>
               </Suspense>
             )}
 
-            {/* Mobile Nav Trigger is now inside NavMenu */}
+            {/* Mobile Nav Trigger */}
             <div className="md:hidden">
-              <NavMenu />
+              <MobileMenu />
             </div>
           </div>
         </div>

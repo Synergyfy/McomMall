@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // Tab data for the new component
 const tabs = [
@@ -55,14 +56,14 @@ export default function McomSolutions() {
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200 mb-12">
           <nav
-            className="-mb-px flex space-x-8 justify-center"
+            className="-mb-px flex space-x-4 sm:space-x-8 justify-center"
             aria-label="Tabs"
           >
             {tabs.map(tab => (
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
-                className={`whitespace-nowrap py-4 px-1 border-b-2 font-medium text-lg transition-colors duration-200
+                className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-base sm:py-4 sm:text-lg transition-colors duration-200
                   ${
                     activeTab === tab.id
                       ? 'border-orange-600 text-orange-600'
@@ -88,7 +89,7 @@ export default function McomSolutions() {
             <div className="mt-8">
               <a
                 href="#"
-                className="inline-flex items-center justify-center px-8 py-4 border border-transparent text-base font-medium rounded-full text-white bg-orange-600 hover:bg-orange-700 transition-transform duration-200 hover:scale-105"
+                className="inline-flex items-center justify-center px-6 py-3 sm:px-8 sm:py-4 border border-transparent text-base font-medium rounded-full text-white bg-orange-600 hover:bg-orange-700 transition-transform duration-200 hover:scale-105"
               >
                 {currentContent.buttonText}
                 <ArrowRightIcon className="ml-2 -mr-1 h-5 w-5" />
@@ -99,14 +100,10 @@ export default function McomSolutions() {
           {/* Right Side: YouTube Video */}
           <div className="w-full h-[300px] md:h-[450px]">
             <div className="w-full h-full rounded-2xl overflow-hidden shadow-2xl">
-              <iframe
-                src={currentContent.videoUrl}
-                title="YouTube video player"
-                frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
-                className="w-full h-full"
-              ></iframe>
+              <LazyYouTubeVideo
+                videoId={currentContent.videoUrl.split('/').pop() || ''}
+                title={currentContent.title}
+              />
             </div>
           </div>
         </div>

@@ -3,7 +3,6 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { Send } from 'lucide-react';
 
 export default function Newsletter() {
   return (
@@ -28,31 +27,26 @@ export default function Newsletter() {
           </p>
 
           {/* Form with a more compact and modern layout */}
-          <form className="mt-10 max-w-lg mx-auto">
-            <div className="relative">
-              {/* Added an icon inside the input for better visual guidance */}
-              <div className="absolute inset-y-0 left-0 flex items-center pl-4 pointer-events-none">
-                <Send className="h-5 w-5 text-slate-500" />
-              </div>
-
-              {/* Input field with padding adjusted for the icon and button */}
+          <form className="mt-10 max-w-lg mx-auto sm:flex sm:gap-x-4">
+            <div className="min-w-0 flex-1">
+              <label htmlFor="email" className="sr-only">
+                Email address
+              </label>
               <Input
                 type="email"
                 name="email"
                 id="email"
                 placeholder="Enter your email"
-                className="block w-full h-14 pl-12 pr-36 py-3 text-base text-white placeholder-slate-500 bg-slate-800/80 border border-slate-700 rounded-full shadow-sm focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
+                className="block w-full h-14 px-5 py-3 text-base text-white placeholder-slate-500 bg-slate-800/80 border border-slate-700 rounded-full shadow-sm focus:ring-orange-500 focus:border-orange-500 backdrop-blur-sm"
               />
-
-              {/* Button is now absolutely positioned inside the input container */}
-              <div className="absolute inset-y-0 right-0 flex items-center pr-2">
-                <Button
-                  type="submit"
-                  className="h-10 px-6 text-sm font-bold text-white bg-orange-600 rounded-full shadow-lg transform transition-transform duration-200 hover:scale-105 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-orange-500"
-                >
-                  Subscribe
-                </Button>
-              </div>
+            </div>
+            <div className="mt-3 sm:mt-0 sm:flex-shrink-0">
+              <Button
+                type="submit"
+                className="block w-full h-14 px-6 text-base font-bold text-white bg-orange-600 rounded-full shadow-lg transform transition-transform duration-200 hover:scale-105 hover:bg-orange-500 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-slate-900 focus:ring-orange-500"
+              >
+                Subscribe
+              </Button>
             </div>
           </form>
 

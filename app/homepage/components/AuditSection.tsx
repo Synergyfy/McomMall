@@ -7,6 +7,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { ArrowRight, BarChart, PackageCheck, Wrench } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // --- Data for each audit tab (Adjusted for Light Theme) ---
 const auditTabsData = [
@@ -50,21 +51,6 @@ const auditTabsData = [
     buttonClasses: 'bg-orange-600 hover:bg-orange-700',
   },
 ];
-
-// --- Reusable Video Player ---
-const VideoPlayer = ({ videoId }: { videoId: string }) => (
-  <div className="aspect-video w-full overflow-hidden rounded-lg border border-slate-200 bg-black shadow-lg">
-    <iframe
-      // src={`https://www.youtube.com/embed/${videoId}`}
-      src={'https://www.youtube.com/embed/dQw4w9WgXcQ'}
-      title="YouTube video player"
-      frameBorder="0"
-      allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-      allowFullScreen
-      className="h-full w-full"
-    ></iframe>
-  </div>
-);
 
 // --- Main Section Component (Light Theme) ---
 export function AuditSection() {
@@ -136,19 +122,22 @@ export function AuditSection() {
                   >
                     {activeTabData.title}
                   </h3>
-                  <p className="mt-6 text-xl leading-relaxed text-slate-600">
+                  <p className="mt-6 text-lg leading-relaxed text-slate-600 sm:text-xl">
                     {activeTabData.description}
                   </p>
                   <a
                     href="#"
-                    className={`mt-10 inline-flex items-center gap-3 rounded-full px-10 py-4 text-xl font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 ${activeTabData.buttonClasses}`}
+                    className={`mt-8 inline-flex items-center gap-3 rounded-full px-6 py-3 text-base font-semibold text-white shadow-lg transition-transform duration-300 hover:scale-105 sm:px-10 sm:py-4 sm:text-lg ${activeTabData.buttonClasses}`}
                   >
                     <span>{activeTabData.buttonText}</span>
                     <ArrowRight className="h-6 w-6" />
                   </a>
                 </div>
                 <div className="order-1 lg:order-2">
-                  <VideoPlayer videoId={activeTabData.videoId} />
+                  <LazyYouTubeVideo
+                    videoId={activeTabData.videoId}
+                    title={activeTabData.title}
+                  />
                 </div>
               </motion.div>
             )}
@@ -156,7 +145,7 @@ export function AuditSection() {
         </div>
 
         <Button
-          className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-6 py-7 text-lg md:text-2xl mt-16 mx-auto flex items-center gap-2 "
+          className="cursor-pointer bg-orange-500 hover:bg-orange-600 text-white px-6 py-4 mt-16 mx-auto flex items-center gap-2 text-base md:text-lg"
           onClick={() => router.push('/audit-calculator')}
         >
           Try our audit calculator

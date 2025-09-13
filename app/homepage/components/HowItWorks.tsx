@@ -2,7 +2,8 @@
 
 import React from 'react';
 import { motion, Variants } from 'framer-motion';
-import { ArrowRight, Briefcase } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
+import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
 // Main data for the cards, with YouTube video URLs
 const cardsData = [
@@ -62,6 +63,15 @@ const HowItWorksRedesigned = () => {
   return (
     <section className="bg-gray-50 font-sans py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
+        <div className="text-center mb-12">
+          <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
+            How MCOM Mall Works
+          </h2>
+          <p className="mt-4 text-lg text-gray-600">
+            Whether you are a business, a consumer, or a service provider, MCOM
+            Mall has something for you.
+          </p>
+        </div>
         {/* Steps Container */}
         <motion.div
           className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
@@ -76,16 +86,10 @@ const HowItWorksRedesigned = () => {
               className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
               variants={itemVariants}
             >
-              <div className="aspect-video relative bg-black">
-                <iframe
-                  src={card.videoUrl}
-                  title={card.title}
-                  frameBorder="0"
-                  allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                  allowFullScreen
-                  className="absolute top-0 left-0 w-full h-full"
-                ></iframe>
-              </div>
+              <LazyYouTubeVideo
+                videoId={card.videoUrl.split('/').pop() || ''}
+                title={card.title}
+              />
               <div className="p-6 flex flex-col flex-grow">
                 <h3 className="text-xl font-bold text-orange-600 mb-4">
                   {card.title}
