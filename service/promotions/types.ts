@@ -55,10 +55,26 @@ export interface CheckPromotionDto {
   productId?: string;
 }
 
+import { User } from '../listings/types';
+
 // A placeholder for the Product type.
 // In a real application, this might be imported from another module.
 export interface Product {
   id: string; // uuid
   name: string;
   // other product fields...
+}
+
+export interface Participant {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  pointsEarned: number;
+  user: User;
+  promotion: Promotion;
+}
+
+export interface UpdatePointsDto {
+  amount: number;
 }
