@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
-import { categories, listings } from '@/lib/listing-data';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
 import ListingCard from '@/components/listingCard';
 import ListingCardSkeleton from '@/components/ListingCardSkeleton';
@@ -45,7 +44,9 @@ const initialFilters: FilterState = {
 function ListingsPageContent() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { accessToken, userRole } = useSelector((state: RootState) => state.auth);
+  const { accessToken, userRole } = useSelector(
+    (state: RootState) => state.auth
+  );
 
   const handleAddNewListing = () => {
     if (!accessToken) {
@@ -188,7 +189,9 @@ function ListingsPageContent() {
     });
 
     if (newFilters.subCategories.length === 0 && newFilters.category) {
-      if (!combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase())) {
+      if (
+        !combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase())
+      ) {
         combinedQuery = `${combinedQuery} ${newFilters.category}`;
       }
     }
@@ -209,7 +212,9 @@ function ListingsPageContent() {
     window.history.pushState(null, '', `?${params.toString()}`);
   };
 
-  const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
+  const totalPages = Math.ceil(
+    (combinedListings?.length || 0) / listingsPerPage
+  );
 
   if (isLoading) {
     return (
