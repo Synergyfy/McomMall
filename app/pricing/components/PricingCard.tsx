@@ -81,19 +81,23 @@ export default function PricingCard({
         } border-2 shadow-md`}
       >
         <CardHeader>
-          <CardTitle className="text-xl font-bold text-blue-900">
+          <CardTitle className="text-lg sm:text-xl font-bold text-blue-900">
             {tier.name}
           </CardTitle>
-          <h3 className={`text-3xl font-extrabold ${priceColor[tier.accent]}`}>
+          <h3
+            className={`text-2xl sm:text-3xl font-extrabold ${
+              priceColor[tier.accent]
+            }`}
+          >
             {tier.price}
           </h3>
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
           {isPayg && (
-            <CardFooter className="flex flex-col md:flex-row gap-2">
+            <CardFooter className="flex flex-col sm:flex-row gap-2 p-0">
               <Button
                 onClick={handlePayNow}
-                className={`w-full md:w-1/2 text-white cursor-pointer ${
+                className={`w-full sm:w-1/2 text-white cursor-pointer ${
                   buttonColor[tier.accent]
                 } `}
               >
@@ -101,7 +105,7 @@ export default function PricingCard({
               </Button>
               <Button
                 onClick={handleStartTrial}
-                className={`w-full md:w-1/2 border bg-white cursor-pointer ${
+                className={`w-full sm:w-1/2 border bg-white cursor-pointer ${
                   outlineButtonColor[tier.accent]
                 }`}
               >

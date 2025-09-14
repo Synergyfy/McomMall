@@ -259,13 +259,13 @@ export default function CoBrandedContent({ listingId }: CoBrandedContentProps) {
         </h1>
         <section className="w-full flex flex-col items-center justify-center mb-12">
           <div className="w-full p-6 sm:p-8 bg-white rounded-lg shadow-lg">
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-start">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
               {/* Left Column: Intro + Video */}
-              <div className="flex flex-col items-center lg:items-start">
-                <h2 className="text-2xl sm:text-3xl font-bold text-center lg:text-left mb-2">
+              <div className="flex flex-col items-center md:items-start">
+                <h2 className="text-2xl sm:text-3xl font-bold text-center md:text-left mb-2">
                   Your Co-Branded Launchpad
                 </h2>
-                <p className="text-center lg:text-left text-gray-600 mb-6 text-base sm:text-lg font-medium">
+                <p className="text-center md:text-left text-gray-600 mb-6 text-base sm:text-lg font-medium">
                   Unlock your brand’s growth with a £365 onboarding fee. Choose
                   from Standard, Pro, or Pro Plus plans and gain access to
                   tools, support, and marketing designed to boost your

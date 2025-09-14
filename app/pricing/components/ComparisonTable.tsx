@@ -44,17 +44,17 @@ export default function ComparisonTable({
   };
 
   return (
-    <div className="overflow-x-auto scroll-smooth">
+<div className="overflow-x-auto scroll-smooth md:overflow-x-visible">
       <Table>
         <TableHeader className="sticky top-0 bg-blue-50 z-10">
           <TableRow>
-            <TableHead className="text-7xl min-w-[300px] font-bold text-blue-900">
+            <TableHead className="text-2xl md:text-3xl min-w-[150px] md:min-w-[300px] font-bold text-blue-900">
               Features
             </TableHead>
             {plans.map((plan, index) => (
               <TableHead
                 key={plan}
-                className={`text-center md:text-lg min-w-[150px] font-bold text-${
+                className={`text-center text-base md:text-lg min-w-[100px] md:min-w-[150px] font-bold text-${
                   accentHeaders[index].split('-')[0]
                 }-700 bg-${accentHeaders[index].split('-')[0]}-50`}
               >
@@ -73,7 +73,7 @@ export default function ComparisonTable({
               >
                 <TableCell
                   colSpan={plans.length + 1}
-                  className="font-bold text-lg"
+                  className="font-bold text-base md:text-lg"
                 >
                   <div className="flex items-center">
                     {group.name}
@@ -98,7 +98,7 @@ export default function ComparisonTable({
                         index % 2 === 0 ? 'bg-white' : 'bg-gray-50'
                       }`}
                     >
-                      <TableCell className="font-medium text-base p-4 min-w-[300px]">
+                      <TableCell className="font-medium text-sm md:text-base p-2 md:p-4 min-w-[150px] md:min-w-[300px]">
                         <div className="flex items-center">
                           {feature.name}
                           {feature.tooltip && (
@@ -118,11 +118,11 @@ export default function ComparisonTable({
                       {feature.availability.map((has, idx) => (
                         <TableCell
                           key={idx}
-                          className="text-center p-4 min-w-[150px]"
+                          className="text-center p-2 md:p-4 min-w-[100px] md:min-w-[150px]"
                         >
                           {has ? (
                             <Check
-                              className={`mx-auto h-6 w-6 text-${
+                              className={`mx-auto h-5 w-5 md:h-6 md:w-6 text-${
                                 accentHeaders[idx].split('-')[0]
                               }-500`}
                             />
