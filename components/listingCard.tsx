@@ -53,8 +53,10 @@ function isGoogleResult(
 
 export default function ListingCard({
   listing,
+  layout = 'grid',
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
+  layout: 'grid' | 'list';
 }) {
   const isGoogle = isGoogleResult(listing);
 
@@ -94,6 +96,9 @@ export default function ListingCard({
         (listing as InHouseBusiness).location.city
       }`
     : '';
+  const shortDescription = isGoogle
+    ? `Business Status: ${listing.businessStatus}`
+    : (listing as InHouseBusiness).shortDescription;
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
   const ratingCount = isGoogle ? listing.userRatingsTotal : undefined;
   const priceLevel = isGoogle ? listing.priceLevel : undefined;
@@ -106,6 +111,85 @@ export default function ListingCard({
   const href = isGoogle
     ? `/listings/${listingId}`
     : `/listings/${listingId}?source=in-house`;
+
+  if (layout === 'list') {
+    return (
+      <Link href={href} className="block">
+        <Card className="w-full overflow-hidden shadow-md border rounded-xl hover:shadow-xl transition-shadow duration-300 flex flex-col md:flex-row">
+          <div className="relative md:w-1/3">
+            <Image
+              src={imgUrl}
+              alt={altText}
+              width={400}
+              height={250}
+              className="object-cover w-full h-56 md:h-full"
+            />
+            <div className="absolute top-4 left-4 z-10">
+              <span className="px-3 py-1 text-xs text-white bg-red-500 rounded-md">
+                {category}
+              </span>
+            </div>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <button className="absolute top-4 right-4 z-10 bg-white p-2 rounded-full shadow-md">
+                    <Heart className="w-5 h-5 text-gray-700" />
+                  </button>
+                </TooltipTrigger>
+                <TooltipContent>
+                  <p>Add to Wishlist</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          </div>
+          <CardContent className="p-4 bg-white flex-1 flex flex-col justify-between">
+            <div>
+              <h3 className="text-lg font-bold text-gray-800">{name}</h3>
+              {isVerified && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <CheckCircle className="h-5 w-5 text-green-500 flex-shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Verified Listing</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+              <div className="flex items-center text-sm text-gray-500 mt-1">
+                <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
+                <span className="truncate">{vicinity}</span>
+              </div>
+              <p className="text-sm text-gray-600 mt-2">{shortDescription}</p>
+            </div>
+            <div className="flex justify-between items-center pt-3 border-t mt-4">
+              <div className="flex items-center">
+                {rating && (
+                  <>
+                    <Star className="w-5 h-5 text-yellow-400 fill-current" />
+                    <span className="text-sm font-semibold ml-1">
+                      {rating?.toFixed(1)}
+                    </span>
+                  </>
+                )}
+                {ratingCount && (
+                  <span className="text-sm text-gray-500 ml-1">
+                    ({ratingCount})
+                  </span>
+                )}
+              </div>
+              {priceLevel && (
+                <p className="text-base font-semibold text-gray-900">
+                  {priceLevel}
+                </p>
+              )}
+            </div>
+          </CardContent>
+        </Card>
+      </Link>
+    );
+  }
 
   return (
     <Link href={href} className="block">

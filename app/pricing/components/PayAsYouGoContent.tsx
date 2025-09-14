@@ -3,49 +3,7 @@ import PricingCard from './PricingCard';
 import ComparisonTable from './ComparisonTable';
 import TrialInfo from './TrialInfo';
 import { PricingTier, TableFeature, FeatureGroup } from '../types/index';
-
-const paygTiers: PricingTier[] = [
-  {
-    name: '90 Days',
-    price: '£90',
-    primaryFeatures: [
-      'Basic Access to MCOM Ecosystem – Limited to services in the purchased seasonal package (Winter, Spring, Summer, or Autumn).',
-      'External Evergreen Reward Programme QR Code – One QR code for the main store; additional codes can be purchased for other branches or partner locations.',
-      'Directory Listing – Business listed on 247GBS Business Directories & MCOM Lead Traffic Hub (after claim & verification).',
-      'MCOM Wallet Access – Limited features for payment acceptance & reward credits.',
-      'Seasonal Campaign Participation – Eligible to join network-wide promotions during your active 30-day season.',
-    ],
-    secondaryFeatures: [
-      'Spare Capacity & Stock Audit Tool – Can be used to identify excess stock and create simple offers.',
-      'Basic Consumer Rewards – Offer rewards via the Evergreen Programme (managed by 247GBS, not customisable).',
-      '7-day, 15-day, or 21-day Challenges – Option to earn credits to reduce future subscription costs.',
-      'Referral Credits – Limited ability to refer other businesses and earn credits.',
-      'Access to Smart Money Solutions – Basic package (VoIP, POS devices, Elavon payment solutions).',
-      'Marketing Exposure – Inclusion in seasonal directory promotions for the active quarter.',
-    ],
-    accent: 'teal',
-  },
-  {
-    name: '180 Days',
-    price: '£150',
-    inherits: '90 Days',
-    primaryFeatures: [
-      'Coverage for two seasonal packages (e.g., Winter + Spring).',
-      'Extended marketing exposure in seasonal directory promotions across two seasons.',
-    ],
-    accent: 'purple',
-  },
-  {
-    name: '270 Days',
-    price: '£240',
-    inherits: '180 Days',
-    primaryFeatures: [
-      'Coverage for three seasonal packages (e.g., Winter + Spring + Summer).',
-      'Extended marketing exposure in seasonal directory promotions across three seasons.',
-    ],
-    accent: 'yellow',
-  },
-];
+import { paygTiers } from '../data/pricingData';
 
 const paygPlans = ['90 Days', '180 Days', '270 Days'];
 
@@ -232,8 +190,8 @@ export default function PayAsYouGoContent({
       <h1 className="text-3xl md:text-4xl font-bold mb-8 text-blue-900">
         Pay As You Go Pricing
       </h1>
-      <section className="w-full flex lg:flex-row items-center justify-center mb-12 gap-8">
-        <div className="">
+      <section className="w-full flex flex-col lg:flex-row items-center justify-center mb-12 gap-8">
+        <div className="w-full lg:w-2/3">
           <TrialInfo />
         </div>
       </section>

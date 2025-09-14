@@ -68,7 +68,7 @@ export default function Header() {
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed inset-0 z-50 flex flex-col bg-white p-4"
+            className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white p-4"
           >
             <div className="flex items-center justify-between">
               <Link href="/" className="text-xl font-semibold text-gray-900">
@@ -199,7 +199,7 @@ export default function Header() {
                         {userName?.charAt(0).toUpperCase()}
                       </AvatarFallback>
                     </Avatar>
-                    <div className="hidden md:block">
+                    <div className="hidden sm:block">
                       <div className="text-sm font-semibold">{userName}</div>
                       <div className="text-xs text-gray-400">
                         {userRole === 'customer'
@@ -207,7 +207,7 @@ export default function Header() {
                           : packageInfo?.planType}
                       </div>
                     </div>
-                    <ChevronDown className="hidden h-4 w-4 md:block ml-1" />
+                    <ChevronDown className="hidden h-4 w-4 sm:block ml-1" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
@@ -223,11 +223,11 @@ export default function Header() {
             ) : (
               <Suspense fallback={<div>Loading...</div>}>
                 <AuthWithRedirect>
-                  <div className="hidden md:flex items-center">
+                  <div className="hidden sm:flex items-center">
                     <User className="w-4 h-4 mr-2" />
                     Sign In
                   </div>
-                  <div className="md:hidden">
+                  <div className="sm:hidden">
                     <User className="w-5 h-5" />
                   </div>
                 </AuthWithRedirect>
@@ -235,7 +235,7 @@ export default function Header() {
             )}
 
             {/* Mobile Nav Trigger */}
-            <div className="md:hidden">
+            <div className="md:hidden flex items-center">
               <MobileMenu />
             </div>
           </div>

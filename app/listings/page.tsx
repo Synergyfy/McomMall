@@ -17,7 +17,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
-import { categories, listings } from '@/lib/listing-data';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
 import ListingCard from '@/components/listingCard';
 import ListingCardSkeleton from '@/components/ListingCardSkeleton';
@@ -45,7 +44,9 @@ const initialFilters: FilterState = {
 function ListingsPageContent() {
   const router = useRouter();
   const dispatch = useDispatch();
-  const { accessToken, userRole } = useSelector((state: RootState) => state.auth);
+  const { accessToken, userRole } = useSelector(
+    (state: RootState) => state.auth
+  );
 
   const handleAddNewListing = () => {
     if (!accessToken) {
@@ -84,6 +85,7 @@ function ListingsPageContent() {
     }
   }, []);
 
+  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [activeFilters, setActiveFilters] =
     useState<FilterState>(initialFilters);
   const [filtersVisible, setFiltersVisible] = useState(false);
@@ -188,7 +190,9 @@ function ListingsPageContent() {
     });
 
     if (newFilters.subCategories.length === 0 && newFilters.category) {
-      if (!combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase())) {
+      if (
+        !combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase())
+      ) {
         combinedQuery = `${combinedQuery} ${newFilters.category}`;
       }
     }
@@ -209,7 +213,9 @@ function ListingsPageContent() {
     window.history.pushState(null, '', `?${params.toString()}`);
   };
 
-  const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
+  const totalPages = Math.ceil(
+    (combinedListings?.length || 0) / listingsPerPage
+  );
 
   if (isLoading) {
     return (
@@ -261,11 +267,29 @@ function ListingsPageContent() {
                   {filtersVisible ? 'Hide Filters' : 'Show Filters'}
                 </Button>
                 <div className="hidden md:flex items-center border rounded-md">
-                  <Button variant="ghost" size="icon">
-                    <LayoutGrid className="h-5 w-5 text-gray-400" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setLayout('grid')}
+                    className={layout === 'grid' ? 'bg-gray-100' : ''}
+                  >
+                    <LayoutGrid
+                      className={`h-5 w-5 ${
+                        layout === 'grid' ? 'text-red-500' : 'text-gray-400'
+                      }`}
+                    />
                   </Button>
-                  <Button variant="ghost" size="icon" className="bg-gray-100">
-                    <List className="h-5 w-5 text-red-500" />
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    onClick={() => setLayout('list')}
+                    className={layout === 'list' ? 'bg-gray-100' : ''}
+                  >
+                    <List
+                      className={`h-5 w-5 ${
+                        layout === 'list' ? 'text-red-500' : 'text-gray-400'
+                      }`}
+                    />
                   </Button>
                 </div>
               </div>
@@ -302,10 +326,14 @@ function ListingsPageContent() {
               ) : (
                 <>
                   <div
-                    className={`grid grid-cols-1 gap-6 ${
-                      filtersVisible
-                        ? 'md:grid-cols-2'
-                        : 'md:grid-cols-2 lg:grid-cols-3'
+                    className={`grid gap-6 ${
+                      layout === 'grid'
+                        ? `grid-cols-1 ${
+                            filtersVisible
+                              ? 'md:grid-cols-2'
+                              : 'md:grid-cols-2 lg:grid-cols-3'
+                          }`
+                        : 'grid-cols-1'
                     }`}
                   >
                     {combinedListings &&
@@ -317,6 +345,7 @@ function ListingsPageContent() {
                               : listing.id
                           }
                           listing={listing}
+                          layout={layout}
                         />
                       ))}
                   </div>
