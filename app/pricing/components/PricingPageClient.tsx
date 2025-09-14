@@ -13,18 +13,18 @@ export default function PricingPageClient() {
   const listingId = searchParams.get('listing_id');
 
   return (
-    <div className="h-full md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
+    <div className="h-full p-4 md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
       <header className="text-center">
-        <h1 className="text-5xl font-semibold">
+        <h1 className="text-3xl md:text-5xl font-semibold">
           McomMall Packages and Pricing
         </h1>
-        <p className="text-xl text-gray-800 font-medium">
+        <p className="text-lg md:text-xl text-gray-800 font-medium mt-2">
           Select the package that serves your need.
         </p>
       </header>
-      <section className="w-5/6 mt-10 flex flex-col  items-center bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 ">
+      <section className="w-full md:w-5/6 mt-10 flex flex-col items-center bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 rounded-lg shadow-lg">
         {/* Desktop Sidebar */}
-        <aside className="mt-20 space-y-4">
+        <aside className="mt-10 md:mt-20 space-y-4">
           <h3 className="text-xl md:text-2xl font-medium text-center">
             Select your plan
           </h3>

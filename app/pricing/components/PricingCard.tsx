@@ -90,7 +90,7 @@ export default function PricingCard({
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
           {isPayg && (
-            <CardFooter className="flex gap-2 ">
+            <CardFooter className="flex flex-col md:flex-row gap-2">
               <Button
                 onClick={handlePayNow}
                 className={`w-full md:w-1/2 text-white cursor-pointer ${

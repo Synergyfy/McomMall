@@ -232,8 +232,8 @@ export default function PayAsYouGoContent({
       <h1 className="text-3xl md:text-4xl font-bold mb-8 text-blue-900">
         Pay As You Go Pricing
       </h1>
-      <section className="w-full flex lg:flex-row items-center justify-center mb-12 gap-8">
-        <div className="">
+      <section className="w-full flex flex-col lg:flex-row items-center justify-center mb-12 gap-8">
+        <div className="w-full lg:w-2/3">
           <TrialInfo />
         </div>
       </section>
