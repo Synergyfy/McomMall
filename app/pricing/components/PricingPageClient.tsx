@@ -6,6 +6,7 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PricingNav from './PricingNav';
 import PayAsYouGoContent from './PayAsYouGoContent';
 import CoBrandedContent from './CoBrandedContent';
+import MobilePricingPage from './MobilePricingPage';
 
 export default function PricingPageClient() {
   const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
@@ -36,30 +37,38 @@ export default function PricingPageClient() {
             />
           </div>
         </aside>
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <AnimatePresence mode="wait">
-            {activeView === 'payg' ? (
-              <motion.div
-                key="payg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-              >
-                <PayAsYouGoContent listingId={listingId} />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="cobranded"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-              >
-                <CoBrandedContent listingId={listingId} />
-              </motion.div>
-            )}
-          </AnimatePresence>
+        <main className="flex-1 w-full p-4 md:p-8 overflow-auto">
+          {/* Desktop Content */}
+          <div className="hidden md:block">
+            <AnimatePresence mode="wait">
+              {activeView === 'payg' ? (
+                <motion.div
+                  key="payg"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                >
+                  <PayAsYouGoContent listingId={listingId} />
+                </motion.div>
+              ) : (
+                <motion.div
+                  key="cobranded"
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -20 }}
+                  transition={{ duration: 0.5, ease: 'easeOut' }}
+                >
+                  <CoBrandedContent listingId={listingId} />
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Mobile Content */}
+          <div className="block md:hidden">
+            <MobilePricingPage activeView={activeView} listingId={listingId} />
+          </div>
         </main>
         {/* Mobile Bottom Nav */}
         <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t p-4 bg-white/80 backdrop-blur-sm z-10">
