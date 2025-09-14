@@ -68,7 +68,7 @@ export default function Header() {
             initial="closed"
             animate="open"
             exit="closed"
-            className="fixed inset-0 z-50 flex flex-col bg-white p-4"
+            className="fixed inset-0 z-50 flex flex-col overflow-y-auto bg-white p-4"
           >
             <div className="flex items-center justify-between">
               <Link href="/" className="text-xl font-semibold text-gray-900">
