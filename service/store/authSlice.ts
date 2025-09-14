@@ -52,8 +52,8 @@ const authSlice = createSlice({
       state.userRole = action.payload.userRole;
       state.packageInfo = action.payload.packageInfo;
       Cookies.set('userId', action.payload.id, { expires: 7 });
+      Cookies.set('userRole', action.payload.userRole, { expires: 7 });
       localStorage.setItem('user-name', action.payload.userName);
-      localStorage.setItem('user-type', action.payload.userRole);
       if (action.payload.packageInfo) {
         Cookies.set('packageInfo', JSON.stringify(action.payload.packageInfo), { expires: 7 });
       }
@@ -67,15 +67,15 @@ const authSlice = createSlice({
       Cookies.remove('access');
       Cookies.remove('refresh');
       Cookies.remove('userId');
+      Cookies.remove('userRole');
       Cookies.remove('packageInfo');
       localStorage.removeItem('user-name');
-      localStorage.removeItem('user-type');
     },
     loadAuthFromCookies: state => {
       const accessToken = Cookies.get('access');
       const userId = Cookies.get('userId');
+      const userRole = Cookies.get('userRole');
       const userName = localStorage.getItem('user-name');
-      const userRole = localStorage.getItem('user-type');
       const packageInfo = Cookies.get('packageInfo');
 
       if (accessToken) {

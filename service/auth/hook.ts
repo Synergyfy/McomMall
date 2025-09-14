@@ -94,7 +94,6 @@ export const useLogin = () => {
           packageInfo: { planType: data.packageInfo.planType },
         })
       );
-      Cookies.set('userId', data.userId, { expires: 7 });
       setBearerToken(data.auth.accessToken);
     },
   });
