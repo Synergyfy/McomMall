@@ -85,7 +85,7 @@ function ListingsPageContent() {
     }
   }, []);
 
-  const [layout, setLayout] = useState('grid');
+  const [layout, setLayout] = useState<'grid' | 'list'>('grid');
   const [activeFilters, setActiveFilters] =
     useState<FilterState>(initialFilters);
   const [filtersVisible, setFiltersVisible] = useState(false);

@@ -96,6 +96,9 @@ export default function ListingCard({
         (listing as InHouseBusiness).location.city
       }`
     : '';
+  const shortDescription = isGoogle
+    ? `Business Status: ${listing.businessStatus}`
+    : (listing as InHouseBusiness).shortDescription;
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
   const ratingCount = isGoogle ? listing.userRatingsTotal : undefined;
   const priceLevel = isGoogle ? listing.priceLevel : undefined;
@@ -158,6 +161,7 @@ export default function ListingCard({
                 <MapPin className="w-4 h-4 mr-1 flex-shrink-0" />
                 <span className="truncate">{vicinity}</span>
               </div>
+              <p className="text-sm text-gray-600 mt-2">{shortDescription}</p>
             </div>
             <div className="flex justify-between items-center pt-3 border-t mt-4">
               <div className="flex items-center">
