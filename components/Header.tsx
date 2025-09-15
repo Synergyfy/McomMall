@@ -25,6 +25,7 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
@@ -41,6 +42,9 @@ export default function Header() {
   const { wishlistCount } = useWishlist();
   const { accessToken, userName, userRole, packageInfo } = useSelector(
     (state: RootState) => state.auth
+  );
+  const { notifications } = useSelector(
+    (state: RootState) => state.notifications
   );
   const logout = useLogout();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -192,7 +196,15 @@ export default function Header() {
             {accessToken ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center">
+                  <Button variant="ghost" className="flex items-center relative">
+                    {userRole === 'owner' && notifications && notifications.total > 0 && (
+                      <Badge
+                        variant="destructive"
+                        className="absolute -top-2 -right-2 w-5 h-5 p-0 flex items-center justify-center text-xs bg-red-500"
+                      >
+                        {notifications.total}
+                      </Badge>
+                    )}
                     <Avatar className="w-8 h-8 mr-2">
                       <AvatarImage src="https://github.com/shadcn.png" />
                       <AvatarFallback>
@@ -211,6 +223,26 @@ export default function Header() {
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
+                  {userRole === 'owner' && notifications && (
+                    <>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/bookings" className="flex justify-between w-full">
+                          Bookings <Badge>{notifications.newBookings}</Badge>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/store/orders" className="flex justify-between w-full">
+                          Orders <Badge>{notifications.newOrders}</Badge>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
+                        <Link href="/dashboard/messages" className="flex justify-between w-full">
+                          Messages <Badge>{notifications.newMessages.total}</Badge>
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuSeparator />
+                    </>
+                  )}
                   <DropdownMenuItem asChild>
                     <Link href="/dashboard">Dashboard</Link>
                   </DropdownMenuItem>

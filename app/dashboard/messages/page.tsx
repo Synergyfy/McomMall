@@ -8,13 +8,20 @@ import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { useAuth } from '@/service/auth/hook';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { notifications } = useSelector(
+    (state: RootState) => state.notifications
+  );
+  const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
 
   useEffect(() => {
     if (conversations && conversations.length > 0 && !selectedConversation) {
@@ -27,6 +34,13 @@ export default function MessagesPage() {
     setSelectedConversation(conversation);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
+    }
+
+    if (!user || !notifications) return;
+
+    const sender = conversation.participants.find(p => p.id !== user.id);
+    if (sender && notifications.newMessages.senders[sender.id]) {
+      markAsSeen({ notificationIds: [sender.id] });
     }
   };
 

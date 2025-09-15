@@ -1,8 +1,11 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import type { FC } from 'react';
 import { useSearchParams } from 'next/navigation';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
 import { MoreHorizontal } from 'lucide-react';
 
 // Import Shadcn UI Components
@@ -40,6 +43,16 @@ const BookingsPage: FC = () => {
   const itemsPerPage: number = 4;
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
+  const { notifications } = useSelector(
+    (state: RootState) => state.notifications
+  );
+  const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+
+  useEffect(() => {
+    if (notifications && notifications.newBookings > 0) {
+      markAsSeen({ notificationIds: ['bookings'] });
+    }
+  }, [notifications, markAsSeen]);
 
   const filteredBookings = useMemo(() => {
     if (!bookings) return [];
