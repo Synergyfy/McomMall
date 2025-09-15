@@ -34,7 +34,8 @@ import { useGetBusinessBookings } from '@/service/bookings/hook';
 import BookingCard from './component/BookingCard';
 
 const BookingsPage: FC = () => {
-  const { data: bookings, isLoading } = useGetBusinessBookings();
+  const [days, setDays] = useState<number | undefined>(undefined);
+  const { data: bookings, isLoading } = useGetBusinessBookings(days);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 4;
   const searchParams = useSearchParams();
@@ -54,7 +55,9 @@ const BookingsPage: FC = () => {
     return bookings;
   }, [bookings, statusParam]);
 
-  const totalPages: number = Math.ceil((filteredBookings?.length || 0) / itemsPerPage);
+  const totalPages: number = Math.ceil(
+    (filteredBookings?.length || 0) / itemsPerPage
+  );
 
   const paginatedBookings = useMemo(() => {
     if (!filteredBookings) return [];
@@ -96,14 +99,20 @@ const BookingsPage: FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                July 13, 2025 - August 12, 2025
+                {days ? `Last ${days} Days` : 'All Time'}
                 <MoreHorizontal className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Last 30 Days</DropdownMenuItem>
-              <DropdownMenuItem>Last 90 Days</DropdownMenuItem>
-              <DropdownMenuItem>All Time</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(30)}>
+                Last 30 Days
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(90)}>
+                Last 90 Days
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(undefined)}>
+                All Time
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardContent>

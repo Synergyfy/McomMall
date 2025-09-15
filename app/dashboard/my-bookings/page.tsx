@@ -37,7 +37,8 @@ import MyBookingCard from './component/MyBookingCard';
 // --- 4. MAIN PAGE COMPONENT ---
 
 const MyBookingsPage: FC = () => {
-  const { data: bookings, isLoading } = useGetCustomerBookings();
+  const [days, setDays] = useState<number | undefined>(undefined);
+  const { data: bookings, isLoading } = useGetCustomerBookings(days);
   const [currentPage, setCurrentPage] = useState<number>(1);
   const itemsPerPage: number = 4;
 
@@ -83,14 +84,20 @@ const MyBookingsPage: FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                July 13, 2025 - August 12, 2025
+                {days ? `Last ${days} Days` : 'All Time'}
                 <MoreHorizontal className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>
             <DropdownMenuContent align="end">
-              <DropdownMenuItem>Last 30 Days</DropdownMenuItem>
-              <DropdownMenuItem>Last 90 Days</DropdownMenuItem>
-              <DropdownMenuItem>All Time</DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(30)}>
+                Last 30 Days
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(90)}>
+                Last 90 Days
+              </DropdownMenuItem>
+              <DropdownMenuItem onClick={() => setDays(undefined)}>
+                All Time
+              </DropdownMenuItem>
             </DropdownMenuContent>
           </DropdownMenu>
         </CardContent>

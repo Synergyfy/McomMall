@@ -12,13 +12,13 @@ const createBooking = async (bookingData: CreateBookingPayload): Promise<Booking
   return data;
 };
 
-const getBusinessBookings = async (): Promise<Booking[]> => {
-  const { data } = await api.get('/bookings/business');
+const getBusinessBookings = async (days?: number): Promise<Booking[]> => {
+  const { data } = await api.get('/bookings/business', { params: { days } });
   return data;
 };
 
-const getCustomerBookings = async (): Promise<Booking[]> => {
-  const { data } = await api.get('/bookings/customer');
+const getCustomerBookings = async (days?: number): Promise<Booking[]> => {
+  const { data } = await api.get('/bookings/customer', { params: { days } });
   return data;
 };
 
@@ -65,17 +65,17 @@ export const useCreateBooking = ({ onSuccess }: { onSuccess?: () => void } = {})
   });
 };
 
-export const useGetBusinessBookings = () => {
+export const useGetBusinessBookings = (days?: number) => {
   return useQuery({
-    queryKey: ['businessBookings'],
-    queryFn: getBusinessBookings,
+    queryKey: ['businessBookings', days],
+    queryFn: () => getBusinessBookings(days),
   });
 };
 
-export const useGetCustomerBookings = () => {
+export const useGetCustomerBookings = (days?: number) => {
   return useQuery({
-    queryKey: ['customerBookings'],
-    queryFn: getCustomerBookings,
+    queryKey: ['customerBookings', days],
+    queryFn: () => getCustomerBookings(days),
   });
 };
 
