@@ -35,6 +35,7 @@ import {
   Wrench,
   Map,
   CalendarDays,
+  CalendarCheck,
   Award,
   Camera,
   Star,
@@ -59,7 +60,7 @@ import SellingModesStep from './steps/product/SellingModesStep';
 import ServiceCategoryStep from './steps/service/ServiceCategoryStep';
 import ServiceAreaStep from './steps/service/ServiceAreaStep';
 import ServiceHoursStep from './steps/service/ServiceHoursStep';
-// BookingStep removed from flow per new requirements
+import BookingStep from './steps/service/BookingStep';
 import CredentialsStep from './steps/service/CredentialsStep';
 
 interface MultiStepListingFormProps {
@@ -343,7 +344,12 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         component: ServiceHoursStep,
         validationRules: {},
       },
-      // Booking step removed per new service creation requirements
+      {
+        title: 'Pricing & Insurance',
+        icon: CalendarCheck,
+        component: BookingStep,
+        validationRules: validationRules.booking,
+      },
       {
         title: 'Credentials',
         icon: Award,
