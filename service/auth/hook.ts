@@ -91,7 +91,9 @@ export const useLogin = () => {
           id: data.userId,
           userName: data.name,
           userRole: String(data.role),
-          packageInfo: { planType: data.packageInfo.planType },
+          packageInfo: data.packageInfo
+            ? { planType: data.packageInfo.planType }
+            : null,
         })
       );
       setBearerToken(data.auth.accessToken);
