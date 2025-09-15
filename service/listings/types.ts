@@ -204,7 +204,7 @@ export interface CertificationPayload {
 }
 
 export interface ServiceProviderProfilePayload {
-  bookingMethod: BookingMethod;
+  bookingMethod?: BookingMethod;
   bookingUrl?: string;
   fixedPriceFrom?: number;
   hourlyRateFrom?: number;
