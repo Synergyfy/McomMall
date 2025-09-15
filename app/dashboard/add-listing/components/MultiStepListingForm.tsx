@@ -78,6 +78,18 @@ const validationRules = {
       validate: isNotEmpty,
       message: 'Business name is required.',
     },
+    address: {
+      validate: isNotEmpty,
+      message: 'Address is required.',
+    },
+    city: {
+      validate: isNotEmpty,
+      message: 'City is required.',
+    },
+    postcode: {
+      validate: isNotEmpty,
+      message: 'Postcode is required.',
+    },
     shortDesc: {
       validate: (v: string) => isLength(v, { min: 20, max: 180 }),
       message: 'Must be 20-180 characters.',
@@ -89,6 +101,7 @@ const validationRules = {
     email: {
       validate: isValidEmail,
       message: 'Invalid email address.',
+      optional: true,
     },
     'socials.website': {
       validate: isValidUrl,
@@ -139,12 +152,7 @@ const validationRules = {
       message: 'Primary category is required.',
     },
   },
-  productLocation: {
-    address: {
-      validate: isNotEmpty,
-      message: 'Address is required.',
-    },
-  },
+  productLocation: {},
   sellingModes: {
     'productData.sellingModes': {
       validate: (modes: { [s: string]: boolean }) =>
@@ -437,7 +445,10 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         continue;
       }
 
-      if (rule.optional && (value === undefined || value === null || value === '')) {
+      if (
+        rule.optional &&
+        (value === undefined || value === null || value === '')
+      ) {
         continue;
       }
 
@@ -476,8 +487,8 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     // --- Location and Service Area ---
     const location: CreateBusinessPayload['location'] = {
       addressLine1: data.address || '',
-      postcode: '', // Note: No postcode in ListingFormData, needs to be extracted from address
-      city: '', // Note: No city in ListingFormData, needs to be extracted from address
+      postcode: data.postcode || '',
+      city: data.city || '',
       showPublicly: data.productData?.showAddressPublicly || false,
       deliveryRadiusKm:
         data.productData?.deliveryArea?.type === 'radius'
@@ -572,7 +583,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         sellingModes,
         fulfilmentNotes: data.productData.fulfilmentNotes,
         returnsPolicy: data.productData.returnsPolicy,
-        hasAgeRestrictedItems: false, // This is not in the form data
+        hasAgeRestrictedItems: !!data.productData.hasAgeRestrictedItems,
         storefrontLinks,
       };
     }
@@ -595,7 +606,8 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         bookingMethod: apiBookingMethod,
         bookingUrl: data.serviceData.bookingURL,
         quoteOnly: data.serviceData.pricingVisibility === 'quote',
-        hasPublicLiabilityInsurance: false, // This is not in the form data
+        hasPublicLiabilityInsurance:
+          !!data.serviceData.hasPublicLiabilityInsurance,
         certifications: [], // File upload needed
       };
     }

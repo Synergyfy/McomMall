@@ -22,16 +22,16 @@ interface StepProps {
 }
 
 const isFieldOptional = (schema: z.ZodSchema<unknown>, fieldName: string) => {
-    if (!schema || !('shape' in schema)) {
-      return true; // Default to optional if schema is not as expected
-    }
-    const fieldSchema = (schema as z.ZodObject<z.ZodRawShape>).shape[fieldName];
-    if (!fieldSchema) {
-        return true;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (fieldSchema as any)._def.typeName === 'ZodOptional';
-  };
+  if (!schema || !('shape' in schema)) {
+    return true; // Default to optional if schema is not as expected
+  }
+  const fieldSchema = (schema as z.ZodObject<z.ZodRawShape>).shape[fieldName];
+  if (!fieldSchema) {
+    return true;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (fieldSchema as any)._def.typeName === 'ZodOptional';
+};
 
 const ProductLocationStep: React.FC<StepProps> = ({
   formData,
@@ -56,9 +56,7 @@ const ProductLocationStep: React.FC<StepProps> = ({
 
   const handleProductDataChange = (
     key: string,
-    value:
-      | boolean
-      | { type: 'radius' | 'postcodes'; value: string | string[] }
+    value: boolean | { type: 'radius' | 'postcodes'; value: string | string[] }
   ) => {
     setFormData(prev => ({
       ...prev,
@@ -83,9 +81,7 @@ const ProductLocationStep: React.FC<StepProps> = ({
     });
   };
 
-  const handlePostcodeKeyDown = (
-    e: React.KeyboardEvent<HTMLInputElement>
-  ) => {
+  const handlePostcodeKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
     if (e.key === 'Enter' && postcode.trim()) {
       e.preventDefault();
       const newPostcodes = [
@@ -112,24 +108,7 @@ const ProductLocationStep: React.FC<StepProps> = ({
   return (
     <div className="space-y-6">
       <div>
-        <Label htmlFor="address">
-            Business Address (Manual Entry)
-            {isFieldOptional(schema!, 'address') && (
-                <span className="text-muted-foreground font-normal text-sm">
-                    {' '}
-                    (optional)
-                </span>
-            )}
-        </Label>
-        <div className="space-y-2 mt-2">
-          <Input
-            id="address"
-            placeholder="e.g., 123 High Street, London, SW1A 1AA"
-            value={formData.address || ''}
-            onChange={handleAddressChange}
-          />
-        </div>
-        <div className="flex items-center space-x-2 mt-4">
+        <div className="flex items-center space-x-2 mt-2">
           <Switch
             id="showAddressPublicly"
             checked={productData.showAddressPublicly !== false}
@@ -139,21 +118,18 @@ const ProductLocationStep: React.FC<StepProps> = ({
           />
           <Label htmlFor="showAddressPublicly">Show address publicly</Label>
         </div>
-        {errors.address && (
-          <p className="text-sm text-red-500 mt-1">{errors.address}</p>
-        )}
       </div>
 
       <div className="border-t pt-6">
         <div className="flex items-center space-x-2">
           <Label>
-              Set Delivery Area
-                {isFieldOptional(schema!, 'productData.deliveryArea') && (
-                    <span className="text-muted-foreground font-normal text-sm">
-                        {' '}
-                        (optional)
-                    </span>
-                )}
+            Set Delivery Area
+            {isFieldOptional(schema!, 'productData.deliveryArea') && (
+              <span className="text-muted-foreground font-normal text-sm">
+                {' '}
+                (optional)
+              </span>
+            )}
           </Label>
           <TooltipProvider>
             <Tooltip>
