@@ -63,7 +63,7 @@ export const PlacementCard = ({
           </Tooltip>
         </TooltipProvider>
       </h3>
-      <p className="text-gray-600">${price.toFixed(2)}</p>
+      <p className="text-gray-600">£{price.toFixed(2)}</p>
     </motion.div>
   );
 };

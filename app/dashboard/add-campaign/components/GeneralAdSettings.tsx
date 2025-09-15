@@ -33,8 +33,8 @@ import {
   Calendar as CalendarIcon,
   Check,
   ChevronsUpDown,
-  DollarSign,
   HelpCircle,
+  PoundSterling,
 } from 'lucide-react';
 import { format } from 'date-fns';
 import React, { useState } from 'react';
@@ -347,7 +347,7 @@ export const GeneralAdSettings = ({
               }
               className="pr-8"
             />
-            <DollarSign className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+            <PoundSterling className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
           </div>
           {errors.budget && (
             <p className="text-red-500 text-xs mt-1">{errors.budget}</p>
