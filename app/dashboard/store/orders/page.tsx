@@ -2,11 +2,12 @@
 
 import * as React from 'react';
 import { useMemo, useEffect } from 'react';
-import { useSelector } from 'react-redux';
+import { useSelector, useDispatch } from 'react-redux';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
 import { useGetStoreOrders } from '@/service/store/orders/hook';
-import { RootState } from '@/service/store/store';
+import { RootState, AppDispatch } from '@/service/store/store';
 import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
+import { clearOrderNotifications } from '@/service/store/notificationSlice';
 import { type Order as ApiOrder } from '@/service/store/orders/types';
 
 // In a real Next.js app with shadcn/ui, you would import components like this:
@@ -89,12 +90,20 @@ export default function OrdersDashboard() {
     (state: RootState) => state.notifications
   );
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+  const dispatch: AppDispatch = useDispatch();
 
   useEffect(() => {
     if (notifications && notifications.newOrders.count > 0) {
-      markAsSeen({ notificationIds: notifications.newOrders.ids });
+      markAsSeen(
+        { notificationIds: notifications.newOrders.ids },
+        {
+          onSuccess: () => {
+            dispatch(clearOrderNotifications());
+          },
+        }
+      );
     }
-  }, [notifications, markAsSeen]);
+  }, [notifications, markAsSeen, dispatch]);
 
   const orders = useMemo(() => {
     if (!apiOrders) return [];

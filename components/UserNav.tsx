@@ -45,7 +45,7 @@ export default function UserNav() {
             </AvatarFallback>
           </Avatar>
           <div className="hidden sm:block text-left">
-            <div className="text-base font-semibold">{userName}</div>
+            <div className="text-base font-semibold text-white">{userName}</div>
             <div className="text-xs text-gray-400">
               {userRole === 'customer'
                 ? 'Customer'

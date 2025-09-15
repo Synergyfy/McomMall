@@ -1,17 +1,17 @@
 'use client';
 
-'use client';
-
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useGetConversations } from '@/service/messaging/hook';
 import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
 import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/service/store/store';
+import { useSelector, useDispatch } from 'react-redux';
+import { RootState, AppDispatch } from '@/service/store/store';
 import { useAuth } from '@/service/auth/hook';
+import { clearMessageNotifications } from '@/service/store/notificationSlice';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading } = useGetConversations();
@@ -22,31 +22,49 @@ export default function MessagesPage() {
     (state: RootState) => state.notifications
   );
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+  const dispatch: AppDispatch = useDispatch();
+  const searchParams = useSearchParams();
 
+  // Effect to set the selected conversation from URL or default to the first one
   useEffect(() => {
-    if (conversations && conversations.length > 0 && !selectedConversation) {
-      setSelectedConversation(conversations[0]);
+    const conversationId = searchParams.get('conversationId');
+    if (conversations && conversations.length > 0) {
+      if (conversationId) {
+        const conversation = conversations.find(c => c.id === conversationId);
+        setSelectedConversation(conversation || conversations[0]);
+      } else if (!selectedConversation) {
+        setSelectedConversation(conversations[0]);
+      }
     }
-  }, [conversations, selectedConversation]);
+  }, [conversations, searchParams, selectedConversation]);
 
+  // Effect to mark a conversation as seen when it's selected
+  useEffect(() => {
+    if (selectedConversation && user && notifications && notifications.newMessages) {
+      const sender = selectedConversation.participants.find(p => p.id !== user.id);
+      if (
+        sender &&
+        notifications.newMessages.senders &&
+        notifications.newMessages.senders[sender.id]
+      ) {
+        markAsSeen(
+          {
+            notificationIds: notifications.newMessages.senders[sender.id].ids,
+          },
+          {
+            onSuccess: () => {
+              dispatch(clearMessageNotifications(sender.id));
+            },
+          }
+        );
+      }
+    }
+  }, [selectedConversation, user, notifications, markAsSeen, dispatch]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
-    }
-
-    if (!user || !notifications || !notifications.newMessages) return;
-
-    const sender = conversation.participants.find(p => p.id !== user.id);
-    if (
-      sender &&
-      notifications.newMessages.senders &&
-      notifications.newMessages.senders[sender.id]
-    ) {
-      markAsSeen({
-        notificationIds: notifications.newMessages.senders[sender.id].ids,
-      });
     }
   };
 
