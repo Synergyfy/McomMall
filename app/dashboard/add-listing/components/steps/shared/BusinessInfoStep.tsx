@@ -163,6 +163,51 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         </FormField>
       </div>
 
+      <FormField
+        id="address"
+        label="Address"
+        tooltip="Your business address. This appears on your listing if you choose to show it."
+        error={errors.address}
+        isOptional={isFieldOptional(validationRules, 'address')}
+      >
+        <Input
+          id="address"
+          value={formData.address || ''}
+          onChange={handleChange}
+          placeholder="123 High Street"
+        />
+      </FormField>
+
+      <FormField
+        id="city"
+        label="City"
+        tooltip="City or town of your business location."
+        error={errors.city}
+        isOptional={isFieldOptional(validationRules, 'city')}
+      >
+        <Input
+          id="city"
+          value={formData.city || ''}
+          onChange={handleChange}
+          placeholder="London"
+        />
+      </FormField>
+
+      <FormField
+        id="postcode"
+        label="Postcode"
+        tooltip="Postcode for your business location."
+        error={errors.postcode}
+        isOptional={isFieldOptional(validationRules, 'postcode')}
+      >
+        <Input
+          id="postcode"
+          value={formData.postcode || ''}
+          onChange={handleChange}
+          placeholder="SW1A 1AA"
+        />
+      </FormField>
+
       <div className="md:col-span-2">
         <FormField
           id="longDesc"

@@ -16,7 +16,7 @@ export interface Media {
 
 export interface TimeRange {
   start: string;
-  end:string;
+  end: string;
 }
 
 export interface WeeklyHours {
@@ -60,6 +60,7 @@ export interface ProductSellerData {
     ebay?: string;
     etsy?: string;
   };
+  hasAgeRestrictedItems?: boolean;
 }
 
 export interface ServiceProviderData {
@@ -80,6 +81,7 @@ export interface ServiceProviderData {
   pricingVisibility: 'fixed' | 'hourly' | 'quote';
   insuranceCertificates?: Media[];
   qualifications?: Media[];
+  hasPublicLiabilityInsurance?: boolean;
 }
 
 // Main form data structure
@@ -94,6 +96,8 @@ export interface ListingFormData {
   shortDesc: string;
   longDesc?: string;
   address?: string;
+  postcode?: string;
+  city?: string;
   phone: string;
   email: string;
   socials: Socials;

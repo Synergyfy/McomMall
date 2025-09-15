@@ -4,6 +4,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import {
   Card,
   CardContent,
@@ -43,6 +44,7 @@ const SellingModesStep: React.FC<StepProps> = ({
     ukWideShipping: false,
   };
   const storefrontLinks = productData.storefrontLinks || {};
+  const hasAgeRestrictedItems = productData.hasAgeRestrictedItems || false;
 
   const handleSellingModeChange = (
     id: keyof ProductSellerData['sellingModes'],
@@ -67,16 +69,18 @@ const SellingModesStep: React.FC<StepProps> = ({
     });
   };
 
-  const handleProductDataChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
-      const { id, value } = e.target;
-      setFormData(prev => ({
-          ...prev,
-          productData: {
-              ...prev.productData,
-              [id]: value,
-          }
-      }))
-  }
+  const handleProductDataChange = (
+    e: React.ChangeEvent<HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      productData: {
+        ...prev.productData,
+        [id]: value,
+      },
+    }));
+  };
 
   const handleStorefrontLinkChange = (
     e: React.ChangeEvent<HTMLInputElement>
@@ -90,6 +94,16 @@ const SellingModesStep: React.FC<StepProps> = ({
           ...(prev.productData?.storefrontLinks || {}),
           [id]: value,
         },
+      },
+    }));
+  };
+
+  const handleToggleAgeRestricted = (checked: boolean) => {
+    setFormData(prev => ({
+      ...prev,
+      productData: {
+        ...prev.productData,
+        hasAgeRestrictedItems: checked,
       },
     }));
   };
@@ -108,7 +122,9 @@ const SellingModesStep: React.FC<StepProps> = ({
             <Checkbox
               id="inStorePickup"
               checked={sellingModes.inStorePickup}
-              onCheckedChange={(checked) => handleSellingModeChange('inStorePickup', !!checked)}
+              onCheckedChange={checked =>
+                handleSellingModeChange('inStorePickup', !!checked)
+              }
             />
             <Label htmlFor="inStorePickup">In-store Pickup</Label>
           </div>
@@ -116,7 +132,9 @@ const SellingModesStep: React.FC<StepProps> = ({
             <Checkbox
               id="localDelivery"
               checked={sellingModes.localDelivery}
-              onCheckedChange={(checked) => handleSellingModeChange('localDelivery', !!checked)}
+              onCheckedChange={checked =>
+                handleSellingModeChange('localDelivery', !!checked)
+              }
             />
             <Label htmlFor="localDelivery">Local Delivery</Label>
           </div>
@@ -124,11 +142,17 @@ const SellingModesStep: React.FC<StepProps> = ({
             <Checkbox
               id="ukWideShipping"
               checked={sellingModes.ukWideShipping}
-              onCheckedChange={(checked) => handleSellingModeChange('ukWideShipping', !!checked)}
+              onCheckedChange={checked =>
+                handleSellingModeChange('ukWideShipping', !!checked)
+              }
             />
             <Label htmlFor="ukWideShipping">UK-wide Shipping</Label>
           </div>
-          {errors['productData.sellingModes'] && <p className="text-sm text-red-500">{errors['productData.sellingModes']}</p>}
+          {errors['productData.sellingModes'] && (
+            <p className="text-sm text-red-500">
+              {errors['productData.sellingModes']}
+            </p>
+          )}
         </CardContent>
       </Card>
 
@@ -137,6 +161,16 @@ const SellingModesStep: React.FC<StepProps> = ({
           <CardTitle>Additional Information</CardTitle>
         </CardHeader>
         <CardContent className="space-y-4">
+          <div className="flex items-center space-x-2">
+            <Switch
+              id="hasAgeRestrictedItems"
+              checked={!!hasAgeRestrictedItems}
+              onCheckedChange={handleToggleAgeRestricted}
+            />
+            <Label htmlFor="hasAgeRestrictedItems">
+              Contains age-restricted items
+            </Label>
+          </div>
           <div>
             <Label htmlFor="fulfilmentNotes">
               Fulfilment Notes
@@ -160,7 +194,10 @@ const SellingModesStep: React.FC<StepProps> = ({
           <div>
             <Label htmlFor="returnsPolicy">
               Returns Policy
-              {isFieldOptional(validationRules, 'productData.returnsPolicy') && (
+              {isFieldOptional(
+                validationRules,
+                'productData.returnsPolicy'
+              ) && (
                 <span className="text-muted-foreground font-normal text-sm">
                   {' '}
                   (optional)
