@@ -39,7 +39,6 @@ const BookingStep: React.FC<StepProps> = ({
   schema,
 }) => {
   const serviceData = formData.serviceData || {};
-  const bookingMethod = serviceData.bookingMethod || 'call';
   const pricingVisibility = serviceData.pricingVisibility || 'quote';
   const hasPublicLiabilityInsurance = !!serviceData.hasPublicLiabilityInsurance;
 
@@ -65,69 +64,7 @@ const BookingStep: React.FC<StepProps> = ({
 
   return (
     <div className="space-y-6">
-      <Card>
-        <CardHeader>
-          <CardTitle>Booking Method</CardTitle>
-          <CardDescription>
-            How should customers book your services?
-            {isFieldOptional(schema!, 'serviceData.bookingMethod') && (
-              <span className="text-muted-foreground font-normal text-sm">
-                {' '}
-                (optional)
-              </span>
-            )}
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <RadioGroup
-            value={bookingMethod}
-            onValueChange={value =>
-              handleServiceDataChange('bookingMethod', value)
-            }
-            className="space-y-2"
-          >
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="call" id="call" />
-              <Label htmlFor="call">Call to book</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="quote" id="quote" />
-              <Label htmlFor="quote">Request a quote</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="online" id="online" />
-              <Label htmlFor="online">Book online</Label>
-            </div>
-          </RadioGroup>
-          {bookingMethod === 'online' && (
-            <div className="mt-4">
-              <Label htmlFor="bookingURL">
-                Booking URL
-                {isFieldOptional(schema!, 'serviceData.bookingURL') && (
-                  <span className="text-muted-foreground font-normal text-sm">
-                    {' '}
-                    (optional)
-                  </span>
-                )}
-              </Label>
-              <Input
-                id="bookingURL"
-                type="url"
-                placeholder="https://yourbookingplatform.com"
-                value={serviceData.bookingURL || ''}
-                onChange={e =>
-                  handleServiceDataChange('bookingURL', e.target.value)
-                }
-              />
-            </div>
-          )}
-          {errors['serviceData.bookingMethod'] && (
-            <p className="text-sm text-red-500 mt-1">
-              {errors['serviceData.bookingMethod']}
-            </p>
-          )}
-        </CardContent>
-      </Card>
+      {/* Booking method removed for service creation. Booking URL also omitted. */}
 
       <Card>
         <CardHeader>

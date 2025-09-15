@@ -76,7 +76,7 @@ export interface ServiceProviderData {
   };
   hoursType: 'weekly' | 'appointmentOnly';
   weeklyHours?: WeeklyHours;
-  bookingMethod: 'call' | 'quote' | 'online';
+  bookingMethod?: 'call' | 'quote' | 'online';
   bookingURL?: string;
   pricingVisibility: 'fixed' | 'hourly' | 'quote';
   insuranceCertificates?: Media[];
