@@ -91,8 +91,8 @@ export default function OrdersDashboard() {
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
 
   useEffect(() => {
-    if (notifications && notifications.newOrders > 0) {
-      markAsSeen({ notificationIds: ['orders'] });
+    if (notifications && notifications.newOrders.count > 0) {
+      markAsSeen({ notificationIds: notifications.newOrders.ids });
     }
   }, [notifications, markAsSeen]);
 

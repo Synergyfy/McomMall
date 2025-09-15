@@ -49,8 +49,8 @@ const BookingsPage: FC = () => {
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
 
   useEffect(() => {
-    if (notifications && notifications.newBookings > 0) {
-      markAsSeen({ notificationIds: ['bookings'] });
+    if (notifications && notifications.newBookings.count > 0) {
+      markAsSeen({ notificationIds: notifications.newBookings.ids });
     }
   }, [notifications, markAsSeen]);
 

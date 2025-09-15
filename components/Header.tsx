@@ -227,12 +227,12 @@ export default function Header() {
                     <>
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/bookings" className="flex justify-between w-full">
-                          Bookings <Badge>{notifications.newBookings}</Badge>
+                          Bookings <Badge>{notifications.newBookings.count}</Badge>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
                         <Link href="/dashboard/store/orders" className="flex justify-between w-full">
-                          Orders <Badge>{notifications.newOrders}</Badge>
+                          Orders <Badge>{notifications.newOrders.count}</Badge>
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>

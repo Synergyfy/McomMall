@@ -36,11 +36,17 @@ export default function MessagesPage() {
       setIsSidebarOpen(false);
     }
 
-    if (!user || !notifications) return;
+    if (!user || !notifications || !notifications.newMessages) return;
 
     const sender = conversation.participants.find(p => p.id !== user.id);
-    if (sender && notifications.newMessages.senders[sender.id]) {
-      markAsSeen({ notificationIds: [sender.id] });
+    if (
+      sender &&
+      notifications.newMessages.senders &&
+      notifications.newMessages.senders[sender.id]
+    ) {
+      markAsSeen({
+        notificationIds: notifications.newMessages.senders[sender.id].ids,
+      });
     }
   };
 
