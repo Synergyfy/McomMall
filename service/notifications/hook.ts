@@ -19,6 +19,7 @@ export const useGetNotifications = () => {
     queryKey: [NOTIFICATIONS_QUERY_KEY],
     queryFn: fetchNotifications,
     enabled: false, // Will be enabled when a user with the 'owner' role is logged in
+    refetchInterval: 30000, // Refetch every 30 seconds
   });
 };
 
