@@ -124,7 +124,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
-              Plugin
+              MARKETING
             </h3>
             {renderMenuItems(pluginMenuItems)}
           </nav>
