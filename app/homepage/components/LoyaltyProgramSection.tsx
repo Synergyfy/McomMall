@@ -24,8 +24,8 @@ interface TabContent {
 
 // --- CONTENT DATA ---
 const evergreenContent: TabContent = {
-  headerTitle: 'Forge Lasting Connections with a Premier Loyalty Program',
-  mainTitle: 'External Evergreen Reward Programme',
+  headerTitle: 'External Evergreen Reward Programme',
+  mainTitle: '',
   subTitle: 'Grow Loyalty, Every Day.',
   description:
     'Selling to existing customers is a lot cheaper than acquiring new ones. Build a lasting relationship with your customers. Keep them coming back with points they can earn and rewards they love. Our Evergreen Reward Programme runs all year round, making loyalty simple for businesses and exciting for customers.',
@@ -57,8 +57,7 @@ const evergreenContent: TabContent = {
 };
 
 const internalContent: TabContent = {
-  headerTitle:
-    'Forge Lasting Connections with an Internal Reward & Loyalty Program',
+  headerTitle: 'Internal Reward & Loyalty Program',
   mainTitle: '', // Main title is not needed here as per the image
   description:
     'Transform casual buyers into lifelong brand advocates. Our Reward & Loyalty Program is engineered to foster deep-rooted customer relationships by acknowledging and rewarding their continued patronage in meaningful ways.',
