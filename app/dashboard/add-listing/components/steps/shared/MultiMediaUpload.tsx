@@ -53,7 +53,6 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
         if (newMediaFiles.length > 0) {
           const updatedMediaFiles = [...prevMediaFiles, ...newMediaFiles];
-          onMediaChange(updatedMediaFiles.map(mf => mf.file));
           setError(null);
           return updatedMediaFiles;
         }
@@ -61,7 +60,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         return prevMediaFiles;
       });
     },
-    [maxFiles, onMediaChange]
+    [maxFiles]
   );
 
   const handleFileChange = useCallback(
@@ -80,8 +79,11 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       URL.revokeObjectURL(deletedFile.previewUrl);
     }
     setMediaFiles(newMediaFiles);
-    onMediaChange(newMediaFiles.map(mf => mf.file));
   };
+
+  useEffect(() => {
+    onMediaChange(mediaFiles.map(mf => mf.file));
+  }, [mediaFiles, onMediaChange]);
 
   useEffect(() => {
     // Cleanup object URLs on unmount

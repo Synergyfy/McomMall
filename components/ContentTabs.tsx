@@ -542,8 +542,9 @@ export default function ContentTabs({
   }
 
   const inHouseListing = listing as InHouseBusiness;
-  const hasProduct = inHouseListing.listingType.includes('product');
-  const hasService = inHouseListing.listingType.includes('service');
+  const listingType = inHouseListing.listingType ?? [];
+  const hasProduct = listingType.includes('product');
+  const hasService = listingType.includes('service');
 
   const tabs = [];
   if (hasProduct) {
