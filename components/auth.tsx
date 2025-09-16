@@ -18,6 +18,7 @@ import { RememberMe } from './remember-me';
 import { useState } from 'react';
 import { toast } from 'sonner';
 import { ErrorResponse, useCreateUser, useLogin } from '@/service/auth/hook';
+import { Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '@/service/auth/types';
 import { useRouter } from 'next/navigation';
 import { useDispatch, useSelector } from 'react-redux';
@@ -34,6 +35,8 @@ const Auth = ({
   const dispatch: AppDispatch = useDispatch();
   const { isLoginModalOpen } = useSelector((state: RootState) => state.ui);
   const [newAccount, setNewAccount] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
   const [formData, setFormData] = useState({
     fullName: '',
@@ -364,7 +367,7 @@ const Auth = ({
               name="email"
               value={formData.email}
               onChange={handleInputChange}
-              placeholder="john@doe.com"
+                placeholder="Your email"
               className={`sm:h-[3rem] ${
                 errors.email ? 'border-orange-500' : ''
               }`}
@@ -383,7 +386,7 @@ const Auth = ({
                 name="phoneNumber"
                 value={formData.phoneNumber}
                 onChange={handleInputChange}
-                placeholder="+44 ... ... ..."
+                placeholder="Your phone number"
                 className={`sm:h-[3rem] ${
                   errors.phoneNumber ? 'border-red-500' : ''
                 }`}
@@ -397,17 +400,26 @@ const Auth = ({
             <Label htmlFor="password" className="text-lg">
               Password
             </Label>
-            <Input
-              id="password"
-              name="password"
-              type="password"
-              value={formData.password}
-              onChange={handleInputChange}
-              placeholder="your password"
-              className={`sm:h-[3rem] ${
-                errors.password ? 'border-orange-500' : ''
-              }`}
-            />
+            <div className="relative">
+              <Input
+                id="password"
+                name="password"
+                type={showPassword ? 'text' : 'password'}
+                value={formData.password}
+                onChange={handleInputChange}
+                placeholder="Your password"
+                className={`sm:h-[3rem] pr-10 ${
+                  errors.password ? 'border-orange-500' : ''
+                }`}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute inset-y-0 right-0 flex items-center pr-3"
+              >
+                {showPassword ? <EyeOff /> : <Eye />}
+              </button>
+            </div>
             {errors.password && (
               <p className="text-orange-500 text-sm">{errors.password}</p>
             )}
@@ -417,17 +429,26 @@ const Auth = ({
               <Label htmlFor="password2" className="text-lg">
                 Confirm Password
               </Label>
-              <Input
-                id="password2"
-                name="confirmPassword"
-                type="password"
-                value={formData.confirmPassword}
-                onChange={handleInputChange}
-                placeholder="confirm password"
-                className={`sm:h-[3rem] ${
-                  errors.confirmPassword ? 'border-orange-500' : ''
-                }`}
-              />
+              <div className="relative">
+                <Input
+                  id="password2"
+                  name="confirmPassword"
+                  type={showConfirmPassword ? 'text' : 'password'}
+                  value={formData.confirmPassword}
+                  onChange={handleInputChange}
+                  placeholder="Confirm password"
+                  className={`sm:h-[3rem] pr-10 ${
+                    errors.confirmPassword ? 'border-orange-500' : ''
+                  }`}
+                />
+                <button
+                  type="button"
+                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute inset-y-0 right-0 flex items-center pr-3"
+                >
+                  {showConfirmPassword ? <EyeOff /> : <Eye />}
+                </button>
+              </div>
               {errors.confirmPassword && (
                 <p className="text-red-orange text-sm">
                   {errors.confirmPassword}

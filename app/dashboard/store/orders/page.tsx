@@ -1,9 +1,10 @@
 'use client';
 
 import * as React from 'react';
-import { useMemo } from 'react';
+import { useMemo, useEffect } from 'react';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
 import { useGetStoreOrders } from '@/service/store/orders/hook';
+import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
 import { type Order as ApiOrder } from '@/service/store/orders/types';
 
 // In a real Next.js app with shadcn/ui, you would import components like this:
@@ -82,6 +83,14 @@ export default function OrdersDashboard() {
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
+  const { newOrdersCount, newOrderIds } = useGetNotifications();
+  const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+
+  useEffect(() => {
+    if (newOrdersCount > 0) {
+      markAsSeen({ notificationIds: newOrderIds });
+    }
+  }, [newOrdersCount, newOrderIds, markAsSeen]);
 
   const orders = useMemo(() => {
     if (!apiOrders) return [];

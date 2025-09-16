@@ -59,7 +59,7 @@ const transformApiDataToFormData = (
         atBusinessLocation: apiData.location.serviceModel !== 'travel_to_customer',
         customerTravels: apiData.location.serviceModel !== 'at_location',
       },
-      serviceArea: { type: 'postcodes', value: apiData.location.servicePostcodes.join(', ') },
+      serviceArea: { type: 'postcodes', value: apiData.location.servicePostcodes?.join(', ') || '' },
       // Other service fields are not available on UserListing type
       hoursType: 'weekly',
       bookingMethod: 'call',

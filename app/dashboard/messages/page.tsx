@@ -1,30 +1,54 @@
 'use client';
 
-'use client';
-
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { useGetConversations } from '@/service/messaging/hook';
 import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
-import { useQueryClient } from '@tanstack/react-query';
+import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
+import { useAuth } from '@/service/auth/hook';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
+  const { senders } = useGetNotifications();
+  const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+  const searchParams = useSearchParams();
+
+  const markConversationAsSeen = useCallback((conversation: Conversation) => {
+    if (!user) return;
+
+    const sender = conversation.participants.find(p => p.id !== user.id);
+    if (sender && senders[sender.id]) {
+      markAsSeen({ notificationIds: senders[sender.id].ids });
+    }
+  }, [user, senders, markAsSeen]);
 
   useEffect(() => {
-    if (conversations && conversations.length > 0 && !selectedConversation) {
-      setSelectedConversation(conversations[0]);
-    }
-  }, [conversations, selectedConversation]);
+    if (conversations && conversations.length > 0 && user) {
+      const conversationId = searchParams.get('conversationId');
+      let conversationToSelect: Conversation | null = null;
 
+      if (conversationId) {
+        conversationToSelect = conversations.find(c => c.id === conversationId) || null;
+      } else if (!selectedConversation) {
+        conversationToSelect = conversations[0];
+      }
+
+      if (conversationToSelect) {
+        setSelectedConversation(conversationToSelect);
+        markConversationAsSeen(conversationToSelect);
+      }
+    }
+  }, [conversations, searchParams, selectedConversation, user, markConversationAsSeen]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    markConversationAsSeen(conversation);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }

@@ -21,7 +21,7 @@ import { NavMenuContent } from './component/NavMenuContent';
 // Shadcn UI Components
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
-import { UserAvatar } from './component/UserAvatar';
+import UserNav from '@/components/UserNav';
 import AuthRedirect from '@/components/AuthRedirect';
 
 export default function DashboardLayout({
@@ -108,7 +108,7 @@ export default function DashboardLayout({
             {/* --- RIGHT SIDE: User Avatar & Mobile Nav Trigger --- */}
             <div className="flex items-center gap-4">
               <div className="hidden md:block">
-                <UserAvatar />
+                <UserNav />
               </div>
               <div className="md:hidden">
                 <Sheet open={isNavMenuOpen} onOpenChange={setIsNavMenuOpen}>

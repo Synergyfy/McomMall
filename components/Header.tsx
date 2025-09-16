@@ -16,18 +16,11 @@ import AuthWithRedirect from './AuthWithRedirect';
 import { Suspense, useState } from 'react';
 import { NavMenu, menuItems, ListItem } from './NavMenu';
 import { usePathname } from 'next/navigation';
-import { useLogout } from '@/service/auth/hook';
 import { useCart } from '@/hooks/useCart'; // Import useCart
 import { useWishlist } from '@/hooks/useWishlist';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import UserNav from './UserNav';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 
 const mobileMenuVariants: Variants = {
@@ -39,10 +32,9 @@ export default function Header() {
   const pathname = usePathname();
   const { cartItemCount } = useCart();
   const { wishlistCount } = useWishlist();
-  const { accessToken, userName, userRole, packageInfo } = useSelector(
+  const { accessToken } = useSelector(
     (state: RootState) => state.auth
   );
-  const logout = useLogout();
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileSubMenu, setOpenMobileSubMenu] = useState<string | null>(
     null
@@ -190,36 +182,7 @@ export default function Header() {
               </Button>
             </Link>
             {accessToken ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center">
-                    <Avatar className="w-8 h-8 mr-2">
-                      <AvatarImage src="https://github.com/shadcn.png" />
-                      <AvatarFallback>
-                        {userName?.charAt(0).toUpperCase()}
-                      </AvatarFallback>
-                    </Avatar>
-                    <div className="hidden sm:block">
-                      <div className="text-sm font-semibold">{userName}</div>
-                      <div className="text-xs text-gray-400">
-                        {userRole === 'customer'
-                          ? 'Customer'
-                          : packageInfo?.planType}
-                      </div>
-                    </div>
-                    <ChevronDown className="hidden h-4 w-4 sm:block ml-1" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem asChild>
-                    <Link href="/dashboard">Dashboard</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/wishlist">My Wishlist</Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={logout}>Log out</DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
+              <UserNav />
             ) : (
               <Suspense fallback={<div>Loading...</div>}>
                 <AuthWithRedirect>

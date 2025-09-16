@@ -12,7 +12,6 @@ import {
 } from '@/components/ui/card';
 import { useAddListing, useEditListing } from '@/service/listings/hook';
 import {
-  type BookingMethod,
   type BusinessHourPayload,
   type CreateBusinessPayload,
   type DayOfWeek,
@@ -36,7 +35,6 @@ import {
   Wrench,
   Map,
   CalendarDays,
-  CalendarCheck,
   Award,
   Camera,
   Star,
@@ -61,7 +59,7 @@ import SellingModesStep from './steps/product/SellingModesStep';
 import ServiceCategoryStep from './steps/service/ServiceCategoryStep';
 import ServiceAreaStep from './steps/service/ServiceAreaStep';
 import ServiceHoursStep from './steps/service/ServiceHoursStep';
-import BookingStep from './steps/service/BookingStep';
+// BookingStep removed from flow per new requirements
 import CredentialsStep from './steps/service/CredentialsStep';
 
 interface MultiStepListingFormProps {
@@ -181,13 +179,7 @@ const validationRules = {
       message: 'Trade category is required.',
     },
   },
-  booking: {
-    'serviceData.bookingURL': {
-      validate: isValidUrl,
-      message: 'A valid booking URL is required for online booking.',
-      // This validation is conditional, handled in validateStep
-    },
-  },
+  booking: {},
 };
 
 const StepIndicator = ({
@@ -287,7 +279,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         },
         serviceArea: { type: 'radius', value: '' },
         hoursType: 'weekly',
-        bookingMethod: 'call',
         pricingVisibility: 'quote',
       };
     }
@@ -352,12 +343,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         component: ServiceHoursStep,
         validationRules: {},
       },
-      {
-        title: 'Booking',
-        icon: CalendarCheck,
-        component: BookingStep,
-        validationRules: validationRules.booking,
-      },
+      // Booking step removed per new service creation requirements
       {
         title: 'Credentials',
         icon: Award,
@@ -591,19 +577,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     // --- Service Provider Profile ---
     let serviceProviderProfile: ServiceProviderProfilePayload | undefined;
     if (data.serviceData) {
-      const bookingMethodMap: {
-        [key: string]: BookingMethod;
-      } = {
-        call: 'call_to_book',
-        quote: 'request_a_quote',
-        online: 'book_online',
-      };
-      const apiBookingMethod =
-        bookingMethodMap[data.serviceData.bookingMethod || ''] ||
-        'call_to_book';
-
       serviceProviderProfile = {
-        bookingMethod: apiBookingMethod,
         bookingUrl: data.serviceData.bookingURL,
         quoteOnly: data.serviceData.pricingVisibility === 'quote',
         hasPublicLiabilityInsurance:
