@@ -4,11 +4,13 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import OrderSummary from './OrderSummary';
 import PaymentForm from './PaymentForm';
+import CouponCodeInput from './CouponCodeInput';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useRecordOrder } from '@/hooks/useRecordOrder';
+import { useValidateCoupon } from '@/service/coupons/hook';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
@@ -30,13 +32,44 @@ export default function CheckoutClient() {
   const { cart, loading: isCartLoading } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
+  const [couponCode, setCouponCode] = useState('');
+  const [discount, setDiscount] = useState(0);
+  const [isCouponLoading, setCouponLoading] = useState(false);
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
   const { mutate: recordOrder } = useRecordOrder();
+  const validateCoupon = useValidateCoupon();
 
-  const totalPrice = fromCart
-    ? cart?.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0) || 0
-    : product ? product.price * quantity : 0;
+  const basePrice = fromCart
+    ? cart?.items.reduce(
+        (acc, item) => acc + item.product.price * item.quantity,
+        0
+      ) || 0
+    : product
+    ? product.price * quantity
+    : 0;
+
+  const totalPrice = basePrice - discount;
+
+  const handleApplyCoupon = async (code: string) => {
+    setCouponLoading(true);
+    try {
+      const productIds = fromCart
+        ? cart!.items.map((item) => item.product.id)
+        : [product!.id];
+      const result = await validateCoupon({
+        couponCode: code,
+        productIds,
+      });
+      setDiscount(result.discountAmount);
+      setCouponCode(code);
+    } catch (error) {
+      console.error('Failed to apply coupon', error);
+      alert('Invalid or inapplicable coupon');
+    } finally {
+      setCouponLoading(false);
+    }
+  };
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
@@ -48,6 +81,7 @@ export default function CheckoutClient() {
               amount: totalPrice,
               transactionId,
             },
+            couponCode: couponCode || undefined,
           },
           {
             onSuccess: () => {
@@ -65,6 +99,7 @@ export default function CheckoutClient() {
               amount: totalPrice,
               transactionId,
             },
+            couponCode: couponCode || undefined,
           },
           {
             onSuccess: () => {
@@ -74,7 +109,7 @@ export default function CheckoutClient() {
         );
       }
     },
-    [fromCart, product, quantity, totalPrice, checkout, recordOrder]
+    [fromCart, product, quantity, totalPrice, checkout, recordOrder, couponCode]
   );
 
   useEffect(() => {
@@ -121,7 +156,15 @@ export default function CheckoutClient() {
               fromCart={fromCart}
               quantity={quantity}
               setQuantity={setQuantity}
+              discount={discount}
+              totalPrice={totalPrice}
             />
+            <div className="mt-8">
+              <CouponCodeInput
+                onApply={handleApplyCoupon}
+                isLoading={isCouponLoading}
+              />
+            </div>
           </div>
           <div>
             <PaymentForm

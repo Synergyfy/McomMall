@@ -12,6 +12,8 @@ interface OrderSummaryProps {
   fromCart: boolean;
   quantity: number;
   setQuantity: (quantity: number | ((prev: number) => number)) => void;
+  discount: number;
+  totalPrice: number;
 }
 
 export default function OrderSummary({
@@ -20,14 +22,21 @@ export default function OrderSummary({
   fromCart,
   quantity,
   setQuantity,
+  discount,
+  totalPrice,
 }: OrderSummaryProps) {
   const handleQuantityChange = (amount: number) => {
     setQuantity(prev => Math.max(1, prev + amount));
   };
 
-  const totalPrice = fromCart
-    ? cart?.items.reduce((acc, item) => acc + item.product.price * item.quantity, 0) || 0
-    : product ? product.price * quantity : 0;
+  const basePrice = fromCart
+    ? cart?.items.reduce(
+        (acc, item) => acc + item.product.price * item.quantity,
+        0
+      ) || 0
+    : product
+    ? product.price * quantity
+    : 0;
 
   return (
     <div className="border rounded-lg p-6">
@@ -94,9 +103,21 @@ export default function OrderSummary({
           </>
         )
       )}
-      <div className="flex items-center justify-between mt-6 border-t pt-4">
-        <p className="text-lg font-bold">Total</p>
-        <p className="text-lg font-bold">£{totalPrice.toFixed(2)}</p>
+      <div className="mt-6 border-t pt-4 space-y-2">
+        <div className="flex items-center justify-between">
+          <p className="text-gray-500">Subtotal</p>
+          <p className="font-semibold">£{basePrice.toFixed(2)}</p>
+        </div>
+        {discount > 0 && (
+          <div className="flex items-center justify-between">
+            <p className="text-gray-500">Discount</p>
+            <p className="font-semibold">-£{discount.toFixed(2)}</p>
+          </div>
+        )}
+        <div className="flex items-center justify-between text-lg font-bold">
+          <p>Total</p>
+          <p>£{totalPrice.toFixed(2)}</p>
+        </div>
       </div>
     </div>
   );

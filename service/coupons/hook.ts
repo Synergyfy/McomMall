@@ -1,5 +1,11 @@
 import useSWR, { useSWRConfig } from 'swr';
-import { Coupon, CreateCouponDto, UpdateCouponDto } from './types';
+import {
+  Coupon,
+  CreateCouponDto,
+  UpdateCouponDto,
+  ValidateCouponDto,
+  ValidateCouponResponse,
+} from './types';
 import api from '../api';
 import { useSelector } from 'react-redux';
 import { RootState } from '../store/store';
@@ -58,4 +64,14 @@ export const useDeleteCoupon = () => {
     mutate('/coupons/mine');
   };
   return deleteCoupon;
+};
+
+export const useValidateCoupon = () => {
+  const validateCoupon = async (
+    validationData: ValidateCouponDto
+  ): Promise<ValidateCouponResponse> => {
+    const response = await api.post('/coupons/validate-coupon', validationData);
+    return response.data;
+  };
+  return validateCoupon;
 };

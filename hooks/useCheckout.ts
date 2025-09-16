@@ -10,6 +10,7 @@ export interface PaymentDto {
 
 export interface CreateCheckoutDto {
   payment: PaymentDto;
+  couponCode?: string;
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
