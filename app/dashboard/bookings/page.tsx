@@ -3,10 +3,7 @@
 import { useState, useMemo, useEffect } from 'react';
 import type { FC } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/service/store/store';
-import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
-import { clearBookingNotifications } from '@/service/store/notificationSlice';
+import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
 import { MoreHorizontal } from 'lucide-react';
 
 // Import Shadcn UI Components
@@ -44,24 +41,14 @@ const BookingsPage: FC = () => {
   const itemsPerPage: number = 4;
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
-  const { notifications } = useSelector(
-    (state: RootState) => state.notifications
-  );
+  const { newBookingsCount, newBookingIds } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
-  const dispatch: AppDispatch = useDispatch();
 
   useEffect(() => {
-    if (notifications && notifications.newBookings.count > 0) {
-      markAsSeen(
-        { notificationIds: notifications.newBookings.ids },
-        {
-          onSuccess: () => {
-            dispatch(clearBookingNotifications());
-          },
-        }
-      );
+    if (newBookingsCount > 0) {
+      markAsSeen({ notificationIds: newBookingIds });
     }
-  }, [notifications, markAsSeen, dispatch]);
+  }, [newBookingsCount, newBookingIds, markAsSeen]);
 
   const filteredBookings = useMemo(() => {
     if (!bookings) return [];

@@ -7,48 +7,29 @@ import { Conversation } from '@/service/messaging/types';
 import ConversationSidebar from './components/ConversationSidebar';
 import MessageView from './components/MessageView';
 import { Menu, X } from 'lucide-react';
-import { useMarkNotificationsAsSeen } from '@/service/notifications/hook';
-import { useSelector, useDispatch } from 'react-redux';
-import { RootState, AppDispatch } from '@/service/store/store';
+import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
 import { useAuth } from '@/service/auth/hook';
-import { clearMessageNotifications } from '@/service/store/notificationSlice';
 
 export default function MessagesPage() {
   const { data: conversations, isLoading } = useGetConversations();
   const [selectedConversation, setSelectedConversation] = useState<Conversation | null>(null);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user } = useAuth();
-  const { notifications } = useSelector(
-    (state: RootState) => state.notifications
-  );
+  const { senders } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
-  const dispatch: AppDispatch = useDispatch();
   const searchParams = useSearchParams();
 
   const markConversationAsSeen = useCallback((conversation: Conversation) => {
-    if (!user || !notifications || !notifications.newMessages) return;
+    if (!user) return;
 
     const sender = conversation.participants.find(p => p.id !== user.id);
-    if (
-      sender &&
-      notifications.newMessages.senders &&
-      notifications.newMessages.senders[sender.id]
-    ) {
-      markAsSeen(
-        {
-          notificationIds: notifications.newMessages.senders[sender.id].ids,
-        },
-        {
-          onSuccess: () => {
-            dispatch(clearMessageNotifications(sender.id));
-          },
-        }
-      );
+    if (sender && senders[sender.id]) {
+      markAsSeen({ notificationIds: senders[sender.id].ids });
     }
-  }, [user, notifications, markAsSeen, dispatch]);
+  }, [user, senders, markAsSeen]);
 
   useEffect(() => {
-    if (conversations && conversations.length > 0 && user && notifications) {
+    if (conversations && conversations.length > 0 && user) {
       const conversationId = searchParams.get('conversationId');
       let conversationToSelect: Conversation | null = null;
 
@@ -63,7 +44,7 @@ export default function MessagesPage() {
         markConversationAsSeen(conversationToSelect);
       }
     }
-  }, [conversations, searchParams, selectedConversation, user, notifications, markConversationAsSeen]);
+  }, [conversations, searchParams, selectedConversation, user, markConversationAsSeen]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
