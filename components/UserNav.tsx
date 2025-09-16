@@ -29,7 +29,10 @@ export default function UserNav() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" className="flex items-center relative w-56">
+        <Button
+          variant="ghost"
+          className="flex items-center relative w-56 group"
+        >
           {userRole === 'owner' && notifications && notifications.total > 0 && (
             <Badge
               variant="destructive"
@@ -46,7 +49,7 @@ export default function UserNav() {
           </Avatar>
           <div className="hidden sm:block text-left">
             <div className="text-base font-semibold text-white">{userName}</div>
-            <div className="text-xs text-gray-400">
+            <div className="text-xs text-gray-400 group-hover:text-white">
               {userRole === 'customer'
                 ? 'Customer'
                 : packageInfo?.planType}

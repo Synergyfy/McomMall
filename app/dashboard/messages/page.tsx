@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { useGetConversations } from '@/service/messaging/hook';
 import { Conversation } from '@/service/messaging/types';
@@ -25,44 +25,49 @@ export default function MessagesPage() {
   const dispatch: AppDispatch = useDispatch();
   const searchParams = useSearchParams();
 
-  // Effect to set the selected conversation from URL or default to the first one
-  useEffect(() => {
-    const conversationId = searchParams.get('conversationId');
-    if (conversations && conversations.length > 0) {
-      if (conversationId) {
-        const conversation = conversations.find(c => c.id === conversationId);
-        setSelectedConversation(conversation || conversations[0]);
-      } else if (!selectedConversation) {
-        setSelectedConversation(conversations[0]);
-      }
-    }
-  }, [conversations, searchParams, selectedConversation]);
+  const markConversationAsSeen = useCallback((conversation: Conversation) => {
+    if (!user || !notifications || !notifications.newMessages) return;
 
-  // Effect to mark a conversation as seen when it's selected
-  useEffect(() => {
-    if (selectedConversation && user && notifications && notifications.newMessages) {
-      const sender = selectedConversation.participants.find(p => p.id !== user.id);
-      if (
-        sender &&
-        notifications.newMessages.senders &&
-        notifications.newMessages.senders[sender.id]
-      ) {
-        markAsSeen(
-          {
-            notificationIds: notifications.newMessages.senders[sender.id].ids,
+    const sender = conversation.participants.find(p => p.id !== user.id);
+    if (
+      sender &&
+      notifications.newMessages.senders &&
+      notifications.newMessages.senders[sender.id]
+    ) {
+      markAsSeen(
+        {
+          notificationIds: notifications.newMessages.senders[sender.id].ids,
+        },
+        {
+          onSuccess: () => {
+            dispatch(clearMessageNotifications(sender.id));
           },
-          {
-            onSuccess: () => {
-              dispatch(clearMessageNotifications(sender.id));
-            },
-          }
-        );
+        }
+      );
+    }
+  }, [user, notifications, markAsSeen, dispatch]);
+
+  useEffect(() => {
+    if (conversations && conversations.length > 0 && user && notifications) {
+      const conversationId = searchParams.get('conversationId');
+      let conversationToSelect: Conversation | null = null;
+
+      if (conversationId) {
+        conversationToSelect = conversations.find(c => c.id === conversationId) || null;
+      } else if (!selectedConversation) {
+        conversationToSelect = conversations[0];
+      }
+
+      if (conversationToSelect) {
+        setSelectedConversation(conversationToSelect);
+        markConversationAsSeen(conversationToSelect);
       }
     }
-  }, [selectedConversation, user, notifications, markAsSeen, dispatch]);
+  }, [conversations, searchParams, selectedConversation, user, notifications, markConversationAsSeen]);
 
   const handleConversationSelect = (conversation: Conversation) => {
     setSelectedConversation(conversation);
+    markConversationAsSeen(conversation);
     if (window.innerWidth < 768) {
       setIsSidebarOpen(false);
     }
