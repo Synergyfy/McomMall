@@ -168,7 +168,7 @@ const WithdrawalHistory: React.FC<{ history: Withdrawal[] }> = ({
 };
 
 // --- MAIN PAGE COMPONENT ---
-export default function WithdrawPage() {
+export default function WithdrawPage({ onBack }: { onBack: () => void }) {
   const balance = 275.5;
   const minimumWithdrawal = 50.0;
 
@@ -210,6 +210,7 @@ export default function WithdrawPage() {
         <div className="max-w-4xl mx-auto">
           <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
             <h1 className="text-3xl font-bold text-gray-800">Withdraw</h1>
+            <Button onClick={onBack}>Back</Button>
             <div className="flex items-center text-sm text-gray-500">
               <span>Home</span>
               <ChevronRight className="h-4 w-4 mx-1" />
