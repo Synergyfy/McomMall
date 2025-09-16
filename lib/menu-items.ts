@@ -38,7 +38,6 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
-  { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
     title: 'Bookings',
@@ -86,11 +85,6 @@ export const storeMenuItems: MenuItem[] = [
   },
   { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   {
-    title: 'Withdraw',
-    href: '/dashboard/store/withdraw',
-    icon: BanknoteArrowDown,
-  },
-  {
     title: 'Settings',
     href: '/dashboard/settings',
     icon: Settings,
@@ -121,6 +115,7 @@ export const accountMenuItems: MenuItem[] = [
     href: '/dashboard/my-subscription',
     icon: CreditCard,
   },
+  { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 

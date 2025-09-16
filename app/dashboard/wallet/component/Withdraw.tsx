@@ -2,7 +2,7 @@
 
 import * as React from 'react';
 import { motion } from 'framer-motion';
-import { Banknote, Wallet, ChevronRight } from 'lucide-react';
+import { PoundSterling, Wallet, ChevronRight } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -89,7 +89,7 @@ const InfoCard: React.FC<InfoCardProps> = ({ title, children }) => (
 );
 
 const PaymentMethodRow: React.FC<{ method: PaymentMethod }> = ({ method }) => {
-  const Icon = method.type === 'Bank Transfer' ? Banknote : Wallet;
+  const Icon = method.type === 'Bank Transfer' ? PoundSterling : Wallet;
   return (
     <div className="flex items-center justify-between py-4">
       <div className="flex items-center gap-4">
@@ -149,7 +149,7 @@ const WithdrawalHistory: React.FC<{ history: Withdrawal[] }> = ({
                 data-label="Amount"
                 className="py-4 text-sm font-medium text-gray-900"
               >
-                ${item.amount.toFixed(2)}
+                £{item.amount.toFixed(2)}
               </td>
               <td data-label="Method" className="py-4 text-sm text-gray-800">
                 {item.method}
@@ -224,11 +224,11 @@ export default function WithdrawPage() {
                   <p className="text-gray-600">
                     Your Balance:{' '}
                     <span className="font-bold text-2xl text-gray-800">
-                      ${balance.toFixed(2)}
+                      £{balance.toFixed(2)}
                     </span>
                   </p>
                   <p className="text-sm text-gray-500">
-                    Minimum Withdraw Amount: ${minimumWithdrawal.toFixed(2)}
+                    Minimum Withdraw Amount: £{minimumWithdrawal.toFixed(2)}
                   </p>
                 </div>
                 <Button size="lg" disabled={balance < minimumWithdrawal}>
