@@ -131,8 +131,16 @@ const ListingCard: React.FC<ListingCardProps> = ({
     visible: { opacity: 1, y: 0 },
   };
 
+  const handleCardClick = () => {
+    router.push(`/listings/${listing.id}`);
+  };
+
   return (
-    <motion.div variants={cardVariants}>
+    <motion.div
+      variants={cardVariants}
+      onClick={handleCardClick}
+      className="cursor-pointer"
+    >
       <Card className="w-full overflow-hidden">
         <div className="flex flex-col md:flex-row items-start gap-6 p-4">
           {imgSrc ? (
@@ -172,16 +180,20 @@ const ListingCard: React.FC<ListingCardProps> = ({
               <Button
                 variant="ghost"
                 className="p-2"
-                onClick={() =>
-                  router.push(`/dashboard/edit-listing/${listing.id}`)
-                }
+                onClick={e => {
+                  e.stopPropagation();
+                  router.push(`/dashboard/edit-listing/${listing.id}`);
+                }}
               >
                 <Edit className="h-5 w-5 text-slate-500" />
               </Button>
               <Button
                 variant="ghost"
                 className="p-2"
-                onClick={() => onDeleteClick(listing.id)}
+                onClick={e => {
+                  e.stopPropagation();
+                  onDeleteClick(listing.id);
+                }}
               >
                 <Trash2 className="h-5 w-5 text-red-500" />
               </Button>
@@ -190,7 +202,10 @@ const ListingCard: React.FC<ListingCardProps> = ({
               <Button
                 variant="primary"
                 className="px-3 py-2 mt-2 bg-blue-600 text-white font-medium rounded-lg flex items-center justify-center cursor-pointer"
-                onClick={() => onVerifyClick(listing.id)}
+                onClick={e => {
+                  e.stopPropagation();
+                  onVerifyClick(listing.id);
+                }}
               >
                 <GoogleLogo className="mr-2 h-4 w-4" />
                 <p className="te">Verify with Google</p>
