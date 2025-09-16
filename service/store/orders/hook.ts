@@ -3,7 +3,7 @@ import api from '@/service/api';
 import { Order } from './types';
 
 const getStoreOrders = async (): Promise<Order[]> => {
-  const { data } = await api.get('/order/store');
+  const { data } = await api.get('/order/');
   return data;
 };
 
