@@ -24,7 +24,7 @@ interface TabContent {
 
 // --- CONTENT DATA ---
 const evergreenContent: TabContent = {
-  headerTitle: 'Forge Lasting Connections with a Premier Loyalty Program',
+  headerTitle: '',
   mainTitle: 'External Evergreen Reward Programme',
   subTitle: 'Grow Loyalty, Every Day.',
   description:
@@ -57,9 +57,8 @@ const evergreenContent: TabContent = {
 };
 
 const internalContent: TabContent = {
-  headerTitle:
-    'Forge Lasting Connections with an Internal Reward & Loyalty Program',
-  mainTitle: '', // Main title is not needed here as per the image
+  headerTitle: '',
+  mainTitle: 'Internal Reward & Loyalty Program',
   description:
     'Transform casual buyers into lifelong brand advocates. Our Reward & Loyalty Program is engineered to foster deep-rooted customer relationships by acknowledging and rewarding their continued patronage in meaningful ways.',
   features: [
@@ -154,13 +153,13 @@ const LoyaltyProgramSection = () => {
             {/* Text Column */}
             <div className="flex flex-col">
               <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 leading-tight">
-                {activeContent.headerTitle}
+                {activeContent.mainTitle}
               </h2>
 
               <div className="mt-6 text-gray-600 space-y-6">
-                {activeContent.mainTitle && (
+                {activeContent.headerTitle && (
                   <h3 className="text-xl sm:text-2xl font-semibold text-gray-700">
-                    {activeContent.mainTitle}
+                    {activeContent.headerTitle}
                   </h3>
                 )}
                 {activeContent.subTitle && (
