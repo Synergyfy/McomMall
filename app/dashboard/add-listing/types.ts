@@ -99,10 +99,9 @@ export interface ListingFormData {
   postcode?: string;
   city?: string;
   phone: string;
-  email: string;
+  email:string;
   socials: Socials;
-  logo: Media | null;
-  banner: Media | null;
+  media: Media[];
 
   // Conditional data
   productData?: Partial<ProductSellerData>;
