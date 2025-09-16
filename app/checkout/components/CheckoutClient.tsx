@@ -180,7 +180,7 @@ export default function CheckoutClient() {
         isOpen={isSuccessModalOpen}
         onClose={() => {
           setSuccessModalOpen(false);
-          router.push('/dashboard/orders');
+          router.push('/dashboard/store/orders');
         }}
       />
     </>
