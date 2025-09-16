@@ -71,7 +71,11 @@ export const useValidateCoupon = () => {
     validationData: ValidateCouponDto
   ): Promise<ValidateCouponResponse> => {
     const response = await api.post('/coupons/validate-coupon', validationData);
-    return response.data;
+    const data = response.data;
+    return {
+      ...data,
+      discountAmount: Number(data.discountAmount),
+    };
   };
   return validateCoupon;
 };
