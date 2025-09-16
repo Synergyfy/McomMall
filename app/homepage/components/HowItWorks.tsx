@@ -5,11 +5,18 @@ import { motion, Variants } from 'framer-motion';
 import { ArrowRight } from 'lucide-react';
 import LazyYouTubeVideo from '@/app/components/LazyYouTubeVideo';
 
-// Main data for the cards, with YouTube video URLs
+// Main data for the cards
 const cardsData = [
   {
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
-    title: 'For Business Owners',
+    title: 'For Service Providers',
+    features: [
+      'Showcase your services to a wider audience.',
+      'Connect with businesses and consumers directly.',
+      'Grow your client base with loyalty and referral programmes.',
+    ],
+  },
+  {
+    title: 'For Product Sellers',
     features: [
       'List your business and reach ready-to-buy customers.',
       'Promote your brand with seasonal campaigns.',
@@ -17,21 +24,11 @@ const cardsData = [
     ],
   },
   {
-    videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ', // A placeholder for "Chilled Serenity"
     title: 'For Consumers',
     features: [
       'Browse shops, services, offers, and rewards.',
       'Enjoy vouchers, loyalty rewards, and seasonal deals.',
       'Support local businesses and explore new experiences.',
-    ],
-  },
-  {
-    videoUrl: 'https://www.youtube.com/embed/jNQXAC9IVRw',
-    title: 'For Service Providers',
-    features: [
-      'Showcase your services to a wider audience.',
-      'Connect with businesses and consumers directly.',
-      'Grow your client base with loyalty and referral programmes.',
     ],
   },
 ];
@@ -72,40 +69,81 @@ const HowItWorksRedesigned = () => {
             Mall has something for you.
           </p>
         </div>
-        {/* Steps Container */}
-        <motion.div
-          className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8"
-          variants={containerVariants}
-          initial="hidden"
-          whileInView="visible"
-          viewport={{ once: true, amount: 0.2 }}
-        >
-          {cardsData.map((card, index) => (
-            <motion.div
-              key={index}
-              className="bg-white rounded-xl shadow-lg overflow-hidden flex flex-col transition-all duration-300 hover:shadow-2xl hover:-translate-y-1"
-              variants={itemVariants}
-            >
+        {/* Main Content */}
+        <div className="flex flex-col md:flex-row md:gap-8">
+          {/* Left side: Video */}
+          <motion.div
+            className="w-full md:w-1/2 mb-8 md:mb-0"
+            initial={{ x: -100, opacity: 0 }}
+            whileInView={{ x: 0, opacity: 1 }}
+            viewport={{ once: true, amount: 0.5 }}
+            transition={{ duration: 0.5 }}
+          >
+            <div className="aspect-w-16 aspect-h-9 rounded-2xl shadow-lg overflow-hidden">
               <LazyYouTubeVideo
-                videoId={card.videoUrl.split('/').pop() || ''}
-                title={card.title}
+                videoId="jNQXAC9IVRw"
+                title="MCOM Mall Overview"
               />
-              <div className="p-6 flex flex-col flex-grow">
+            </div>
+          </motion.div>
+
+          {/* Right side: Cards */}
+          <motion.div
+            className="w-full md:w-1/2 flex flex-col gap-4"
+            variants={containerVariants}
+            initial="hidden"
+            whileInView="visible"
+            viewport={{ once: true, amount: 0.2 }}
+          >
+            <div className="flex flex-col sm:flex-row gap-4">
+              {cardsData.slice(0, 2).map((card, index) => (
+                <motion.div
+                  key={index}
+                  className={`bg-white p-6 border border-orange-600 flex-1 ${
+                    index === 0
+                      ? 'rounded-tl-2xl rounded-br-2xl'
+                      : 'rounded-tr-2xl rounded-bl-2xl'
+                  }`}
+                  variants={itemVariants}
+                >
+                  <h3 className="text-xl font-bold text-orange-600 mb-4">
+                    {card.title}
+                  </h3>
+                  <ul className="space-y-3 text-gray-600">
+                    {card.features.map((feature, i) => (
+                      <li key={i} className="flex items-start">
+                        <span className="text-orange-500 mr-2 mt-1">
+                          &#8226;
+                        </span>
+                        <span>{feature}</span>
+                      </li>
+                    ))}
+                  </ul>
+                </motion.div>
+              ))}
+            </div>
+            <div className="flex justify-center">
+              <motion.div
+                className="bg-white p-6 border border-orange-600 rounded-tl-2xl rounded-br-2xl w-full sm:w-auto sm:min-w-[50%]"
+                variants={itemVariants}
+              >
                 <h3 className="text-xl font-bold text-orange-600 mb-4">
-                  {card.title}
+                  {cardsData[2].title}
                 </h3>
-                <ul className="space-y-3 text-gray-600 flex-grow">
-                  {card.features.map((feature, i) => (
+                <ul className="space-y-3 text-gray-600">
+                  {cardsData[2].features.map((feature, i) => (
                     <li key={i} className="flex items-start">
-                      <span className="text-orange-500 mr-2 mt-1">&#8226;</span>
+                      <span className="text-orange-500 mr-2 mt-1">
+                        &#8226;
+                      </span>
                       <span>{feature}</span>
                     </li>
                   ))}
                 </ul>
-              </div>
-            </motion.div>
-          ))}
-        </motion.div>
+              </motion.div>
+            </div>
+          </motion.div>
+        </div>
 
         {/* Buttons Section */}
         <motion.div
