@@ -133,15 +133,9 @@ const validationRules = {
     },
   },
   media: {
-    'logo.altText': {
-      validate: () => true, // Always valid
-      message: '',
-      optional: true,
-    },
-    'banner.altText': {
-      validate: () => true, // Always valid
-      message: '',
-      optional: true,
+    media: {
+      validate: (media: unknown[]) => media.length > 0,
+      message: 'At least one image or video is required.',
     },
   },
   productCategory: {
@@ -249,8 +243,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       email: '',
       shortDesc: '',
       socials: { website: '' },
-      logo: null,
-      banner: null,
+      media: [],
       ...propInitialData,
     };
     if (businessTypes.includes('Product') && !initialData.productData) {
@@ -415,13 +408,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       const rule = currentRules[fieldName];
       const value = get(formData, fieldName);
 
-      // Conditional validation for logo/banner alt text
-      if (fieldName === 'logo.altText' && !formData.logo?.file) {
-        continue;
-      }
-      if (fieldName === 'banner.altText' && !formData.banner?.file) {
-        continue;
-      }
 
       // Conditional validation for booking URL
       if (
@@ -597,10 +583,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       website: data.socials.website,
       businessPhone: data.phone,
       businessEmail: data.email,
-      logoUrl: undefined, // Requires file upload handling
-      bannerUrl: undefined, // Requires file upload handling
-      logoAltText: data.logo?.altText,
-      bannerAltText: data.banner?.altText,
       location,
       socialLinks,
       categoryIds: [
@@ -640,9 +622,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
         const rule = rules[fieldName];
         const value = get(formData, fieldName);
-
-        if (fieldName === 'logo.altText' && !formData.logo?.file) continue;
-        if (fieldName === 'banner.altText' && !formData.banner?.file) continue;
 
         if (
           fieldName === 'serviceData.bookingURL' &&

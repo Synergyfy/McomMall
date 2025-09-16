@@ -37,7 +37,7 @@ export const ListingPackageTable = () => {
 
 export const EarningTable = () => {
   return (
-    <div className="border rounded w-2/5">
+    <div className="border rounded w-full">
       <div className="border-b h-[3rem] flex items-center justify-between px-4">
         <TableHeader title="Your Earnings" />
       </div>

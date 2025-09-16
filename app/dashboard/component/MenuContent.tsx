@@ -9,7 +9,8 @@ import { RootState } from '@/service/store/store';
 import {
   mainMenuItems,
   listingMenuItems,
-  storeMenuItems,
+  productMenuItems,
+  serviceMenuItems,
   accountMenuItems,
   pluginMenuItems,
 } from '@/lib/menu-items';
@@ -118,9 +119,15 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
-              Store
+              Product
             </h3>
-            {renderMenuItems(storeMenuItems)}
+            {renderMenuItems(productMenuItems)}
+          </nav>
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Service
+            </h3>
+            {renderMenuItems(serviceMenuItems)}
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">

@@ -39,18 +39,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
-  {
-    title: 'Bookings',
-    href: '/dashboard/bookings',
-    icon: BookOpen,
-    subMenu: [
-      { title: 'Calendar View', href: '/dashboard/bookings/calendar-view' },
-      { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner' },
-      { title: 'Pending', href: '/dashboard/bookings?status=pending' },
-      { title: 'Approved', href: '/dashboard/bookings?status=approved' },
-      { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
-    ],
-  },
+  { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
 ];
 
 export const listingMenuItems: MenuItem[] = [
@@ -71,24 +60,42 @@ export const listingMenuItems: MenuItem[] = [
   { title: 'Bookmarks', href: '/dashboard/bookmarks', icon: Bookmark }, // Typo corrected: "Boomarks" -> "Bookmarks"
 ];
 
-export const storeMenuItems: MenuItem[] = [
-  { title: 'Dashboard', href: '/dashboard/store', icon: LayoutDashboard },
+export const productMenuItems: MenuItem[] = [
   {
-    title: 'Products',
+    title: 'Product',
     href: '/dashboard/store/products',
     icon: SquareDashedKanban,
   },
   {
-    title: 'Services',
+    title: 'Add Product',
+    href: '/dashboard/store/products/add-product',
+    icon: Plus,
+  },
+  { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
+];
+
+export const serviceMenuItems: MenuItem[] = [
+  {
+    title: 'Service',
     href: '/dashboard/services',
     icon: SquareDashedKanban,
   },
-  { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
   {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
+    title: 'Add Service',
+    href: '/dashboard/services/add-service',
+    icon: Plus,
+  },
+  {
+    title: 'Bookings',
+    href: '/dashboard/bookings',
+    icon: BookOpen,
+    subMenu: [
+      { title: 'Calendar View', href: '/dashboard/bookings/calendar-view' },
+      { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner' },
+      { title: 'Pending', href: '/dashboard/bookings?status=pending' },
+      { title: 'Approved', href: '/dashboard/bookings?status=approved' },
+      { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
+    ],
   },
 ];
 
@@ -116,6 +123,12 @@ export const accountMenuItems: MenuItem[] = [
     icon: CreditCard,
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
+  {
+    title: 'Settings',
+    href: '/dashboard/settings',
+    icon: Settings,
+    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
+  },
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 

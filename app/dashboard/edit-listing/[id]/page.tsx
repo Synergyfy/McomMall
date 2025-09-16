@@ -23,13 +23,17 @@ const transformApiDataToFormData = (
       // They would need to be added to the type and fetched from the API
       // to be populated here.
     },
-    logo: apiData.logoUrl
-      ? { file: null, altText: apiData.logoAltText || '' }
-      : null,
-    banner: apiData.bannerUrl
-      ? { file: null, altText: apiData.bannerAltText || '' }
-      : null,
+    media: [], // This needs to be populated from the API, assuming the API provides a list of media URLs.
   };
+
+  const mediaItems = [];
+  if (apiData.logoUrl) {
+    mediaItems.push({ url: apiData.logoUrl, altText: apiData.logoAltText || '' });
+  }
+  if (apiData.bannerUrl) {
+    mediaItems.push({ url: apiData.bannerUrl, altText: apiData.bannerAltText || '' });
+  }
+  formData.media = mediaItems;
 
   if (apiData.listingType.includes('product')) {
     formData.productData = {

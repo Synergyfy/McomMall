@@ -9,7 +9,7 @@ const Page = () => {
   const [showWithdraw, setShowWithdraw] = React.useState(false);
 
   if (showWithdraw) {
-    return <WithdrawPage />;
+    return <WithdrawPage onBack={() => setShowWithdraw(false)} />;
   }
 
   return (
