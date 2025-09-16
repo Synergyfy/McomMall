@@ -30,24 +30,29 @@ const MediaStep: React.FC<StepProps> = ({ setFormData, errors }) => {
 
   return (
     <div className="space-y-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
+        <div className="md:col-span-1">
           <h3 className="text-lg font-medium mb-2">Business Logo</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Upload a square logo for your business (e.g., 500x500px). Max 5MB.
+            Upload a square logo (max 5MB).
           </p>
-          <SingleImageInput onImageChange={handleLogoChange} />
+          <SingleImageInput
+            onImageChange={handleLogoChange}
+            className="aspect-square"
+          />
           {errors.logo && (
             <p className="text-sm text-red-500 mt-2">{errors.logo}</p>
           )}
         </div>
-        <div>
+        <div className="md:col-span-2">
           <h3 className="text-lg font-medium mb-2">Business Banner</h3>
           <p className="text-sm text-gray-500 mb-4">
-            Upload a wide banner for your listing page (e.g., 1200x400px). Max
-            5MB.
+            Upload a wide banner (max 5MB).
           </p>
-          <SingleImageInput onImageChange={handleBannerChange} />
+          <SingleImageInput
+            onImageChange={handleBannerChange}
+            className="aspect-video"
+          />
           {errors.banner && (
             <p className="text-sm text-red-500 mt-2">{errors.banner}</p>
           )}

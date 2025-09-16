@@ -4,13 +4,16 @@ import React, { useState, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
 import Image from 'next/image';
 import { LucideImage } from 'lucide-react';
+import clsx from 'clsx';
 
 interface SingleImageInputProps {
   onImageChange?: (image: File | null) => void;
+  className?: string;
 }
 
 const SingleImageInput: React.FC<SingleImageInputProps> = ({
   onImageChange,
+  className,
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
 
@@ -53,7 +56,10 @@ const SingleImageInput: React.FC<SingleImageInputProps> = ({
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: 0.5 }}
-      className="w-full h-full aspect-square border-2 border-gray-300 rounded-lg flex items-center justify-center bg-gray-100 cursor-pointer overflow-hidden"
+      className={clsx(
+        'w-full h-full border-2 border-gray-300 rounded-lg flex items-center justify-center bg-gray-100 cursor-pointer overflow-hidden',
+        className
+      )}
       onClick={handleClick}
     >
       {preview ? (
