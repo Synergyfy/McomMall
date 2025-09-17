@@ -2,30 +2,24 @@ import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
 import { User, UpdateUserDto } from './types';
 
-const USER_QUERY_KEY = 'user';
+const USER_QUERY_KEY = 'my-user';
 
 // Fetch user profile
-const getUserProfile = async (id: string): Promise<User> => {
-  const { data } = await api.get<User>(`/users/${id}`);
+const getUserProfile = async (): Promise<User> => {
+  const { data } = await api.get<User>('/users/myinfo');
   return data;
 };
 
-export const useGetUserProfile = (id: string) => {
+export const useGetUserProfile = () => {
   return useQuery({
-    queryKey: [USER_QUERY_KEY, id],
-    queryFn: () => getUserProfile(id),
-    enabled: !!id, // Only run the query if the id is available
+    queryKey: [USER_QUERY_KEY],
+    queryFn: getUserProfile,
   });
 };
 
 // Update user profile
-const updateUserProfile = async ({
-  id,
-  ...updateData
-}: {
-  id: string;
-} & UpdateUserDto): Promise<User> => {
-  const { data } = await api.patch<User>(`/users/${id}`, updateData);
+const updateUserProfile = async (updateData: UpdateUserDto): Promise<User> => {
+  const { data } = await api.patch<User>('/users/myinfo', updateData);
   return data;
 };
 
@@ -36,7 +30,7 @@ export const useUpdateUserProfile = () => {
     mutationFn: updateUserProfile,
     onSuccess: (data) => {
       // Invalidate and refetch the user query to get the latest data
-      queryClient.invalidateQueries({ queryKey: [USER_QUERY_KEY, data.id] });
+      queryClient.invalidateQueries({ queryKey: [USER_QUERY_KEY] });
     },
   });
 };

@@ -212,12 +212,11 @@ const InfoAlert = ({
 
 const MyProfilePage: NextPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const [userId] = useState('user-id'); // Replace with actual user ID logic
   const {
     data: user,
     isLoading,
     isError,
-  } = useGetUserProfile(userId);
+  } = useGetUserProfile();
   const updateUserMutation = useUpdateUserProfile();
 
   const [profile, setProfile] = useState<Partial<User>>({});
@@ -308,10 +307,9 @@ const MyProfilePage: NextPage = () => {
       return;
     }
 
-    const { id, ...socialsToUpdate } = socials;
+    const { ...socialsToUpdate } = socials;
     updateUserMutation.mutate(
       {
-        id: userId,
         name: profile.name,
         phoneNumber: profile.phoneNumber,
         socials: socialsToUpdate,
