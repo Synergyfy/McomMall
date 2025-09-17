@@ -4,6 +4,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Star, MapPin, Zap, Fuel, Gauge, CheckCircle } from 'lucide-react';
 import Image from 'next/image';
+import { CURRENCY } from '@/lib/utils';
 
 const listings = [
   {
@@ -13,7 +14,7 @@ const listings = [
     location: 'Ocean Avenue, New York',
     image: 'https://ext.same-assets.com/1310083762/3001611569.jpeg',
     rating: 3.8,
-    price: '$100.00',
+    price: `${CURRENCY}100.00`,
     priceUnit: 'per day',
     featured: true,
     verified: true,
@@ -27,7 +28,7 @@ const listings = [
     location: 'Suffolk County, New York',
     image: 'https://ext.same-assets.com/1310083762/2416888981.jpeg',
     rating: 5.0,
-    price: '$20.00',
+    price: `${CURRENCY}20.00`,
     priceUnit: 'per hour',
     featured: false,
     verified: true,

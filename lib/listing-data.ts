@@ -80,6 +80,8 @@ export interface DetailedListing extends Listing {
   };
 }
 
+import { CURRENCY } from './utils';
+
 // ==================================
 // ## MOCK DATA
 // ==================================
@@ -92,7 +94,7 @@ export const listings: Listing[] = [
     category: 'Coaching',
     categoryTag: 'Business Coach, Coaching',
     location: 'Ocean Avenue, New York',
-    priceDisplay: 'Starts from $100.00',
+    priceDisplay: `Starts from ${CURRENCY}100.00`,
     rating: 5.0,
     reviewCount: 3, // Updated to match detailed review count
     imageUrl:
@@ -109,7 +111,7 @@ export const listings: Listing[] = [
     category: 'Cars',
     categoryTag: 'Cars, For Rent',
     location: 'Suffolk County, New York',
-    priceDisplay: 'Starts from $20.00 per hour',
+    priceDisplay: `Starts from ${CURRENCY}20.00 per hour`,
     rating: 4.3,
     reviewCount: 2,
     imageUrl:
@@ -125,7 +127,7 @@ export const listings: Listing[] = [
     category: 'Services',
     categoryTag: 'Barber, Services',
     location: 'Auburndale, Queens, NY',
-    priceDisplay: '$12.00 - $40.00',
+    priceDisplay: `${CURRENCY}12.00 - ${CURRENCY}40.00`,
     rating: 4.9,
     reviewCount: 3,
     imageUrl:

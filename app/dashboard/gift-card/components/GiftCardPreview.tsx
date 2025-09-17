@@ -2,6 +2,7 @@
 
 import { AnimatePresence, motion } from 'framer-motion';
 import { GiftCardDesign } from '../types';
+import { formatCurrency } from '@/lib/utils';
 
 interface GiftCardPreviewProps {
   design: GiftCardDesign;
@@ -60,7 +61,7 @@ export function GiftCardPreview({ design, amount }: GiftCardPreviewProps) {
             <div className="text-right">
               <p className="font-semibold text-lg opacity-80">{design.name}</p>
               <p className="text-5xl font-bold tracking-tight">
-                £{amount || '0.00'}
+                {formatCurrency(Number(amount) || 0)}
               </p>
             </div>
           </div>

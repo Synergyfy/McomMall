@@ -21,6 +21,7 @@ import {
 import { Button } from '@/components/ui/button';
 import { MoreHorizontal, Pencil, Trash2, Play, Pause } from 'lucide-react';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 interface CampaignsTableProps {
   campaigns: Campaign[];
@@ -99,8 +100,7 @@ export const CampaignsTable = ({
                 <TableCell className="hidden md:table-cell">
                   <div className="flex flex-col gap-1">
                     <span>
-                      ${campaign.spent.toFixed(2)} / $
-                      {campaign.budget.toFixed(2)}
+                      {formatCurrency(campaign.spent)} / {formatCurrency(campaign.budget)}
                     </span>
                     <Progress
                       value={(campaign.spent / campaign.budget) * 100}

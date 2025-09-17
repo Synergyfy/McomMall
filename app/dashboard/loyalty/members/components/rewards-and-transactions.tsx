@@ -42,6 +42,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { CURRENCY } from '@/lib/utils';
 
 type RewardStatus = 'Claimed' | 'Pending';
 type TransactionStatus = 'Active' | 'Expired';
@@ -79,7 +80,7 @@ const initialRewards: Reward[] = [
   {
     id: 2,
     dateClaimed: '09/16/2024 4:05 pm',
-    offer: 'Save $5',
+    offer: `Save ${CURRENCY}5`,
     points: 5000,
     status: 'Pending',
     expirationDate: '09/16/2025',
@@ -87,7 +88,7 @@ const initialRewards: Reward[] = [
   {
     id: 3,
     dateClaimed: '09/16/2024 4:05 pm',
-    offer: 'Save $1',
+    offer: `Save ${CURRENCY}1`,
     points: 1000,
     status: 'Pending',
     expirationDate: '09/16/2025',
@@ -95,7 +96,7 @@ const initialRewards: Reward[] = [
   {
     id: 4,
     dateClaimed: '09/16/2024 4:02 pm',
-    offer: 'Save $1',
+    offer: `Save ${CURRENCY}1`,
     points: 1000,
     status: 'Pending',
     expirationDate: '09/16/2025',
@@ -144,7 +145,7 @@ const initialTransactions: Transaction[] = [
   {
     id: 4,
     date: '09/16/2024 4:05 pm',
-    note: 'Claimed offer: Save $5',
+    note: `Claimed offer: Save ${CURRENCY}5`,
     expiration: '09/16/2025',
     debit: 5000,
     credit: null,
