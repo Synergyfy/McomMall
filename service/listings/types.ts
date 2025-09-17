@@ -44,7 +44,7 @@ export interface GoogleReview {
 
 import { Review as ApiReview } from '../reviews/types';
 
-export { ApiReview };
+export type { ApiReview };
 
 export type Review = GoogleReview | ApiReview;
 
