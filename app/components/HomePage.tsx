@@ -306,7 +306,7 @@ export default function HomePage() {
             </h2>
             <motion.div
               layout
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-6xl mx-auto"
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
             >
               <AnimatePresence>
                 {isLoading ? (
@@ -314,7 +314,7 @@ export default function HomePage() {
                 ) : isError ? (
                   <p>Error fetching listings.</p>
                 ) : (
-                  recentListings?.map(ad => (
+                  recentListings?.slice(0, 3).map(ad => (
                     <motion.div
                       key={ad.id}
                       layout
@@ -322,7 +322,7 @@ export default function HomePage() {
                       animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0, scale: 0.8 }}
                       transition={{ duration: 0.3 }}
-                      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col sm:flex-row gap-4 p-4 hover:shadow-xl transition-shadow"
+                      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow"
                     >
                       <Image
                         src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`}
@@ -330,13 +330,13 @@ export default function HomePage() {
                         width={300}
                         height={200}
                         loading="lazy"
-                        className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
+                        className="w-full h-48 object-cover"
                       />
-                      <div className="flex flex-col justify-between w-full">
+                      <div className="flex flex-col justify-between w-full p-4">
                         <div>
                           <div className="flex justify-between items-start">
                             <Link href={`/listings/${ad.id}`}>
-                              <h3 className="font-bold text-xl mb-2 hover:underline">
+                              <h3 className="font-bold text-lg mb-2 hover:underline">
                                 {ad.businessName}
                               </h3>
                             </Link>

@@ -11,29 +11,28 @@ import {
   Upload,
   Youtube,
 } from 'lucide-react';
-import React, { useState, useRef, ChangeEvent, FormEvent } from 'react';
+import React, { useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react';
 import Image from 'next/image';
+import {
+  useGetUserProfile,
+  useUpdateUserProfile,
+} from '../../../service/user/hook';
+import { User, Socials } from '../../../service/user/types';
+import { toast } from 'sonner';
 
 type SocialPlatform =
-  | 'Twitter'
-  | 'Facebook'
-  | 'LinkedIn'
-  | 'Instagram'
-  | 'YouTube';
+  | 'twitter'
+  | 'facebook'
+  | 'linkedin'
+  | 'instagram'
+  | 'youtube';
 
-type SocialLink = {
-  platform: SocialPlatform;
-  url: string;
-  icon: React.ElementType;
-};
-
-type UserProfile = {
-  firstName: string;
-  lastName: string;
-  phone: string;
-  email: string;
-  avatar: string | null;
-  socials: SocialLink[];
+const socialIcons: { [key in SocialPlatform]: React.ElementType } = {
+  twitter: Twitter,
+  facebook: Facebook,
+  linkedin: Linkedin,
+  instagram: Instagram,
+  youtube: Youtube,
 };
 
 type PasswordFields = {
@@ -43,7 +42,10 @@ type PasswordFields = {
 };
 
 type ProfileErrors = {
-  [key in keyof Omit<UserProfile, 'socials' | 'avatar'>]?: string;
+  name?: string;
+  phoneNumber?: string;
+  email?: string;
+  socials?: { [key in SocialPlatform]?: string };
 };
 
 type PasswordErrors = {
@@ -67,8 +69,10 @@ interface PasswordFieldProps extends Omit<InputFieldProps, 'type' | 'id'> {
 }
 
 interface SocialInputFieldProps {
-  social: SocialLink;
+  platform: SocialPlatform;
+  url: string;
   onChange: (platform: SocialPlatform, url: string) => void;
+  error?: string;
 }
 
 // --- UI Components ---
@@ -158,26 +162,41 @@ const PasswordField = ({
   );
 };
 
-const SocialInputField = ({ social, onChange }: SocialInputFieldProps) => (
-  <div>
-    <label
-      htmlFor={social.platform}
-      className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
-    >
-      <social.icon className="h-4 w-4" />
-      {social.platform}
-    </label>
-    <input
-      type="text"
-      id={social.platform}
-      value={social.url}
-      onChange={(e: ChangeEvent<HTMLInputElement>) =>
-        onChange(social.platform, e.target.value)
-      }
-      className="block w-full rounded-md border-gray-300 bg-gray-50 p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500 sm:text-sm"
-    />
-  </div>
-);
+const SocialInputField = ({
+  platform,
+  url,
+  onChange,
+  error,
+}: SocialInputFieldProps) => {
+  const Icon = socialIcons[platform];
+  return (
+    <div>
+      <label
+        htmlFor={platform}
+        className="mb-2 flex items-center gap-2 text-sm font-medium text-gray-700 dark:text-gray-300"
+      >
+        <Icon className="h-4 w-4" />
+        {platform.charAt(0).toUpperCase() + platform.slice(1)}
+      </label>
+      <input
+        type="text"
+        id={platform}
+        value={url}
+        onChange={(e: ChangeEvent<HTMLInputElement>) =>
+          onChange(platform, e.target.value)
+        }
+        className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
+          error
+            ? 'border-red-500 ring-1 ring-red-500'
+            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+        } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
+      />
+      {error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
+    </div>
+  );
+};
 
 const InfoAlert = ({
   message,
@@ -202,27 +221,17 @@ const InfoAlert = ({
   );
 };
 
-/**
- * The main component for the "My Profile" page.
- */
 const MyProfilePage: NextPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const {
+    data: user,
+    isLoading,
+    isError,
+  } = useGetUserProfile();
+  const updateUserMutation = useUpdateUserProfile();
 
-  const [profile, setProfile] = useState<UserProfile>({
-    firstName: 'Tom',
-    lastName: 'Smith',
-    phone: '',
-    email: 'owner@listeo.pro',
-    avatar: 'https://placehold.co/150x150/EFEFEF/333333?text=User',
-    socials: [
-      { platform: 'Twitter', url: '', icon: Twitter },
-      { platform: 'Facebook', url: '', icon: Facebook },
-      { platform: 'LinkedIn', url: '', icon: Linkedin },
-      { platform: 'Instagram', url: '', icon: Instagram },
-      { platform: 'YouTube', url: '', icon: Youtube },
-    ],
-  });
-
+  const [profile, setProfile] = useState<Partial<User>>({});
+  const [socials, setSocials] = useState<Partial<Socials>>({});
   const [passwords, setPasswords] = useState<PasswordFields>({
     current: '',
     new: '',
@@ -231,30 +240,40 @@ const MyProfilePage: NextPage = () => {
 
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
+  const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (user) {
+      setProfile({
+        name: user.name,
+        email: user.email,
+        phoneNumber: user.phoneNumber,
+      });
+      setSocials(user.socials || {});
+      setAvatarPreview(
+        'https://placehold.co/150x150/EFEFEF/333333?text=User'
+      ); // Assuming no avatar URL from API
+    }
+  }, [user]);
 
   const handleProfileChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { id, value } = e.target;
-    setProfile({ ...profile, [id]: value });
+    setProfile(prev => ({ ...prev, [id]: value }));
     if (profileErrors[id as keyof ProfileErrors]) {
-      setProfileErrors({ ...profileErrors, [id]: undefined });
+      setProfileErrors(prev => ({ ...prev, [id]: undefined }));
     }
   };
 
   const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const { id, value } = e.target;
-    setPasswords({ ...passwords, [id]: value });
+    setPasswords(prev => ({ ...prev, [id]: value }));
     if (passwordErrors[id as keyof PasswordErrors]) {
-      setPasswordErrors({ ...passwordErrors, [id]: undefined });
+      setPasswordErrors(prev => ({ ...prev, [id]: undefined }));
     }
   };
 
   const handleSocialChange = (platform: SocialPlatform, url: string): void => {
-    setProfile({
-      ...profile,
-      socials: profile.socials.map(social =>
-        social.platform === platform ? { ...social, url } : social
-      ),
-    });
+    setSocials(prev => ({ ...prev, [platform]: url }));
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>): void => {
@@ -262,27 +281,48 @@ const MyProfilePage: NextPage = () => {
       const file = e.target.files[0];
       const reader = new FileReader();
       reader.onloadend = () => {
-        setProfile({ ...profile, avatar: reader.result as string });
+        setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
     }
   };
 
   const validateProfile = (): boolean => {
-    const errors: ProfileErrors = {};
-    if (!profile.firstName.trim()) errors.firstName = 'First name is required.';
-    if (!profile.lastName.trim()) errors.lastName = 'Last name is required.';
-    if (profile.phone && !/^\+?[0-9\s-()]{7,20}$/.test(profile.phone)) {
-      errors.phone = 'Please enter a valid phone number.';
+    const errors: ProfileErrors = { socials: {} };
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+
+    if (!profile.name?.trim()) errors.name = 'Name is required.';
+
+    if (
+      profile.phoneNumber &&
+      !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
+    ) {
+      errors.phoneNumber = 'Please enter a valid phone number.';
     }
+
+    if (profile.email && !/\S+@\S+\.\S+/.test(profile.email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    for (const [platform, url] of Object.entries(socials)) {
+      if (url && !urlRegex.test(url as string)) {
+        if (!errors.socials) errors.socials = {};
+        errors.socials[platform as SocialPlatform] =
+          'Please enter a valid URL.';
+      }
+    }
+
     setProfileErrors(errors);
-    return Object.keys(errors).length === 0;
+    return (
+      Object.keys(errors).length === 1 &&
+      Object.keys(errors.socials || {}).length === 0
+    );
   };
 
   const validatePasswords = (): boolean => {
     const errors: PasswordErrors = {};
     if (!passwords.current) errors.current = 'Current password is required.';
-    if (passwords.new.length < 12)
+    if (passwords.new.length > 0 && passwords.new.length < 12)
       errors.new = 'New password must be at least 12 characters long.';
     if (passwords.new !== passwords.confirm)
       errors.confirm = 'Passwords do not match.';
@@ -292,31 +332,40 @@ const MyProfilePage: NextPage = () => {
 
   const handleProfileSubmit = (e: FormEvent): void => {
     e.preventDefault();
-    if (validateProfile()) {
-      console.log('Profile data submitted:', {
-        ...profile,
-      });
-      // In a real app, you'd show a success toast or message instead of an alert.
-      alert('Profile details saved successfully!');
-    } else {
-      console.log('Profile validation failed.');
+    if (!validateProfile()) {
+      toast.error('Please correct the errors before submitting.');
+      return;
     }
+
+    const { ...socialsToUpdate } = socials;
+    updateUserMutation.mutate(
+      {
+        name: profile.name,
+        phoneNumber: profile.phoneNumber,
+        socials: socialsToUpdate,
+      },
+      {
+        onSuccess: () => {
+          toast.success('Profile updated successfully!');
+        },
+        onError: (error) => {
+          toast.error(`Failed to update profile: ${error.message}`);
+        },
+      }
+    );
   };
 
   const handlePasswordSubmit = (e: FormEvent): void => {
     e.preventDefault();
     if (validatePasswords()) {
-      console.log('Password change submitted:', {
-        current: '******',
-        new: '******',
-      });
-      // In a real app, you'd show a success toast or message instead of an alert.
-      alert('Password changed successfully!');
+      // Implement password change logic here
+      toast.success('Password changed successfully!');
       setPasswords({ current: '', new: '', confirm: '' });
-    } else {
-      console.log('Password validation failed.');
     }
   };
+
+  if (isLoading) return <div>Loading...</div>;
+  if (isError) return <div>Error fetching profile.</div>;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 font-sans dark:bg-gray-950">
@@ -359,9 +408,9 @@ const MyProfilePage: NextPage = () => {
                     className="group relative mb-2 h-36 w-36 cursor-pointer rounded-md border-2 border-dashed border-gray-300 p-2 dark:border-gray-600"
                     onClick={() => fileInputRef.current?.click()}
                   >
-                    {profile.avatar ? (
+                    {avatarPreview ? (
                       <Image
-                        src={profile.avatar}
+                        src={avatarPreview}
                         alt="User Avatar"
                         width="130"
                         height="130"
@@ -379,7 +428,7 @@ const MyProfilePage: NextPage = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setProfile({ ...profile, avatar: null })}
+                    onClick={() => setAvatarPreview(null)}
                     className="text-sm text-red-600 hover:underline dark:text-red-500"
                   >
                     Remove file
@@ -387,18 +436,11 @@ const MyProfilePage: NextPage = () => {
                 </div>
                 <div className="space-y-6 md:col-span-2">
                   <InputField
-                    label="First Name"
-                    id="firstName"
-                    value={profile.firstName}
+                    label="Full Name"
+                    id="name"
+                    value={profile.name || ''}
                     onChange={handleProfileChange}
-                    error={profileErrors.firstName}
-                  />
-                  <InputField
-                    label="Last Name"
-                    id="lastName"
-                    value={profile.lastName}
-                    onChange={handleProfileChange}
-                    error={profileErrors.lastName}
+                    error={profileErrors.name}
                   />
                 </div>
               </div>
@@ -409,32 +451,40 @@ const MyProfilePage: NextPage = () => {
                 />
                 <InputField
                   label="Phone"
-                  id="phone"
-                  value={profile.phone}
+                  id="phoneNumber"
+                  value={profile.phoneNumber || ''}
                   onChange={handleProfileChange}
-                  error={profileErrors.phone}
+                    error={profileErrors.phoneNumber}
                 />
                 <InputField
                   label="E-mail"
                   id="email"
-                  value={profile.email}
+                  value={profile.email || ''}
                   onChange={handleProfileChange}
                   disabled={true}
+                  error={profileErrors.email}
                 />
-                {profile.socials.map(social => (
+                {(
+                  Object.keys(socialIcons) as SocialPlatform[]
+                ).map(platform => (
                   <SocialInputField
-                    key={social.platform}
-                    social={social}
+                    key={platform}
+                    platform={platform}
+                    url={socials[platform as keyof typeof socials] || ''}
                     onChange={handleSocialChange}
+                    error={profileErrors.socials?.[platform]}
                   />
                 ))}
               </div>
               <div className="mt-8 flex justify-end">
                 <button
                   type="submit"
-                  className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline  focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                  className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                  disabled={updateUserMutation.isPending}
                 >
-                  Save Changes
+                  {updateUserMutation.isPending
+                    ? 'Saving...'
+                    : 'Save Changes'}
                 </button>
               </div>
             </div>
