@@ -390,3 +390,26 @@ export interface InHouseBusiness {
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];
+
+export interface RecentListing {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  listingType: string[];
+  businessName: string;
+  shortDescription: string;
+  businessPhone: string;
+  status: string;
+  categories: {
+    id:string;
+    name:string;
+  }[];
+  location: {
+    id: string;
+    addressLine1: string;
+    city: string;
+    postcode: string;
+  };
+}
+
+export type RecentListings = RecentListing[];

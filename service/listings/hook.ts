@@ -7,6 +7,7 @@ import {
   GooglePlaceResult,
   GooglePlaceResults,
   InHouseBusinessResults,
+  RecentListings,
 } from './types';
 
 export interface ErrorResponse {
@@ -48,6 +49,28 @@ export const useGetGoogleListings = ({
     queryKey: ['FETCH_GOOGLE_BUSINESSES', lat, lng, queryText],
     enabled: lat && lng ? true : false,
     refetchOnMount: false,
+  });
+  return query;
+};
+
+export const useGetRecentListings = () => {
+  const fetch = async () => {
+    try {
+      const response = await api.get('listings/recent');
+      return response.data as RecentListings;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to fetch recent listings'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_RECENT_LISTINGS'],
   });
   return query;
 };
