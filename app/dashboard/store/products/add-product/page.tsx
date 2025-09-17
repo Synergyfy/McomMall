@@ -7,6 +7,7 @@ import {
   FieldError,
 } from 'react-hook-form';
 import { useGetUserListings } from '@/service/listings/hook';
+import { UserListing } from '@/service/listings/types';
 import {
   UploadCloud,
   Plus,
@@ -67,18 +68,14 @@ import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { businessCategories } from '@/lib/business-categories';
 
-interface Listing {
-  id: string;
-  businessName: string;
-}
 
 interface ProductFormValues {
-  title: string;
+  title:string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
+  tags: string[];
   price: number;
   discountedPrice?: number;
-  tags: string;
   shortDescription: string;
   description: string;
   sku: string;
@@ -123,14 +120,17 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
+    if (!data.tags || data.tags.length === 0) {
+    errors.tags = {
+      type: 'required',
+      message: 'Please select at least one tag.',
+    };
+  }
   if (data.price === undefined || data.price < 0) {
     errors.price = {
       type: 'min',
       message: 'Price must be a positive number.',
     };
-  }
-  if (!data.tags?.trim()) {
-    errors.tags = { type: 'required', message: 'Tags are required.' };
   }
   if (!data.shortDescription?.trim()) {
     errors.shortDescription = {
@@ -251,7 +251,6 @@ const customResolver = (data: ProductFormValues) => {
 
 export default function AddProductPage() {
   const router = useRouter();
-  const [selectedSubCategories, setSelectedSubCategories] = useState<string[]>([]);
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const form = useForm<ProductFormValues>({
     resolver: customResolver,
@@ -259,9 +258,9 @@ export default function AddProductPage() {
       title: '',
       productType: 'physical',
       category: '',
+      tags: [],
       price: 0,
       discountedPrice: undefined,
-      tags: '',
       shortDescription: '',
       description: '',
       sku: '',
@@ -299,9 +298,6 @@ export default function AddProductPage() {
   const productType = form.watch('productType');
 
   const category = form.watch('category');
-  React.useEffect(() => {
-    setSelectedSubCategories([]);
-  }, [category]);
 
   async function onSubmit(data: ProductFormValues) {
     const productData: CreateProductDto = {
@@ -336,7 +332,7 @@ export default function AddProductPage() {
       visibility: data.visibility,
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
-      tags: selectedSubCategories,
+      tags: data.tags,
     };
 
     addProduct(productData, {
@@ -1142,14 +1138,18 @@ export default function AddProductPage() {
                                   Loading businesses...
                                 </SelectItem>
                               ) : (
-                                userListings?.map((listing: Listing) => (
-                                  <SelectItem
-                                    key={listing.id}
-                                    value={listing.id}
-                                  >
-                                    {listing.businessName}
-                                  </SelectItem>
-                                ))
+                                userListings
+                                  ?.filter((listing: UserListing) =>
+                                    listing.listingType.includes('product')
+                                  )
+                                  .map((listing: UserListing) => (
+                                    <SelectItem
+                                      key={listing.id}
+                                      value={listing.id}
+                                    >
+                                      {listing.businessName}
+                                    </SelectItem>
+                                  ))
                               )}
                             </SelectContent>
                           </Select>
@@ -1268,7 +1268,8 @@ export default function AddProductPage() {
                                         value={cat.name}
                                         key={cat.name}
                                         onSelect={() => {
-                                          form.setValue('category', cat.name);
+                                          form.setValue('category', cat.name, { shouldValidate: true });
+                                          form.setValue('tags', [], { shouldValidate: true });
                                         }}
                                       >
                                         {cat.name}
@@ -1286,19 +1287,19 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Sub-categories (as Tags) */}
+                {/* Tags */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Sub-categories</CardTitle>
+                    <CardTitle className="text-2xl">Tags</CardTitle>
                     <CardDescription>
-                      Select sub-categories that will act as tags for your product.
+                      Select tags for your product.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
                       name="tags"
-                      render={() => (
+                      render={({ field }) => (
                         <FormItem>
                           <Popover>
                             <PopoverTrigger asChild>
@@ -1308,17 +1309,17 @@ export default function AddProductPage() {
                                 disabled={!form.watch('category')}
                               >
                                 <Plus className="mr-2 h-4 w-4" />
-                                {selectedSubCategories.length > 0
-                                  ? 'Add more sub-categories'
-                                  : 'Select sub-categories'}
+                                {field.value?.length > 0
+                                  ? 'Add more tags'
+                                  : 'Select tags'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                               <Command>
-                                <CommandInput placeholder="Search sub-category..." />
+                                <CommandInput placeholder="Search tags..." />
                                 <CommandList>
                                   <CommandEmpty>
-                                    No sub-category found.
+                                    No tags found.
                                   </CommandEmpty>
                                   <CommandGroup>
                                     {businessCategories
@@ -1328,8 +1329,9 @@ export default function AddProductPage() {
                                           key={sc.name}
                                           value={sc.name}
                                           onSelect={() => {
-                                            if (!selectedSubCategories.includes(sc.name)) {
-                                              setSelectedSubCategories([...selectedSubCategories, sc.name]);
+                                            const currentValue = form.getValues('tags') || [];
+                                            if (!currentValue.includes(sc.name)) {
+                                              form.setValue('tags', [...currentValue, sc.name], { shouldValidate: true });
                                             }
                                           }}
                                         >
@@ -1342,23 +1344,20 @@ export default function AddProductPage() {
                             </PopoverContent>
                           </Popover>
                           <div className="flex flex-wrap gap-2 mt-4">
-                            {selectedSubCategories.map(subCategory => (
+                            {field.value?.map(tag => (
                               <Badge
-                                key={subCategory}
+                                key={tag}
                                 variant="secondary"
                                 className="text-base"
                               >
-                                {subCategory}
+                                {tag}
                                 <button
                                   type="button"
                                   className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                  onClick={() =>
-                                    setSelectedSubCategories(
-                                      selectedSubCategories.filter(
-                                        s => s !== subCategory
-                                      )
-                                    )
-                                  }
+                                  onClick={() => {
+                                    const currentValue = form.getValues('tags') || [];
+                                    form.setValue('tags', currentValue.filter(s => s !== tag), { shouldValidate: true });
+                                  }}
                                 >
                                   <X className="h-3 w-3" />
                                 </button>

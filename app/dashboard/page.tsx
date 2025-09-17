@@ -2,10 +2,10 @@
 
 import type { FC } from 'react';
 import {
-  MapPin,
+  DollarSign,
+  ShoppingCart,
+  Package,
   BarChart2,
-  MessageSquare,
-  Heart,
   MoreHorizontal,
   Diamond,
 } from 'lucide-react';
@@ -42,7 +42,7 @@ import {
 
 interface StatCardProps {
   title: string;
-  value: number;
+  value: number | string;
   icon: React.ReactNode;
   color: string;
 }
@@ -64,35 +64,7 @@ interface ChartData {
   views: number;
 }
 
-// 2. --- MOCK DATA ---
-// Simulates data you would fetch from an API.
-
-const stats: StatCardProps[] = [
-  {
-    title: 'Active Listings',
-    value: 0,
-    icon: <MapPin className="h-8 w-8" />,
-    color: 'text-green-500',
-  },
-  {
-    title: 'Total Views',
-    value: 196237,
-    icon: <BarChart2 className="h-8 w-8" />,
-    color: 'text-gray-700',
-  },
-  {
-    title: 'Total Reviews',
-    value: 0,
-    icon: <MessageSquare className="h-8 w-8" />,
-    color: 'text-yellow-500',
-  },
-  {
-    title: 'Times Bookmarked',
-    value: 0,
-    icon: <Heart className="h-8 w-8" />,
-    color: 'text-red-500',
-  },
-];
+import { useGetOrderStats } from '@/service/store/orders/hook';
 
 const recentActivities: Activity[] = [
   {
@@ -145,7 +117,7 @@ const StatCard: FC<StatCardProps> = ({ title, value, icon, color }) => (
     <CardContent className="p-6 flex items-center justify-between">
       <div>
         <p className={`text-3xl font-bold ${color}`}>
-          {value.toLocaleString()}
+          {typeof value === 'number' ? value.toLocaleString() : value}
         </p>
         <p className="text-sm text-gray-500">{title}</p>
       </div>
@@ -259,6 +231,61 @@ const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
 // Assembles the entire dashboard page.
 
 const DashboardPage: FC = () => {
+  const { data: orderStats, isLoading } = useGetOrderStats();
+
+  const stats: StatCardProps[] = isLoading
+    ? [
+        {
+          title: 'Total Sales',
+          value: 'loading...',
+          icon: <DollarSign className="h-8 w-8" />,
+          color: 'text-green-500',
+        },
+        {
+          title: 'Net Sales',
+          value: 'loading...',
+          icon: <DollarSign className="h-8 w-8" />,
+          color: 'text-blue-500',
+        },
+        {
+          title: 'Orders',
+          value: 'loading...',
+          icon: <ShoppingCart className="h-8 w-8" />,
+          color: 'text-yellow-500',
+        },
+        {
+          title: 'Products Sold',
+          value: 'loading...',
+          icon: <Package className="h-8 w-8" />,
+          color: 'text-red-500',
+        },
+      ]
+    : [
+        {
+          title: 'Total Sales',
+          value: `$${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
+          icon: <DollarSign className="h-8 w-8" />,
+          color: 'text-green-500',
+        },
+        {
+          title: 'Net Sales',
+          value: `$${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
+          icon: <DollarSign className="h-8 w-8" />,
+          color: 'text-blue-500',
+        },
+        {
+          title: 'Orders',
+          value: orderStats?.orders ?? 0,
+          icon: <ShoppingCart className="h-8 w-8" />,
+          color: 'text-yellow-500',
+        },
+        {
+          title: 'Products Sold',
+          value: orderStats?.productsSold ?? 0,
+          icon: <Package className="h-8 w-8" />,
+          color: 'text-red-500',
+        },
+      ];
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       {/* Header */}

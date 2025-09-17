@@ -1,11 +1,22 @@
 import { useState, useEffect, useRef } from 'react';
-import { Conversation } from '@/service/messaging/types';
+import { Conversation, Message } from '@/service/messaging/types';
 import { useGetConversationMessages, useSendMessage } from '@/service/messaging/hook';
 import { useAuth } from '@/service/auth/hook';
 
 interface MessageViewProps {
   conversation: Conversation | null;
 }
+
+const groupMessagesByDate = (messages: Message[]) => {
+  return messages.reduce((acc, message) => {
+    const messageDate = new Date(message.createdAt).toDateString();
+    if (!acc[messageDate]) {
+      acc[messageDate] = [];
+    }
+    acc[messageDate].push(message);
+    return acc;
+  }, {} as Record<string, Message[]>);
+};
 
 export default function MessageView({ conversation }: MessageViewProps) {
   const { data: messages, isLoading } = useGetConversationMessages(conversation?.id || '');
@@ -52,6 +63,9 @@ export default function MessageView({ conversation }: MessageViewProps) {
     return <div>Loading messages...</div>;
   }
 
+  const groupedMessages = messages ? groupMessagesByDate(messages) : {};
+  const sortedDates = Object.keys(groupedMessages).sort((a, b) => new Date(a).getTime() - new Date(b).getTime());
+
   return (
     <div className="flex-1 flex flex-col h-full">
       <div className="p-4 border-b flex items-center">
@@ -59,25 +73,39 @@ export default function MessageView({ conversation }: MessageViewProps) {
         <h2 className="text-xl font-semibold">{getContactName(conversation)}</h2>
       </div>
       <div className="flex-1 p-4 overflow-y-auto">
-        {messages?.map(message => (
-          <div
-            key={message.id}
-            className={`flex my-2 ${
-              message.sender.id === currentUser?.id ? 'justify-end' : 'justify-start'
-            }`}
-          >
-            <div
-              className={`p-3 rounded-lg max-w-xs ${
-                message.sender.id === currentUser?.id
-                  ? 'bg-blue-500 text-white'
-                  : 'bg-gray-200'
-              }`}
-            >
-              <p>{message.content}</p>
-              <p className="text-xs text-right mt-1 opacity-75">
-                {new Date(message.createdAt).toLocaleTimeString()}
-              </p>
+        {sortedDates.map(date => (
+          <div key={date}>
+            <div className="text-center my-4">
+              <span className="text-xs text-gray-500">
+                ----- {new Date(date).toLocaleDateString('en-US', {
+                  weekday: 'short',
+                  year: 'numeric',
+                  month: 'short',
+                  day: 'numeric',
+                })} -----
+              </span>
             </div>
+            {groupedMessages[date].map(message => (
+              <div
+                key={message.id}
+                className={`flex my-2 ${
+                  message.sender.id === currentUser?.id ? 'justify-end' : 'justify-start'
+                }`}
+              >
+                <div
+                  className={`p-3 rounded-lg max-w-xs ${
+                    message.sender.id === currentUser?.id
+                      ? 'bg-blue-500 text-white'
+                      : 'bg-gray-200'
+                  }`}
+                >
+                  <p>{message.content}</p>
+                  <p className="text-xs text-right mt-1 opacity-75">
+                    {new Date(message.createdAt).toLocaleTimeString()}
+                  </p>
+                </div>
+              </div>
+            ))}
           </div>
         ))}
         <div ref={messagesEndRef} />

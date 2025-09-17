@@ -31,7 +31,7 @@ interface OpeningHours {
   openNow: boolean;
 }
 
-export interface Review {
+export interface GoogleReview {
   author_name: string;
   author_url: string;
   language: string;
@@ -41,6 +41,12 @@ export interface Review {
   text: string;
   time: number;
 }
+
+import { Review as ApiReview } from '../reviews/types';
+
+export type { ApiReview };
+
+export type Review = GoogleReview | ApiReview;
 
 export interface GooglePlaceResult {
   businessStatus: string;
@@ -384,3 +390,26 @@ export interface InHouseBusiness {
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];
+
+export interface RecentListing {
+  id: string;
+  createdAt: string;
+  updatedAt: string;
+  listingType: string[];
+  businessName: string;
+  shortDescription: string;
+  businessPhone: string;
+  status: string;
+  categories: {
+    id:string;
+    name:string;
+  }[];
+  location: {
+    id: string;
+    addressLine1: string;
+    city: string;
+    postcode: string;
+  };
+}
+
+export type RecentListings = RecentListing[];

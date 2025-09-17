@@ -14,11 +14,13 @@ interface MediaFile {
 interface MultiMediaUploadProps {
   onMediaChange: (media: File[]) => void;
   maxFiles?: number;
+  maxSize?: number;
 }
 
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
   maxFiles = 5,
+  maxSize = 5 * 1024 * 1024, // 5MB default
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -33,6 +35,10 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
         const newMediaFiles: MediaFile[] = files
           .map(file => {
+            if (file.size > maxSize) {
+              setError(`File ${file.name} exceeds the ${maxSize / 1024 / 1024}MB size limit.`);
+              return null;
+            }
             const fileType = file.type.startsWith('image/')
               ? 'image'
               : file.type.startsWith('video/')
@@ -53,7 +59,6 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
         if (newMediaFiles.length > 0) {
           const updatedMediaFiles = [...prevMediaFiles, ...newMediaFiles];
-          onMediaChange(updatedMediaFiles.map(mf => mf.file));
           setError(null);
           return updatedMediaFiles;
         }
@@ -61,7 +66,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         return prevMediaFiles;
       });
     },
-    [maxFiles, onMediaChange]
+    [maxFiles, maxSize]
   );
 
   const handleFileChange = useCallback(
@@ -80,8 +85,11 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       URL.revokeObjectURL(deletedFile.previewUrl);
     }
     setMediaFiles(newMediaFiles);
-    onMediaChange(newMediaFiles.map(mf => mf.file));
   };
+
+  useEffect(() => {
+    onMediaChange(mediaFiles.map(mf => mf.file));
+  }, [mediaFiles, onMediaChange]);
 
   useEffect(() => {
     // Cleanup object URLs on unmount

@@ -65,7 +65,7 @@ export default function StripeCheckoutForm({
     data,
     isPending,
   } = useStripePayment();
-  const clientSecret = data?.client_secret;
+  const clientSecret = data?.clientSecret;
 
   useEffect(() => {
     if (totalPrice > 0) {

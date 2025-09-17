@@ -101,6 +101,8 @@ export interface ListingFormData {
   phone: string;
   email:string;
   socials: Socials;
+  logo?: Media | null;
+  banner?: Media | null;
   media: Media[];
 
   // Conditional data

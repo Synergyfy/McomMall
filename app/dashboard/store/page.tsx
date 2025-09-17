@@ -31,6 +31,7 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
+import { useGetOrderStats } from '@/service/store/orders/hook';
 
 // --- Type Definitions ---
 
@@ -52,29 +53,6 @@ type Preset = {
   range: () => DateRange;
 };
 
-// --- Mock Data & Components ---
-
-const performanceStats: Omit<StatCardProps, 'color'>[] = [
-  { title: 'Total sales', value: '$1,450.50', change: '+12.5%' },
-  { title: 'Marketplace Commission', value: '$145.05' },
-  { title: 'Net sales', value: '$1,305.45', change: '+11.8%' },
-  { title: 'Orders', value: '72', change: '+5' },
-  { title: 'Average order value', value: '$20.15' },
-  { title: 'Products sold', value: '103' },
-  { title: 'Returns', value: '$25.00' },
-  { title: 'Discounted orders', value: '8' },
-  { title: 'Net discount amount', value: '$55.20' },
-  { title: 'Total tax', value: '$98.10' },
-  { title: 'Order tax', value: '$65.40' },
-  { title: 'Shipping tax', value: '$32.70' },
-  { title: 'Shipping', value: '$150.00' },
-  { title: 'Downloads', value: '12', change: '0%' },
-  { title: 'Gross sales', value: '$1,620.70' },
-  { title: 'Total Earning', value: '$1,155.40' },
-  { title: 'Marketplace Discount', value: '$30.00' },
-  { title: 'Store Discount', value: '$25.20' },
-  { title: 'Variations Sold', value: '15' },
-];
 
 const generateChartData = (days: number): ChartData[] => {
   return Array.from({ length: days }, (_, i) => ({
@@ -316,6 +294,7 @@ const DateRangePicker: React.FC<{
 // --- Main Page Component ---
 
 export default function StoreDashboardPage() {
+  const { data: orderStats, isLoading } = useGetOrderStats();
   const chartData = useMemo(() => generateChartData(11), []);
   const statCardColors = [
     '#ffebee',
@@ -326,6 +305,44 @@ export default function StoreDashboardPage() {
     '#fffde7',
     '#fbe9e7',
   ];
+
+  const performanceStats: Omit<StatCardProps, 'color'>[] = isLoading
+    ? [
+        { title: 'Total sales', value: 'loading...' },
+        { title: 'Net sales', value: 'loading...' },
+        { title: 'Orders', value: 'loading...' },
+        { title: 'Products sold', value: 'loading...' },
+        { title: 'Gross sales', value: 'loading...' },
+        { title: 'Total Earning', value: 'loading...' },
+        { title: 'Balance', value: 'loading...' },
+      ]
+    : [
+        {
+          title: 'Total sales',
+          value: `$${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
+        },
+        {
+          title: 'Net sales',
+          value: `$${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
+        },
+        { title: 'Orders', value: orderStats?.orders.toString() ?? '0' },
+        {
+          title: 'Products sold',
+          value: orderStats?.productsSold.toString() ?? '0',
+        },
+        {
+          title: 'Gross sales',
+          value: `$${orderStats?.grossSales.toFixed(2) ?? '0.00'}`,
+        },
+        {
+          title: 'Total Earning',
+          value: `$${orderStats?.totalEarnings.toFixed(2) ?? '0.00'}`,
+        },
+        {
+          title: 'Balance',
+          value: `$${orderStats?.balance.toFixed(2) ?? '0.00'}`,
+        },
+      ];
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -343,7 +360,7 @@ export default function StoreDashboardPage() {
             <h2 className="text-2xl font-semibold text-slate-700">Overview</h2>
             <div className="flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:w-auto">
               <span className="inline-flex items-center justify-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
-                Balance: $0.00
+                Balance: ${orderStats?.balance.toFixed(2) ?? '0.00'}
               </span>
               <div className="w-full sm:w-72">
                 <DateRangePicker />

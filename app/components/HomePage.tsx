@@ -10,6 +10,7 @@ import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
 import Image from 'next/image';
 import { businessCategories } from '@/lib/business-categories';
+import { useGetRecentListings } from '@/service/listings/hook';
 
 // Dynamically import components
 const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
@@ -42,49 +43,6 @@ const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
     </motion.section>
   );
 };
-
-const allFeaturedAds = [
-  {
-    title: 'Albuquerque NM',
-    location: 'California, Cape May',
-    date: 'August 21, 2024',
-    seller: 'adlinet',
-    category: 'Place',
-    price: '$156,245.00',
-    image:
-      'https://images.unsplash.com/photo-1570129477492-45c003edd2be?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Pizza Point',
-    location: 'California, Cape May',
-    date: 'August 21, 2024',
-    seller: 'adlinet',
-    category: 'Restaurant',
-    price: '$300.00',
-    image:
-      'https://images.unsplash.com/photo-1565299624946-b28f40a0ae38?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Modern Apartment',
-    location: 'New York, NY',
-    date: 'July 15, 2024',
-    seller: 'cityhomes',
-    category: 'Real Estate',
-    price: '$2,500,000.00',
-    image:
-      'https://images.unsplash.com/photo-1493809842364-78817add7ffb?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Cozy Cafe',
-    location: 'Paris, France',
-    date: 'June 02, 2024',
-    seller: 'pariseats',
-    category: 'Restaurant',
-    price: '$500.00',
-    image:
-      'https://images.unsplash.com/photo-1509042239860-f550ce710b93?q=80&w=300&auto=format&fit=crop',
-  },
-];
 
 const blogPosts = [
   {
@@ -153,12 +111,16 @@ const SwirlArrow = () => (
 // --- Main App Component ---
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
-  const [activeAdFilter, setActiveAdFilter] = useState('All');
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
   const [searchError, setSearchError] = useState('');
   const router = useRouter();
+  const {
+    data: recentListings,
+    isLoading,
+    isError,
+  } = useGetRecentListings();
 
   const backgroundImages = [Autumn, Summer, Spring, Winter];
 
@@ -184,12 +146,6 @@ export default function HomePage() {
     window.addEventListener('scroll', checkScrollTop);
     return () => window.removeEventListener('scroll', checkScrollTop);
   }, [showBackToTop]);
-
-  // Filtered ads based on the active tab
-  const filteredAds =
-    activeAdFilter === 'All'
-      ? allFeaturedAds
-      : allFeaturedAds.filter(ad => ad.category === activeAdFilter);
 
   const handleSearch = () => {
     if (!searchQuery.trim()) {
@@ -342,79 +298,72 @@ export default function HomePage() {
 
         <BusinessCategoriesSection />
 
-        {/* --- Featured Ads Section --- */}
+        {/* --- Recent Listings Section --- */}
         <ScrollAnimatedSection>
           <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
             <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
-              Featured Ads
+              Recent Listings
             </h2>
-            <div className="flex justify-center flex-wrap gap-2 sm:gap-4 mb-8">
-              {['All', 'Place', 'Restaurant', 'Real Estate', 'Others'].map(
-                tab => (
-                  <button
-                    key={tab}
-                    onClick={() => setActiveAdFilter(tab)}
-                    className={`py-2 px-4 text-sm sm:text-base sm:px-5 rounded-lg font-semibold transition-colors ${
-                      activeAdFilter === tab
-                        ? 'bg-gray-800 text-white'
-                        : 'bg-white text-gray-600 hover:bg-gray-200'
-                    }`}
-                  >
-                    {tab}
-                  </button>
-                )
-              )}
-            </div>
             <motion.div
               layout
               className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8 max-w-6xl mx-auto"
             >
               <AnimatePresence>
-                {filteredAds.map(ad => (
-                  <motion.div
-                    key={ad.title}
-                    layout
-                    initial={{ opacity: 0, scale: 0.8 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    transition={{ duration: 0.3 }}
-                    className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col sm:flex-row gap-4 p-4 hover:shadow-xl transition-shadow"
-                  >
-                    <Image
-                      src={ad.image}
-                      alt={ad.title}
-                      width={300}
-                      height={200}
-                      loading="lazy"
-                      className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
-                    />
-                    <div className="flex flex-col justify-between w-full">
-                      <div>
-                        <div className="flex justify-between items-start">
-                          <h3 className="font-bold text-xl mb-2">{ad.title}</h3>
-                          <button className="text-gray-400 hover:text-red-500">
-                            <Heart />
-                          </button>
+                {isLoading ? (
+                  <p>Loading...</p>
+                ) : isError ? (
+                  <p>Error fetching listings.</p>
+                ) : (
+                  recentListings?.map(ad => (
+                    <motion.div
+                      key={ad.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col sm:flex-row gap-4 p-4 hover:shadow-xl transition-shadow"
+                    >
+                      <Image
+                        src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`}
+                        alt={ad.businessName}
+                        width={300}
+                        height={200}
+                        loading="lazy"
+                        className="w-full sm:w-1/3 h-48 sm:h-full object-cover rounded-lg"
+                      />
+                      <div className="flex flex-col justify-between w-full">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <Link href={`/listings/${ad.id}`}>
+                              <h3 className="font-bold text-xl mb-2 hover:underline">
+                                {ad.businessName}
+                              </h3>
+                            </Link>
+                            <button className="text-gray-400 hover:text-red-500">
+                              <Heart />
+                            </button>
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mb-1">
+                            <MapPin size={16} className="mr-2" />{' '}
+                            {ad.location.addressLine1}, {ad.location.city}
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mb-4">
+                            <span className="mr-4">
+                              🕒{' '}
+                              {new Date(ad.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
                         </div>
-                        <div className="flex items-center text-gray-500 text-sm mb-1">
-                          <MapPin size={16} className="mr-2" /> {ad.location}
-                        </div>
-                        <div className="flex items-center text-gray-500 text-sm mb-4">
-                          <span className="mr-4">🕒 {ad.date}</span>
-                          <span>👤 {ad.seller}</span>
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full">
+                            {ad.categories[0]?.name}
+                          </span>
                         </div>
                       </div>
-                      <div className="flex justify-between items-center mt-4">
-                        <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full">
-                          {ad.category}
-                        </span>
-                        <span className="font-bold text-lg text-gray-800">
-                          {ad.price}
-                        </span>
-                      </div>
-                    </div>
-                  </motion.div>
-                ))}
+                    </motion.div>
+                  ))
+                )}
               </AnimatePresence>
             </motion.div>
           </div>

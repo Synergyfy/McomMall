@@ -44,6 +44,12 @@ type Order = {
 // --- HELPER COMPONENTS ---
 const formatDate = (dateString: string) => {
   const date = new Date(dateString);
+  if (isNaN(date.getTime())) {
+    return {
+      main: 'Invalid Date',
+      sub: 'Last Modified',
+    };
+  }
   return {
     main: new Intl.DateTimeFormat('en-US', {
       year: 'numeric',

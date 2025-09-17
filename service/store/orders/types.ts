@@ -8,3 +8,13 @@ export interface Order {
   payment: Payment;
   created_at: string;
 }
+
+export interface OrderStats {
+  totalSales: number;
+  netSales: number;
+  orders: number;
+  productsSold: number;
+  totalEarnings: number;
+  grossSales: number;
+  balance: number;
+}
