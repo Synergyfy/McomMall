@@ -31,7 +31,7 @@ interface OpeningHours {
   openNow: boolean;
 }
 
-export interface Review {
+export interface GoogleReview {
   author_name: string;
   author_url: string;
   language: string;
@@ -41,6 +41,21 @@ export interface Review {
   text: string;
   time: number;
 }
+
+export interface ApiReview {
+  id: string;
+  rating: number;
+  comment: string;
+  businessId: string;
+  author: {
+    id:string;
+    name: string;
+    avatarUrl: string;
+  };
+  date: string;
+}
+
+export type Review = GoogleReview | ApiReview;
 
 export interface GooglePlaceResult {
   businessStatus: string;

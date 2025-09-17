@@ -301,6 +301,9 @@ function OverviewSection({
     ? listing.formattedAddress || listing.vicinity
     : `${listing.location.addressLine1}, ${listing.location.city}`;
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
+  const businessId = isGoogle
+    ? (listing as GooglePlaceResult).placeId
+    : (listing as InHouseBusiness).id;
 
   if (isGoogle) {
     // Keeping Google result view simpler as requested
@@ -333,7 +336,7 @@ function OverviewSection({
           <p className="text-gray-600">FAQ content goes here.</p>
         </div>
         <div className="py-8">
-          <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+          <ReviewsTabContent businessId={businessId} />
         </div>
       </div>
     );
@@ -486,7 +489,7 @@ function OverviewSection({
       </div>
 
       <div className="py-8 px-6">
-        <ReviewsTabContent reviews={reviews} isLoading={isLoading} />
+        <ReviewsTabContent businessId={businessId} />
       </div>
     </div>
   );

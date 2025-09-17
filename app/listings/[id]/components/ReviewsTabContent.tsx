@@ -2,6 +2,8 @@
 
 import { Review } from '@/service/listings/types';
 import { ReviewCard } from './ReviewCard';
+import { useGetReviewsForBusiness } from '@/service/reviews/hook';
+import { AddReviewModal } from '@/components/AddReviewModal';
 
 // Skeleton loader component for the reviews tab
 const ReviewsSkeleton = () => {
@@ -23,29 +25,48 @@ const ReviewsSkeleton = () => {
 
 // Main component for the reviews tab content
 export const ReviewsTabContent = ({
-  reviews,
-  isLoading,
+  businessId,
 }: {
-  reviews: Review[] | undefined;
-  isLoading: boolean;
+  businessId: string;
 }) => {
+  const {
+    data: reviews,
+    isLoading,
+    isError,
+  } = useGetReviewsForBusiness(businessId);
+
   if (isLoading) {
     return <ReviewsSkeleton />;
   }
 
-  if (!reviews || reviews.length === 0) {
+  if (isError) {
     return (
       <div className="text-center py-12">
-        <p className="text-gray-500">This business doesn&apos;t have any reviews yet.</p>
+        <p className="text-red-500">Could not load reviews.</p>
       </div>
     );
   }
 
   return (
     <div className="max-w-4xl mx-auto">
-      {reviews.map((review, index) => (
-        <ReviewCard key={index} review={review} />
-      ))}
+      <div className="flex justify-between items-center mb-6">
+        <h3 className="text-2xl font-bold">Customer Reviews</h3>
+        <AddReviewModal businessId={businessId} />
+      </div>
+      {(!reviews || reviews.length === 0) && (
+        <div className="text-center py-12">
+          <p className="text-gray-500">
+            This business doesn&apos;t have any reviews yet.
+          </p>
+        </div>
+      )}
+      {reviews && reviews.length > 0 && (
+        <div className="space-y-6">
+          {reviews.map(review => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </div>
+      )}
     </div>
   );
 };
