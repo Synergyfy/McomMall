@@ -18,6 +18,8 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 
 // Import Shadcn UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -232,6 +234,7 @@ const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
 
 const DashboardPage: FC = () => {
   const { data: orderStats, isLoading } = useGetOrderStats();
+  const { userName } = useSelector((state: RootState) => state.auth);
 
   const stats: StatCardProps[] = isLoading
     ? [
@@ -263,13 +266,13 @@ const DashboardPage: FC = () => {
     : [
         {
           title: 'Total Sales',
-          value: `$${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
+          value: `£${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
           icon: <DollarSign className="h-8 w-8" />,
           color: 'text-green-500',
         },
         {
           title: 'Net Sales',
-          value: `$${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
+          value: `£${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
           icon: <DollarSign className="h-8 w-8" />,
           color: 'text-blue-500',
         },
@@ -290,7 +293,9 @@ const DashboardPage: FC = () => {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Hello Tom !</h1>
+        <h1 className="text-3xl font-bold text-gray-800">
+          Hello {userName || 'User'} !
+        </h1>
         <Breadcrumb className="mt-2 sm:mt-0">
           <BreadcrumbList>
             <BreadcrumbItem>
