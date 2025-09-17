@@ -2,6 +2,8 @@
 
 import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
+import { motion } from 'framer-motion';
+import { Loader } from 'lucide-react';
 import OrderSummary from './OrderSummary';
 import PaymentForm from './PaymentForm';
 import CouponCodeInput from './CouponCodeInput';
@@ -129,7 +131,11 @@ export default function CheckoutClient() {
   }, [stripeRedirect, clientSecret, handlePaymentSuccess]);
 
   if (isProductLoading || isCartLoading) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader className="animate-spin text-orange-600" size={48} />
+      </div>
+    );
   }
 
   if (!productId && !fromCart) {
@@ -146,10 +152,17 @@ export default function CheckoutClient() {
 
   return (
     <>
-      <div className="container mx-auto px-4 py-8">
-        <h1 className="text-3xl font-bold text-center mb-8">Checkout</h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12">
-          <div>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ duration: 0.5 }}
+        className="container mx-auto px-4 py-12"
+      >
+        <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-800">
+          Secure Checkout
+        </h1>
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
+          <div className="bg-white rounded-xl shadow-lg p-8">
             <OrderSummary
               product={product}
               cart={cart}
@@ -166,7 +179,7 @@ export default function CheckoutClient() {
               />
             </div>
           </div>
-          <div>
+          <div className="bg-white rounded-xl shadow-lg p-8">
             <PaymentForm
               totalPrice={totalPrice}
               onPaymentSuccess={(transactionId) =>
@@ -175,7 +188,7 @@ export default function CheckoutClient() {
             />
           </div>
         </div>
-      </div>
+      </motion.div>
       <SuccessDialog
         isOpen={isSuccessModalOpen}
         onClose={() => {
