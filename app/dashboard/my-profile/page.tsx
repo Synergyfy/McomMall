@@ -44,6 +44,8 @@ type PasswordFields = {
 type ProfileErrors = {
   name?: string;
   phoneNumber?: string;
+  email?: string;
+  socials?: { [key in SocialPlatform]?: string };
 };
 
 type PasswordErrors = {
@@ -70,6 +72,7 @@ interface SocialInputFieldProps {
   platform: SocialPlatform;
   url: string;
   onChange: (platform: SocialPlatform, url: string) => void;
+  error?: string;
 }
 
 // --- UI Components ---
@@ -163,6 +166,7 @@ const SocialInputField = ({
   platform,
   url,
   onChange,
+  error,
 }: SocialInputFieldProps) => {
   const Icon = socialIcons[platform];
   return (
@@ -181,8 +185,15 @@ const SocialInputField = ({
         onChange={(e: ChangeEvent<HTMLInputElement>) =>
           onChange(platform, e.target.value)
         }
-        className="block w-full rounded-md border-gray-300 bg-gray-50 p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400 dark:focus:border-blue-500 dark:focus:ring-blue-500 sm:text-sm"
+        className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
+          error
+            ? 'border-red-500 ring-1 ring-red-500'
+            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+        } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
       />
+      {error && (
+        <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
+      )}
     </div>
   );
 };
@@ -277,16 +288,35 @@ const MyProfilePage: NextPage = () => {
   };
 
   const validateProfile = (): boolean => {
-    const errors: ProfileErrors = {};
+    const errors: ProfileErrors = { socials: {} };
+    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+
     if (!profile.name?.trim()) errors.name = 'Name is required.';
+
     if (
       profile.phoneNumber &&
       !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
     ) {
       errors.phoneNumber = 'Please enter a valid phone number.';
     }
+
+    if (profile.email && !/\S+@\S+\.\S+/.test(profile.email)) {
+      errors.email = 'Please enter a valid email address.';
+    }
+
+    for (const [platform, url] of Object.entries(socials)) {
+      if (url && !urlRegex.test(url as string)) {
+        if (!errors.socials) errors.socials = {};
+        errors.socials[platform as SocialPlatform] =
+          'Please enter a valid URL.';
+      }
+    }
+
     setProfileErrors(errors);
-    return Object.keys(errors).length === 0;
+    return (
+      Object.keys(errors).length === 1 &&
+      Object.keys(errors.socials || {}).length === 0
+    );
   };
 
   const validatePasswords = (): boolean => {
@@ -432,6 +462,7 @@ const MyProfilePage: NextPage = () => {
                   value={profile.email || ''}
                   onChange={handleProfileChange}
                   disabled={true}
+                  error={profileErrors.email}
                 />
                 {(
                   Object.keys(socialIcons) as SocialPlatform[]
@@ -439,8 +470,9 @@ const MyProfilePage: NextPage = () => {
                   <SocialInputField
                     key={platform}
                     platform={platform}
-                    url={socials[platform] || ''}
+                    url={socials[platform as keyof typeof socials] || ''}
                     onChange={handleSocialChange}
+                    error={profileErrors.socials?.[platform]}
                   />
                 ))}
               </div>
