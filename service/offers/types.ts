@@ -58,3 +58,23 @@ export interface CreateOfferDto {
 }
 
 export interface UpdateOfferDto extends Partial<CreateOfferDto> {}
+
+// Based on the /checkout/applicable-offers endpoint
+export interface ApplicableOffer {
+  offerId: string; // uuid
+  offerName: string;
+  pointsCost: number;
+  applicableProductIds: string[]; // Array of product UUIDs
+}
+
+// Based on the /offer/apply endpoint
+export interface ApplyOfferRequest {
+  offerId: string; // uuid
+  productIds: string[]; // Array of product UUIDs
+}
+
+export interface ApplyOfferResponse {
+  originalPrice: number;
+  discountedPrice: number;
+  discountAmount: number;
+}
