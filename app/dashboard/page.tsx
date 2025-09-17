@@ -2,7 +2,7 @@
 
 import type { FC } from 'react';
 import {
-  DollarSign,
+  PoundSterling,
   ShoppingCart,
   Package,
   BarChart2,
@@ -241,13 +241,13 @@ const DashboardPage: FC = () => {
         {
           title: 'Total Sales',
           value: 'loading...',
-          icon: <DollarSign className="h-8 w-8" />,
+          icon: <PoundSterling className="h-8 w-8" />,
           color: 'text-green-500',
         },
         {
           title: 'Net Sales',
           value: 'loading...',
-          icon: <DollarSign className="h-8 w-8" />,
+          icon: <PoundSterling className="h-8 w-8" />,
           color: 'text-blue-500',
         },
         {
@@ -267,13 +267,13 @@ const DashboardPage: FC = () => {
         {
           title: 'Total Sales',
           value: `£${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
-          icon: <DollarSign className="h-8 w-8" />,
+          icon: <PoundSterling className="h-8 w-8" />,
           color: 'text-green-500',
         },
         {
           title: 'Net Sales',
           value: `£${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
-          icon: <DollarSign className="h-8 w-8" />,
+          icon: <PoundSterling className="h-8 w-8" />,
           color: 'text-blue-500',
         },
         {
