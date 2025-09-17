@@ -93,19 +93,22 @@ export const ReviewCard = ({ review }: { review: Review }) => {
     const toggleExpanded = () => {
       setIsExpanded(!isExpanded);
     };
+    const authorName = review.author ? review.author.name : 'Anonymous';
+    const authorAvatar = review.author ? review.author.avatarUrl : '/default-avatar.png';
+
     return (
       <div className="border-t py-6">
         <div className="flex items-start space-x-4">
           <Avatar className="h-12 w-12">
-            <AvatarImage src={review.author.avatarUrl} alt={review.author.name} />
-            <AvatarFallback>{getInitials(review.author.name)}</AvatarFallback>
+            <AvatarImage src={authorAvatar} alt={authorName} />
+            <AvatarFallback>{getInitials(authorName)}</AvatarFallback>
           </Avatar>
           <div className="flex-1">
             <div className="flex justify-between items-center">
               <div>
-                <h4 className="font-bold">{review.author.name}</h4>
+                <h4 className="font-bold">{authorName}</h4>
                 <p className="text-sm text-gray-500">
-                  {new Date(review.date).toLocaleDateString()}
+                  {new Date(review.createdAt).toLocaleDateString()}
                 </p>
               </div>
               <StarRating rating={review.rating} />

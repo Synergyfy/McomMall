@@ -2,13 +2,14 @@ export type Review = {
   id: string;
   rating: number;
   comment: string;
-  businessId: string;
-  author: {
+  createdAt: string;
+  updatedAt: string;
+  businessId?: string; // Optional because it's not in the business review response
+  author?: {
     id: string;
     name: string;
     avatarUrl: string;
   };
-  date: string;
 };
 
 export type CreateReviewPayload = {

@@ -42,18 +42,9 @@ export interface GoogleReview {
   time: number;
 }
 
-export interface ApiReview {
-  id: string;
-  rating: number;
-  comment: string;
-  businessId: string;
-  author: {
-    id:string;
-    name: string;
-    avatarUrl: string;
-  };
-  date: string;
-}
+import { Review as ApiReview } from '../reviews/types';
+
+export { ApiReview };
 
 export type Review = GoogleReview | ApiReview;
 

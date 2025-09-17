@@ -28,6 +28,9 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
     visible: { opacity: 1, scale: 1 },
   };
 
+  const authorName = review.author?.name || 'Anonymous';
+  const authorAvatar = review.author?.avatarUrl || '/default-avatar.png';
+
   return (
     <motion.div
       variants={cardVariants}
@@ -35,8 +38,8 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
     >
       <div className="flex items-start gap-4">
         <Image
-          src={review.author.avatarUrl}
-          alt={review.author.name}
+          src={authorAvatar}
+          alt={authorName}
           width={48}
           height={48}
           className="h-12 w-12 rounded-full object-cover"
@@ -44,19 +47,21 @@ const ReviewCard: React.FC<{ review: Review }> = ({ review }) => {
         <div className="flex-1">
           <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between">
             <div>
-              <h4 className="font-semibold text-slate-800">
-                {review.author.name}
-              </h4>
-              <p className="text-xs text-slate-500">
-                review for{' '}
-                <span className="font-medium text-slate-600">
-                  Business ID: {review.businessId}
-                </span>
-              </p>
+              <h4 className="font-semibold text-slate-800">{authorName}</h4>
+              {review.businessId && (
+                <p className="text-xs text-slate-500">
+                  review for{' '}
+                  <span className="font-medium text-slate-600">
+                    Business ID: {review.businessId}
+                  </span>
+                </p>
+              )}
             </div>
             <div className="flex flex-col items-start gap-1 sm:items-end">
               <StarRating rating={review.rating} />
-              <p className="text-xs text-slate-400">{new Date(review.date).toLocaleDateString()}</p>
+              <p className="text-xs text-slate-400">
+                {new Date(review.createdAt).toLocaleDateString()}
+              </p>
             </div>
           </div>
           <p className="mt-3 text-sm leading-relaxed text-slate-600">

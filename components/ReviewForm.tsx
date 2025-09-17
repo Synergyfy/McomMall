@@ -17,6 +17,7 @@ import {
 } from '@/components/ui/form';
 import { Textarea } from '@/components/ui/textarea';
 import { useCreateReview } from '@/service/reviews/hook';
+import { toast } from 'sonner';
 
 const reviewSchema = z.object({
   rating: z.number().min(1, 'Rating is required').max(5),
@@ -47,6 +48,7 @@ export function ReviewForm({ businessId, onSuccess }: ReviewFormProps) {
       { ...values, businessId },
       {
         onSuccess: () => {
+          toast.success('Review submitted successfully!');
           form.reset();
           onSuccess?.();
         },

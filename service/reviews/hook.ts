@@ -40,12 +40,14 @@ export const useCreateReview = () => {
       const { data } = await api.post<Review>('/reviews', payload);
       return data;
     },
-    onSuccess: (data) => {
+    onSuccess: (data, variables) => {
+      // Invalidate the query for the specific business's reviews
       queryClient.invalidateQueries({
-        queryKey: ['reviews', data.businessId],
+        queryKey: ['reviews', variables.businessId],
       });
+      // Optionally, invalidate the query for the user's reviews if they are on that page
       queryClient.invalidateQueries({
-        queryKey: ['reviews', 'user', data.author.id],
+        queryKey: ['reviews', 'user'],
       });
     },
   });
