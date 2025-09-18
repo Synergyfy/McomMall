@@ -39,6 +39,7 @@ type Order = {
   itemCount: number;
   total: number;
   date: string;
+  productName: string;
 };
 
 // --- HELPER COMPONENTS ---
@@ -109,6 +110,9 @@ export default function OrdersDashboard() {
       itemCount: order.quantity,
       total: order.payment?.amount || 0,
       date: order.created_at,
+      // TODO: The API does not provide product details in the order response.
+      // Defaulting to 'N/A'. A backend change is required to include this.
+      productName: 'N/A',
     }));
   }, [apiOrders]);
 
@@ -292,6 +296,7 @@ export default function OrdersDashboard() {
                     </TableHead>
                     <TableHead>Order ID</TableHead>
                     <TableHead>Customer</TableHead>
+                    <TableHead>Product Name</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Items</TableHead>
                     <TableHead>Total</TableHead>
@@ -345,6 +350,12 @@ export default function OrdersDashboard() {
                               {order.customerEmail}
                             </span>
                           </div>
+                        </TableCell>
+                        <TableCell
+                          data-label="Product Name"
+                          className="responsive-cell font-medium text-gray-800"
+                        >
+                          {order.productName}
                         </TableCell>
                         <TableCell
                           data-label="Status"

@@ -28,6 +28,7 @@ import {
   MoreHorizontal,
   Trash2,
   Edit,
+  Eye,
 } from 'lucide-react';
 import { useGetMyProducts, useDeleteProduct } from '@/service/store/products/hook';
 import { useRouter } from 'next/navigation';
@@ -566,6 +567,14 @@ export default function StoreDashboard() {
                             <DropdownMenuContent align="end">
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
+                              <DropdownMenuItem
+                                onSelect={() =>
+                                  router.push(`/products/${product.id}`)
+                                }
+                              >
+                                <Eye className="mr-2 h-4 w-4" />
+                                View Product
+                              </DropdownMenuItem>
                               <DropdownMenuItem
                                 onSelect={() =>
                                   router.push(

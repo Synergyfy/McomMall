@@ -58,7 +58,7 @@ const HowItWorksRedesigned = () => {
   };
 
   return (
-    <section className="bg-gray-50 font-sans py-16 sm:py-24 px-4 sm:px-6 lg:px-8">
+    <section className="bg-gray-50 font-sans py-12 sm:py-20 px-4 sm:px-6 lg:px-8">
       <div className="max-w-7xl mx-auto">
         <div className="text-center mb-12">
           <h2 className="text-3xl md:text-4xl font-bold text-gray-800">
@@ -85,6 +85,19 @@ const HowItWorksRedesigned = () => {
                 title="MCOM Mall Overview"
               />
             </div>
+            {/* Buttons Section */}
+            <motion.div
+              className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-4"
+              initial={{ y: 20, opacity: 0 }}
+              whileInView={{ y: 0, opacity: 1 }}
+              viewport={{ once: true, amount: 0.5 }}
+              transition={{ delay: 0.5, duration: 0.5 }}
+            >
+              <button className="w-full sm:w-auto flex items-center justify-center text-lg font-semibold text-white bg-orange-600 rounded-lg px-8 py-4 transition-all duration-300 hover:bg-orange-700 hover:shadow-xl transform hover:scale-105 shadow-orange-300">
+                Start Exploring
+                <ArrowRight className="ml-2 h-5 w-5" />
+              </button>
+            </motion.div>
           </motion.div>
 
           {/* Right side: Cards */}
@@ -144,20 +157,6 @@ const HowItWorksRedesigned = () => {
             </div>
           </motion.div>
         </div>
-
-        {/* Buttons Section */}
-        <motion.div
-          className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-16"
-          initial={{ y: 20, opacity: 0 }}
-          whileInView={{ y: 0, opacity: 1 }}
-          viewport={{ once: true, amount: 0.5 }}
-          transition={{ delay: 0.5, duration: 0.5 }}
-        >
-          <button className="w-full sm:w-auto flex items-center justify-center text-lg font-semibold text-white bg-orange-600 rounded-lg px-8 py-4 transition-all duration-300 hover:bg-orange-700 hover:shadow-xl transform hover:scale-105 shadow-orange-300">
-            Start Exploring
-            <ArrowRight className="ml-2 h-5 w-5" />
-          </button>
-        </motion.div>
       </div>
     </section>
   );

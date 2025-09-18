@@ -10,12 +10,14 @@ import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import LoyaltyContent from '@/components/LoyaltyContent';
+import { useRouter } from 'next/navigation';
 
 type ProductDetailsProps = {
   productId: string;
 };
 
 export default function ProductDetails({ productId }: ProductDetailsProps) {
+  const router = useRouter();
   const { data: product, isLoading, isError } = useGetProductById(productId);
   const { addItemToCart } = useCart();
   const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
@@ -41,6 +43,13 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     if (product) {
       addItemToCart({ productId: product.id, quantity });
       toast.success('Added to cart');
+    }
+  };
+
+  const handleOrderNow = () => {
+    if (product) {
+      addItemToCart({ productId: product.id, quantity });
+      router.push(`/checkout?productId=${product.id}`);
     }
   };
 
@@ -141,6 +150,13 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                 onClick={handleAddToCart}
               >
                 Add to Cart
+              </Button>
+               <Button
+                size="lg"
+                className="flex-1 bg-green-600 hover:bg-green-700"
+                onClick={handleOrderNow}
+              >
+                Order Now
               </Button>
               <Button
                 variant="outline"

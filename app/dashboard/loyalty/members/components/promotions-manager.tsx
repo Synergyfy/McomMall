@@ -54,6 +54,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { CURRENCY } from '@/lib/utils';
 
 // TypeScript Types
 type PromotionStatus = 'Active' | 'Inactive';
@@ -88,7 +89,7 @@ const initialPromotions: Promotion[] = [
     id: 2,
     status: 'Active',
     name: '500 Bonus Points on Shoes',
-    description: 'Any shoe purchase over $100',
+    description: `Any shoe purchase over ${CURRENCY}100`,
     type: 'Bonus points',
     beginDate: '2024-09-01',
     endDate: '2024-09-15',

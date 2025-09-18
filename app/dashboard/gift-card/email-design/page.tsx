@@ -33,7 +33,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { cn } from '@/lib/utils';
+import { cn, CURRENCY } from '@/lib/utils';
 
 type SvgComponent = React.ComponentType<{ className?: string }>;
 
@@ -318,7 +318,7 @@ const CardPreview = ({
               className="text-4xl font-light my-4"
               style={{ color: design.titleColor }}
             >
-              $123.45
+              {CURRENCY}123.45
             </p>
             <p
               className="font-mono text-sm"

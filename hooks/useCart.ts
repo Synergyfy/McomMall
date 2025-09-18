@@ -1,6 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
 import api from '@/service/api';
 import { useAuth } from '@/service/auth/hook';
+import { RootState, AppDispatch } from '@/service/store/store';
+import { setCart, setLoading } from '@/service/store/cartSlice';
 
 // DTOs
 export interface AddItemToCartDto {
@@ -35,39 +38,40 @@ export interface Cart {
 const CART_STORAGE_KEY = 'mcom_cart';
 
 export const useCart = () => {
-  const [cart, setCart] = useState<Cart | null>(null);
-  const [loading, setLoading] = useState(true);
+  const dispatch = useDispatch<AppDispatch>();
+  const { cart, loading } = useSelector((state: RootState) => state.cart);
   const { token } = useAuth();
 
   useEffect(() => {
     const fetchCart = async () => {
+      dispatch(setLoading(true));
       try {
         const { data } = await api.get<Cart>('/cart');
-        setCart(data);
+        dispatch(setCart(data));
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
       } catch (error) {
         console.error('Failed to fetch cart:', error);
         // Attempt to load from local storage if API fails
         const localCart = localStorage.getItem(CART_STORAGE_KEY);
         if (localCart) {
-          setCart(JSON.parse(localCart));
+          dispatch(setCart(JSON.parse(localCart)));
         }
       } finally {
-        setLoading(false);
+        dispatch(setLoading(false));
       }
     };
 
     if (token) {
       fetchCart();
     } else {
-      setLoading(false);
+      dispatch(setLoading(false));
     }
-  }, [token]);
+  }, [token, dispatch]);
 
   const addItemToCart = async (item: AddItemToCartDto) => {
     try {
       const { data } = await api.post<Cart>('/cart/add', item);
-      setCart(data);
+      dispatch(setCart(data));
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to add item to cart:', error);
@@ -77,7 +81,7 @@ export const useCart = () => {
   const updateCartItem = async (item: UpdateCartItemDto) => {
     try {
       const { data } = await api.patch<Cart>('/cart/update', item);
-      setCart(data);
+      dispatch(setCart(data));
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to update cart item:', error);
@@ -87,7 +91,7 @@ export const useCart = () => {
   const removeCartItem = async (productId: string) => {
     try {
       const { data } = await api.delete<Cart>(`/cart/remove/${productId}`);
-      setCart(data);
+      dispatch(setCart(data));
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
       console.error('Failed to remove cart item:', error);
@@ -97,7 +101,7 @@ export const useCart = () => {
   const clearCart = async () => {
     try {
       await api.delete('/cart');
-      setCart(null);
+      dispatch(setCart(null));
       localStorage.removeItem(CART_STORAGE_KEY);
     } catch (error) {
       console.error('Failed to clear cart:', error);

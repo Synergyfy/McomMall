@@ -32,6 +32,7 @@ import {
 } from '@/components/ui/popover';
 import { Calendar } from '@/components/ui/calendar';
 import { useGetOrderStats } from '@/service/store/orders/hook';
+import { formatCurrency } from '@/lib/utils';
 
 // --- Type Definitions ---
 
@@ -115,7 +116,7 @@ const ChartCard: React.FC<{ title: string; data: ChartData[] }> = ({
             fontSize={12}
             tickLine={false}
             axisLine={false}
-            tickFormatter={value => `$${value}`}
+            tickFormatter={value => formatCurrency(value)}
           />
           <Tooltip />
           <Area
@@ -319,11 +320,11 @@ export default function StoreDashboardPage() {
     : [
         {
           title: 'Total sales',
-          value: `$${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
+          value: formatCurrency(orderStats?.totalSales ?? 0),
         },
         {
           title: 'Net sales',
-          value: `$${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
+          value: formatCurrency(orderStats?.netSales ?? 0),
         },
         { title: 'Orders', value: orderStats?.orders.toString() ?? '0' },
         {
@@ -332,15 +333,15 @@ export default function StoreDashboardPage() {
         },
         {
           title: 'Gross sales',
-          value: `$${orderStats?.grossSales.toFixed(2) ?? '0.00'}`,
+          value: formatCurrency(orderStats?.grossSales ?? 0),
         },
         {
           title: 'Total Earning',
-          value: `$${orderStats?.totalEarnings.toFixed(2) ?? '0.00'}`,
+          value: formatCurrency(orderStats?.totalEarnings ?? 0),
         },
         {
           title: 'Balance',
-          value: `$${orderStats?.balance.toFixed(2) ?? '0.00'}`,
+          value: formatCurrency(orderStats?.balance ?? 0),
         },
       ];
 
@@ -360,7 +361,7 @@ export default function StoreDashboardPage() {
             <h2 className="text-2xl font-semibold text-slate-700">Overview</h2>
             <div className="flex w-full flex-col items-stretch gap-4 sm:flex-row sm:items-center sm:w-auto">
               <span className="inline-flex items-center justify-center rounded-md bg-green-100 px-3 py-2 text-sm font-medium text-green-800">
-                Balance: ${orderStats?.balance.toFixed(2) ?? '0.00'}
+                Balance: {formatCurrency(orderStats?.balance ?? 0)}
               </span>
               <div className="w-full sm:w-72">
                 <DateRangePicker />

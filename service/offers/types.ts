@@ -21,6 +21,10 @@ export interface Offer {
     | 'PERCENTAGE_DISCOUNT'
     | 'FREE_PRODUCTS'
     | 'BONUS_POINTS';
+  discountAmount?: number;
+  discountPercentage?: number;
+  freeProductId?: string;
+  bonusPoints?: number;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;
@@ -46,6 +50,10 @@ export interface CreateOfferDto {
     | 'PERCENTAGE_DISCOUNT'
     | 'FREE_PRODUCTS'
     | 'BONUS_POINTS';
+  discountAmount?: number;
+  discountPercentage?: number;
+  freeProductId?: string;
+  bonusPoints?: number;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;
@@ -58,3 +66,23 @@ export interface CreateOfferDto {
 }
 
 export interface UpdateOfferDto extends Partial<CreateOfferDto> {}
+
+// Based on the /checkout/applicable-offers endpoint
+export interface ApplicableOffer {
+  offerId: string; // uuid
+  offerName: string;
+  pointsCost: number;
+  applicableProductIds: string[]; // Array of product UUIDs
+}
+
+// Based on the /offer/apply endpoint
+export interface ApplyOfferRequest {
+  offerId: string; // uuid
+  productIds: string[]; // Array of product UUIDs
+}
+
+export interface ApplyOfferResponse {
+  originalPrice: number;
+  discountedPrice: number;
+  discountAmount: number;
+}

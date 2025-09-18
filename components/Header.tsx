@@ -16,7 +16,6 @@ import AuthWithRedirect from './AuthWithRedirect';
 import { Suspense, useState } from 'react';
 import { NavMenu, menuItems, ListItem } from './NavMenu';
 import { usePathname } from 'next/navigation';
-import { useCart } from '@/hooks/useCart'; // Import useCart
 import { useWishlist } from '@/hooks/useWishlist';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
@@ -30,7 +29,8 @@ const mobileMenuVariants: Variants = {
 
 export default function Header() {
   const pathname = usePathname();
-  const { cartItemCount } = useCart();
+  const { cart } = useSelector((state: RootState) => state.cart);
+  const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   const { wishlistCount } = useWishlist();
   const { accessToken } = useSelector(
     (state: RootState) => state.auth

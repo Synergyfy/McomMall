@@ -3,6 +3,7 @@ import { Gift, Coins, Award } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { CURRENCY } from '@/lib/utils';
 
 interface EarnOffer {
   id: number;
@@ -29,7 +30,7 @@ const earnOffers: EarnOffer[] = [
   {
     id: 1,
     title: 'Earn 10 points',
-    description: 'For every $1.00 you spend on your total purchase',
+    description: `For every ${CURRENCY}1.00 you spend on your total purchase`,
   },
   { id: 2, title: 'Earn 2X points', description: 'On all Bookings' },
 ];
@@ -37,26 +38,26 @@ const earnOffers: EarnOffer[] = [
 const claimableRewards: ClaimableReward[] = [
   {
     id: 1,
-    title: 'Save $1',
+    title: `Save ${CURRENCY}1`,
     description: 'On your total purchase',
     points: 1000,
   },
   {
     id: 2,
-    title: 'Save $5',
+    title: `Save ${CURRENCY}5`,
     description: 'On your total purchase',
     points: 5000,
   },
   {
     id: 3,
-    title: 'Save $15',
+    title: `Save ${CURRENCY}15`,
     description: 'On your total purchase',
     points: 15000,
   },
 ];
 
 const redeemedRewards: RedeemedReward[] = [
-  { id: 1, title: 'Save $1', description: 'On your total purchase' },
+  { id: 1, title: `Save ${CURRENCY}1`, description: 'On your total purchase' },
 ];
 
 const RewardsHeader = ({ points }: { points: number }) => (

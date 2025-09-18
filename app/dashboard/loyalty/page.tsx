@@ -1,5 +1,6 @@
 import { Medal } from 'lucide-react';
 import React from 'react';
+import { CURRENCY } from '@/lib/utils';
 
 const DashboardHeader = () => {
   return (
@@ -18,7 +19,7 @@ const DashboardHeader = () => {
           <p className="text-sm font-medium">Enrolled Percentage</p>
         </li>
         <li className="flex flex-col gap-1 items-center justify-center">
-          <p className="font-bold text-3xl">$2,933</p>
+          <p className="font-bold text-3xl">{CURRENCY}2,933</p>
           <p className="text-sm font-medium">Member revenue</p>
         </li>
       </ul>
@@ -49,11 +50,11 @@ const MostPopularOfferContainer = () => {
       <h5 className="text-gray-700 font-medium">Most popular offer</h5>
       <div className="space-y-4">
         <MostPopularOffer
-          title="Save $5"
+          title={`Save ${CURRENCY}5`}
           description="On your total purchase"
         />
         <MostPopularOffer
-          title="Save $25"
+          title={`Save ${CURRENCY}25`}
           description="On your total purchase"
         />
       </div>
