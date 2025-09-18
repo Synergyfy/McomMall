@@ -21,6 +21,10 @@ export interface Offer {
     | 'PERCENTAGE_DISCOUNT'
     | 'FREE_PRODUCTS'
     | 'BONUS_POINTS';
+  discountAmount?: number;
+  discountPercentage?: number;
+  freeProductId?: string;
+  bonusPoints?: number;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;
@@ -46,6 +50,10 @@ export interface CreateOfferDto {
     | 'PERCENTAGE_DISCOUNT'
     | 'FREE_PRODUCTS'
     | 'BONUS_POINTS';
+  discountAmount?: number;
+  discountPercentage?: number;
+  freeProductId?: string;
+  bonusPoints?: number;
   limitUsageToXProducts?: number;
   expireAfterXDays?: number;
   allowFreeShipping?: boolean;
