@@ -2,9 +2,14 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { QrCode, Clock } from 'lucide-react';
+import { List, LayoutDashboard } from 'lucide-react';
 
-const ComingSoonPage: React.FC = () => {
+interface ListingsStatusPageProps {
+  title: string;
+  description: string;
+}
+
+const ListingsStatusPage: React.FC<ListingsStatusPageProps> = ({ title, description }) => {
   return (
     <div className="flex min-h-[calc(100vh-theme(spacing.16))] flex-col items-center justify-center bg-gray-50 p-4 text-center">
       <motion.div
@@ -13,7 +18,7 @@ const ComingSoonPage: React.FC = () => {
         transition={{ duration: 0.5 }}
         className="relative mb-6"
       >
-        <QrCode className="h-24 w-24 text-gray-300" />
+        <List className="h-24 w-24 text-gray-300" />
         <motion.div
           className="absolute -top-2 -right-2"
           animate={{ rotate: [0, 15, -10, 10, 0] }}
@@ -24,7 +29,7 @@ const ComingSoonPage: React.FC = () => {
             ease: 'easeInOut',
           }}
         >
-          <Clock className="h-8 w-8 text-pink-500" />
+          <LayoutDashboard className="h-8 w-8 text-pink-500" />
         </motion.div>
       </motion.div>
 
@@ -34,7 +39,7 @@ const ComingSoonPage: React.FC = () => {
         transition={{ delay: 0.2, duration: 0.5 }}
         className="mb-3 text-4xl font-bold tracking-tight text-gray-800"
       >
-        Coming Soon!
+        {title}
       </motion.h1>
 
       <motion.p
@@ -43,8 +48,7 @@ const ComingSoonPage: React.FC = () => {
         transition={{ delay: 0.4, duration: 0.5 }}
         className="max-w-md text-lg text-gray-600"
       >
-        We are working hard to bring you an amazing QR code scanning experience.
-        Stay tuned for updates!
+        {description}
       </motion.p>
 
       <motion.div
@@ -66,4 +70,4 @@ const ComingSoonPage: React.FC = () => {
   );
 };
 
-export default ComingSoonPage;
+export default ListingsStatusPage;

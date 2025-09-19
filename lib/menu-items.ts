@@ -50,9 +50,9 @@ export const listingMenuItems: MenuItem[] = [
     href: '/dashboard/my-listings',
     icon: List,
     subMenu: [
-      { title: 'Active', href: '/dashboard/bookings/qr-scanner' },
-      { title: 'Pending', href: '/dashboard/bookings/qr-scanner' },
-      { title: 'Expired', href: '/dashboard/bookings/qr-scanner' },
+      { title: 'Active', href: '/dashboard/my-listings/active' },
+      { title: 'Pending', href: '/dashboard/my-listings/pending' },
+      { title: 'Expired', href: '/dashboard/my-listings/expired' },
     ],
   },
   { title: 'Coupons', href: '/dashboard/coupons', icon: ShoppingCart },
