@@ -161,6 +161,12 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              HISTORY
+            </h3>
+            {renderMenuItems(historyMenuItems)}
+          </nav>
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
               Account
             </h3>
             {renderMenuItems(customerAccountMenu)}
