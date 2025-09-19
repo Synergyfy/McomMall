@@ -11,10 +11,16 @@ export interface PaymentDto {
 export interface CreateCheckoutDto {
   payment: PaymentDto;
   couponCode?: string;
+  offerId?: string;
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
-  const { data } = await api.post('/order/checkout', checkoutData);
+  const { payment, couponCode, offerId } = checkoutData;
+  const { data } = await api.post('/order/checkout', {
+    payment,
+    couponCode,
+    offerId,
+  });
   return data;
 };
 
