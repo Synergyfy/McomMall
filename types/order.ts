@@ -9,6 +9,7 @@ export interface CreateOrderDto {
         transactionId: string;
     };
     couponCode?: string;
+    offerId?: string;
 }
 
 export { PaymentMethod };
