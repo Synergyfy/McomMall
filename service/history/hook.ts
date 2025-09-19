@@ -1,22 +1,18 @@
 import { useQuery } from '@tanstack/react-query';
-import axios from 'axios';
 import {
   UserPromotion,
   UserTransaction,
   RedeemedOffer,
   PaginatedResponse,
 } from './types';
-
-const historyApi = axios.create({
-  baseURL: 'https://api.example.com/api/v1',
-});
+import api from '../api';
 
 // API Functions
 
 const fetchUserPromotions = async (
   userId: string
 ): Promise<{ data: UserPromotion[] }> => {
-  const { data } = await historyApi.get(`/users/${userId}/promotions`);
+  const { data } = await api.get(`/users/${userId}/promotions`);
   return data;
 };
 
@@ -25,7 +21,7 @@ const fetchUserTransactions = async (
   page: number,
   per_page: number
 ): Promise<PaginatedResponse<UserTransaction>> => {
-  const { data } = await historyApi.get(`/users/${userId}/transactions`, {
+  const { data } = await api.get(`/users/${userId}/transactions`, {
     params: { page, per_page },
   });
   return data;
@@ -36,7 +32,7 @@ const fetchRedeemedOffers = async (
   page: number,
   per_page: number
 ): Promise<PaginatedResponse<RedeemedOffer>> => {
-  const { data } = await historyApi.get(`/users/${userId}/redeemed-offers`, {
+  const { data } = await api.get(`/users/${userId}/redeemed-offers`, {
     params: { page, per_page },
   });
   return data;
