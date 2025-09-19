@@ -9,7 +9,6 @@ import {
   ShoppingCart,
   UserStar,
   Bookmark,
-  BanknoteArrowDown,
   ShoppingBag,
   SquareDashedKanban,
   Settings,
@@ -19,6 +18,7 @@ import {
   LogOut,
   Megaphone,
   CreditCard,
+  History,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -96,6 +96,14 @@ export const serviceMenuItems: MenuItem[] = [
       { title: 'Approved', href: '/dashboard/bookings?status=approved' },
       { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
     ],
+  },
+];
+
+export const historyMenuItems: MenuItem[] = [
+  {
+    title: 'Promotion History',
+    href: '/dashboard/history/promotion-history',
+    icon: History,
   },
 ];
 
