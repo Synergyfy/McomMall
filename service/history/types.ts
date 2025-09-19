@@ -2,9 +2,11 @@
 
 export interface UserPromotion {
   promotionId: string;
-  promotionName: string;
-  pointsBalance: number;
-  enrollmentDate: string; // ISO 8601 date string
+  name: string;
+  description: string;
+  balance: number;
+  status: string;
+  endDate: string; // ISO 8601 date string
 }
 
 export interface UserTransaction {

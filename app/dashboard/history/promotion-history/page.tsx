@@ -23,7 +23,7 @@ const PromotionHistoryPage = () => {
   const { data: transactionsData, isLoading: transactionsLoading } = useGetUserTransactions(userId, transactionsPage, 20);
   const { data: redeemedOffersData, isLoading: redeemedOffersLoading } = useGetRedeemedOffers(userId, redeemedOffersPage, 20);
 
-  const filteredPromotions = promotionsData?.data.promotions?.filter(p => p.promotionName.toLowerCase().includes(promotionsFilter.toLowerCase()));
+  const filteredPromotions = promotionsData?.data.promotions?.filter(p => p.name.toLowerCase().includes(promotionsFilter.toLowerCase()));
   const filteredTransactions = transactionsData?.data.transactions?.filter(t => t.description.toLowerCase().includes(transactionsFilter.toLowerCase()));
   const filteredRedeemedOffers = redeemedOffersData?.data.redeemedOffers?.filter(o => o.offerName.toLowerCase().includes(redeemedOffersFilter.toLowerCase()));
 
@@ -62,8 +62,8 @@ const PromotionHistoryPage = () => {
                 <TableHeader>
                   <TableRow>
                     <TableHead>Promotion Name</TableHead>
-                    <TableHead>Points Balance</TableHead>
-                    <TableHead>Enrollment Date</TableHead>
+                    <TableHead>Balance</TableHead>
+                    <TableHead>End Date</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -72,9 +72,9 @@ const PromotionHistoryPage = () => {
                   ) : (
                     filteredPromotions?.map(p => (
                       <TableRow key={p.promotionId}>
-                        <TableCell>{p.promotionName}</TableCell>
-                        <TableCell>{p.pointsBalance}</TableCell>
-                        <TableCell>{new Date(p.enrollmentDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{p.name}</TableCell>
+                        <TableCell>{p.balance}</TableCell>
+                        <TableCell>{new Date(p.endDate).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))
                   )}
