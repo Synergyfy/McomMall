@@ -23,7 +23,7 @@ const PromotionHistoryPage = () => {
   const { data: transactionsData, isLoading: transactionsLoading } = useGetUserTransactions(userId, transactionsPage, 20);
   const { data: redeemedOffersData, isLoading: redeemedOffersLoading } = useGetRedeemedOffers(userId, redeemedOffersPage, 20);
 
-  const filteredPromotions = promotionsData?.data?.filter(p => p.promotionName.toLowerCase().includes(promotionsFilter.toLowerCase()));
+  const filteredPromotions = promotionsData?.data.promotions?.filter(p => p.promotionName.toLowerCase().includes(promotionsFilter.toLowerCase()));
   const filteredTransactions = transactionsData?.data.transactions?.filter(t => t.description.toLowerCase().includes(transactionsFilter.toLowerCase()));
   const filteredRedeemedOffers = redeemedOffersData?.data.redeemedOffers?.filter(o => o.offerName.toLowerCase().includes(redeemedOffersFilter.toLowerCase()));
 

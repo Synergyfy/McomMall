@@ -11,7 +11,7 @@ import api from '../api';
 
 const fetchUserPromotions = async (
   userId: string
-): Promise<{ data: UserPromotion[] }> => {
+): Promise<{ data: { promotions: UserPromotion[] } }> => {
   const { data } = await api.get(`/users/${userId}/promotions`);
   return data;
 };
@@ -41,7 +41,7 @@ const fetchRedeemedOffers = async (
 // React Query Hooks
 
 export const useGetUserPromotions = (userId: string | null) => {
-  return useQuery<{ data: UserPromotion[] }, Error>({
+  return useQuery<{ data: { promotions: UserPromotion[] } }, Error>({
     queryKey: ['userPromotions', userId],
     queryFn: () => fetchUserPromotions(userId!),
     enabled: userId !== null,
