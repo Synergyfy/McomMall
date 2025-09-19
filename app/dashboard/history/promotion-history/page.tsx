@@ -23,9 +23,9 @@ const PromotionHistoryPage = () => {
   const { data: transactionsData, isLoading: transactionsLoading } = useGetUserTransactions(userId, transactionsPage, 20);
   const { data: redeemedOffersData, isLoading: redeemedOffersLoading } = useGetRedeemedOffers(userId, redeemedOffersPage, 20);
 
-  const filteredPromotions = promotionsData?.data.promotions?.filter(p => p.promotion_name.toLowerCase().includes(promotionsFilter.toLowerCase()));
+  const filteredPromotions = promotionsData?.data?.filter(p => p.promotionName.toLowerCase().includes(promotionsFilter.toLowerCase()));
   const filteredTransactions = transactionsData?.data.transactions?.filter(t => t.description.toLowerCase().includes(transactionsFilter.toLowerCase()));
-  const filteredRedeemedOffers = redeemedOffersData?.data.redeemedOffers?.filter(o => o.offer_name.toLowerCase().includes(redeemedOffersFilter.toLowerCase()));
+  const filteredRedeemedOffers = redeemedOffersData?.data.redeemedOffers?.filter(o => o.offerName.toLowerCase().includes(redeemedOffersFilter.toLowerCase()));
 
   if (!userId) {
     return (
@@ -71,10 +71,10 @@ const PromotionHistoryPage = () => {
                     <TableRow><TableCell colSpan={3}>Loading...</TableCell></TableRow>
                   ) : (
                     filteredPromotions?.map(p => (
-                      <TableRow key={p.promotion_id}>
-                        <TableCell>{p.promotion_name}</TableCell>
-                        <TableCell>{p.points_balance}</TableCell>
-                        <TableCell>{new Date(p.enrollment_date).toLocaleDateString()}</TableCell>
+                      <TableRow key={p.promotionId}>
+                        <TableCell>{p.promotionName}</TableCell>
+                        <TableCell>{p.pointsBalance}</TableCell>
+                        <TableCell>{new Date(p.enrollmentDate).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -110,7 +110,7 @@ const PromotionHistoryPage = () => {
                     <TableRow><TableCell colSpan={4}>Loading...</TableCell></TableRow>
                   ) : (
                     filteredTransactions?.map(t => (
-                      <TableRow key={t.transaction_id}>
+                      <TableRow key={t.transactionId}>
                         <TableCell>{t.type}</TableCell>
                         <TableCell>{t.points}</TableCell>
                         <TableCell>{t.description}</TableCell>
@@ -129,7 +129,7 @@ const PromotionHistoryPage = () => {
                 </Button>
                 <Button
                   onClick={() => setTransactionsPage(p => p + 1)}
-                  disabled={!transactionsData || transactionsPage >= transactionsData.pagination.total_pages}
+                  disabled={!transactionsData || transactionsPage >= transactionsData.pagination.totalPages}
                 >
                   Next
                 </Button>
@@ -163,10 +163,10 @@ const PromotionHistoryPage = () => {
                     <TableRow><TableCell colSpan={3}>Loading...</TableCell></TableRow>
                   ) : (
                     filteredRedeemedOffers?.map(o => (
-                      <TableRow key={o.offer_id}>
-                        <TableCell>{o.offer_name}</TableCell>
-                        <TableCell>{o.points_spent}</TableCell>
-                        <TableCell>{new Date(o.redemption_date).toLocaleDateString()}</TableCell>
+                      <TableRow key={o.offerId}>
+                        <TableCell>{o.offerName}</TableCell>
+                        <TableCell>{o.pointsSpent}</TableCell>
+                        <TableCell>{new Date(o.redemptionDate).toLocaleDateString()}</TableCell>
                       </TableRow>
                     ))
                   )}
@@ -181,7 +181,7 @@ const PromotionHistoryPage = () => {
                 </Button>
                 <Button
                   onClick={() => setRedeemedOffersPage(p => p + 1)}
-                  disabled={!redeemedOffersData || redeemedOffersPage >= redeemedOffersData.pagination.total_pages}
+                  disabled={!redeemedOffersData || redeemedOffersPage >= redeemedOffersData.pagination.totalPages}
                 >
                   Next
                 </Button>

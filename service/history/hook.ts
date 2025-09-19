@@ -20,7 +20,7 @@ const fetchUserTransactions = async (
   userId: string,
   page: number,
   per_page: number
-): Promise<PaginatedResponse<UserTransaction>> => {
+): Promise<PaginatedResponse<{ transactions: UserTransaction[] }>> => {
   const { data } = await api.get(`/users/${userId}/transactions`, {
     params: { page, per_page },
   });
@@ -31,7 +31,7 @@ const fetchRedeemedOffers = async (
   userId: string,
   page: number,
   per_page: number
-): Promise<PaginatedResponse<RedeemedOffer>> => {
+): Promise<PaginatedResponse<{ redeemedOffers: RedeemedOffer[] }>> => {
   const { data } = await api.get(`/users/${userId}/redeemed-offers`, {
     params: { page, per_page },
   });
@@ -53,7 +53,10 @@ export const useGetUserTransactions = (
   page: number,
   per_page: number
 ) => {
-  return useQuery<PaginatedResponse<UserTransaction>, Error>({
+  return useQuery<
+    PaginatedResponse<{ transactions: UserTransaction[] }>,
+    Error
+  >({
     queryKey: ['userTransactions', userId, page, per_page],
     queryFn: () => fetchUserTransactions(userId!, page, per_page),
     enabled: userId !== null,
@@ -65,7 +68,7 @@ export const useGetRedeemedOffers = (
   page: number,
   per_page: number
 ) => {
-  return useQuery<PaginatedResponse<RedeemedOffer>, Error>({
+  return useQuery<PaginatedResponse<{ redeemedOffers: RedeemedOffer[] }>, Error>({
     queryKey: ['redeemedOffers', userId, page, per_page],
     queryFn: () => fetchRedeemedOffers(userId!, page, per_page),
     enabled: userId !== null,

@@ -1,35 +1,39 @@
 // Promotion History API Types
 
 export interface UserPromotion {
-  promotion_id: string;
-  promotion_name: string;
-  points_balance: number;
-  enrollment_date: string; // ISO 8601 date string
+  promotionId: string;
+  promotionName: string;
+  pointsBalance: number;
+  enrollmentDate: string; // ISO 8601 date string
 }
 
 export interface UserTransaction {
-  transaction_id: string;
+  transactionId: string;
   type: 'earn' | 'spend';
   points: number;
   description: string;
   timestamp: string; // ISO 8601 date string
+  details?: {
+    promotionId?: string;
+    promotionName?: string;
+  };
 }
 
 export interface RedeemedOffer {
-  offer_id: string;
-  offer_name: string;
-  redemption_date: string; // ISO 8601 date string
-  points_spent: number;
+  offerId: string;
+  offerName: string;
+  redemptionDate: string; // ISO 8601 date string
+  pointsSpent: number;
 }
 
 export interface Pagination {
-  total_items: number;
-  total_pages: number;
-  current_page: number;
-  per_page: number;
+  totalItems: number;
+  totalPages: number;
+  currentPage: number;
+  perPage: number;
 }
 
 export interface PaginatedResponse<T> {
-  data: T[];
+  data: T;
   pagination: Pagination;
 }
