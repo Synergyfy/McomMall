@@ -39,3 +39,20 @@ export interface RefreshTokenResponse {
   accessToken: string;
   refreshToken: string;
 }
+
+export interface SendOtpInterface {
+  email: string;
+  type: 'VERIFICATION' | 'PASSWORD_RESET';
+}
+
+export interface ValidateOtpInterface {
+  email: string;
+  otp: string;
+  type: 'VERIFICATION' | 'PASSWORD_RESET';
+}
+
+export interface ResetPasswordInterface {
+  email: string;
+  password: string;
+  confirmPassword: string;
+}
