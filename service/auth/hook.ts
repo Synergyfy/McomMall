@@ -8,6 +8,9 @@ import {
   AuthInterface,
   LoginResponse,
   ClaimInterface,
+  SendOtpInterface,
+  ValidateOtpInterface,
+  ResetPasswordInterface,
 } from './types';
 import { useDispatch } from 'react-redux';
 import {
@@ -43,6 +46,71 @@ export const useCreateUser = () => {
 
   const mutation = useMutation({
     mutationFn: create,
+  });
+  return mutation;
+};
+
+export const useSendOtp = () => {
+  const sendOtp = async (payload: SendOtpInterface) => {
+    try {
+      const response = await api.post('email/send-otp', {
+        ...payload,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to send OTP'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: sendOtp,
+  });
+  return mutation;
+};
+
+export const useValidateOtp = () => {
+  const validateOtp = async (payload: ValidateOtpInterface) => {
+    try {
+      const response = await api.post('email/validate-otp', {
+        ...payload,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to validate OTP'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: validateOtp,
+  });
+  return mutation;
+};
+
+export const useResetPassword = () => {
+  const resetPassword = async (payload: ResetPasswordInterface) => {
+    try {
+      const response = await api.post('email/reset-password', {
+        ...payload,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to reset password'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: resetPassword,
   });
   return mutation;
 };
