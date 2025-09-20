@@ -373,7 +373,7 @@ export default function OrdersDashboard() {
                           data-label="Total"
                           className="responsive-cell font-medium text-gray-800"
                         >
-                          ${order.total.toFixed(2)}
+                          £{order.total.toFixed(2)}
                         </TableCell>
                         <TableCell
                           data-label="Date"
