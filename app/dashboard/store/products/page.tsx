@@ -524,11 +524,11 @@ export default function StoreDashboard() {
                             {product.price !== product.salePrice &&
                               product.salePrice && (
                                 <span className="line-through text-gray-400">
-                                  ${product.price.toFixed(2)}
+                                  £{product.price.toFixed(2)}
                                 </span>
                               )}
                             <span>
-                              ${(product.salePrice || product.price).toFixed(2)}
+                              £{(product.salePrice || product.price).toFixed(2)}
                             </span>
                           </div>
                         </TableCell>

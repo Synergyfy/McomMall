@@ -233,11 +233,11 @@ export default function ServicesDashboard() {
                           className="mobile-table-cell md:table-cell text-gray-600"
                         >
                           {service.pricingModel === 'fixed' &&
-                            `$${service.fixedPrice}`}
+                            `£${service.fixedPrice}`}
                           {service.pricingModel === 'perHour' &&
-                            `$${service.pricePerHour}/hr`}
+                            `£${service.pricePerHour}/hr`}
                           {service.pricingModel === 'perUnit' &&
-                            `$${service.pricePerUnit}/${service.unitName}`}
+                            `£${service.pricePerUnit}/${service.unitName}`}
                         </TableCell>
                         <TableCell
                           data-label="Date"
