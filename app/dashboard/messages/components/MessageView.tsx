@@ -2,6 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { Conversation, Message } from '@/service/messaging/types';
 import { useGetConversationMessages, useSendMessage } from '@/service/messaging/hook';
 import { useAuth } from '@/service/auth/hook';
+import { ReplyIcon, XIcon } from 'lucide-react';
 
 interface MessageViewProps {
   conversation: Conversation | null;
@@ -23,11 +24,12 @@ export default function MessageView({ conversation }: MessageViewProps) {
   const { user: currentUser } = useAuth();
   const { mutate: sendMessage } = useSendMessage();
   const [newMessage, setNewMessage] = useState('');
+  const [replyingTo, setReplyingTo] = useState<Message | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
 
   const getContactName = (conversation: Conversation) => {
     const participant = conversation.participants.find(p => p.id !== currentUser?.id);
-    return participant?.name || 'Unknown';
+    return participant?.email || 'Unknown';
   };
 
   useEffect(() => {
@@ -40,15 +42,26 @@ export default function MessageView({ conversation }: MessageViewProps) {
     const receiver = conversation.participants.find(p => p.id !== currentUser.id);
 
     if (!receiver) {
-      console.error("Could not determine the receiver of the message. The participants array may be incomplete.");
+      console.error("Could not determine the receiver of the message.");
       return;
     }
 
     sendMessage({
       content: newMessage,
       receiverId: receiver.id,
+      parentMessageId: replyingTo?.id,
     });
+
     setNewMessage('');
+    setReplyingTo(null);
+  };
+
+  const handleReplyClick = (message: Message) => {
+    setReplyingTo(message);
+  };
+
+  const cancelReply = () => {
+    setReplyingTo(null);
   };
 
   if (!conversation) {
@@ -88,21 +101,35 @@ export default function MessageView({ conversation }: MessageViewProps) {
             {groupedMessages[date].map(message => (
               <div
                 key={message.id}
-                className={`flex my-2 ${
+                className={`flex items-center my-2 group ${
                   message.sender.id === currentUser?.id ? 'justify-end' : 'justify-start'
                 }`}
               >
                 <div
-                  className={`p-3 rounded-lg max-w-xs ${
+                  className={`p-3 rounded-lg max-w-xs relative ${
                     message.sender.id === currentUser?.id
                       ? 'bg-blue-500 text-white'
                       : 'bg-gray-200'
                   }`}
                 >
+                  {message.parentMessage && (
+                    <div className="p-2 mb-2 border-l-2 border-gray-400">
+                      <p className="font-bold text-xs">
+                        {message.parentMessage.sender.id === currentUser?.id ? 'You' : message.parentMessage.sender.email}
+                      </p>
+                      <p className="text-xs opacity-80">{message.parentMessage.content}</p>
+                    </div>
+                  )}
                   <p>{message.content}</p>
                   <p className="text-xs text-right mt-1 opacity-75">
                     {new Date(message.createdAt).toLocaleTimeString()}
                   </p>
+                  <button
+                    onClick={() => handleReplyClick(message)}
+                    className="absolute top-1/2 -translate-y-1/2 -left-8 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  >
+                    <ReplyIcon size={16} />
+                  </button>
                 </div>
               </div>
             ))}
@@ -111,6 +138,17 @@ export default function MessageView({ conversation }: MessageViewProps) {
         <div ref={messagesEndRef} />
       </div>
       <div className="p-4 border-t">
+        {replyingTo && (
+          <div className="flex items-center justify-between p-2 mb-2 bg-gray-100 rounded-lg">
+            <div>
+              <p className="font-bold text-xs">Replying to {replyingTo.sender.email}</p>
+              <p className="text-xs text-gray-600">{replyingTo.content}</p>
+            </div>
+            <button onClick={cancelReply} className="p-1">
+              <XIcon size={16} />
+            </button>
+          </div>
+        )}
         <div className="relative">
           <input
             type="text"

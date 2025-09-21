@@ -7,7 +7,7 @@ export interface User {
   isEmailVerified: boolean;
   role: string;
   createdAt: string;
-  updatedAt: string;
+  updatedAt:string;
 }
 
 export interface Message {
@@ -17,6 +17,8 @@ export interface Message {
   conversation: Conversation;
   createdAt: string;
   updatedAt: string;
+  parentMessage?: Message;
+  replies?: Message[];
 }
 
 export interface Conversation {
@@ -31,4 +33,5 @@ export interface CreateMessageDto {
   content: string;
   receiverId: string;
   conversationId?: string;
+  parentMessageId?: string;
 }
