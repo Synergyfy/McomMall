@@ -224,7 +224,7 @@ export interface ServiceProviderProfilePayload {
 // --- Main Payload Interface ---
 
 export interface CreateBusinessPayload {
-  media: { url: string; altText: string }[];
+  media: string[];
   listingType: ListingType[];
   businessName: string;
   legalName?: string;

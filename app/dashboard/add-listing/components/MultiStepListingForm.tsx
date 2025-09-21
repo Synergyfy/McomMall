@@ -669,7 +669,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         const payload = transformFormDataToPayload(formData);
 
         // Add the media URLs to the payload
-        payload.media = mediaUrls.map(url => ({ url, altText: '' }));
+        payload.media = mediaUrls;
         payload.logoUrl = logoUrl;
         payload.bannerUrl = bannerUrl;
 
