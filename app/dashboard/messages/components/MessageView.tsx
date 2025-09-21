@@ -98,41 +98,47 @@ export default function MessageView({ conversation }: MessageViewProps) {
                 })} -----
               </span>
             </div>
-            {groupedMessages[date].map(message => (
-              <div
-                key={message.id}
-                className={`flex items-center my-2 group ${
-                  message.sender.id === currentUser?.id ? 'justify-end' : 'justify-start'
-                }`}
-              >
+            {groupedMessages[date].map(message => {
+              const parentMessage = message.parentMessage
+                ? messages?.find(m => m.id === message.parentMessage?.id)
+                : null;
+
+              return (
                 <div
-                  className={`p-3 rounded-lg max-w-xs relative ${
-                    message.sender.id === currentUser?.id
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-gray-200'
+                  key={message.id}
+                  className={`flex items-center my-2 group ${
+                    message.sender.id === currentUser?.id ? 'justify-end' : 'justify-start'
                   }`}
                 >
-                  {message.parentMessage && (
-                    <div className="p-2 mb-2 border-l-2 border-gray-400">
-                      <p className="font-bold text-xs">
-                        {message.parentMessage.sender.id === currentUser?.id ? 'You' : message.parentMessage.sender.email}
-                      </p>
-                      <p className="text-xs opacity-80">{message.parentMessage.content}</p>
-                    </div>
-                  )}
-                  <p>{message.content}</p>
-                  <p className="text-xs text-right mt-1 opacity-75">
-                    {new Date(message.createdAt).toLocaleTimeString()}
-                  </p>
-                  <button
-                    onClick={() => handleReplyClick(message)}
-                    className="absolute top-1/2 -translate-y-1/2 -left-8 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                  <div
+                    className={`p-3 rounded-lg max-w-xs relative ${
+                      message.sender.id === currentUser?.id
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-gray-200'
+                    }`}
                   >
-                    <ReplyIcon size={16} />
-                  </button>
+                    {parentMessage && (
+                      <div className="p-2 mb-2 border-l-2 border-gray-400">
+                        <p className="font-bold text-xs">
+                          {parentMessage.sender.id === currentUser?.id ? 'You' : parentMessage.sender.email}
+                        </p>
+                        <p className="text-xs opacity-80">{parentMessage.content}</p>
+                      </div>
+                    )}
+                    <p>{message.content}</p>
+                    <p className="text-xs text-right mt-1 opacity-75">
+                      {new Date(message.createdAt).toLocaleTimeString()}
+                    </p>
+                    <button
+                      onClick={() => handleReplyClick(message)}
+                      className="absolute top-1/2 -translate-y-1/2 -left-8 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                    >
+                      <ReplyIcon size={16} />
+                    </button>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ))}
         <div ref={messagesEndRef} />
