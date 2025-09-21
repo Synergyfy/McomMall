@@ -359,7 +359,7 @@ export default function AddProductPage() {
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen p-4 sm:p-6 lg:p-8 text-base">
+    <div className="bg-gray-50 p-4 sm:p-6 lg:p-8 text-base">
       <div className="max-w-7xl mx-auto">
         <SuccessDialog
           open={isSuccessDialogOpen}
