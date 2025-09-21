@@ -131,7 +131,9 @@ export default function MessageView({ conversation }: MessageViewProps) {
                     </p>
                     <button
                       onClick={() => handleReplyClick(message)}
-                      className="absolute top-1/2 -translate-y-1/2 -left-8 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity"
+                      className={`absolute top-1/2 -translate-y-1/2 text-gray-500 opacity-0 group-hover:opacity-100 transition-opacity ${
+                        message.sender.id === currentUser?.id ? '-left-8' : '-right-8'
+                      }`}
                     >
                       <ReplyIcon size={16} />
                     </button>
