@@ -42,7 +42,7 @@ export async function POST(req: NextRequest) {
       readableStream.pipe(stream);
     });
 
-    return NextResponse.json({ result });
+    return NextResponse.json(result);
   } catch (error) {
     return NextResponse.json(
       { error: (error as Error).message },

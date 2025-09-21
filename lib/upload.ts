@@ -1,4 +1,4 @@
-export const uploadFile = async (file: File): Promise<string> => {
+export const uploadFile = async (file: File): Promise<{ secure_url: string, public_id: string }> => {
   const formData = new FormData();
   formData.append('file', file);
 
@@ -12,5 +12,5 @@ export const uploadFile = async (file: File): Promise<string> => {
   }
 
   const data = await response.json();
-  return data.result.secure_url;
+  return data;
 };
