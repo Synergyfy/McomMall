@@ -47,6 +47,7 @@ import {
   isValidUrl,
 } from '@/lib/validation';
 import { ListingFormData } from '../types';
+import { uploadFile } from '@/lib/upload';
 
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
@@ -573,6 +574,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     }
 
     const payload: CreateBusinessPayload = {
+      media: [],
       listingType,
       businessName: data.businessName,
       legalName: data.legalName,
@@ -650,14 +652,35 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     return { isValid, firstErrorStep };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const { isValid, firstErrorStep } = validateAllSteps();
     if (isValid) {
-      const payload = transformFormDataToPayload(formData);
-      if (listingId) {
-        editListing({ listingId, payload });
-      } else {
-        addListing(payload);
+      try {
+        // Upload media files
+        const mediaPromises = formData.media
+          .filter(media => media.file)
+          .map(media => uploadFile(media.file as File));
+        const mediaUrls = await Promise.all(mediaPromises);
+
+        // Upload logo and banner
+        const logoUrl = formData.logo?.file ? await uploadFile(formData.logo.file) : undefined;
+        const bannerUrl = formData.banner?.file ? await uploadFile(formData.banner.file) : undefined;
+
+        const payload = transformFormDataToPayload(formData);
+
+        // Add the media URLs to the payload
+        payload.media = mediaUrls.map(url => ({ url, altText: '' }));
+        payload.logoUrl = logoUrl;
+        payload.bannerUrl = bannerUrl;
+
+        if (listingId) {
+          editListing({ listingId, payload });
+        } else {
+          addListing(payload);
+        }
+      } catch (error) {
+        console.error('Upload failed', error);
+        // Handle upload error, maybe show a notification to the user
       }
     } else if (firstErrorStep !== null) {
       setCurrentStep(firstErrorStep);
