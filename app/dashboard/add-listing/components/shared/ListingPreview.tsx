@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Smartphone, Monitor } from 'lucide-react';
-import ListingPage from '@/app/listings/[id]/components/ListingPage';
+import ListingPage from '@/app/(public)/listings/[id]/components/ListingPage';
 import { ListingFormData } from '../../types';
 import { InHouseBusiness } from '@/service/listings/types';
 

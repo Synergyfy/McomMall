@@ -9,7 +9,7 @@ import {
   InHouseBusiness,
   Product,
 } from '@/service/listings/types';
-import { ReviewsTabContent } from '@/app/listings/[id]/components/ReviewsTabContent';
+import { ReviewsTabContent } from '@/app/(public)/listings/[id]/components/ReviewsTabContent';
 import { toast } from 'sonner';
 import { useCart } from '@/hooks/useCart'; // Import the useCart hook
 import { useWishlist } from '@/hooks/useWishlist';
