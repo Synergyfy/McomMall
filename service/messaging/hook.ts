@@ -37,10 +37,14 @@ export const useSendMessage = () => {
       const { data } = await api.post('/messaging', {
         content: message.content,
         receiverId: message.receiverId,
+        parentMessageId: message.parentMessageId,
       });
       return data;
     },
     onSuccess: (data: Message) => {
+      queryClient.invalidateQueries({
+        queryKey: [MESSAGING_QUERY_KEY, 'conversations', data.conversation.id],
+      });
       queryClient.invalidateQueries({
         queryKey: [MESSAGING_QUERY_KEY, 'conversations'],
       });
