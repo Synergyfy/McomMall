@@ -20,6 +20,8 @@ import {
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState } from 'react';
+import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
+import { uploadFile } from '@/lib/upload';
 import { toast } from 'sonner';
 
 import { useAddProduct } from '@/service/store/products/hook';
@@ -98,7 +100,7 @@ interface ProductFormValues {
   visibility: 'public' | 'private' | 'password-protected';
   purchaseNote?: string;
   enableReviews: boolean;
-  productImages: FileList | null;
+  media: File[];
   businessId?: string;
 }
 
@@ -178,16 +180,24 @@ const customResolver = (data: ProductFormValues) => {
       errors.dimensions = dimErrors;
     }
   }
-  if (!data.productImages || data.productImages.length === 0) {
-    errors.productImages = {
+  if (!data.media || data.media.length === 0) {
+    (errors.media as unknown as FieldError) = {
       type: 'required',
       message: 'At least one product image is required.',
     };
-  } else if (data.productImages.length > 5) {
-    errors.productImages = {
+  } else if (data.media.length > 5) {
+    (errors.media as unknown as FieldError) = {
       type: 'max',
-      message: 'You can upload a maximum of 5 images.',
+      message: 'You can upload a maximum of 5 files.',
     };
+  } else {
+    const hasImage = data.media.some(file => file.type.startsWith('image/'));
+    if (!hasImage) {
+      (errors.media as unknown as FieldError) = {
+        type: 'validate',
+        message: 'At least one image is required.',
+      };
+    }
   }
   if (!data.businessId) {
     errors.businessId = {
@@ -280,7 +290,7 @@ export default function AddProductPage() {
       visibility: 'public',
       purchaseNote: '',
       enableReviews: true,
-      productImages: null,
+      media: [],
       businessId: '',
     },
   });
@@ -300,6 +310,11 @@ export default function AddProductPage() {
   const category = form.watch('category');
 
   async function onSubmit(data: ProductFormValues) {
+    const mediaUrls = await Promise.all(
+        data.media.map(file => uploadFile(file))
+    );
+
+
     const productData: CreateProductDto = {
       bussinessId: data.businessId as string,
       title: data.title,
@@ -309,9 +324,7 @@ export default function AddProductPage() {
       description: data.description,
       sku: data.sku,
       shortDescription: data.shortDescription,
-      fileUrls: Array.from(data.productImages as FileList).map(
-        () => `https://source.unsplash.com/random/800x600?sig=${Math.random()}`
-      ),
+      fileUrls: mediaUrls.map(result => result.secure_url),
       productUrl: data.productUrl,
       downloadLimit: data.downloadLimit
         ? Number(data.downloadLimit)
@@ -1160,65 +1173,26 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Product Images */}
+                {/* Product Media */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Product Images</CardTitle>
+                    <CardTitle className="text-2xl">Product Media</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
-                      name="productImages"
-                      render={({ field: { onChange, value, ...rest } }) => (
-                        <>
-                          <div className="flex items-center justify-center w-full">
-                            <label
-                              htmlFor="dropzone-file"
-                              className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                            >
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <UploadCloud className="w-8 h-8 mb-2 text-gray-400" />
-                                <p className="mb-1 text-sm text-gray-500">
-                                  <span className="font-semibold">
-                                    Click to upload
-                                  </span>{' '}
-                                  or drag and drop
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  SVG, PNG, JPG or GIF (MAX. 800x400px)
-                                </p>
-                              </div>
-                              <input
-                                id="dropzone-file"
-                                type="file"
-                                multiple
-                                className="hidden"
-                                {...rest}
-                                onChange={event => {
-                                  onChange(event.target.files);
-                                }}
-                              />
-                            </label>
-                          </div>
+                      name="media"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <MultiMediaUpload
+                              onMediaChange={field.onChange}
+                            />
+                          </FormControl>
                           <FormMessage className="text-red-500 text-base font-medium" />
-                        </>
+                        </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      {form.watch('productImages') &&
-                        Array.from(form.watch('productImages') as FileList).map(
-                          (file, index) => (
-                            <div key={index} className="relative h-24">
-                              <Image
-                                src={URL.createObjectURL(file)}
-                                alt={`New product image ${index + 1}`}
-                                fill
-                                className="object-cover rounded-lg"
-                              />
-                            </div>
-                          )
-                        )}
-                    </div>
                   </CardContent>
                 </Card>
 

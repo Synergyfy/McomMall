@@ -68,6 +68,11 @@ const PlaceholderImage = ({ className }: { className?: string }) => (
   </svg>
 );
 
+const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
@@ -422,7 +427,9 @@ export default function StoreDashboard() {
                       </TableCell>
                     </TableRow>
                   ) : filteredProducts.length > 0 ? (
-                    filteredProducts.map(product => (
+                    filteredProducts.map(product => {
+                      const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl;
+                      return (
                       <TableRow
                         key={product.id}
                         className={`mobile-table-card md:table-row ${
@@ -449,9 +456,9 @@ export default function StoreDashboard() {
                         >
                           <Link href={`/products/${product.id}`} passHref>
                             <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
-                              {product.imageUrl ? (
+                              {firstImageUrl ? (
                                 <img
-                                  src={product.imageUrl}
+                                  src={firstImageUrl}
                                   alt={product.title}
                                   className="w-full h-full object-cover rounded-md"
                                 />
@@ -599,7 +606,7 @@ export default function StoreDashboard() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))
+                    )})
                   ) : (
                     <TableRow className="block md:table-row">
                       <TableCell

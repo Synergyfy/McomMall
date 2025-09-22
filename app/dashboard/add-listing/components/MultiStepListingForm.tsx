@@ -47,6 +47,10 @@ import {
   isValidUrl,
 } from '@/lib/validation';
 import { ListingFormData } from '../types';
+import { uploadFile } from '@/lib/upload';
+import { InProgressDialog } from '@/components/InProgressDialog';
+import { UploadSuccessDialog } from '@/components/UploadSuccessDialog';
+import { ErrorDialog } from '@/components/ErrorDialog';
 
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
@@ -280,7 +284,12 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   const [errors, setErrors] = useState<Record<string, string>>({});
   const { mutate: addListing, isPending: isAdding } = useAddListing();
   const { mutate: editListing, isPending: isEditing } = useEditListing();
-  const isPending = isAdding || isEditing;
+  const [isUploading, setIsUploading] = useState(false);
+  const [uploadSuccess, setUploadSuccess] = useState(false);
+  const [uploadError, setUploadError] = useState(false);
+  const [errorMessage, setErrorMessage] = useState('');
+
+  const isPending = isAdding || isEditing || isUploading;
 
   const steps = useMemo(() => {
     const sharedInitial = [
@@ -573,6 +582,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     }
 
     const payload: CreateBusinessPayload = {
+      media: [],
       listingType,
       businessName: data.businessName,
       legalName: data.legalName,
@@ -650,17 +660,84 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     return { isValid, firstErrorStep };
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
     const { isValid, firstErrorStep } = validateAllSteps();
-    if (isValid) {
-      const payload = transformFormDataToPayload(formData);
-      if (listingId) {
-        editListing({ listingId, payload });
-      } else {
-        addListing(payload);
+    if (!isValid) {
+      if (firstErrorStep !== null) {
+        setCurrentStep(firstErrorStep);
       }
-    } else if (firstErrorStep !== null) {
-      setCurrentStep(firstErrorStep);
+      return;
+    }
+
+    setIsUploading(true);
+    let uploadedFiles: { secure_url: string; public_id: string }[] = [];
+
+    try {
+      // Wrap upload and mutation in a promise
+      await new Promise<void>(async (resolve, reject) => {
+        try {
+          const uploadPromises = formData.media
+            .filter(media => media.file)
+            .map(media => uploadFile(media.file as File));
+
+          const logoPromise = formData.logo?.file ? uploadFile(formData.logo.file) : Promise.resolve(undefined);
+          const bannerPromise = formData.banner?.file ? uploadFile(formData.banner.file) : Promise.resolve(undefined);
+
+          const [mediaResults, logoResult, bannerResult] = await Promise.all([
+            Promise.all(uploadPromises),
+            logoPromise,
+            bannerPromise,
+          ]);
+
+          uploadedFiles = [...mediaResults, logoResult, bannerResult].filter(Boolean) as { secure_url: string; public_id: string }[];
+
+          const payload = transformFormDataToPayload(formData);
+          payload.media = mediaResults.map(r => r.secure_url);
+          payload.logoUrl = logoResult?.secure_url;
+          payload.bannerUrl = bannerResult?.secure_url;
+
+          if (listingId) {
+            editListing({ listingId, payload }, {
+              onSuccess: () => {
+                setUploadSuccess(true);
+                resolve();
+              },
+              onError: () => {
+                setErrorMessage('An unknown error occurred.');
+                setUploadError(true);
+                reject(new Error('Submission failed'));
+              },
+            });
+          } else {
+            addListing(payload, {
+              onSuccess: () => {
+                setUploadSuccess(true);
+                resolve();
+              },
+              onError: () => {
+                setErrorMessage('An unknown error occurred.');
+                setUploadError(true);
+                reject(new Error('Submission failed'));
+              },
+            });
+          }
+        } catch (uploadError) {
+          setErrorMessage('File upload failed. Please try again.');
+          setUploadError(true);
+          reject(uploadError);
+        }
+      });
+    } catch {
+      // This catch block will handle the rejection from the promise
+      if (uploadedFiles.length > 0) {
+        await fetch('/api/upload/delete', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ public_ids: uploadedFiles.map(f => f.public_id) }),
+        });
+      }
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -679,6 +756,17 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
   return (
     <>
+      <InProgressDialog isOpen={isUploading} message="Publishing your listing, please wait..." />
+      <UploadSuccessDialog
+        isOpen={uploadSuccess}
+        onClose={() => setUploadSuccess(false)}
+        message="Listing published successfully!"
+      />
+      <ErrorDialog
+        isOpen={uploadError}
+        onClose={() => setUploadError(false)}
+        message={errorMessage}
+      />
       <Card>
         <CardHeader>
           <div className="flex justify-between items-center">

@@ -89,7 +89,13 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
   useEffect(() => {
     onMediaChange(mediaFiles.map(mf => mf.file));
-  }, [mediaFiles, onMediaChange]);
+    const hasImage = mediaFiles.some(mf => mf.type === 'image');
+    if (mediaFiles.length > 0 && !hasImage) {
+      setError('At least one image file is required.');
+    } else if (error === 'At least one image file is required.' && hasImage) {
+      setError(null);
+    }
+  }, [mediaFiles, onMediaChange, error]);
 
   useEffect(() => {
     // Cleanup object URLs on unmount

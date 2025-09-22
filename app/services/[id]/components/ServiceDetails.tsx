@@ -10,6 +10,11 @@ import { toast } from 'sonner';
 import { BookingModal } from '@/components/BookingModal';
 import { Service } from '@/service/services/types';
 
+const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+}
+
 type ServiceDetailsProps = {
   serviceId: string;
 };
@@ -59,8 +64,8 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
     }
   };
 
-  const imageUrl =
-    service.images?.[0] || 'https://via.placeholder.com/500x500.png?text=No+Image';
+  const firstImageUrl =
+    service.images?.find(isImageUrl) || 'https://via.placeholder.com/500x500.png?text=No+Image';
 
   return (
     <div className="bg-gray-50/50">
@@ -69,7 +74,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
           {/* Service Image */}
           <div className="aspect-square relative w-full rounded-lg overflow-hidden shadow-lg">
             <Image
-              src={imageUrl}
+              src={firstImageUrl}
               alt={service.name}
               fill
               className="object-cover"

@@ -42,6 +42,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Service } from '@/service/services/types';
 
+const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+}
+
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
   const date = new Date(dateString);
@@ -152,6 +157,7 @@ export default function ServicesDashboard() {
                         aria-label="Select all rows"
                       />
                     </TableHead>
+                    <TableHead className="w-[80px]">Image</TableHead>
                     <TableHead>Name</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Pricing Model</TableHead>
@@ -163,21 +169,23 @@ export default function ServicesDashboard() {
                 <TableBody className="block md:table-row-group">
                   {isLoading ? (
                     <TableRow>
-                      <TableCell colSpan={7} className="h-24 text-center">
+                      <TableCell colSpan={8} className="h-24 text-center">
                         Loading services...
                       </TableCell>
                     </TableRow>
                   ) : isError ? (
                     <TableRow>
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center text-red-500"
                       >
                         Error loading services: {error.message}
                       </TableCell>
                     </TableRow>
                   ) : services.length > 0 ? (
-                    services.map(service => (
+                    services.map(service => {
+                      const firstImageUrl = service.images?.find(isImageUrl);
+                      return (
                       <TableRow
                         key={service.id}
                         className="mobile-table-card md:table-row"
@@ -193,6 +201,24 @@ export default function ServicesDashboard() {
                             }
                             aria-label={`Select row for ${service.name}`}
                           />
+                        </TableCell>
+                        <TableCell
+                            data-label="Image"
+                            className="mobile-table-cell md:table-cell"
+                        >
+                            <Link href={`/services/${service.id}`} passHref>
+                                <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
+                                    {firstImageUrl ? (
+                                        <img
+                                            src={firstImageUrl}
+                                            alt={service.name}
+                                            className="w-full h-full object-cover rounded-md"
+                                        />
+                                    ) : (
+                                        <div className="w-8 h-8 text-gray-400" />
+                                    )}
+                                </div>
+                            </Link>
                         </TableCell>
                         <TableCell
                           data-label="Name"
@@ -286,11 +312,11 @@ export default function ServicesDashboard() {
                           </DropdownMenu>
                         </TableCell>
                       </TableRow>
-                    ))
+                    )})
                   ) : (
                     <TableRow className="block md:table-row">
                       <TableCell
-                        colSpan={7}
+                        colSpan={8}
                         className="h-24 text-center block md:table-cell"
                       >
                         No services found.
