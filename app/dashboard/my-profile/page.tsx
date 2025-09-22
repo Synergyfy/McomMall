@@ -244,6 +244,7 @@ const MyProfilePage: NextPage = () => {
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -363,13 +364,16 @@ const MyProfilePage: NextPage = () => {
 
     let profilePictureUrl: string | undefined = undefined;
     if (avatarFile) {
+      setIsUploading(true);
       try {
         const { secure_url } = await uploadFile(avatarFile);
         profilePictureUrl = secure_url;
       } catch (error) {
         toast.error('Failed to upload image. Please try again.');
+        setIsUploading(false);
         return;
       }
+      setIsUploading(false);
     }
 
     const { ...socialsToUpdate } = socials;
@@ -528,9 +532,11 @@ const MyProfilePage: NextPage = () => {
                 <button
                   type="submit"
                   className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                  disabled={updateUserMutation.isPending}
+                  disabled={updateUserMutation.isPending || isUploading}
                 >
-                  {updateUserMutation.isPending
+                  {isUploading
+                    ? 'Uploading...'
+                    : updateUserMutation.isPending
                     ? 'Saving...'
                     : 'Save Changes'}
                 </button>
