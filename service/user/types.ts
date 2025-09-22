@@ -14,12 +14,14 @@ export interface User {
   phoneNumber?: string;
   isActive: boolean;
   isEmailVerified: boolean;
-  role: string;
+  role:string;
   socials: Socials;
+  profilePictureUrl?: string;
 }
 
 export interface UpdateUserDto {
   name?: string;
   phoneNumber?: string;
   socials?: Partial<Omit<Socials, 'id'>>;
+  profilePictureUrl?: string;
 }

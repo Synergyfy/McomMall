@@ -19,6 +19,7 @@ import {
 } from '../../../service/user/hook';
 import { User, Socials } from '../../../service/user/types';
 import { toast } from 'sonner';
+import { uploadFile } from '../../../lib/upload';
 
 type SocialPlatform =
   | 'twitter'
@@ -46,6 +47,7 @@ type ProfileErrors = {
   phoneNumber?: string;
   email?: string;
   socials?: { [key in SocialPlatform]?: string };
+  avatar?: string;
 };
 
 type PasswordErrors = {
@@ -241,6 +243,7 @@ const MyProfilePage: NextPage = () => {
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
 
   useEffect(() => {
     if (user) {
@@ -251,7 +254,8 @@ const MyProfilePage: NextPage = () => {
       });
       setSocials(user.socials || {});
       setAvatarPreview(
-        user.avatarUrl || 'https://placehold.co/150x150/EFEFEF/333333?text=User'
+        user.profilePictureUrl ||
+          'https://placehold.co/150x150/EFEFEF/333333?text=User'
       );
     }
   }, [user]);
@@ -277,13 +281,33 @@ const MyProfilePage: NextPage = () => {
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setProfileErrors(prev => ({
+          ...prev,
+          avatar: 'Invalid file type. Only images are allowed.',
+        }));
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        setProfileErrors(prev => ({
+          ...prev,
+          avatar: 'File size exceeds the 5MB limit.',
+        }));
+        return;
+      }
+
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      setProfileErrors(prev => ({ ...prev, avatar: undefined }));
     }
   };
 
@@ -330,11 +354,22 @@ const MyProfilePage: NextPage = () => {
     return Object.keys(errors).length === 0;
   };
 
-  const handleProfileSubmit = (e: FormEvent): void => {
+  const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
     if (!validateProfile()) {
       toast.error('Please correct the errors before submitting.');
       return;
+    }
+
+    let profilePictureUrl: string | undefined = undefined;
+    if (avatarFile) {
+      try {
+        const { secure_url } = await uploadFile(avatarFile);
+        profilePictureUrl = secure_url;
+      } catch (error) {
+        toast.error('Failed to upload image. Please try again.');
+        return;
+      }
     }
 
     const { ...socialsToUpdate } = socials;
@@ -343,10 +378,12 @@ const MyProfilePage: NextPage = () => {
         name: profile.name,
         phoneNumber: profile.phoneNumber,
         socials: socialsToUpdate,
+        profilePictureUrl,
       },
       {
         onSuccess: () => {
           toast.success('Profile updated successfully!');
+          setAvatarFile(null);
         },
         onError: (error) => {
           toast.error(`Failed to update profile: ${error.message}`);
@@ -428,11 +465,19 @@ const MyProfilePage: NextPage = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setAvatarPreview(null)}
+                    onClick={() => {
+                      setAvatarPreview(null);
+                      setAvatarFile(null);
+                    }}
                     className="text-sm text-red-600 hover:underline dark:text-red-500"
                   >
                     Remove file
                   </button>
+                  {profileErrors.avatar && (
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {profileErrors.avatar}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-6 md:col-span-2">
                   <InputField

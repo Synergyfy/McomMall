@@ -23,6 +23,22 @@ export async function POST(req: NextRequest) {
       return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
     }
 
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      return NextResponse.json(
+        { error: 'Invalid file type. Only images are allowed.' },
+        { status: 400 }
+      );
+    }
+
+    // Validate file size (5MB limit)
+    if (file.size > 5 * 1024 * 1024) {
+      return NextResponse.json(
+        { error: 'File size exceeds the 5MB limit.' },
+        { status: 400 }
+      );
+    }
+
     const buffer = Buffer.from(await file.arrayBuffer());
     const readableStream = new Readable();
     readableStream.push(buffer);
@@ -30,7 +46,7 @@ export async function POST(req: NextRequest) {
 
     const result = await new Promise((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder: 'listings', resource_type: 'auto' },
+        { folder: 'profile-pictures', resource_type: 'image' },
         (error, result) => {
           if (result) {
             resolve(result);
