@@ -316,6 +316,11 @@ const MyProfilePage: NextPage = () => {
     const newErrors: ProfileErrors = {};
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
+    // Validate name if it exists
+    if (profile.name && profile.name.trim().length < 2) {
+      newErrors.name = 'Full name must be at least 2 characters long.';
+    }
+
     // Validate phone number if it exists
     if (
       profile.phoneNumber &&
@@ -355,11 +360,25 @@ const MyProfilePage: NextPage = () => {
 
   const validatePasswords = (): boolean => {
     const errors: PasswordErrors = {};
-    if (!passwords.current) errors.current = 'Current password is required.';
-    if (passwords.new.length > 0 && passwords.new.length < 12)
-      errors.new = 'New password must be at least 12 characters long.';
-    if (passwords.new !== passwords.confirm)
-      errors.confirm = 'Passwords do not match.';
+    const { current, new: newPass, confirm } = passwords;
+
+    // Only validate if user starts filling any of the password fields
+    if (current || newPass || confirm) {
+      if (!current) {
+        errors.current = 'Current password is required to change password.';
+      }
+      if (!newPass) {
+        errors.new = 'New password is required.';
+      } else if (newPass.length < 12) {
+        errors.new = 'New password must be at least 12 characters long.';
+      }
+      if (!confirm) {
+        errors.confirm = 'Please confirm your new password.';
+      } else if (newPass && newPass !== confirm) {
+        errors.confirm = 'Passwords do not match.';
+      }
+    }
+
     setPasswordErrors(errors);
     return Object.keys(errors).length === 0;
   };
