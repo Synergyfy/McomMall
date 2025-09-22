@@ -39,6 +39,9 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
+import { formatDistanceToNow } from 'date-fns';
+import { useRecentActivities } from '@/service/activities/hook';
+import { Activity } from '@/service/activities/types';
 // 1. --- TYPE DEFINITIONS ---
 // Ensures all data structures are strongly typed.
 
@@ -47,13 +50,6 @@ interface StatCardProps {
   value: number | string;
   icon: React.ReactNode;
   color: string;
-}
-
-interface Activity {
-  id: number;
-  type: 'io' | 'test' | 'MR' | 'rer';
-  description: string;
-  timestamp: string;
 }
 
 interface ListingPackage {
@@ -67,33 +63,6 @@ interface ChartData {
 }
 
 import { useGetOrderStats } from '@/service/store/orders/hook';
-
-const recentActivities: Activity[] = [
-  {
-    id: 1,
-    type: 'io',
-    description: 'Listing io was created',
-    timestamp: '12 hours ago',
-  },
-  {
-    id: 2,
-    type: 'rer',
-    description: 'Listing Maxime voluptate rer was created',
-    timestamp: '12 hours ago',
-  },
-  {
-    id: 3,
-    type: 'test',
-    description: 'Listing test was created',
-    timestamp: '3 days ago',
-  },
-  {
-    id: 4,
-    type: 'MR',
-    description: 'Listing MR was created',
-    timestamp: '3 days ago',
-  },
-];
 
 const listingPackage: ListingPackage = {
   name: 'Basic',
@@ -128,7 +97,10 @@ const StatCard: FC<StatCardProps> = ({ title, value, icon, color }) => (
   </Card>
 );
 
-const RecentActivities: FC<{ activities: Activity[] }> = ({ activities }) => (
+const RecentActivities: FC<{
+  activities: Activity[] | undefined;
+  isLoading: boolean;
+}> = ({ activities, isLoading }) => (
   <Card className="shadow-sm">
     <CardHeader className="flex flex-row items-center justify-between">
       <CardTitle className="text-lg font-semibold">Recent Activities</CardTitle>
@@ -137,21 +109,24 @@ const RecentActivities: FC<{ activities: Activity[] }> = ({ activities }) => (
       </Button>
     </CardHeader>
     <CardContent>
-      <ul className="space-y-4">
-        {activities.map(activity => (
-          <li key={activity.id} className="flex items-center space-x-4">
-            <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-              <span className="font-bold text-gray-500">
-                {activity.type.toUpperCase()}
-              </span>
-            </div>
-            <div className="flex-grow">
-              <p className="text-sm text-gray-800">{activity.description}</p>
-              <p className="text-xs text-gray-400">{activity.timestamp}</p>
-            </div>
-          </li>
-        ))}
-      </ul>
+      {isLoading ? (
+        <p>Loading activities...</p>
+      ) : (
+        <ul className="space-y-4">
+          {activities?.map((activity, index) => (
+            <li key={index} className="flex items-center space-x-4">
+              <div className="flex-grow">
+                <p className="text-sm text-gray-800">{activity.message}</p>
+                <p className="text-xs text-gray-400">
+                  {formatDistanceToNow(new Date(activity.date), {
+                    addSuffix: true,
+                  })}
+                </p>
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
     </CardContent>
   </Card>
 );
@@ -235,6 +210,10 @@ const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
 const DashboardPage: FC = () => {
   const { data: orderStats, isLoading } = useGetOrderStats();
   const { userName } = useSelector((state: RootState) => state.auth);
+  const {
+    data: activities,
+    isLoading: isLoadingActivities,
+  } = useRecentActivities();
 
   const stats: StatCardProps[] = isLoading
     ? [
@@ -327,7 +306,10 @@ const DashboardPage: FC = () => {
         <section className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
           {/* Left Column */}
           <div className="lg:col-span-1 space-y-8">
-            <RecentActivities activities={recentActivities} />
+            <RecentActivities
+              activities={activities}
+              isLoading={isLoadingActivities}
+            />
           </div>
 
           {/* Right Column */}
