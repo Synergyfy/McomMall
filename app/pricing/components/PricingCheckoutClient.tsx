@@ -88,9 +88,14 @@ export default function PricingCheckoutClient({
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
+      const amountForRecord =
+        paymentMethod === PaymentMethod.STRIPE
+          ? Math.round(totalPrice * 100)
+          : totalPrice;
+
       recordPayment(
         {
-          amount: totalPrice,
+          amount: amountForRecord,
           planType: isPayg ? PlanType.PAYG : PlanType.CO_BRANDED,
           paygOption: isPayg ? getPaygOption(planName) : undefined,
           isTrial,
