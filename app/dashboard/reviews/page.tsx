@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Star, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Star } from 'lucide-react';
 import Image from 'next/image';
 import {
   useGetReviewsForUser,
@@ -38,11 +38,9 @@ const ReviewCard: React.FC<{ review: Review; isBusinessOwnerView: boolean }> = (
   };
 
   const name = isBusinessOwnerView
-    ? review.author?.name || 'Anonymous'
+    ? 'A customer'
     : review.business?.name || 'Unknown Business';
-  const avatar = isBusinessOwnerView
-    ? review.author?.avatarUrl || '/default-avatar.png'
-    : review.business?.logo || '/default-business-logo.png';
+  const avatar = review.business?.logo || '/default-business-logo.png';
 
   return (
     <motion.div
@@ -86,14 +84,6 @@ const ReviewCard: React.FC<{ review: Review; isBusinessOwnerView: boolean }> = (
           <div className="mt-4">
             <p className="text-sm text-gray-600">{review.comment}</p>
           </div>
-          <div className="mt-4 flex items-center justify-start gap-4">
-            <button className="flex items-center gap-1 text-xs text-gray-500 hover:text-green-600">
-              <ThumbsUp className="h-4 w-4" /> Helpful
-            </button>
-            <button className="flex items-center gap-1 text-xs text-gray-500 hover:text-red-600">
-              <ThumbsDown className="h-4 w-4" /> Not Helpful
-            </button>
-          </div>
         </div>
       </div>
     </motion.div>
@@ -104,7 +94,7 @@ const ReviewCard: React.FC<{ review: Review; isBusinessOwnerView: boolean }> = (
 
 export default function ReviewsPage() {
   const { user } = useAuth();
-  const isBusinessOwner = user?.role === 'owner';
+  const isBusinessOwner = user?.role?.toLowerCase() === 'owner';
 
   const [showMyReviews, setShowMyReviews] = useState(false);
   const [selectedBusiness, setSelectedBusiness] = useState<string | undefined>(
