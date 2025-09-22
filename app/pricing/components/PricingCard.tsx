@@ -10,31 +10,30 @@ import {
 import { Button } from '@/components/ui/button';
 import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingTier } from '../types/index';
-import { PaymentGatewayDialog } from '@/components/PaymentGatewayDialog';
 
 interface PricingCardProps {
   tier: PricingTier & { accent: 'teal' | 'purple' | 'yellow' };
   isPayg?: boolean;
   listingId: string | null;
+  onPayNow: (tier: PricingTier) => void;
+  onStartTrial: (tier: PricingTier) => void;
 }
 
 export default function PricingCard({
   tier,
   isPayg,
   listingId,
+  onPayNow,
+  onStartTrial,
 }: PricingCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isTrial, setIsTrial] = useState(false);
 
   const handlePayNow = () => {
-    setIsTrial(false);
-    setIsDialogOpen(true);
+    onPayNow(tier);
   };
 
   const handleStartTrial = () => {
-    setIsTrial(true);
-    setIsDialogOpen(true);
+    onStartTrial(tier);
   };
 
   const accentClasses = {
@@ -175,15 +174,6 @@ export default function PricingCard({
           )}
         </CardContent>
       </Card>
-      <PaymentGatewayDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        planName={tier.name}
-        planPrice={tier.price}
-        listingId={listingId}
-        isTrial={isTrial}
-        isPayg={isPayg}
-      />
     </motion.div>
   );
 }

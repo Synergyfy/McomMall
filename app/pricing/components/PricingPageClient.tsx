@@ -7,11 +7,37 @@ import PricingNav from './PricingNav';
 import PayAsYouGoContent from './PayAsYouGoContent';
 import CoBrandedContent from './CoBrandedContent';
 import MobilePricingPage from './MobilePricingPage';
+import PricingCheckoutClient from './PricingCheckoutClient';
+import { PricingTier } from '../types';
 
 export default function PricingPageClient() {
   const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
+  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+  const [isTrial, setIsTrial] = useState(false);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
+
+  const handlePayNow = (tier: PricingTier) => {
+    setSelectedTier(tier);
+    setIsTrial(false);
+  };
+
+  const handleStartTrial = (tier: PricingTier) => {
+    setSelectedTier(tier);
+    setIsTrial(true);
+  };
+
+  if (selectedTier) {
+    return (
+      <PricingCheckoutClient
+        planName={selectedTier.name}
+        planPrice={selectedTier.price}
+        isTrial={isTrial}
+        isPayg={activeView === 'payg'}
+        listingId={listingId}
+      />
+    );
+  }
 
   return (
     <div className="h-full p-4 md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
@@ -49,7 +75,11 @@ export default function PricingPageClient() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 >
-                  <PayAsYouGoContent listingId={listingId} />
+                  <PayAsYouGoContent
+                    listingId={listingId}
+                    onPayNow={handlePayNow}
+                    onStartTrial={handleStartTrial}
+                  />
                 </motion.div>
               ) : (
                 <motion.div
@@ -59,7 +89,11 @@ export default function PricingPageClient() {
                   exit={{ opacity: 0, y: -20 }}
                   transition={{ duration: 0.5, ease: 'easeOut' }}
                 >
-                  <CoBrandedContent listingId={listingId} />
+                  <CoBrandedContent
+                    listingId={listingId}
+                    onPayNow={handlePayNow}
+                    onStartTrial={handleStartTrial}
+                  />
                 </motion.div>
               )}
             </AnimatePresence>

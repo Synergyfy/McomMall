@@ -19,6 +19,7 @@ import {
 } from '../../../service/user/hook';
 import { User, Socials } from '../../../service/user/types';
 import { toast } from 'sonner';
+import { uploadFile } from '../../../lib/upload';
 
 type SocialPlatform =
   | 'twitter'
@@ -46,6 +47,7 @@ type ProfileErrors = {
   phoneNumber?: string;
   email?: string;
   socials?: { [key in SocialPlatform]?: string };
+  avatar?: string;
 };
 
 type PasswordErrors = {
@@ -231,7 +233,9 @@ const MyProfilePage: NextPage = () => {
   const updateUserMutation = useUpdateUserProfile();
 
   const [profile, setProfile] = useState<Partial<User>>({});
+  const [initialProfile, setInitialProfile] = useState<Partial<User>>({});
   const [socials, setSocials] = useState<Partial<Socials>>({});
+  const [initialSocials, setInitialSocials] = useState<Partial<Socials>>({});
   const [passwords, setPasswords] = useState<PasswordFields>({
     current: '',
     new: '',
@@ -241,18 +245,26 @@ const MyProfilePage: NextPage = () => {
   const [profileErrors, setProfileErrors] = useState<ProfileErrors>({});
   const [passwordErrors, setPasswordErrors] = useState<PasswordErrors>({});
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
+  const [avatarFile, setAvatarFile] = useState<File | null>(null);
+  const [isUploading, setIsUploading] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
-      setProfile({
+      const initialProfileData = {
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
-      });
-      setSocials(user.socials || {});
+      };
+      const initialSocialsData = user.socials || {};
+
+      setProfile(initialProfileData);
+      setInitialProfile(initialProfileData);
+      setSocials(initialSocialsData);
+      setInitialSocials(initialSocialsData);
       setAvatarPreview(
-        'https://placehold.co/150x150/EFEFEF/333333?text=User'
-      ); // Assuming no avatar URL from API
+        user.profilePictureUrl ||
+          'https://placehold.co/150x150/EFEFEF/333333?text=User'
+      );
     }
   }, [user]);
 
@@ -277,76 +289,151 @@ const MyProfilePage: NextPage = () => {
   };
 
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    if (e.target.files && e.target.files[0]) {
-      const file = e.target.files[0];
+    const file = e.target.files?.[0];
+    if (file) {
+      // Validate file type
+      if (!file.type.startsWith('image/')) {
+        setProfileErrors(prev => ({
+          ...prev,
+          avatar: 'Invalid file type. Only images are allowed.',
+        }));
+        return;
+      }
+
+      // Validate file size (5MB limit)
+      if (file.size > 5 * 1024 * 1024) {
+        setProfileErrors(prev => ({
+          ...prev,
+          avatar: 'File size exceeds the 5MB limit.',
+        }));
+        return;
+      }
+
+      setAvatarFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
       };
       reader.readAsDataURL(file);
+      setProfileErrors(prev => ({ ...prev, avatar: undefined }));
     }
-  };
-
-  const validateProfile = (): boolean => {
-    const errors: ProfileErrors = { socials: {} };
-    const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
-
-    if (!profile.name?.trim()) errors.name = 'Name is required.';
-
-    if (
-      profile.phoneNumber &&
-      !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
-    ) {
-      errors.phoneNumber = 'Please enter a valid phone number.';
-    }
-
-    if (profile.email && !/\S+@\S+\.\S+/.test(profile.email)) {
-      errors.email = 'Please enter a valid email address.';
-    }
-
-    for (const [platform, url] of Object.entries(socials)) {
-      if (url && !urlRegex.test(url as string)) {
-        if (!errors.socials) errors.socials = {};
-        errors.socials[platform as SocialPlatform] =
-          'Please enter a valid URL.';
-      }
-    }
-
-    setProfileErrors(errors);
-    return (
-      Object.keys(errors).length === 1 &&
-      Object.keys(errors.socials || {}).length === 0
-    );
   };
 
   const validatePasswords = (): boolean => {
     const errors: PasswordErrors = {};
-    if (!passwords.current) errors.current = 'Current password is required.';
-    if (passwords.new.length > 0 && passwords.new.length < 12)
-      errors.new = 'New password must be at least 12 characters long.';
-    if (passwords.new !== passwords.confirm)
-      errors.confirm = 'Passwords do not match.';
+    const { current, new: newPass, confirm } = passwords;
+
+    // Only validate if user starts filling any of the password fields
+    if (current || newPass || confirm) {
+      if (!current) {
+        errors.current = 'Current password is required to change password.';
+      }
+      if (!newPass) {
+        errors.new = 'New password is required.';
+      } else if (newPass.length < 12) {
+        errors.new = 'New password must be at least 12 characters long.';
+      }
+      if (!confirm) {
+        errors.confirm = 'Please confirm your new password.';
+      } else if (newPass && newPass !== confirm) {
+        errors.confirm = 'Passwords do not match.';
+      }
+    }
+
     setPasswordErrors(errors);
     return Object.keys(errors).length === 0;
   };
 
-  const handleProfileSubmit = (e: FormEvent): void => {
+  const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
-    if (!validateProfile()) {
+    setProfileErrors({}); // Clear previous errors
+
+    const profileHasChanged =
+      JSON.stringify(profile) !== JSON.stringify(initialProfile);
+    const socialsHaveChanged =
+      JSON.stringify(socials) !== JSON.stringify(initialSocials);
+    const avatarHasChanged = avatarFile !== null;
+
+    if (!profileHasChanged && !socialsHaveChanged && !avatarHasChanged) {
+      toast.info('No changes to save.');
+      return;
+    }
+
+    const newErrors: ProfileErrors = {};
+    const urlRegex =
+      /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
+
+    // Validate only changed fields
+    if (profile.name !== initialProfile.name) {
+      if (profile.name && profile.name.trim().length < 2) {
+        newErrors.name = 'Full name must be at least 2 characters long.';
+      }
+    }
+
+    if (profile.phoneNumber !== initialProfile.phoneNumber) {
+      if (
+        profile.phoneNumber &&
+        !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
+      ) {
+        newErrors.phoneNumber = 'Please enter a valid phone number.';
+      }
+    }
+
+    const socialErrors: { [key in SocialPlatform]?: string } = {};
+    for (const platform of Object.keys(socials) as SocialPlatform[]) {
+      if (socials[platform] !== initialSocials[platform]) {
+        if (socials[platform] && !urlRegex.test(socials[platform] as string)) {
+          socialErrors[platform] = 'Please enter a valid URL.';
+        }
+      }
+    }
+    if (Object.keys(socialErrors).length > 0) {
+      newErrors.socials = socialErrors;
+    }
+
+    if (avatarFile) {
+      if (!avatarFile.type.startsWith('image/')) {
+        newErrors.avatar = 'Invalid file type. Only images are allowed.';
+      } else if (avatarFile.size > 5 * 1024 * 1024) {
+        newErrors.avatar = 'File size exceeds the 5MB limit.';
+      }
+    }
+
+    if (Object.keys(newErrors).length > 0) {
+      setProfileErrors(newErrors);
       toast.error('Please correct the errors before submitting.');
       return;
     }
 
+    let profilePictureUrl: string | undefined = undefined;
+    if (avatarFile) {
+      setIsUploading(true);
+      try {
+        const { secure_url } = await uploadFile(avatarFile);
+        profilePictureUrl = secure_url;
+      } catch (error) {
+        toast.error('Failed to upload image. Please try again.');
+        setIsUploading(false);
+        return;
+      }
+      setIsUploading(false);
+    }
+
     const { ...socialsToUpdate } = socials;
+    if (!user) return;
+
     updateUserMutation.mutate(
       {
+        id: user.id,
         name: profile.name,
         phoneNumber: profile.phoneNumber,
         socials: socialsToUpdate,
+        profilePictureUrl,
       },
       {
         onSuccess: () => {
           toast.success('Profile updated successfully!');
+          setAvatarFile(null);
         },
         onError: (error) => {
           toast.error(`Failed to update profile: ${error.message}`);
@@ -428,11 +515,19 @@ const MyProfilePage: NextPage = () => {
                   </div>
                   <button
                     type="button"
-                    onClick={() => setAvatarPreview(null)}
+                    onClick={() => {
+                      setAvatarPreview(null);
+                      setAvatarFile(null);
+                    }}
                     className="text-sm text-red-600 hover:underline dark:text-red-500"
                   >
                     Remove file
                   </button>
+                  {profileErrors.avatar && (
+                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                      {profileErrors.avatar}
+                    </p>
+                  )}
                 </div>
                 <div className="space-y-6 md:col-span-2">
                   <InputField
@@ -480,9 +575,11 @@ const MyProfilePage: NextPage = () => {
                 <button
                   type="submit"
                   className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                  disabled={updateUserMutation.isPending}
+                  disabled={updateUserMutation.isPending || isUploading}
                 >
-                  {updateUserMutation.isPending
+                  {isUploading
+                    ? 'Uploading...'
+                    : updateUserMutation.isPending
                     ? 'Saving...'
                     : 'Save Changes'}
                 </button>

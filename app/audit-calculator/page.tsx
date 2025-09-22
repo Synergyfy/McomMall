@@ -6,6 +6,7 @@ import {
   Calculator as CalculatorIcon,
   HelpCircle,
   Info,
+  Mail,
 } from 'lucide-react';
 
 import { industries, Industry, InputField } from './calculator-data';
@@ -65,6 +66,8 @@ const AuditCalculatorPage: FC = () => {
       setResult(null);
     }
   };
+
+  const [email, setEmail] = useState('');
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -227,6 +230,25 @@ const AuditCalculatorPage: FC = () => {
                     {selectedIndustry.fields.map(renderInputField)}
                   </motion.div>
                 </AnimatePresence>
+              </div>
+              <div>
+                <h3 className="text-2xl font-semibold text-gray-200 mb-4">
+                  3. Enter Your Email
+                </h3>
+                <div className="relative">
+                  <div className="pointer-events-none absolute inset-y-0 left-0 flex items-center pl-3">
+                    <Mail className="w-5 h-5 text-gray-500" />
+                  </div>
+                  <Input
+                    type="email"
+                    name="email"
+                    id="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    placeholder="your@email.com"
+                    className="pl-10 bg-gray-900 border-gray-600 focus-visible:ring-orange-500 text-lg"
+                  />
+                </div>
               </div>
             </CardContent>
             <CardFooter>

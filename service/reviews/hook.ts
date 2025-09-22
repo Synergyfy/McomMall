@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { Review, CreateReviewPayload } from './types';
+import { Review, CreateReviewPayload, PaginatedReviews } from './types';
 import { useAuth } from '../auth/hook';
 
 // Get all reviews for a business
@@ -29,6 +29,28 @@ export const useGetReviewsForUser = () => {
       return data;
     },
     enabled: !!userId,
+  });
+};
+
+// Get all reviews for a business owner
+export const useGetReviewsForBusinessOwner = (businessId?: string) => {
+  const { user } = useAuth();
+  const queryKey = businessId
+    ? ['reviews', 'business-owner', user?.id, businessId]
+    : ['reviews', 'business-owner', user?.id];
+
+  return useQuery<PaginatedReviews, Error>({
+    queryKey,
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedReviews>(
+        `/reviews/business-owner`,
+        {
+          params: { businessId },
+        }
+      );
+      return data;
+    },
+    enabled: !!user,
   });
 };
 

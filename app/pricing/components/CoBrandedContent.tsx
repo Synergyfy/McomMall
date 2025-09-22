@@ -6,7 +6,6 @@ import { PricingTier, TableFeature, FeatureGroup } from '../types/index';
 import { ShieldCheck, LayoutDashboard, Rocket, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { CardFooter } from '@/components/ui/card';
-import { PaymentGatewayDialog } from '@/components/PaymentGatewayDialog';
 import { coBrandedTiers } from '../data/pricingData';
 
 const coBrandedPlans = ['Standard', 'Pro', 'Pro Plus'];
@@ -179,22 +178,15 @@ const coBrandedFeatureGroups: FeatureGroup[] = [
 
 interface CoBrandedContentProps {
   listingId: string | null;
+  onPayNow: (tier: PricingTier) => void;
+  onStartTrial: (tier: PricingTier) => void;
 }
 
-export default function CoBrandedContent({ listingId }: CoBrandedContentProps) {
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [isTrial, setIsTrial] = useState(false);
-
-  const handlePayNow = () => {
-    setIsTrial(false);
-    setIsDialogOpen(true);
-  };
-
-  const handleStartTrial = () => {
-    setIsTrial(true);
-    setIsDialogOpen(true);
-  };
-
+export default function CoBrandedContent({
+  listingId,
+  onPayNow,
+  onStartTrial,
+}: CoBrandedContentProps) {
   return (
     <>
       <motion.div
@@ -304,13 +296,25 @@ export default function CoBrandedContent({ listingId }: CoBrandedContentProps) {
             {/* Action Buttons */}
             <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-8">
               <Button
-                onClick={handlePayNow}
+                onClick={() =>
+                  onPayNow({
+                    name: 'Co-Branded Launchpad',
+                    price: '£365',
+                    primaryFeatures: [],
+                  })
+                }
                 className="w-full sm:w-1/2 md:w-1/4 text-white bg-orange-600 hover:bg-orange-700"
               >
                 Pay Now
               </Button>
               <Button
-                onClick={handleStartTrial}
+                onClick={() =>
+                  onStartTrial({
+                    name: 'Co-Branded Launchpad',
+                    price: '£365',
+                    primaryFeatures: [],
+                  })
+                }
                 className="w-full sm:w-1/2 md:w-1/4 border bg-white text-orange-600 border-orange-600 hover:border-orange-700 hover:bg-white"
               >
                 Start Trial
@@ -335,6 +339,8 @@ export default function CoBrandedContent({ listingId }: CoBrandedContentProps) {
                 }
                 isPayg={false}
                 listingId={listingId}
+                onPayNow={onPayNow}
+                onStartTrial={onStartTrial}
               />
             </motion.div>
           ))}
@@ -345,14 +351,6 @@ export default function CoBrandedContent({ listingId }: CoBrandedContentProps) {
           accentHeaders={['blue-900', 'orange-800', 'black-500']}
         />
       </motion.div>
-      <PaymentGatewayDialog
-        isOpen={isDialogOpen}
-        onClose={() => setIsDialogOpen(false)}
-        planName="Co-Branded Launchpad"
-        planPrice="£365"
-        listingId={listingId}
-        isTrial={isTrial}
-      />
     </>
   );
 }

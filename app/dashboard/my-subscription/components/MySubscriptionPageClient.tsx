@@ -56,7 +56,11 @@ export default function MySubscriptionPageClient() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               >
-                <PayAsYouGoContent listingId={listingId} />
+                <PayAsYouGoContent
+                  listingId={listingId}
+                  onPayNow={() => {}}
+                  onStartTrial={() => {}}
+                />
               </motion.div>
             ) : (
               <motion.div
@@ -66,7 +70,11 @@ export default function MySubscriptionPageClient() {
                 exit={{ opacity: 0, y: -20 }}
                 transition={{ duration: 0.5, ease: 'easeOut' }}
               >
-                <CoBrandedContent listingId={listingId} />
+                <CoBrandedContent
+                  listingId={listingId}
+                  onPayNow={() => {}}
+                  onStartTrial={() => {}}
+                />
               </motion.div>
             )}
           </AnimatePresence>

@@ -10,6 +10,7 @@ const api = axios.create({
   },
 });
 
+// This function sets the bearer token for all subsequent API requests.
 export const setBearerToken = (token: string) => {
   api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 };

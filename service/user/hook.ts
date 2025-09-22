@@ -6,7 +6,7 @@ const USER_QUERY_KEY = 'my-user';
 
 // Fetch user profile
 const getUserProfile = async (): Promise<User> => {
-  const { data } = await api.get<User>('/users/myinfo');
+  const { data } = await api.get<User>('/users/me');
   return data;
 };
 
@@ -18,8 +18,13 @@ export const useGetUserProfile = () => {
 };
 
 // Update user profile
-const updateUserProfile = async (updateData: UpdateUserDto): Promise<User> => {
-  const { data } = await api.patch<User>('/users/myinfo', updateData);
+const updateUserProfile = async ({
+  id,
+  ...updateData
+}: {
+  id: string;
+} & UpdateUserDto): Promise<User> => {
+  const { data } = await api.patch<User>(`/users/${id}`, updateData);
   return data;
 };
 

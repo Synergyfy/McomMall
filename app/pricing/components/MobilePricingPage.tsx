@@ -11,7 +11,10 @@ interface MobilePricingPageProps {
   listingId: string | null;
 }
 
-const MobilePricingPage: React.FC<MobilePricingPageProps> = ({ activeView, listingId }) => {
+const MobilePricingPage: React.FC<MobilePricingPageProps> = ({
+  activeView,
+  listingId,
+}) => {
   const tiers = activeView === 'payg' ? paygTiers : coBrandedTiers;
 
   return (
@@ -26,9 +29,13 @@ const MobilePricingPage: React.FC<MobilePricingPageProps> = ({ activeView, listi
             transition={{ duration: 0.5, delay: index * 0.1 }}
           >
             <PricingCard
-              tier={tier as PricingTier & { accent: 'teal' | 'purple' | 'yellow' }}
+              tier={
+                tier as PricingTier & { accent: 'teal' | 'purple' | 'yellow' }
+              }
               isPayg={activeView === 'payg'}
               listingId={listingId}
+              onPayNow={() => {}}
+              onStartTrial={() => {}}
             />
           </motion.div>
         ))}
