@@ -251,8 +251,8 @@ const MyProfilePage: NextPage = () => {
       });
       setSocials(user.socials || {});
       setAvatarPreview(
-        'https://placehold.co/150x150/EFEFEF/333333?text=User'
-      ); // Assuming no avatar URL from API
+        user.avatarUrl || 'https://placehold.co/150x150/EFEFEF/333333?text=User'
+      );
     }
   }, [user]);
 
