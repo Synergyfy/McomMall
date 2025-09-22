@@ -313,33 +313,44 @@ const MyProfilePage: NextPage = () => {
   };
 
   const validateProfile = (): boolean => {
-    const errors: ProfileErrors = { socials: {} };
+    const newErrors: ProfileErrors = {};
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
+    // Validate phone number if it exists
     if (
       profile.phoneNumber &&
       !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
     ) {
-      errors.phoneNumber = 'Please enter a valid phone number.';
+      newErrors.phoneNumber = 'Please enter a valid phone number.';
     }
 
+    // Email is disabled, but let's keep validation just in case
     if (profile.email && !/\S+@\S+\.\S+/.test(profile.email)) {
-      errors.email = 'Please enter a valid email address.';
+      newErrors.email = 'Please enter a valid email address.';
     }
 
+    // Validate social links if they exist
+    const socialErrors: { [key in SocialPlatform]?: string } = {};
     for (const [platform, url] of Object.entries(socials)) {
       if (url && !urlRegex.test(url as string)) {
-        if (!errors.socials) errors.socials = {};
-        errors.socials[platform as SocialPlatform] =
-          'Please enter a valid URL.';
+        socialErrors[platform as SocialPlatform] = 'Please enter a valid URL.';
+      }
+    }
+    if (Object.keys(socialErrors).length > 0) {
+      newErrors.socials = socialErrors;
+    }
+
+    // Re-validate avatar on submit
+    if (avatarFile) {
+      if (!avatarFile.type.startsWith('image/')) {
+        newErrors.avatar = 'Invalid file type. Only images are allowed.';
+      } else if (avatarFile.size > 5 * 1024 * 1024) {
+        newErrors.avatar = 'File size exceeds the 5MB limit.';
       }
     }
 
-    setProfileErrors(errors);
-    return (
-      Object.keys(errors).length === 1 &&
-      Object.keys(errors.socials || {}).length === 0
-    );
+    setProfileErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
   };
 
   const validatePasswords = (): boolean => {
