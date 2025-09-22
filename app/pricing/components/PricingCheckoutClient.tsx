@@ -3,9 +3,12 @@
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
-import { loadStripe } from '@stripe/stripe-js';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useRecordPayment } from '@/service/payments/hook';
+import {
+  useRecordPayment,
+  useCreateStripeIntent,
+  useCreatePayPalOrder,
+} from '@/service/payments/hook';
 import {
   PaymentGateway,
   PlanType,
@@ -13,15 +16,9 @@ import {
 } from '@/service/payments/types';
 import SubscriptionSummary from './SubscriptionSummary';
 import PaymentForm from '@/app/checkout/components/PaymentForm';
-import CouponCodeInput from '@/app/checkout/components/CouponCodeInput';
-import ApplicableOffers from '@/app/checkout/components/ApplicableOffers';
-import { useValidateCoupon } from '@/service/coupons/hook';
-import {
-  useGetApplicableOffers,
-  useApplyOffer,
-} from '@/service/offers/hook';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
+import { loadStripe } from '@stripe/stripe-js';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -45,72 +42,46 @@ export default function PricingCheckoutClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const stripeRedirect = searchParams.get('stripe_redirect');
-  const clientSecret = searchParams.get('payment_intent_client_secret');
 
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [isCouponLoading, setCouponLoading] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
-  const [offerDiscount, setOfferDiscount] = useState(0);
-  const [isOfferLoading, setOfferLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    PaymentMethod.STRIPE
+  );
 
   const { mutate: recordPayment, isPending: isRecordingPayment } =
     useRecordPayment();
-  const validateCoupon = useValidateCoupon();
-  const applyOffer = useApplyOffer();
-
-  // For now, we'll assume no products are associated with plans
-  const productIds: string[] = [];
-
-  const { data: applicableOffers, isLoading: areOffersLoading } =
-    useGetApplicableOffers(productIds);
+  const {
+    mutateAsync: createStripeIntent,
+    data: stripeIntent,
+    isPending: isCreatingStripeIntent,
+  } = useCreateStripeIntent();
+  const {
+    mutateAsync: createPayPalOrder,
+    data: payPalOrder,
+    isPending: isCreatingPayPalOrder,
+  } = useCreatePayPalOrder();
 
   const getPriceAsNumber = (price: string) => {
     const numericPart = price.replace(/[^0-9.-]+/g, '');
     return parseFloat(numericPart);
   };
 
-  const basePrice = isTrial ? 1.0 : getPriceAsNumber(planPrice) + 1.0;
-  const totalPrice = basePrice - discount - offerDiscount;
+  const totalPrice = isTrial ? 1.0 : getPriceAsNumber(planPrice);
 
-  const handleApplyCoupon = async (code: string) => {
-    setCouponLoading(true);
-    try {
-      const result = await validateCoupon({
-        couponCode: code,
-        productIds,
-      });
-      setDiscount(result.discountAmount);
-      setCouponCode(code);
-      setOfferDiscount(0);
-      setSelectedOffer(null);
-    } catch (error) {
-      console.error('Failed to apply coupon', error);
-      alert('Invalid or inapplicable coupon');
-    } finally {
-      setCouponLoading(false);
+  useEffect(() => {
+    if (totalPrice > 0) {
+      if (paymentMethod === PaymentMethod.STRIPE) {
+        createStripeIntent({ amount: totalPrice });
+      } else {
+        createPayPalOrder({ amount: totalPrice });
+      }
     }
-  };
-
-  const handleApplyOffer = async (offerId: string) => {
-    setOfferLoading(true);
-    try {
-      const result = await applyOffer.mutateAsync({
-        offerId,
-        productIds,
-      });
-      setOfferDiscount(result.discountAmount);
-      setSelectedOffer(offerId);
-      setDiscount(0);
-      setCouponCode('');
-    } catch (error) {
-      console.error('Failed to apply offer', error);
-      alert('Failed to apply offer');
-    } finally {
-      setOfferLoading(false);
-    }
-  };
+  }, [
+    totalPrice,
+    paymentMethod,
+    createStripeIntent,
+    createPayPalOrder,
+  ]);
 
   const getPaygOption = (name: string): PaygOption | undefined => {
     if (name.includes('90')) return PaygOption.NINETY_DAYS;
@@ -131,28 +102,24 @@ export default function PricingCheckoutClient({
             paymentMethod === PaymentMethod.STRIPE
               ? PaymentGateway.STRIPE
               : PaymentGateway.PAYPAL,
+          transactionId,
+          currency: 'gbp',
         },
         {
           onSuccess: () => setSuccessModalOpen(true),
         }
       );
     },
-    [
-      totalPrice,
-      isPayg,
-      planName,
-      isTrial,
-      recordPayment,
-    ]
+    [totalPrice, isPayg, planName, isTrial, recordPayment]
   );
 
   useEffect(() => {
-    if (stripeRedirect && clientSecret) {
+    if (stripeRedirect && stripeIntent?.clientSecret) {
       const verifyPayment = async () => {
         const stripe = await stripePromise;
         if (!stripe) return;
         const { paymentIntent } = await stripe.retrievePaymentIntent(
-          clientSecret
+          stripeIntent.clientSecret
         );
         if (paymentIntent?.status === 'succeeded') {
           handlePaymentSuccess(paymentIntent.id, PaymentMethod.STRIPE);
@@ -160,9 +127,9 @@ export default function PricingCheckoutClient({
       };
       verifyPayment();
     }
-  }, [stripeRedirect, clientSecret, handlePaymentSuccess]);
+  }, [stripeRedirect, stripeIntent, handlePaymentSuccess]);
 
-  if (isRecordingPayment) {
+  if (isRecordingPayment || isCreatingStripeIntent || isCreatingPayPalOrder) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader className="animate-spin text-orange-600" size={48} />
@@ -187,27 +154,23 @@ export default function PricingCheckoutClient({
               planName={planName}
               planPrice={planPrice}
               isTrial={isTrial}
-              discount={discount + offerDiscount}
+              isPayg={isPayg}
+              paygOption={getPaygOption(planName)}
               totalPrice={totalPrice}
             />
-            <div className="mt-8">
-              <CouponCodeInput
-                onApply={handleApplyCoupon}
-                isLoading={isCouponLoading}
-              />
-              <ApplicableOffers
-                offers={applicableOffers || []}
-                onApply={handleApplyOffer}
-                isLoading={isOfferLoading || areOffersLoading}
-              />
-            </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-8">
             <PaymentForm
               totalPrice={totalPrice}
               onPaymentSuccess={(transactionId) =>
-                handlePaymentSuccess(transactionId, PaymentMethod.PAYPAL)
+                handlePaymentSuccess(
+                  transactionId,
+                  paymentMethod
+                )
               }
+              clientSecret={stripeIntent?.clientSecret}
+              orderID={payPalOrder?.id}
+              setPaymentMethod={setPaymentMethod}
             />
           </div>
         </div>
@@ -216,7 +179,7 @@ export default function PricingCheckoutClient({
         isOpen={isSuccessModalOpen}
         onClose={() => {
           setSuccessModalOpen(false);
-          router.push('/dashboard/my-listings');
+          router.push('/dashboard/my-subscription');
         }}
       />
     </>

@@ -8,7 +8,6 @@ import {
   useElements,
 } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
-import { useStripePayment } from '@/hooks/useStripePayment';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
 
@@ -30,7 +29,7 @@ function CheckoutForm() {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.href}&stripe_redirect=true`,
+        return_url: `${window.location.origin}/pricing?stripe_redirect=true`,
       },
     });
 
@@ -56,27 +55,10 @@ function CheckoutForm() {
 }
 
 export default function StripeCheckoutForm({
-  totalPrice,
+  clientSecret,
 }: {
-  totalPrice: number;
+  clientSecret: string;
 }) {
-  const {
-    mutate: createPaymentIntent,
-    data,
-    isPending,
-  } = useStripePayment();
-  const clientSecret = data?.clientSecret;
-
-  useEffect(() => {
-    if (totalPrice > 0) {
-      createPaymentIntent(totalPrice);
-    }
-  }, [totalPrice, createPaymentIntent]);
-
-  if (isPending) {
-    return <div>Loading payment form...</div>;
-  }
-
   if (!clientSecret) {
     return <div>Could not initialize payment.</div>;
   }

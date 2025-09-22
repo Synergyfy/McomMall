@@ -6,17 +6,31 @@ import { CreditCard, Wallet } from 'lucide-react';
 import StripeCheckoutForm from '@/components/StripeCheckoutForm';
 import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
 import { Button } from '@/components/ui/button';
+import { PaymentMethod } from '@/service/bookings/types';
 
 interface PaymentFormProps {
   totalPrice: number;
   onPaymentSuccess: (orderId: string) => void;
+  clientSecret?: string;
+  orderID?: string;
+  setPaymentMethod: (method: PaymentMethod) => void;
 }
 
 export default function PaymentForm({
   totalPrice,
   onPaymentSuccess,
+  clientSecret,
+  orderID,
+  setPaymentMethod,
 }: PaymentFormProps) {
-  const [paymentMethod, setPaymentMethod] = useState('stripe');
+  const [selectedMethod, setSelectedMethod] = useState<PaymentMethod>(
+    PaymentMethod.STRIPE
+  );
+
+  const handleMethodChange = (method: PaymentMethod) => {
+    setSelectedMethod(method);
+    setPaymentMethod(method);
+  };
 
   return (
     <motion.div
@@ -29,10 +43,12 @@ export default function PaymentForm({
       <div className="grid grid-cols-2 gap-4">
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
-            onClick={() => setPaymentMethod('stripe')}
-            variant={paymentMethod === 'stripe' ? 'default' : 'outline'}
+            onClick={() => handleMethodChange(PaymentMethod.STRIPE)}
+            variant={
+              selectedMethod === PaymentMethod.STRIPE ? 'default' : 'outline'
+            }
             className={`w-full h-20 text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
-              paymentMethod === 'stripe'
+              selectedMethod === PaymentMethod.STRIPE
                 ? 'bg-orange-600 text-white shadow-lg'
                 : 'bg-white'
             }`}
@@ -43,10 +59,12 @@ export default function PaymentForm({
         </motion.div>
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
-            onClick={() => setPaymentMethod('paypal')}
-            variant={paymentMethod === 'paypal' ? 'default' : 'outline'}
+            onClick={() => handleMethodChange(PaymentMethod.PAYPAL)}
+            variant={
+              selectedMethod === PaymentMethod.PAYPAL ? 'default' : 'outline'
+            }
             className={`w-full h-20 text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
-              paymentMethod === 'paypal'
+              selectedMethod === PaymentMethod.PAYPAL
                 ? 'bg-orange-600 text-white shadow-lg'
                 : 'bg-white'
             }`}
@@ -58,7 +76,7 @@ export default function PaymentForm({
       </div>
 
       <div className="mt-6">
-        {paymentMethod === 'stripe' && (
+        {selectedMethod === PaymentMethod.STRIPE && clientSecret && (
           <motion.div
             key="stripe"
             initial={{ opacity: 0, x: -20 }}
@@ -66,10 +84,10 @@ export default function PaymentForm({
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
-            <StripeCheckoutForm totalPrice={totalPrice} />
+            <StripeCheckoutForm clientSecret={clientSecret} />
           </motion.div>
         )}
-        {paymentMethod === 'paypal' && (
+        {selectedMethod === PaymentMethod.PAYPAL && orderID && (
           <motion.div
             key="paypal"
             initial={{ opacity: 0, x: -20 }}
@@ -78,7 +96,7 @@ export default function PaymentForm({
             transition={{ duration: 0.3 }}
           >
             <PayPalCheckoutButton
-              totalPrice={totalPrice}
+              orderID={orderID}
               onSuccess={onPaymentSuccess}
             />
           </motion.div>

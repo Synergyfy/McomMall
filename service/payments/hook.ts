@@ -38,6 +38,52 @@ export const useGetSubscriptionStatus = () => {
   return query;
 };
 
+export const useCreateStripeIntent = () => {
+  const create = async (payload: { amount: number }) => {
+    try {
+      const response = await api.post('/payments/stripe/create-intent', payload);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to create Stripe Payment Intent';
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: create,
+  });
+
+  return mutation;
+};
+
+export const useCreatePayPalOrder = () => {
+  const create = async (payload: { amount: number }) => {
+    try {
+      const response = await api.post('/payments/paypal/create-order', payload);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      const errorMessage =
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to create PayPal order';
+      toast.error(errorMessage);
+      throw new Error(errorMessage);
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: create,
+  });
+
+  return mutation;
+};
+
 export const useRecordPayment = () => {
   const create = async (payload: RecordPaymentDto) => {
     try {
