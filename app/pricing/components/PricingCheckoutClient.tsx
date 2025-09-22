@@ -133,6 +133,8 @@ export default function PricingCheckoutClient({
             paymentMethod === PaymentMethod.STRIPE
               ? PaymentGateway.STRIPE
               : PaymentGateway.PAYPAL,
+          transactionId,
+          currency: 'gbp',
         },
         {
           onSuccess: () => setSuccessModalOpen(true),

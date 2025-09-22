@@ -20,6 +20,8 @@ export interface RecordPaymentDto {
   paygOption?: PaygOption;
   isTrial: boolean;
   paymentGateway: PaymentGateway;
+  transactionId: string;
+  currency?: string;
 }
 
 export enum SubscriptionStatusEnum {
