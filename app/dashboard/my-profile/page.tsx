@@ -233,7 +233,9 @@ const MyProfilePage: NextPage = () => {
   const updateUserMutation = useUpdateUserProfile();
 
   const [profile, setProfile] = useState<Partial<User>>({});
+  const [initialProfile, setInitialProfile] = useState<Partial<User>>({});
   const [socials, setSocials] = useState<Partial<Socials>>({});
+  const [initialSocials, setInitialSocials] = useState<Partial<Socials>>({});
   const [passwords, setPasswords] = useState<PasswordFields>({
     current: '',
     new: '',
@@ -248,12 +250,17 @@ const MyProfilePage: NextPage = () => {
 
   useEffect(() => {
     if (user) {
-      setProfile({
+      const initialProfileData = {
         name: user.name,
         email: user.email,
         phoneNumber: user.phoneNumber,
-      });
-      setSocials(user.socials || {});
+      };
+      const initialSocialsData = user.socials || {};
+
+      setProfile(initialProfileData);
+      setInitialProfile(initialProfileData);
+      setSocials(initialSocialsData);
+      setInitialSocials(initialSocialsData);
       setAvatarPreview(
         user.profilePictureUrl ||
           'https://placehold.co/150x150/EFEFEF/333333?text=User'
@@ -385,6 +392,18 @@ const MyProfilePage: NextPage = () => {
 
   const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
+
+    const profileHasChanged =
+      JSON.stringify(profile) !== JSON.stringify(initialProfile);
+    const socialsHaveChanged =
+      JSON.stringify(socials) !== JSON.stringify(initialSocials);
+    const avatarHasChanged = avatarFile !== null;
+
+    if (!profileHasChanged && !socialsHaveChanged && !avatarHasChanged) {
+      toast.info('No changes to save.');
+      return;
+    }
+
     if (!validateProfile()) {
       toast.error('Please correct the errors before submitting.');
       return;
