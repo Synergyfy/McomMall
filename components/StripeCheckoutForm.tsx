@@ -30,7 +30,9 @@ function CheckoutForm() {
     const { error } = await stripe.confirmPayment({
       elements,
       confirmParams: {
-        return_url: `${window.location.href}&stripe_redirect=true`,
+        return_url: `${
+          window.location.origin
+        }/pricing?stripe_redirect=true`,
       },
     });
 

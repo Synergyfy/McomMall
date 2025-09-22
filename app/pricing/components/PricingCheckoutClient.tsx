@@ -13,13 +13,6 @@ import {
 } from '@/service/payments/types';
 import SubscriptionSummary from './SubscriptionSummary';
 import PaymentForm from '@/app/checkout/components/PaymentForm';
-import CouponCodeInput from '@/app/checkout/components/CouponCodeInput';
-import ApplicableOffers from '@/app/checkout/components/ApplicableOffers';
-import { useValidateCoupon } from '@/service/coupons/hook';
-import {
-  useGetApplicableOffers,
-  useApplyOffer,
-} from '@/service/offers/hook';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
 
@@ -48,69 +41,16 @@ export default function PricingCheckoutClient({
   const clientSecret = searchParams.get('payment_intent_client_secret');
 
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [isCouponLoading, setCouponLoading] = useState(false);
-  const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
-  const [offerDiscount, setOfferDiscount] = useState(0);
-  const [isOfferLoading, setOfferLoading] = useState(false);
 
   const { mutate: recordPayment, isPending: isRecordingPayment } =
     useRecordPayment();
-  const validateCoupon = useValidateCoupon();
-  const applyOffer = useApplyOffer();
-
-  // For now, we'll assume no products are associated with plans
-  const productIds: string[] = [];
-
-  const { data: applicableOffers, isLoading: areOffersLoading } =
-    useGetApplicableOffers(productIds);
 
   const getPriceAsNumber = (price: string) => {
     const numericPart = price.replace(/[^0-9.-]+/g, '');
     return parseFloat(numericPart);
   };
 
-  const basePrice = isTrial ? 1.0 : getPriceAsNumber(planPrice) + 1.0;
-  const totalPrice = basePrice - discount - offerDiscount;
-
-  const handleApplyCoupon = async (code: string) => {
-    setCouponLoading(true);
-    try {
-      const result = await validateCoupon({
-        couponCode: code,
-        productIds,
-      });
-      setDiscount(result.discountAmount);
-      setCouponCode(code);
-      setOfferDiscount(0);
-      setSelectedOffer(null);
-    } catch (error) {
-      console.error('Failed to apply coupon', error);
-      alert('Invalid or inapplicable coupon');
-    } finally {
-      setCouponLoading(false);
-    }
-  };
-
-  const handleApplyOffer = async (offerId: string) => {
-    setOfferLoading(true);
-    try {
-      const result = await applyOffer.mutateAsync({
-        offerId,
-        productIds,
-      });
-      setOfferDiscount(result.discountAmount);
-      setSelectedOffer(offerId);
-      setDiscount(0);
-      setCouponCode('');
-    } catch (error) {
-      console.error('Failed to apply offer', error);
-      alert('Failed to apply offer');
-    } finally {
-      setOfferLoading(false);
-    }
-  };
+  const totalPrice = isTrial ? 1.0 : getPriceAsNumber(planPrice) + 1.0;
 
   const getPaygOption = (name: string): PaygOption | undefined => {
     if (name.includes('90')) return PaygOption.NINETY_DAYS;
@@ -191,20 +131,9 @@ export default function PricingCheckoutClient({
               planName={planName}
               planPrice={planPrice}
               isTrial={isTrial}
-              discount={discount + offerDiscount}
+              discount={0}
               totalPrice={totalPrice}
             />
-            <div className="mt-8">
-              <CouponCodeInput
-                onApply={handleApplyCoupon}
-                isLoading={isCouponLoading}
-              />
-              <ApplicableOffers
-                offers={applicableOffers || []}
-                onApply={handleApplyOffer}
-                isLoading={isOfferLoading || areOffersLoading}
-              />
-            </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-8">
             <PaymentForm
