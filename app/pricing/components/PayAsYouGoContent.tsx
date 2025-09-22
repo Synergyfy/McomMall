@@ -2,7 +2,7 @@ import { motion } from 'framer-motion';
 import PricingCard from './PricingCard';
 import ComparisonTable from './ComparisonTable';
 import TrialInfo from './TrialInfo';
-import { PricingTier, TableFeature, FeatureGroup } from '../types/index';
+import { TableFeature, FeatureGroup } from '../types/index';
 import { paygTiers } from '../data/pricingData';
 
 const paygPlans = ['90 Days', '180 Days', '270 Days'];
@@ -170,12 +170,18 @@ const paygFeatureGroups: FeatureGroup[] = [
   { name: 'Premium Features', features: paygFeatures.slice(24) },
 ];
 
+import { PricingTier } from '../types';
+
 interface PayAsYouGoContentProps {
   listingId: string | null;
+  onPayNow: (tier: PricingTier) => void;
+  onStartTrial: (tier: PricingTier) => void;
 }
 
 export default function PayAsYouGoContent({
   listingId,
+  onPayNow,
+  onStartTrial,
 }: PayAsYouGoContentProps) {
   return (
     <motion.div
@@ -212,6 +218,8 @@ export default function PayAsYouGoContent({
               }
               isPayg={true}
               listingId={listingId}
+              onPayNow={onPayNow}
+              onStartTrial={onStartTrial}
             />
           </motion.div>
         ))}
