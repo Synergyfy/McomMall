@@ -1,14 +1,28 @@
 export type Review = {
-  id: string;
+  id:string;
   rating: number;
   comment: string;
   createdAt: string;
   updatedAt: string;
-  businessId?: string; // Optional because it's not in the business review response
+  businessId?: string;
   author?: {
     id: string;
     name: string;
     avatarUrl: string;
+  };
+  business?: {
+    name: string;
+    logo: string;
+  };
+};
+
+export type PaginatedReviews = {
+  data: Review[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    totalPages: number;
   };
 };
 
