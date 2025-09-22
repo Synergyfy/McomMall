@@ -373,8 +373,11 @@ const MyProfilePage: NextPage = () => {
     }
 
     const { ...socialsToUpdate } = socials;
+    if (!user) return;
+
     updateUserMutation.mutate(
       {
+        id: user.id,
         name: profile.name,
         phoneNumber: profile.phoneNumber,
         socials: socialsToUpdate,

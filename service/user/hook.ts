@@ -18,8 +18,13 @@ export const useGetUserProfile = () => {
 };
 
 // Update user profile
-const updateUserProfile = async (updateData: UpdateUserDto): Promise<User> => {
-  const { data } = await api.patch<User>('/users/me', updateData);
+const updateUserProfile = async ({
+  id,
+  ...updateData
+}: {
+  id: string;
+} & UpdateUserDto): Promise<User> => {
+  const { data } = await api.patch<User>(`/users/${id}`, updateData);
   return data;
 };
 
