@@ -18,12 +18,6 @@ import SubscriptionSummary from './SubscriptionSummary';
 import PaymentForm from '@/app/checkout/components/PaymentForm';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
-import { loadStripe } from '@stripe/stripe-js';
-import { toast } from 'sonner';
-
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
-);
 
 interface PricingCheckoutClientProps {
   planName: string;
@@ -43,7 +37,6 @@ export default function PricingCheckoutClient({
   const router = useRouter();
   const searchParams = useSearchParams();
   const stripeRedirect = searchParams.get('stripe_redirect');
-  const clientSecretFromUrl = searchParams.get('payment_intent_client_secret');
 
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
@@ -73,7 +66,7 @@ export default function PricingCheckoutClient({
   useEffect(() => {
     if (!stripeRedirect && totalPrice > 0) {
       if (paymentMethod === PaymentMethod.STRIPE) {
-        createStripeIntent({ amount: totalPrice });
+        createStripeIntent({ amount: Math.round(totalPrice * 100) });
       } else {
         createPayPalOrder({ amount: totalPrice });
       }
@@ -116,23 +109,6 @@ export default function PricingCheckoutClient({
     [totalPrice, isPayg, planName, isTrial, recordPayment]
   );
 
-  useEffect(() => {
-    if (stripeRedirect && clientSecretFromUrl) {
-      const verifyPayment = async () => {
-        const stripe = await stripePromise;
-        if (!stripe) return;
-        const { paymentIntent } = await stripe.retrievePaymentIntent(
-          clientSecretFromUrl
-        );
-        if (paymentIntent?.status === 'succeeded') {
-          handlePaymentSuccess(paymentIntent.id, PaymentMethod.STRIPE);
-        } else {
-          toast.error('Payment verification failed. Please try again.');
-        }
-      };
-      verifyPayment();
-    }
-  }, [stripeRedirect, clientSecretFromUrl, handlePaymentSuccess]);
 
   if (isRecordingPayment || isCreatingStripeIntent || isCreatingPayPalOrder) {
     return (

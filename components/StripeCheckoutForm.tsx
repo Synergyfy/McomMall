@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect } from 'react';
+import { useState } from 'react';
 import {
   Elements,
   PaymentElement,
@@ -10,42 +10,64 @@ import {
 import { loadStripe } from '@stripe/stripe-js';
 import { Button } from '@/components/ui/button';
 import { toast } from 'sonner';
+import { Loader } from 'lucide-react';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
 
-function CheckoutForm() {
+function CheckoutForm({
+  onPaymentSuccess,
+}: {
+  onPaymentSuccess: (paymentIntentId: string) => void;
+}) {
   const stripe = useStripe();
   const elements = useElements();
+  const [isLoading, setIsLoading] = useState(false);
+  const [message, setMessage] = useState('');
 
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
+    setMessage('');
 
     if (!stripe || !elements) {
       return;
     }
 
-    const { error } = await stripe.confirmPayment({
+    setIsLoading(true);
+    setMessage('Processing payment... Please do not close this page.');
+
+    const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/pricing?stripe_redirect=true`,
-      },
+      redirect: 'if_required',
     });
 
     if (error) {
       toast.error(error.message);
+      setMessage(error.message || 'An unexpected error occurred.');
+      setIsLoading(false);
+    } else if (paymentIntent?.status === 'succeeded') {
+      setMessage('Payment successful!');
+      onPaymentSuccess(paymentIntent.id);
+      setIsLoading(false);
     } else {
-      // This part is not reached because the user is redirected.
+      setMessage('Payment not successful. Please try again.');
+      setIsLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
+      {isLoading && (
+        <div className="absolute inset-0 bg-white bg-opacity-75 flex flex-col items-center justify-center z-10">
+          <Loader className="animate-spin text-orange-600" size={48} />
+          <p className="mt-4 text-lg font-semibold text-gray-700">{message}</p>
+        </div>
+      )}
       <PaymentElement />
       <Button
         type="submit"
-        disabled={!stripe}
+        disabled={!stripe || isLoading}
         className="w-full mt-6 bg-orange-600 hover:bg-orange-700 text-white"
       >
         Pay Now
@@ -56,8 +78,10 @@ function CheckoutForm() {
 
 export default function StripeCheckoutForm({
   clientSecret,
+  onPaymentSuccess,
 }: {
   clientSecret: string;
+  onPaymentSuccess: (paymentIntentId: string) => void;
 }) {
   if (!clientSecret) {
     return <div>Could not initialize payment.</div>;
@@ -65,7 +89,7 @@ export default function StripeCheckoutForm({
 
   return (
     <Elements stripe={stripePromise} options={{ clientSecret }}>
-      <CheckoutForm />
+      <CheckoutForm onPaymentSuccess={onPaymentSuccess} />
     </Elements>
   );
 }

@@ -84,7 +84,10 @@ export default function PaymentForm({
             exit={{ opacity: 0, x: 20 }}
             transition={{ duration: 0.3 }}
           >
-            <StripeCheckoutForm clientSecret={clientSecret} />
+            <StripeCheckoutForm
+              clientSecret={clientSecret}
+              onPaymentSuccess={onPaymentSuccess}
+            />
           </motion.div>
         )}
         {selectedMethod === PaymentMethod.PAYPAL && orderID && (
