@@ -24,6 +24,11 @@ import {
 } from 'lucide-react';
 import ChatIcon from './ChatIcon';
 
+const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+}
+
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
@@ -84,7 +89,9 @@ function ProductPage({
     <div>
       <h3 className="text-xl font-bold border-t pt-6">Products</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-        {(listing as InHouseBusiness).products?.map(product => (
+        {(listing as InHouseBusiness).products?.map(product => {
+          const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl;
+          return (
           <Link
             href={`/products/${product.id}`}
             key={product.id}
@@ -93,7 +100,7 @@ function ProductPage({
             <div className="relative w-full h-32 mb-2">
               <Image
                 src={
-                  product.imageUrl ||
+                  firstImageUrl ||
                   'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
                 }
                 alt={product.title}
@@ -143,7 +150,7 @@ function ProductPage({
               Order Now
             </Button>
           </Link>
-        ))}
+        )})}
       </div>
     </div>
   );
@@ -207,7 +214,9 @@ function ServicePage({
     <div>
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-        {services.map(service => (
+        {services.map(service => {
+          const firstImageUrl = service.images?.find(isImageUrl);
+          return (
           <Link
             href={`/services/${service.id}`}
             key={service.id}
@@ -215,7 +224,7 @@ function ServicePage({
           >
             <div className="relative w-full h-32 mb-2">
               <Image
-                src={`https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
+                src={firstImageUrl || `https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
                 alt={service.name}
                 layout="fill"
                 className="object-cover rounded-md"
@@ -240,7 +249,7 @@ function ServicePage({
               Book Now
             </Button>
           </Link>
-        ))}
+        )})}
       </div>
       <BookingModal
         service={selectedService}

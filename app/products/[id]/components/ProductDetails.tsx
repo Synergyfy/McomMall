@@ -12,6 +12,11 @@ import { toast } from 'sonner';
 import LoyaltyContent from '@/components/LoyaltyContent';
 import { useRouter } from 'next/navigation';
 
+const isImageUrl = (url: string) => {
+    if (!url) return false;
+    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+}
+
 type ProductDetailsProps = {
   productId: string;
 };
@@ -77,8 +82,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     return <div>Product not found.</div>;
   }
 
-  const imageUrl =
-    product.imageUrl || 'https://via.placeholder.com/500x500.png?text=No+Image';
+  const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl || 'https://via.placeholder.com/500x500.png?text=No+Image';
 
   return (
     <div className="bg-gray-50/50">
@@ -87,7 +91,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           {/* Product Image */}
           <div className="aspect-square relative w-full rounded-lg overflow-hidden shadow-lg">
             <Image
-              src={imageUrl}
+              src={firstImageUrl}
               alt={product.title}
               fill
               className="object-cover"

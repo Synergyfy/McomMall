@@ -20,6 +20,8 @@ import { useRouter } from 'next/navigation';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { CreateServiceDto } from '@/service/services/types';
 import { useAddService } from '@/service/services/hook';
+import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
+import { uploadFile } from '@/lib/upload';
 import { UserListing } from '@/service/listings/types';
 import {
   Card,
@@ -51,6 +53,7 @@ interface ServiceError {
   baseGuests?: string;
   additionalGuestPrice?: string;
   bookingFee?: string;
+  media?: string;
 }
 
 const TooltipLabel = ({
@@ -114,10 +117,21 @@ const AddServicePage = () => {
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const [media, setMedia] = React.useState<File[]>([]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (validateForm()) {
-      addService(formData, {
+      const mediaUrls = await Promise.all(
+        media.map(file => uploadFile(file))
+      );
+
+      const serviceData = {
+        ...formData,
+        images: mediaUrls.map(result => result.secure_url),
+      }
+
+      addService(serviceData, {
         onSuccess: () => {
           queryClient.invalidateQueries({ queryKey: ['my-services'] });
           setShowSuccessDialog(true);
@@ -218,6 +232,17 @@ const AddServicePage = () => {
       newErrors.bookingFee = 'Booking fee is required.';
     } else if (formData.bookingFee != null && formData.bookingFee < 0) {
       newErrors.bookingFee = 'Booking fee must not be less than 0.';
+    }
+
+    if (media.length === 0) {
+      newErrors.media = 'At least one image is required.';
+    } else if (media.length > 5) {
+        newErrors.media = 'You can upload a maximum of 5 files.';
+    } else {
+        const hasImage = media.some(file => file.type.startsWith('image/'));
+        if (!hasImage) {
+            newErrors.media = 'At least one image is required.';
+        }
     }
 
     setErrors(newErrors);
@@ -723,6 +748,23 @@ const AddServicePage = () => {
                   </div>
                 )}
               </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Service Media</CardTitle>
+                    <CardDescription>
+                        Upload images and videos for your service.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <MultiMediaUpload onMediaChange={setMedia} />
+                    {errors.media && (
+                        <p className="text-red-500 text-sm mt-1">
+                            {errors.media}
+                        </p>
+                    )}
+                </CardContent>
             </Card>
 
             <Card>
