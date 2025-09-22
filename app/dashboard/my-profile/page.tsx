@@ -316,8 +316,6 @@ const MyProfilePage: NextPage = () => {
     const errors: ProfileErrors = { socials: {} };
     const urlRegex = /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
-    if (!profile.name?.trim()) errors.name = 'Name is required.';
-
     if (
       profile.phoneNumber &&
       !/^\+?[0-9\s-()]{7,20}$/.test(profile.phoneNumber)
