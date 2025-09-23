@@ -4,6 +4,8 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { PlusCircle, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import {
   Card,
@@ -43,7 +45,7 @@ const SellingModesStep: React.FC<StepProps> = ({
     localDelivery: false,
     ukWideShipping: false,
   };
-  const storefrontLinks = productData.storefrontLinks || {};
+  const storefrontLinks = productData.storefrontLinks || [];
   const hasAgeRestrictedItems = productData.hasAgeRestrictedItems || false;
 
   const handleSellingModeChange = (
@@ -83,19 +85,51 @@ const SellingModesStep: React.FC<StepProps> = ({
   };
 
   const handleStorefrontLinkChange = (
-    e: React.ChangeEvent<HTMLInputElement>
+    index: number,
+    field: 'name' | 'url',
+    value: string
   ) => {
-    const { id, value } = e.target;
+    setFormData(prev => {
+      const newStorefrontLinks = [...(prev.productData?.storefrontLinks || [])];
+      newStorefrontLinks[index] = {
+        ...newStorefrontLinks[index],
+        [field]: value,
+      };
+      return {
+        ...prev,
+        productData: {
+          ...prev.productData,
+          storefrontLinks: newStorefrontLinks,
+        },
+      };
+    });
+  };
+
+  const addStorefrontLink = () => {
     setFormData(prev => ({
       ...prev,
       productData: {
         ...prev.productData,
-        storefrontLinks: {
-          ...(prev.productData?.storefrontLinks || {}),
-          [id]: value,
-        },
+        storefrontLinks: [
+          ...(prev.productData?.storefrontLinks || []),
+          { name: '', url: '' },
+        ],
       },
     }));
+  };
+
+  const removeStorefrontLink = (index: number) => {
+    setFormData(prev => {
+      const newStorefrontLinks = [...(prev.productData?.storefrontLinks || [])];
+      newStorefrontLinks.splice(index, 1);
+      return {
+        ...prev,
+        productData: {
+          ...prev.productData,
+          storefrontLinks: newStorefrontLinks,
+        },
+      };
+    });
   };
 
   const handleToggleAgeRestricted = (checked: boolean) => {
@@ -231,48 +265,60 @@ const SellingModesStep: React.FC<StepProps> = ({
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-4">
-          <div>
-            <Label htmlFor="amazon">Amazon Store</Label>
-            <Input
-              id="amazon"
-              placeholder="https://amazon.co.uk/your-store"
-              value={storefrontLinks.amazon || ''}
-              onChange={handleStorefrontLinkChange}
-            />
-            {errors['productData.storefrontLinks.amazon'] && (
-              <p className="text-sm text-red-500">
-                {errors['productData.storefrontLinks.amazon']}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="ebay">eBay Store</Label>
-            <Input
-              id="ebay"
-              placeholder="https://ebay.co.uk/usr/your-store"
-              value={storefrontLinks.ebay || ''}
-              onChange={handleStorefrontLinkChange}
-            />
-            {errors['productData.storefrontLinks.ebay'] && (
-              <p className="text-sm text-red-500">
-                {errors['productData.storefrontLinks.ebay']}
-              </p>
-            )}
-          </div>
-          <div>
-            <Label htmlFor="etsy">Etsy Shop</Label>
-            <Input
-              id="etsy"
-              placeholder="https://etsy.com/shop/your-shop"
-              value={storefrontLinks.etsy || ''}
-              onChange={handleStorefrontLinkChange}
-            />
-            {errors['productData.storefrontLinks.etsy'] && (
-              <p className="text-sm text-red-500">
-                {errors['productData.storefrontLinks.etsy']}
-              </p>
-            )}
-          </div>
+          {storefrontLinks.map((link, index) => (
+            <div key={index} className="flex items-end space-x-2">
+              <div className="flex-grow space-y-2">
+                <div>
+                  <Label htmlFor={`storeName-${index}`}>Store Name</Label>
+                  <Input
+                    id={`storeName-${index}`}
+                    placeholder="e.g., My Awesome Shop"
+                    value={link.name}
+                    onChange={e =>
+                      handleStorefrontLinkChange(index, 'name', e.target.value)
+                    }
+                  />
+                  {errors[`productData.storefrontLinks[${index}].name`] && (
+                    <p className="text-sm text-red-500">
+                      {errors[`productData.storefrontLinks[${index}].name`]}
+                    </p>
+                  )}
+                </div>
+                <div>
+                  <Label htmlFor={`storeUrl-${index}`}>Store URL</Label>
+                  <Input
+                    id={`storeUrl-${index}`}
+                    placeholder="https://example.com/store"
+                    value={link.url}
+                    onChange={e =>
+                      handleStorefrontLinkChange(index, 'url', e.target.value)
+                    }
+                  />
+                  {errors[`productData.storefrontLinks[${index}].url`] && (
+                    <p className="text-sm text-red-500">
+                      {errors[`productData.storefrontLinks[${index}].url`]}
+                    </p>
+                  )}
+                </div>
+              </div>
+              <Button
+                variant="ghost"
+                size="icon"
+                onClick={() => removeStorefrontLink(index)}
+                className="text-red-500 hover:text-red-600"
+              >
+                <Trash2 className="h-5 w-5" />
+              </Button>
+            </div>
+          ))}
+          <Button
+            variant="outline"
+            onClick={addStorefrontLink}
+            className="mt-2"
+          >
+            <PlusCircle className="mr-2 h-4 w-4" />
+            Add Storefront
+          </Button>
         </CardContent>
       </Card>
     </div>

@@ -55,11 +55,7 @@ export interface ProductSellerData {
   };
   fulfilmentNotes?: string;
   returnsPolicy?: string;
-  storefrontLinks?: {
-    amazon?: string;
-    ebay?: string;
-    etsy?: string;
-  };
+  storefrontLinks?: { name: string; url: string }[];
   hasAgeRestrictedItems?: boolean;
 }
 

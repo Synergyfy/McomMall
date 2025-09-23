@@ -4,10 +4,10 @@ import { useParams, useRouter } from 'next/navigation';
 import { useGetBusinessData } from '@/service/listings/hook';
 import MultiStepListingForm from '@/app/dashboard/add-listing/components/MultiStepListingForm';
 import { ListingFormData } from '@/app/dashboard/add-listing/types';
-import { UserListing } from '@/service/listings/types';
+import { InHouseBusiness } from '@/service/listings/types';
 
 const transformApiDataToFormData = (
-  apiData: UserListing
+  apiData: InHouseBusiness
 ): Partial<ListingFormData> => {
   const formData: Partial<ListingFormData> = {
     businessTypes: apiData.listingType.map(
@@ -44,15 +44,25 @@ const transformApiDataToFormData = (
         type: 'radius',
         value: apiData.location.deliveryRadiusKm?.toString() || '',
       },
-      // Other product fields are not available on UserListing type
       sellingModes: {
-        inStorePickup: false,
-        localDelivery: false,
-        ukWideShipping: false,
+        inStorePickup:
+          apiData.productSellerProfile?.sellingModes.includes('pickup') ||
+          false,
+        localDelivery:
+          apiData.productSellerProfile?.sellingModes.includes(
+            'local_delivery'
+          ) || false,
+        ukWideShipping:
+          apiData.productSellerProfile?.sellingModes.includes('uk_shipping') ||
+          false,
       },
-      fulfilmentNotes: '',
-      returnsPolicy: '',
-      storefrontLinks: {},
+      fulfilmentNotes: apiData.productSellerProfile?.fulfilmentNotes || '',
+      returnsPolicy: apiData.productSellerProfile?.returnsPolicy || '',
+      storefrontLinks:
+        apiData.productSellerProfile?.storefrontLinks.map(link => ({
+          name: link.platform,
+          url: link.url,
+        })) || [],
     };
   }
 
