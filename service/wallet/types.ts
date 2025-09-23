@@ -2,9 +2,9 @@ export interface Wallet {
   id: string;
   createdAt: string;
   updatedAt: string;
-  balance: number;
+  balance: string;
   totalOrders: number;
-  withdrawableBalance: number;
+  withdrawableBalance: string;
 }
 
 export interface OrderItem {

@@ -54,10 +54,10 @@ export const WalletSummary = () => {
       <h2 className="text-3xl font-medium">Wallet</h2>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
         <BalanceSummaryCard
-          amount={parseFloat(walletData?.wallet.withdrawableBalance) || 0}
+          amount={parseFloat(walletData?.wallet.withdrawableBalance || '0')}
         />
         <EarningSummaryCard
-          amount={parseFloat(walletData?.wallet.balance) || 0}
+          amount={parseFloat(walletData?.wallet.balance || '0')}
         />
         <OrderSummaryCard count={walletData?.wallet.totalOrders || 0} />
       </div>
