@@ -87,7 +87,8 @@ export const useCreatePayPalOrder = () => {
 export const useRecordPayment = () => {
   const create = async (payload: RecordPaymentDto) => {
     try {
-      const response = await api.post('/payments/record', payload);
+      const amount = payload.amount.toFixed(2);
+      const response = await api.post('/payments/record', {...payload, amount: parseFloat(amount) });
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
