@@ -155,21 +155,6 @@ const validationRules = {
         Object.values(modes).some(v => v),
       message: 'At least one selling mode must be selected.',
     },
-    'productData.storefrontLinks.amazon': {
-      validate: isValidUrl,
-      message: 'Invalid URL.',
-      optional: true,
-    },
-    'productData.storefrontLinks.ebay': {
-      validate: isValidUrl,
-      message: 'Invalid URL.',
-      optional: true,
-    },
-    'productData.storefrontLinks.etsy': {
-      validate: isValidUrl,
-      message: 'Invalid URL.',
-      optional: true,
-    },
   },
   serviceCategory: {
     'serviceData.tradeCategory': {
@@ -263,7 +248,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         },
         fulfilmentNotes: '',
         returnsPolicy: '',
-        storefrontLinks: {},
+        storefrontLinks: [],
       };
     }
     if (businessTypes.includes('Service') && !initialData.serviceData) {
@@ -438,6 +423,22 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       }
     }
 
+    // Custom validation for storefront links
+    if (formData.productData?.storefrontLinks) {
+      formData.productData.storefrontLinks.forEach((link, index) => {
+        if (link.name && !link.url) {
+          newErrors[`productData.storefrontLinks[${index}].url`] =
+            'URL is required if name is provided.';
+        } else if (link.url && !link.name) {
+          newErrors[`productData.storefrontLinks[${index}].name`] =
+            'Name is required if URL is provided.';
+        } else if (link.url && !isValidUrl(link.url)) {
+          newErrors[`productData.storefrontLinks[${index}].url`] =
+            'Invalid URL format.';
+        }
+      });
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -546,19 +547,25 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       if (data.productData.sellingModes?.ukWideShipping)
         sellingModes.push('uk_shipping');
 
-      const storefrontLinks: StorefrontLinkPayload[] = Object.entries(
-        data.productData.storefrontLinks || {}
+      const storefrontLinks: StorefrontLinkPayload[] = (
+        data.productData.storefrontLinks || []
       )
-        .map(([platform, url]) => {
-          const formattedUrl = formatUrl(url);
-          return formattedUrl
-            ? {
-                platform: platform as StorefrontLinkPayload['platform'],
-                url: formattedUrl,
-              }
-            : null;
+        .map(link => {
+          if (link.name && link.url) {
+            const formattedUrl = formatUrl(link.url);
+            return formattedUrl
+              ? {
+                  platform: link.name,
+                  url: formattedUrl,
+                }
+              : null;
+          }
+          return null;
         })
-        .filter((link): link is StorefrontLinkPayload => link !== null);
+        .filter(
+          (link): link is StorefrontLinkPayload =>
+            link !== null && link.url !== undefined
+        );
 
       productSellerProfile = {
         sellingModes,
