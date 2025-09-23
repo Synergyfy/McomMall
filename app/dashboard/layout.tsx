@@ -31,15 +31,14 @@ export default function DashboardLayout({
 }) {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const { data: subscriptionStatus } = useGetTrialStatus();
+  const { data: trialStatus } = useGetTrialStatus();
 
   return (
     <>
       <AuthRedirect />
-      {subscriptionStatus?.status === SubscriptionStatusEnum.TRIAL_ACTIVE &&
-        subscriptionStatus.trialEndDate && (
-          <TrialCountdownTimer subscriptionStatus={subscriptionStatus} />
-        )}
+      {trialStatus?.isActive && (
+        <TrialCountdownTimer trialStatus={trialStatus} />
+      )}
       <section className="flex w-screen h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className="hidden md:block w-[19rem] p-5">

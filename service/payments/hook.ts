@@ -6,16 +6,65 @@ import {
   RecordPaymentDto,
   SubscriptionStatusResponse,
   TrialAction,
+  TrialStatusResponse,
 } from './types';
 import { ErrorResponse } from '../listings/hook';
 
-export const useGetTrialStatus = () => {
+export const useGetSubscriptionStatus = () => {
   const fetch = async (): Promise<SubscriptionStatusResponse> => {
     try {
-      const response = await api.get('/trial');
+      const response = await api.get('/payments/status');
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to fetch subscription status'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_SUBSCRIPTION_STATUS'],
+    enabled: true,
+  });
+
+  return query;
+};
+
+export const useGetTrialStatus = () => {
+  const fetchAndTransform = async (): Promise<TrialStatusResponse | null> => {
+    try {
+      const response = await api.get<TrialStatusResponse>('/trial');
+      const data = response.data;
+
+      if (!data) {
+        return null;
+      }
+
+      // Derive UI-related fields from the core API response
+      const maxPauses = 2;
+      const pausesCount = data.pauses?.length || 0;
+      const lastPause = pausesCount > 0 ? data.pauses[pausesCount - 1] : null;
+
+      const isPaused = !!lastPause && lastPause.resumedAt === null;
+      const remainingPauses = maxPauses - pausesCount;
+      const isTrialPausable = remainingPauses > 0;
+
+      return {
+        ...data,
+        isPaused,
+        remainingPauses,
+        isTrialPausable,
+      };
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      // Don't throw an error for 404, it just means no trial exists
+      if (err.response?.status === 404) {
+        return null;
+      }
       throw new Error(
         err.response?.data?.message ||
           err.message ||
@@ -25,7 +74,7 @@ export const useGetTrialStatus = () => {
   };
 
   const query = useQuery({
-    queryFn: fetch,
+    queryFn: fetchAndTransform,
     queryKey: ['FETCH_TRIAL_STATUS'],
     enabled: true,
   });

@@ -36,6 +36,14 @@ export enum SubscriptionStatusEnum {
   INACTIVE = 'INACTIVE',
 }
 
+// This is the response from the /payments/status endpoint
+export interface SubscriptionStatusResponse {
+  status: SubscriptionStatusEnum;
+  planType: PlanType;
+  paygOption: PaygOption | null;
+  trialEndDate: string | null;
+}
+
 export interface TrialTasks {
   createdBusiness: boolean;
   createdProductOrService: boolean;
@@ -44,16 +52,21 @@ export interface TrialTasks {
   createdCoupon: boolean;
 }
 
-export interface SubscriptionStatusResponse {
-  status: SubscriptionStatusEnum;
-  planType: PlanType;
-  paygOption: PaygOption | null;
-  trialEndDate: string | null;
-  isPaused: boolean;
-  isTrialPausable: boolean;
-  remainingPauses: number;
+export interface TrialPause {
+  pausedAt: string;
+  resumedAt: string | null;
+}
+
+// This is the response from the /trial endpoint
+export interface TrialStatusResponse {
+  isActive: boolean;
   remainingTime: number;
   tasks: TrialTasks;
+  pauses: TrialPause[];
+  // The following fields are derived in the hook for UI convenience
+  isPaused?: boolean;
+  isTrialPausable?: boolean;
+  remainingPauses?: number;
 }
 
 export enum TrialAction {

@@ -12,7 +12,7 @@ import {
 } from 'lucide-react';
 import { usePauseOrPlay } from '@/service/payments/hook';
 import {
-  SubscriptionStatusResponse,
+  TrialStatusResponse,
   TrialAction,
   TrialTasks,
 } from '@/service/payments/types';
@@ -25,19 +25,19 @@ import {
 } from './ui/dropdown-menu';
 
 interface TrialCountdownTimerProps {
-  subscriptionStatus: SubscriptionStatusResponse;
+  trialStatus: TrialStatusResponse;
 }
 
 const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
-  subscriptionStatus,
+  trialStatus,
 }) => {
   const {
-    isPaused,
-    isTrialPausable,
-    remainingPauses,
+    isPaused = false,
+    isTrialPausable = false,
+    remainingPauses = 0,
     remainingTime,
     tasks,
-  } = subscriptionStatus;
+  } = trialStatus;
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const [timeLeft, setTimeLeft] = useState(remainingTime);
 
