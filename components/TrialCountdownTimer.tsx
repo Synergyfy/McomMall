@@ -1,72 +1,80 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { TimerIcon, PlayIcon, PauseIcon } from 'lucide-react';
+import {
+  TimerIcon,
+  PlayIcon,
+  PauseIcon,
+  ChevronDownIcon,
+  CheckCircleIcon,
+  XCircleIcon,
+} from 'lucide-react';
 import { usePauseOrPlay } from '@/service/payments/hook';
-import { TrialAction } from '@/service/payments/types';
+import {
+  SubscriptionStatusResponse,
+  TrialAction,
+  TrialTasks,
+} from '@/service/payments/types';
 import { Button } from './ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from './ui/dropdown-menu';
 
 interface TrialCountdownTimerProps {
-  trialEndDate: string;
-  isPaused: boolean;
-  isTrialPausable: boolean;
-  remainingPauses: number;
+  subscriptionStatus: SubscriptionStatusResponse;
 }
 
 const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
-  trialEndDate,
-  isPaused,
-  isTrialPausable,
-  remainingPauses,
+  subscriptionStatus,
 }) => {
+  const {
+    isPaused,
+    isTrialPausable,
+    remainingPauses,
+    remainingTime,
+    tasks,
+  } = subscriptionStatus;
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
-  const calculateTimeLeft = useCallback(() => {
-    const difference = +new Date(trialEndDate) - +new Date();
-    let timeLeft = {};
-
-    if (difference > 0) {
-      timeLeft = {
-        days: Math.floor(difference / (1000 * 60 * 60 * 24)),
-        hours: Math.floor((difference / (1000 * 60 * 60)) % 24),
-        minutes: Math.floor((difference / 1000 / 60) % 60),
-        seconds: Math.floor((difference / 1000) % 60),
-      };
-    }
-
-    return timeLeft;
-  }, [trialEndDate]);
-
-  const [timeLeft, setTimeLeft] = useState(calculateTimeLeft());
+  const [timeLeft, setTimeLeft] = useState(remainingTime);
 
   useEffect(() => {
-    if (isPaused && isTrialPausable) return;
+    if (isPaused) return;
 
     const interval = setInterval(() => {
-      setTimeLeft(calculateTimeLeft());
+      setTimeLeft((prevTime) => (prevTime > 0 ? prevTime - 1000 : 0));
     }, 1000);
 
     return () => clearInterval(interval);
-  }, [isPaused, isTrialPausable, calculateTimeLeft]);
+  }, [isPaused]);
 
-  const timerComponents = Object.entries(timeLeft).map(([interval, value]) => {
-    if ((value as number) < 0) {
-      return null;
-    }
+  const formatTime = (ms: number) => {
+    const totalSeconds = Math.floor(ms / 1000);
+    const days = Math.floor(totalSeconds / 86400);
+    const hours = Math.floor((totalSeconds % 86400) / 3600);
+    const minutes = Math.floor((totalSeconds % 3600) / 60);
+    const seconds = totalSeconds % 60;
 
-    return (
-      <div key={interval} className="flex flex-col items-center">
-        <span className="text-2xl font-bold">
-          {String(value).padStart(2, '0')}
-        </span>
-        <span className="text-xs uppercase">{interval}</span>
-      </div>
-    );
-  });
+    return {
+      days: String(days).padStart(2, '0'),
+      hours: String(hours).padStart(2, '0'),
+      minutes: String(minutes).padStart(2, '0'),
+      seconds: String(seconds).padStart(2, '0'),
+    };
+  };
 
-  if (!timerComponents.length) {
-    return null;
-  }
+  const formattedTime = formatTime(timeLeft);
+
+  const taskLabels: Record<keyof TrialTasks, string> = {
+    createdBusiness: 'Create a business',
+    createdProductOrService: 'Create a product or service',
+    createdPromotion: 'Create a promotion',
+    createdOffer: 'Create an offer',
+    createdCoupon: 'Create a coupon',
+  };
 
   return (
     <motion.div
@@ -81,7 +89,14 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
       <TimerIcon className="w-8 h-8" />
       <div className="flex items-center space-x-2">
         <h3 className="text-lg font-semibold">Trial Period Ends In:</h3>
-        <div className="flex space-x-2">{timerComponents}</div>
+        <div className="flex space-x-2">
+          {Object.entries(formattedTime).map(([unit, value]) => (
+            <div key={unit} className="flex flex-col items-center">
+              <span className="text-2xl font-bold">{value}</span>
+              <span className="text-xs uppercase">{unit}</span>
+            </div>
+          ))}
+        </div>
       </div>
       {isTrialPausable && (
         <div className="flex items-center space-x-2">
@@ -91,7 +106,7 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
                 action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
               })
             }
-            disabled={isPending || remainingPauses === 0}
+            disabled={isPending || (!isPaused && remainingPauses <= 0)}
             variant="ghost"
             size="icon"
             className="rounded-full"
@@ -107,6 +122,25 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
           </div>
         </div>
       )}
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon" className="rounded-full">
+            <ChevronDownIcon className="w-6 h-6" />
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent className="w-64 bg-gray-900 text-white">
+          {Object.entries(tasks).map(([key, completed]) => (
+            <DropdownMenuItem key={key} className="flex items-center justify-between">
+              <span>{taskLabels[key as keyof TrialTasks]}</span>
+              {completed ? (
+                <CheckCircleIcon className="w-5 h-5 text-green-500" />
+              ) : (
+                <XCircleIcon className="w-5 h-5 text-red-500" />
+              )}
+            </DropdownMenuItem>
+          ))}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </motion.div>
   );
 };

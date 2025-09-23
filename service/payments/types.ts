@@ -36,6 +36,14 @@ export enum SubscriptionStatusEnum {
   INACTIVE = 'INACTIVE',
 }
 
+export interface TrialTasks {
+  createdBusiness: boolean;
+  createdProductOrService: boolean;
+  createdPromotion: boolean;
+  createdOffer: boolean;
+  createdCoupon: boolean;
+}
+
 export interface SubscriptionStatusResponse {
   status: SubscriptionStatusEnum;
   planType: PlanType;
@@ -44,6 +52,8 @@ export interface SubscriptionStatusResponse {
   isPaused: boolean;
   isTrialPausable: boolean;
   remainingPauses: number;
+  remainingTime: number;
+  tasks: TrialTasks;
 }
 
 export enum TrialAction {

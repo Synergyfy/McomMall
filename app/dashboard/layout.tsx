@@ -38,12 +38,7 @@ export default function DashboardLayout({
       <AuthRedirect />
       {subscriptionStatus?.status === SubscriptionStatusEnum.TRIAL_ACTIVE &&
         subscriptionStatus.trialEndDate && (
-          <TrialCountdownTimer
-            trialEndDate={subscriptionStatus.trialEndDate}
-            isPaused={subscriptionStatus.isPaused}
-            isTrialPausable={subscriptionStatus.isTrialPausable}
-            remainingPauses={subscriptionStatus.remainingPauses}
-          />
+          <TrialCountdownTimer subscriptionStatus={subscriptionStatus} />
         )}
       <section className="flex w-screen h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
