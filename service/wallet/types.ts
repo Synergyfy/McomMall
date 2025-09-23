@@ -10,7 +10,7 @@ export interface Wallet {
 export interface OrderItem {
   id: string;
   quantity: number;
-  price: number;
+  price: string;
   product: {
     id: string;
     name: string;
@@ -19,7 +19,7 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  total: number;
+  total: string;
   items: OrderItem[];
 }
 
