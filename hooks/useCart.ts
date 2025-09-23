@@ -9,6 +9,7 @@ import { setCart, setLoading } from '@/service/store/cartSlice';
 export interface AddItemToCartDto {
   productId: string;
   quantity: number;
+  variants?: Record<string, string>;
 }
 
 export interface UpdateCartItemDto {
@@ -70,7 +71,11 @@ export const useCart = () => {
 
   const addItemToCart = async (item: AddItemToCartDto) => {
     try {
-      const { data } = await api.post<Cart>('/cart/add', item);
+      const { data } = await api.post<Cart>('/cart/add', {
+        productId: item.productId,
+        quantity: item.quantity,
+        variants: item.variants,
+      });
       dispatch(setCart(data));
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
     } catch (error) {
