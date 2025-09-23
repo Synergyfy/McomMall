@@ -5,33 +5,28 @@ import {
   PauseResumeTrialDto,
   RecordPaymentDto,
   SubscriptionStatusResponse,
+  TrialAction,
 } from './types';
 import { ErrorResponse } from '../listings/hook';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import { UserRole } from '../auth/types';
 
-export const useGetSubscriptionStatus = () => {
-  const { userRole } = useSelector((state: RootState) => state.auth);
-
+export const useGetTrialStatus = () => {
   const fetch = async (): Promise<SubscriptionStatusResponse> => {
     try {
-      const response = await api.get('/payments/status');
+      const response = await api.get('/trial');
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
           err.message ||
-          'Failed to fetch subscription status'
+          'Failed to fetch trial status'
       );
     }
   };
 
-  console.log(userRole, 'userRole in hook');
   const query = useQuery({
     queryFn: fetch,
-    queryKey: ['FETCH_SUBSCRIPTION_STATUS'],
+    queryKey: ['FETCH_TRIAL_STATUS'],
     enabled: true,
   });
 
@@ -111,11 +106,15 @@ export const useRecordPayment = () => {
 export const usePauseOrPlay = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (payload: PauseResumeTrialDto) =>
-      api.patch('/payments/trial', payload),
+    mutationFn: (payload: PauseResumeTrialDto) => {
+      const { action } = payload;
+      const endpoint =
+        action === TrialAction.PAUSE ? '/trial/pause' : '/trial/resume';
+      return api.post(endpoint);
+    },
     onSuccess: () => {
       toast.success('Trial status updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['FETCH_SUBSCRIPTION_STATUS'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_TRIAL_STATUS'] });
     },
     onError: (error: unknown) => {
       const err = error as ErrorResponse;

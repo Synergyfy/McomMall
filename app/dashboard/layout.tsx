@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useGetSubscriptionStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hook';
 import TrialCountdownTimer from '@/components/TrialCountdownTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -31,7 +31,7 @@ export default function DashboardLayout({
 }) {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const { data: subscriptionStatus } = useGetSubscriptionStatus();
+  const { data: subscriptionStatus } = useGetTrialStatus();
 
   return (
     <>

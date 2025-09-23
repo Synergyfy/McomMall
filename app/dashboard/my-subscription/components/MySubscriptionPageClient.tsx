@@ -6,14 +6,14 @@ import { AnimatePresence, motion } from 'framer-motion';
 import PricingNav from '@/app/pricing/components/PricingNav';
 import PayAsYouGoContent from '@/app/pricing/components/PayAsYouGoContent';
 import CoBrandedContent from '@/app/pricing/components/CoBrandedContent';
-import { useGetSubscriptionStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hook';
 import CurrentPlanCard from './CurrentPlanCard';
 
 export default function MySubscriptionPageClient() {
   const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
-  const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
+  const { data: subscriptionStatus, isLoading } = useGetTrialStatus();
 
   return (
     <div className="h-full md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
