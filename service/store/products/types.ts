@@ -1,3 +1,8 @@
+export interface ProductVariant {
+  name: string;
+  options: string[];
+}
+
 export interface CreateProductDto {
   bussinessId: string;
   title: string;
@@ -22,6 +27,7 @@ export interface CreateProductDto {
   purchaseNote?: string;
   enableReviews?: boolean;
   tags?: string[];
+  variants?: ProductVariant[];
 }
 
 import { Product } from '@/service/listings/types';

@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  FormProvider,
   useForm,
   useFieldArray,
   FieldErrors,
@@ -23,6 +24,7 @@ import { toast } from 'sonner';
 import { useGetProductById, useUpdateProduct } from '@/service/store/products/hook';
 import { UpdateSuccessDialog } from '../../components/UpdateSuccessDialog';
 import { CreateProductDto } from '@/service/store/products/types';
+import VariantManager from '../../components/VariantManager';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -101,6 +103,7 @@ interface ProductFormValues {
   productImages: FileList | null;
   businessId?: string;
   imageUrls?: string[];
+  variants: { name: string; options: string[] }[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -284,6 +287,7 @@ export default function EditProductPage() {
       productImages: null,
       businessId: '',
       imageUrls: [],
+      variants: [],
     },
   });
 
@@ -321,6 +325,7 @@ export default function EditProductPage() {
         businessId: product.bussinessId,
         productImages: null, // Not handled
         imageUrls: product.fileUrls || [],
+        variants: product.variants || [],
       });
     }
   }, [product, form]);
@@ -369,6 +374,7 @@ export default function EditProductPage() {
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
       tags: data.tags.split(',').map(tag => tag.trim()),
+      variants: data.variants,
     };
 
     updateProduct(
@@ -415,11 +421,12 @@ export default function EditProductPage() {
           Edit Product
         </h1>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Main Content Column */}
-              <div className="lg:col-span-2 space-y-8">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Content Column */}
+                <div className="lg:col-span-2 space-y-8">
                 {/* Product Title */}
                 <Card>
                   <CardContent className="p-6">
@@ -447,6 +454,15 @@ export default function EditProductPage() {
                         </FormItem>
                       )}
                     />
+                  </CardContent>
+                </Card>
+
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Variants</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <VariantManager name="variants" />
                   </CardContent>
                 </Card>
 
@@ -1381,6 +1397,7 @@ export default function EditProductPage() {
             </div>
           </form>
         </Form>
+        </FormProvider>
       </div>
     </div>
   );

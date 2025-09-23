@@ -1,6 +1,7 @@
 'use client';
 
 import {
+  FormProvider,
   useForm,
   useFieldArray,
   FieldErrors,
@@ -28,6 +29,7 @@ import { useAddProduct } from '@/service/store/products/hook';
 import { SuccessDialog } from '../components/SuccessDialog';
 import { CreateProductDto } from '@/service/store/products/types';
 
+import VariantManager from '../components/VariantManager';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -102,6 +104,7 @@ interface ProductFormValues {
   enableReviews: boolean;
   media: File[];
   businessId?: string;
+  variants: { name: string; options: string[] }[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -292,6 +295,7 @@ export default function AddProductPage() {
       enableReviews: true,
       media: [],
       businessId: '',
+      variants: [],
     },
   });
 
@@ -346,6 +350,7 @@ export default function AddProductPage() {
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
       tags: data.tags,
+      variants: data.variants,
     };
 
     addProduct(productData, {
@@ -382,11 +387,12 @@ export default function AddProductPage() {
           Add New Product
         </h1>
 
-        <Form {...form}>
-          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-              {/* Main Content Column */}
-              <div className="lg:col-span-2 space-y-8">
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Main Content Column */}
+                <div className="lg:col-span-2 space-y-8">
                 {/* Product Title */}
                 <Card>
                   <CardContent className="p-6">
@@ -416,7 +422,14 @@ export default function AddProductPage() {
                     />
                   </CardContent>
                 </Card>
-
+ <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Variants</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <VariantManager name="variants" />
+                  </CardContent>
+                </Card>
                 {/* Product Data Section */}
                 <Card>
                   <CardHeader>
@@ -1360,6 +1373,7 @@ export default function AddProductPage() {
             </div>
           </form>
         </Form>
+        </FormProvider>
       </div>
     </div>
   );

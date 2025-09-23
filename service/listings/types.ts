@@ -309,6 +309,8 @@ export interface ServiceProviderProfile {
   certifications: Certification[];
 }
 
+import { ProductVariant } from '../store/products/types';
+
 export interface Product {
   id: string;
   bussinessId?: string;
@@ -340,6 +342,7 @@ export interface Product {
   views?: number;
   createdAt?: string;
   updatedAt?: string;
+  variants?: ProductVariant[];
 }
 
 export type CampaignType = string;

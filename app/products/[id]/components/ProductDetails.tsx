@@ -2,7 +2,15 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { useGetProductById } from '@/service/store/products/hook';
+import { ProductVariant } from '@/service/store/products/types';
 import { Button } from '@/components/ui/button';
 import { Star, Minus, Plus, Heart } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
@@ -27,6 +35,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   const { addItemToCart } = useCart();
   const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
   const isWishlisted = wishlist?.items?.some(
     (item) => item.product.id === productId
@@ -46,14 +55,14 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
   const handleAddToCart = () => {
     if (product) {
-      addItemToCart({ productId: product.id, quantity });
+      addItemToCart({ productId: product.id, quantity, variants: selectedVariants });
       toast.success('Added to cart');
     }
   };
 
   const handleOrderNow = () => {
     if (product) {
-      addItemToCart({ productId: product.id, quantity });
+      addItemToCart({ productId: product.id, quantity, variants: selectedVariants });
       router.push(`/checkout?productId=${product.id}`);
     }
   };
@@ -128,6 +137,38 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             <p className="text-gray-600 text-base leading-relaxed">
               {product.shortDescription || product.description.substring(0, 150) + '...'}
             </p>
+
+            {/* Variant Selectors */}
+            {product.variants && product.variants.length > 0 && (
+              <div className="space-y-4">
+                {product.variants.map((variant: ProductVariant) => (
+                  <div key={variant.name}>
+                    <label className="text-sm font-medium text-gray-700">
+                      {variant.name}
+                    </label>
+                    <Select
+                      onValueChange={(value) =>
+                        setSelectedVariants({
+                          ...selectedVariants,
+                          [variant.name]: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue placeholder={`Select ${variant.name}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {variant.options.map((option: string) => (
+                          <SelectItem key={option} value={option}>
+                            {option}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                ))}
+              </div>
+            )}
 
             {/* Quantity and Add to Cart */}
             <div className="flex items-center space-x-4">
