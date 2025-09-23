@@ -84,13 +84,13 @@ export const EarningTable = () => {
                   )}
                   <td className="p-2">{item.product.name}</td>
                   <td className="p-2">{item.quantity}</td>
-                  <td className="p-2">£{item.price.toFixed(2)}</td>
+                  <td className="p-2">£{parseFloat(item.price).toFixed(2)}</td>
                   {index === 0 && (
                     <td
                       className="p-2"
                       rowSpan={order.items.length}
                     >
-                      £{order.total.toFixed(2)}
+                      £{parseFloat(order.total).toFixed(2)}
                     </td>
                   )}
                 </tr>
