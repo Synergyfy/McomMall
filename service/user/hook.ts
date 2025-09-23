@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { User, UpdateUserDto } from './types';
+import { User, UpdateUserDto, CustomerStats } from './types';
 
 const USER_QUERY_KEY = 'my-user';
 
@@ -37,5 +37,17 @@ export const useUpdateUserProfile = () => {
       // Invalidate and refetch the user query to get the latest data
       queryClient.invalidateQueries({ queryKey: [USER_QUERY_KEY] });
     },
+  });
+};
+
+const getCustomerStats = async (): Promise<CustomerStats> => {
+  const { data } = await api.get('/stats');
+  return data;
+};
+
+export const useGetCustomerStats = () => {
+  return useQuery({
+    queryKey: ['customerStats'],
+    queryFn: getCustomerStats,
   });
 };
