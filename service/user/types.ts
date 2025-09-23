@@ -25,3 +25,10 @@ export interface UpdateUserDto {
   socials?: Partial<Omit<Socials, 'id'>>;
   profilePictureUrl?: string;
 }
+
+export interface CustomerStats {
+  totalOrders: number;
+  totalSpent: number;
+  promotionPoints: number;
+  promotionsParticipating: number;
+}

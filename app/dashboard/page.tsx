@@ -5,7 +5,6 @@ import {
   PoundSterling,
   ShoppingCart,
   Package,
-  BarChart2,
   MoreHorizontal,
   Diamond,
 } from 'lucide-react';
@@ -42,6 +41,7 @@ import {
 import { formatDistanceToNow } from 'date-fns';
 import { useRecentActivities } from '@/service/activities/hook';
 import { Activity } from '@/service/activities/types';
+import CustomerDashboard from './component/CustomerDashboard';
 // 1. --- TYPE DEFINITIONS ---
 // Ensures all data structures are strongly typed.
 
@@ -209,7 +209,7 @@ const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
 
 const DashboardPage: FC = () => {
   const { data: orderStats, isLoading } = useGetOrderStats();
-  const { userName } = useSelector((state: RootState) => state.auth);
+  const { userName, userRole } = useSelector((state: RootState) => state.auth);
   const {
     data: activities,
     isLoading: isLoadingActivities,
@@ -289,35 +289,41 @@ const DashboardPage: FC = () => {
       </header>
 
       <main className="space-y-8">
-        {/* Stat Cards Section */}
-        <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-          {stats.map(stat => (
-            <StatCard
-              key={stat.title}
-              title={stat.title}
-              value={stat.value}
-              icon={stat.icon}
-              color={stat.color}
-            />
-          ))}
-        </section>
+        {userRole === 'customer' ? (
+          <CustomerDashboard />
+        ) : (
+          <>
+            {/* Stat Cards Section */}
+            <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
+              {stats.map(stat => (
+                <StatCard
+                  key={stat.title}
+                  title={stat.title}
+                  value={stat.value}
+                  icon={stat.icon}
+                  color={stat.color}
+                />
+              ))}
+            </section>
 
-        {/* Main Content Grid */}
-        <section className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
-          {/* Left Column */}
-          <div className="lg:col-span-1 space-y-8">
-            <RecentActivities
-              activities={activities}
-              isLoading={isLoadingActivities}
-            />
-          </div>
+            {/* Main Content Grid */}
+            <section className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
+              {/* Left Column */}
+              <div className="lg:col-span-1 space-y-8">
+                <RecentActivities
+                  activities={activities}
+                  isLoading={isLoadingActivities}
+                />
+              </div>
 
-          {/* Right Column */}
-          <div className="lg:col-span-2 space-y-8">
-            <ListingPackages pkg={listingPackage} />
-            <ListingsViewsChart data={chartData} />
-          </div>
-        </section>
+              {/* Right Column */}
+              <div className="lg:col-span-2 space-y-8">
+                <ListingPackages pkg={listingPackage} />
+                <ListingsViewsChart data={chartData} />
+              </div>
+            </section>
+          </>
+        )}
       </main>
     </div>
   );
