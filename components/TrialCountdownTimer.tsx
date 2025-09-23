@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import {
   TimerIcon,
   PlayIcon,
@@ -9,6 +9,7 @@ import {
   ChevronDownIcon,
   CheckCircleIcon,
   XCircleIcon,
+  ChevronsRightLeft,
 } from 'lucide-react';
 import { usePauseOrPlay } from '@/service/payments/hook';
 import {
@@ -40,6 +41,7 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   } = trialStatus;
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const [timeLeft, setTimeLeft] = useState(remainingTime);
+  const [isExpanded, setIsExpanded] = useState(false);
 
   useEffect(() => {
     if (isPaused) return;
@@ -76,71 +78,102 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
     createdCoupon: 'Create a coupon',
   };
 
+  const timeUnits = Object.entries(formattedTime);
+
   return (
     <motion.div
+      layout
       drag
       dragMomentum={false}
       initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5 }}
+      transition={{ duration: 0.5, type: 'spring' }}
       className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-600 text-white p-4 rounded-lg shadow-lg flex items-center space-x-4 cursor-grab"
       whileTap={{ cursor: 'grabbing' }}
     >
-      <TimerIcon className="w-8 h-8" />
+      <TimerIcon className="w-8 h-8 flex-shrink-0" />
       <div className="flex items-center space-x-2">
-        <h3 className="text-lg font-semibold">Trial Period Ends In:</h3>
-        <div className="flex space-x-2">
-          {Object.entries(formattedTime).map(([unit, value]) => (
-            <div key={unit} className="flex flex-col items-center">
-              <span className="text-2xl font-bold">{value}</span>
-              <span className="text-xs uppercase">{unit}</span>
-            </div>
-          ))}
+        <div className="flex flex-col items-center">
+          <span className="text-2xl font-bold">{formattedTime.days}</span>
+          <span className="text-xs uppercase">days left</span>
         </div>
+        <AnimatePresence>
+          {isExpanded && (
+            <motion.div
+              className="flex items-center space-x-2"
+              initial={{ opacity: 0, width: 0 }}
+              animate={{ opacity: 1, width: 'auto' }}
+              exit={{ opacity: 0, width: 0 }}
+              transition={{ duration: 0.3 }}
+            >
+              {timeUnits.slice(1).map(([unit, value]) => (
+                <div key={unit} className="flex flex-col items-center">
+                  <span className="text-2xl font-bold">{value}</span>
+                  <span className="text-xs uppercase">{unit}</span>
+                </div>
+              ))}
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
-      {isTrialPausable && (
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={() =>
-              pauseOrPlay({
-                action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
-              })
-            }
-            disabled={isPending || (!isPaused && remainingPauses <= 0)}
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-          >
-            {isPaused ? (
-              <PlayIcon className="w-6 h-6" />
-            ) : (
-              <PauseIcon className="w-6 h-6" />
-            )}
-          </Button>
-          <div className="text-sm">
-            <p>Pauses Left: {remainingPauses}</p>
-          </div>
-        </div>
-      )}
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="ghost" size="icon" className="rounded-full">
-            <ChevronDownIcon className="w-6 h-6" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent className="w-64 bg-gray-900 text-white">
-          {Object.entries(tasks).map(([key, completed]) => (
-            <DropdownMenuItem key={key} className="flex items-center justify-between">
-              <span>{taskLabels[key as keyof TrialTasks]}</span>
-              {completed ? (
-                <CheckCircleIcon className="w-5 h-5 text-green-500" />
+
+      <div className="flex items-center space-x-2 ml-auto">
+        <Button
+          onClick={() => setIsExpanded(!isExpanded)}
+          variant="ghost"
+          size="icon"
+          className="rounded-full"
+        >
+          <ChevronsRightLeft className="w-6 h-6" />
+        </Button>
+
+        {isTrialPausable && (
+          <div className="flex items-center space-x-2">
+            <Button
+              onClick={() =>
+                pauseOrPlay({
+                  action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+                })
+              }
+              disabled={isPending || (!isPaused && remainingPauses <= 0)}
+              variant="ghost"
+              size="icon"
+              className="rounded-full"
+            >
+              {isPaused ? (
+                <PlayIcon className="w-6 h-6" />
               ) : (
-                <XCircleIcon className="w-5 h-5 text-red-500" />
+                <PauseIcon className="w-6 h-6" />
               )}
-            </DropdownMenuItem>
-          ))}
-        </DropdownMenuContent>
-      </DropdownMenu>
+            </Button>
+             <div className="text-sm">
+              <p>{remainingPauses} Pauses Left</p>
+            </div>
+          </div>
+        )}
+        <DropdownMenu>
+          <DropdownMenuTrigger asChild>
+            <Button variant="ghost" size="icon" className="rounded-full">
+              <ChevronDownIcon className="w-6 h-6" />
+            </Button>
+          </DropdownMenuTrigger>
+          <DropdownMenuContent className="w-64 bg-gray-900 text-white">
+            {Object.entries(tasks).map(([key, completed]) => (
+              <DropdownMenuItem
+                key={key}
+                className="flex items-center justify-between"
+              >
+                <span>{taskLabels[key as keyof TrialTasks]}</span>
+                {completed ? (
+                  <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                ) : (
+                  <XCircleIcon className="w-5 h-5 text-red-500" />
+                )}
+              </DropdownMenuItem>
+            ))}
+          </DropdownMenuContent>
+        </DropdownMenu>
+      </div>
     </motion.div>
   );
 };
