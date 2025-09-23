@@ -1,12 +1,14 @@
 'use client';
 
 import { motion } from 'framer-motion';
+import { PaygOption } from '@/service/payments/types';
 
 interface SubscriptionSummaryProps {
   planName: string;
   planPrice: string;
   isTrial: boolean;
-  discount: number;
+  isPayg?: boolean;
+  paygOption?: PaygOption;
   totalPrice: number;
 }
 
@@ -14,15 +16,25 @@ export default function SubscriptionSummary({
   planName,
   planPrice,
   isTrial,
-  discount,
+  isPayg,
+  paygOption,
   totalPrice,
 }: SubscriptionSummaryProps) {
-  const getPriceAsNumber = (price: string) => {
-    const numericPart = price.replace(/[^0-9.-]+/g, '');
-    return parseFloat(numericPart);
+  const getPaygOptionString = (option?: PaygOption) => {
+    if (!option) return '';
+    switch (option) {
+      case PaygOption.NINETY_DAYS:
+        return ' (90 Days)';
+      case PaygOption.ONE_EIGHTY_DAYS:
+        return ' (180 Days)';
+      case PaygOption.TWO_SEVENTY_DAYS:
+        return ' (270 Days)';
+      default:
+        return '';
+    }
   };
 
-  const basePrice = isTrial ? 1.0 : getPriceAsNumber(planPrice) + 1.0;
+  const planTypeString = isPayg ? 'Pay As You Go' : 'Co-Branded';
 
   return (
     <motion.div
@@ -34,6 +46,10 @@ export default function SubscriptionSummary({
       <h2 className="text-3xl font-bold text-gray-800">Order Summary</h2>
       <div>
         <h3 className="text-xl font-bold text-gray-800">{planName}</h3>
+        <p className="text-lg text-gray-600">
+          {planTypeString}
+          {isPayg && getPaygOptionString(paygOption)}
+        </p>
         <p className="text-lg text-gray-600">{planPrice}</p>
         {isTrial && (
           <p className="text-sm text-gray-500">
@@ -45,15 +61,9 @@ export default function SubscriptionSummary({
         <div className="flex items-center justify-between text-lg">
           <p className="text-gray-600">Subtotal</p>
           <p className="font-semibold text-gray-800">
-            £{basePrice.toFixed(2)}
+            £{totalPrice.toFixed(2)}
           </p>
         </div>
-        {discount > 0 && (
-          <div className="flex items-center justify-between text-lg text-green-600">
-            <p>Discount</p>
-            <p className="font-semibold">-£{discount.toFixed(2)}</p>
-          </div>
-        )}
         <div className="flex items-center justify-between text-2xl font-bold text-gray-800 pt-2 border-t-2 border-gray-100 mt-2">
           <p>Total</p>
           <p>£{totalPrice.toFixed(2)}</p>

@@ -4,41 +4,27 @@ import {
   PayPalScriptProvider,
   PayPalButtons,
 } from '@paypal/react-paypal-js';
-import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { toast } from 'sonner';
 
 const PAYPAL_CLIENT_ID =
-  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'sb'; // Fallback to 'sb' for sandbox
+  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'sb';
 
 interface PayPalCheckoutButtonProps {
-  totalPrice: number;
+  orderID: string;
   onSuccess: (orderId: string) => void;
 }
 
 export default function PayPalCheckoutButton({
-  totalPrice,
+  orderID,
   onSuccess,
 }: PayPalCheckoutButtonProps) {
-  const { createOrderMutation, captureOrderMutation } = usePayPalPayment();
-
-  const createOrder = async () => {
-    try {
-      const data = await createOrderMutation.mutateAsync(totalPrice);
-      return data.id;
-    } catch (_error) {
-      toast.error('Could not create PayPal order. Please try again.');
-      return '';
-    }
-  };
-
   const onApprove = async (data: { orderID: string }) => {
-    try {
-      await captureOrderMutation.mutateAsync(data.orderID);
-      onSuccess(data.orderID);
-    } catch (_error) {
-      toast.error('Could not capture PayPal payment. Please try again.');
-    }
+    onSuccess(data.orderID);
   };
+
+  if (!orderID) {
+    return <div>Loading PayPal button...</div>;
+  }
 
   return (
     <PayPalScriptProvider
@@ -49,7 +35,9 @@ export default function PayPalCheckoutButton({
     >
       <PayPalButtons
         style={{ layout: 'vertical' }}
-        createOrder={createOrder}
+        createOrder={(_, actions) => {
+          return Promise.resolve(orderID);
+        }}
         onApprove={onApprove}
       />
     </PayPalScriptProvider>

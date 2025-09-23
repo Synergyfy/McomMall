@@ -14,12 +14,19 @@ export enum PaymentGateway {
   PAYPAL = 'PAYPAL',
 }
 
+export interface CreatePaymentIntentDto {
+  amount: number;
+  currency?: string;
+}
+
 export interface RecordPaymentDto {
   amount: number;
   planType: PlanType;
   paygOption?: PaygOption;
   isTrial: boolean;
   paymentGateway: PaymentGateway;
+  transactionId: string;
+  currency?: string;
 }
 
 export enum SubscriptionStatusEnum {

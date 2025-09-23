@@ -45,6 +45,9 @@ export default function CheckoutClient() {
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
+    PaymentMethod.STRIPE
+  );
 
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
@@ -225,8 +228,9 @@ export default function CheckoutClient() {
             <PaymentForm
               totalPrice={totalPrice}
               onPaymentSuccess={(transactionId) =>
-                handlePaymentSuccess(transactionId, PaymentMethod.PAYPAL)
+                handlePaymentSuccess(transactionId, paymentMethod)
               }
+              setPaymentMethod={setPaymentMethod}
             />
           </div>
         </div>
