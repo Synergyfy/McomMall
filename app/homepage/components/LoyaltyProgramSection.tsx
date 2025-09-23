@@ -99,7 +99,7 @@ const LoyaltyProgramSection = () => {
   };
 
   return (
-    <section className="bg-white font-sans py-5 sm:py-20 px-4 sm:px-6 lg:px-8">
+    <section className="bg-white font-sans py-5 sm:py-20 px-4 sm:px-6 lg:px-5">
       <div className="max-w-7xl mx-auto">
         {/* Tab Navigation */}
         <div className="mb-10 border-b border-gray-200">
@@ -152,13 +152,13 @@ const LoyaltyProgramSection = () => {
 
             {/* Text Column */}
             <div className="flex flex-col">
-              <h2 className="text-3xl sm:text-4xl font-bold text-gray-800 leading-tight">
+              <h2 className="text-3xl sm:text-3xl font-bold text-gray-800 leading-tight">
                 {activeContent.headerTitle}
               </h2>
 
               <div className="mt-6 text-gray-600 space-y-6">
                 {activeContent.mainTitle && (
-                  <h3 className="text-xl sm:text-2xl font-semibold text-gray-700">
+                  <h3 className="text-xl sm:text-xl font-semibold text-gray-700">
                     {activeContent.mainTitle}
                   </h3>
                 )}
