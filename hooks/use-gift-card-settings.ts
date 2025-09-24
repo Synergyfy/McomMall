@@ -5,8 +5,24 @@ import {
   UpdateGiftCardSettingsDto,
 } from '@/app/dashboard/gift-card/types';
 
-// The fetcher function for SWR
-const fetcher = (url: string) => api.get(url).then(res => res.data);
+/**
+ * The fetcher function for SWR.
+ * It handles 404 errors by returning null, which signifies that settings
+ * have not yet been created. Other errors are thrown to be handled by SWR.
+ */
+const fetcher = async (url: string): Promise<GiftCardSettings | null> => {
+  try {
+    const res = await api.get(url);
+    return res.data;
+  } catch (error: any) {
+    if (error?.response?.status === 404) {
+      // Return null if settings are not found (404), it's not an "error" state.
+      return null;
+    }
+    // For all other errors, let SWR handle it.
+    throw error;
+  }
+};
 
 /**
  * Custom hook to manage merchant gift card settings.
@@ -20,15 +36,14 @@ const fetcher = (url: string) => api.get(url).then(res => res.data);
 export const useGiftCardSettings = (options?: SWRConfiguration) => {
   const endpoint = '/merchant/gift-cards/settings';
 
-  // Use SWR to fetch the settings data
+  // Use SWR to fetch the settings data. Note the type allows for `null`.
   const {
     data: settings,
     error,
-    mutate, // `mutate` is used to trigger a re-fetch or update local data
+    mutate,
     isLoading,
-  } = useSWR<GiftCardSettings>(endpoint, fetcher, {
+  } = useSWR<GiftCardSettings | null>(endpoint, fetcher, {
     ...options,
-    // Optional: Keep data fresh by revalidating on focus or reconnect
     revalidateOnFocus: true,
     revalidateOnReconnect: true,
   });
@@ -44,34 +59,20 @@ export const useGiftCardSettings = (options?: SWRConfiguration) => {
   ): Promise<GiftCardSettings> => {
     try {
       // Optimistically update the local data for a better user experience
-      await mutate(
-        async currentSettings => {
-          // Make the API call to update the settings
-          const { data: newSettings } = await api.put<GiftCardSettings>(
-            endpoint,
-            updatedSettings
-          );
-          return { ...currentSettings, ...newSettings }; // Return the merged data
-        },
-        {
-          optimisticData: { ...settings, ...updatedSettings } as GiftCardSettings, // Immediately update UI
-          rollbackOnError: true, // Revert on failure
-          populateCache: true, // Update the cache with the new data
-          revalidate: false, // Don't re-fetch immediately after mutation
-        }
+      const { data: newSettings } = await api.put<GiftCardSettings>(
+        endpoint,
+        updatedSettings
       );
 
-      // The `mutate` function above already returns the updated data,
-      // but we need to satisfy the promise return type.
-      // We can fetch the latest data from the cache.
-      const finalSettings = await mutate();
-      if (!finalSettings) {
-        throw new Error('Failed to retrieve updated settings from cache.');
-      }
-      return finalSettings;
+      // After a successful update, re-fetch the data to ensure consistency.
+      // Or, we can just update the cache directly.
+      mutate(newSettings, false); // Update local data, don't revalidate
+
+      return newSettings;
     } catch (e) {
       console.error('Failed to update gift card settings:', e);
-      // Let the SWR error handling and rollback take care of the UI state
+      // Manually trigger a revalidation to get the correct server state on error.
+      mutate();
       throw e; // Re-throw the error to be caught by the caller
     }
   };
@@ -81,6 +82,6 @@ export const useGiftCardSettings = (options?: SWRConfiguration) => {
     isLoading,
     error,
     updateSettings,
-    mutate, // Expose mutate for manual re-fetching if needed
+    mutate,
   };
 };

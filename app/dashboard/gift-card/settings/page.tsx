@@ -1,14 +1,15 @@
 'use client';
 
 import * as React from 'react';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useMemo } from 'react';
 import { useGiftCardSettings } from '@/hooks/use-gift-card-settings';
-import { UpdateGiftCardSettingsDto } from '@/app/dashboard/gift-card/types';
+import {
+  GiftCardSettings,
+  UpdateGiftCardSettingsDto,
+} from '@/app/dashboard/gift-card/types';
 import { toast } from 'sonner';
 
-// --- UI Components ---
-// Basic functional equivalents of shadcn/ui components
-
+// --- UI Components (Placeholders) ---
 const Card = ({
   children,
   className = '',
@@ -22,7 +23,6 @@ const Card = ({
     {children}
   </div>
 );
-
 const CardHeader = ({
   children,
   className = '',
@@ -30,17 +30,14 @@ const CardHeader = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 border-b dark:border-gray-700 ${className}`}>{children}</div>;
-
 const CardTitle = ({ children }: { children: React.ReactNode }) => (
   <h3 className="text-lg font-semibold leading-6 text-gray-900 dark:text-white">
     {children}
   </h3>
 );
-
 const CardDescription = ({ children }: { children: React.ReactNode }) => (
   <p className="mt-1 text-sm text-gray-500 dark:text-gray-400">{children}</p>
 );
-
 const CardContent = ({
   children,
   className = '',
@@ -48,21 +45,6 @@ const CardContent = ({
   children: React.ReactNode;
   className?: string;
 }) => <div className={`p-6 ${className}`}>{children}</div>;
-
-const CardFooter = ({
-  children,
-  className = '',
-}: {
-  children: React.ReactNode;
-  className?: string;
-}) => (
-  <div
-    className={`px-6 py-4 bg-gray-50 dark:bg-gray-900/50 border-t dark:border-gray-700 flex justify-end ${className}`}
-  >
-    {children}
-  </div>
-);
-
 const Button = ({
   children,
   onClick,
@@ -82,7 +64,6 @@ const Button = ({
     {children}
   </button>
 );
-
 const Switch = ({
   id,
   checked,
@@ -110,7 +91,6 @@ const Switch = ({
     />
   </button>
 );
-
 const FormRow = ({
   id,
   label,
@@ -139,44 +119,52 @@ const FormRow = ({
     <div>{children}</div>
   </div>
 );
-
 const SkeletonLoader = ({ className = '' }: { className?: string }) => (
   <div
     className={`animate-pulse bg-gray-200 dark:bg-gray-700 rounded-md ${className}`}
   ></div>
 );
 
-// --- Main Page Component ---
+// --- Default Settings ---
+const DEFAULT_SETTINGS: GiftCardSettings = {
+  isEnabled: false,
+  allowDeliveryScheduling: true,
+  allowPersonalMessage: true,
+  enableQrCode: false,
+  allowReloading: false,
+  redemptionRules: {
+    canBeUsedWithDiscounts: false,
+    canApplyToShipping: true,
+    canApplyToTax: true,
+  },
+};
 
+// --- Main Page Component ---
 export default function GiftCardSettingsPage() {
   const { settings, isLoading, error, updateSettings } = useGiftCardSettings();
   const [formData, setFormData] = useState<UpdateGiftCardSettingsDto>({});
   const [isSaving, setIsSaving] = useState(false);
-  const [hasChanges, setHasChanges] = useState(false);
+
+  const initialSettings = useMemo(
+    () => settings ?? DEFAULT_SETTINGS,
+    [settings]
+  );
 
   useEffect(() => {
-    if (settings) {
-      setFormData({
-        isEnabled: settings.isEnabled,
-        allowDeliveryScheduling: settings.allowDeliveryScheduling,
-        allowPersonalMessage: settings.allowPersonalMessage,
-        enableQrCode: settings.enableQrCode,
-        allowReloading: settings.allowReloading,
-        redemptionRules: {
-          canBeUsedWithDiscounts: settings.redemptionRules.canBeUsedWithDiscounts,
-          canApplyToShipping: settings.redemptionRules.canApplyToShipping,
-          canApplyToTax: settings.redemptionRules.canApplyToTax,
-        },
-      });
-    }
-  }, [settings]);
+    // When settings load (or on initial load with defaults), set the form data.
+    setFormData(initialSettings);
+  }, [initialSettings]);
+
+  const hasChanges = useMemo(() => {
+    if (isLoading || !formData) return false;
+    return JSON.stringify(formData) !== JSON.stringify(initialSettings);
+  }, [formData, initialSettings, isLoading]);
 
   const handleFormChange = (
     key: keyof UpdateGiftCardSettingsDto,
     value: any
   ) => {
     setFormData(prev => ({ ...prev, [key]: value }));
-    setHasChanges(true);
   };
 
   const handleRedemptionRuleChange = (
@@ -186,11 +174,11 @@ export default function GiftCardSettingsPage() {
     setFormData(prev => ({
       ...prev,
       redemptionRules: {
-        ...prev.redemptionRules,
+        ...(prev.redemptionRules ??
+          DEFAULT_SETTINGS.redemptionRules),
         [key]: value,
       },
     }));
-    setHasChanges(true);
   };
 
   const handleSaveChanges = async () => {
@@ -201,7 +189,6 @@ export default function GiftCardSettingsPage() {
       loading: 'Saving settings...',
       success: () => {
         setIsSaving(false);
-        setHasChanges(false);
         return 'Settings saved successfully!';
       },
       error: () => {
@@ -220,9 +207,9 @@ export default function GiftCardSettingsPage() {
             <SkeletonLoader className="h-4 w-3/4 mt-2" />
           </CardHeader>
           <CardContent className="space-y-6">
-            <SkeletonLoader className="h-8 w-full" />
-            <SkeletonLoader className="h-8 w-full" />
-            <SkeletonLoader className="h-8 w-full" />
+            <SkeletonLoader className="h-10 w-full" />
+            <SkeletonLoader className="h-10 w-full" />
+            <SkeletonLoader className="h-10 w-full" />
           </CardContent>
         </Card>
       </div>
@@ -232,7 +219,9 @@ export default function GiftCardSettingsPage() {
   if (error) {
     return (
       <div className="p-8 max-w-4xl mx-auto text-center">
-        <p className="text-red-500">Failed to load settings. Please try refreshing the page.</p>
+        <p className="text-red-500">
+          Failed to load settings. Please try refreshing the page.
+        </p>
       </div>
     );
   }
@@ -257,7 +246,9 @@ export default function GiftCardSettingsPage() {
               <Switch
                 id="isEnabled"
                 checked={formData.isEnabled ?? false}
-                onCheckedChange={checked => handleFormChange('isEnabled', checked)}
+                onCheckedChange={checked =>
+                  handleFormChange('isEnabled', checked)
+                }
               />
             </FormRow>
 
@@ -297,7 +288,9 @@ export default function GiftCardSettingsPage() {
               <Switch
                 id="enableQrCode"
                 checked={formData.enableQrCode ?? false}
-                onCheckedChange={checked => handleFormChange('enableQrCode', checked)}
+                onCheckedChange={checked =>
+                  handleFormChange('enableQrCode', checked)
+                }
               />
             </FormRow>
 
@@ -333,7 +326,9 @@ export default function GiftCardSettingsPage() {
               >
                 <Switch
                   id="canBeUsedWithDiscounts"
-                  checked={formData.redemptionRules?.canBeUsedWithDiscounts ?? false}
+                  checked={
+                    formData.redemptionRules?.canBeUsedWithDiscounts ?? false
+                  }
                   onCheckedChange={checked =>
                     handleRedemptionRuleChange('canBeUsedWithDiscounts', checked)
                   }
@@ -372,12 +367,12 @@ export default function GiftCardSettingsPage() {
         </div>
 
         <div className="mt-8 flex justify-end">
-           <Button
-              onClick={handleSaveChanges}
-              disabled={isSaving || !hasChanges}
-            >
-              {isSaving ? 'Saving...' : 'Save Changes'}
-            </Button>
+          <Button
+            onClick={handleSaveChanges}
+            disabled={isSaving || !hasChanges}
+          >
+            {isSaving ? 'Saving...' : 'Save Changes'}
+          </Button>
         </div>
       </div>
     </div>
