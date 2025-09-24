@@ -6,6 +6,7 @@ import { useGiftCardSettings } from '@/hooks/use-gift-card-settings';
 import {
   GiftCardSettings,
   UpdateGiftCardSettingsDto,
+  RedemptionRules,
 } from '@/app/dashboard/gift-card/types';
 import { toast } from 'sonner';
 
@@ -162,13 +163,13 @@ export default function GiftCardSettingsPage() {
 
   const handleFormChange = (
     key: keyof UpdateGiftCardSettingsDto,
-    value: any
+    value: UpdateGiftCardSettingsDto[keyof UpdateGiftCardSettingsDto]
   ) => {
     setFormData(prev => ({ ...prev, [key]: value }));
   };
 
   const handleRedemptionRuleChange = (
-    key: keyof UpdateGiftCardSettingsDto['redemptionRules'],
+    key: keyof RedemptionRules,
     value: boolean
   ) => {
     setFormData(prev => ({
@@ -233,7 +234,7 @@ export default function GiftCardSettingsPage() {
           <CardHeader>
             <CardTitle>Gift Card Settings</CardTitle>
             <CardDescription>
-              Manage your store's gift card program. Enable or disable features
+              Manage your store&apos;s gift card program. Enable or disable features
               to fit your business needs.
             </CardDescription>
           </CardHeader>

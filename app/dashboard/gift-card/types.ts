@@ -15,4 +15,15 @@ export interface GiftCardSettings {
   redemptionRules: RedemptionRules;
 }
 
+import { ElementType, ReactNode } from 'react';
+
 export type UpdateGiftCardSettingsDto = Partial<GiftCardSettings>;
+
+export interface GiftCardDesign {
+  id: string;
+  name: string;
+  primaryColor: string;
+  secondaryColor: string;
+  icon: ElementType;
+  pattern: ReactNode;
+}
