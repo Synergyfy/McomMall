@@ -25,10 +25,11 @@ const fetcher = async (url: string): Promise<GiftCardSettings | null> => {
 };
 
 /**
- * Custom hook to manage merchant gift card settings.
+ * Custom hook to manage the gift card settings for a business owner.
  *
  * This hook handles fetching, updating, and revalidating the gift card settings
- * for the authenticated merchant. It uses SWR for robust data fetching and caching.
+ * for the authenticated business owner. These settings apply globally across all
+ * businesses owned by the user. It uses SWR for robust data fetching and caching.
  *
  * @param {SWRConfiguration} options - Optional SWR configuration.
  * @returns {object} The state and functions to manage gift card settings.

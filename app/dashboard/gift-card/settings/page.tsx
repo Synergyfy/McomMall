@@ -234,8 +234,8 @@ export default function GiftCardSettingsPage() {
           <CardHeader>
             <CardTitle>Gift Card Settings</CardTitle>
             <CardDescription>
-              Manage your store&apos;s gift card program. Enable or disable features
-              to fit your business needs.
+              Manage your gift card program. These settings apply to all
+              businesses you own.
             </CardDescription>
           </CardHeader>
           <CardContent>
