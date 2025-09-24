@@ -5,15 +5,12 @@ import {
   PauseResumeTrialDto,
   RecordPaymentDto,
   SubscriptionStatusResponse,
+  TrialAction,
+  TrialStatusResponse,
 } from './types';
 import { ErrorResponse } from '../listings/hook';
-import { useSelector } from 'react-redux';
-import { RootState } from '../store/store';
-import { UserRole } from '../auth/types';
 
 export const useGetSubscriptionStatus = () => {
-  const { userRole } = useSelector((state: RootState) => state.auth);
-
   const fetch = async (): Promise<SubscriptionStatusResponse> => {
     try {
       const response = await api.get('/payments/status');
@@ -28,10 +25,57 @@ export const useGetSubscriptionStatus = () => {
     }
   };
 
-  console.log(userRole, 'userRole in hook');
   const query = useQuery({
     queryFn: fetch,
     queryKey: ['FETCH_SUBSCRIPTION_STATUS'],
+    enabled: true,
+  });
+
+  return query;
+};
+
+export const useGetTrialStatus = () => {
+  const fetchAndTransform = async (): Promise<TrialStatusResponse | null> => {
+    try {
+      const response = await api.get<TrialStatusResponse>('/trial');
+      const data = response.data;
+
+      if (!data) {
+        return null;
+      }
+
+      // Derive UI-related fields from the core API response
+      const maxPauses = 2;
+      const pausesCount = data.pauses?.length || 0;
+      const lastPause = pausesCount > 0 ? data.pauses[pausesCount - 1] : null;
+
+      const isPaused = !!lastPause && lastPause.resumedAt === null;
+      const remainingPauses = maxPauses - pausesCount;
+      const isTrialPausable = remainingPauses > 0;
+
+      return {
+        ...data,
+        isPaused,
+        remainingPauses,
+        isTrialPausable,
+      };
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      // Don't throw an error for 404, it just means no trial exists
+      if (err.response?.status === 404) {
+        return null;
+      }
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to fetch trial status'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetchAndTransform,
+    queryKey: ['FETCH_TRIAL_STATUS'],
     enabled: true,
   });
 
@@ -111,11 +155,15 @@ export const useRecordPayment = () => {
 export const usePauseOrPlay = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
-    mutationFn: (payload: PauseResumeTrialDto) =>
-      api.patch('/payments/trial', payload),
+    mutationFn: (payload: PauseResumeTrialDto) => {
+      const { action } = payload;
+      const endpoint =
+        action === TrialAction.PAUSE ? '/trial/pause' : '/trial/resume';
+      return api.post(endpoint);
+    },
     onSuccess: () => {
       toast.success('Trial status updated successfully');
-      queryClient.invalidateQueries({ queryKey: ['FETCH_SUBSCRIPTION_STATUS'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_TRIAL_STATUS'] });
     },
     onError: (error: unknown) => {
       const err = error as ErrorResponse;

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useGetSubscriptionStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hook';
 import TrialCountdownTimer from '@/components/TrialCountdownTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -31,20 +31,14 @@ export default function DashboardLayout({
 }) {
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
-  const { data: subscriptionStatus } = useGetSubscriptionStatus();
+  const { data: trialStatus } = useGetTrialStatus();
 
   return (
     <>
       <AuthRedirect />
-      {subscriptionStatus?.status === SubscriptionStatusEnum.TRIAL_ACTIVE &&
-        subscriptionStatus.trialEndDate && (
-          <TrialCountdownTimer
-            trialEndDate={subscriptionStatus.trialEndDate}
-            isPaused={subscriptionStatus.isPaused}
-            isTrialPausable={subscriptionStatus.isTrialPausable}
-            remainingPauses={subscriptionStatus.remainingPauses}
-          />
-        )}
+      {trialStatus?.isActive && (
+        <TrialCountdownTimer trialStatus={trialStatus} />
+      )}
       <section className="flex w-screen h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className="hidden md:block w-[19rem] p-5">
