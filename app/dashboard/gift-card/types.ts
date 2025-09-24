@@ -1,10 +1,18 @@
-import * as React from 'react';
+// types.ts
 
-export interface GiftCardDesign {
-  id: string;
-  name: string;
-  icon: React.ElementType;
-  primaryColor: string;
-  secondaryColor: string;
-  pattern: React.ReactElement;
+export interface RedemptionRules {
+  canBeUsedWithDiscounts: boolean;
+  canApplyToShipping: boolean;
+  canApplyToTax: boolean;
 }
+
+export interface GiftCardSettings {
+  isEnabled: boolean;
+  allowDeliveryScheduling: boolean;
+  allowPersonalMessage: boolean;
+  enableQrCode: boolean;
+  allowReloading: boolean;
+  redemptionRules: RedemptionRules;
+}
+
+export type UpdateGiftCardSettingsDto = Partial<GiftCardSettings>;
