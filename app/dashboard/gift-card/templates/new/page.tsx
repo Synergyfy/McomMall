@@ -138,7 +138,12 @@ const CreateGiftCardTemplatePage = () => {
 
       const result = await response.json();
 
-      const finalFormData = { ...formData, imageUrl: result.secure_url };
+      const finalFormData = {
+        ...formData,
+        imageUrl: result.secure_url,
+        minCustomAmount: formData.allowCustomAmount ? Number(formData.minCustomAmount) : undefined,
+        maxCustomAmount: formData.allowCustomAmount ? Number(formData.maxCustomAmount) : undefined,
+      };
 
       mutate(finalFormData as CreateGiftCardTemplateDto, {
         onSuccess: () => {
