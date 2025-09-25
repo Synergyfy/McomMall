@@ -1,6 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { GiftCardTemplate, CreateGiftCardTemplateDto } from './types';
+import {
+  GiftCardTemplate,
+  CreateGiftCardTemplateDto,
+  InitiatePurchaseDto,
+  VerifyPurchaseDto,
+  InitiatePurchaseResponse,
+  GiftCard,
+} from './types';
 
 // API Functions
 const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
@@ -10,6 +17,16 @@ const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
 
 const addGiftCardTemplate = async (templateData: CreateGiftCardTemplateDto): Promise<GiftCardTemplate> => {
   const { data } = await api.post<GiftCardTemplate>('/merchant/gift-cards/templates', templateData);
+  return data;
+};
+
+const initiatePurchase = async (purchaseData: InitiatePurchaseDto): Promise<InitiatePurchaseResponse> => {
+  const { data } = await api.post<InitiatePurchaseResponse>('/gift-cards/purchase', purchaseData);
+  return data;
+};
+
+const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<GiftCard> => {
+  const { data } = await api.post<GiftCard>('/gift-cards/purchase/verify', verificationData);
   return data;
 };
 
@@ -36,11 +53,27 @@ export const useGetBusinessGiftCards = (businessId: string) => {
 };
 
 export const useAddGiftCardTemplate = () => {
-    const queryClient = useQueryClient();
-    return useMutation<GiftCardTemplate, Error, CreateGiftCardTemplateDto>({
-        mutationFn: addGiftCardTemplate,
-        onSuccess: () => {
-            queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
-        },
-    });
+  const queryClient = useQueryClient();
+  return useMutation<GiftCardTemplate, Error, CreateGiftCardTemplateDto>({
+    mutationFn: addGiftCardTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useInitiatePurchase = () => {
+  return useMutation<InitiatePurchaseResponse, Error, InitiatePurchaseDto>({
+    mutationFn: initiatePurchase,
+  });
+};
+
+export const useVerifyPurchase = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard, Error, VerifyPurchaseDto>({
+    mutationFn: verifyPurchase,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['giftCards'] });
+    },
+  });
 };
