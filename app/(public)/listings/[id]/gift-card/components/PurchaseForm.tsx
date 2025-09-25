@@ -223,13 +223,25 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
             <FormItem>
               <FormLabel>Amount</FormLabel>
               <RadioGroup
-                onValueChange={(value) => field.onChange(Number(value))}
-                className="flex flex-wrap gap-4"
+                onValueChange={(value) => {
+                  field.onChange(Number(value));
+                  setCustomAmount("");
+                }}
+                value={
+                  field.value && template.fixedAmounts.includes(field.value)
+                    ? String(field.value)
+                    : ""
+                }
+                className="flex flex-wrap items-center gap-4"
               >
                 {template.fixedAmounts.map((amount) => (
                   <FormItem key={amount}>
                     <FormControl>
-                      <RadioGroupItem value={String(amount)} id={String(amount)} className="sr-only" />
+                      <RadioGroupItem
+                        value={String(amount)}
+                        id={String(amount)}
+                        className="sr-only"
+                      />
                     </FormControl>
                     <Label
                       htmlFor={String(amount)}
@@ -248,23 +260,26 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                     }`}
                   >
                     <span className="pl-3 text-gray-500">$</span>
-                    <Input
-                      type="number"
-                      placeholder="Custom"
-                      value={customAmount}
-                      onChange={(e) => {
-                        setCustomAmount(e.target.value);
-                        field.onChange(Number(e.target.value));
-                      }}
-                      min={template.minCustomAmount}
-                      max={template.maxCustomAmount}
-                      className="w-28 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
-                      onClick={() => {
-                        if (customAmount) {
-                          field.onChange(Number(customAmount));
-                        }
-                      }}
-                    />
+                    <FormControl>
+                      <Input
+                        type="number"
+                        placeholder="Custom"
+                        value={customAmount}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setCustomAmount(val);
+                          field.onChange(val ? Number(val) : undefined);
+                        }}
+                        onFocus={() => {
+                          field.onChange(
+                            customAmount ? Number(customAmount) : undefined
+                          );
+                        }}
+                        min={template.minCustomAmount}
+                        max={template.maxCustomAmount}
+                        className="w-28 border-none bg-transparent focus-visible:ring-0 focus-visible:ring-offset-0"
+                      />
+                    </FormControl>
                   </div>
                 )}
               </RadioGroup>
