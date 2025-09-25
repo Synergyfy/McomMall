@@ -43,7 +43,7 @@ const formSchema = z.object({
   recipientEmail: z.string().email("Invalid email address."),
   senderName: z.string().min(1, "Sender name is required."),
   personalMessage: z.string().optional(),
-  paymentProvider: z.enum(["STRIPE", "PAYPAL"]),
+  paymentProvider: z.enum(["stripe", "paypal"]),
 });
 
 type PurchaseFormValues = z.infer<typeof formSchema>;
@@ -69,7 +69,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
   const form = useForm<PurchaseFormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
-      paymentProvider: "STRIPE",
+      paymentProvider: "stripe",
     },
   });
 
@@ -131,7 +131,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     );
   }
 
-  if (purchaseResponse && purchaseResponse.provider === "STRIPE" && purchaseResponse.clientSecret) {
+  if (purchaseResponse && purchaseResponse.provider === "stripe" && purchaseResponse.clientSecret) {
     return (
       <StripeCheckoutForm
         clientSecret={purchaseResponse.clientSecret}
@@ -140,7 +140,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     );
   }
 
-  if (purchaseResponse && purchaseResponse.provider === "PAYPAL" && purchaseResponse.orderId) {
+  if (purchaseResponse && purchaseResponse.provider === "paypal" && purchaseResponse.orderId) {
     return (
       <div className="flex justify-center">
         <PayPalCheckoutButton
@@ -285,8 +285,8 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="STRIPE">Stripe</SelectItem>
-                  <SelectItem value="PAYPAL">PayPal</SelectItem>
+                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
                 </SelectContent>
               </Select>
               <FormMessage />

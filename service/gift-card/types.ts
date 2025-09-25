@@ -27,17 +27,17 @@ export interface InitiatePurchaseDto {
   recipientName: string;
   senderName: string;
   personalMessage?: string;
-  paymentProvider: 'STRIPE' | 'PAYPAL';
+  paymentProvider: 'stripe' | 'paypal';
 }
 
 export interface VerifyPurchaseDto {
-  paymentProvider: 'STRIPE' | 'PAYPAL';
+  paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
   purchaseDetails: Omit<InitiatePurchaseDto, 'paymentProvider'>;
 }
 
 export interface InitiatePurchaseResponse {
-  provider: 'STRIPE' | 'PAYPAL';
+  provider: 'stripe' | 'paypal';
   clientSecret?: string;
   orderId?: string;
 }
