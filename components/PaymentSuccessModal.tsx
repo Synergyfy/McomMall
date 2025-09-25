@@ -67,7 +67,7 @@ export default function PaymentSuccessDialog({
                   <span className="font-semibold">Code:</span> {giftCard.code}
                 </p>
                 <p>
-                  <span className="font-semibold">Balance:</span> ${giftCard.initialBalance.toFixed(2)}
+                  <span className="font-semibold">Balance:</span> £{giftCard.initialBalance.toFixed(2)}
                 </p>
                 <p>
                   <span className="font-semibold">Recipient:</span> {giftCard.recipientEmail}
