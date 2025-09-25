@@ -11,9 +11,9 @@ import { Terminal } from "lucide-react";
 import { useGetGiftCardTemplates } from '@/service/gift-card/hook';
 
 const GiftCardTemplatesPage = () => {
-  const { data: templates, isPending, isError } = useGetGiftCardTemplates();
+  const { data: templates, isLoading, isError } = useGetGiftCardTemplates();
 
-  if (isPending) {
+  if (isLoading) {
     return <div>Loading...</div>;
   }
 
