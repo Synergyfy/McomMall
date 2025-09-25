@@ -1,16 +1,21 @@
 "use client";
-import React, { useState, useEffect } from 'react';
+import React from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
+import Image from 'next/image';
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useGetGiftCardTemplates } from '@/service/gift-card/hook';
 
 const GiftCardTemplatesPage = () => {
-  const { data: templates, isLoading, isError } = useGetGiftCardTemplates();
+  const { data: templates, isPending, isError } = useGetGiftCardTemplates();
+
+  if (isPending) {
+    return <div>Loading...</div>;
+  }
 
   if (isError) {
     return (
@@ -38,9 +43,9 @@ const GiftCardTemplatesPage = () => {
         </Link>
       </div>
 
-      {templates?.length === 0 ? (
+      {templates && templates.length === 0 ? (
         <div className="text-center py-20">
-          <p className="text-gray-500 mb-4">You haven't created any gift card templates yet.</p>
+          <p className="text-gray-500 mb-4">You haven&apos;t created any gift card templates yet.</p>
           <Link href="/dashboard/gift-card/templates/new" passHref>
             <Button className="bg-orange-600 hover:bg-orange-700 text-white">
               <PlusCircle className="mr-2 h-4 w-4" />
@@ -50,10 +55,10 @@ const GiftCardTemplatesPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {templates.map((template) => (
+          {templates && templates.map((template) => (
             <Card key={template.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
               <CardHeader className="p-0">
-                <img src={template.imageUrl} alt={template.name} className="w-full h-48 object-cover" />
+                <Image src={template.imageUrl} alt={template.name} className="w-full h-48 object-cover" width={300} height={200} />
               </CardHeader>
               <CardContent className="p-4">
                 <CardTitle className="text-lg font-semibold text-gray-800">{template.name}</CardTitle>

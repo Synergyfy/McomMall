@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from 'react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { createGiftCardTemplate } from '@/service/gift-card';
 import { CreateGiftCardTemplateDto } from '@/service/gift-card/types';
 
@@ -15,9 +15,10 @@ const CreateGiftCardTemplatePage = () => {
   const router = useRouter();
   const queryClient = useQueryClient();
 
-  const { mutate, isLoading } = useMutation(createGiftCardTemplate, {
+  const { mutate, isPending } = useMutation({
+    mutationFn: createGiftCardTemplate,
     onSuccess: () => {
-      queryClient.invalidateQueries('giftCardTemplates');
+      queryClient.invalidateQueries({queryKey: ['giftCardTemplates']});
       router.push('/dashboard/gift-card/templates');
     },
     onError: (error) => {
@@ -68,11 +69,11 @@ const CreateGiftCardTemplatePage = () => {
             </div>
 
             <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isLoading}>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isLoading}>
-                {isLoading ? 'Creating...' : 'Create Template'}
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isPending}>
+                {isPending ? 'Creating...' : 'Create Template'}
               </Button>
             </div>
           </form>

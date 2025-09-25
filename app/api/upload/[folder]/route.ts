@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { v2 as cloudinary } from 'cloudinary';
+import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
 import multer from 'multer';
 import { Readable } from 'stream';
 
@@ -14,9 +14,9 @@ cloudinary.config({
 const storage = multer.memoryStorage();
 multer({ storage });
 
-export async function POST(req: NextRequest, { params }: { params: { folder: string } }) {
+export async function POST(req: NextRequest, { params }: { params: Promise<{ folder: string }> }) {
   try {
-    const { folder } = params;
+    const { folder } = await params;
     if (!folder || typeof folder !== 'string') {
       return NextResponse.json({ error: 'Folder name is required' }, { status: 400 });
     }
@@ -49,7 +49,7 @@ export async function POST(req: NextRequest, { params }: { params: { folder: str
     readableStream.push(buffer);
     readableStream.push(null);
 
-    const result = await new Promise<any>((resolve, reject) => {
+    const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
         { folder, resource_type: 'image' },
         (error, result) => {
@@ -65,11 +65,15 @@ export async function POST(req: NextRequest, { params }: { params: { folder: str
 
     return NextResponse.json(result);
   } catch (error) {
+    let message = 'An unknown error occurred';
+    if (error instanceof Error) {
+      message = error.message;
+    } else if (typeof error === 'string') {
+      message = error;
+    }
     return NextResponse.json(
-      { error: (error as Error).message },
+      { error: message },
       { status: 500 }
     );
   }
 }
-
-
