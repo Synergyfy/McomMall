@@ -87,11 +87,11 @@ const CreateGiftCardTemplatePage = () => {
       newErrors.fixedAmounts = "At least one fixed amount is required if custom amounts are not allowed.";
     }
     if (formData.allowCustomAmount) {
-      if (!formData.minCustomAmount || formData.minCustomAmount <= 0) {
-        newErrors.minCustomAmount = "Minimum custom amount must be greater than 0.";
+      if (!formData.minCustomAmount || formData.minCustomAmount < 0.01) {
+        newErrors.minCustomAmount = "Minimum custom amount must be at least £0.01.";
       }
-      if (!formData.maxCustomAmount || formData.maxCustomAmount <= 0) {
-        newErrors.maxCustomAmount = "Maximum custom amount must be greater than 0.";
+      if (!formData.maxCustomAmount || formData.maxCustomAmount < 0.01) {
+        newErrors.maxCustomAmount = "Maximum custom amount must be at least £0.01.";
       }
       if (formData.minCustomAmount && formData.maxCustomAmount && formData.minCustomAmount >= formData.maxCustomAmount) {
         newErrors.maxCustomAmount = "Maximum amount must be greater than the minimum amount.";
