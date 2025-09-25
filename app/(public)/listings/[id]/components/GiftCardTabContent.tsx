@@ -4,7 +4,7 @@ import { useGetBusinessGiftCards } from '@/service/gift-card/hook';
 import { GiftCardTemplate } from '@/service/gift-card/types';
 import { Button } from '@/components/ui/button';
 import Image from 'next/image';
-import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface GiftCardTabContentProps {
   businessId: string;
@@ -12,6 +12,7 @@ interface GiftCardTabContentProps {
 
 export default function GiftCardTabContent({ businessId }: GiftCardTabContentProps) {
   const { data: templates, isPending, isError } = useGetBusinessGiftCards(businessId);
+  const router = useRouter();
 
   if (isPending) {
     return <p>Loading gift cards...</p>;
@@ -26,7 +27,7 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
   }
 
   const handleBuyNow = (template: GiftCardTemplate) => {
-    toast.info(`The "Buy Now" functionality for "${template.name}" is not yet implemented.`);
+    router.push(`/listings/${businessId}/gift-card?templateId=${template.id}`);
   };
 
   return (
