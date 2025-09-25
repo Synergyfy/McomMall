@@ -63,7 +63,7 @@ export default function UserNav() {
           <ChevronDown className="hidden h-4 w-4 sm:block ml-auto" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56">
+      <DropdownMenuContent align="end" className="w-56 bg-white">
         {userRole === 'owner' && (
           <>
             <DropdownMenuItem asChild>
