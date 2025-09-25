@@ -6,29 +6,24 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from 'next/navigation';
-import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { createGiftCardTemplate } from '@/service/gift-card';
+import { useAddGiftCardTemplate } from '@/service/gift-card/hook';
 import { CreateGiftCardTemplateDto } from '@/service/gift-card/types';
 
 const CreateGiftCardTemplatePage = () => {
   const { register, handleSubmit, formState: { errors } } = useForm<CreateGiftCardTemplateDto>();
   const router = useRouter();
-  const queryClient = useQueryClient();
-
-  const { mutate, isPending } = useMutation({
-    mutationFn: createGiftCardTemplate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({queryKey: ['giftCardTemplates']});
-      router.push('/dashboard/gift-card/templates');
-    },
-    onError: (error) => {
-      // Handle error, e.g., show a notification
-      console.error("Failed to create gift card template:", error);
-    },
-  });
+  const { mutate, isPending } = useAddGiftCardTemplate();
 
   const onSubmit = (data: CreateGiftCardTemplateDto) => {
-    mutate(data);
+    mutate(data, {
+      onSuccess: () => {
+        router.push('/dashboard/gift-card/templates');
+      },
+      onError: (error) => {
+        // Handle error, e.g., show a notification
+        console.error("Failed to create gift card template:", error);
+      },
+    });
   };
 
   return (
