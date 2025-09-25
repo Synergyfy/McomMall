@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
@@ -38,8 +38,8 @@ import PayPalCheckoutButton from "@/components/PayPalCheckoutButton";
 import PaymentSuccessDialog from "@/components/PaymentSuccessModal";
 import { toast } from "sonner";
 
-const formSchema = z.object({
-  amount: z.coerce.number().min(1, "Amount must be at least 1."),
+const baseFormSchema = z.object({
+  amount: z.coerce.number().min(1, "A valid amount is required."),
   recipientName: z.string().min(1, "Recipient name is required."),
   recipientEmail: z.string().email("Invalid email address."),
   senderName: z.string().min(1, "Sender name is required."),
@@ -47,7 +47,7 @@ const formSchema = z.object({
   paymentProvider: z.enum(["stripe", "paypal"]),
 });
 
-type PurchaseFormValues = z.infer<typeof formSchema>;
+type PurchaseFormValues = z.infer<typeof baseFormSchema>;
 
 interface PurchaseFormProps {
   template: GiftCardTemplate;
@@ -66,6 +66,29 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     useInitiatePurchase();
   const { mutate: verifyPurchase, isPending: isVerifying } =
     useVerifyPurchase();
+
+  const formSchema = useMemo(
+    () =>
+      baseFormSchema.refine(
+        (data) => {
+          if (!data.amount) return true; // Let required check from base schema handle it
+          if (template.fixedAmounts.includes(data.amount)) {
+            return true;
+          }
+          if (template.allowCustomAmount) {
+            const min = template.minCustomAmount ?? -Infinity;
+            const max = template.maxCustomAmount ?? Infinity;
+            return data.amount >= min && data.amount <= max;
+          }
+          return false;
+        },
+        {
+          message: `Custom amount must be between $${template.minCustomAmount} and $${template.maxCustomAmount}.`,
+          path: ["amount"],
+        }
+      ),
+    [template]
+  );
 
   const form = useForm<PurchaseFormValues>({
     resolver: zodResolver(formSchema),
@@ -148,9 +171,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Form fields remain the same */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          {/* Recipient Info */}
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -180,7 +201,6 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
             />
           </div>
 
-          {/* Sender Info */}
           <div className="space-y-4">
             <FormField
               control={form.control}
@@ -239,7 +259,11 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                     </FormControl>
                     <Label
                       htmlFor={String(amount)}
-                      className="cursor-pointer rounded-md border border-gray-300 px-4 py-2 hover:bg-orange-100 data-[state=checked]:border-orange-600 data-[state=checked]:bg-orange-50"
+                      className={`cursor-pointer rounded-md border px-4 py-2 transition-colors hover:bg-orange-100 ${
+                        field.value === amount
+                          ? "border-orange-600 bg-orange-50 ring-2 ring-orange-500"
+                          : "border-gray-300"
+                      }`}
                     >
                       ${amount}
                     </Label>
@@ -249,7 +273,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                   <div
                     className={`flex items-center rounded-md border transition-colors ${
                       field.value && !template.fixedAmounts.includes(field.value)
-                        ? "border-orange-600 bg-orange-50"
+                        ? "border-orange-600 bg-orange-50 ring-2 ring-orange-500"
                         : "border-gray-300"
                     }`}
                   >
