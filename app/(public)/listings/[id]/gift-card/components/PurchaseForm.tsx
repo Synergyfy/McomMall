@@ -6,6 +6,7 @@ import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
   GiftCardTemplate,
+  InitiatePurchaseDto,
   InitiatePurchaseResponse,
   GiftCard,
 } from "@/service/gift-card/types";
@@ -57,7 +58,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
   const [purchaseResponse, setPurchaseResponse] =
     useState<InitiatePurchaseResponse | null>(null);
   const [purchaseDetails, setPurchaseDetails] =
-    useState<Omit<PurchaseFormValues, "paymentProvider"> | null>(null);
+    useState<InitiatePurchaseDto | null>(null);
   const [createdGiftCard, setCreatedGiftCard] = useState<GiftCard | null>(null);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
@@ -74,23 +75,19 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
   });
 
   const onSubmit = (values: PurchaseFormValues) => {
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-    const { paymentProvider, ...details } = values;
+    const details: InitiatePurchaseDto = {
+      ...values,
+      templateId: template.id,
+    };
     setPurchaseDetails(details);
-    initiatePurchase(
-      {
-        ...values,
-        templateId: template.id,
+    initiatePurchase(details, {
+      onSuccess: (data) => {
+        setPurchaseResponse(data);
       },
-      {
-        onSuccess: (data) => {
-          setPurchaseResponse(data);
-        },
-        onError: () => {
-          toast.error("Failed to initiate purchase. Please try again.");
-        },
-      }
-    );
+      onError: () => {
+        toast.error("Failed to initiate purchase. Please try again.");
+      },
+    });
   };
 
   const handleVerification = (transactionId: string) => {
@@ -100,10 +97,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
       {
         paymentProvider: purchaseResponse.provider,
         transactionId,
-        purchaseDetails: {
-          ...purchaseDetails,
-          templateId: template.id,
-        },
+        purchaseDetails: purchaseDetails,
       },
       {
         onSuccess: (data) => {

@@ -33,7 +33,7 @@ export interface InitiatePurchaseDto {
 export interface VerifyPurchaseDto {
   paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
-  purchaseDetails: Omit<InitiatePurchaseDto, 'paymentProvider'>;
+  purchaseDetails: InitiatePurchaseDto;
 }
 
 export interface InitiatePurchaseResponse {
