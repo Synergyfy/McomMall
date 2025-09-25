@@ -132,7 +132,7 @@ const ListingCard: React.FC<ListingCardProps> = ({
   };
 
   const handleCardClick = () => {
-    router.push(`/listings/${listing.id}`);
+    router.push(`/listings/${listing.id}?source=in-house`);
   };
 
   return (
