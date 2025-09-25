@@ -7,6 +7,7 @@ export interface GiftCardTemplate {
   allowCustomAmount: boolean;
   minCustomAmount?: number;
   maxCustomAmount?: number;
+  createdAt: string;
 }
 
 export interface CreateGiftCardTemplateDto {
