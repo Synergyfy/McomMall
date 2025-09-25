@@ -5,14 +5,12 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
 
-import { useQuery } from 'react-query';
-import { GiftCardTemplate } from '@/service/gift-card/types';
-import { getGiftCardTemplates } from '@/service/gift-card';
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
+import { useGetGiftCardTemplates } from '@/service/gift-card/hook';
 
 const GiftCardTemplatesPage = () => {
-  const { data: templates, isLoading, isError } = useQuery<GiftCardTemplate[]>('giftCardTemplates', getGiftCardTemplates);
+  const { data: templates, isLoading, isError } = useGetGiftCardTemplates();
 
   if (isError) {
     return (
