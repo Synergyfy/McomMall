@@ -41,6 +41,7 @@ import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoyaltyContent from './LoyaltyContent';
+import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
 
 function ProductPage({
   listing,
@@ -532,7 +533,11 @@ function AboutBusinessTabs({
         <p>Voucher content goes here.</p>
       </TabsContent>
       <TabsContent value="gift-card">
-        <p>Gift Card content goes here.</p>
+        {businessId ? (
+          <GiftCardTabContent businessId={businessId} />
+        ) : (
+          <p>Gift cards are not available for this listing.</p>
+        )}
       </TabsContent>
     </Tabs>
   );
