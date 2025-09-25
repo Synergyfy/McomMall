@@ -14,7 +14,7 @@ import Image from 'next/image';
 import { useForm, Controller, SubmitHandler } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
-import api from "@/service/api";
+// api not needed for image upload; using Next.js route via fetch
 
 const templateFormSchema = z.object({
     name: z.string().min(1, "Name is required"),
@@ -120,8 +120,10 @@ const GiftCardTemplatesPage = () => {
             const formData = new FormData();
             formData.append('file', imageFile);
             try {
-                const response = await api.post('/api/template', formData);
-                imageUrl = response.data.secure_url;
+                const res = await fetch('/api/templates/upload', { method: 'POST', body: formData });
+                const json = await res.json();
+                if (!res.ok) throw new Error(json?.error || 'Upload failed');
+                imageUrl = json.secure_url;
             } catch (error) {
                 console.error("Image upload failed:", error);
                 setIsUploading(false);
