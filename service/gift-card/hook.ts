@@ -22,6 +22,19 @@ export const useGetGiftCardTemplates = () => {
   });
 };
 
+const fetchBusinessGiftCardTemplates = async (businessId: string): Promise<GiftCardTemplate[]> => {
+  const { data } = await api.get<GiftCardTemplate[]>(`/gift-cards/templates/${businessId}`);
+  return data;
+};
+
+export const useGetBusinessGiftCards = (businessId: string) => {
+  return useQuery<GiftCardTemplate[], Error>({
+    queryKey: ['businessGiftCardTemplates', businessId],
+    queryFn: () => fetchBusinessGiftCardTemplates(businessId),
+    enabled: !!businessId,
+  });
+};
+
 export const useAddGiftCardTemplate = () => {
     const queryClient = useQueryClient();
     return useMutation<GiftCardTemplate, Error, CreateGiftCardTemplateDto>({
