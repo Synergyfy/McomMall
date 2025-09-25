@@ -1,11 +1,27 @@
 "use client";
 
+import { useState } from "react";
 import { useGetMyPurchases } from "@/service/gift-card/hook";
 import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
+import { Copy, Check } from "lucide-react";
+import { toast } from "sonner";
 
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
+  const [copiedCode, setCopiedCode] = useState<string | null>(null);
+
+  const formatGiftCardCode = (code: string) => {
+    return code.replace(/(.{4})/g, "$1-").slice(0, -1);
+  };
+
+  const handleCopy = (code: string) => {
+    navigator.clipboard.writeText(code).then(() => {
+      setCopiedCode(code);
+      toast.success("Copied to clipboard!");
+      setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
 
   if (isPending) {
     return (
@@ -49,9 +65,19 @@ const GiftCardHistoryPage = () => {
                   </span>
                 </div>
 
-                <p className="text-gray-700 mb-2">
-                  <span className="font-semibold">Code:</span> {purchase.code}
-                </p>
+                <div className="flex items-center gap-2 text-gray-700 mb-2">
+                  <span className="font-semibold">Code:</span>
+                  <span>{formatGiftCardCode(purchase.code)}</span>
+                  {copiedCode === purchase.code ? (
+                    <Check className="text-green-500" size={16} />
+                  ) : (
+                    <Copy
+                      className="cursor-pointer text-gray-500 hover:text-orange-600"
+                      size={16}
+                      onClick={() => handleCopy(purchase.code)}
+                    />
+                  )}
+                </div>
                 <p className="text-gray-700 mb-2">
                   <span className="font-semibold">Recipient:</span> {purchase.recipientEmail}
                 </p>
