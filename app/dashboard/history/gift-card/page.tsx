@@ -59,10 +59,10 @@ const GiftCardHistoryPage = () => {
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center text-lg">
                     <p className="font-bold text-gray-800">
-                      Initial: <span className="text-orange-600">£{purchase.initialBalance.toFixed(2)}</span>
+                      Initial: <span className="text-orange-600">£{Number(purchase.initialBalance).toFixed(2)}</span>
                     </p>
                     <p className="font-bold text-gray-800">
-                      Current: <span className="text-green-600">£{purchase.currentBalance.toFixed(2)}</span>
+                      Current: <span className="text-green-600">£{Number(purchase.currentBalance).toFixed(2)}</span>
                     </p>
                   </div>
                 </div>
