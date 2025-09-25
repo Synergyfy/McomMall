@@ -105,6 +105,11 @@ export const historyMenuItems: MenuItem[] = [
     href: '/dashboard/history/promotion-history',
     icon: History,
   },
+  {
+    title: 'Gift Card',
+    href: '/dashboard/history/gift-card',
+    icon: CreditCard,
+  },
 ];
 
 export const businessCategories = [

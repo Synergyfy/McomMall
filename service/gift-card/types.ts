@@ -54,3 +54,16 @@ export interface GiftCard {
   createdAt: string;
   updatedAt: string;
 }
+
+export interface MyPurchase {
+  id: string;
+  code: string;
+  initialBalance: number;
+  currentBalance: number;
+  currency: string;
+  recipientEmail: string;
+  purchaseBusiness: {
+    businessName: string;
+  };
+  createdAt: string;
+}

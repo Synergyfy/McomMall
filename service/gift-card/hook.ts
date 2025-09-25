@@ -7,6 +7,7 @@ import {
   VerifyPurchaseDto,
   InitiatePurchaseResponse,
   GiftCard,
+  MyPurchase,
 } from './types';
 
 // API Functions
@@ -59,6 +60,18 @@ export const useAddGiftCardTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
     },
+  });
+};
+
+const fetchMyPurchases = async (): Promise<MyPurchase[]> => {
+  const { data } = await api.get<MyPurchase[]>('/gift-cards/my-purchases');
+  return data;
+};
+
+export const useGetMyPurchases = () => {
+  return useQuery<MyPurchase[], Error>({
+    queryKey: ['myPurchases'],
+    queryFn: fetchMyPurchases,
   });
 };
 
