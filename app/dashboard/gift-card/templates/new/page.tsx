@@ -34,7 +34,15 @@ const CreateGiftCardTemplatePage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
+    if (name === "minCustomAmount" || name === "maxCustomAmount") {
+      const parsedValue = parseFloat(value);
+      setFormData((prev) => ({
+        ...prev,
+        [name]: isNaN(parsedValue) ? undefined : parsedValue,
+      }));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSwitchChange = (checked: boolean) => {
