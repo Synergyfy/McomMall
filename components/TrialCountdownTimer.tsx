@@ -6,7 +6,6 @@ import {
   TimerIcon,
   PlayIcon,
   PauseIcon,
-  ChevronDownIcon,
   CheckCircleIcon,
   XCircleIcon,
   ChevronsRightLeft,
@@ -88,74 +87,78 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
       initial={{ opacity: 0, y: -50 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, type: 'spring' }}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-600 text-white p-4 rounded-lg shadow-lg flex items-center space-x-4 cursor-grab"
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-600 text-white p-4 rounded-lg shadow-lg flex flex-col items-center space-y-2 cursor-grab"
       whileTap={{ cursor: 'grabbing' }}
     >
-      <TimerIcon className="w-8 h-8 flex-shrink-0" />
-      <div className="flex items-center space-x-2">
-        <div className="flex flex-col items-center">
-          <span className="text-2xl font-bold">{formattedTime.days}</span>
-          <span className="text-xs uppercase">days left</span>
-        </div>
-        <AnimatePresence>
-          {isExpanded && (
-            <motion.div
-              className="flex items-center space-x-2"
-              initial={{ opacity: 0, width: 0 }}
-              animate={{ opacity: 1, width: 'auto' }}
-              exit={{ opacity: 0, width: 0 }}
-              transition={{ duration: 0.3 }}
-            >
-              {timeUnits.slice(1).map(([unit, value]) => (
-                <div key={unit} className="flex flex-col items-center">
-                  <span className="text-2xl font-bold">{value}</span>
-                  <span className="text-xs uppercase">{unit}</span>
-                </div>
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      </div>
-
-      <div className="flex items-center space-x-2 ml-auto">
-        <Button
-          onClick={() => setIsExpanded(!isExpanded)}
-          variant="ghost"
-          size="icon"
-          className="rounded-full"
-        >
-          <ChevronsRightLeft className="w-6 h-6" />
-        </Button>
-
-        {isTrialPausable && (
-          <div className="flex items-center space-x-2">
-            <Button
-              onClick={() =>
-                pauseOrPlay({
-                  action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
-                })
-              }
-              disabled={isPending || (!isPaused && remainingPauses <= 0)}
-              variant="ghost"
-              size="icon"
-              className="rounded-full"
-            >
-              {isPaused ? (
-                <PlayIcon className="w-6 h-6" />
-              ) : (
-                <PauseIcon className="w-6 h-6" />
-              )}
-            </Button>
-             <div className="text-sm">
-              <p>{remainingPauses} Pauses Left</p>
-            </div>
+      <div className="flex items-center space-x-4">
+        <TimerIcon className="w-8 h-8 flex-shrink-0" />
+        <div className="flex items-center space-x-2">
+          <div className="flex flex-col items-center">
+            <span className="text-2xl font-bold">{formattedTime.days}</span>
+            <span className="text-xs uppercase">days left</span>
           </div>
-        )}
+          <AnimatePresence>
+            {isExpanded && (
+              <motion.div
+                className="flex items-center space-x-2"
+                initial={{ opacity: 0, width: 0 }}
+                animate={{ opacity: 1, width: 'auto' }}
+                exit={{ opacity: 0, width: 0 }}
+                transition={{ duration: 0.3 }}
+              >
+                {timeUnits.slice(1).map(([unit, value]) => (
+                  <div key={unit} className="flex flex-col items-center">
+                    <span className="text-2xl font-bold">{value}</span>
+                    <span className="text-xs uppercase">{unit}</span>
+                  </div>
+                ))}
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <Button
+            onClick={() => setIsExpanded(!isExpanded)}
+            variant="ghost"
+            size="icon"
+            className="rounded-full"
+          >
+            <ChevronsRightLeft className="w-6 h-6" />
+          </Button>
+
+          {isTrialPausable && (
+            <div className="flex items-center space-x-2">
+              <Button
+                onClick={() =>
+                  pauseOrPlay({
+                    action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+                  })
+                }
+                disabled={isPending || (!isPaused && remainingPauses <= 0)}
+                variant="ghost"
+                size="icon"
+                className="rounded-full"
+              >
+                {isPaused ? (
+                  <PlayIcon className="w-6 h-6" />
+                ) : (
+                  <PauseIcon className="w-6 h-6" />
+                )}
+              </Button>
+              <div className="text-sm">
+                <p>{remainingPauses} Pauses Left</p>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+      <div className="mt-2">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" className="rounded-full">
-              <ChevronDownIcon className="w-6 h-6" />
-            </Button>
+            <p className="text-sm cursor-pointer hover:underline">
+              See your trial period tasks
+            </p>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64 bg-gray-900 text-white">
             {Object.entries(tasks).map(([key, completed]) => (
