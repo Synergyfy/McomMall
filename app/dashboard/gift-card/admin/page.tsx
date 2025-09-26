@@ -93,8 +93,8 @@ const ViewActivityDialog = ({
 
     return sortedHistory.map(item => {
       const currentBalance = runningBalance;
-      runningBalance += item.amount;
-      return { ...item, currentBalance };
+      runningBalance += parseFloat(item.amount);
+      return { ...item, amount: parseFloat(item.amount), currentBalance };
     });
   }, [history, card.initialBalance]);
 
