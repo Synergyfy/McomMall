@@ -7,6 +7,7 @@ import { Loader } from 'lucide-react';
 import OrderSummary from './OrderSummary';
 import PaymentForm from './PaymentForm';
 import CouponCodeInput from './CouponCodeInput';
+import GiftCardInput from './GiftCardInput';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
@@ -15,6 +16,7 @@ import { useRecordOrder } from '@/hooks/useRecordOrder';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
+import { useValidateGiftCard } from '@/service/gift-card/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -46,6 +48,9 @@ export default function CheckoutClient() {
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
   const [isCouponLoading, setCouponLoading] = useState(false);
+  const [giftCardCode, setGiftCardCode] = useState('');
+  const [giftCardDiscount, setGiftCardDiscount] = useState(0);
+  const [isGiftCardLoading, setGiftCardLoading] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
@@ -63,6 +68,7 @@ export default function CheckoutClient() {
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
+  const validateGiftCard = useValidateGiftCard();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -83,7 +89,7 @@ export default function CheckoutClient() {
     ? product.price * quantity
     : 0;
 
-  const totalPrice = basePrice - discount - offerDiscount;
+  const totalPrice = basePrice - discount - offerDiscount - giftCardDiscount;
 
   const handleApplyCoupon = async (code: string) => {
     setCouponLoading(true);
@@ -94,13 +100,38 @@ export default function CheckoutClient() {
       });
       setDiscount(result.discountAmount);
       setCouponCode(code);
-      setOfferDiscount(0); // Reset offer discount
+      setOfferDiscount(0);
       setSelectedOffer(null);
+      setGiftCardDiscount(0);
+      setGiftCardCode('');
     } catch (error) {
       console.error('Failed to apply coupon', error);
       alert('Invalid or inapplicable coupon');
     } finally {
       setCouponLoading(false);
+    }
+  };
+
+  const handleApplyGiftCard = async (code: string) => {
+    setGiftCardLoading(true);
+    try {
+      const result = await validateGiftCard({ giftCardCode: code });
+      if (result.isValid) {
+        const applicableDiscount = Math.min(basePrice, result.balance);
+        setGiftCardDiscount(applicableDiscount);
+        setGiftCardCode(code);
+        setDiscount(0);
+        setCouponCode('');
+        setOfferDiscount(0);
+        setSelectedOffer(null);
+      } else {
+        alert('Invalid gift card code.');
+      }
+    } catch (error) {
+      console.error('Failed to apply gift card', error);
+      alert('Failed to apply gift card');
+    } finally {
+      setGiftCardLoading(false);
     }
   };
 
@@ -113,8 +144,10 @@ export default function CheckoutClient() {
       });
       setOfferDiscount(result.discountAmount);
       setSelectedOffer(offerId);
-      setDiscount(0); // Reset coupon discount
+      setDiscount(0);
       setCouponCode('');
+      setGiftCardDiscount(0);
+      setGiftCardCode('');
     } catch (error) {
       console.error('Failed to apply offer', error);
       alert('Failed to apply offer');
@@ -132,6 +165,7 @@ export default function CheckoutClient() {
           transactionId,
         },
         couponCode: couponCode || undefined,
+        giftCardCode: giftCardCode || undefined,
         offerId: selectedOffer || undefined,
       };
 
@@ -160,6 +194,7 @@ export default function CheckoutClient() {
       checkout,
       recordOrder,
       couponCode,
+      giftCardCode,
       selectedOffer,
     ]
   );
@@ -240,13 +275,17 @@ export default function CheckoutClient() {
               fromCart={fromCart}
               quantity={quantity}
               setQuantity={setQuantity}
-              discount={discount + offerDiscount}
+              discount={discount + offerDiscount + giftCardDiscount}
               totalPrice={totalPrice}
             />
             <div className="mt-8">
               <CouponCodeInput
                 onApply={handleApplyCoupon}
                 isLoading={isCouponLoading}
+              />
+              <GiftCardInput
+                onApply={handleApplyGiftCard}
+                isLoading={isGiftCardLoading}
               />
               <ApplicableOffers
                 offers={applicableOffers || []}

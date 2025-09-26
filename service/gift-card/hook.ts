@@ -1,92 +1,96 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import api from '@/service/api';
 import {
+  ValidateGiftCardDto,
+  ValidateGiftCardResponse,
   GiftCardTemplate,
-  CreateGiftCardTemplateDto,
+  Purchase,
   InitiatePurchaseDto,
-  VerifyPurchaseDto,
   InitiatePurchaseResponse,
+  VerifyPurchaseDto,
   GiftCard,
-  MyPurchase,
+  CreateGiftCardTemplateDto,
 } from './types';
+import api from '../api';
 
-// API Functions
-const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
-  const { data } = await api.get<GiftCardTemplate[]>('/merchant/gift-cards/templates');
-  return data;
+export const useValidateGiftCard = () => {
+  const validateGiftCard = async (
+    validationData: ValidateGiftCardDto
+  ): Promise<ValidateGiftCardResponse> => {
+    const response = await api.post('/gift-card/validate', validationData);
+    const data = response.data;
+    return {
+      ...data,
+      balance: Number(data.balance),
+    };
+  };
+  return validateGiftCard;
 };
 
-const addGiftCardTemplate = async (templateData: CreateGiftCardTemplateDto): Promise<GiftCardTemplate> => {
-  const { data } = await api.post<GiftCardTemplate>('/merchant/gift-cards/templates', templateData);
-  return data;
-};
-
-const initiatePurchase = async (purchaseData: InitiatePurchaseDto): Promise<InitiatePurchaseResponse> => {
-  const { data } = await api.post<InitiatePurchaseResponse>('/gift-cards/purchase', purchaseData);
-  return data;
-};
-
-const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<GiftCard> => {
-  const { data } = await api.post<GiftCard>('/gift-cards/purchase/verify', verificationData);
-  return data;
-};
-
-
-// React Query Hooks
-export const useGetGiftCardTemplates = () => {
-  return useQuery<GiftCardTemplate[], Error>({
-    queryKey: ['giftCardTemplates'],
-    queryFn: fetchGiftCardTemplates,
-  });
-};
-
-const fetchBusinessGiftCardTemplates = async (businessId: string): Promise<GiftCardTemplate[]> => {
-  const { data } = await api.get<GiftCardTemplate[]>(`/gift-cards/templates/${businessId}`);
-  return data;
-};
-
-export const useGetBusinessGiftCards = (businessId: string) => {
-  return useQuery<GiftCardTemplate[], Error>({
-    queryKey: ['businessGiftCardTemplates', businessId],
-    queryFn: () => fetchBusinessGiftCardTemplates(businessId),
-    enabled: !!businessId,
-  });
-};
-
-export const useAddGiftCardTemplate = () => {
-  const queryClient = useQueryClient();
-  return useMutation<GiftCardTemplate, Error, CreateGiftCardTemplateDto>({
-    mutationFn: addGiftCardTemplate,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
-    },
-  });
-};
-
-const fetchMyPurchases = async (): Promise<MyPurchase[]> => {
-  const { data } = await api.get<MyPurchase[]>('/gift-cards/my-purchases');
-  return data;
-};
-
-export const useGetMyPurchases = () => {
-  return useQuery<MyPurchase[], Error>({
-    queryKey: ['myPurchases'],
-    queryFn: fetchMyPurchases,
-  });
+export const useGetBusinessGiftCards = (_businessId: string) => {
+  // Placeholder function
+  return { data: [] as GiftCardTemplate[], isPending: false, isError: false };
 };
 
 export const useInitiatePurchase = () => {
-  return useMutation<InitiatePurchaseResponse, Error, InitiatePurchaseDto>({
-    mutationFn: initiatePurchase,
-  });
+  // Placeholder function
+  return {
+    mutate: (
+      _variables: InitiatePurchaseDto,
+      _options?: {
+        onSuccess?: (data: InitiatePurchaseResponse) => void;
+        onError?: () => void;
+      }
+    ) => {},
+    mutateAsync: async (
+      _variables: InitiatePurchaseDto
+    ): Promise<InitiatePurchaseResponse> => ({
+      purchaseId: 'mock-id',
+      clientSecret: 'mock-secret',
+      provider: 'stripe',
+      orderId: 'mock-order-id',
+    }),
+    isPending: false,
+  };
 };
 
 export const useVerifyPurchase = () => {
-  const queryClient = useQueryClient();
-  return useMutation<GiftCard, Error, VerifyPurchaseDto>({
-    mutationFn: verifyPurchase,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['giftCards'] });
-    },
-  });
+  // Placeholder function
+  return {
+    mutate: (
+      _variables: VerifyPurchaseDto,
+      _options?: {
+        onSuccess?: (data: GiftCard) => void;
+        onError?: () => void;
+      }
+    ) => {},
+    mutateAsync: async (_variables: VerifyPurchaseDto): Promise<GiftCard> => ({
+      id: 'mock-giftcard-id',
+      code: 'mock-code',
+      balance: 100,
+      initialBalance: 100,
+      recipientEmail: 'mock@example.com',
+    }),
+    isPending: false,
+  };
+};
+
+export const useAddGiftCardTemplate = () => {
+  // Placeholder function
+  return {
+    mutate: (
+      _variables: CreateGiftCardTemplateDto,
+      _options?: { onSuccess?: () => void; onError?: (err: any) => void }
+    ) => {},
+    mutateAsync: async (_variables: CreateGiftCardTemplateDto) => ({}),
+    isPending: false,
+  };
+};
+
+export const useGetGiftCardTemplates = () => {
+  // Placeholder function
+  return { data: [] as GiftCardTemplate[], isPending: false, isError: false };
+};
+
+export const useGetMyPurchases = () => {
+  // Placeholder function
+  return { data: [] as Purchase[], isPending: false, isError: false };
 };

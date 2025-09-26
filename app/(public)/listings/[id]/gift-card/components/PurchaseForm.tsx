@@ -118,6 +118,8 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
 
     verifyPurchase(
       {
+        purchaseId: purchaseResponse.purchaseId,
+        paymentIntentId: transactionId,
         paymentProvider: purchaseResponse.provider,
         transactionId,
         purchaseDetails: purchaseDetails,
