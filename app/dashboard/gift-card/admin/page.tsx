@@ -2,8 +2,7 @@
 
 import * as React from 'react';
 import { useState, useMemo } from 'react';
-import { AnimatePresence, motion } from 'framer-motion';
-import { Search, FileText, PlusCircle, Edit } from 'lucide-react';
+import { Search, PlusCircle, Edit, Eye } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -27,29 +26,11 @@ import {
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { cn } from '@/lib/utils';
-
-// --- TYPESCRIPT INTERFACES ---
-interface ActivityLog {
-  id: string;
-  date: string;
-  action: 'Create' | 'Transaction' | 'Adjust' | 'Note';
-  user: string;
-  note: string;
-  amount: number;
-  balance: number;
-}
-
-interface GiftCard {
-  id: string;
-  cardNumber: string;
-  balance: number;
-  expirationDate: string | null;
-  recipient: string;
-  activity: ActivityLog[];
-}
+import { useGetGiftCards, useMutateGiftCard } from '@/service/gift-card/hook';
+import { GiftCard as AdminGiftCard, ActivityLog } from '@/types/gift-card';
 
 // --- MOCK DATA ---
-const initialMockGiftCards: GiftCard[] = [
+const initialMockGiftCards: AdminGiftCard[] = [
   {
     id: '1',
     cardNumber: '8FQY-5QA6-PVPM-ZWN3',
@@ -126,7 +107,7 @@ const initialMockGiftCards: GiftCard[] = [
 
 // --- SUB-COMPONENTS ---
 
-const HeaderStats = ({ cards }: { cards: GiftCard[] }) => {
+const HeaderStats = ({ cards }: { cards: AdminGiftCard[] }) => {
   const totalBalance = cards.reduce((sum, card) => sum + card.balance, 0);
   const activeCards = cards.filter(card => card.balance > 0).length;
 
@@ -164,88 +145,44 @@ const HeaderStats = ({ cards }: { cards: GiftCard[] }) => {
   );
 };
 
-const ActivityLogTable = ({ activities }: { activities: ActivityLog[] }) => {
-  return (
-    <div className="bg-yellow-50 p-4">
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Date</TableHead>
-            <TableHead>Action</TableHead>
-            <TableHead>User</TableHead>
-            <TableHead>Note</TableHead>
-            <TableHead className="text-right">Amount</TableHead>
-            <TableHead className="text-right">Balance</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {activities.map(log => (
-            <TableRow key={log.id}>
-              <TableCell>{log.date}</TableCell>
-              <TableCell>{log.action}</TableCell>
-              <TableCell>{log.user}</TableCell>
-              <TableCell className="text-xs">{log.note}</TableCell>
-              <TableCell
-                className={cn(
-                  'text-right',
-                  log.amount < 0 ? 'text-red-600' : 'text-gray-800'
-                )}
-              >
-                £{log.amount.toFixed(2)}
-              </TableCell>
-              <TableCell className="text-right">
-                £{log.balance.toFixed(2)}
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
-    </div>
-  );
-};
-
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardDashboardPage() {
-  const [giftCards, setGiftCards] = useState<GiftCard[]>(initialMockGiftCards);
+    const { data: giftCards, isLoading } = useGetGiftCards();
+    const { mutate: mutateGiftCard } = useMutateGiftCard();
+
   const [searchQuery, setSearchQuery] = useState('');
-  const [expandedCardId, setExpandedCardId] = useState<string | null>('3');
   const [modalState, setModalState] = useState<{
-    type: 'note' | 'adjust' | null;
-    card: GiftCard | null;
+    type: 'note' | 'adjust' | 'view' | null;
+    card: AdminGiftCard | null;
   }>({ type: null, card: null });
 
   const filteredCards = useMemo(() => {
-    if (!searchQuery) return giftCards;
+    const cardsToFilter = giftCards || initialMockGiftCards;
+    if (!searchQuery) return cardsToFilter;
     const lowercasedQuery = searchQuery.toLowerCase();
-    return giftCards.filter(
+    return cardsToFilter.filter(
       card =>
         card.cardNumber.toLowerCase().includes(lowercasedQuery) ||
         card.recipient.toLowerCase().includes(lowercasedQuery)
     );
   }, [searchQuery, giftCards]);
 
-  const toggleExpand = (cardId: string) => {
-    setExpandedCardId(expandedCardId === cardId ? null : cardId);
-  };
-
   const handleAddNote = (cardId: string, note: string) => {
-    setGiftCards(prevCards =>
-      prevCards.map(card => {
-        if (card.id === cardId) {
-          const newActivity: ActivityLog = {
-            id: `act-${Date.now()}`,
-            date: new Date().toLocaleString(),
-            action: 'Note',
-            user: 'admin@store.com', // Mock user
-            note,
-            amount: 0,
-            balance: card.balance,
-          };
-          return { ...card, activity: [newActivity, ...card.activity] };
-        }
-        return card;
-      })
-    );
+    if(!giftCards) return;
+    const cardToUpdate = giftCards.find(card => card.id === cardId);
+    if (cardToUpdate) {
+      const newActivity: ActivityLog = {
+        id: `act-${Date.now()}`,
+        date: new Date().toLocaleString(),
+        action: 'Note',
+        user: 'admin@store.com', // Mock user
+        note,
+        amount: 0,
+        balance: cardToUpdate.balance,
+      };
+      const updatedCard = { ...cardToUpdate, activity: [newActivity, ...cardToUpdate.activity] };
+      mutateGiftCard(updatedCard);
+    }
   };
 
   const handleAdjustBalance = (
@@ -253,34 +190,36 @@ export default function GiftCardDashboardPage() {
     amount: number,
     note: string
   ) => {
-    setGiftCards(prevCards =>
-      prevCards.map(card => {
-        if (card.id === cardId) {
-          const newBalance = card.balance + amount;
-          const newActivity: ActivityLog = {
-            id: `act-${Date.now()}`,
-            date: new Date().toLocaleString(),
-            action: 'Adjust',
-            user: 'admin@store.com', // Mock user
-            note,
-            amount,
-            balance: newBalance,
-          };
-          return {
-            ...card,
-            balance: newBalance,
-            activity: [newActivity, ...card.activity],
-          };
-        }
-        return card;
-      })
-    );
+    if(!giftCards) return;
+    const cardToUpdate = giftCards.find(card => card.id === cardId);
+    if(cardToUpdate) {
+        const newBalance = cardToUpdate.balance + amount;
+        const newActivity: ActivityLog = {
+          id: `act-${Date.now()}`,
+          date: new Date().toLocaleString(),
+          action: 'Adjust',
+          user: 'admin@store.com', // Mock user
+          note,
+          amount,
+          balance: newBalance,
+        };
+        const updatedCard = {
+          ...cardToUpdate,
+          balance: newBalance,
+          activity: [newActivity, ...cardToUpdate.activity],
+        };
+        mutateGiftCard(updatedCard);
+    }
   };
+
+  if (isLoading) {
+    return <div>Loading...</div>;
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <HeaderStats cards={giftCards} />
+        <HeaderStats cards={giftCards || initialMockGiftCards} />
 
         <Card>
           <CardContent className="p-4">
@@ -316,8 +255,7 @@ export default function GiftCardDashboardPage() {
                 </TableHeader>
                 <TableBody>
                   {filteredCards.map(card => (
-                    <React.Fragment key={card.id}>
-                      <TableRow>
+                      <TableRow key={card.id}>
                         <TableCell className="font-mono text-sm">
                           {card.cardNumber}
                         </TableCell>
@@ -340,9 +278,9 @@ export default function GiftCardDashboardPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => toggleExpand(card.id)}
+                              onClick={() => setModalState({ type: 'view', card })}
                             >
-                              <FileText className="h-3 w-3 mr-1" />
+                              <Eye className="h-3 w-3 mr-1" />
                               View activity
                             </Button>
                             <Button
@@ -368,26 +306,6 @@ export default function GiftCardDashboardPage() {
                           </div>
                         </TableCell>
                       </TableRow>
-                      <AnimatePresence>
-                        {expandedCardId === card.id && (
-                          <TableRow>
-                            <TableCell colSpan={5} className="p-0">
-                              <motion.div
-                                initial={{ opacity: 0, height: 0 }}
-                                animate={{ opacity: 1, height: 'auto' }}
-                                exit={{ opacity: 0, height: 0 }}
-                                transition={{
-                                  duration: 0.3,
-                                  ease: 'easeInOut',
-                                }}
-                              >
-                                <ActivityLogTable activities={card.activity} />
-                              </motion.div>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                      </AnimatePresence>
-                    </React.Fragment>
                   ))}
                 </TableBody>
               </Table>
@@ -416,6 +334,12 @@ export default function GiftCardDashboardPage() {
               onClose={() => setModalState({ type: null, card: null })}
             />
           )}
+          {modalState.type === 'view' && modalState.card && (
+            <ViewActivityDialog
+              card={modalState.card}
+              onClose={() => setModalState({ type: null, card: null })}
+            />
+          )}
         </DialogContent>
       </Dialog>
     </div>
@@ -429,7 +353,7 @@ const AddNoteDialog = ({
   onSubmit,
   onClose,
 }: {
-  card: GiftCard;
+  card: AdminGiftCard;
   onSubmit: (cardId: string, note: string) => void;
   onClose: () => void;
 }) => {
@@ -469,7 +393,7 @@ const AdjustBalanceDialog = ({
   onSubmit,
   onClose,
 }: {
-  card: GiftCard;
+  card: AdminGiftCard;
   onSubmit: (cardId: string, amount: number, note: string) => void;
   onClose: () => void;
 }) => {
@@ -517,3 +441,57 @@ const AdjustBalanceDialog = ({
     </>
   );
 };
+
+const ViewActivityDialog = ({
+    card,
+    onClose,
+  }: {
+    card: AdminGiftCard;
+    onClose: () => void;
+  }) => {
+    return (
+      <>
+        <DialogHeader>
+          <DialogTitle>Activity for {card.cardNumber}</DialogTitle>
+        </DialogHeader>
+        <div className="py-4">
+        <Table>
+        <TableHeader>
+          <TableRow>
+            <TableHead>Date</TableHead>
+            <TableHead>Action</TableHead>
+            <TableHead>User</TableHead>
+            <TableHead>Note</TableHead>
+            <TableHead className="text-right">Amount</TableHead>
+            <TableHead className="text-right">Balance</TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          {card.activity.map(log => (
+            <TableRow key={log.id}>
+              <TableCell>{log.date}</TableCell>
+              <TableCell>{log.action}</TableCell>
+              <TableCell>{log.user}</TableCell>
+              <TableCell className="text-xs">{log.note}</TableCell>
+              <TableCell
+                className={cn(
+                  'text-right',
+                  log.amount < 0 ? 'text-red-600' : 'text-gray-800'
+                )}
+              >
+                £{log.amount.toFixed(2)}
+              </TableCell>
+              <TableCell className="text-right">
+                £{log.balance.toFixed(2)}
+              </TableCell>
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+        </div>
+        <DialogFooter>
+          <Button onClick={onClose}>Close</Button>
+        </DialogFooter>
+      </>
+    );
+  };
