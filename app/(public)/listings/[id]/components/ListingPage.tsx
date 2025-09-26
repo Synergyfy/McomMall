@@ -40,8 +40,8 @@ export default function ListingPage({
       <div className="container mx-auto px-4 py-8">
         {/* Header Section */}
         <header className="mb-6">
-          <div className="flex flex-wrap items-center justify-between gap-4">
-            <div>
+          <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
+            <div className="flex-grow">
               <div className="flex items-center space-x-2 mb-2">
                 <span className="px-3 py-1 text-xs text-white bg-red-500 rounded-md">
                   {isGoogle
@@ -54,7 +54,7 @@ export default function ListingPage({
                   </span>
                 )}
               </div>
-              <h1 className="text-4xl font-bold text-gray-900">
+              <h1 className="text-3xl md:text-4xl font-bold text-gray-900">
                 {isGoogle
                   ? (listing as GooglePlaceResult).name
                   : (listing as InHouseBusiness).businessName}
@@ -80,8 +80,12 @@ export default function ListingPage({
                 </div>
               )}
             </div>
-            <div className="flex flex-col items-end gap-4">
-              <Button variant="outline" onClick={handleWishlistToggle}>
+            <div className="flex flex-col sm:flex-row sm:items-center gap-4 mt-4 md:mt-0">
+              <Button
+                variant="outline"
+                onClick={handleWishlistToggle}
+                className="w-full sm:w-auto"
+              >
                 <Heart
                   className={`mr-2 h-4 w-4 ${
                     isWishlisted ? 'text-red-500 fill-current' : ''

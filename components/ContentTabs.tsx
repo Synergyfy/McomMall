@@ -505,27 +505,23 @@ function OverviewSection({
   );
 }
 
-function AboutBusinessTabs({
+function PromotionsTabs({
   listing,
-  isLoading,
 }: {
   listing: GooglePlaceResult | InHouseBusiness;
-  isLoading: boolean;
 }) {
   const isGoogle = isGoogleResult(listing);
-  const businessId = isGoogle ? undefined : listing.id;
+  const businessId = isGoogle ? undefined : (listing as InHouseBusiness).id;
 
   return (
-    <Tabs defaultValue="overview" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 mb-6">
-        <TabsTrigger value="overview">Overview</TabsTrigger>
-        <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
-        <TabsTrigger value="voucher">Voucher</TabsTrigger>
-        <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
-      </TabsList>
-      <TabsContent value="overview">
-        <OverviewSection listing={listing} isLoading={isLoading} />
-      </TabsContent>
+    <Tabs defaultValue="loyalty" className="w-full">
+      <div className="overflow-x-auto">
+        <TabsList className="grid w-full grid-cols-3 mb-6 min-w-max">
+          <TabsTrigger value="loyalty">Loyalty & Reward</TabsTrigger>
+          <TabsTrigger value="voucher">Voucher</TabsTrigger>
+          <TabsTrigger value="gift-card">Gift Card</TabsTrigger>
+        </TabsList>
+      </div>
       <TabsContent value="loyalty">
         <LoyaltyContent businessId={businessId} />
       </TabsContent>
@@ -552,36 +548,38 @@ export default function ContentTabs({
 }) {
   const isGoogle = isGoogleResult(listing);
 
-  if (isGoogle) {
-    // For Google listings, we can keep a simpler or different tab structure
-    // if required. For now, let's keep it similar to the old "About" tab.
-    return <AboutBusinessTabs listing={listing} isLoading={isLoading} />;
-  }
-
-  const inHouseListing = listing as InHouseBusiness;
-  const listingType = inHouseListing.listingType ?? [];
-  const hasProduct = listingType.includes('product');
-  const hasService = listingType.includes('service');
-
   const tabs = [];
-  if (hasProduct) {
-    tabs.push({
-      value: 'product-page',
-      label: 'Products',
-      component: <ProductPage listing={listing} />,
-    });
+  if (!isGoogle) {
+    const inHouseListing = listing as InHouseBusiness;
+    const listingType = inHouseListing.listingType ?? [];
+    const hasProduct = listingType.includes('product');
+    const hasService = listingType.includes('service');
+
+    if (hasProduct) {
+      tabs.push({
+        value: 'product-page',
+        label: 'Products',
+        component: <ProductPage listing={listing} />,
+      });
+    }
+    if (hasService) {
+      tabs.push({
+        value: 'service-page',
+        label: 'Services',
+        component: <ServicePage listing={listing} />,
+      });
+    }
   }
-  if (hasService) {
-    tabs.push({
-      value: 'service-page',
-      label: 'Services',
-      component: <ServicePage listing={listing} />,
-    });
-  }
+
+  tabs.push({
+    value: 'promotions',
+    label: 'Promotions',
+    component: <PromotionsTabs listing={listing} />,
+  });
   tabs.push({
     value: 'about-business',
     label: 'About this business',
-    component: <AboutBusinessTabs listing={listing} isLoading={isLoading} />,
+    component: <OverviewSection listing={listing} isLoading={isLoading} />,
   });
 
   const gridColsClass =
@@ -593,13 +591,15 @@ export default function ContentTabs({
 
   return (
     <Tabs defaultValue={tabs[0].value} className="w-full">
-      <TabsList className={`grid w-full ${gridColsClass} mb-6`}>
-        {tabs.map(tab => (
-          <TabsTrigger key={tab.value} value={tab.value}>
-            {tab.label}
-          </TabsTrigger>
-        ))}
-      </TabsList>
+      <div className="overflow-x-auto">
+        <TabsList className={`grid w-full ${gridColsClass} mb-6 min-w-max`}>
+          {tabs.map(tab => (
+            <TabsTrigger key={tab.value} value={tab.value}>
+              {tab.label}
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </div>
       {tabs.map(tab => (
         <TabsContent key={tab.value} value={tab.value}>
           {tab.component}
