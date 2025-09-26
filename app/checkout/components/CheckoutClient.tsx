@@ -165,6 +165,7 @@ export default function CheckoutClient() {
   );
 
   const [orderID, setOrderID] = useState<string | undefined>();
+  const createPaypalOrderAsync = createOrderMutation.mutateAsync;
 
   useEffect(() => {
     if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
@@ -176,14 +177,13 @@ export default function CheckoutClient() {
           console.error('Failed to create payment intent', err)
         );
     } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
-      createOrderMutation
-        .mutateAsync(totalPrice)
+      createPaypalOrderAsync(totalPrice)
         .then((order) => {
           setOrderID(order.id);
         })
         .catch((err) => console.error('Failed to create paypal order', err));
     }
-  }, [totalPrice, paymentMethod, createPaymentIntent, createOrderMutation]);
+  }, [totalPrice, paymentMethod, createPaymentIntent, createPaypalOrderAsync]);
 
   useEffect(() => {
     if (stripeRedirect && paymentIntentClientSecret) {
