@@ -12,6 +12,8 @@ import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useRecordOrder } from '@/hooks/useRecordOrder';
+import { useStripePayment } from '@/hooks/useStripePayment';
+import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import {
   useGetApplicableOffers,
@@ -31,7 +33,9 @@ export default function CheckoutClient() {
   const productId = searchParams.get('productId');
   const fromCart = searchParams.get('from') === 'cart';
   const stripeRedirect = searchParams.get('stripe_redirect');
-  const clientSecret = searchParams.get('payment_intent_client_secret');
+  const paymentIntentClientSecret = searchParams.get(
+    'payment_intent_client_secret'
+  );
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
@@ -48,10 +52,16 @@ export default function CheckoutClient() {
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
   );
+  const [clientSecret, setClientSecret] = useState<string | undefined>(
+    paymentIntentClientSecret || undefined
+  );
 
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
   const { mutate: recordOrder } = useRecordOrder();
+  const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
+    useStripePayment();
+  const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
   const applyOffer = useApplyOffer();
 
@@ -154,13 +164,34 @@ export default function CheckoutClient() {
     ]
   );
 
+  const [orderID, setOrderID] = useState<string | undefined>();
+
   useEffect(() => {
-    if (stripeRedirect && clientSecret) {
+    if (paymentMethod === PaymentMethod.STRIPE && totalPrice > 0) {
+      createPaymentIntent(totalPrice)
+        .then((data) => {
+          setClientSecret(data.clientSecret);
+        })
+        .catch((err) =>
+          console.error('Failed to create payment intent', err)
+        );
+    } else if (paymentMethod === PaymentMethod.PAYPAL && totalPrice > 0) {
+      createOrderMutation
+        .mutateAsync(totalPrice)
+        .then((order) => {
+          setOrderID(order.id);
+        })
+        .catch((err) => console.error('Failed to create paypal order', err));
+    }
+  }, [totalPrice, paymentMethod, createPaymentIntent, createOrderMutation]);
+
+  useEffect(() => {
+    if (stripeRedirect && paymentIntentClientSecret) {
       const verifyPayment = async () => {
         const stripe = await stripePromise;
         if (!stripe) return;
         const { paymentIntent } = await stripe.retrievePaymentIntent(
-          clientSecret
+          paymentIntentClientSecret
         );
         if (paymentIntent?.status === 'succeeded') {
           handlePaymentSuccess(paymentIntent.id, PaymentMethod.STRIPE);
@@ -168,7 +199,7 @@ export default function CheckoutClient() {
       };
       verifyPayment();
     }
-  }, [stripeRedirect, clientSecret, handlePaymentSuccess]);
+  }, [stripeRedirect, paymentIntentClientSecret, handlePaymentSuccess]);
 
   if (isProductLoading || isCartLoading) {
     return (
@@ -225,13 +256,21 @@ export default function CheckoutClient() {
             </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-8">
-            <PaymentForm
-              totalPrice={totalPrice}
-              onPaymentSuccess={(transactionId) =>
-                handlePaymentSuccess(transactionId, paymentMethod)
-              }
-              setPaymentMethod={setPaymentMethod}
-            />
+            {isStripeLoading ? (
+              <div className="flex justify-center items-center h-full">
+                <Loader className="animate-spin text-orange-600" size={32} />
+              </div>
+            ) : (
+              <PaymentForm
+                totalPrice={totalPrice}
+                onPaymentSuccess={(transactionId) =>
+                  handlePaymentSuccess(transactionId, paymentMethod)
+                }
+                setPaymentMethod={setPaymentMethod}
+                clientSecret={clientSecret}
+                orderID={orderID}
+              />
+            )}
           </div>
         </div>
       </motion.div>

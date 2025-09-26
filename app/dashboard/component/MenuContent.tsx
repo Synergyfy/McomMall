@@ -2,10 +2,12 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
+import { useRouter } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { RootState } from '@/service/store/store';
+import { logout } from '@/service/store/authSlice';
 import {
   mainMenuItems,
   listingMenuItems,
@@ -14,19 +16,28 @@ import {
   accountMenuItems,
   pluginMenuItems,
   historyMenuItems,
+  MenuItem,
 } from '@/lib/menu-items';
 
-// An optional prop to close the menu on link click (for mobile)
 interface MenuContentProps {
   onLinkClick?: () => void;
 }
 
 export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const { userRole } = useSelector((state: RootState) => state.auth);
-
+  const dispatch = useDispatch();
+  const router = useRouter();
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
   );
+
+  const handleLogout = () => {
+    dispatch(logout());
+    router.push('/');
+    if (onLinkClick) {
+      onLinkClick();
+    }
+  };
 
   const customerListingMenu = listingMenuItems.filter(item =>
     ['Reviews', 'Bookmarks'].includes(item.title)
@@ -34,6 +45,10 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
   const customerMainMenu = mainMenuItems.filter(item =>
     ['My Bookings', 'Messages', 'Wallet', 'My Wishlist'].includes(item.title)
+  );
+
+  const customerProductMenu = productMenuItems.filter(item =>
+    ['Orders'].includes(item.title)
   );
 
   const customerAccountMenu = accountMenuItems.filter(item =>
@@ -44,8 +59,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
     setOpenSubMenus(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
-  const renderMenuItems = (items: typeof mainMenuItems) => (
-    <ul className="space-y-1 ">
+  const renderMenuItems = (items: MenuItem[]) => (
+    <ul className="space-y-1">
       {items.map((item, i) => (
         <li key={i}>
           <motion.div
@@ -60,7 +75,14 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               <Link
                 href={item.href}
                 className="flex items-center space-x-2"
-                onClick={onLinkClick} // Close mobile menu on click
+                onClick={e => {
+                  if (item.title === 'Logout') {
+                    e.preventDefault();
+                    handleLogout();
+                  } else if (onLinkClick) {
+                    onLinkClick();
+                  }
+                }}
               >
                 <item.icon className="w-5 h-5 text-orange-500" />
                 <span>{item.title}</span>
@@ -88,7 +110,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                     <Link
                       href={subItem.href}
                       className="block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8"
-                      onClick={onLinkClick} // Close mobile menu on click
+                      onClick={onLinkClick}
                     >
                       {subItem.title}
                     </Link>
@@ -158,6 +180,12 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               Listing
             </h3>
             {renderMenuItems(customerListingMenu)}
+          </nav>
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Store
+            </h3>
+            {renderMenuItems(customerProductMenu)}
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">

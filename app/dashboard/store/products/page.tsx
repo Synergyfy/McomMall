@@ -454,7 +454,11 @@ export default function StoreDashboard() {
                           data-label="Image"
                           className="mobile-table-cell md:table-cell"
                         >
-                          <Link href={`/products/${product.id}`} passHref>
+                          <Link
+                            href={`/products/${product.id}`}
+                            passHref
+                            target="_blank"
+                          >
                             <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
                               {firstImageUrl ? (
                                 <img
@@ -475,6 +479,7 @@ export default function StoreDashboard() {
                           <Link
                             href={`/products/${product.id}`}
                             className="hover:underline"
+                            target="_blank"
                           >
                             {product.title}
                           </Link>
@@ -575,9 +580,10 @@ export default function StoreDashboard() {
                               <DropdownMenuLabel>Actions</DropdownMenuLabel>
                               <DropdownMenuSeparator />
                               <DropdownMenuItem
-                                onSelect={() =>
-                                  router.push(`/products/${product.id}`)
-                                }
+                                onSelect={() => {
+                                  const url = `/products/${product.id}`;
+                                  window.open(url, '_blank');
+                                }}
                               >
                                 <Eye className="mr-2 h-4 w-4" />
                                 View Product
