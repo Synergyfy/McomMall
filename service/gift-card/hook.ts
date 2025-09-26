@@ -8,6 +8,7 @@ import {
   InitiatePurchaseResponse,
   GiftCard,
   MyPurchase,
+  GiftCardBalanceResponse,
 } from './types';
 
 // API Functions
@@ -28,6 +29,11 @@ const initiatePurchase = async (purchaseData: InitiatePurchaseDto): Promise<Init
 
 const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<GiftCard> => {
   const { data } = await api.post<GiftCard>('/gift-cards/purchase/verify', verificationData);
+  return data;
+};
+
+const checkGiftCardBalance = async (code: string): Promise<GiftCardBalanceResponse> => {
+  const { data } = await api.get<GiftCardBalanceResponse>(`/gift-cards/balance/${code}`);
   return data;
 };
 
@@ -60,6 +66,12 @@ export const useAddGiftCardTemplate = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
     },
+  });
+};
+
+export const useCheckGiftCardBalance = () => {
+  return useMutation<GiftCardBalanceResponse, Error, string>({
+    mutationFn: checkGiftCardBalance,
   });
 };
 

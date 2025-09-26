@@ -67,3 +67,10 @@ export interface MyPurchase {
   };
   createdAt: string;
 }
+
+export interface GiftCardBalanceResponse {
+  initialBalance: number;
+  currentBalance: number;
+  currency: string;
+  expiryDate: string;
+}
