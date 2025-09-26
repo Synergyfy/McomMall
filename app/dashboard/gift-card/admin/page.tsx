@@ -23,17 +23,11 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import { useGetMerchantGiftCards } from '@/service/merchant/gift-card';
+import {
+  useGetMerchantGiftCards,
+  useGetGiftCardHistory,
+} from '@/service/merchant/gift-card';
 import { MerchantGiftCard } from '@/types/merchant-gift-card';
-
-// --- MOCK ACTIVITY DATA ---
-const mockActivity = [
-  { id: '1', date: '2023-10-01', action: 'Issued', amount: 100, balance: 100, user: 'system', note: 'Initial issue' },
-  { id: '2', date: '2023-10-05', action: 'Purchase', amount: -25, balance: 75, user: 'john.doe@example.com', note: 'Order #123' },
-  { id: '3', date: '2023-10-15', action: 'Purchase', amount: -30, balance: 45, user: 'john.doe@example.com', note: 'Order #124' },
-  { id: '4', date: '2023-11-01', action: 'Top-up', amount: 50, balance: 95, user: 'jane.doe@example.com', note: 'Customer service credit' },
-];
-
 
 // --- SUB-COMPONENTS ---
 
@@ -82,45 +76,73 @@ const ViewActivityDialog = ({
   card: MerchantGiftCard;
   onClose: () => void;
 }) => {
+  const {
+    data: history,
+    isLoading,
+    isError,
+  } = useGetGiftCardHistory(card.code);
+
+  const processedHistory = useMemo(() => {
+    if (!history) return [];
+
+    let runningBalance = parseFloat(card.initialBalance);
+    const sortedHistory = [...history].sort(
+      (a, b) =>
+        new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+    );
+
+    return sortedHistory.map(item => {
+      const currentBalance = runningBalance;
+      runningBalance += item.amount;
+      return { ...item, currentBalance };
+    });
+  }, [history, card.initialBalance]);
+
   return (
     <>
       <DialogHeader>
         <DialogTitle>Activity for {card.code}</DialogTitle>
       </DialogHeader>
       <div className="py-4">
-      <Table>
-      <TableHeader>
-        <TableRow>
-          <TableHead>Date</TableHead>
-          <TableHead>Action</TableHead>
-          <TableHead>User</TableHead>
-          <TableHead>Note</TableHead>
-          <TableHead className="text-right">Amount</TableHead>
-          <TableHead className="text-right">Balance</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {mockActivity.map(log => (
-          <TableRow key={log.id}>
-            <TableCell>{log.date}</TableCell>
-            <TableCell>{log.action}</TableCell>
-            <TableCell>{log.user}</TableCell>
-            <TableCell className="text-xs">{log.note}</TableCell>
-            <TableCell
-              className={cn(
-                'text-right',
-                log.amount < 0 ? 'text-red-600' : 'text-gray-800'
-              )}
-            >
-              £{log.amount.toFixed(2)}
-            </TableCell>
-            <TableCell className="text-right">
-              £{log.balance.toFixed(2)}
-            </TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+        {isLoading && <p>Loading activity...</p>}
+        {isError && (
+          <p className="text-red-500">Failed to load activity.</p>
+        )}
+        {processedHistory && (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead>Date</TableHead>
+                <TableHead>Action</TableHead>
+                <TableHead>Note</TableHead>
+                <TableHead className="text-right">Amount</TableHead>
+                <TableHead className="text-right">Balance</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {processedHistory.map(log => (
+                <TableRow key={log.id}>
+                  <TableCell>
+                    {new Date(log.created_at).toLocaleString()}
+                  </TableCell>
+                  <TableCell>{log.type}</TableCell>
+                  <TableCell className="text-xs">{log.notes}</TableCell>
+                  <TableCell
+                    className={cn(
+                      'text-right',
+                      log.amount < 0 ? 'text-red-600' : 'text-gray-800'
+                    )}
+                  >
+                    £{log.amount.toFixed(2)}
+                  </TableCell>
+                  <TableCell className="text-right">
+                    £{log.currentBalance.toFixed(2)}
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
       </div>
       <DialogFooter>
         <Button onClick={onClose}>Close</Button>
@@ -136,7 +158,7 @@ export default function GiftCardDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(null);
 
-  const giftCards = giftCardResponse?.data || [];
+  const giftCards = useMemo(() => giftCardResponse?.data || [], [giftCardResponse]);
 
   const filteredCards = useMemo(() => {
     if (!searchQuery) return giftCards;
