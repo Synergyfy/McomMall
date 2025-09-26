@@ -8,8 +8,7 @@ import {
   InitiatePurchaseResponse,
   GiftCard,
   MyPurchase,
-  ValidateGiftCardDto,
-  ValidateGiftCardResponse,
+  GiftCardBalanceResponse,
 } from './types';
 
 // API Functions
@@ -33,13 +32,8 @@ const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<Gift
   return data;
 };
 
-const validateGiftCard = async (
-  validationData: ValidateGiftCardDto
-): Promise<ValidateGiftCardResponse> => {
-  const { data } = await api.post<ValidateGiftCardResponse>(
-    '/gift-cards/validate',
-    validationData
-  );
+const checkGiftCardBalance = async (code: string): Promise<GiftCardBalanceResponse> => {
+  const { data } = await api.get<GiftCardBalanceResponse>(`/gift-cards/balance/${code}`);
   return data;
 };
 
@@ -75,13 +69,9 @@ export const useAddGiftCardTemplate = () => {
   });
 };
 
-export const useValidateGiftCard = () => {
-  return useMutation<
-    ValidateGiftCardResponse,
-    Error,
-    ValidateGiftCardDto
-  >({
-    mutationFn: validateGiftCard,
+export const useCheckGiftCardBalance = () => {
+  return useMutation<GiftCardBalanceResponse, Error, string>({
+    mutationFn: checkGiftCardBalance,
   });
 };
 

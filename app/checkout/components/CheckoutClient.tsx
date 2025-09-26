@@ -16,7 +16,7 @@ import { useRecordOrder } from '@/hooks/useRecordOrder';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
-import { useValidateGiftCard } from '@/service/gift-card/hook';
+import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -68,7 +68,7 @@ export default function CheckoutClient() {
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
-  const { mutateAsync: validateGiftCard } = useValidateGiftCard();
+  const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -94,16 +94,18 @@ export default function CheckoutClient() {
   const handleApplyGiftCard = async (code: string) => {
     setGiftCardLoading(true);
     try {
-      const result = await validateGiftCard({
-        giftCardCode: code,
-        productIds,
-      });
-      setGiftCardDiscount(result.amountApplied);
-      setGiftCardCode(code);
-      setDiscount(0); // Reset coupon discount
-      setCouponCode('');
-      setOfferDiscount(0); // Reset offer discount
-      setSelectedOffer(null);
+      const result = await checkGiftCardBalance(code);
+      if (result.currentBalance > 0) {
+        const applicableDiscount = Math.min(result.currentBalance, basePrice);
+        setGiftCardDiscount(applicableDiscount);
+        setGiftCardCode(code);
+        setDiscount(0); // Reset coupon discount
+        setCouponCode('');
+        setOfferDiscount(0); // Reset offer discount
+        setSelectedOffer(null);
+      } else {
+        alert('This gift card has no balance.');
+      }
     } catch (error) {
       console.error('Failed to apply gift card', error);
       alert('Invalid or inapplicable gift card');

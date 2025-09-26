@@ -68,12 +68,9 @@ export interface MyPurchase {
   createdAt: string;
 }
 
-export interface ValidateGiftCardDto {
-  giftCardCode: string;
-  productIds: string[];
-}
-
-export interface ValidateGiftCardResponse {
-  code: string;
-  amountApplied: number;
+export interface GiftCardBalanceResponse {
+  initialBalance: number;
+  currentBalance: number;
+  currency: string;
+  expiryDate: string;
 }
