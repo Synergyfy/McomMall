@@ -6,22 +6,16 @@ import {
   InitiatePurchaseDto,
   VerifyPurchaseDto,
   InitiatePurchaseResponse,
+  GiftCard,
   MyPurchase,
   GiftCardBalanceResponse,
-  GiftCard,
 } from './types';
-import { GiftCard as AdminGiftCard } from '@/types/gift-card';
 
 // API Functions
 const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
   const { data } = await api.get<GiftCardTemplate[]>('/merchant/gift-cards/templates');
   return data;
 };
-
-const getGiftCards = async (): Promise<AdminGiftCard[]> => {
-    const { data } = await api.get('/merchant/gift-cards');
-    return data;
-  };
 
 const addGiftCardTemplate = async (templateData: CreateGiftCardTemplateDto): Promise<GiftCardTemplate> => {
   const { data } = await api.post<GiftCardTemplate>('/merchant/gift-cards/templates', templateData);
@@ -45,13 +39,6 @@ const checkGiftCardBalance = async (code: string): Promise<GiftCardBalanceRespon
 
 
 // React Query Hooks
-export const useGetGiftCards = () => {
-    return useQuery<AdminGiftCard[], Error>({
-      queryKey: ['giftCards'],
-      queryFn: getGiftCards,
-    });
-  };
-
 export const useGetGiftCardTemplates = () => {
   return useQuery<GiftCardTemplate[], Error>({
     queryKey: ['giftCardTemplates'],
@@ -115,26 +102,3 @@ export const useVerifyPurchase = () => {
     },
   });
 };
-
-export const useMutateGiftCard = () => {
-    const queryClient = useQueryClient();
-    return useMutation({
-      mutationFn: async (updatedCard: AdminGiftCard) => {
-        // Here you would typically make an API call to update the gift card on the server
-        // For now, we'll just update the cache optimistically.
-        return Promise.resolve(updatedCard);
-      },
-      onSuccess: (data: AdminGiftCard) => {
-        queryClient.setQueryData(['giftCards'], (oldData: AdminGiftCard[] | undefined) => {
-          if (!oldData) return [];
-          const index = oldData.findIndex(card => card.id === data.id);
-          if (index !== -1) {
-            const newData = [...oldData];
-            newData[index] = data;
-            return newData;
-          }
-          return oldData;
-        });
-      },
-    });
-  };
