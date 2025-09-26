@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useGetMyPurchases } from "@/service/gift-card/hook";
-import { Purchase } from "@/service/gift-card/types";
+import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
@@ -50,7 +50,7 @@ const GiftCardHistoryPage = () => {
 
       <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         {purchases && purchases.length > 0 ? (
-          purchases.map((purchase: Purchase) => (
+          purchases.map((purchase: MyPurchase) => (
             <div
               key={purchase.id}
               className="bg-white rounded-lg shadow-lg overflow-hidden transform hover:scale-105 transition-transform duration-300"

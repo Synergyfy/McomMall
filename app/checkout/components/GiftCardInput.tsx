@@ -27,7 +27,7 @@ export default function GiftCardInput({
     <motion.div
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.5 }}
+      transition={{ duration: 0.5, delay: 0.6 }}
       className="flex w-full items-center space-x-3 mt-4"
     >
       <Input
@@ -42,7 +42,7 @@ export default function GiftCardInput({
         <Button
           onClick={handleApply}
           disabled={isLoading}
-          className="h-12 text-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all duration-300"
+          className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition-all duration-300"
         >
           {isLoading ? (
             <Loader className="animate-spin" />

@@ -68,7 +68,7 @@ export default function CheckoutClient() {
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
-  const validateGiftCard = useValidateGiftCard();
+  const { mutateAsync: validateGiftCard } = useValidateGiftCard();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -91,6 +91,27 @@ export default function CheckoutClient() {
 
   const totalPrice = basePrice - discount - offerDiscount - giftCardDiscount;
 
+  const handleApplyGiftCard = async (code: string) => {
+    setGiftCardLoading(true);
+    try {
+      const result = await validateGiftCard({
+        giftCardCode: code,
+        productIds,
+      });
+      setGiftCardDiscount(result.amountApplied);
+      setGiftCardCode(code);
+      setDiscount(0); // Reset coupon discount
+      setCouponCode('');
+      setOfferDiscount(0); // Reset offer discount
+      setSelectedOffer(null);
+    } catch (error) {
+      console.error('Failed to apply gift card', error);
+      alert('Invalid or inapplicable gift card');
+    } finally {
+      setGiftCardLoading(false);
+    }
+  };
+
   const handleApplyCoupon = async (code: string) => {
     setCouponLoading(true);
     try {
@@ -100,38 +121,13 @@ export default function CheckoutClient() {
       });
       setDiscount(result.discountAmount);
       setCouponCode(code);
-      setOfferDiscount(0);
+      setOfferDiscount(0); // Reset offer discount
       setSelectedOffer(null);
-      setGiftCardDiscount(0);
-      setGiftCardCode('');
     } catch (error) {
       console.error('Failed to apply coupon', error);
       alert('Invalid or inapplicable coupon');
     } finally {
       setCouponLoading(false);
-    }
-  };
-
-  const handleApplyGiftCard = async (code: string) => {
-    setGiftCardLoading(true);
-    try {
-      const result = await validateGiftCard({ giftCardCode: code });
-      if (result.isValid) {
-        const applicableDiscount = Math.min(basePrice, result.balance);
-        setGiftCardDiscount(applicableDiscount);
-        setGiftCardCode(code);
-        setDiscount(0);
-        setCouponCode('');
-        setOfferDiscount(0);
-        setSelectedOffer(null);
-      } else {
-        alert('Invalid gift card code.');
-      }
-    } catch (error) {
-      console.error('Failed to apply gift card', error);
-      alert('Failed to apply gift card');
-    } finally {
-      setGiftCardLoading(false);
     }
   };
 
@@ -144,10 +140,8 @@ export default function CheckoutClient() {
       });
       setOfferDiscount(result.discountAmount);
       setSelectedOffer(offerId);
-      setDiscount(0);
+      setDiscount(0); // Reset coupon discount
       setCouponCode('');
-      setGiftCardDiscount(0);
-      setGiftCardCode('');
     } catch (error) {
       console.error('Failed to apply offer', error);
       alert('Failed to apply offer');
@@ -165,8 +159,8 @@ export default function CheckoutClient() {
           transactionId,
         },
         couponCode: couponCode || undefined,
-        giftCardCode: giftCardCode || undefined,
         offerId: selectedOffer || undefined,
+        giftCardCode: giftCardCode || undefined,
       };
 
       if (fromCart) {
@@ -194,8 +188,8 @@ export default function CheckoutClient() {
       checkout,
       recordOrder,
       couponCode,
-      giftCardCode,
       selectedOffer,
+      giftCardCode,
     ]
   );
 
@@ -275,7 +269,7 @@ export default function CheckoutClient() {
               fromCart={fromCart}
               quantity={quantity}
               setQuantity={setQuantity}
-              discount={discount + offerDiscount + giftCardDiscount}
+              discount={discount + offerDiscount}
               totalPrice={totalPrice}
             />
             <div className="mt-8">
