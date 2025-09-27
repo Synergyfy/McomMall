@@ -38,8 +38,13 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
       theme: "birthday",
       svg: "BirthdayCake" as string | null,
       customImage: null as string | null,
-      textColor: "#000000",
-      backgroundColor: "#f0f0f0",
+      title: "A Gift For You",
+      titleColor: "#000000",
+      cardColor: "#f0f0f0",
+      additionalContent: "",
+      redeemButtonText: "Redeem Gift",
+      redeemButtonColor: "#ea580c",
+      redeemButtonTextColor: "#ffffff",
     },
     delivery: {
       type: "now" as "now" | "scheduled",
@@ -76,8 +81,13 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
     recipientName: string;
     recipientEmail: string;
     personalMessage: string;
-    textColor: string;
-    backgroundColor: string;
+    title: string;
+    titleColor: string;
+    cardColor: string;
+    additionalContent: string;
+    redeemButtonText: string;
+    redeemButtonColor: string;
+    redeemButtonTextColor: string;
   }) => {
     setFormData((prev) => ({
       ...prev,
@@ -89,8 +99,13 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
         theme: data.theme,
         svg: data.svg,
         customImage: data.customImage,
-        textColor: data.textColor,
-        backgroundColor: data.backgroundColor,
+        title: data.title,
+        titleColor: data.titleColor,
+        cardColor: data.cardColor,
+        additionalContent: data.additionalContent,
+        redeemButtonText: data.redeemButtonText,
+        redeemButtonColor: data.redeemButtonColor,
+        redeemButtonTextColor: data.redeemButtonTextColor,
       },
     }));
     setStep(4);

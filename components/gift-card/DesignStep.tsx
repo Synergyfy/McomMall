@@ -28,6 +28,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { cn, CURRENCY } from "@/lib/utils";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 
@@ -46,16 +47,26 @@ const CardPreview = ({
   amount,
   recipientName,
   personalMessage,
-  textColor,
-  backgroundColor,
+  title,
+  titleColor,
+  cardColor,
+  additionalContent,
+  redeemButtonText,
+  redeemButtonColor,
+  redeemButtonTextColor,
 }: {
   selectedSvg: SvgComponent | null;
   customImage: string | null;
   amount: number;
   recipientName: string;
   personalMessage: string;
-  textColor: string;
-  backgroundColor: string;
+  title: string;
+  titleColor: string;
+  cardColor: string;
+  additionalContent: string;
+  redeemButtonText: string;
+  redeemButtonColor: string;
+  redeemButtonTextColor: string;
 }) => {
   return (
     <Card className="bg-gray-50">
@@ -75,11 +86,16 @@ const CardPreview = ({
             <Gift className="mx-auto h-12 w-12 text-gray-400" />
           )}
         </div>
+        {additionalContent && (
+            <div className="text-sm text-gray-600 text-center">
+                <p>{additionalContent}</p>
+            </div>
+        )}
         <div
           className="rounded-lg p-6 text-center shadow-md transition-colors duration-300"
-          style={{ backgroundColor: backgroundColor, color: textColor }}
+          style={{ backgroundColor: cardColor, color: titleColor }}
         >
-          <h3 className="text-2xl font-bold">You&apos;ve received a gift card!</h3>
+          <h3 className="text-2xl font-bold" style={{ color: titleColor }}>{title || "You've received a gift card!"}</h3>
           <p className="text-sm mt-2">For: {recipientName || "Recipient"}</p>
           <p className="text-4xl font-light my-4">
             {CURRENCY}
@@ -94,11 +110,11 @@ const CardPreview = ({
           <button
             className="mt-6 px-8 py-3 rounded-md font-semibold transition-colors duration-300"
             style={{
-              backgroundColor: textColor,
-              color: backgroundColor,
+              backgroundColor: redeemButtonColor,
+              color: redeemButtonTextColor,
             }}
           >
-            Redeem
+            {redeemButtonText || "Redeem"}
           </button>
         </div>
       </CardContent>
@@ -114,8 +130,13 @@ interface DesignStepProps {
     recipientName: string;
     recipientEmail: string;
     personalMessage: string;
-    textColor: string;
-    backgroundColor: string;
+    title: string;
+    titleColor: string;
+    cardColor: string;
+    additionalContent: string;
+    redeemButtonText: string;
+    redeemButtonColor: string;
+    redeemButtonTextColor: string;
   }) => void;
   amount: number;
   recipientType: "myself" | "someoneElse";
@@ -128,8 +149,13 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
   const [recipientName, setRecipientName] = useState("");
   const [recipientEmail, setRecipientEmail] = useState("");
   const [personalMessage, setPersonalMessage] = useState("");
-  const [textColor, setTextColor] = useState("#000000");
-  const [backgroundColor, setBackgroundColor] = useState("#f0f0f0");
+  const [title, setTitle] = useState("A Gift For You");
+  const [titleColor, setTitleColor] = useState("#000000");
+  const [cardColor, setCardColor] = useState("#f0f0f0");
+  const [additionalContent, setAdditionalContent] = useState("");
+  const [redeemButtonText, setRedeemButtonText] = useState("Redeem Gift");
+  const [redeemButtonColor, setRedeemButtonColor] = useState("#ea580c");
+  const [redeemButtonTextColor, setRedeemButtonTextColor] = useState("#ffffff");
 
   const handleThemeChange = (theme: string) => {
     setSelectedTheme(theme);
@@ -163,8 +189,13 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
       recipientName,
       recipientEmail,
       personalMessage,
-      textColor,
-      backgroundColor,
+      title,
+      titleColor,
+      cardColor,
+      additionalContent,
+      redeemButtonText,
+      redeemButtonColor,
+      redeemButtonTextColor,
     });
   };
 
@@ -176,115 +207,183 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
       className="grid grid-cols-1 lg:grid-cols-2 gap-8"
     >
       <div className="space-y-6">
-        {recipientType === "someoneElse" && (
-          <>
-            <div>
-              <Label htmlFor="recipientName">Recipient Name</Label>
-              <Input
-                id="recipientName"
-                value={recipientName}
-                onChange={(e) => setRecipientName(e.target.value)}
-                placeholder="Jane Doe"
-              />
-            </div>
-            <div>
-              <Label htmlFor="recipientEmail">Recipient Email</Label>
-              <Input
-                id="recipientEmail"
-                type="email"
-                value={recipientEmail}
-                onChange={(e) => setRecipientEmail(e.target.value)}
-                placeholder="jane.doe@example.com"
-              />
-            </div>
-          </>
-        )}
-        <div>
-          <Label htmlFor="personalMessage">Personal Message</Label>
-          <Textarea
-            id="personalMessage"
-            value={personalMessage}
-            onChange={(e) => setPersonalMessage(e.target.value)}
-            placeholder="Happy Birthday!"
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-4">
-          <div>
-            <Label htmlFor="textColor">Text Color</Label>
-            <Input
-              id="textColor"
-              type="color"
-              value={textColor}
-              onChange={(e) => setTextColor(e.target.value)}
-              className="h-12 p-1"
-            />
-          </div>
-          <div>
-            <Label htmlFor="backgroundColor">Background Color</Label>
-            <Input
-              id="backgroundColor"
-              type="color"
-              value={backgroundColor}
-              onChange={(e) => setBackgroundColor(e.target.value)}
-              className="h-12 p-1"
-            />
-          </div>
-        </div>
-        <div>
-          <label className="text-lg font-semibold mb-2 block">
-            Select a theme
-          </label>
-          <Select value={selectedTheme} onValueChange={handleThemeChange}>
-            <SelectTrigger>
-              <SelectValue placeholder="Select a theme" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="birthday">Birthday</SelectItem>
-              <SelectItem value="anniversary">Anniversary</SelectItem>
-              <SelectItem value="holiday">Holiday</SelectItem>
-              <SelectItem value="default">Other</SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <label className="text-lg font-semibold mb-2 block">
-            Choose a design
-          </label>
-          <div className="grid grid-cols-3 gap-4">
-            {themes[selectedTheme].map((Svg, index) => (
-              <motion.div
-                key={index}
-                whileHover={{ scale: 1.05 }}
-                whileTap={{ scale: 0.95 }}
-                onClick={() => handleSvgSelect(Svg)}
-                className={cn(
-                  "cursor-pointer rounded-lg border-2 p-2 transition-all",
-                  "hover:border-orange-500",
-                  selectedSvg === Svg ? "border-orange-600" : "border-gray-200"
-                )}
-              >
-                <Svg className="w-full h-auto rounded-md" />
-              </motion.div>
-            ))}
-          </div>
-        </div>
-        <div>
-           <label htmlFor="customImageUpload" className="w-full">
-            <motion.div
-              whileHover={{ scale: 1.02 }}
-              className="mt-4 flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-            >
-              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                <UploadCloud className="w-8 h-8 mb-2 text-gray-500" />
-                <p className="mb-2 text-sm text-gray-500">
-                  <span className="font-semibold">Click to upload</span> or drag and drop
-                </p>
-                <p className="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+        <Accordion type="multiple" defaultValue={["recipient", "design", "theme"]}>
+          <AccordionItem value="recipient">
+            <AccordionTrigger>Recipient Details</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+              {recipientType === "someoneElse" && (
+                <>
+                  <div>
+                    <Label htmlFor="recipientName">Recipient Name</Label>
+                    <Input
+                      id="recipientName"
+                      value={recipientName}
+                      onChange={(e) => setRecipientName(e.target.value)}
+                      placeholder="Jane Doe"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="recipientEmail">Recipient Email</Label>
+                    <Input
+                      id="recipientEmail"
+                      type="email"
+                      value={recipientEmail}
+                      onChange={(e) => setRecipientEmail(e.target.value)}
+                      placeholder="jane.doe@example.com"
+                    />
+                  </div>
+                </>
+              )}
+              <div>
+                <Label htmlFor="personalMessage">Personal Message</Label>
+                <Textarea
+                  id="personalMessage"
+                  value={personalMessage}
+                  onChange={(e) => setPersonalMessage(e.target.value)}
+                  placeholder="Happy Birthday!"
+                />
               </div>
-              <input id="customImageUpload" type="file" className="hidden" onChange={handleCustomImageUpload} accept="image/*" />
-            </motion.div>
-          </label>
-        </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="design">
+            <AccordionTrigger>Card Design</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+              <div>
+                <Label htmlFor="title">Gift Card Title</Label>
+                <Input
+                  id="title"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                />
+              </div>
+               <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label htmlFor="titleColor">Title Color</Label>
+                  <Input
+                    id="titleColor"
+                    type="color"
+                    value={titleColor}
+                    onChange={(e) => setTitleColor(e.target.value)}
+                    className="h-12 p-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="cardColor">Card Background Color</Label>
+                  <Input
+                    id="cardColor"
+                    type="color"
+                    value={cardColor}
+                    onChange={(e) => setCardColor(e.target.value)}
+                    className="h-12 p-1"
+                  />
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="additionalContent">Additional Content</Label>
+                <Textarea
+                  id="additionalContent"
+                  value={additionalContent}
+                  onChange={(e) => setAdditionalContent(e.target.value)}
+                  placeholder="Optional text to display above the card"
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="button">
+             <AccordionTrigger>Redeem Button</AccordionTrigger>
+             <AccordionContent className="space-y-4">
+                <div>
+                  <Label htmlFor="redeemButtonText">Button Text</Label>
+                  <Input
+                    id="redeemButtonText"
+                    value={redeemButtonText}
+                    onChange={(e) => setRedeemButtonText(e.target.value)}
+                  />
+                </div>
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <Label htmlFor="redeemButtonColor">Button Color</Label>
+                        <Input
+                        id="redeemButtonColor"
+                        type="color"
+                        value={redeemButtonColor}
+                        onChange={(e) => setRedeemButtonColor(e.target.value)}
+                        className="h-12 p-1"
+                        />
+                    </div>
+                    <div>
+                        <Label htmlFor="redeemButtonTextColor">Button Text Color</Label>
+                        <Input
+                        id="redeemButtonTextColor"
+                        type="color"
+                        value={redeemButtonTextColor}
+                        onChange={(e) => setRedeemButtonTextColor(e.target.value)}
+                        className="h-12 p-1"
+                        />
+                    </div>
+                </div>
+             </AccordionContent>
+          </AccordionItem>
+
+          <AccordionItem value="theme">
+            <AccordionTrigger>Theme &amp; Image</AccordionTrigger>
+            <AccordionContent className="space-y-4">
+              <div>
+                <Label>Select a theme</Label>
+                <Select value={selectedTheme} onValueChange={handleThemeChange}>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a theme" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="birthday">Birthday</SelectItem>
+                    <SelectItem value="anniversary">Anniversary</SelectItem>
+                    <SelectItem value="holiday">Holiday</SelectItem>
+                    <SelectItem value="default">Other</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div>
+                <Label>Choose a design</Label>
+                <div className="grid grid-cols-3 gap-4">
+                  {themes[selectedTheme].map((Svg, index) => (
+                    <motion.div
+                      key={index}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      onClick={() => handleSvgSelect(Svg)}
+                      className={cn(
+                        "cursor-pointer rounded-lg border-2 p-2 transition-all",
+                        "hover:border-orange-500",
+                        selectedSvg === Svg ? "border-orange-600" : "border-gray-200"
+                      )}
+                    >
+                      <Svg className="w-full h-auto rounded-md" />
+                    </motion.div>
+                  ))}
+                </div>
+              </div>
+              <div>
+                <Label htmlFor="customImageUpload" className="w-full">Or upload your own</Label>
+                <motion.div
+                  whileHover={{ scale: 1.02 }}
+                  className="mt-2 flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
+                >
+                  <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                    <UploadCloud className="w-8 h-8 mb-2 text-gray-500" />
+                    <p className="mb-2 text-sm text-gray-500">
+                      <span className="font-semibold">Click to upload</span> or drag and drop
+                    </p>
+                    <p className="text-xs text-gray-500">SVG, PNG, JPG or GIF (MAX. 800x400px)</p>
+                  </div>
+                  <input id="customImageUpload" type="file" className="hidden" onChange={handleCustomImageUpload} accept="image/*" />
+                </motion.div>
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        </Accordion>
+
         <div className="flex space-x-4">
           <Dialog>
             <DialogTrigger asChild>
@@ -300,8 +399,13 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
                 amount={amount}
                 recipientName={recipientName}
                 personalMessage={personalMessage}
-                textColor={textColor}
-                backgroundColor={backgroundColor}
+                title={title}
+                titleColor={titleColor}
+                cardColor={cardColor}
+                additionalContent={additionalContent}
+                redeemButtonText={redeemButtonText}
+                redeemButtonColor={redeemButtonColor}
+                redeemButtonTextColor={redeemButtonTextColor}
               />
             </DialogContent>
           </Dialog>
@@ -317,8 +421,13 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
           amount={amount}
           recipientName={recipientName}
           personalMessage={personalMessage}
-          textColor={textColor}
-          backgroundColor={backgroundColor}
+          title={title}
+          titleColor={titleColor}
+          cardColor={cardColor}
+          additionalContent={additionalContent}
+          redeemButtonText={redeemButtonText}
+          redeemButtonColor={redeemButtonColor}
+          redeemButtonTextColor={redeemButtonTextColor}
         />
       </div>
     </motion.div>
