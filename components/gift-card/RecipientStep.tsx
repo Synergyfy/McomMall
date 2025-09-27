@@ -16,7 +16,7 @@ const RecipientStep = ({ onSelect }: RecipientStepProps) => {
       className="space-y-4"
     >
       <h3 className="text-lg font-semibold">Who are you sending to?</h3>
-      <div className="flex space-x-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <Button
           onClick={() => onSelect("myself")}
           className="w-full h-24 text-lg"
