@@ -25,29 +25,16 @@ import {
   InitiatePurchaseDto,
   GiftCardTemplate,
 } from "@/service/gift-card/types";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { CURRENCY } from "@/lib/utils";
 
 const checkoutFormSchema = z
   .object({
-    recipientName: z.string().optional(),
-    recipientEmail: z.string().email("Invalid email address.").optional(),
     senderName: z.string().min(1, "Sender name is required."),
     senderEmail: z.string().email("Your email is required.").optional(),
-    personalMessage: z.string().optional(),
     paymentProvider: z.enum(["stripe", "paypal"]),
     recipientType: z.enum(["myself", "someoneElse"]),
   })
-  .refine(
-    (data) => {
-      if (data.recipientType === "someoneElse") {
-        return !!data.recipientName && !!data.recipientEmail;
-      }
-      return true;
-    },
-    {
-      message: "Recipient details are required.",
-      path: ["recipientName"],
-    }
-  )
   .refine(
     (data) => {
       if (data.recipientType === "myself") {
@@ -68,6 +55,9 @@ interface CheckoutStepProps {
   formData: {
     amount: number;
     recipientType: "myself" | "someoneElse";
+    recipientName: string;
+    recipientEmail: string;
+    personalMessage: string;
   };
   onPurchase: (details: InitiatePurchaseDto) => void;
   isInitiating: boolean;
@@ -92,13 +82,13 @@ const CheckoutStep = ({
       recipientName:
         formData.recipientType === "myself"
           ? values.senderName
-          : values.recipientName!,
+          : formData.recipientName,
       recipientEmail:
         formData.recipientType === "myself"
           ? values.senderEmail!
-          : values.recipientEmail!,
+          : formData.recipientEmail,
       senderName: values.senderName,
-      personalMessage: values.personalMessage,
+      personalMessage: formData.personalMessage,
       paymentProvider: values.paymentProvider,
       templateId: template.id,
       amount: formData.amount,
@@ -111,122 +101,111 @@ const CheckoutStep = ({
       initial={{ opacity: 0, x: -20 }}
       animate={{ opacity: 1, x: 0 }}
       transition={{ duration: 0.5 }}
+      className="grid grid-cols-1 lg:grid-cols-2 gap-8"
     >
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {formData.recipientType === "someoneElse" ? (
-              <div className="space-y-4">
-                <FormField
-                  control={form.control}
-                  name="recipientName"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Recipient Name</FormLabel>
-                      <FormControl>
-                        <Input placeholder="Jane Doe" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-                <FormField
-                  control={form.control}
-                  name="recipientEmail"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Recipient Email</FormLabel>
-                      <FormControl>
-                        <Input
-                          placeholder="recipient@example.com"
-                          {...field}
-                        />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-            ) : (
-              <div />
+      <div>
+        <Card>
+          <CardHeader>
+            <CardTitle>Order Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            <div className="flex justify-between">
+              <span>Gift Card Value</span>
+              <span>{CURRENCY}{formData.amount.toFixed(2)}</span>
+            </div>
+            {formData.recipientType === "someoneElse" && (
+              <>
+                <div className="flex justify-between">
+                  <span>Recipient Name</span>
+                  <span>{formData.recipientName}</span>
+                </div>
+                <div className="flex justify-between">
+                  <span>Recipient Email</span>
+                  <span>{formData.recipientEmail}</span>
+                </div>
+              </>
             )}
+            {formData.personalMessage && (
+               <div className="flex justify-between">
+                <span>Message</span>
+                <span className="italic">&quot;{formData.personalMessage}&quot;</span>
+              </div>
+            )}
+             <div className="flex justify-between font-bold text-lg border-t pt-4">
+              <span>Total</span>
+              <span>{CURRENCY}{formData.amount.toFixed(2)}</span>
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+      <div>
+        <Form {...form}>
+          <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
             <div className="space-y-4">
               <FormField
-                control={form.control}
-                name="senderName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Your Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="John Smith" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              {formData.recipientType === "myself" && (
-                <FormField
                   control={form.control}
-                  name="senderEmail"
+                  name="senderName"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Your Email</FormLabel>
+                      <FormLabel>Your Name</FormLabel>
                       <FormControl>
-                        <Input placeholder="you@example.com" {...field} />
+                        <Input placeholder="John Smith" {...field} />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
-              )}
-              <FormField
-                control={form.control}
-                name="personalMessage"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Personal Message (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Happy Birthday!" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
+                {formData.recipientType === "myself" && (
+                  <FormField
+                    control={form.control}
+                    name="senderEmail"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel>Your Email</FormLabel>
+                        <FormControl>
+                          <Input placeholder="you@example.com" {...field} />
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
                 )}
-              />
             </div>
-          </div>
-          <FormField
-            control={form.control}
-            name="paymentProvider"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Payment Method</FormLabel>
-                <Select
-                  onValueChange={field.onChange}
-                  defaultValue={field.value}
-                >
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a payment method" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="stripe">Stripe</SelectItem>
-                    <SelectItem value="paypal">PayPal</SelectItem>
-                  </SelectContent>
-                </Select>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
-          <Button
-            type="submit"
-            disabled={isInitiating}
-            className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-6"
-          >
-            {isInitiating ? "Processing..." : "Proceed to Payment"}
-          </Button>
-        </form>
-      </Form>
+
+            <FormField
+              control={form.control}
+              name="paymentProvider"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Payment Method</FormLabel>
+                  <Select
+                    onValueChange={field.onChange}
+                    defaultValue={field.value}
+                  >
+                    <FormControl>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select a payment method" />
+                      </SelectTrigger>
+                    </FormControl>
+                    <SelectContent>
+                      <SelectItem value="stripe">Stripe</SelectItem>
+                      <SelectItem value="paypal">PayPal</SelectItem>
+                    </SelectContent>
+                  </Select>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <Button
+              type="submit"
+              disabled={isInitiating}
+              className="w-full bg-orange-600 hover:bg-orange-700 text-lg py-6"
+            >
+              {isInitiating ? "Processing..." : `Pay ${CURRENCY}${formData.amount.toFixed(2)}`}
+            </Button>
+          </form>
+        </Form>
+      </div>
     </motion.div>
   );
 };

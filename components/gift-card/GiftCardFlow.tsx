@@ -31,10 +31,15 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
   const [formData, setFormData] = useState({
     recipientType: "someoneElse" as "myself" | "someoneElse",
     amount: 0,
+    recipientName: "",
+    recipientEmail: "",
+    personalMessage: "",
     design: {
       theme: "birthday",
       svg: "BirthdayCake" as string | null,
       customImage: null as string | null,
+      textColor: "#000000",
+      backgroundColor: "#f0f0f0",
     },
     delivery: {
       type: "now" as "now" | "scheduled",
@@ -64,12 +69,30 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
     setStep(3);
   };
 
-  const handleDesignSave = (design: {
+  const handleDesignSave = (data: {
     theme: string;
     svg: string | null;
     customImage: string | null;
+    recipientName: string;
+    recipientEmail: string;
+    personalMessage: string;
+    textColor: string;
+    backgroundColor: string;
   }) => {
-    setFormData((prev) => ({ ...prev, design }));
+    setFormData((prev) => ({
+      ...prev,
+      recipientName: data.recipientName,
+      recipientEmail: data.recipientEmail,
+      personalMessage: data.personalMessage,
+      design: {
+        ...prev.design,
+        theme: data.theme,
+        svg: data.svg,
+        customImage: data.customImage,
+        textColor: data.textColor,
+        backgroundColor: data.backgroundColor,
+      },
+    }));
     setStep(4);
   };
 
@@ -172,7 +195,11 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
           <ValueStep template={template} onSave={handleValueSave} />
         )}
         {step === 3 && (
-          <DesignStep onSave={handleDesignSave} amount={formData.amount} />
+          <DesignStep
+            onSave={handleDesignSave}
+            amount={formData.amount}
+            recipientType={formData.recipientType}
+          />
         )}
         {step === 4 && <DeliveryStep onSave={handleDeliverySave} />}
         {step === 5 && (
