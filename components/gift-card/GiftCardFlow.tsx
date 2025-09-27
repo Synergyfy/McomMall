@@ -16,7 +16,6 @@ import { toast } from "sonner";
 import RecipientStep from "./RecipientStep";
 import ValueStep from "./ValueStep";
 import DesignStep from "./DesignStep";
-import DeliveryStep from "./DeliveryStep";
 import CheckoutStep from "./CheckoutStep";
 import StripeCheckoutForm from "@/components/StripeCheckoutForm";
 import PayPalCheckoutButton from "@/components/PayPalCheckoutButton";
@@ -111,13 +110,6 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
     setStep(4);
   };
 
-  const handleDeliverySave = (delivery: {
-    type: "now" | "scheduled";
-    date: Date | null;
-  }) => {
-    setFormData((prev) => ({ ...prev, delivery }));
-    setStep(5);
-  };
 
   const handlePurchase = (details: InitiatePurchaseDto) => {
     setPurchaseDetails(details);
@@ -157,7 +149,6 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
     { title: "Recipient", description: "Who is this gift for?" },
     { title: "Value", description: "Choose the gift card value" },
     { title: "Design", description: "Personalize your gift card" },
-    { title: "Delivery", description: "Schedule the delivery" },
     { title: "Checkout", description: "Complete your purchase" },
   ];
 
@@ -216,8 +207,7 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
             recipientType={formData.recipientType}
           />
         )}
-        {step === 4 && <DeliveryStep onSave={handleDeliverySave} />}
-        {step === 5 && (
+        {step === 4 && (
           <CheckoutStep
             template={template}
             formData={formData}
