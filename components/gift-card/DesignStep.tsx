@@ -133,7 +133,7 @@ const DesignStep = ({ onSave, amount, recipientType }: DesignStepProps) => {
 
   const handleThemeChange = (theme: string) => {
     setSelectedTheme(theme);
-    setSelectedSvg(themes[theme][0] || null);
+    setSelectedSvg(null);
     setCustomImage(null);
   };
 
