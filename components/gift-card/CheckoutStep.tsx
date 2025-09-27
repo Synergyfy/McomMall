@@ -26,13 +26,40 @@ import {
   GiftCardTemplate,
 } from "@/service/gift-card/types";
 
-const checkoutFormSchema = z.object({
-  recipientName: z.string().min(1, "Recipient name is required."),
-  recipientEmail: z.string().email("Invalid email address."),
-  senderName: z.string().min(1, "Sender name is required."),
-  personalMessage: z.string().optional(),
-  paymentProvider: z.enum(["stripe", "paypal"]),
-});
+const checkoutFormSchema = z
+  .object({
+    recipientName: z.string().optional(),
+    recipientEmail: z.string().email("Invalid email address.").optional(),
+    senderName: z.string().min(1, "Sender name is required."),
+    senderEmail: z.string().email("Your email is required.").optional(),
+    personalMessage: z.string().optional(),
+    paymentProvider: z.enum(["stripe", "paypal"]),
+    recipientType: z.enum(["myself", "someoneElse"]),
+  })
+  .refine(
+    (data) => {
+      if (data.recipientType === "someoneElse") {
+        return !!data.recipientName && !!data.recipientEmail;
+      }
+      return true;
+    },
+    {
+      message: "Recipient details are required.",
+      path: ["recipientName"],
+    }
+  )
+  .refine(
+    (data) => {
+      if (data.recipientType === "myself") {
+        return !!data.senderEmail;
+      }
+      return true;
+    },
+    {
+      message: "Your email is required.",
+      path: ["senderEmail"],
+    }
+  );
 
 type CheckoutFormValues = z.infer<typeof checkoutFormSchema>;
 
@@ -56,12 +83,23 @@ const CheckoutStep = ({
     resolver: zodResolver(checkoutFormSchema),
     defaultValues: {
       paymentProvider: "stripe",
+      recipientType: formData.recipientType,
     },
   });
 
   const onSubmit = (values: CheckoutFormValues) => {
     const purchaseDetails: InitiatePurchaseDto = {
-      ...values,
+      recipientName:
+        formData.recipientType === "myself"
+          ? values.senderName
+          : values.recipientName!,
+      recipientEmail:
+        formData.recipientType === "myself"
+          ? values.senderEmail!
+          : values.recipientEmail!,
+      senderName: values.senderName,
+      personalMessage: values.personalMessage,
+      paymentProvider: values.paymentProvider,
       templateId: template.id,
       amount: formData.amount,
     };
@@ -77,34 +115,41 @@ const CheckoutStep = ({
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div className="space-y-4">
-              <FormField
-                control={form.control}
-                name="recipientName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="Jane Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
-                name="recipientEmail"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recipient Email</FormLabel>
-                    <FormControl>
-                      <Input placeholder="recipient@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
+            {formData.recipientType === "someoneElse" ? (
+              <div className="space-y-4">
+                <FormField
+                  control={form.control}
+                  name="recipientName"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipient Name</FormLabel>
+                      <FormControl>
+                        <Input placeholder="Jane Doe" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+                <FormField
+                  control={form.control}
+                  name="recipientEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Recipient Email</FormLabel>
+                      <FormControl>
+                        <Input
+                          placeholder="recipient@example.com"
+                          {...field}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              </div>
+            ) : (
+              <div />
+            )}
             <div className="space-y-4">
               <FormField
                 control={form.control}
@@ -119,6 +164,21 @@ const CheckoutStep = ({
                   </FormItem>
                 )}
               />
+              {formData.recipientType === "myself" && (
+                <FormField
+                  control={form.control}
+                  name="senderEmail"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Your Email</FormLabel>
+                      <FormControl>
+                        <Input placeholder="you@example.com" {...field} />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
               <FormField
                 control={form.control}
                 name="personalMessage"
