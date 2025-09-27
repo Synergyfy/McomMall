@@ -1,14 +1,17 @@
 "use client";
 
 import { useGetBusinessGiftCards } from "@/service/gift-card/hook";
-import PurchaseForm from "./components/PurchaseForm";
+import GiftCardFlow from "@/components/gift-card/GiftCardFlow";
 
 interface GiftCardPurchaseClientProps {
   params: { id: string };
   searchParams: { templateId?: string };
 }
 
-const GiftCardPurchaseClient = ({ params, searchParams }: GiftCardPurchaseClientProps) => {
+const GiftCardPurchaseClient = ({
+  params,
+  searchParams,
+}: GiftCardPurchaseClientProps) => {
   const templateId = searchParams.templateId;
   const { data: templates, isPending } = useGetBusinessGiftCards(params.id);
 
@@ -24,10 +27,7 @@ const GiftCardPurchaseClient = ({ params, searchParams }: GiftCardPurchaseClient
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-bold text-center mb-8 text-orange-600">
-        Purchase Gift Card
-      </h1>
-      <PurchaseForm template={selectedTemplate} />
+      <GiftCardFlow template={selectedTemplate} />
     </div>
   );
 };
