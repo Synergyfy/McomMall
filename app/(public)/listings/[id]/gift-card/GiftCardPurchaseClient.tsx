@@ -1,7 +1,7 @@
 "use client";
 
 import { useGetBusinessGiftCards } from "@/service/gift-card/hook";
-import GiftCardFlow from "@/components/gift-card/GiftCardFlow";
+import NewGiftCardFlow from "@/components/gift-card/NewGiftCardFlow";
 
 interface GiftCardPurchaseClientProps {
   params: { id: string };
@@ -18,18 +18,14 @@ const GiftCardPurchaseClient = ({
   const selectedTemplate = templates?.find((t) => t.id === templateId);
 
   if (isPending) {
-    return <div>Loading...</div>;
+    return <div className="flex justify-center items-center h-screen">Loading...</div>;
   }
 
   if (!selectedTemplate) {
-    return <div>Template not found</div>;
+    return <div className="flex justify-center items-center h-screen">Template not found</div>;
   }
 
-  return (
-    <div className="container mx-auto px-4 py-8">
-      <GiftCardFlow template={selectedTemplate} />
-    </div>
-  );
+  return <NewGiftCardFlow template={selectedTemplate} />;
 };
 
 export default GiftCardPurchaseClient;
