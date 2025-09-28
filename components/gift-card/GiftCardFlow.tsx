@@ -79,11 +79,11 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
     customImage: string | null;
     recipientName: string;
     recipientEmail: string;
-    personalMessage: string;
+    personalMessage?: string;
     title: string;
     titleColor: string;
     cardColor: string;
-    additionalContent: string;
+    additionalContent?: string;
     redeemButtonText: string;
     redeemButtonColor: string;
     redeemButtonTextColor: string;
@@ -92,7 +92,7 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
       ...prev,
       recipientName: data.recipientName,
       recipientEmail: data.recipientEmail,
-      personalMessage: data.personalMessage,
+      personalMessage: data.personalMessage || "",
       design: {
         ...prev.design,
         theme: data.theme,
@@ -101,12 +101,13 @@ const GiftCardFlow = ({ template }: GiftCardFlowProps) => {
         title: data.title,
         titleColor: data.titleColor,
         cardColor: data.cardColor,
-        additionalContent: data.additionalContent,
+        additionalContent: data.additionalContent || "",
         redeemButtonText: data.redeemButtonText,
         redeemButtonColor: data.redeemButtonColor,
         redeemButtonTextColor: data.redeemButtonTextColor,
       },
     }));
+    // This is the crucial part that advances to the next step.
     setStep(4);
   };
 
