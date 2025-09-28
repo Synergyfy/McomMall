@@ -17,9 +17,23 @@ const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
   return data;
 };
 
+const fetchGiftCardTemplateById = async (id: string): Promise<GiftCardTemplate> => {
+  const { data } = await api.get<GiftCardTemplate>(`/merchant/gift-cards/templates/${id}`);
+  return data;
+};
+
 const addGiftCardTemplate = async (templateData: CreateGiftCardTemplateDto): Promise<GiftCardTemplate> => {
   const { data } = await api.post<GiftCardTemplate>('/merchant/gift-cards/templates', templateData);
   return data;
+};
+
+const updateGiftCardTemplate = async ({ id, templateData }: { id: string, templateData: Partial<CreateGiftCardTemplateDto> }): Promise<GiftCardTemplate> => {
+  const { data } = await api.put<GiftCardTemplate>(`/merchant/gift-cards/templates/${id}`, templateData);
+  return data;
+};
+
+const deleteGiftCardTemplate = async (id: string): Promise<void> => {
+  await api.delete(`/merchant/gift-cards/templates/${id}`);
 };
 
 const initiatePurchase = async (purchaseData: InitiatePurchaseDto): Promise<InitiatePurchaseResponse> => {
@@ -46,6 +60,14 @@ export const useGetGiftCardTemplates = () => {
   });
 };
 
+export const useGetGiftCardTemplateById = (id: string) => {
+  return useQuery<GiftCardTemplate, Error>({
+    queryKey: ['giftCardTemplate', id],
+    queryFn: () => fetchGiftCardTemplateById(id),
+    enabled: !!id,
+  });
+};
+
 const fetchBusinessGiftCardTemplates = async (businessId: string): Promise<GiftCardTemplate[]> => {
   const { data } = await api.get<GiftCardTemplate[]>(`/gift-cards/templates/${businessId}`);
   return data;
@@ -63,6 +85,26 @@ export const useAddGiftCardTemplate = () => {
   const queryClient = useQueryClient();
   return useMutation<GiftCardTemplate, Error, CreateGiftCardTemplateDto>({
     mutationFn: addGiftCardTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useUpdateGiftCardTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCardTemplate, Error, { id: string, templateData: Partial<CreateGiftCardTemplateDto> }>({
+    mutationFn: updateGiftCardTemplate,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useDeleteGiftCardTemplate = () => {
+  const queryClient = useQueryClient();
+  return useMutation<void, Error, string>({
+    mutationFn: deleteGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
     },

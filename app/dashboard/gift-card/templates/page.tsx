@@ -1,18 +1,42 @@
 "use client";
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import Link from 'next/link';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
-import { useGetGiftCardTemplates } from '@/service/gift-card/hook';
+import { useGetGiftCardTemplates, useDeleteGiftCardTemplate } from '@/service/gift-card/hook';
 
 const GiftCardTemplatesPage = () => {
   const { data: templates, isPending, isError } = useGetGiftCardTemplates();
+  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteGiftCardTemplate();
+
+  const handleDelete = (id: string) => {
+    deleteTemplate(id, {
+      onSuccess: () => {
+        toast.success("Template deleted successfully!");
+      },
+      onError: () => {
+        toast.error("Failed to delete template. Please try again.");
+      },
+    });
+  };
 
   if (isPending) {
     return <div>Loading...</div>;
@@ -81,6 +105,36 @@ const GiftCardTemplatesPage = () => {
                         )}
                     </div>
                 </div>
+                 <CardFooter className="border-t pt-4 mt-4">
+                    <div className="flex justify-end w-full gap-2">
+                        <Link href={`/dashboard/gift-card/templates/edit/${template.id}`} passHref>
+                            <Button variant="outline" size="sm">
+                                <Pencil className="mr-2 h-4 w-4" /> Edit
+                            </Button>
+                        </Link>
+                        <AlertDialog>
+                            <AlertDialogTrigger asChild>
+                                <Button variant="destructive" size="sm" disabled={isDeleting}>
+                                    <Trash2 className="mr-2 h-4 w-4" /> Delete
+                                </Button>
+                            </AlertDialogTrigger>
+                            <AlertDialogContent>
+                                <AlertDialogHeader>
+                                    <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+                                    <AlertDialogDescription>
+                                        This action cannot be undone. This will permanently delete the gift card template.
+                                    </AlertDialogDescription>
+                                </AlertDialogHeader>
+                                <AlertDialogFooter>
+                                    <AlertDialogCancel>Cancel</AlertDialogCancel>
+                                    <AlertDialogAction onClick={() => handleDelete(template.id)} disabled={isDeleting}>
+                                        {isDeleting ? 'Deleting...' : 'Delete'}
+                                    </AlertDialogAction>
+                                </AlertDialogFooter>
+                            </AlertDialogContent>
+                        </AlertDialog>
+                    </div>
+                </CardFooter>
               </CardContent>
             </Card>
           ))}
