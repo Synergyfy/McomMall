@@ -12,12 +12,18 @@ import { Label } from "@/components/ui/label";
 import { X } from 'lucide-react';
 import { toast } from "sonner";
 import Image from "next/image";
+import { SketchPicker, ColorResult } from 'react-color';
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import GiftCardPreview from '@/components/gift-card/gift-card-preview';
+
 
 const CreateGiftCardTemplatePage = () => {
   const [formData, setFormData] = useState<Partial<CreateGiftCardTemplateDto>>({
     name: '',
     description: '',
-    imageUrl: '',
+    backgroundImageUrl: '',
+    backgroundColor: '#ffffff',
+    textColor: '#000000',
     fixedAmounts: [],
     allowCustomAmount: false,
     minCustomAmount: undefined,
@@ -45,6 +51,10 @@ const CreateGiftCardTemplatePage = () => {
     }
   };
 
+  const handleColorChange = (color: ColorResult, field: 'backgroundColor' | 'textColor') => {
+    setFormData((prev) => ({ ...prev, [field]: color.hex }));
+  };
+
   const handleSwitchChange = (checked: boolean) => {
     setFormData((prev) => ({ ...prev, allowCustomAmount: checked }));
   };
@@ -54,14 +64,16 @@ const CreateGiftCardTemplatePage = () => {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
+      setFormData(prev => ({...prev, backgroundImageUrl: URL.createObjectURL(file)}));
       setErrors((prev) => {
         const newErrors = { ...prev };
-        delete newErrors.imageUrl;
+        delete newErrors.backgroundImageUrl;
         return newErrors;
       });
     } else {
       setImageFile(null);
       setImagePreview(null);
+      setFormData(prev => ({...prev, backgroundImageUrl: ''}));
     }
   };
 
@@ -90,7 +102,6 @@ const CreateGiftCardTemplatePage = () => {
     const newErrors: Record<string, string> = {};
     if (!formData.name) newErrors.name = "Template name is required";
     if (!formData.description) newErrors.description = "Description is required";
-    if (!imageFile) newErrors.imageUrl = "Image is required";
     if (!formData.allowCustomAmount && (!formData.fixedAmounts || formData.fixedAmounts.length === 0)) {
       newErrors.fixedAmounts = "At least one fixed amount is required if custom amounts are not allowed.";
     }
@@ -116,64 +127,67 @@ const CreateGiftCardTemplatePage = () => {
       return;
     }
 
-    if (!imageFile) {
-        toast.error("Please select an image to upload.");
-        return;
-    }
-
     setIsUploading(true);
 
-    const uploadFormData = new FormData();
-    uploadFormData.append('file', imageFile);
+    const submissionData: Partial<CreateGiftCardTemplateDto> = {
+      ...formData,
+      minCustomAmount: formData.allowCustomAmount ? Number(formData.minCustomAmount) : undefined,
+      maxCustomAmount: formData.allowCustomAmount ? Number(formData.maxCustomAmount) : undefined,
+    };
 
-    try {
-      const response = await fetch('/api/upload/gift-card', {
-        method: 'POST',
-        body: uploadFormData,
-      });
+    if (imageFile) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', imageFile);
 
-      if (!response.ok) {
-        throw new Error('Image upload failed');
+      try {
+        const response = await fetch('/api/upload/gift-card', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Image upload failed');
+        }
+
+        const result = await response.json();
+        submissionData.backgroundImageUrl = result.secure_url;
+
+      } catch (error) {
+        console.error("Image upload error:", error);
+        toast.error("Image upload failed. Please try again.");
+        setIsUploading(false);
+        return;
       }
-
-      const result = await response.json();
-
-      const finalFormData = {
-        ...formData,
-        imageUrl: result.secure_url,
-        minCustomAmount: formData.allowCustomAmount ? Number(formData.minCustomAmount) : undefined,
-        maxCustomAmount: formData.allowCustomAmount ? Number(formData.maxCustomAmount) : undefined,
-      };
-
-      mutate(finalFormData as CreateGiftCardTemplateDto, {
-        onSuccess: () => {
-          toast.success("Gift card template created successfully!");
-          router.push('/dashboard/gift-card/templates');
-        },
-        onError: (error) => {
-          console.error("Failed to create gift card template:", error);
-          toast.error("Failed to create gift card template. Please try again.");
-        },
-      });
-
-    } catch (error) {
-      console.error("Image upload error:", error);
-      toast.error("Image upload failed. Please try again.");
-    } finally {
-      setIsUploading(false);
+    } else {
+      submissionData.backgroundImageUrl = undefined;
     }
+
+    mutate(submissionData as CreateGiftCardTemplateDto, {
+      onSuccess: () => {
+        toast.success("Gift card template created successfully!");
+        router.push('/dashboard/gift-card/templates');
+      },
+      onError: (error) => {
+        console.error("Failed to create gift card template:", error);
+        toast.error("Failed to create gift card template. Please try again.");
+      },
+      onSettled: () => {
+        setIsUploading(false);
+      },
+    });
   };
 
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
-      <Card className="max-w-2xl mx-auto">
-        <CardHeader>
-          <CardTitle className="text-2xl font-bold text-gray-800">Create New Gift Card Template</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <div>
-              <Label htmlFor="name">Template Name</Label>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-2xl font-bold text-gray-800">Create New Gift Card Template</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-6">
+              <div>
+                <Label htmlFor="name">Template Name</Label>
               <Input id="name" name="name" value={formData.name || ''} onChange={handleInputChange} className="mt-1" />
               {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
             </div>
@@ -184,8 +198,39 @@ const CreateGiftCardTemplatePage = () => {
               {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
             </div>
 
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <Label>Background Color</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.backgroundColor }} />
+                      {formData.backgroundColor}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0">
+                    <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              <div>
+                <Label>Text Color</Label>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.textColor }} />
+                      {formData.textColor}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="p-0">
+                    <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
+                  </PopoverContent>
+                </Popover>
+              </div>
+            </div>
+
             <div>
-              <Label htmlFor="image">Image</Label>
+              <Label htmlFor="image">Background Image (optional)</Label>
               <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isPending || isUploading} />
               {imagePreview && (
                 <div className="mt-4">
@@ -262,7 +307,11 @@ const CreateGiftCardTemplatePage = () => {
             </div>
           </form>
         </CardContent>
-      </Card>
+        </Card>
+        <div>
+          <GiftCardPreview template={formData} />
+        </div>
+      </div>
     </div>
   );
 };

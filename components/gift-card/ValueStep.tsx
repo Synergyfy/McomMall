@@ -60,7 +60,7 @@ const ValueStep = ({ template, onSave }: ValueStepProps) => {
           <div>
             <Label className="text-base font-semibold text-gray-700">Choose a fixed amount</Label>
             <div className="grid grid-cols-2 md:grid-cols-3 gap-4 mt-2">
-              {template.fixedAmounts.map((amount) => (
+              {template.fixedAmounts?.map((amount) => (
                 <motion.div
                   key={amount}
                   whileHover={{ scale: 1.05 }}

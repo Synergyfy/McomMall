@@ -72,7 +72,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
       baseFormSchema.refine(
         (data) => {
           if (!data.amount) return true; // Let required check from base schema handle it
-          if (template.fixedAmounts.includes(data.amount)) {
+          if (template.fixedAmounts?.includes(data.amount)) {
             return true;
           }
           if (template.allowCustomAmount) {
@@ -242,13 +242,13 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                   setCustomAmount("");
                 }}
                 value={
-                  field.value && template.fixedAmounts.includes(field.value)
+                  field.value && template.fixedAmounts?.includes(field.value)
                     ? String(field.value)
                     : ""
                 }
                 className="flex flex-wrap items-center gap-4"
               >
-                {template.fixedAmounts.map((amount) => (
+                {template.fixedAmounts?.map((amount) => (
                   <FormItem key={amount}>
                     <FormControl>
                       <RadioGroupItem
@@ -272,7 +272,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
                 {template.allowCustomAmount && (
                   <div
                     className={`flex items-center rounded-md border transition-colors ${
-                      field.value && !template.fixedAmounts.includes(field.value)
+                      field.value && !template.fixedAmounts?.includes(field.value)
                         ? "border-orange-600 bg-orange-50 ring-2 ring-orange-500"
                         : "border-gray-300"
                     }`}

@@ -1,23 +1,30 @@
 export interface GiftCardTemplate {
-  id: string;
-  name: string;
-  description: string;
-  imageUrl: string;
-  fixedAmounts: number[];
-  allowCustomAmount: boolean;
-  minCustomAmount?: number;
-  maxCustomAmount?: number;
-  createdAt: string;
+    id: string; // UUID
+    name: string;
+    description?: string;
+    backgroundImageUrl?: string;
+    backgroundColor?: string;
+    textColor?: string;
+    fixedAmounts?: number[];
+    allowCustomAmount: boolean;
+    minCustomAmount?: number;
+    maxCustomAmount?: number;
+    expiryPeriodDays?: number;
+    isActive: boolean;
+    ownerId: string; // User UUID
 }
 
 export interface CreateGiftCardTemplateDto {
   name: string;
-  description: string;
-  imageUrl: string;
-  fixedAmounts: number[];
+  description?: string;
+  backgroundImageUrl?: string;
+  backgroundColor?: string;
+  textColor?: string;
+  fixedAmounts?: number[];
   allowCustomAmount: boolean;
   minCustomAmount?: number;
   maxCustomAmount?: number;
+  expiryPeriodDays?: number;
 }
 
 export interface InitiatePurchaseDto {

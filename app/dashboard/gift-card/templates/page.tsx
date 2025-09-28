@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
 import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
-import { format } from 'date-fns';
 
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
@@ -59,8 +58,11 @@ const GiftCardTemplatesPage = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
           {templates && templates.map((template) => (
             <Card key={template.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
-              <CardHeader className="p-0">
-                <Image src={template.imageUrl} alt={template.name} className="w-full h-48 object-cover" width={300} height={200} />
+              <CardHeader className="p-0 relative">
+                <Image src={template.backgroundImageUrl || 'https://via.placeholder.com/400x200'} alt={template.name} className="w-full h-48 object-cover" width={300} height={200} />
+                <Badge className={`absolute top-2 right-2 ${template.isActive ? 'bg-green-500' : 'bg-red-500'}`}>
+                  {template.isActive ? 'Active' : 'Inactive'}
+                </Badge>
               </CardHeader>
               <CardContent className="p-4 flex flex-col flex-grow">
                 <div className="flex-grow">
@@ -69,7 +71,7 @@ const GiftCardTemplatesPage = () => {
 
                     <h4 className="text-sm font-semibold text-gray-700 mb-2">Price Options</h4>
                     <div className="flex flex-wrap gap-2">
-                        {template.fixedAmounts.map((amount) => (
+                        {template.fixedAmounts?.map((amount) => (
                             <Badge key={amount} variant="secondary">£{amount}</Badge>
                         ))}
                         {template.allowCustomAmount && (
@@ -78,9 +80,6 @@ const GiftCardTemplatesPage = () => {
                             </Badge>
                         )}
                     </div>
-                </div>
-                <div className="text-xs text-gray-500 mt-4 pt-4 border-t border-gray-200">
-                  Created on {format(new Date(template.createdAt), 'do MMMM yyyy')}
                 </div>
               </CardContent>
             </Card>
