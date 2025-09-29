@@ -259,106 +259,105 @@ const CardPreview = ({
   selectedSvg: SvgComponent | null;
 }) => {
   const alignmentClasses = {
+    Left: 'items-start',
+    Center: 'items-center',
+    Right: 'items-end',
+  };
+
+  const textAlignClasses = {
     Left: 'text-left',
     Center: 'text-center',
     Right: 'text-right',
-  };
+  }
 
   const AdditionalContent = () => (
     <div
-      className={`text-sm text-gray-600 ${
-        alignmentClasses[design.contentAlignment]
-      }`}
+      className={`w-full flex flex-col ${alignmentClasses[design.contentAlignment]} ${textAlignClasses[design.contentAlignment]}`}
     >
-      <p>{design.additionalContent}</p>
+      <div dangerouslySetInnerHTML={{ __html: design.additionalContent }} />
     </div>
   );
 
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Preview</h2>
-        <Button variant="outline">
+        <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
+        <Button variant="outline" size="sm">
           <Mail className="w-4 h-4 mr-2" />
           Send a preview email
         </Button>
       </div>
-      <Card className="bg-gray-50">
-        <CardContent className="space-y-4 pt-6">
-          <div className="w-full max-w-md mx-auto h-48 flex items-center justify-center">
-            {SelectedSvg ? (
-              <SelectedSvg className="w-3/4 h-3/4" />
-            ) : (
-               <Gift className="w-12 h-12 text-gray-400" />
-            )}
-          </div>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>
-              <strong>To:</strong> Recipient Name
-            </p>
-            <p>
-              <strong>From:</strong> The Purchasing Customer
-            </p>
-            <p>Gift card message to the recipient from the sender.</p>
-          </div>
-
-          {design.contentLocation === 'Top' && <AdditionalContent />}
-
-          <div
-            className="w-full max-w-md mx-auto aspect-[1.586] rounded-xl shadow-2xl p-6 flex flex-col justify-between"
-            style={{ backgroundColor: design.cardColor, color: design.titleColor }}
-          >
-            <div className="flex justify-between items-start">
-              <h2 className="text-2xl font-bold">{design.title}</h2>
-              <div className="w-12 h-8 bg-yellow-400 rounded-md" />
+      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+            <p className="text-sm text-gray-500"><strong>From:</strong> Your Business Name &lt;noreply@example.com&gt;</p>
+            <p className="text-sm text-gray-500"><strong>To:</strong> Recipient Name &lt;recipient@example.com&gt;</p>
+            <h3 className="text-lg font-semibold text-gray-800 mt-2">You&apos;ve received a gift card!</h3>
+        </div>
+        <div className="p-6 bg-gray-50 space-y-6">
+            <div className="w-full max-w-md mx-auto h-48 flex items-center justify-center">
+                {SelectedSvg ? (
+                <SelectedSvg className="w-3/4 h-3/4" />
+                ) : (
+                <Gift className="w-12 h-12 text-gray-400" />
+                )}
             </div>
 
-            <div className="flex items-center justify-start">
-                <Wifi size={32} />
+            <div className="text-center text-gray-700">
+                <p>Gift card message to the recipient from the sender will appear here.</p>
             </div>
 
-            <div className="text-left">
-              <p className="text-2xl font-mono tracking-widest">
-                4000 1234 5678 9010
-              </p>
-            </div>
+            {design.contentLocation === 'Top' && <AdditionalContent />}
 
-            <div className="flex justify-between items-end">
+            <div
+                className="w-full max-w-md mx-auto aspect-[1.586] rounded-xl shadow-lg p-6 flex flex-col justify-between"
+                style={{ backgroundColor: design.cardColor, color: design.titleColor }}
+            >
+                <div className="flex justify-between items-start">
+                    <h2 className="text-2xl font-bold">{design.title}</h2>
+                    <div className="w-12 h-8 bg-yellow-400/80 rounded-md" />
+                </div>
+
+                <div className="flex items-center justify-start">
+                    <Wifi size={32} />
+                </div>
+
                 <div>
-                    <p className="text-sm opacity-80">Card Holder</p>
-                    <p className="font-semibold">Recipient Name</p>
+                    <p className="text-2xl font-mono tracking-widest">4000 1234 5678 9010</p>
                 </div>
-                <div>
-                    <p className="text-sm opacity-80">Expires</p>
-                    <p className="font-semibold">12/28</p>
-                </div>
-                <div className="text-4xl font-bold">
-                    {CURRENCY}123.45
+
+                <div className="flex justify-between items-end">
+                    <div>
+                        <p className="text-xs opacity-80">CARD HOLDER</p>
+                        <p className="font-semibold text-base">Recipient Name</p>
+                    </div>
+                    <div>
+                        <p className="text-xs opacity-80">EXPIRES</p>
+                        <p className="font-semibold text-base">12/28</p>
+                    </div>
+                    <div className="text-4xl font-bold">{CURRENCY}123.45</div>
                 </div>
             </div>
-          </div>
 
-          {design.contentLocation === 'Bottom' && <AdditionalContent />}
+             {design.contentLocation === 'Bottom' && <AdditionalContent />}
 
-          <div className="text-center mt-4">
-            <button
-                className="mt-6 px-8 py-3 rounded-md font-semibold text-white transition-colors duration-300"
-                style={{
-                  backgroundColor: design.redeemButtonColor,
-                  color: design.redeemButtonTextColor,
-                }}
-              >
-                {design.redeemButtonText}
-            </button>
-          </div>
-
-          <div className="text-center mt-4">
-            <a href="#" className="text-sm text-orange-600 hover:underline">
-              View or print your gift card.
+            <div className="text-center mt-4">
+                <button
+                    className="mt-4 px-10 py-3 rounded-lg font-bold text-lg shadow-md transition-transform transform hover:scale-105"
+                    style={{
+                    backgroundColor: design.redeemButtonColor,
+                    color: design.redeemButtonTextColor,
+                    }}
+                >
+                    {design.redeemButtonText}
+                </button>
+            </div>
+        </div>
+        <div className="p-4 border-t border-gray-200 text-center">
+             <a href="#" className="text-sm text-orange-600 hover:underline">
+              View or print your gift card
             </a>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
