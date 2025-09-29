@@ -311,29 +311,30 @@ const CardPreview = React.forwardRef<
             {design.contentLocation === 'Top' && <AdditionalContent />}
 
             <div
-                className="w-full max-w-md mx-auto aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+                className="w-full max-w-md mx-auto aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between border"
+                style={{ backgroundColor: design.cardColor }}
             >
                 <div className="flex justify-between items-start">
                     <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
-                    <CreditCard size={24} className="text-gray-400"/>
+                    <CreditCard size={24} style={{ color: design.titleColor }}/>
                 </div>
 
                 <div className="text-left">
-                    <p className="text-2xl md:text-3xl font-mono text-gray-700 tracking-wider">
+                    <p className="text-2xl md:text-3xl font-mono tracking-wider" style={{ color: design.titleColor }}>
                         4000 1234 5678 9010
                     </p>
                 </div>
 
                 <div className="flex justify-between items-end">
                     <div>
-                        <p className="text-xs text-gray-500 uppercase">Card Holder</p>
-                        <p className="font-medium text-gray-800">Recipient Name</p>
+                        <p className="text-xs uppercase" style={{ color: design.titleColor, opacity: 0.8 }}>Card Holder</p>
+                        <p className="font-medium" style={{ color: design.titleColor }}>Recipient Name</p>
                     </div>
                     <div>
-                        <p className="text-xs text-gray-500 uppercase">Expires</p>
-                        <p className="font-medium text-gray-800">12/28</p>
+                        <p className="text-xs uppercase" style={{ color: design.titleColor, opacity: 0.8 }}>Expires</p>
+                        <p className="font-medium" style={{ color: design.titleColor }}>12/28</p>
                     </div>
-                    <div className="text-3xl font-bold text-gray-800">
+                    <div className="text-3xl font-bold" style={{ color: design.titleColor }}>
                         {CURRENCY}123.45
                     </div>
                 </div>
@@ -375,7 +376,41 @@ export default function GiftCardEditorPage() {
 
   const handleSave = () => {
     if (emailPreviewRef.current) {
-      console.log(emailPreviewRef.current.innerHTML);
+      const originalNode = emailPreviewRef.current;
+      const clonedNode = originalNode.cloneNode(true) as HTMLElement;
+
+      const allOriginalNodes = Array.from(originalNode.querySelectorAll('*'));
+      const allClonedNodes = Array.from(clonedNode.querySelectorAll('*'));
+
+      allOriginalNodes.unshift(originalNode);
+      allClonedNodes.unshift(clonedNode);
+
+      allOriginalNodes.forEach((node, index) => {
+        const cloned = allClonedNodes[index] as HTMLElement;
+        const computedStyle = window.getComputedStyle(node);
+        for (let i = 0; i < computedStyle.length; i++) {
+          const propName = computedStyle[i];
+          const propValue = computedStyle.getPropertyValue(propName);
+          cloned.style.setProperty(propName, propValue);
+        }
+      });
+
+      const emailHtml = clonedNode.outerHTML;
+
+      const fullHtml = `
+            <!DOCTYPE html>
+            <html lang="en">
+            <head>
+                <meta charset="UTF-8">
+                <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                <title>Email Preview</title>
+            </head>
+            <body>
+                ${emailHtml}
+            </body>
+            </html>
+        `;
+      console.log(fullHtml);
     }
   };
 
