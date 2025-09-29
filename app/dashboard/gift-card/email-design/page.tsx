@@ -285,6 +285,13 @@ const CardPreview = ({
       </div>
       <Card className="bg-gray-50">
         <CardContent className="space-y-4 pt-6">
+          <div className="w-full max-w-md mx-auto h-48 flex items-center justify-center">
+            {SelectedSvg ? (
+              <SelectedSvg className="w-3/4 h-3/4" />
+            ) : (
+               <Gift className="w-12 h-12 text-gray-400" />
+            )}
+          </div>
           <div className="text-sm text-gray-600 space-y-1">
             <p>
               <strong>To:</strong> Recipient Name
@@ -306,15 +313,8 @@ const CardPreview = ({
               <div className="w-12 h-8 bg-yellow-400 rounded-md" />
             </div>
 
-            <div className="flex items-center justify-between">
+            <div className="flex items-center justify-start">
                 <Wifi size={32} />
-                <div className="w-1/4 h-16 flex items-center justify-center">
-                    {SelectedSvg ? (
-                      <SelectedSvg className="w-full h-full" />
-                    ) : (
-                      <Gift className="w-12 h-12 text-gray-400" />
-                    )}
-                </div>
             </div>
 
             <div className="text-left">
