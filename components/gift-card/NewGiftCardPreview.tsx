@@ -39,32 +39,33 @@ const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
         ) : null}
       </div>
       <motion.div
-        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between border"
+        style={{ backgroundColor: design.cardColor }}
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0, backgroundColor: design.cardColor }}
         transition={{ duration: 0.5 }}
       >
         <div className="flex justify-between items-start">
-          <h2 className="text-xl font-semibold text-gray-800">{design.title}</h2>
-          <CreditCard size={24} className="text-gray-400"/>
+          <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
+          <CreditCard size={24} style={{ color: design.titleColor }}/>
         </div>
 
         <div className="text-left">
-          <p className="text-2xl md:text-3xl font-mono text-gray-700 tracking-wider">
+          <p className="text-2xl md:text-3xl font-mono tracking-wider" style={{ color: design.titleColor }}>
             4000 1234 5678 9010
           </p>
         </div>
 
         <div className="flex justify-between items-end">
             <div>
-                <p className="text-xs text-gray-500 uppercase">Card Holder</p>
-                <p className="font-medium text-gray-800">{formData.recipientName || "Recipient Name"}</p>
+                <p className="text-xs uppercase" style={{ color: design.titleColor, opacity: 0.8 }}>Card Holder</p>
+                <p className="font-medium" style={{ color: design.titleColor }}>{formData.recipientName || "Recipient Name"}</p>
             </div>
             <div>
-                <p className="text-xs text-gray-500 uppercase">Expires</p>
-                <p className="font-medium text-gray-800">12/28</p>
+                <p className="text-xs uppercase" style={{ color: design.titleColor, opacity: 0.8 }}>Expires</p>
+                <p className="font-medium" style={{ color: design.titleColor }}>12/28</p>
             </div>
-            <div className="text-3xl font-bold text-gray-800">
+            <div className="text-3xl font-bold" style={{ color: design.titleColor }}>
                 {CURRENCY}{formData.amount}
             </div>
         </div>
