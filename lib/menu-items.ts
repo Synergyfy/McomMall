@@ -57,7 +57,6 @@ export const listingMenuItems: MenuItem[] = [
   },
   { title: 'Coupons', href: '/dashboard/coupons', icon: ShoppingCart },
   { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
-  { title: 'Bookmarks', href: '/dashboard/bookmarks', icon: Bookmark }, // Typo corrected: "Boomarks" -> "Bookmarks"
 ];
 
 export const productMenuItems: MenuItem[] = [
