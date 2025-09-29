@@ -42,6 +42,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoyaltyContent from './LoyaltyContent';
 import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
+import VoucherContent from './VoucherContent';
 
 function ProductPage({
   listing,
@@ -526,7 +527,7 @@ function PromotionsTabs({
         <LoyaltyContent businessId={businessId} />
       </TabsContent>
       <TabsContent value="voucher">
-        <p>Voucher content goes here.</p>
+        <VoucherContent businessId={businessId} />
       </TabsContent>
       <TabsContent value="gift-card">
         {businessId ? (
