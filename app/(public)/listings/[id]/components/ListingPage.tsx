@@ -6,6 +6,7 @@ import { VerificationFeeDialog } from '@/components/VerificationFeeDialog';
 import BookingSidebar from '@/components/BookingSidebar';
 import ContentTabs from '@/components/ContentTabs';
 import ImageGallery from '@/components/ImageGallery';
+import OverviewSection from '@/components/OverviewSection';
 import { useAuth } from '@/service/auth/hook';
 import {
   GooglePlaceResult,
@@ -114,7 +115,24 @@ export default function ListingPage({
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-12">
           {/* Left Column */}
           <div className="lg:col-span-2">
-            {listing && <ContentTabs listing={listing} isLoading={isLoading} />}
+            {isGoogle ? (
+              <div>
+                <div className="flex space-x-4 mb-8">
+                  <Button
+                    size="lg"
+                    className="bg-primary text-white hover:bg-primary-dark"
+                  >
+                    Claim this listing
+                  </Button>
+                  <Button size="lg" variant="outline">
+                    Share
+                  </Button>
+                </div>
+                <OverviewSection listing={listing} isLoading={isLoading} />
+              </div>
+            ) : (
+              listing && <ContentTabs listing={listing} isLoading={isLoading} />
+            )}
           </div>
 
           {/* Right Column (Sidebar) */}
