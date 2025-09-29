@@ -42,7 +42,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import LoyaltyContent from './LoyaltyContent';
 import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
-import VoucherContent from './VoucherContent';
+import VoucherTabContent from '@/app/(public)/listings/[id]/components/VoucherTabContent';
 
 function ProductPage({
   listing,
@@ -285,7 +285,11 @@ function PromotionsTabs({
         <LoyaltyContent businessId={businessId} />
       </TabsContent>
       <TabsContent value="voucher">
-        <VoucherContent businessId={businessId} />
+        {businessId ? (
+          <VoucherTabContent businessId={businessId} />
+        ) : (
+          <p>Vouchers are not available for this listing.</p>
+        )}
       </TabsContent>
       <TabsContent value="gift-card">
         {businessId ? (
