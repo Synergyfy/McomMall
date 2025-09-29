@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Gift, Mail, Info, PlusCircle } from 'lucide-react';
+import { Gift, Mail, Info, PlusCircle, CreditCard } from 'lucide-react';
 
 import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
 import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
@@ -259,99 +259,104 @@ const CardPreview = ({
   selectedSvg: SvgComponent | null;
 }) => {
   const alignmentClasses = {
+    Left: 'items-start',
+    Center: 'items-center',
+    Right: 'items-end',
+  };
+
+  const textAlignClasses = {
     Left: 'text-left',
     Center: 'text-center',
     Right: 'text-right',
-  };
+  }
 
   const AdditionalContent = () => (
     <div
-      className={`text-sm text-gray-600 ${
-        alignmentClasses[design.contentAlignment]
-      }`}
+      className={`w-full flex flex-col ${alignmentClasses[design.contentAlignment]} ${textAlignClasses[design.contentAlignment]}`}
     >
-      <p>{design.additionalContent}</p>
+      <div dangerouslySetInnerHTML={{ __html: design.additionalContent }} />
     </div>
   );
 
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-4">
-        <h2 className="text-lg font-semibold text-gray-800">Preview</h2>
-        <Button variant="outline">
+        <h2 className="text-xl font-bold text-gray-800">Email Preview</h2>
+        <Button variant="outline" size="sm">
           <Mail className="w-4 h-4 mr-2" />
           Send a preview email
         </Button>
       </div>
-      <Card className="bg-gray-50">
-        <CardContent className="space-y-4 pt-6">
-          <div className="text-center">
-            {SelectedSvg ? (
-              <SelectedSvg className="mx-auto w-full h-auto rounded-lg" />
-            ) : (
-              <Gift className="mx-auto h-12 w-12 text-gray-400" />
-            )}
-          </div>
-          <div className="text-sm text-gray-600 space-y-1">
-            <p>
-              <strong>To:</strong> Recipient Name
-            </p>
-            <p>
-              <strong>From:</strong> The Purchasing Customer
-            </p>
-            <p>Gift card message to the recipient from the sender.</p>
-          </div>
+      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+        <div className="p-4 border-b border-gray-200">
+            <p className="text-sm text-gray-500"><strong>From:</strong> Your Business Name &lt;noreply@example.com&gt;</p>
+            <p className="text-sm text-gray-500"><strong>To:</strong> Recipient Name &lt;recipient@example.com&gt;</p>
+            <h3 className="text-lg font-semibold text-gray-800 mt-2">You&apos;ve received a gift card!</h3>
+        </div>
+        <div className="p-6 bg-gray-50 space-y-6">
+            <div className="w-full max-w-md mx-auto h-40 flex items-center justify-center">
+                {SelectedSvg ? (
+                <SelectedSvg className="w-3/4 h-3/4" />
+                ) : (
+                <Gift className="w-12 h-12 text-gray-400" />
+                )}
+            </div>
 
-          {design.contentLocation === 'Top' && <AdditionalContent />}
+            <div className="text-center text-gray-700">
+                <p>Gift card message to the recipient from the sender will appear here.</p>
+            </div>
 
-          <div
-            className="rounded-lg p-6 text-center shadow-md transition-colors duration-300"
-            style={{ backgroundColor: design.cardColor }}
-          >
-            <h3
-              className="text-2xl font-bold transition-colors duration-300"
-              style={{ color: design.titleColor }}
-            >
-              {design.title}
-            </h3>
-            <p
-              className="text-4xl font-light my-4"
-              style={{ color: design.titleColor }}
-            >
-              {CURRENCY}123.45
-            </p>
-            <p
-              className="font-mono text-sm"
-              style={{ color: design.titleColor, opacity: 0.8 }}
-            >
-              1234-WXYZ-5678-ABCD
-            </p>
-            <button
-              className="mt-6 px-8 py-3 rounded-md font-semibold text-white transition-colors duration-300"
-              style={{
-                backgroundColor: design.redeemButtonColor,
-                color: design.redeemButtonTextColor,
-              }}
-            >
-              {design.redeemButtonText}
-            </button>
-            <p
-              className="text-xs mt-4"
-              style={{ color: design.titleColor, opacity: 0.7 }}
-            >
-              Expires June 17, 2026
-            </p>
-          </div>
+            {design.contentLocation === 'Top' && <AdditionalContent />}
 
-          {design.contentLocation === 'Bottom' && <AdditionalContent />}
+            <div
+                className="w-full max-w-md mx-auto aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+            >
+                <div className="flex justify-between items-start">
+                    <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
+                    <CreditCard size={24} className="text-gray-400"/>
+                </div>
 
-          <div className="text-center mt-4">
-            <a href="#" className="text-sm text-orange-600 hover:underline">
-              View or print your gift card.
+                <div className="text-left">
+                    <p className="text-2xl md:text-3xl font-mono text-gray-700 tracking-wider">
+                        4000 1234 5678 9010
+                    </p>
+                </div>
+
+                <div className="flex justify-between items-end">
+                    <div>
+                        <p className="text-xs text-gray-500 uppercase">Card Holder</p>
+                        <p className="font-medium text-gray-800">Recipient Name</p>
+                    </div>
+                    <div>
+                        <p className="text-xs text-gray-500 uppercase">Expires</p>
+                        <p className="font-medium text-gray-800">12/28</p>
+                    </div>
+                    <div className="text-3xl font-bold text-gray-800">
+                        {CURRENCY}123.45
+                    </div>
+                </div>
+            </div>
+
+             {design.contentLocation === 'Bottom' && <AdditionalContent />}
+
+            <div className="text-center mt-4">
+                <button
+                    className="mt-4 px-10 py-3 rounded-lg font-bold text-lg shadow-md transition-transform transform hover:scale-105"
+                    style={{
+                    backgroundColor: design.redeemButtonColor,
+                    color: design.redeemButtonTextColor,
+                    }}
+                >
+                    {design.redeemButtonText}
+                </button>
+            </div>
+        </div>
+        <div className="p-4 border-t border-gray-200 text-center">
+             <a href="#" className="text-sm text-orange-600 hover:underline">
+              View or print your gift card
             </a>
-          </div>
-        </CardContent>
-      </Card>
+        </div>
+      </div>
     </div>
   );
 };
