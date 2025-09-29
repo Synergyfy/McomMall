@@ -57,7 +57,6 @@ export const listingMenuItems: MenuItem[] = [
   },
   { title: 'Coupons', href: '/dashboard/coupons', icon: ShoppingCart },
   { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
-  { title: 'Bookmarks', href: '/dashboard/bookmarks', icon: Bookmark }, // Typo corrected: "Boomarks" -> "Bookmarks"
 ];
 
 export const productMenuItems: MenuItem[] = [
@@ -108,6 +107,11 @@ export const historyMenuItems: MenuItem[] = [
   {
     title: 'Gift Card',
     href: '/dashboard/history/gift-card',
+    icon: CreditCard,
+  },
+  {
+    title: 'My Vouchers',
+    href: '/dashboard/history/my-vouchers',
     icon: CreditCard,
   },
 ];
@@ -167,6 +171,7 @@ export const pluginMenuItems: MenuItem[] = [
     subMenu: [
       { title: 'Dashboard', href: '/dashboard/gift-card' },
       { title: 'Templates', href: '/dashboard/gift-card/templates' },
+      { title: 'Assets', href: '/dashboard/gift-card/assets' },
       { title: 'Admin', href: '/dashboard/gift-card/admin' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
       { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
@@ -176,17 +181,12 @@ export const pluginMenuItems: MenuItem[] = [
 
   {
     title: 'Voucher',
-    href: '/dashboard/voucher',
+    href: '/dashboard/vouchers',
     icon: Settings,
     subMenu: [
-      { title: 'Dashboard', href: '/dashboard/voucher' },
-      { title: 'Admin', href: '/dashboard/gift-card/admin' },
-      { title: 'Reports', href: '/dashboard/voucher/reports' },
-      { title: 'Offers', href: '/dashboard/loyalty/offers' },
-      { title: 'Pay your price', href: '/dashboard/voucher/pay-your-price' },
-      { title: 'Vendor', href: '/dashboard/voucher/vendor-settings' },
-      { title: 'Settings', href: '/dashboard/voucher/settings' },
-      { title: 'Notification', href: '/dashboard/voucher/notification' },
+      { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
+      { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
+      { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
     ],
   },
 ];
