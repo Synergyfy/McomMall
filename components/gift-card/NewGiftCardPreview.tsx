@@ -39,13 +39,14 @@ const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
         ) : null}
       </div>
       <motion.div
-        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between border"
+        style={{ backgroundColor: design.cardColor }}
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0, backgroundColor: design.cardColor }}
         transition={{ duration: 0.5 }}
       >
         <div className="flex justify-between items-start">
-          <h2 className="text-xl font-semibold text-gray-800">{design.title}</h2>
+          <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
           <CreditCard size={24} className="text-gray-400"/>
         </div>
 
