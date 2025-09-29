@@ -75,9 +75,11 @@ const initialDesign: GiftCardDesign = {
 const DesignForm = ({
   design,
   setDesign,
+  onSave,
 }: {
   design: GiftCardDesign;
   setDesign: React.Dispatch<React.SetStateAction<GiftCardDesign>>;
+  onSave: () => void;
 }) => {
   const [openSections, setOpenSections] = useState<string[]>([
     'general',
@@ -244,20 +246,20 @@ const DesignForm = ({
         </AccordionItem>
       </Accordion>
       <div className="flex items-center space-x-2">
-        <Button>Save design</Button>
+        <Button onClick={onSave}>Save design</Button>
         <Button variant="destructive">Delete design</Button>
       </div>
     </div>
   );
 };
 
-const CardPreview = ({
-  design,
-  selectedSvg: SelectedSvg,
-}: {
-  design: GiftCardDesign;
-  selectedSvg: SvgComponent | null;
-}) => {
+const CardPreview = React.forwardRef<
+  HTMLDivElement,
+  {
+    design: GiftCardDesign;
+    selectedSvg: SvgComponent | null;
+  }
+>(({ design, selectedSvg: SelectedSvg }, ref) => {
   const alignmentClasses = {
     Left: 'items-start',
     Center: 'items-center',
@@ -287,7 +289,7 @@ const CardPreview = ({
           Send a preview email
         </Button>
       </div>
-      <div className="bg-white rounded-lg shadow-md border border-gray-200">
+      <div ref={ref} className="bg-white rounded-lg shadow-md border border-gray-200">
         <div className="p-4 border-b border-gray-200">
             <p className="text-sm text-gray-500"><strong>From:</strong> Your Business Name &lt;noreply@example.com&gt;</p>
             <p className="text-sm text-gray-500"><strong>To:</strong> Recipient Name &lt;recipient@example.com&gt;</p>
@@ -359,7 +361,8 @@ const CardPreview = ({
       </div>
     </div>
   );
-};
+});
+CardPreview.displayName = 'CardPreview';
 
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardEditorPage() {
@@ -368,6 +371,13 @@ export default function GiftCardEditorPage() {
   const [selectedSvg, setSelectedSvg] = useState<SvgComponent | null>(
     () => BirthdayCake
   );
+  const emailPreviewRef = React.useRef<HTMLDivElement>(null);
+
+  const handleSave = () => {
+    if (emailPreviewRef.current) {
+      console.log(emailPreviewRef.current.innerHTML);
+    }
+  };
 
   const handleThemeChange = (theme: string) => {
     setSelectedTheme(theme);
@@ -447,12 +457,12 @@ export default function GiftCardEditorPage() {
         <div className="grid grid-cols-1 lg:grid-cols-2 lg:gap-8">
           {/* Left Column: Form */}
           <div className="mb-8 lg:mb-0">
-            <DesignForm design={design} setDesign={setDesign} />
+            <DesignForm design={design} setDesign={setDesign} onSave={handleSave} />
           </div>
 
           {/* Right Column: Preview */}
           <div>
-            <CardPreview design={design} selectedSvg={selectedSvg} />
+            <CardPreview design={design} selectedSvg={selectedSvg} ref={emailPreviewRef} />
           </div>
         </div>
       </div>
