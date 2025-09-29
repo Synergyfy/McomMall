@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
@@ -15,18 +15,31 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useGetGiftCardAssets, useDeleteGiftCardAsset } from '@/service/gift-card/asset-hook';
 import { GiftCardAsset } from '@/service/gift-card/asset-types';
-import { AssetForm } from './components/asset-form'; // This component will be created later
+import { AssetForm } from './components/asset-form';
 
 const GiftCardAssetsPage = () => {
   const { data: assets, isPending, isError } = useGetGiftCardAssets();
   const { mutate: deleteAsset, isPending: isDeleting } = useDeleteGiftCardAsset();
-  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<GiftCardAsset | null>(null);
+
+  useEffect(() => {
+    // Reset selected asset when modal is closed
+    if (!isModalOpen) {
+      setSelectedAsset(null);
+    }
+  }, [isModalOpen]);
 
   const handleDelete = (id: string) => {
     deleteAsset(id, {
@@ -41,21 +54,20 @@ const GiftCardAssetsPage = () => {
 
   const handleEdit = (asset: GiftCardAsset) => {
     setSelectedAsset(asset);
-    setIsFormOpen(true);
+    setIsModalOpen(true);
   };
 
   const handleAddNew = () => {
     setSelectedAsset(null);
-    setIsFormOpen(true);
+    setIsModalOpen(true);
   };
 
-  const handleFormClose = () => {
-    setIsFormOpen(false);
-    setSelectedAsset(null);
+  const handleModalClose = () => {
+    setIsModalOpen(false);
   };
 
   if (isPending) {
-    return <div>Loading...</div>;
+    return <div className="p-6">Loading...</div>;
   }
 
   if (isError) {
@@ -82,14 +94,19 @@ const GiftCardAssetsPage = () => {
         </Button>
       </div>
 
-      {isFormOpen && (
-        <AssetForm
-          asset={selectedAsset}
-          onClose={handleFormClose}
-        />
-      )}
+      <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
+        <DialogContent className="sm:max-w-[425px]">
+          <DialogHeader>
+            <DialogTitle>{selectedAsset ? 'Edit Asset' : 'Add New Asset'}</DialogTitle>
+          </DialogHeader>
+          <AssetForm
+            asset={selectedAsset}
+            onClose={handleModalClose}
+          />
+        </DialogContent>
+      </Dialog>
 
-      {assets && assets.length === 0 && !isFormOpen ? (
+      {!assets || assets.length === 0 ? (
         <div className="text-center py-20">
           <p className="text-gray-500 mb-4">You haven&apos;t created any gift card assets yet.</p>
           <Button onClick={handleAddNew} className="bg-orange-600 hover:bg-orange-700 text-white">
@@ -99,7 +116,7 @@ const GiftCardAssetsPage = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-          {assets && assets.map((asset) => (
+          {assets.map((asset) => (
             <Card key={asset.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
               <CardHeader className="p-0 relative">
                 <Image src={asset.url} alt={asset.name} className="w-full h-48 object-cover" width={300} height={200} />
