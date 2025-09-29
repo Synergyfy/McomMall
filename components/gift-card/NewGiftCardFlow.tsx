@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, ChangeEvent } from "react";
+import ReactDOMServer from "react-dom/server";
 import { GiftCardTemplate } from "@/service/gift-card/types";
 import NewGiftCardPreview from "./NewGiftCardPreview";
 import Accordion from "./Accordion";
@@ -17,6 +18,7 @@ import OtherCelebration from "@/components/svgs/gift-card/OtherCelebration";
 import OtherCongrats from "@/components/svgs/gift-card/OtherCongrats";
 import OtherThankYou from "@/components/svgs/gift-card/OtherThankYou";
 import { cn } from "@/lib/utils";
+import GiftCardEmail from "./GiftCardEmail";
 
 
 type SvgComponent = React.ComponentType<{ className?: string }>;
@@ -142,8 +144,10 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
   const handleSave = () => {
     const isValid = validate();
     if (isValid) {
-      // In a real scenario, you would proceed to payment here.
-      // For now, we do nothing as per the instructions.
+      const emailHtml = ReactDOMServer.renderToStaticMarkup(
+        <GiftCardEmail formData={formData} />
+      );
+      console.log(emailHtml);
       console.log("Form is valid, but payment is disabled.", formData);
     }
   };
@@ -343,9 +347,9 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                 <div className="pt-4">
                   <button
                     onClick={handleSave}
-                    className="w-full bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700 transition-colors disabled:bg-gray-400"
+                    className="w-full bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700 transition-colors"
                   >
-                    Save and Continue (Disabled)
+                    Save and Continue
                   </button>
                 </div>
               </div>
