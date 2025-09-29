@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Gift, Mail, Info, PlusCircle, Wifi } from 'lucide-react';
+import { Gift, Mail, Info, PlusCircle, CreditCard } from 'lucide-react';
 
 import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
 import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
@@ -294,7 +294,7 @@ const CardPreview = ({
             <h3 className="text-lg font-semibold text-gray-800 mt-2">You&apos;ve received a gift card!</h3>
         </div>
         <div className="p-6 bg-gray-50 space-y-6">
-            <div className="w-full max-w-md mx-auto h-48 flex items-center justify-center">
+            <div className="w-full max-w-md mx-auto h-40 flex items-center justify-center">
                 {SelectedSvg ? (
                 <SelectedSvg className="w-3/4 h-3/4" />
                 ) : (
@@ -309,32 +309,31 @@ const CardPreview = ({
             {design.contentLocation === 'Top' && <AdditionalContent />}
 
             <div
-                className="w-full max-w-md mx-auto aspect-[1.586] rounded-xl shadow-lg p-6 flex flex-col justify-between"
-                style={{ backgroundColor: design.cardColor, color: design.titleColor }}
+                className="w-full max-w-md mx-auto aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
             >
                 <div className="flex justify-between items-start">
-                    <h2 className="text-2xl font-bold">{design.title}</h2>
-                    <div className="w-12 h-8 bg-yellow-400/80 rounded-md" />
+                    <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
+                    <CreditCard size={24} className="text-gray-400"/>
                 </div>
 
-                <div className="flex items-center justify-start">
-                    <Wifi size={32} />
-                </div>
-
-                <div>
-                    <p className="text-2xl font-mono tracking-widest">4000 1234 5678 9010</p>
+                <div className="text-left">
+                    <p className="text-2xl md:text-3xl font-mono text-gray-700 tracking-wider">
+                        4000 1234 5678 9010
+                    </p>
                 </div>
 
                 <div className="flex justify-between items-end">
                     <div>
-                        <p className="text-xs opacity-80">CARD HOLDER</p>
-                        <p className="font-semibold text-base">Recipient Name</p>
+                        <p className="text-xs text-gray-500 uppercase">Card Holder</p>
+                        <p className="font-medium text-gray-800">Recipient Name</p>
                     </div>
                     <div>
-                        <p className="text-xs opacity-80">EXPIRES</p>
-                        <p className="font-semibold text-base">12/28</p>
+                        <p className="text-xs text-gray-500 uppercase">Expires</p>
+                        <p className="font-medium text-gray-800">12/28</p>
                     </div>
-                    <div className="text-4xl font-bold">{CURRENCY}123.45</div>
+                    <div className="text-3xl font-bold text-gray-800">
+                        {CURRENCY}123.45
+                    </div>
                 </div>
             </div>
 
