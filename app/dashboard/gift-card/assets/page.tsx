@@ -27,6 +27,7 @@ import { Terminal } from "lucide-react";
 import { useGetGiftCardAssets, useDeleteGiftCardAsset } from '@/service/gift-card/asset-hook';
 import { GiftCardAsset } from '@/service/gift-card/asset-types';
 import { AssetForm } from './components/asset-form';
+import { CategoryList } from './components/category-list';
 
 const GiftCardAssetsPage = () => {
   const { data: assets, isPending, isError } = useGetGiftCardAssets();
@@ -93,6 +94,8 @@ const GiftCardAssetsPage = () => {
           Add New Asset
         </Button>
       </div>
+
+      <CategoryList />
 
       <Dialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <DialogContent className="sm:max-w-[425px]">
