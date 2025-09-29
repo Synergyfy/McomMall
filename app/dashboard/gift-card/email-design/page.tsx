@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { Gift, Mail, Info, PlusCircle } from 'lucide-react';
+import { Gift, Mail, Info, PlusCircle, Wifi } from 'lucide-react';
 
 import AnniversaryChampagne from '@/components/svgs/gift-card/AnniversaryChampagne';
 import AnniversaryHearts from '@/components/svgs/gift-card/AnniversaryHearts';
@@ -285,13 +285,6 @@ const CardPreview = ({
       </div>
       <Card className="bg-gray-50">
         <CardContent className="space-y-4 pt-6">
-          <div className="text-center">
-            {SelectedSvg ? (
-              <SelectedSvg className="mx-auto w-full h-auto rounded-lg" />
-            ) : (
-              <Gift className="mx-auto h-12 w-12 text-gray-400" />
-            )}
-          </div>
           <div className="text-sm text-gray-600 space-y-1">
             <p>
               <strong>To:</strong> Recipient Name
@@ -305,45 +298,59 @@ const CardPreview = ({
           {design.contentLocation === 'Top' && <AdditionalContent />}
 
           <div
-            className="rounded-lg p-6 text-center shadow-md transition-colors duration-300"
-            style={{ backgroundColor: design.cardColor }}
+            className="w-full max-w-md mx-auto aspect-[1.586] rounded-xl shadow-2xl p-6 flex flex-col justify-between"
+            style={{ backgroundColor: design.cardColor, color: design.titleColor }}
           >
-            <h3
-              className="text-2xl font-bold transition-colors duration-300"
-              style={{ color: design.titleColor }}
-            >
-              {design.title}
-            </h3>
-            <p
-              className="text-4xl font-light my-4"
-              style={{ color: design.titleColor }}
-            >
-              {CURRENCY}123.45
-            </p>
-            <p
-              className="font-mono text-sm"
-              style={{ color: design.titleColor, opacity: 0.8 }}
-            >
-              1234-WXYZ-5678-ABCD
-            </p>
-            <button
-              className="mt-6 px-8 py-3 rounded-md font-semibold text-white transition-colors duration-300"
-              style={{
-                backgroundColor: design.redeemButtonColor,
-                color: design.redeemButtonTextColor,
-              }}
-            >
-              {design.redeemButtonText}
-            </button>
-            <p
-              className="text-xs mt-4"
-              style={{ color: design.titleColor, opacity: 0.7 }}
-            >
-              Expires June 17, 2026
-            </p>
+            <div className="flex justify-between items-start">
+              <h2 className="text-2xl font-bold">{design.title}</h2>
+              <div className="w-12 h-8 bg-yellow-400 rounded-md" />
+            </div>
+
+            <div className="flex items-center justify-between">
+                <Wifi size={32} />
+                <div className="w-1/4 h-16 flex items-center justify-center">
+                    {SelectedSvg ? (
+                      <SelectedSvg className="w-full h-full" />
+                    ) : (
+                      <Gift className="w-12 h-12 text-gray-400" />
+                    )}
+                </div>
+            </div>
+
+            <div className="text-left">
+              <p className="text-2xl font-mono tracking-widest">
+                4000 1234 5678 9010
+              </p>
+            </div>
+
+            <div className="flex justify-between items-end">
+                <div>
+                    <p className="text-sm opacity-80">Card Holder</p>
+                    <p className="font-semibold">Recipient Name</p>
+                </div>
+                <div>
+                    <p className="text-sm opacity-80">Expires</p>
+                    <p className="font-semibold">12/28</p>
+                </div>
+                <div className="text-4xl font-bold">
+                    {CURRENCY}123.45
+                </div>
+            </div>
           </div>
 
           {design.contentLocation === 'Bottom' && <AdditionalContent />}
+
+          <div className="text-center mt-4">
+            <button
+                className="mt-6 px-8 py-3 rounded-md font-semibold text-white transition-colors duration-300"
+                style={{
+                  backgroundColor: design.redeemButtonColor,
+                  color: design.redeemButtonTextColor,
+                }}
+              >
+                {design.redeemButtonText}
+            </button>
+          </div>
 
           <div className="text-center mt-4">
             <a href="#" className="text-sm text-orange-600 hover:underline">
