@@ -15,15 +15,38 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
   const router = useRouter();
 
   if (isPending) {
-    return <p>Loading gift cards...</p>;
+    return (
+      <div className="space-y-4 mt-4">
+        <div className="bg-gray-100 p-6 rounded-lg animate-pulse">
+          <div className="h-6 bg-gray-300 rounded w-3/4 mb-4"></div>
+          <div className="h-4 bg-gray-300 rounded w-full mb-2"></div>
+          <div className="h-4 bg-gray-300 rounded w-5/6"></div>
+        </div>
+      </div>
+    );
   }
 
   if (isError) {
-    return <p>There was an error fetching gift cards.</p>;
+    return (
+      <div className="text-red-500 bg-red-50 p-4 rounded-lg">
+        <h4 className="font-bold">Error</h4>
+        <p>Could not load gift cards at this time. Please try again later.</p>
+      </div>
+    );
   }
 
   if (!templates || templates.length === 0) {
-    return <p>No gift cards available for this business.</p>;
+    return (
+      <div className="text-center py-12 px-6 bg-gray-50 rounded-lg mt-6">
+        <h4 className="text-lg font-semibold text-gray-700">
+          No Gift Cards Available
+        </h4>
+        <p className="text-gray-500 mt-2">
+          This business does not have any gift cards available at the moment.
+          Check back later!
+        </p>
+      </div>
+    );
   }
 
   const handleBuyNow = (template: GiftCardTemplate) => {
