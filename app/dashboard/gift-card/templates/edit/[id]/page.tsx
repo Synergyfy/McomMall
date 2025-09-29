@@ -5,9 +5,11 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useRouter } from 'next/navigation';
-import { useAddGiftCardTemplate } from '@/service/gift-card/hook';
+import { useUpdateGiftCardTemplate, useGetGiftCardTemplateById } from '@/service/gift-card/hook';
 import { CreateGiftCardTemplateDto } from '@/service/gift-card/types';
 import { Switch } from "@/components/ui/switch";
+import { useParams } from 'next/navigation';
+import { useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { X } from 'lucide-react';
 import { toast } from "sonner";
@@ -17,26 +19,38 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
 
 
-const CreateGiftCardTemplatePage = () => {
-  const [formData, setFormData] = useState<Partial<CreateGiftCardTemplateDto>>({
-    name: '',
-    description: '',
-    backgroundImageUrl: '',
-    backgroundColor: '#ffffff',
-    textColor: '#000000',
-    fixedAmounts: [],
-    allowCustomAmount: false,
-    minCustomAmount: undefined,
-    maxCustomAmount: undefined,
-  });
+const EditGiftCardTemplatePage = () => {
+  const router = useRouter();
+  const params = useParams();
+  const id = params.id as string;
+
+  const { data: template, isPending: isFetching } = useGetGiftCardTemplateById(id);
+  const { mutate: updateTemplate, isPending: isUpdating } = useUpdateGiftCardTemplate();
+
+  const [formData, setFormData] = useState<Partial<CreateGiftCardTemplateDto>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
 
-  const router = useRouter();
-  const { mutate, isPending } = useAddGiftCardTemplate();
+  useEffect(() => {
+    if (template) {
+      setFormData({
+        name: template.name,
+        description: template.description,
+        backgroundColor: template.backgroundColor,
+        textColor: template.textColor,
+        fixedAmounts: template.fixedAmounts,
+        allowCustomAmount: template.allowCustomAmount,
+        minCustomAmount: template.minCustomAmount,
+        maxCustomAmount: template.maxCustomAmount,
+      });
+      if (template.backgroundImageUrl) {
+        setImagePreview(template.backgroundImageUrl);
+      }
+    }
+  }, [template]);
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -159,17 +173,17 @@ const CreateGiftCardTemplatePage = () => {
         return;
       }
     } else {
-      submissionData.backgroundImageUrl = undefined;
+      submissionData.backgroundImageUrl = template?.backgroundImageUrl;
     }
 
-    mutate(submissionData as CreateGiftCardTemplateDto, {
+    updateTemplate({ id, templateData: submissionData }, {
       onSuccess: () => {
-        toast.success("Gift card template created successfully!");
+        toast.success("Gift card template updated successfully!");
         router.push('/dashboard/gift-card/templates');
       },
       onError: (error) => {
-        console.error("Failed to create gift card template:", error);
-        toast.error("Failed to create gift card template. Please try again.");
+        console.error("Failed to update gift card template:", error);
+        toast.error("Failed to update gift card template. Please try again.");
       },
       onSettled: () => {
         setIsUploading(false);
@@ -177,12 +191,16 @@ const CreateGiftCardTemplatePage = () => {
     });
   };
 
+  if (isFetching) {
+    return <div className="p-6">Loading template data...</div>;
+  }
+
   return (
     <div className="p-6 bg-gray-50 min-h-screen">
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 max-w-7xl mx-auto">
         <Card>
           <CardHeader>
-            <CardTitle className="text-2xl font-bold text-gray-800">Create New Gift Card Template</CardTitle>
+            <CardTitle className="text-2xl font-bold text-gray-800">Edit Gift Card Template</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -231,7 +249,7 @@ const CreateGiftCardTemplatePage = () => {
 
             <div>
               <Label htmlFor="image">Background Image (optional)</Label>
-              <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isPending || isUploading} />
+              <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
               {imagePreview && (
                 <div className="mt-4">
                   <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
@@ -298,11 +316,11 @@ const CreateGiftCardTemplatePage = () => {
             )}
 
             <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isPending || isUploading}>
+              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isUpdating || isUploading || isFetching}>
                 Cancel
               </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isPending || isUploading}>
-                {isPending ? 'Creating...' : isUploading ? 'Uploading...' : 'Create Template'}
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isUpdating || isUploading || isFetching}>
+                {isUpdating ? 'Updating...' : isUploading ? 'Uploading...' : 'Update Template'}
               </Button>
             </div>
           </form>
@@ -316,4 +334,4 @@ const CreateGiftCardTemplatePage = () => {
   );
 };
 
-export default CreateGiftCardTemplatePage;
+export default EditGiftCardTemplatePage;

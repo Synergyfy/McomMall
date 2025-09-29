@@ -167,6 +167,7 @@ export const pluginMenuItems: MenuItem[] = [
     subMenu: [
       { title: 'Dashboard', href: '/dashboard/gift-card' },
       { title: 'Templates', href: '/dashboard/gift-card/templates' },
+      { title: 'Assets', href: '/dashboard/gift-card/assets' },
       { title: 'Admin', href: '/dashboard/gift-card/admin' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
       { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },

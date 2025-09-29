@@ -36,7 +36,7 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
         <div key={template.id} className="bg-white rounded-lg shadow-md overflow-hidden transform transition-transform hover:scale-105">
           <div className="relative h-48 w-full">
             <Image
-              src={template.imageUrl || 'https://via.placeholder.com/400x200'}
+              src={template.backgroundImageUrl || 'https://via.placeholder.com/400x200'}
               alt={template.name}
               layout="fill"
               objectFit="cover"
@@ -48,7 +48,7 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
             <div className="mt-4">
               <h4 className="text-sm font-semibold text-gray-700">Available Amounts:</h4>
               <div className="flex flex-wrap gap-2 mt-2">
-                {template.fixedAmounts.map((amount) => (
+                {template.fixedAmounts?.map((amount) => (
                   <span key={amount} className="px-3 py-1 bg-gray-200 text-gray-800 rounded-full text-sm">
                     £{amount}
                   </span>
