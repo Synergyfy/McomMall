@@ -1,8 +1,8 @@
 export interface Voucher {
   id: string;
   code: string;
-  initialValue: number;
-  balance: number;
+  initialValue: string;
+  balance: string;
   status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled';
   recipientName?: string;
   recipientEmail?: string;
@@ -15,7 +15,7 @@ export interface Voucher {
   buyer: any; // Define User type if available
   recipient?: any; // Define User type if available
   order: any; // Define Order type if available
-  voucherProduct: VoucherProduct;
+  voucherProduct?: VoucherProduct;
   transactions: VoucherTransaction[];
 }
 
@@ -66,4 +66,30 @@ export interface PurchaseVoucherDto {
 export interface RedeemVoucherDto {
   code: string;
   amount?: number;
+}
+
+export interface InitiateVoucherPurchaseDto {
+  voucherProductId: string;
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+  recipientName?: string;
+  recipientEmail?: string;
+  personalMessage?: string;
+  deliveryDate?: string;
+}
+
+export interface VerifyVoucherPurchaseDto {
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+  purchaseDetails: InitiateVoucherPurchaseDto;
+}
+
+export interface StripeVoucherPurchaseResponse {
+  provider: 'stripe';
+  clientSecret: string;
+}
+
+export interface PayPalVoucherPurchaseResponse {
+  provider: 'paypal';
+  orderId: string;
 }
