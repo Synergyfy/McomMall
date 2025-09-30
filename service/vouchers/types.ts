@@ -15,7 +15,7 @@ export interface Voucher {
   buyer: any; // Define User type if available
   recipient?: any; // Define User type if available
   order: any; // Define Order type if available
-  voucherProduct: VoucherProduct;
+  voucherProduct?: VoucherProduct;
   transactions: VoucherTransaction[];
 }
 
