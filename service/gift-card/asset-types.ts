@@ -1,21 +1,21 @@
-import { Category } from './category-types';
+import { AssetCategory } from './asset-category-types';
 
 export interface GiftCardAsset {
   id: string; // UUID
   name: string;
   url: string;
   ownerId: string; // User UUID
-  categories: Category[];
+  categories: AssetCategory[];
 }
 
 export interface CreateGiftCardAssetDto {
   name: string;
   url: string; // URL to the GIF
-  categoryIds?: string[]; // Array of Category UUIDs
+  assetCategoryIds?: string[]; // Array of AssetCategory UUIDs
 }
 
 export interface UpdateGiftCardAssetDto {
   name?: string;
   url?: string;
-  categoryIds?: string[]; // Array of Category UUIDs
+  assetCategoryIds?: string[]; // Array of AssetCategory UUIDs
 }

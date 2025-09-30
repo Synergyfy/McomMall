@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { useAddGiftCardAsset, useUpdateGiftCardAsset } from '@/service/gift-card/asset-hook';
 import { GiftCardAsset, CreateGiftCardAssetDto, UpdateGiftCardAssetDto } from '@/service/gift-card/asset-types';
-import { useGetGiftCardCategories } from '@/service/gift-card/category-hook';
+import { useGetAssetCategories } from '@/service/gift-card/asset-category-hook';
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import axios from 'axios';
@@ -19,30 +19,30 @@ interface AssetFormProps {
 
 type FormData = {
     name: string;
-    categoryIds: string[];
+    assetCategoryIds: string[];
 };
 
 export const AssetForm: React.FC<AssetFormProps> = ({ asset, onClose }) => {
   const { register, handleSubmit, setValue, watch, formState: { errors } } = useForm<FormData>({
     defaultValues: {
       name: asset?.name || '',
-      categoryIds: asset?.categories?.map(c => c.id) || [],
+      assetCategoryIds: asset?.categories?.map(c => c.id) || [],
     }
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(asset ? asset.url : null);
 
-  const { data: categories, isPending: isLoadingCategories } = useGetGiftCardCategories();
+  const { data: categories, isPending: isLoadingCategories } = useGetAssetCategories();
   const addAssetMutation = useAddGiftCardAsset();
   const updateAssetMutation = useUpdateGiftCardAsset();
 
-  const selectedCategoryIds = watch('categoryIds');
+  const selectedCategoryIds = watch('assetCategoryIds');
 
   useEffect(() => {
     if (asset) {
       setValue('name', asset.name);
-      setValue('categoryIds', asset.categories?.map(c => c.id) || []);
+      setValue('assetCategoryIds', asset.categories?.map(c => c.id) || []);
     }
   }, [asset, setValue]);
 
@@ -88,7 +88,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ asset, onClose }) => {
       const assetData: CreateGiftCardAssetDto | UpdateGiftCardAssetDto = {
         name: data.name,
         url: imageUrl,
-        categoryIds: data.categoryIds,
+        assetCategoryIds: data.assetCategoryIds,
       };
 
       if (asset) {
@@ -162,11 +162,11 @@ export const AssetForm: React.FC<AssetFormProps> = ({ asset, onClose }) => {
                       id={`category-${category.id}`}
                       checked={selectedCategoryIds.includes(category.id)}
                       onCheckedChange={(checked) => {
-                        const currentCategoryIds = watch('categoryIds');
+                        const currentCategoryIds = watch('assetCategoryIds');
                         const newCategoryIds = checked
                           ? [...currentCategoryIds, category.id]
                           : currentCategoryIds.filter((id) => id !== category.id);
-                        setValue('categoryIds', newCategoryIds, { shouldValidate: true });
+                        setValue('assetCategoryIds', newCategoryIds, { shouldValidate: true });
                       }}
                     />
                     <label

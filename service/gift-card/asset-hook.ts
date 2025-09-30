@@ -4,27 +4,27 @@ import { GiftCardAsset, CreateGiftCardAssetDto, UpdateGiftCardAssetDto } from '.
 
 // API Functions
 const fetchGiftCardAssets = async (): Promise<GiftCardAsset[]> => {
-  const { data } = await api.get<GiftCardAsset[]>('/gift-card-assets/');
+  const { data } = await api.get<GiftCardAsset[]>('/merchant/gift-card-assets');
   return data;
 };
 
 const fetchGiftCardAssetById = async (id: string): Promise<GiftCardAsset> => {
-  const { data } = await api.get<GiftCardAsset>(`/gift-card-assets/${id}`);
+  const { data } = await api.get<GiftCardAsset>(`/merchant/gift-card-assets/${id}`);
   return data;
 };
 
 const addGiftCardAsset = async (assetData: CreateGiftCardAssetDto): Promise<GiftCardAsset> => {
-  const { data } = await api.post<GiftCardAsset>('/gift-card-assets/', assetData);
+  const { data } = await api.post<GiftCardAsset>('/merchant/gift-card-assets', assetData);
   return data;
 };
 
 const updateGiftCardAsset = async ({ id, assetData }: { id: string, assetData: Partial<UpdateGiftCardAssetDto> }): Promise<GiftCardAsset> => {
-  const { data } = await api.patch<GiftCardAsset>(`/gift-card-assets/${id}`, assetData);
+  const { data } = await api.patch<GiftCardAsset>(`/merchant/gift-card-assets/${id}`, assetData);
   return data;
 };
 
 const deleteGiftCardAsset = async (id: string): Promise<void> => {
-  await api.delete(`/gift-card-assets/${id}`);
+  await api.delete(`/merchant/gift-card-assets/${id}`);
 };
 
 // React Query Hooks

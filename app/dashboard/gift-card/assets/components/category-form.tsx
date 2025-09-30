@@ -3,12 +3,12 @@ import React, { useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useAddGiftCardCategory, useUpdateGiftCardCategory } from '@/service/gift-card/category-hook';
-import { Category, CreateCategoryDto } from '@/service/gift-card/category-types';
+import { useAddAssetCategory, useUpdateAssetCategory } from '@/service/gift-card/asset-category-hook';
+import { AssetCategory, CreateAssetCategoryDto } from '@/service/gift-card/asset-category-types';
 import { toast } from "sonner";
 
 interface CategoryFormProps {
-  category: Category | null;
+  category: AssetCategory | null;
   onClose: () => void;
 }
 
@@ -19,8 +19,8 @@ type FormData = {
 export const CategoryForm: React.FC<CategoryFormProps> = ({ category, onClose }) => {
   const { register, handleSubmit, setValue, formState: { errors } } = useForm<FormData>();
 
-  const addCategoryMutation = useAddGiftCardCategory();
-  const updateCategoryMutation = useUpdateGiftCardCategory();
+  const addCategoryMutation = useAddAssetCategory();
+  const updateCategoryMutation = useUpdateAssetCategory();
 
   useEffect(() => {
     if (category) {
@@ -42,7 +42,7 @@ export const CategoryForm: React.FC<CategoryFormProps> = ({ category, onClose })
         },
       });
     } else {
-      addCategoryMutation.mutate(categoryData as CreateCategoryDto, {
+      addCategoryMutation.mutate(categoryData as CreateAssetCategoryDto, {
         onSuccess: () => {
           toast.success("Category created successfully!");
           onClose();

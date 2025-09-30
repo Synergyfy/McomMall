@@ -23,15 +23,15 @@ import {
 import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
-import { useGetGiftCardCategories, useDeleteGiftCardCategory } from '@/service/gift-card/category-hook';
-import { Category } from '@/service/gift-card/category-types';
+import { useGetAssetCategories, useDeleteAssetCategory } from '@/service/gift-card/asset-category-hook';
+import { AssetCategory } from '@/service/gift-card/asset-category-types';
 import { CategoryForm } from './category-form';
 
 export const CategoryList = () => {
-  const { data: categories, isPending, isError } = useGetGiftCardCategories();
-  const { mutate: deleteCategory, isPending: isDeleting } = useDeleteGiftCardCategory();
+  const { data: categories, isPending, isError } = useGetAssetCategories();
+  const { mutate: deleteCategory, isPending: isDeleting } = useDeleteAssetCategory();
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const [selectedCategory, setSelectedCategory] = useState<Category | null>(null);
+  const [selectedCategory, setSelectedCategory] = useState<AssetCategory | null>(null);
 
   const handleDelete = (id: string) => {
     deleteCategory(id, {
@@ -44,7 +44,7 @@ export const CategoryList = () => {
     });
   };
 
-  const handleEdit = (category: Category) => {
+  const handleEdit = (category: AssetCategory) => {
     setSelectedCategory(category);
     setIsModalOpen(true);
   };
@@ -63,7 +63,7 @@ export const CategoryList = () => {
     <Card className="mb-8">
       <CardHeader>
         <div className="flex justify-between items-center">
-          <CardTitle>Categories</CardTitle>
+          <CardTitle>Asset Categories</CardTitle>
           <Button onClick={handleAddNew} size="sm">
             <PlusCircle className="mr-2 h-4 w-4" />
             Add Category

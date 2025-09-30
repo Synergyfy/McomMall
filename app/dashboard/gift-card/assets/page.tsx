@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
 import Image from 'next/image';
@@ -125,7 +126,12 @@ const GiftCardAssetsPage = () => {
                 <Image src={asset.url} alt={asset.name} className="w-full h-48 object-cover" width={300} height={200} />
               </CardHeader>
               <CardContent className="p-4 flex flex-col flex-grow">
-                <CardTitle className="text-lg font-semibold text-gray-800">{asset.name}</CardTitle>
+                <CardTitle className="text-lg font-semibold text-gray-800 mb-2">{asset.name}</CardTitle>
+                <div className="flex flex-wrap gap-1">
+                  {asset.categories?.map((category) => (
+                    <Badge key={category.id} variant="secondary">{category.name}</Badge>
+                  ))}
+                </div>
               </CardContent>
               <CardFooter className="border-t pt-4 mt-auto">
                 <div className="flex justify-end w-full gap-2">
