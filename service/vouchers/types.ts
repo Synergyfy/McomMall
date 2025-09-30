@@ -1,8 +1,8 @@
 export interface Voucher {
   id: string;
   code: string;
-  initialValue: number;
-  balance: number;
+  initialValue: string;
+  balance: string;
   status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled';
   recipientName?: string;
   recipientEmail?: string;
@@ -15,7 +15,7 @@ export interface Voucher {
   buyer: any; // Define User type if available
   recipient?: any; // Define User type if available
   order: any; // Define Order type if available
-  voucherProduct: VoucherProduct;
+  voucherProduct?: VoucherProduct;
   transactions: VoucherTransaction[];
 }
 
