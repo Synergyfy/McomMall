@@ -112,7 +112,7 @@ export default function VoucherPurchaseModal({
     setIsLoading(true);
     const details: InitiateVoucherPurchaseDto = {
       voucherProductId: product.id,
-      amount: selectedAmount,
+      amount: Number(selectedAmount),
       paymentProvider,
       recipientName,
       recipientEmail,
