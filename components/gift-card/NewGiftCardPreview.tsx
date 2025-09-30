@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { svgMap } from "./NewGiftCardFlow";
 import Image from "next/image";
 import { CreditCard } from "lucide-react";
 import { CURRENCY } from "@/lib/utils";
@@ -13,7 +12,7 @@ interface NewGiftCardPreviewProps {
     recipientEmail: string;
     personalMessage: string;
     design: {
-      svg: string | null;
+      assetUrl: string | null;
       customImage: string | null;
       title: string;
       titleColor: string;
@@ -27,15 +26,26 @@ interface NewGiftCardPreviewProps {
 
 const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
   const { design } = formData;
-  const SelectedSvg = design.svg ? svgMap[design.svg] : null;
 
   return (
     <div className="w-full flex flex-col items-center space-y-6">
-       <div className="w-full max-w-md h-40 flex items-center justify-center">
+      <div className="w-full max-w-md h-40 flex items-center justify-center">
         {design.customImage ? (
-          <Image src={design.customImage} alt="Custom design" width={160} height={160} className="max-h-full w-auto object-contain rounded-lg" />
-        ) : SelectedSvg ? (
-          <SelectedSvg className="w-3/4 h-3/4" />
+          <Image
+            src={design.customImage}
+            alt="Custom design"
+            width={160}
+            height={160}
+            className="max-h-full w-auto object-contain rounded-lg"
+          />
+        ) : design.assetUrl ? (
+          <Image
+            src={design.assetUrl}
+            alt="Selected design"
+            width={160}
+            height={160}
+            className="max-h-full w-auto object-contain rounded-lg"
+          />
         ) : null}
       </div>
       <motion.div

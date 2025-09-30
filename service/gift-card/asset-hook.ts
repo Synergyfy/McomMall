@@ -4,7 +4,7 @@ import { GiftCardAsset, CreateGiftCardAssetDto, UpdateGiftCardAssetDto } from '.
 
 // API Functions
 const fetchGiftCardAssets = async (): Promise<GiftCardAsset[]> => {
-  const { data } = await api.get<GiftCardAsset[]>('/gift-card-assets/');
+  const { data } = await api.get<GiftCardAsset[]>('/gift-card-assets');
   return data;
 };
 
@@ -14,7 +14,7 @@ const fetchGiftCardAssetById = async (id: string): Promise<GiftCardAsset> => {
 };
 
 const addGiftCardAsset = async (assetData: CreateGiftCardAssetDto): Promise<GiftCardAsset> => {
-  const { data } = await api.post<GiftCardAsset>('/gift-card-assets/', assetData);
+  const { data } = await api.post<GiftCardAsset>('/gift-card-assets', assetData);
   return data;
 };
 
