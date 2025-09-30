@@ -10,6 +10,8 @@ export interface CreateOrderDto {
     };
     couponCode?: string;
     offerId?: string;
+    voucherCode?: string;
+    giftCardCode?: string;
 }
 
 export { PaymentMethod };

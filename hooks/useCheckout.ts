@@ -12,14 +12,19 @@ export interface CreateCheckoutDto {
   payment: PaymentDto;
   couponCode?: string;
   offerId?: string;
+  voucherCode?: string;
+  giftCardCode?: string;
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
-  const { payment, couponCode, offerId } = checkoutData;
+  const { payment, couponCode, offerId, voucherCode, giftCardCode } =
+    checkoutData;
   const { data } = await api.post('/order/checkout', {
     payment,
     couponCode,
     offerId,
+    voucherCode,
+    giftCardCode,
   });
   return data;
 };
