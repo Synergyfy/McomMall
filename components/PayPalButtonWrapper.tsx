@@ -9,13 +9,13 @@ const PAYPAL_CLIENT_ID =
   'AdMnk_v1AaH8-ntOEM6y58zDTWkb5VzOAn285XcoSwDxnecLJb0OcPFCSUYGmiRQHR8x2o97JHnYXPuJ';
 
 interface PayPalButtonWrapperProps {
-  paypalAmount: string;
-  handleSuccess: () => void;
+  orderId: string;
+  onApprove: (orderId: string) => void;
 }
 
 export default function PayPalButtonWrapper({
-  paypalAmount,
-  handleSuccess,
+  orderId,
+  onApprove,
 }: PayPalButtonWrapperProps) {
   return (
     <PayPalScriptProvider
@@ -26,23 +26,15 @@ export default function PayPalButtonWrapper({
     >
       <PayPalButtons
         style={{ layout: 'vertical' }}
-        createOrder={(data, actions) => {
-          return actions.order.create({
-            intent: 'CAPTURE',
-            purchase_units: [
-              {
-                amount: {
-                  currency_code: 'GBP',
-                  value: paypalAmount,
-                },
-              },
-            ],
-          });
+        createOrder={() => {
+          return Promise.resolve(orderId);
         }}
-        onApprove={(data, actions) => {
-          console.log('Simulating PayPal payment approval');
-          handleSuccess();
-          return Promise.resolve();
+        onApprove={async data => {
+          console.log('PayPal payment approved for orderId:', data.orderID);
+          onApprove(data.orderID);
+        }}
+        onError={err => {
+          console.error('PayPal Checkout onError', err);
         }}
       />
     </PayPalScriptProvider>
