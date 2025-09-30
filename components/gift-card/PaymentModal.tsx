@@ -33,64 +33,67 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
   const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("stripe");
   const [error, setError] = useState<string | null>(null);
 
-  const handleStripePayment = async () => {
-    if (!stripe || !elements) {
-      return;
-    }
-    const cardElement = elements.getElement(CardElement);
-    if (!cardElement) return;
-
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
     setError(null);
 
-    try {
-      const initiationRes = await initiatePurchase({
-        ...purchaseDetails,
-        paymentProvider: "stripe",
-      });
-
-      if (!initiationRes?.data?.clientSecret) {
-        throw new Error("Failed to initiate payment.");
+    if (paymentProvider === 'stripe') {
+      if (!stripe || !elements) {
+        setError("Stripe is not ready.");
+        return;
       }
-
-      const paymentResult = await stripe.confirmCardPayment(initiationRes.data.clientSecret, {
-        payment_method: {
-          card: cardElement,
-          billing_details: {
-            email: purchaseDetails.recipientEmail,
-            name: purchaseDetails.recipientName,
-          },
-        },
-      });
-
-      if (paymentResult.error) {
-        setError(paymentResult.error.message ?? "An unknown error occurred.");
+      const cardElement = elements.getElement(CardElement);
+      if (!cardElement) {
+        setError("Card details not found.");
         return;
       }
 
-      if (paymentResult.paymentIntent?.status === "succeeded") {
-        await verifyPurchase({
-          paymentProvider: "stripe",
-          transactionId: paymentResult.paymentIntent.id,
-          purchaseDetails: {
-            ...purchaseDetails,
-            paymentProvider: "stripe",
-          },
+      try {
+        const initiationRes = await initiatePurchase({
+          ...purchaseDetails,
+          paymentProvider,
         });
-        onSuccess();
-      }
-    } catch (e: unknown) {
-      if (e instanceof Error) {
-        setError(e.message);
-      } else {
-        setError("Payment failed. Please try again.");
-      }
-    }
-  };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (paymentProvider === "stripe") {
-      await handleStripePayment();
+        if (!initiationRes?.data?.clientSecret) {
+          throw new Error("Failed to initiate payment.");
+        }
+
+        const paymentResult = await stripe.confirmCardPayment(
+          initiationRes.data.clientSecret,
+          {
+            payment_method: {
+              card: cardElement,
+              billing_details: {
+                email: purchaseDetails.recipientEmail,
+                name: purchaseDetails.recipientName,
+              },
+            },
+          }
+        );
+
+        if (paymentResult.error) {
+          setError(paymentResult.error.message ?? "An unknown error occurred.");
+          return;
+        }
+
+        if (paymentResult.paymentIntent?.status === "succeeded") {
+          await verifyPurchase({
+            paymentProvider,
+            transactionId: paymentResult.paymentIntent.id,
+            purchaseDetails: {
+              ...purchaseDetails,
+              paymentProvider,
+            },
+          });
+          onSuccess();
+        }
+      } catch (e: unknown) {
+        if (e instanceof Error) {
+          setError(e.message);
+        } else {
+          setError("Payment failed. Please try again.");
+        }
+      }
     } else {
       // Handle PayPal
       setError("PayPal is not yet supported.");
