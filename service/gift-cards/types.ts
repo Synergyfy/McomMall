@@ -16,7 +16,7 @@ export interface GiftCardAsset {
   categories: AssetCategory[];
 }
 
-export type PaymentProvider = "STRIPE" | "PAYPAL";
+export type PaymentProvider = "stripe" | "paypal";
 
 export interface InitiatePurchaseDto {
   templateId: string;

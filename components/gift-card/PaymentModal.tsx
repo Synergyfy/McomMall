@@ -30,7 +30,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
   const elements = useElements();
   const { initiatePurchase, isInitiating } = useInitiateGiftCardPurchase();
   const { verifyPurchase, isVerifying } = useVerifyGiftCardPurchase();
-  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("STRIPE");
+  const [paymentProvider, setPaymentProvider] = useState<PaymentProvider>("stripe");
   const [error, setError] = useState<string | null>(null);
 
   const handleStripePayment = async () => {
@@ -45,7 +45,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
     try {
       const initiationRes = await initiatePurchase({
         ...purchaseDetails,
-        paymentProvider: "STRIPE",
+        paymentProvider: "stripe",
       });
 
       if (!initiationRes?.data?.clientSecret) {
@@ -69,11 +69,11 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
 
       if (paymentResult.paymentIntent?.status === "succeeded") {
         await verifyPurchase({
-          paymentProvider: "STRIPE",
+          paymentProvider: "stripe",
           transactionId: paymentResult.paymentIntent.id,
           purchaseDetails: {
             ...purchaseDetails,
-            paymentProvider: "STRIPE",
+            paymentProvider: "stripe",
           },
         });
         onSuccess();
@@ -89,7 +89,7 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (paymentProvider === "STRIPE") {
+    if (paymentProvider === "stripe") {
       await handleStripePayment();
     } else {
       // Handle PayPal
@@ -102,22 +102,22 @@ const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails:
       <div className="flex justify-center space-x-4 mb-6">
         <Button
           type="button"
-          onClick={() => setPaymentProvider("STRIPE")}
-          variant={paymentProvider === "STRIPE" ? "default" : "outline"}
+          onClick={() => setPaymentProvider("stripe")}
+          variant={paymentProvider === "stripe" ? "default" : "outline"}
           className="bg-orange-600"
         >
           <CreditCard className="mr-2 h-4 w-4" /> Stripe
         </Button>
         <Button
           type="button"
-          onClick={() => setPaymentProvider("PAYPAL")}
-          variant={paymentProvider === "PAYPAL" ? "default" : "outline"}
+          onClick={() => setPaymentProvider("paypal")}
+          variant={paymentProvider === "paypal" ? "default" : "outline"}
         >
           <Palmtree className="mr-2 h-4 w-4" /> PayPal
         </Button>
       </div>
 
-      {paymentProvider === "STRIPE" && (
+      {paymentProvider === "stripe" && (
         <div className="mb-4 p-4 border rounded-md">
           <CardElement options={{ style: { base: { fontSize: "16px" } } }} />
         </div>
