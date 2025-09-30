@@ -2,6 +2,7 @@
 
 import { useState, useMemo } from "react";
 import { useForm } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import {
@@ -35,7 +36,7 @@ import {
 } from "@/service/gift-card/hook";
 import StripeCheckoutForm from "@/components/StripeCheckoutForm";
 import PayPalCheckoutButton from "@/components/PayPalCheckoutButton";
-import PaymentSuccessDialog from "@/components/PaymentSuccessModal";
+import PaymentSuccessDialog from "@/components/PaymentSuccessDialog";
 import { toast } from "sonner";
 
 const baseFormSchema = z.object({
@@ -54,6 +55,7 @@ interface PurchaseFormProps {
 }
 
 const PurchaseForm = ({ template }: PurchaseFormProps) => {
+  const router = useRouter();
   const [customAmount, setCustomAmount] = useState("");
   const [purchaseResponse, setPurchaseResponse] =
     useState<InitiatePurchaseResponse | null>(null);
@@ -138,12 +140,16 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     return <div>Verifying payment...</div>;
   }
 
+  const handleRedirect = () => {
+    router.push('/dashboard/my-listings');
+  };
+
   if (showSuccessDialog && createdGiftCard) {
     return (
       <PaymentSuccessDialog
         isOpen={showSuccessDialog}
         onClose={() => setShowSuccessDialog(false)}
-        giftCard={createdGiftCard}
+        onRedirect={handleRedirect}
       />
     );
   }

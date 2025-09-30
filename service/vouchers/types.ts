@@ -67,3 +67,29 @@ export interface RedeemVoucherDto {
   code: string;
   amount?: number;
 }
+
+export interface InitiateVoucherPurchaseDto {
+  voucherProductId: string;
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+  recipientName?: string;
+  recipientEmail?: string;
+  personalMessage?: string;
+  deliveryDate?: string;
+}
+
+export interface VerifyVoucherPurchaseDto {
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+  purchaseDetails: InitiateVoucherPurchaseDto;
+}
+
+export interface StripeVoucherPurchaseResponse {
+  provider: 'stripe';
+  clientSecret: string;
+}
+
+export interface PayPalVoucherPurchaseResponse {
+  provider: 'paypal';
+  orderId: string;
+}
