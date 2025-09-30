@@ -19,9 +19,10 @@ interface GiftCardEmailProps {
       redeemButtonTextColor: string;
     };
   };
+  isPlaceholder?: boolean;
 }
 
-const GiftCardEmail = ({ formData }: GiftCardEmailProps) => {
+const GiftCardEmail = ({ formData, isPlaceholder }: GiftCardEmailProps) => {
   const { design, amount, recipientName, personalMessage } = formData;
 
   const containerStyle: React.CSSProperties = {
@@ -106,7 +107,7 @@ const GiftCardEmail = ({ formData }: GiftCardEmailProps) => {
               fontSize: "18px",
             }}
           >
-            4000 1234 5678 9010
+            {isPlaceholder ? "GEN_GIFT_CARD_CODE" : "4000 1234 5678 9010"}
           </p>
         </div>
         <div

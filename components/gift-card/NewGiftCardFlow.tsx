@@ -9,12 +9,15 @@ import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GiftCardEmail from "./GiftCardEmail";
 import { useGetGiftCardAssets } from "@/service/hooks/useGiftCardService";
-import { AssetCategory } from "@/service/gift-cards/types";
+import { AssetCategory, InitiatePurchaseDto } from "@/service/gift-cards/types";
 import Image from "next/image";
+import PaymentModal from "./PaymentModal";
+import SuccessAnimation from "./SuccessAnimation";
 
 interface Errors {
   recipientName?: string;
   recipientEmail?: string;
+  customAmount?: string;
 }
 
 interface NewGiftCardFlowProps {
@@ -24,11 +27,16 @@ interface NewGiftCardFlowProps {
 const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
   const { assets, isLoading } = useGetGiftCardAssets(template.id);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [purchaseDetails, setPurchaseDetails] = useState<Omit<InitiatePurchaseDto, "paymentProvider"> | null>(null);
+  const [customAmountInput, setCustomAmountInput] = useState('');
 
   const [formData, setFormData] = useState({
     recipientType: "someoneElse" as "myself" | "someoneElse",
-    amount: template.fixedAmounts?.[0] ?? 25,
+    amount: template.fixedAmounts?.[0] ?? template.minCustomAmount ?? 25,
     recipientName: "",
+    senderName: "",
     recipientEmail: "",
     personalMessage: "",
     design: {
@@ -97,6 +105,20 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
     } else if (!/\S+@\S+\.\S+/.test(formData.recipientEmail)) {
       newErrors.recipientEmail = "Email address is invalid.";
     }
+
+    if (template.allowCustomAmount && customAmountInput) {
+      const value = parseFloat(customAmountInput);
+      if (isNaN(value)) {
+        newErrors.customAmount = 'Please enter a valid number.';
+      } else if (
+        template.minCustomAmount !== undefined &&
+        template.maxCustomAmount !== undefined &&
+        (value < template.minCustomAmount || value > template.maxCustomAmount)
+      ) {
+        newErrors.customAmount = `Amount must be between $${template.minCustomAmount} and $${template.maxCustomAmount}.`;
+      }
+    }
+
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -123,6 +145,20 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
 
   const handleAmountChange = (amount: number) => {
     setFormData((prev) => ({ ...prev, amount }));
+    setCustomAmountInput('');
+    if (errors.customAmount) {
+      setErrors((prev) => ({ ...prev, customAmount: undefined }));
+    }
+  };
+
+  const handleCustomAmountChange = (e: ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setCustomAmountInput(value);
+    const numericValue = parseFloat(value);
+
+    if (!isNaN(numericValue) && numericValue > 0) {
+      setFormData((prev) => ({ ...prev, amount: numericValue }));
+    }
   };
 
   const handleCategoryChange = (categoryId: string) => {
@@ -160,36 +196,89 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
     const isValid = validate();
     if (isValid) {
       const emailHtml = ReactDOMServer.renderToStaticMarkup(
-        <GiftCardEmail formData={formData} />
+        <GiftCardEmail formData={formData} isPlaceholder={true} />
       );
-      console.log(emailHtml);
-      console.log("Form is valid, but payment is disabled.", formData);
+
+      const selectedAsset = assets?.find(asset => asset.url === formData.design.assetUrl);
+
+      const details: Omit<InitiatePurchaseDto, "paymentProvider"> = {
+        templateId: template.id,
+        amount: formData.amount,
+        recipientEmail: formData.recipientEmail,
+        recipientName: formData.recipientName,
+        personalMessage: formData.personalMessage,
+        assetId: selectedAsset?.id,
+        htmlBody: emailHtml,
+      };
+
+      setPurchaseDetails(details);
+      setPaymentModalOpen(true);
     }
   };
 
+  const handlePaymentSuccess = () => {
+    setPaymentModalOpen(false);
+    setShowSuccessAnimation(true);
+  };
+
+  const handlePaymentModalClose = () => {
+    setPaymentModalOpen(false);
+    setPurchaseDetails(null);
+  };
+
+  const handleSuccessDone = () => {
+    setShowSuccessAnimation(false);
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div>
-          <h1 className="text-3xl font-bold mb-6">Create Your Gift Card</h1>
-          <div className="space-y-2">
-            <Accordion title="1. Choose Value" isOpen={true}>
-              <div className="flex space-x-2">
-                {[25, 50, 100, 200].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => handleAmountChange(value)}
-                    className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-200 ${
-                      formData.amount === value
-                        ? "bg-orange-600 text-white shadow-md scale-105"
-                        : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
-                    }`}
-                  >
-                    ${value}
-                  </button>
-                ))}
-              </div>
-            </Accordion>
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Create Your Gift Card</h1>
+            <div className="space-y-2">
+              <Accordion title="1. Choose Value" isOpen={true}>
+                <div className="flex flex-wrap gap-2">
+                  {template.fixedAmounts?.map((value) => (
+                      <button
+                        key={value}
+                        onClick={() => handleAmountChange(value)}
+                        className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-200 ${
+                          formData.amount === value && !customAmountInput
+                            ? "bg-orange-600 text-white shadow-md scale-105"
+                            : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
+                        }`}
+                      >
+                        ${value}
+                      </button>
+                    ))}
+                </div>
+                {template.allowCustomAmount && (
+                  <div className="mt-4">
+                    <label htmlFor="customAmount" className="block text-sm font-medium text-gray-700">
+                      Or enter a custom amount
+                    </label>
+                    <input
+                      type="number"
+                      id="customAmount"
+                      name="customAmount"
+                      value={customAmountInput}
+                      onChange={handleCustomAmountChange}
+                      placeholder={
+                        `Enter amount between $${template.minCustomAmount} and $${template.maxCustomAmount}`
+                      }
+                      className={`mt-1 block w-full px-3 py-2 border ${
+                        errors.customAmount
+                          ? "border-red-500"
+                          : "border-gray-300"
+                      } rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500`}
+                    />
+                    {errors.customAmount && (
+                      <p className="text-red-500 text-xs mt-1">{errors.customAmount}</p>
+                    )}
+                  </div>
+                )}
+              </Accordion>
             <Accordion title="2. Personalize your Card">
               <div className="space-y-6">
                 {/* Recipient Info */}
@@ -218,6 +307,22 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                         {errors.recipientName}
                       </p>
                     )}
+                  </div>
+                  <div>
+                    <label
+                      htmlFor="senderName"
+                      className="block text-sm font-medium text-gray-700"
+                    >
+                      Sender Name (Optional)
+                    </label>
+                    <input
+                      type="text"
+                      id="senderName"
+                      name="senderName"
+                      value={formData.senderName || ""}
+                      onChange={handleInputChange}
+                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-orange-500 focus:border-orange-500"
+                    />
                   </div>
                   <div>
                     <label
@@ -587,11 +692,21 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
             </Accordion>
           </div>
         </div>
-        <div className="sticky top-8 self-start">
-          <NewGiftCardPreview formData={formData} />
+          <div className="sticky top-8 self-start">
+            <NewGiftCardPreview formData={formData} />
+          </div>
         </div>
       </div>
-    </div>
+      {purchaseDetails && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={handlePaymentModalClose}
+          purchaseDetails={purchaseDetails}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+      {showSuccessAnimation && <SuccessAnimation onDone={handleSuccessDone} />}
+    </>
   );
 };
 
