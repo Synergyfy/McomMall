@@ -15,3 +15,23 @@ export interface GiftCardAsset {
   updated_at: string;
   categories: AssetCategory[];
 }
+
+export type PaymentProvider = "STRIPE" | "PAYPAL";
+
+export interface InitiatePurchaseDto {
+  templateId: string;
+  amount: number;
+  recipientEmail: string;
+  paymentProvider: PaymentProvider;
+  recipientName?: string;
+  senderName?: string;
+  personalMessage?: string;
+  assetId?: string;
+  htmlBody?: string;
+}
+
+export interface VerifyPurchaseDto {
+  paymentProvider: PaymentProvider;
+  transactionId: string;
+  purchaseDetails: InitiatePurchaseDto;
+}

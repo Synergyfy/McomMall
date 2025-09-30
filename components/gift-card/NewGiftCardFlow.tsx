@@ -9,8 +9,10 @@ import { UploadCloud } from "lucide-react";
 import { cn } from "@/lib/utils";
 import GiftCardEmail from "./GiftCardEmail";
 import { useGetGiftCardAssets } from "@/service/hooks/useGiftCardService";
-import { AssetCategory } from "@/service/gift-cards/types";
+import { AssetCategory, InitiatePurchaseDto } from "@/service/gift-cards/types";
 import Image from "next/image";
+import PaymentModal from "./PaymentModal";
+import SuccessAnimation from "./SuccessAnimation";
 
 interface Errors {
   recipientName?: string;
@@ -24,6 +26,9 @@ interface NewGiftCardFlowProps {
 const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
   const { assets, isLoading } = useGetGiftCardAssets(template.id);
   const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+  const [showSuccessAnimation, setShowSuccessAnimation] = useState(false);
+  const [purchaseDetails, setPurchaseDetails] = useState<Omit<InitiatePurchaseDto, "paymentProvider"> | null>(null);
 
   const [formData, setFormData] = useState({
     recipientType: "someoneElse" as "myself" | "someoneElse",
@@ -162,34 +167,62 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
       const emailHtml = ReactDOMServer.renderToStaticMarkup(
         <GiftCardEmail formData={formData} isPlaceholder={true} />
       );
-      console.log(emailHtml);
-      console.log("Form is valid, but payment is disabled.", formData);
+
+      const selectedAsset = assets?.find(asset => asset.url === formData.design.assetUrl);
+
+      const details: Omit<InitiatePurchaseDto, "paymentProvider"> = {
+        templateId: template.id,
+        amount: formData.amount,
+        recipientEmail: formData.recipientEmail,
+        recipientName: formData.recipientName,
+        personalMessage: formData.personalMessage,
+        assetId: selectedAsset?.id,
+        htmlBody: emailHtml,
+      };
+
+      setPurchaseDetails(details);
+      setPaymentModalOpen(true);
     }
   };
 
+  const handlePaymentSuccess = () => {
+    setPaymentModalOpen(false);
+    setShowSuccessAnimation(true);
+  };
+
+  const handlePaymentModalClose = () => {
+    setPaymentModalOpen(false);
+    setPurchaseDetails(null);
+  };
+
+  const handleSuccessDone = () => {
+    setShowSuccessAnimation(false);
+  };
+
   return (
-    <div className="container mx-auto px-4 py-8">
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
-        <div>
-          <h1 className="text-3xl font-bold mb-6">Create Your Gift Card</h1>
-          <div className="space-y-2">
-            <Accordion title="1. Choose Value" isOpen={true}>
-              <div className="flex space-x-2">
-                {[25, 50, 100, 200].map((value) => (
-                  <button
-                    key={value}
-                    onClick={() => handleAmountChange(value)}
-                    className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-200 ${
-                      formData.amount === value
-                        ? "bg-orange-600 text-white shadow-md scale-105"
-                        : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
-                    }`}
-                  >
-                    ${value}
-                  </button>
-                ))}
-              </div>
-            </Accordion>
+    <>
+      <div className="container mx-auto px-4 py-8">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div>
+            <h1 className="text-3xl font-bold mb-6">Create Your Gift Card</h1>
+            <div className="space-y-2">
+              <Accordion title="1. Choose Value" isOpen={true}>
+                <div className="flex space-x-2">
+                  {[25, 50, 100, 200].map((value) => (
+                    <button
+                      key={value}
+                      onClick={() => handleAmountChange(value)}
+                      className={`px-6 py-3 rounded-lg text-lg font-semibold transition-all duration-200 ${
+                        formData.amount === value
+                          ? "bg-orange-600 text-white shadow-md scale-105"
+                          : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
+                      }`}
+                    >
+                      ${value}
+                    </button>
+                  ))}
+                </div>
+              </Accordion>
             <Accordion title="2. Personalize your Card">
               <div className="space-y-6">
                 {/* Recipient Info */}
@@ -587,11 +620,21 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
             </Accordion>
           </div>
         </div>
-        <div className="sticky top-8 self-start">
-          <NewGiftCardPreview formData={formData} />
+          <div className="sticky top-8 self-start">
+            <NewGiftCardPreview formData={formData} />
+          </div>
         </div>
       </div>
-    </div>
+      {purchaseDetails && (
+        <PaymentModal
+          isOpen={isPaymentModalOpen}
+          onClose={handlePaymentModalClose}
+          purchaseDetails={purchaseDetails}
+          onSuccess={handlePaymentSuccess}
+        />
+      )}
+      {showSuccessAnimation && <SuccessAnimation onDone={handleSuccessDone} />}
+    </>
   );
 };
 
