@@ -160,26 +160,11 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
     const isValid = validate();
     if (isValid) {
       const emailHtml = ReactDOMServer.renderToStaticMarkup(
-        <GiftCardEmail formData={formData} />
+        <GiftCardEmail formData={formData} isPlaceholder={true} />
       );
       console.log(emailHtml);
       console.log("Form is valid, but payment is disabled.", formData);
     }
-  };
-
-  const exportAsHtml = () => {
-    const emailHtml = ReactDOMServer.renderToStaticMarkup(
-      <GiftCardEmail formData={formData} isPlaceholder={true} />
-    );
-    const blob = new Blob([emailHtml], { type: "text/html" });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "gift-card-email.html";
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
   };
 
   return (
@@ -590,18 +575,12 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                         }`}
                   </span>
                 </div>
-                <div className="pt-4 flex space-x-2">
+                <div className="pt-4">
                   <button
                     onClick={handleSave}
                     className="w-full bg-orange-600 text-white font-bold py-3 px-4 rounded-md hover:bg-orange-700 transition-colors"
                   >
                     Save and Continue
-                  </button>
-                  <button
-                    onClick={exportAsHtml}
-                    className="w-full bg-gray-600 text-white font-bold py-3 px-4 rounded-md hover:bg-gray-700 transition-colors"
-                  >
-                    Export as HTML
                   </button>
                 </div>
               </div>
