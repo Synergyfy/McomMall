@@ -1,8 +1,8 @@
 export interface Voucher {
   id: string;
   code: string;
-  initialValue: number;
-  balance: number;
+  initialValue: string;
+  balance: string;
   status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled';
   recipientName?: string;
   recipientEmail?: string;
