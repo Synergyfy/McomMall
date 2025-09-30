@@ -1,0 +1,107 @@
+'use client';
+
+import { useGetBusinessVoucherProducts } from '@/service/hooks/useVoucherService';
+import { VoucherProduct } from '@/service/vouchers/types';
+import { Button } from '@/components/ui/button';
+import { useRouter } from 'next/navigation';
+import { CURRENCY } from '@/lib/utils';
+import { toast } from 'sonner';
+
+interface VoucherTabContentProps {
+  businessId: string;
+}
+
+export default function VoucherTabContent({
+  businessId,
+}: VoucherTabContentProps) {
+  const {
+    voucherProducts,
+    isLoading,
+    isError,
+  } = useGetBusinessVoucherProducts(businessId);
+  const router = useRouter();
+
+  if (isLoading) {
+    return (
+      <div className="mt-4 space-y-4">
+        <div className="animate-pulse rounded-lg bg-gray-100 p-6">
+          <div className="mb-4 h-6 w-3/4 rounded bg-gray-300"></div>
+          <div className="mb-2 h-4 w-full rounded bg-gray-300"></div>
+          <div className="h-4 w-5/6 rounded bg-gray-300"></div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isError) {
+    return (
+      <div className="rounded-lg bg-red-50 p-4 text-red-500">
+        <h4 className="font-bold">Error</h4>
+        <p>Could not load vouchers at this time. Please try again later.</p>
+      </div>
+    );
+  }
+
+  if (!voucherProducts || voucherProducts.length === 0) {
+    return (
+      <div className="mt-6 rounded-lg bg-gray-50 px-6 py-12 text-center">
+        <h4 className="text-lg font-semibold text-gray-700">
+          No Vouchers Available
+        </h4>
+        <p className="mt-2 text-gray-500">
+          This business does not have any vouchers available for purchase at the
+          moment.
+        </p>
+      </div>
+    );
+  }
+
+  const handleBuyNow = (template: VoucherProduct) => {
+    // For now, we'll just show a toast. The full purchase flow will be implemented later.
+    toast.info(`Purchasing ${template.name}...`);
+    // Example of navigation to a purchase page:
+    // router.push(`/listings/${businessId}/vouchers/purchase?productId=${template.id}`);
+  };
+
+  return (
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+      {voucherProducts.map(product => (
+        <div
+          key={product.id}
+          className="transform overflow-hidden rounded-lg bg-white shadow-md transition-transform hover:scale-105"
+        >
+          <div className="p-4">
+            <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
+            {product.description && (
+              <p className="mt-1 text-sm text-gray-600">
+                {product.description}
+              </p>
+            )}
+            <div className="mt-4">
+              <h4 className="text-sm font-semibold text-gray-700">
+                Available Amounts:
+              </h4>
+              <div className="mt-2 flex flex-wrap gap-2">
+                {product.fixedAmounts?.map(amount => (
+                  <span
+                    key={amount}
+                    className="rounded-full bg-gray-200 px-3 py-1 text-sm text-gray-800"
+                  >
+                    {CURRENCY}
+                    {amount}
+                  </span>
+                ))}
+              </div>
+            </div>
+            <Button
+              className="mt-6 w-full bg-orange-600 text-white hover:bg-orange-700"
+              onClick={() => handleBuyNow(product)}
+            >
+              Buy Now
+            </Button>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}

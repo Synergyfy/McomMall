@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { svgMap } from "./NewGiftCardFlow";
 import Image from "next/image";
 import { CreditCard } from "lucide-react";
 import { CURRENCY } from "@/lib/utils";
@@ -13,7 +12,7 @@ interface NewGiftCardPreviewProps {
     recipientEmail: string;
     personalMessage: string;
     design: {
-      svg: string | null;
+      assetUrl: string | null;
       customImage: string | null;
       title: string;
       titleColor: string;
@@ -27,25 +26,37 @@ interface NewGiftCardPreviewProps {
 
 const NewGiftCardPreview = ({ formData }: NewGiftCardPreviewProps) => {
   const { design } = formData;
-  const SelectedSvg = design.svg ? svgMap[design.svg] : null;
 
   return (
     <div className="w-full flex flex-col items-center space-y-6">
-       <div className="w-full max-w-md h-40 flex items-center justify-center">
+      <div className="w-full max-w-md h-40 flex items-center justify-center">
         {design.customImage ? (
-          <Image src={design.customImage} alt="Custom design" width={160} height={160} className="max-h-full w-auto object-contain rounded-lg" />
-        ) : SelectedSvg ? (
-          <SelectedSvg className="w-3/4 h-3/4" />
+          <Image
+            src={design.customImage}
+            alt="Custom design"
+            width={160}
+            height={160}
+            className="max-h-full w-auto object-contain rounded-lg"
+          />
+        ) : design.assetUrl ? (
+          <Image
+            src={design.assetUrl}
+            alt="Selected design"
+            width={160}
+            height={160}
+            className="max-h-full w-auto object-contain rounded-lg"
+          />
         ) : null}
       </div>
       <motion.div
-        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between bg-white border"
+        className="w-full max-w-md aspect-[1.586] rounded-2xl shadow-lg p-6 flex flex-col justify-between border"
+        style={{ backgroundColor: design.cardColor }}
         initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
+        animate={{ opacity: 1, y: 0, backgroundColor: design.cardColor }}
         transition={{ duration: 0.5 }}
       >
         <div className="flex justify-between items-start">
-          <h2 className="text-xl font-semibold text-gray-800">{design.title}</h2>
+          <h2 className="text-xl font-semibold" style={{ color: design.titleColor }}>{design.title}</h2>
           <CreditCard size={24} className="text-gray-400"/>
         </div>
 

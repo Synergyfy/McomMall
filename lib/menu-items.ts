@@ -109,6 +109,11 @@ export const historyMenuItems: MenuItem[] = [
     href: '/dashboard/history/gift-card',
     icon: CreditCard,
   },
+  {
+    title: 'My Vouchers',
+    href: '/dashboard/history/my-vouchers',
+    icon: CreditCard,
+  },
 ];
 
 export const businessCategories = [
@@ -176,17 +181,12 @@ export const pluginMenuItems: MenuItem[] = [
 
   {
     title: 'Voucher',
-    href: '/dashboard/voucher',
+    href: '/dashboard/vouchers',
     icon: Settings,
     subMenu: [
-      { title: 'Dashboard', href: '/dashboard/voucher' },
-      { title: 'Admin', href: '/dashboard/gift-card/admin' },
-      { title: 'Reports', href: '/dashboard/voucher/reports' },
-      { title: 'Offers', href: '/dashboard/loyalty/offers' },
-      { title: 'Pay your price', href: '/dashboard/voucher/pay-your-price' },
-      { title: 'Vendor', href: '/dashboard/voucher/vendor-settings' },
-      { title: 'Settings', href: '/dashboard/voucher/settings' },
-      { title: 'Notification', href: '/dashboard/voucher/notification' },
+      { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
+      { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
+      { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
     ],
   },
 ];
