@@ -18,7 +18,7 @@ import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
-import { useRedeemVoucher } from '@/service/vouchers/hook';
+import { useApplyVoucher } from '@/service/vouchers/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -74,7 +74,7 @@ export default function CheckoutClient() {
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
   const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
-  const { mutateAsync: redeemVoucher } = useRedeemVoucher();
+  const { mutateAsync: applyVoucher } = useApplyVoucher();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -101,7 +101,7 @@ export default function CheckoutClient() {
   const handleApplyVoucher = async (code: string) => {
     setVoucherLoading(true);
     try {
-      const result = await redeemVoucher({ code });
+      const result = await applyVoucher(code);
       if (result.balance > 0) {
         const applicableDiscount = Math.min(result.balance, basePrice);
         setVoucherDiscount(applicableDiscount);
