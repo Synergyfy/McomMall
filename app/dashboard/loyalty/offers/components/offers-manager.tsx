@@ -113,6 +113,7 @@ export function OffersManager() {
                   <TableHead className="text-white font-bold">
                     Offer name
                   </TableHead>
+                  <TableHead className="text-white font-bold">Scope</TableHead>
                   <TableHead className="text-white font-bold">
                     Description
                   </TableHead>
@@ -129,7 +130,7 @@ export function OffersManager() {
               <TableBody>
                 {isLoading ? (
                   <TableRow>
-                    <TableCell colSpan={7} className="text-center">
+                    <TableCell colSpan={8} className="text-center">
                       <div className="flex justify-center items-center p-8">
                         <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
                       </div>
@@ -138,7 +139,7 @@ export function OffersManager() {
                 ) : error ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="text-center text-red-500"
                     >
                       Error loading offers: {error.message}
@@ -173,6 +174,11 @@ export function OffersManager() {
                           >
                             {offer.name}
                           </a>
+                        </TableCell>
+                        <TableCell>
+                          {offer.offerScope === 'ALL_LISTINGS'
+                            ? 'All Listings'
+                            : 'Specific Listings'}
                         </TableCell>
                         <TableCell>{offer.description}</TableCell>
                         <TableCell>{offer.points.toLocaleString()}</TableCell>
