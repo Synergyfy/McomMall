@@ -26,6 +26,7 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
+import { CreateCheckoutDto } from '@/hooks/useCheckout';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -186,7 +187,7 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
-      const checkoutData: any = {
+      const checkoutData: CreateCheckoutDto = {
         payment: {
           paymentMethod,
           amount: totalPrice,
