@@ -46,11 +46,11 @@ const SoldVoucherRow: React.FC<SoldVoucherRowProps> = ({ voucher }) => {
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
         {CURRENCY}
-        {voucher.initialValue.toFixed(2)}
+        {Number(voucher.initialValue).toFixed(2)}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
         {CURRENCY}
-        {voucher.balance.toFixed(2)}
+        {Number(voucher.balance).toFixed(2)}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm">
         <span
