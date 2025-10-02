@@ -8,15 +8,16 @@ import OrderSummary from './OrderSummary';
 import PaymentForm from './PaymentForm';
 import CouponCodeInput from './CouponCodeInput';
 import GiftCardInput from './GiftCardInput';
+import VoucherInput from './VoucherInput';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
-import { useRecordOrder } from '@/hooks/useRecordOrder';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
+import { useApplyVoucher } from '@/service/vouchers/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -25,6 +26,7 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
+import { CreateCheckoutDto } from '@/hooks/useCheckout';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -51,6 +53,9 @@ export default function CheckoutClient() {
   const [giftCardCode, setGiftCardCode] = useState('');
   const [giftCardDiscount, setGiftCardDiscount] = useState(0);
   const [isGiftCardLoading, setGiftCardLoading] = useState(false);
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [isVoucherLoading, setVoucherLoading] = useState(false);
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
@@ -63,12 +68,12 @@ export default function CheckoutClient() {
 
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
-  const { mutate: recordOrder } = useRecordOrder();
   const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
   const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
+  const { mutateAsync: applyVoucher } = useApplyVoucher();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -89,7 +94,33 @@ export default function CheckoutClient() {
     ? product.price * quantity
     : 0;
 
-  const totalPrice = basePrice - discount - offerDiscount - giftCardDiscount;
+  const totalPrice =
+    basePrice - discount - offerDiscount - giftCardDiscount - voucherDiscount;
+
+  const handleApplyVoucher = async (code: string) => {
+    setVoucherLoading(true);
+    try {
+      const result = await applyVoucher(code);
+      if (result.balance > 0) {
+        const applicableDiscount = Math.min(result.balance, basePrice);
+        setVoucherDiscount(applicableDiscount);
+        setVoucherCode(code);
+        setDiscount(0);
+        setCouponCode('');
+        setOfferDiscount(0);
+        setSelectedOffer(null);
+        setGiftCardDiscount(0);
+        setGiftCardCode('');
+      } else {
+        alert('This voucher has no balance.');
+      }
+    } catch (error) {
+      console.error('Failed to apply voucher', error);
+      alert('Invalid or inapplicable voucher');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
 
   const handleApplyGiftCard = async (code: string) => {
     setGiftCardLoading(true);
@@ -103,6 +134,8 @@ export default function CheckoutClient() {
         setCouponCode('');
         setOfferDiscount(0); // Reset offer discount
         setSelectedOffer(null);
+        setVoucherDiscount(0);
+        setVoucherCode('');
       } else {
         alert('This gift card has no balance.');
       }
@@ -154,7 +187,7 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
-      const checkoutData = {
+      const checkoutData: CreateCheckoutDto = {
         payment: {
           paymentMethod,
           amount: totalPrice,
@@ -163,24 +196,19 @@ export default function CheckoutClient() {
         couponCode: couponCode || undefined,
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
+        voucherCode: voucherCode || undefined,
       };
 
-      if (fromCart) {
-        checkout(checkoutData, {
-          onSuccess: () => setSuccessModalOpen(true),
-        });
-      } else if (product) {
-        recordOrder(
-          {
-            ...checkoutData,
-            productId: product.id,
-            quantity,
-          },
-          {
-            onSuccess: () => setSuccessModalOpen(true),
-          }
-        );
+      if (!fromCart && product) {
+        checkoutData.directPurchase = {
+          productId: product.id,
+          quantity,
+        };
       }
+
+      checkout(checkoutData, {
+        onSuccess: () => setSuccessModalOpen(true),
+      });
     },
     [
       fromCart,
@@ -188,10 +216,10 @@ export default function CheckoutClient() {
       quantity,
       totalPrice,
       checkout,
-      recordOrder,
       couponCode,
       selectedOffer,
       giftCardCode,
+      voucherCode,
     ]
   );
 
@@ -282,6 +310,10 @@ export default function CheckoutClient() {
               <GiftCardInput
                 onApply={handleApplyGiftCard}
                 isLoading={isGiftCardLoading}
+              />
+              <VoucherInput
+                onApply={handleApplyVoucher}
+                isLoading={isVoucherLoading}
               />
               <ApplicableOffers
                 offers={applicableOffers || []}

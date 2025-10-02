@@ -42,6 +42,9 @@ import { cn } from '@/lib/utils';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { Product } from '@/service/store/products/types';
 import { CreateOfferDto, UpdateOfferDto } from '@/service/offers/types';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { useGetUserListings } from '@/service/listings/hook';
+import { InHouseBusiness } from '@/service/listings/types';
 
 interface FormData {
   name: string;
@@ -68,6 +71,8 @@ interface FormData {
   allowLimitToReset: boolean;
   includedProductIds: string[];
   excludedProductIds: string[];
+  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
+  businessIds: string[];
 }
 
 interface FormErrors {
@@ -78,6 +83,8 @@ interface FormErrors {
   discountPercentage?: string;
   freeProductId?: string;
   bonusPoints?: string;
+  businessIds?: string;
+  includedProductIds?: string;
 }
 
 interface OfferFormProps {
@@ -94,10 +101,12 @@ export default function OfferForm({
   submitButtonText,
 }: OfferFormProps) {
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
   const [openIncludedProducts, setOpenIncludedProducts] =
     React.useState(false);
   const [openExcludedProducts, setOpenExcludedProducts] =
     React.useState(false);
+  const [openBusinessIds, setOpenBusinessIds] = React.useState(false);
 
   const [formData, setFormData] = useState<FormData>({
     name: '',
@@ -119,6 +128,8 @@ export default function OfferForm({
     allowLimitToReset: false,
     includedProductIds: [],
     excludedProductIds: [],
+    offerScope: 'ALL_LISTINGS',
+    businessIds: [],
     ...initialData,
   });
 
@@ -188,6 +199,19 @@ export default function OfferForm({
     ) {
       newErrors.bonusPoints = 'Bonus points must be a positive integer.';
     }
+    if (
+      formData.offerScope === 'SPECIFIC_LISTINGS' &&
+      formData.businessIds.length === 0
+    ) {
+      newErrors.businessIds = 'At least one business must be selected.';
+    }
+    if (
+      formData.offerScope === 'SPECIFIC_PRODUCTS' &&
+      formData.includedProductIds.length === 0
+    ) {
+      newErrors.includedProductIds =
+        'At least one product must be selected.';
+    }
     return newErrors;
   };
 
@@ -233,6 +257,8 @@ export default function OfferForm({
         allowLimitToReset: formData.allowLimitToReset,
         includedProductIds: formData.includedProductIds,
         excludedProductIds: formData.excludedProductIds,
+        offerScope: formData.offerScope,
+        businessIds: formData.businessIds,
       };
       await onSubmit(dataToSubmit);
     } else {
@@ -241,7 +267,7 @@ export default function OfferForm({
   };
 
   const handleMultiSelectChange = (
-    field: 'includedProductIds' | 'excludedProductIds',
+    field: 'includedProductIds' | 'excludedProductIds' | 'businessIds',
     id: string
   ) => {
     setFormData(prev => {
@@ -263,6 +289,97 @@ export default function OfferForm({
           </h2>
         </CardHeader>
         <CardContent className="space-y-6">
+          <div className="grid gap-2">
+            <Label htmlFor="offerScope">Offer Scope</Label>
+            <RadioGroup
+              defaultValue="ALL_LISTINGS"
+              onValueChange={
+                (value: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS') =>
+                  handleSelectChange('offerScope', value)
+              }
+              className="flex space-x-4"
+            >
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="ALL_LISTINGS" id="all-listings" />
+                <Label htmlFor="all-listings">All Listings</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="SPECIFIC_LISTINGS"
+                  id="specific-listings"
+                />
+                <Label htmlFor="specific-listings">Specific Listings</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="SPECIFIC_PRODUCTS"
+                  id="specific-products"
+                />
+                <Label htmlFor="specific-products">Specific Products</Label>
+              </div>
+            </RadioGroup>
+          </div>
+          {formData.offerScope === 'SPECIFIC_LISTINGS' && (
+            <div className="grid gap-2">
+              <Label htmlFor="businessIds">Businesses</Label>
+              <Popover
+                open={openBusinessIds}
+                onOpenChange={setOpenBusinessIds}
+              >
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    role="combobox"
+                    aria-expanded={openBusinessIds}
+                    className="w-full justify-between"
+                  >
+                    {formData.businessIds.length > 0
+                      ? `${formData.businessIds.length} business(es) selected`
+                      : 'Select businesses...'}
+                    <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-full p-0">
+                  <Command>
+                    <CommandInput placeholder="Search businesses..." />
+                    <CommandEmpty>No businesses found.</CommandEmpty>
+                    <CommandGroup>
+                      {isLoadingListings ? (
+                        <CommandItem>Loading...</CommandItem>
+                      ) : (
+                        listings?.map((listing: InHouseBusiness) => (
+                          <CommandItem
+                            key={listing.id}
+                            onSelect={() =>
+                              handleMultiSelectChange(
+                                'businessIds',
+                                listing.id
+                              )
+                            }
+                          >
+                            <Check
+                              className={cn(
+                                'mr-2 h-4 w-4',
+                                formData.businessIds.includes(listing.id)
+                                  ? 'opacity-100'
+                                  : 'opacity-0'
+                              )}
+                            />
+                            {listing.businessName}
+                          </CommandItem>
+                        ))
+                      )}
+                    </CommandGroup>
+                  </Command>
+                </PopoverContent>
+              </Popover>
+              {errors.businessIds && (
+                <p className="text-base text-red-600 mt-1">
+                  {errors.businessIds}
+                </p>
+              )}
+            </div>
+          )}
           <div className="grid gap-2">
             <Label htmlFor="name">Offer Name</Label>
             <Input
@@ -573,6 +690,11 @@ export default function OfferForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {errors.includedProductIds && (
+              <p className="text-base text-red-600 mt-1">
+                {errors.includedProductIds}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="excludedProductIds">Excluded Products</Label>
