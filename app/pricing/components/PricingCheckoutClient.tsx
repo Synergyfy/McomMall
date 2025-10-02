@@ -15,7 +15,7 @@ import {
   PaygOption,
 } from '@/service/payments/types';
 import SubscriptionSummary from './SubscriptionSummary';
-import PaymentForm from '@/app/checkout/components/PaymentForm';
+import PaymentForm from '@/app/(public)/checkout/components/PaymentForm';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
 
