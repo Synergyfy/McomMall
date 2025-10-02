@@ -13,7 +13,6 @@ import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
-import { useRecordOrder } from '@/hooks/useRecordOrder';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
@@ -68,7 +67,6 @@ export default function CheckoutClient() {
 
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
-  const { mutate: recordOrder } = useRecordOrder();
   const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
@@ -188,7 +186,7 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
-      const checkoutData = {
+      const checkoutData: any = {
         payment: {
           paymentMethod,
           amount: totalPrice,
@@ -200,22 +198,16 @@ export default function CheckoutClient() {
         voucherCode: voucherCode || undefined,
       };
 
-      if (fromCart) {
-        checkout(checkoutData, {
-          onSuccess: () => setSuccessModalOpen(true),
-        });
-      } else if (product) {
-        recordOrder(
-          {
-            ...checkoutData,
-            productId: product.id,
-            quantity,
-          },
-          {
-            onSuccess: () => setSuccessModalOpen(true),
-          }
-        );
+      if (!fromCart && product) {
+        checkoutData.directPurchase = {
+          productId: product.id,
+          quantity,
+        };
       }
+
+      checkout(checkoutData, {
+        onSuccess: () => setSuccessModalOpen(true),
+      });
     },
     [
       fromCart,
@@ -223,7 +215,6 @@ export default function CheckoutClient() {
       quantity,
       totalPrice,
       checkout,
-      recordOrder,
       couponCode,
       selectedOffer,
       giftCardCode,

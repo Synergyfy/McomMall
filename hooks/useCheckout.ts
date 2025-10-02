@@ -8,8 +8,23 @@ export interface PaymentDto {
   amount: number;
 }
 
+export interface DirectPurchaseDto {
+  productId: string;
+  quantity: number;
+}
+
+export interface GiftCardPurchaseDto {
+  businessId: string;
+  amount: number;
+  recipientEmail: string;
+  message?: string;
+  fromName: string;
+}
+
 export interface CreateCheckoutDto {
   payment: PaymentDto;
+  directPurchase?: DirectPurchaseDto;
+  giftCardPurchases?: GiftCardPurchaseDto[];
   couponCode?: string;
   offerId?: string;
   voucherCode?: string;
@@ -17,10 +32,19 @@ export interface CreateCheckoutDto {
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
-  const { payment, couponCode, offerId, voucherCode, giftCardCode } =
-    checkoutData;
+  const {
+    payment,
+    directPurchase,
+    giftCardPurchases,
+    couponCode,
+    offerId,
+    voucherCode,
+    giftCardCode,
+  } = checkoutData;
   const { data } = await api.post('/order/checkout', {
     payment,
+    directPurchase,
+    giftCardPurchases,
     couponCode,
     offerId,
     voucherCode,
