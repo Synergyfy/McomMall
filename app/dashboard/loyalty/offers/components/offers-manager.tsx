@@ -178,7 +178,9 @@ export function OffersManager() {
                         <TableCell>
                           {offer.offerScope === 'ALL_LISTINGS'
                             ? 'All Listings'
-                            : 'Specific Listings'}
+                            : offer.offerScope === 'SPECIFIC_LISTINGS'
+                            ? 'Specific Listings'
+                            : 'Specific Products'}
                         </TableCell>
                         <TableCell>{offer.description}</TableCell>
                         <TableCell>{offer.points.toLocaleString()}</TableCell>

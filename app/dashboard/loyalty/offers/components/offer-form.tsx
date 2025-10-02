@@ -71,7 +71,7 @@ interface FormData {
   allowLimitToReset: boolean;
   includedProductIds: string[];
   excludedProductIds: string[];
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS';
+  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
   businessIds: string[];
 }
 
@@ -83,6 +83,8 @@ interface FormErrors {
   discountPercentage?: string;
   freeProductId?: string;
   bonusPoints?: string;
+  businessIds?: string;
+  includedProductIds?: string;
 }
 
 interface OfferFormProps {
@@ -197,6 +199,19 @@ export default function OfferForm({
     ) {
       newErrors.bonusPoints = 'Bonus points must be a positive integer.';
     }
+    if (
+      formData.offerScope === 'SPECIFIC_LISTINGS' &&
+      formData.businessIds.length === 0
+    ) {
+      newErrors.businessIds = 'At least one business must be selected.';
+    }
+    if (
+      formData.offerScope === 'SPECIFIC_PRODUCTS' &&
+      formData.includedProductIds.length === 0
+    ) {
+      newErrors.includedProductIds =
+        'At least one product must be selected.';
+    }
     return newErrors;
   };
 
@@ -278,8 +293,9 @@ export default function OfferForm({
             <Label htmlFor="offerScope">Offer Scope</Label>
             <RadioGroup
               defaultValue="ALL_LISTINGS"
-              onValueChange={(value: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS') =>
-                handleSelectChange('offerScope', value)
+              onValueChange={
+                (value: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS') =>
+                  handleSelectChange('offerScope', value)
               }
               className="flex space-x-4"
             >
@@ -293,6 +309,13 @@ export default function OfferForm({
                   id="specific-listings"
                 />
                 <Label htmlFor="specific-listings">Specific Listings</Label>
+              </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem
+                  value="SPECIFIC_PRODUCTS"
+                  id="specific-products"
+                />
+                <Label htmlFor="specific-products">Specific Products</Label>
               </div>
             </RadioGroup>
           </div>
@@ -350,6 +373,11 @@ export default function OfferForm({
                   </Command>
                 </PopoverContent>
               </Popover>
+              {errors.businessIds && (
+                <p className="text-base text-red-600 mt-1">
+                  {errors.businessIds}
+                </p>
+              )}
             </div>
           )}
           <div className="grid gap-2">
@@ -662,6 +690,11 @@ export default function OfferForm({
                 </Command>
               </PopoverContent>
             </Popover>
+            {errors.includedProductIds && (
+              <p className="text-base text-red-600 mt-1">
+                {errors.includedProductIds}
+              </p>
+            )}
           </div>
           <div className="grid gap-2">
             <Label htmlFor="excludedProductIds">Excluded Products</Label>

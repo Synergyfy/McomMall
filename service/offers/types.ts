@@ -34,7 +34,7 @@ export interface Offer {
   allowLimitToReset?: boolean;
   includedProducts?: Product[];
   excludedProducts?: Product[];
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS';
+  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
   businessIds?: string[];
   created_at: string; // ISO
   updated_at: string; // ISO
@@ -42,7 +42,7 @@ export interface Offer {
 
 // Based on the Create Offer DTO
 export interface CreateOfferDto {
-  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS';
+  offerScope: 'ALL_LISTINGS' | 'SPECIFIC_LISTINGS' | 'SPECIFIC_PRODUCTS';
   businessIds?: string[];
   name: string;
   description?: string;
