@@ -17,6 +17,8 @@ import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, 
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchServices } from '@/service/services/hooks';
 import { IService } from '@/service/services/types';
+import { ScrollArea } from '@/components/ui/scroll-area';
+import { cn } from '@/lib/utils';
 
 interface ServicePlusModalProps {
   isOpen: boolean;
@@ -43,7 +45,7 @@ export default function ServicePlusModal({
 
   const handleRequestPartnership = () => {
     if (selectedService) {
-        requestPartnership({ providerId: selectedService.owner.id }, {
+        requestPartnership({ providerId: selectedService.business.id }, {
             onSuccess: () => {
                 toast.success('Partnership request sent successfully!');
                 setShowConfirmation(false);
@@ -63,48 +65,60 @@ export default function ServicePlusModal({
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
-          <DialogTitle>Add Service Plus</DialogTitle>
+          <DialogTitle>Add Service Plus Partner</DialogTitle>
           <DialogDescription>
-            Search for a service to recommend to your customers.
+            Search for a service to recommend to your customers. A partnership request will be sent to the business owner.
           </DialogDescription>
         </DialogHeader>
-        <div className="grid gap-4 py-4">
+        <div className="grid gap-4 pt-4">
           <div className="flex items-center space-x-2">
             <Input
               id="search-service"
-              placeholder="Search by service name or description..."
+              placeholder="e.g., 'plumbing', 'electrician', 'cleaning'"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
             />
             <Button onClick={handleSearch} disabled={isSearching}>
               {isSearching ? 'Searching...' : 'Search'}
             </Button>
           </div>
-          <div className="mt-4 max-h-60 overflow-y-auto">
-            {services?.map((service: IService) => (
-              <div
-                key={service.id}
-                className={`flex items-center gap-4 p-2 rounded-md cursor-pointer ${selectedService?.id === service.id ? 'bg-muted' : ''}`}
-                onClick={() => setSelectedService(service)}
-              >
-                <Avatar>
-                    <AvatarImage src={service.owner.profilePictureUrl} />
-                    <AvatarFallback>{service.owner.name.charAt(0)}</AvatarFallback>
-                </Avatar>
-                <div>
-                    <h4 className="font-semibold">{service.name}</h4>
-                    <p className="text-sm text-muted-foreground">by {service.owner.name}</p>
-                </div>
-              </div>
-            ))}
-          </div>
+          <ScrollArea className="h-72 w-full rounded-md border">
+            <div className="p-4">
+                {services && services.length > 0 ? (
+                    services.map((service: IService) => (
+                    <div
+                        key={service.id}
+                        className={cn(
+                            'flex items-center gap-4 p-3 rounded-lg cursor-pointer transition-colors',
+                            selectedService?.id === service.id ? 'bg-red-100' : 'hover:bg-gray-100'
+                        )}
+                        onClick={() => setSelectedService(service)}
+                    >
+                        <Avatar className="h-12 w-12 border">
+                            <AvatarImage src={service.business.logoUrl || ''} alt={service.business.businessName} />
+                            <AvatarFallback>{service.business.businessName.charAt(0)}</AvatarFallback>
+                        </Avatar>
+                        <div className="flex-1">
+                            <h4 className="font-semibold text-gray-800">{service.name}</h4>
+                            <p className="text-sm text-gray-500">by {service.business.businessName}</p>
+                        </div>
+                    </div>
+                    ))
+                ) : (
+                    <div className="text-center text-gray-500 py-10">
+                        <p>No services found. Try a different search term.</p>
+                    </div>
+                )}
+            </div>
+          </ScrollArea>
         </div>
         <DialogFooter>
           <Button variant="outline" onClick={onClose}>
             Cancel
           </Button>
-          <Button onClick={() => setShowConfirmation(true)} disabled={!selectedService}>
-            Send Request
+          <Button onClick={() => setShowConfirmation(true)} disabled={!selectedService || isRequesting}>
+            {isRequesting ? 'Sending...' : 'Send Request'}
           </Button>
         </DialogFooter>
       </DialogContent>
@@ -115,13 +129,13 @@ export default function ServicePlusModal({
             <AlertDialogHeader>
                 <AlertDialogTitle>Confirm Partnership Request</AlertDialogTitle>
                 <AlertDialogDescription>
-                    Are you sure you want to send a partnership request to the provider of &quot;{selectedService?.name}&quot;?
+                    Send a partnership request to <span className="font-semibold">{selectedService?.business.businessName}</span> for their service: <span className="font-semibold">&quot;{selectedService?.name}&quot;</span>?
                 </AlertDialogDescription>
             </AlertDialogHeader>
             <AlertDialogFooter>
                 <AlertDialogCancel>Cancel</AlertDialogCancel>
                 <AlertDialogAction onClick={handleRequestPartnership} disabled={isRequesting}>
-                    {isRequesting ? 'Sending...' : 'Confirm'}
+                    {isRequesting ? 'Sending...' : 'Confirm & Send'}
                 </AlertDialogAction>
             </AlertDialogFooter>
         </AlertDialogContent>

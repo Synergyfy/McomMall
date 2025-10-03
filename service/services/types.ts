@@ -12,10 +12,10 @@ export interface SearchServiceDto {
   term: string;
 }
 
-import { User } from '../user/types';
+import { IBusiness } from '../merchant/types';
 
 export interface IService extends Service {
-  owner: User;
+  business: IBusiness;
 }
 
 export interface CreateServiceDto {
