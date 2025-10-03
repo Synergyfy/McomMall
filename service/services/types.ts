@@ -8,6 +8,10 @@ export interface BundledService {
   updated_at: string;
 }
 
+export interface SearchServiceDto {
+  term: string;
+}
+
 import { User } from '../user/types';
 
 export interface IService extends Service {
