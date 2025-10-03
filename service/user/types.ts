@@ -1,34 +1,26 @@
+import { UserRole } from "@/service/auth/types";
+
+export type SocialPlatform =
+  | 'twitter'
+  | 'facebook'
+  | 'linkedin'
+  | 'instagram'
+  | 'youtube';
+
 export interface Socials {
-  id: string;
-  twitter?: string;
-  facebook?: string;
-  instagram?: string;
-  linkedin?: string;
-  youtube?: string;
+    twitter?: string;
+    facebook?: string;
+    linkedin?: string;
+    instagram?: string;
+    youtube?: string;
 }
 
-export interface User {
-  id: string;
-  name: string;
-  email: string;
-  phoneNumber?: string;
-  isActive: boolean;
-  isEmailVerified: boolean;
-  role:string;
-  socials: Socials;
-  profilePictureUrl?: string;
-}
-
-export interface UpdateUserDto {
-  name?: string;
-  phoneNumber?: string;
-  socials?: Partial<Omit<Socials, 'id'>>;
-  profilePictureUrl?: string;
-}
-
-export interface CustomerStats {
-  totalOrders: number;
-  totalSpent: number;
-  promotionPoints: number;
-  promotionsParticipating: number;
-}
+export interface IUser {
+    id: string;
+    name: string;
+    email: string;
+    phoneNumber?: string;
+    profilePictureUrl?: string;
+    role: UserRole;
+    socials?: Socials;
+  }

@@ -19,6 +19,7 @@ import {
   Megaphone,
   CreditCard,
   History,
+  Users,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -187,6 +188,15 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
       { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
       { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
+    ],
+  },
+  {
+    title: 'Partnerships',
+    href: '/dashboard/partnerships',
+    icon: Users,
+    subMenu: [
+        { title: 'Partnership Requests', href: '/dashboard/partnerships/requests' },
+        { title: 'My Partners', href: '/dashboard/partnerships/my-partners' },
     ],
   },
 ];

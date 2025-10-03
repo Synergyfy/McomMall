@@ -455,9 +455,8 @@ export default function StoreDashboard() {
                           className="mobile-table-cell md:table-cell"
                         >
                           <Link
-                            href={`/products/${product.id}`}
+                            href={`/dashboard/product/${product.id}`}
                             passHref
-                            target="_blank"
                           >
                             <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
                               {firstImageUrl ? (
@@ -477,9 +476,8 @@ export default function StoreDashboard() {
                           className="mobile-table-cell md:table-cell font-medium text-gray-800"
                         >
                           <Link
-                            href={`/products/${product.id}`}
+                            href={`/dashboard/product/${product.id}`}
                             className="hover:underline"
-                            target="_blank"
                           >
                             {product.title}
                           </Link>

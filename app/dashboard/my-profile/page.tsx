@@ -17,7 +17,7 @@ import {
   useGetUserProfile,
   useUpdateUserProfile,
 } from '../../../service/user/hook';
-import { User, Socials } from '../../../service/user/types';
+import { IUser as User, Socials } from '../../../service/user/types';
 import { toast } from 'sonner';
 import { uploadFile } from '../../../lib/upload';
 
