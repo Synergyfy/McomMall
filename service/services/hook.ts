@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { Service } from './types';
+import { Service, IService } from './types';
 
 const getMyServices = async (): Promise<Service[]> => {
   const { data } = await api.get('/services');
@@ -26,6 +26,19 @@ export const useDeleteService = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-services'] });
     },
+  });
+};
+
+const searchServices = async (term: string): Promise<IService[]> => {
+  const { data } = await api.get('/services/search', {
+    params: { term },
+  });
+  return data;
+};
+
+export const useSearchServices = () => {
+  return useMutation({
+    mutationFn: searchServices,
   });
 };
 

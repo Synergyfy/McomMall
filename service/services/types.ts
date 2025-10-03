@@ -8,6 +8,12 @@ export interface BundledService {
   updated_at: string;
 }
 
+import { User } from '../user/types';
+
+export interface IService extends Service {
+  owner: User;
+}
+
 export interface CreateServiceDto {
   name: string;
   description?: string;
