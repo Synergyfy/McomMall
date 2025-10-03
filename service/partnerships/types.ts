@@ -1,16 +1,25 @@
+import { Product } from '../listings/types';
+import { IService } from '../services/types';
 import { User } from '../user/types';
 
-export type PartnershipStatus = 'pending' | 'accepted' | 'rejected' | 'terminated';
+export type PartnershipRequestStatus = 'pending' | 'accepted' | 'declined';
 
-export interface IPartnership {
-  id: string;
-  status: PartnershipStatus;
-  requester: User;
-  provider: User;
-  created_at: string;
-  updated_at: string;
+export interface CreatePartnershipRequestDto {
+  productId: string;
+  serviceId: string;
 }
 
-export interface CreatePartnershipDto {
-    providerId: string;
+export interface RespondToPartnershipRequestDto {
+  status: 'accepted' | 'declined';
+}
+
+export interface PartnershipRequest {
+  id: string;
+  status: PartnershipRequestStatus;
+  product: Product;
+  service: IService;
+  requestingUser: User;
+  serviceOwner: User;
+  created_at: string;
+  updated_at: string;
 }

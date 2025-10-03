@@ -1,90 +1,75 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { CreatePartnershipDto, IPartnership } from './types';
-import { User } from '../user/types';
+import {
+  CreatePartnershipRequestDto,
+  PartnershipRequest,
+  RespondToPartnershipRequestDto,
+} from './types';
 
-// Fetch all partnerships for the current user
-const getMyPartnerships = async (): Promise<IPartnership[]> => {
-  const { data } = await api.get('/partnerships/my');
+// Create a new partnership request
+const createPartnershipRequest = async (dto: CreatePartnershipRequestDto): Promise<PartnershipRequest> => {
+  const { data } = await api.post('/partnerships', dto);
   return data;
 };
 
-export const useGetMyPartnerships = () => {
-  return useQuery({
-    queryKey: ['my-partnerships'],
-    queryFn: getMyPartnerships,
-  });
-};
-
-// Fetch all accepted partners for the current user
-const getMyAcceptedPartners = async (): Promise<User[]> => {
-    const { data } = await api.get('/partnerships/my/accepted-partners');
-    return data;
-};
-
-export const useGetMyAcceptedPartners = () => {
-    return useQuery({
-        queryKey: ['my-accepted-partners'],
-        queryFn: getMyAcceptedPartners,
-    });
-}
-
-// Request a new partnership
-const requestPartnership = async (partnershipData: CreatePartnershipDto) => {
-  const { data } = await api.post('/partnerships/request', partnershipData);
-  return data;
-};
-
-export const useRequestPartnership = () => {
+export const useCreatePartnershipRequest = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: requestPartnership,
+  return useMutation<PartnershipRequest, Error, CreatePartnershipRequestDto>({
+    mutationFn: createPartnershipRequest,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-partnerships'] });
+      queryClient.invalidateQueries({ queryKey: ['sent-partnership-requests'] });
     },
   });
 };
 
-// Accept a partnership request
-const acceptPartnership = async (partnershipId: string) => {
-  const { data } = await api.patch(`/partnerships/${partnershipId}/accept`);
+// Respond to a partnership request
+const respondToPartnershipRequest = async ({
+  id,
+  dto,
+}: {
+  id: string;
+  dto: RespondToPartnershipRequestDto;
+}): Promise<PartnershipRequest> => {
+  const { data } = await api.patch(`/partnerships/requests/${id}/respond`, dto);
   return data;
 };
 
-export const useAcceptPartnership = () => {
+export const useRespondToPartnershipRequest = () => {
   const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: acceptPartnership,
+  return useMutation<
+    PartnershipRequest,
+    Error,
+    { id: string; dto: RespondToPartnershipRequestDto }
+  >({
+    mutationFn: respondToPartnershipRequest,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-partnerships'] });
+      queryClient.invalidateQueries({ queryKey: ['received-partnership-requests'] });
     },
   });
 };
 
-// Reject a partnership request
-const rejectPartnership = async (partnershipId: string) => {
-  const { data } = await api.patch(`/partnerships/${partnershipId}/reject`);
+// Get all partnership requests sent by the current user
+const getSentPartnershipRequests = async (): Promise<PartnershipRequest[]> => {
+  const { data } = await api.get('/partnerships/requests/sent');
   return data;
 };
 
-export const useRejectPartnership = () => {
-  const queryClient = useQueryClient();
-  return useMutation({
-    mutationFn: rejectPartnership,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-partnerships'] });
-    },
+export const useGetSentPartnershipRequests = () => {
+  return useQuery<PartnershipRequest[], Error>({
+    queryKey: ['sent-partnership-requests'],
+    queryFn: getSentPartnershipRequests,
   });
 };
 
-// Search for owners with service profiles
-const searchOwners = async (params: { skills?: string[]; serviceArea?: string }): Promise<User[]> => {
-    const { data } = await api.get('/users/search/owners-with-service-profiles', { params });
-    return data;
+// Get all partnership requests received by the current user
+const getReceivedPartnershipRequests = async (): Promise<PartnershipRequest[]> => {
+  const { data } = await api.get('/partnerships/requests/received');
+  return data;
 };
 
-export const useSearchOwners = () => {
-    return useMutation({
-        mutationFn: searchOwners,
-    });
+export const useGetReceivedPartnershipRequests = () => {
+  return useQuery<PartnershipRequest[], Error>({
+    queryKey: ['received-partnership-requests'],
+    queryFn: getReceivedPartnershipRequests,
+  });
 };
