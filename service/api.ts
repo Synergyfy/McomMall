@@ -1,4 +1,5 @@
 import axios from 'axios';
+import Cookies from 'js-cookie';
 
 export const baseURL =
   process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3009';
@@ -14,5 +15,11 @@ const api = axios.create({
 export const setBearerToken = (token: string) => {
   api.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 };
+
+// Initialize the token from cookies when the application loads
+const initialToken = Cookies.get('access');
+if (initialToken) {
+  setBearerToken(initialToken);
+}
 
 export default api;
