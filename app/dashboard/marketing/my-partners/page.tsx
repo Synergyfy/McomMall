@@ -9,24 +9,25 @@ import {
 } from '@/service/partnerships/hooks';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Badge } from '@/components/ui/badge';
+import { Badge, badgeVariants } from '@/components/ui/badge';
 import { PartnershipRequest, PartnershipRequestStatus } from '@/service/partnerships/types';
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Handshake, Info, ArrowUpRight, ArrowDownRight, CheckCircle, XCircle, Users, Send, GitPullRequestReceive } from 'lucide-react';
-import { Product } from '@/service/listings/types';
-import { IService } from '@/service/services/types';
-import { User } from '@/service/user/types';
+import { Handshake, Info, CheckCircle, XCircle, Users, Send, GitPullRequest } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { Toaster, toast } from 'sonner';
-import { useAppSelector } from '@/service/store/hooks';
+import { TypedUseSelectorHook, useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { VariantProps } from 'class-variance-authority';
 
+const useAppSelector: TypedUseSelectorHook<RootState> = useSelector;
 
-const getStatusUi = (status: PartnershipRequestStatus) => {
+type BadgeVariant = VariantProps<typeof badgeVariants>['variant'];
+
+const getStatusUi = (status: PartnershipRequestStatus): { variant: BadgeVariant; icon: React.ReactNode; text: string } => {
   switch (status) {
     case 'accepted':
-      return { variant: 'success', icon: <CheckCircle className="h-4 w-4" />, text: 'Accepted' };
+      return { variant: 'default', icon: <CheckCircle className="h-4 w-4" />, text: 'Accepted' };
     case 'declined':
       return { variant: 'destructive', icon: <XCircle className="h-4 w-4" />, text: 'Declined' };
     case 'pending':
@@ -120,7 +121,8 @@ const ReceivedRequestCard = ({ request }: { request: PartnershipRequest }) => {
   );
 };
 
-const AcceptedPartnerCard = ({ partnership, currentUserId }: { partnership: PartnershipRequest, currentUserId: string | null }) => {
+const AcceptedPartnerCard = ({ partnership, currentUserId }: { partnership: PartnershipRequest, currentUserId?: string | null }) => {
+    if (!currentUserId) return null; // Should not happen in practice for this card
     const partner = partnership.requestingUser.id === currentUserId ? partnership.serviceOwner : partnership.requestingUser;
     const myAsset = partnership.requestingUser.id === currentUserId ? partnership.product : partnership.service;
     const partnerAsset = partnership.requestingUser.id === currentUserId ? partnership.service : partnership.product;
@@ -139,7 +141,7 @@ const AcceptedPartnerCard = ({ partnership, currentUserId }: { partnership: Part
                         <CardDescription className="text-xs">Active Partner</CardDescription>
                     </div>
                 </div>
-                <Badge variant="success" className="capitalize flex items-center gap-1.5 text-xs py-1 px-2.5">
+                <Badge variant="default" className="capitalize flex items-center gap-1.5 text-xs py-1 px-2.5 bg-green-500 text-white">
                     <Handshake className="h-4 w-4" />Partnership
                 </Badge>
             </CardHeader>
@@ -149,7 +151,7 @@ const AcceptedPartnerCard = ({ partnership, currentUserId }: { partnership: Part
                     <p>{'title' in myAsset ? myAsset.title : myAsset.name}</p>
                 </div>
                 <div>
-                    <p className="font-semibold text-gray-800">Partner's Asset:</p>
+                    <p className="font-semibold text-gray-800">Partner&apos;s Asset:</p>
                     <p>{'title' in partnerAsset ? partnerAsset.title : partnerAsset.name}</p>
                 </div>
             </CardContent>
@@ -158,13 +160,23 @@ const AcceptedPartnerCard = ({ partnership, currentUserId }: { partnership: Part
   );
 };
 
-const PartnershipTabContent = ({ requests, isLoading, isError, error, CardComponent, emptyState, currentUserId }: any) => {
+interface PartnershipTabContentProps {
+  requests: PartnershipRequest[] | undefined;
+  isLoading: boolean;
+  isError: boolean;
+  error: Error | null;
+  CardComponent: React.ComponentType<{ request: PartnershipRequest; partnership: PartnershipRequest; currentUserId?: string | null }>;
+  emptyState: React.ReactNode;
+  currentUserId?: string | null;
+}
+
+const PartnershipTabContent = ({ requests, isLoading, isError, error, CardComponent, emptyState, currentUserId }: PartnershipTabContentProps) => {
   if (isLoading) {
     return <div className="p-8 text-center"><p>Loading...</p></div>;
   }
 
   if (isError) {
-    return <div className="p-8 text-red-500 text-center"><p>Error: {error.message}</p></div>;
+    return <div className="p-8 text-red-500 text-center"><p>Error: {error?.message || 'An unknown error occurred.'}</p></div>;
   }
 
   return (
@@ -208,7 +220,7 @@ export default function MyPartnersPage() {
 
       <Tabs defaultValue="sent" className="w-full">
         <TabsList className="grid w-full grid-cols-3 bg-gray-100 rounded-xl p-1 h-12">
-          <TabsTrigger value="sent" className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg">Sent</TabsTrigger>
+          <TabsTrigger value="sent" className="text-.sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg">Sent</TabsTrigger>
           <TabsTrigger value="received" className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg">Received</TabsTrigger>
           <TabsTrigger value="accepted" className="text-sm font-semibold data-[state=active]:bg-white data-[state=active]:shadow-md rounded-lg">Partners</TabsTrigger>
         </TabsList>
@@ -221,7 +233,7 @@ export default function MyPartnersPage() {
                 isError={isErrorSent}
                 error={errorSent}
                 CardComponent={SentRequestCard}
-                emptyState={<EmptyState icon={<Send size={48} />} title="No Sent Requests" description="You haven't sent any partnership requests yet." />}
+                emptyState={<EmptyState icon={<Send size={48} />} title="No Sent Requests" description="You haven&apos;t sent any partnership requests yet." />}
             />
             </TabsContent>
             <TabsContent value="received">
@@ -231,7 +243,7 @@ export default function MyPartnersPage() {
                 isError={isErrorReceived}
                 error={errorReceived}
                 CardComponent={ReceivedRequestCard}
-                emptyState={<EmptyState icon={<GitPullRequestReceive size={48} />} title="No Received Requests" description="You haven't received any partnership requests yet." />}
+                emptyState={<EmptyState icon={<GitPullRequest size={48} />} title="No Received Requests" description="You haven&apos;t received any partnership requests yet." />}
             />
             </TabsContent>
             <TabsContent value="accepted">
@@ -241,7 +253,7 @@ export default function MyPartnersPage() {
                 isError={isErrorAccepted}
                 error={errorAccepted}
                 CardComponent={AcceptedPartnerCard}
-                emptyState={<EmptyState icon={<Users size={48} />} title="No Accepted Partners" description="You don't have any accepted partners yet." />}
+                emptyState={<EmptyState icon={<Users size={48} />} title="No Accepted Partners" description="You don&apos;t have any accepted partners yet." />}
                 currentUserId={currentUserId}
             />
             </TabsContent>
