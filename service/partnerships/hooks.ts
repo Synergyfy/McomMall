@@ -73,3 +73,16 @@ export const useGetReceivedPartnershipRequests = () => {
     queryFn: getReceivedPartnershipRequests,
   });
 };
+
+// Get all accepted partnerships for the current user
+const getAcceptedPartners = async (): Promise<PartnershipRequest[]> => {
+  const { data } = await api.get('/partnerships/my/accepted-partners');
+  return data;
+};
+
+export const useGetAcceptedPartners = () => {
+  return useQuery<PartnershipRequest[], Error>({
+    queryKey: ['accepted-partners'],
+    queryFn: getAcceptedPartners,
+  });
+};
