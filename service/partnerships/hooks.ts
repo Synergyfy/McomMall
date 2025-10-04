@@ -8,7 +8,7 @@ import {
 
 // Create a new partnership request
 const createPartnershipRequest = async (dto: CreatePartnershipRequestDto): Promise<PartnershipRequest> => {
-  const { data } = await api.post('/partnerships', dto);
+  const { data } = await api.post('/partnerships/requests', dto);
   return data;
 };
 
