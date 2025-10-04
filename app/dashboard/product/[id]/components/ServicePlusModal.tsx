@@ -13,7 +13,6 @@ import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCreatePartnershipRequest } from '@/service/partnerships/hooks';
 import { toast } from 'sonner';
-import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchServices } from '@/service/services/hooks';
 import { IService } from '@/service/services/types';
@@ -35,7 +34,6 @@ export default function ServicePlusModal({
 }: ServicePlusModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState<IService | null>(null);
-  const [showConfirmation, setShowConfirmation] = useState(false);
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -63,7 +61,6 @@ export default function ServicePlusModal({
           setRequestError('An unknown error occurred.');
         }
       } finally {
-        setShowConfirmation(false);
         setShowResultDialog(true);
       }
     }
@@ -132,29 +129,12 @@ export default function ServicePlusModal({
             <Button variant="outline" onClick={onClose}>
               Cancel
             </Button>
-            <Button onClick={() => setShowConfirmation(true)} disabled={!selectedService || isRequesting}>
+            <Button onClick={handleRequestPartnership} disabled={!selectedService || isRequesting}>
               {isRequesting ? 'Sending...' : 'Send Request'}
             </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      <AlertDialog open={showConfirmation} onOpenChange={setShowConfirmation}>
-        <AlertDialogContent>
-          <AlertDialogHeader>
-            <AlertDialogTitle>Confirm Partnership Request</AlertDialogTitle>
-            <AlertDialogDescription>
-              Send a partnership request to <span className="font-semibold">{selectedService?.business.businessName}</span> for their service: <span className="font-semibold">&quot;{selectedService?.name}&quot;</span>?
-            </AlertDialogDescription>
-          </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleRequestPartnership} disabled={isRequesting}>
-              {isRequesting ? 'Sending...' : 'Confirm & Send'}
-            </AlertDialogAction>
-          </AlertDialogFooter>
-        </AlertDialogContent>
-      </AlertDialog>
 
       <SuccessDialog
         isOpen={showResultDialog}
