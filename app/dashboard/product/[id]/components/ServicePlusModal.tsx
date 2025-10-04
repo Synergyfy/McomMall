@@ -40,7 +40,7 @@ export default function ServicePlusModal({
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const { data: services, mutate: searchServices, isPending: isSearching } = useSearchServices();
-  const { mutate: createPartnership, isPending: isRequesting } = useCreatePartnershipRequest();
+  const { mutateAsync: createPartnership, isPending: isRequesting } = useCreatePartnershipRequest();
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -48,23 +48,24 @@ export default function ServicePlusModal({
     }
   };
 
-  const handleRequestPartnership = () => {
+  const handleRequestPartnership = async () => {
     if (selectedService) {
-      createPartnership(
-        { productId, serviceId: selectedService.id },
-        {
-          onSuccess: () => {
-            setRequestError(null);
-            setShowConfirmation(false);
-            setShowResultDialog(true);
-          },
-          onError: (error: Error) => {
-            setRequestError(error.message || 'An unknown error occurred.');
-            setShowConfirmation(false);
-            setShowResultDialog(true);
-          },
+      try {
+        await createPartnership({
+          productId,
+          serviceId: selectedService.id,
+        });
+        setRequestError(null);
+      } catch (error: unknown) {
+        if (error instanceof Error) {
+          setRequestError(error.message);
+        } else {
+          setRequestError('An unknown error occurred.');
         }
-      );
+      } finally {
+        setShowConfirmation(false);
+        setShowResultDialog(true);
+      }
     }
   };
 
