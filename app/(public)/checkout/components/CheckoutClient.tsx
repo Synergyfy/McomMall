@@ -4,7 +4,7 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
-import OrderSummary from './OrderSummary';
+import OrderSummaryCard from './OrderSummaryCard';
 import PaymentForm from './PaymentForm';
 import CouponCodeInput from './CouponCodeInput';
 import GiftCardInput from './GiftCardInput';
@@ -47,18 +47,23 @@ export default function CheckoutClient() {
   const { cart, loading: isCartLoading } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
+
   const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [couponDiscount, setCouponDiscount] = useState(0);
   const [isCouponLoading, setCouponLoading] = useState(false);
+
   const [giftCardCode, setGiftCardCode] = useState('');
   const [giftCardDiscount, setGiftCardDiscount] = useState(0);
   const [isGiftCardLoading, setGiftCardLoading] = useState(false);
+
   const [voucherCode, setVoucherCode] = useState('');
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [isVoucherLoading, setVoucherLoading] = useState(false);
+
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
   );
@@ -85,17 +90,19 @@ export default function CheckoutClient() {
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
-  const basePrice = fromCart
-    ? cart?.items.reduce(
-        (acc, item) => acc + item.product.price * item.quantity,
-        0
-      ) || 0
-    : product
-    ? product.price * quantity
-    : 0;
+  const basePrice =
+    (fromCart
+      ? cart?.items.reduce(
+          (acc, item) => acc + item.product.price * item.quantity,
+          0
+        )
+      : product
+      ? product.price * quantity
+      : 0) || 0;
 
-  const totalPrice =
-    basePrice - discount - offerDiscount - giftCardDiscount - voucherDiscount;
+  const totalDiscount =
+    couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
+  const totalPrice = basePrice - totalDiscount;
 
   const handleApplyVoucher = async (code: string) => {
     setVoucherLoading(true);
@@ -105,7 +112,7 @@ export default function CheckoutClient() {
         const applicableDiscount = Math.min(result.balance, basePrice);
         setVoucherDiscount(applicableDiscount);
         setVoucherCode(code);
-        setDiscount(0);
+        setCouponDiscount(0);
         setCouponCode('');
         setOfferDiscount(0);
         setSelectedOffer(null);
@@ -130,7 +137,7 @@ export default function CheckoutClient() {
         const applicableDiscount = Math.min(result.currentBalance, basePrice);
         setGiftCardDiscount(applicableDiscount);
         setGiftCardCode(code);
-        setDiscount(0); // Reset coupon discount
+        setCouponDiscount(0); // Reset coupon discount
         setCouponCode('');
         setOfferDiscount(0); // Reset offer discount
         setSelectedOffer(null);
@@ -154,7 +161,7 @@ export default function CheckoutClient() {
         couponCode: code,
         productIds,
       });
-      setDiscount(result.discountAmount);
+      setCouponDiscount(result.discountAmount);
       setCouponCode(code);
       setOfferDiscount(0); // Reset offer discount
       setSelectedOffer(null);
@@ -175,7 +182,7 @@ export default function CheckoutClient() {
       });
       setOfferDiscount(result.discountAmount);
       setSelectedOffer(offerId);
-      setDiscount(0); // Reset coupon discount
+      setCouponDiscount(0); // Reset coupon discount
       setCouponCode('');
     } catch (error) {
       console.error('Failed to apply offer', error);
@@ -286,58 +293,80 @@ export default function CheckoutClient() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="container mx-auto px-4 py-12"
+        className="container mx-auto px-4 sm:px-6 lg:px-8 py-12"
       >
-        <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-800">
-          Secure Checkout
-        </h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <OrderSummary
-              product={product}
-              cart={cart}
-              fromCart={fromCart}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              discount={discount + offerDiscount}
-              totalPrice={totalPrice}
-            />
-            <div className="mt-8">
-              <CouponCodeInput
-                onApply={handleApplyCoupon}
-                isLoading={isCouponLoading}
-              />
-              <GiftCardInput
-                onApply={handleApplyGiftCard}
-                isLoading={isGiftCardLoading}
-              />
-              <VoucherInput
-                onApply={handleApplyVoucher}
-                isLoading={isVoucherLoading}
-              />
-              <ApplicableOffers
-                offers={applicableOffers || []}
-                onApply={handleApplyOffer}
-                isLoading={isOfferLoading || areOffersLoading}
-              />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            {isStripeLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <Loader className="animate-spin text-orange-600" size={32} />
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl lg:text-4xl font-extrabold text-center mb-12 text-gray-900">
+            Complete Your Purchase
+          </h1>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12">
+            {/* Left side: Payment and Discounts */}
+            <div className="lg:col-span-7 space-y-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Payment Information
+                </h2>
+                {isStripeLoading ? (
+                  <div className="flex justify-center items-center h-48">
+                    <Loader className="animate-spin text-orange-600" size={32} />
+                  </div>
+                ) : (
+                  <PaymentForm
+                    totalPrice={totalPrice}
+                    onPaymentSuccess={(transactionId) =>
+                      handlePaymentSuccess(transactionId, paymentMethod)
+                    }
+                    setPaymentMethod={setPaymentMethod}
+                    clientSecret={clientSecret}
+                    orderID={orderID}
+                  />
+                )}
               </div>
-            ) : (
-              <PaymentForm
-                totalPrice={totalPrice}
-                onPaymentSuccess={(transactionId) =>
-                  handlePaymentSuccess(transactionId, paymentMethod)
-                }
-                setPaymentMethod={setPaymentMethod}
-                clientSecret={clientSecret}
-                orderID={orderID}
-              />
-            )}
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Discounts & Offers
+                </h2>
+                <div className="space-y-4">
+                  <CouponCodeInput
+                    onApply={handleApplyCoupon}
+                    isLoading={isCouponLoading}
+                  />
+                  <GiftCardInput
+                    onApply={handleApplyGiftCard}
+                    isLoading={isGiftCardLoading}
+                  />
+                  <VoucherInput
+                    onApply={handleApplyVoucher}
+                    isLoading={isVoucherLoading}
+                  />
+                  <ApplicableOffers
+                    offers={applicableOffers || []}
+                    onApply={handleApplyOffer}
+                    isLoading={isOfferLoading || areOffersLoading}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: Order Summary */}
+            <div className="lg:col-span-5 mt-12 lg:mt-0">
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8 sticky top-8">
+                <OrderSummaryCard
+                  product={product}
+                  cart={cart}
+                  fromCart={fromCart}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  basePrice={basePrice}
+                  totalPrice={totalPrice}
+                  couponDiscount={couponDiscount}
+                  giftCardDiscount={giftCardDiscount}
+                  voucherDiscount={voucherDiscount}
+                  offerDiscount={offerDiscount}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>
