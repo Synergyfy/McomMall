@@ -102,7 +102,7 @@ export default function VoucherTabContent({
               )}
               <div className="mt-4">
                 <h4 className="text-sm font-semibold text-gray-700">
-                  Available Amounts:
+                  Pricing Options:
                 </h4>
                 <div className="mt-2 flex flex-wrap gap-2">
                   {product.fixedAmounts?.map(amount => (
@@ -114,6 +114,13 @@ export default function VoucherTabContent({
                       {amount}
                     </span>
                   ))}
+                  {product.allowCustomAmount && (
+                    <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800">
+                      Custom: {CURRENCY}
+                      {product.minCustomAmount} - {CURRENCY}
+                      {product.maxCustomAmount}
+                    </span>
+                  )}
                 </div>
               </div>
               <Button
