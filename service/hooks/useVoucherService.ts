@@ -98,7 +98,7 @@ export const useInitiateVoucherPurchase = () => {
     purchaseData: InitiateVoucherPurchaseDto
   ): Promise<StripeVoucherPurchaseResponse | PayPalVoucherPurchaseResponse> => {
     const response = await api.post(
-      '/vouchers/purchase/initiate',
+      '/vouchers/initiate-purchase',
       purchaseData
     );
     return response.data;
@@ -112,7 +112,7 @@ export const useVerifyVoucherPurchase = () => {
     verificationData: VerifyVoucherPurchaseDto
   ): Promise<Voucher> => {
     const response = await api.post(
-      '/vouchers/purchase/verify',
+      '/vouchers/verify-purchase',
       verificationData
     );
     // Revalidate the user's vouchers after a successful purchase
