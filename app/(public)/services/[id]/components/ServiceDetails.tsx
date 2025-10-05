@@ -4,7 +4,7 @@ import { useState } from 'react';
 import Image from 'next/image';
 import { useGetServiceById } from '@/service/services/hook';
 import { Button } from '@/components/ui/button';
-import { Star, Minus, Plus, Heart, Clock, Calendar, Users } from 'lucide-react';
+import { Star, Heart, Clock, Users, Award } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { toast } from 'sonner';
 import { BookingModal } from '@/components/BookingModal';
@@ -30,9 +30,9 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   if (isLoading) {
     return (
       <div className="container mx-auto px-4 py-8">
-        <div className="grid md:grid-cols-2 gap-8">
-          <div className="animate-pulse bg-gray-200 rounded-lg h-96"></div>
-          <div>
+        <div className="grid md:grid-cols-2 gap-12">
+          <div className="animate-pulse bg-gray-200 rounded-2xl h-[500px]"></div>
+          <div className="space-y-6">
             <div className="animate-pulse bg-gray-200 h-8 w-3/4 mb-4 rounded"></div>
             <div className="animate-pulse bg-gray-200 h-6 w-1/4 mb-4 rounded"></div>
             <div className="animate-pulse bg-gray-200 h-10 w-1/2 mb-4 rounded"></div>
@@ -44,11 +44,11 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   }
 
   if (isError) {
-    return <div>Error loading service.</div>;
+    return <div className="text-center py-20 text-red-500">Error loading service. Please try again later.</div>;
   }
 
   if (!service) {
-    return <div>Service not found.</div>;
+    return <div className="text-center py-20">Service not found.</div>;
   }
 
   const getPriceDisplay = (service: Service) => {
@@ -60,7 +60,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
       case 'perUnit':
         return `£${service.pricePerUnit}/${service.unitName}`;
       default:
-        return 'Price not available';
+        return 'Enquire for Price';
     }
   };
 
@@ -68,89 +68,93 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
     service.images?.find(isImageUrl) || 'https://via.placeholder.com/500x500.png?text=No+Image';
 
   return (
-    <div className="bg-gray-50/50">
+    <div className="bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           {/* Service Image */}
-          <div className="aspect-square relative w-full rounded-lg overflow-hidden shadow-lg">
+          <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
             <Image
               src={firstImageUrl}
               alt={service.name}
               fill
-              className="object-cover"
+              className="object-cover transition-transform duration-500 hover:scale-105"
             />
           </div>
 
           {/* Service Info */}
-          <div className="space-y-6">
-            <div className="space-y-2">
-              <h1 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <div className="space-y-8">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
                 {service.name}
               </h1>
               <div className="flex items-center">
-                <div className="flex items-center">
+                 <div className="flex items-center text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-5 w-5 ${
-                        i < 4 ? 'text-yellow-400 fill-current' : 'text-gray-300'
+                      className={`h-6 w-6 ${
+                        i < 4 ? 'fill-current' : ''
                       }`}
                     />
                   ))}
                 </div>
-                <span className="ml-2 text-sm text-gray-500">(5 Reviews)</span>
+                <span className="ml-3 text-md text-gray-600">(5 customer reviews)</span>
               </div>
             </div>
 
             <div>
-              <p className="text-4xl font-bold text-gray-900">
+              <p className="text-5xl font-bold text-gray-900">
                 {getPriceDisplay(service)}
               </p>
             </div>
 
-            <p className="text-gray-600 text-base leading-relaxed">
+            <p className="text-gray-700 text-lg leading-relaxed">
               {service.description}
             </p>
 
             {/* Booking and Wishlist */}
-            <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-6">
               <Button
                 size="lg"
-                className="flex-1 bg-orange-600 hover:bg-orange-700"
+                className="flex-1 text-lg py-7 bg-orange-600 hover:bg-orange-700 rounded-full shadow-lg"
                 onClick={handleBookNow}
               >
                 Book Now
               </Button>
-              <Button variant="outline" size="icon" onClick={() => toast.info('Wishlist functionality coming soon!')}>
-                <Heart className="h-5 w-5" />
+              <Button variant="outline" size="icon" className="rounded-full w-14 h-14" onClick={() => toast.info('Wishlist functionality coming soon!')}>
+                <Heart className="h-7 w-7 text-gray-400" />
               </Button>
             </div>
 
             {/* Service Details */}
-            <div className="text-sm text-gray-500 space-y-2 pt-4 border-t">
+            <div className="space-y-3 pt-6 border-t">
+              <div className="flex items-center text-gray-600">
+                <Award className="h-5 w-5 mr-3 text-green-500" />
+                <span>Professional & Verified Provider</span>
+              </div>
               {service.pricingModel === 'perHour' && (
-                  <p className="flex items-center"><Clock className="h-4 w-4 mr-2" /> Billed hourly</p>
+                  <div className="flex items-center text-gray-600"><Clock className="h-5 w-5 mr-3 text-blue-500" /> Billed on an hourly basis</div>
               )}
               {service.enableGuestPricing && (
-                <p className="flex items-center"><Users className="h-4 w-4 mr-2" /> Priced per guest</p>
+                <div className="flex items-center text-gray-600"><Users className="h-5 w-5 mr-3 text-purple-500" /> Custom pricing per guest available</div>
               )}
             </div>
           </div>
         </div>
 
         {/* Description, Reviews, etc. */}
-        <div className="mt-16">
-          <Tabs defaultValue="description">
-            <TabsList className="grid w-full grid-cols-2">
-              <TabsTrigger value="description">Service Details</TabsTrigger>
-              <TabsTrigger value="reviews">Reviews</TabsTrigger>
+        <div className="mt-20">
+          <Tabs defaultValue="description" className="w-full">
+            <TabsList className="grid w-full grid-cols-2 text-lg p-2 h-auto">
+              <TabsTrigger value="description" className="py-3">Service Details</TabsTrigger>
+              <TabsTrigger value="reviews" className="py-3">Reviews</TabsTrigger>
             </TabsList>
-            <TabsContent value="description" className="mt-4 p-6 border rounded-md">
+            <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
               <p className="text-gray-700 whitespace-pre-wrap">
                 {service.description}
               </p>
             </TabsContent>
-            <TabsContent value="reviews" className="mt-4 p-6 border rounded-md">
+            <TabsContent value="reviews" className="mt-6 p-8 border rounded-lg text-lg">
               <p className="text-gray-700">No reviews yet.</p>
             </TabsContent>
           </Tabs>
