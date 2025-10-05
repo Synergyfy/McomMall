@@ -9,8 +9,6 @@ import {
   Package,
   Briefcase,
   List,
-  ArrowDown,
-  ArrowUp,
   Star,
   Ticket,
   ShoppingCart,
@@ -36,60 +34,70 @@ const OwnerStatsMap = [
     label: "Product Sales",
     icon: DollarSign,
     color: "text-green-500",
+    isCurrency: true,
   },
   {
     key: "totalAmountEarnedFromGiftCard",
     label: "Gift Card Sales",
     icon: Gift,
     color: "text-blue-500",
+    isCurrency: true,
   },
   {
     key: "totalAmountSpentForPromotions",
     label: "Promotion Spending",
     icon: Tag,
     color: "text-red-500",
+    isCurrency: true,
   },
   {
     key: "totalOffersRedeemed",
     label: "Offers Redeemed",
     icon: Users,
     color: "text-yellow-500",
+    isCurrency: false,
   },
   {
     key: "totalAmountSpentOnCoupon",
     label: "Coupon Spending",
     icon: Ticket,
     color: "text-red-500",
+    isCurrency: true,
   },
   {
     key: "totalAmountOfVoucherPurchased",
     label: "Vouchers Purchased",
     icon: ShoppingCart,
     color: "text-purple-500",
+    isCurrency: true,
   },
   {
     key: "totalAmountOfProduct",
     label: "Total Products",
     icon: Package,
     color: "text-indigo-500",
+    isCurrency: false,
   },
   {
     key: "totalAmountOfService",
     label: "Total Services",
     icon: Briefcase,
     color: "text-pink-500",
+    isCurrency: false,
   },
   {
     key: "totalAmountOfListing",
     label: "Total Listings",
     icon: List,
     color: "text-gray-500",
+    isCurrency: false,
   },
   {
     key: "totalWalletBalance",
     label: "Wallet Balance",
     icon: Wallet,
     color: "text-green-700",
+    isCurrency: true,
   },
 ];
 
@@ -99,48 +107,56 @@ const CustomerStatsMap = [
     label: "Product Spending",
     icon: ShoppingBag,
     color: "text-green-500",
+    isCurrency: true,
   },
   {
     key: "totalNumberOfProductOrdered",
     label: "Products Ordered",
     icon: Package,
     color: "text-blue-500",
+    isCurrency: false,
   },
   {
     key: "totalNumberOfServiceBooked",
     label: "Services Booked",
     icon: Book,
     color: "text-purple-500",
+    isCurrency: false,
   },
   {
     key: "totalNumberOfPromotionsParticipating",
     label: "Promotions Joined",
     icon: Handshake,
     color: "text-yellow-500",
+    isCurrency: false,
   },
   {
     key: "totalNumberOfPointsEarned",
     label: "Points Earned",
     icon: Star,
     color: "text-green-500",
+    isCurrency: false,
   },
   {
     key: "totalNumberOfPointsRedeemed",
     label: "Points Redeemed",
     icon: Star,
     color: "text-red-500",
+    isCurrency: false,
   },
   {
     key: "totalAmountSpentOnVoucher",
     label: "Voucher Spending",
     icon: Ticket,
     color: "text-indigo-500",
+    isCurrency: true,
   },
   {
     key: "totalAmountSpentOnGiftCards",
     label: "Gift Card Spending",
     icon: Gift,
     color: "text-pink-500",
+    isCurrency: true,
   },
 ];
 
@@ -150,12 +166,8 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
 
   return (
     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-      {statsMap.map(({ key, label, icon: Icon, color }) => {
+      {statsMap.map(({ key, label, icon: Icon, color, isCurrency }) => {
         const value = stats[key as keyof typeof stats];
-        const isCurrency =
-          key.toLowerCase().includes("amount") ||
-          key.toLowerCase().includes("balance") ||
-          key.toLowerCase().includes("spending");
         return (
           <Card key={key} className="hover:shadow-lg transition-shadow duration-300">
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
