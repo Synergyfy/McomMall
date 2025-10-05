@@ -12,6 +12,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCreatePartnershipRequest } from '@/service/partnerships/hooks';
+import { useSendMessage } from '@/service/messaging/hook';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchServices } from '@/service/services/hooks';
 import { IService } from '@/service/services/types';
@@ -39,6 +40,7 @@ export default function ServicePlusModal({
 
   const { data: services, mutate: searchServices, isPending: isSearching } = useSearchServices();
   const { mutateAsync: createPartnership, isPending: isRequesting } = useCreatePartnershipRequest();
+  const { mutate: sendMessage } = useSendMessage();
 
   const handleSearch = () => {
     if (searchTerm.trim()) {
@@ -52,8 +54,15 @@ export default function ServicePlusModal({
         await createPartnership({
           productId,
           serviceId: selectedService.id,
-          message,
         });
+
+        if (message.trim()) {
+          sendMessage({
+            content: message,
+            receiverId: selectedService.business.userId,
+          });
+        }
+
         setRequestError(null);
       } catch (error: unknown) {
         if (error instanceof Error) {

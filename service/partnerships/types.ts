@@ -7,7 +7,6 @@ export type PartnershipRequestStatus = 'pending' | 'accepted' | 'declined';
 export interface CreatePartnershipRequestDto {
   productId: string;
   serviceId: string;
-  message?: string;
 }
 
 export interface RespondToPartnershipRequestDto {
