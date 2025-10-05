@@ -12,14 +12,13 @@ import {
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { useCreatePartnershipRequest } from '@/service/partnerships/hooks';
-import { toast } from 'sonner';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchServices } from '@/service/services/hooks';
 import { IService } from '@/service/services/types';
 import { ScrollArea } from '@/components/ui/scroll-area';
 import { cn } from '@/lib/utils';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
-import { CheckCircle, XCircle } from 'lucide-react';
+import { Textarea } from '@/components/ui/textarea';
 
 interface ServicePlusModalProps {
   isOpen: boolean;
@@ -34,6 +33,7 @@ export default function ServicePlusModal({
 }: ServicePlusModalProps) {
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedService, setSelectedService] = useState<IService | null>(null);
+  const [message, setMessage] = useState('');
   const [showResultDialog, setShowResultDialog] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
 
@@ -52,6 +52,7 @@ export default function ServicePlusModal({
         await createPartnership({
           productId,
           serviceId: selectedService.id,
+          message,
         });
         setRequestError(null);
       } catch (error: unknown) {
@@ -69,6 +70,7 @@ export default function ServicePlusModal({
   const closeAllModals = () => {
     setShowResultDialog(false);
     setSelectedService(null);
+    setMessage('');
     onClose();
   };
 
@@ -95,7 +97,7 @@ export default function ServicePlusModal({
                 {isSearching ? 'Searching...' : 'Search'}
               </Button>
             </div>
-            <ScrollArea className="h-72 w-full rounded-md border">
+            <ScrollArea className="h-60 w-full rounded-md border">
               <div className="p-4">
                 {services && services.length > 0 ? (
                   services.map((service: IService) => (
@@ -124,6 +126,20 @@ export default function ServicePlusModal({
                 )}
               </div>
             </ScrollArea>
+            {selectedService && (
+              <div className="grid gap-2">
+                <label htmlFor="message" className="text-sm font-medium">
+                  Message (optional)
+                </label>
+                <Textarea
+                  id="message"
+                  placeholder="Write a brief message to the service owner..."
+                  value={message}
+                  onChange={(e) => setMessage(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            )}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={onClose}>
