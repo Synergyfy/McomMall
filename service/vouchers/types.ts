@@ -2,7 +2,10 @@ export interface VoucherProduct {
   id: string;
   name: string;
   description?: string;
-  fixedAmounts: number[];
+  fixedAmounts?: number[];
+  allowCustomAmount?: boolean;
+  minCustomAmount?: number;
+  maxCustomAmount?: number;
   expiryDays?: number;
   usage?: 'both' | 'online_only' | 'instore_only';
   allowPartialRedemption?: boolean;
@@ -16,6 +19,7 @@ export interface InitiateVoucherPurchaseDto {
   recipientName?: string;
   recipientEmail?: string;
   personalMessage?: string;
+  deliveryDate?: string;
 }
 
 
@@ -45,11 +49,14 @@ export interface Voucher {
 export interface CreateVoucherProductDto {
   name: string;
   description?: string;
-  fixedAmounts: number[];
+  fixedAmounts?: number[];
+  allowCustomAmount?: boolean;
+  minCustomAmount?: number;
+  maxCustomAmount?: number;
+  usage?: 'online_only' | 'instore_only' | 'both';
+  isEnabled?: boolean;
   expiryDays?: number;
-  usage: 'both' | 'online_only' | 'instore_only';
-  allowPartialRedemption: boolean;
-  isEnabled: boolean;
+  allowPartialRedemption?: boolean;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;

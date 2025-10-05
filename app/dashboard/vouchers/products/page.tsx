@@ -1,7 +1,5 @@
 'use client';
 
-'use client';
-
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Edit, Trash2, PlusCircle } from 'lucide-react';
@@ -67,6 +65,19 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
     visible: { opacity: 1, y: 0 },
   };
 
+  const renderPricing = () => {
+    const parts = [];
+    if (product.fixedAmounts && product.fixedAmounts.length > 0) {
+      parts.push(`Fixed: ${product.fixedAmounts.join(', ')}`);
+    }
+    if (product.allowCustomAmount) {
+      parts.push(
+        `Custom: ${product.minCustomAmount} - ${product.maxCustomAmount}`
+      );
+    }
+    return parts.length > 0 ? parts.join('; ') : 'N/A';
+  };
+
   return (
     <motion.tr
       variants={rowVariants}
@@ -76,7 +87,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
         {product.name}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {product.fixedAmounts.join(', ')}
+        {renderPricing()}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
         {product.expiryDays || 'N/A'}
@@ -172,7 +183,7 @@ export default function VoucherProductsPage() {
                 <tr>
                   {[
                     'Name',
-                    'Fixed Amounts',
+                    'Pricing',
                     'Expiry (Days)',
                     'Status',
                     'Actions',

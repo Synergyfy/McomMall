@@ -1,10 +1,9 @@
 'use client';
 
 import type { FC } from 'react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import {
-  PoundSterling,
-  ShoppingCart,
-  Package,
   MoreHorizontal,
   Diamond,
 } from 'lucide-react';
@@ -17,8 +16,6 @@ import {
   Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { useSelector } from 'react-redux';
-import { RootState } from '@/service/store/store';
 
 // Import Shadcn UI Components
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -38,20 +35,15 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 
-import { formatDistanceToNow } from 'date-fns';
 import { useRecentActivities } from '@/service/activities/hook';
-import { Activity } from '@/service/activities/types';
-import CustomerDashboard from './component/CustomerDashboard';
-// 1. --- TYPE DEFINITIONS ---
-// Ensures all data structures are strongly typed.
+import { useGetStats } from '@/service/stats';
+import StatsCards from './component/StatsCards';
+import RecentActivities from './component/RecentActivities';
+import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
+import { UserRole } from '@/service/auth/types';
 
-interface StatCardProps {
-  title: string;
-  value: number | string;
-  icon: React.ReactNode;
-  color: string;
-}
 
+// --- TYPE DEFINITIONS ---
 interface ListingPackage {
   name: string;
   description: string;
@@ -61,8 +53,6 @@ interface ChartData {
   name: string;
   views: number;
 }
-
-import { useGetOrderStats } from '@/service/store/orders/hook';
 
 const listingPackage: ListingPackage = {
   name: 'Basic',
@@ -80,57 +70,7 @@ const chartData: ChartData[] = [
   { name: 'Aug', views: 1.0 },
 ];
 
-// 3. --- SUB-COMPONENTS ---
-// Breaks the UI into manageable, reusable pieces.
-
-const StatCard: FC<StatCardProps> = ({ title, value, icon, color }) => (
-  <Card className="shadow-sm hover:shadow-md transition-shadow duration-300">
-    <CardContent className="p-6 flex items-center justify-between">
-      <div>
-        <p className={`text-3xl font-bold ${color}`}>
-          {typeof value === 'number' ? value.toLocaleString() : value}
-        </p>
-        <p className="text-sm text-gray-500">{title}</p>
-      </div>
-      <div className={color}>{icon}</div>
-    </CardContent>
-  </Card>
-);
-
-const RecentActivities: FC<{
-  activities: Activity[] | undefined;
-  isLoading: boolean;
-}> = ({ activities, isLoading }) => (
-  <Card className="shadow-sm">
-    <CardHeader className="flex flex-row items-center justify-between">
-      <CardTitle className="text-lg font-semibold">Recent Activities</CardTitle>
-      <Button variant="ghost" size="sm">
-        Clear All
-      </Button>
-    </CardHeader>
-    <CardContent>
-      {isLoading ? (
-        <p>Loading activities...</p>
-      ) : (
-        <ul className="space-y-4">
-          {activities?.map((activity, index) => (
-            <li key={index} className="flex items-center space-x-4">
-              <div className="flex-grow">
-                <p className="text-sm text-gray-800">{activity.message}</p>
-                <p className="text-xs text-gray-400">
-                  {formatDistanceToNow(new Date(activity.date), {
-                    addSuffix: true,
-                  })}
-                </p>
-              </div>
-            </li>
-          ))}
-        </ul>
-      )}
-    </CardContent>
-  </Card>
-);
-
+// --- SUB-COMPONENTS ---
 const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
   <Card className="shadow-sm">
     <CardHeader>
@@ -204,70 +144,15 @@ const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
   </Card>
 );
 
-// 4. --- MAIN PAGE COMPONENT ---
-// Assembles the entire dashboard page.
-
+// --- MAIN PAGE COMPONENT ---
 const DashboardPage: FC = () => {
-  const { data: orderStats, isLoading } = useGetOrderStats();
   const { userName, userRole } = useSelector((state: RootState) => state.auth);
+  const { data: stats, isLoading: isLoadingStats } = useGetStats<OwnerStatsDto | CustomerStatsDto>();
   const {
     data: activities,
     isLoading: isLoadingActivities,
   } = useRecentActivities();
 
-  const stats: StatCardProps[] = isLoading
-    ? [
-        {
-          title: 'Total Sales',
-          value: 'loading...',
-          icon: <PoundSterling className="h-8 w-8" />,
-          color: 'text-green-500',
-        },
-        {
-          title: 'Net Sales',
-          value: 'loading...',
-          icon: <PoundSterling className="h-8 w-8" />,
-          color: 'text-blue-500',
-        },
-        {
-          title: 'Orders',
-          value: 'loading...',
-          icon: <ShoppingCart className="h-8 w-8" />,
-          color: 'text-yellow-500',
-        },
-        {
-          title: 'Products Sold',
-          value: 'loading...',
-          icon: <Package className="h-8 w-8" />,
-          color: 'text-red-500',
-        },
-      ]
-    : [
-        {
-          title: 'Total Sales',
-          value: `£${orderStats?.totalSales.toFixed(2) ?? '0.00'}`,
-          icon: <PoundSterling className="h-8 w-8" />,
-          color: 'text-green-500',
-        },
-        {
-          title: 'Net Sales',
-          value: `£${orderStats?.netSales.toFixed(2) ?? '0.00'}`,
-          icon: <PoundSterling className="h-8 w-8" />,
-          color: 'text-blue-500',
-        },
-        {
-          title: 'Orders',
-          value: orderStats?.orders ?? 0,
-          icon: <ShoppingCart className="h-8 w-8" />,
-          color: 'text-yellow-500',
-        },
-        {
-          title: 'Products Sold',
-          value: orderStats?.productsSold ?? 0,
-          icon: <Package className="h-8 w-8" />,
-          color: 'text-red-500',
-        },
-      ];
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       {/* Header */}
@@ -289,40 +174,28 @@ const DashboardPage: FC = () => {
       </header>
 
       <main className="space-y-8">
-        {userRole === 'customer' ? (
-          <CustomerDashboard />
-        ) : (
+        {isLoadingStats ? (
+          <p>Loading statistics...</p>
+        ) : stats && userRole ? (
           <>
-            {/* Stat Cards Section */}
-            <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4">
-              {stats.map(stat => (
-                <StatCard
-                  key={stat.title}
-                  title={stat.title}
-                  value={stat.value}
-                  icon={stat.icon}
-                  color={stat.color}
-                />
-              ))}
-            </section>
-
-            {/* Main Content Grid */}
-            <section className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
-              {/* Left Column */}
+            <StatsCards stats={stats} role={userRole as UserRole} />
+            <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
               <div className="lg:col-span-1 space-y-8">
-                <RecentActivities
-                  activities={activities}
-                  isLoading={isLoadingActivities}
-                />
+                 <RecentActivities
+                    activities={activities}
+                    isLoading={isLoadingActivities}
+                  />
               </div>
-
-              {/* Right Column */}
-              <div className="lg:col-span-2 space-y-8">
-                <ListingPackages pkg={listingPackage} />
-                <ListingsViewsChart data={chartData} />
-              </div>
-            </section>
+              {userRole === UserRole.OWNER && (
+                <div className="lg:col-span-2 space-y-8">
+                  <ListingPackages pkg={listingPackage} />
+                  <ListingsViewsChart data={chartData} />
+                </div>
+              )}
+            </div>
           </>
+        ) : (
+          <p>No statistics available.</p>
         )}
       </main>
     </div>
