@@ -3,6 +3,7 @@ export interface VoucherProduct {
   name: string;
   description?: string;
   fixedAmounts: number[];
+  customAmount?: [number, number];
   expiryDays?: number;
   usage?: 'both' | 'online_only' | 'instore_only';
   allowPartialRedemption?: boolean;
@@ -46,6 +47,7 @@ export interface CreateVoucherProductDto {
   name: string;
   description?: string;
   fixedAmounts: number[];
+  customAmount?: [number, number];
   expiryDays?: number;
   usage: 'both' | 'online_only' | 'instore_only';
   allowPartialRedemption: boolean;
