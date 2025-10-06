@@ -42,13 +42,14 @@ export default function CheckoutClient() {
   const paymentIntentClientSecret = searchParams.get(
     'payment_intent_client_secret'
   );
+  const quantityFromUrl = searchParams.get('quantity');
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
   );
   const { cart, loading: isCartLoading } = useCart();
   const { bookings } = useSelector((state: RootState) => state.booking);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState(quantityFromUrl ? parseInt(quantityFromUrl, 10) : 1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');

@@ -91,12 +91,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
   const handleOrderNow = () => {
     if (product) {
-      addItemToCart({
-        productId: product.id,
-        quantity,
-        variants: selectedVariants,
-      });
-      router.push(`/cart`);
+      router.push(`/checkout?productId=${product.id}&quantity=${quantity}`);
     }
   };
 
