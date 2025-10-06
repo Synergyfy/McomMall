@@ -15,20 +15,19 @@ interface ServiceBookingProps {
 }
 
 const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfirmation }) => {
-  const [selectedDateTime, setSelectedDateTime] = useState<Date | null>(null);
+  const [selectedDateTime, setSelectedDateTime] = useState<{ start: Date; end: Date } | null>(null);
   const [isBooking, setIsBooking] = useState(false);
 
-  const handleDateTimeChange = (dateTime: Date | null) => {
+  const handleDateTimeChange = (dateTime: { start: Date; end: Date } | null) => {
     setSelectedDateTime(dateTime);
   };
 
   const handleConfirmBooking = () => {
     if (selectedDateTime && onBookingConfirmation) {
-      const durationInMs = (service.duration || 60) * 60 * 1000;
       const bookingDetails: ServiceBookingDetailsDto = {
         serviceId: service.id,
-        startTime: selectedDateTime.toISOString(),
-        endTime: new Date(selectedDateTime.getTime() + durationInMs).toISOString(),
+        startTime: selectedDateTime.start.toISOString(),
+        endTime: selectedDateTime.end.toISOString(),
       };
       onBookingConfirmation(bookingDetails);
       setIsBooking(false);

@@ -1,50 +1,61 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Calendar } from './calendar';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
 import { Calendar as CalendarIcon, Clock } from 'lucide-react';
-import { format } from 'date-fns';
+import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
 
 const timeSlots = [
-  '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00'
+  '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
+  '01:00 PM', '02:00 PM', '03:00 PM', '04:00 PM', '05:00 PM'
 ];
 
 interface DateTimePickerProps {
-  onDateTimeChange: (dateTime: Date | null) => void;
+  onDateTimeChange: (dateTime: { start: Date; end: Date } | null) => void;
 }
 
 export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onDateTimeChange }) => {
   const [selectedDate, setSelectedDate] = useState<Date | undefined>();
-  const [selectedTime, setSelectedTime] = useState<string | null>(null);
+  const [selectedStartTime, setSelectedStartTime] = useState<string | null>(null);
+  const [selectedEndTime, setSelectedEndTime] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (selectedDate && selectedStartTime && selectedEndTime) {
+      const startDate = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedStartTime}`, 'yyyy-MM-dd h:mm a', new Date());
+      const endDate = parse(`${format(selectedDate, 'yyyy-MM-dd')} ${selectedEndTime}`, 'yyyy-MM-dd h:mm a', new Date());
+
+      if (startDate < endDate) {
+        onDateTimeChange({ start: startDate, end: endDate });
+      } else {
+        onDateTimeChange(null);
+      }
+    } else {
+      onDateTimeChange(null);
+    }
+  }, [selectedDate, selectedStartTime, selectedEndTime, onDateTimeChange]);
 
   const handleDateChange = (date: Date | undefined) => {
     setSelectedDate(date);
-    if (date && selectedTime) {
-      const [hours, minutes] = selectedTime.split(':').map(Number);
-      const newDateTime = new Date(date);
-      newDateTime.setHours(hours, minutes);
-      onDateTimeChange(newDateTime);
-    } else {
-      onDateTimeChange(null);
-    }
   };
 
-  const handleTimeChange = (time: string) => {
-    setSelectedTime(time);
-    if (selectedDate) {
-      const [hours, minutes] = time.split(':').map(Number);
-      const newDateTime = new Date(selectedDate);
-      newDateTime.setHours(hours, minutes);
-      onDateTimeChange(newDateTime);
-    } else {
-      onDateTimeChange(null);
-    }
+  const handleStartTimeChange = (time: string) => {
+    setSelectedStartTime(time);
+  };
+
+  const handleEndTimeChange = (time: string) => {
+    setSelectedEndTime(time);
+  };
+
+  const getEndTimeSlots = () => {
+    if (!selectedStartTime) return timeSlots;
+    const startIndex = timeSlots.indexOf(selectedStartTime);
+    return timeSlots.slice(startIndex + 1);
   };
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-6">
       <Popover>
         <PopoverTrigger asChild>
           <Button
@@ -68,23 +79,47 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onDateTimeChange
         </PopoverContent>
       </Popover>
 
-      <div className="grid grid-cols-3 gap-2">
-        {timeSlots.map((time) => (
-          <Button
-            key={time}
-            variant={selectedTime === time ? 'default' : 'outline'}
-            onClick={() => handleTimeChange(time)}
-            className="flex items-center justify-center"
-          >
-            <Clock className="mr-2 h-4 w-4" />
-            {time}
-          </Button>
-        ))}
+      <div className="space-y-4">
+        <div>
+          <h4 className="text-lg font-semibold mb-2">Start Time</h4>
+          <div className="grid grid-cols-3 gap-2">
+            {timeSlots.map((time) => (
+              <Button
+                key={`start-${time}`}
+                variant={selectedStartTime === time ? 'default' : 'outline'}
+                onClick={() => handleStartTimeChange(time)}
+                className="flex items-center justify-center"
+              >
+                <Clock className="mr-2 h-4 w-4" />
+                {time}
+              </Button>
+            ))}
+          </div>
+        </div>
+
+        {selectedStartTime && (
+          <div>
+            <h4 className="text-lg font-semibold mb-2">End Time</h4>
+            <div className="grid grid-cols-3 gap-2">
+              {getEndTimeSlots().map((time) => (
+                <Button
+                  key={`end-${time}`}
+                  variant={selectedEndTime === time ? 'default' : 'outline'}
+                  onClick={() => handleEndTimeChange(time)}
+                  className="flex items-center justify-center"
+                >
+                  <Clock className="mr-2 h-4 w-4" />
+                  {time}
+                </Button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {selectedDate && selectedTime && (
+      {selectedDate && selectedStartTime && selectedEndTime && (
         <div className="text-center text-lg font-semibold text-green-600 p-3 bg-green-50 rounded-lg">
-          Selected: {format(selectedDate, 'PPP')} at {selectedTime}
+          Selected: {format(selectedDate, 'PPP')} from {selectedStartTime} to {selectedEndTime}
         </div>
       )}
     </div>
