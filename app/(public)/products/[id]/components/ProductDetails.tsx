@@ -299,6 +299,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               {servicesLoading ? (
                 <div className="text-center py-12">Loading services...</div>
               ) : (
+                // The isDashboardView prop defaults to false, so buttons are correctly rendered.
                 <ServiceList services={services || []} />
               )}
             </TabsContent>
