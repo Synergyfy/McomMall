@@ -76,7 +76,7 @@ export default function OrderSummaryCard({
   };
 
   const servicesTotal = serviceBookings
-    ? serviceBookings.reduce((acc, booking) => acc + (booking?.price || 0), 0)
+    ? serviceBookings.reduce((acc, booking) => acc + Number(booking?.price || 0), 0)
     : 0;
 
   return (
@@ -202,7 +202,7 @@ export default function OrderSummaryCard({
               </div>
               <p className="font-semibold text-gray-800">
                 {CURRENCY}
-                {booking.price.toFixed(2)}
+                {Number(booking.price).toFixed(2)}
               </p>
             </motion.div>
           ))}
