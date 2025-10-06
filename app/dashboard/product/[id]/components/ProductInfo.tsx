@@ -73,7 +73,7 @@ export default function ProductInfo({ product, onAddPartner }: ProductInfoProps)
         {servicesLoading ? (
           <div className="text-center py-12">Loading services...</div>
         ) : (
-          <ServiceList services={services || []} />
+          <ServiceList services={services || []} isDashboardView={true} />
         )}
       </div>
     </div>

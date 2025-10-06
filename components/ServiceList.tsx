@@ -8,9 +8,10 @@ import { ShoppingCart, Zap } from "lucide-react";
 
 interface ServiceListProps {
   services: PartnershipService[];
+  isDashboardView?: boolean;
 }
 
-const ServiceList: React.FC<ServiceListProps> = ({ services }) => {
+const ServiceList: React.FC<ServiceListProps> = ({ services, isDashboardView = false }) => {
   if (!services || services.length === 0) {
     return (
       <div className="text-center py-12 text-gray-500">
@@ -78,16 +79,18 @@ const ServiceList: React.FC<ServiceListProps> = ({ services }) => {
                   </div>
                 </div>
 
-                <div className="flex justify-end space-x-4 pt-4">
-                  <Button variant="outline">
-                    <ShoppingCart className="mr-2 h-4 w-4" />
-                    Add to Cart
-                  </Button>
-                  <Button>
-                    <Zap className="mr-2 h-4 w-4" />
-                    Book Now
-                  </Button>
-                </div>
+                {!isDashboardView && (
+                  <div className="flex justify-end space-x-4 pt-4">
+                    <Button variant="outline">
+                      <ShoppingCart className="mr-2 h-4 w-4" />
+                      Add to Cart
+                    </Button>
+                    <Button>
+                      <Zap className="mr-2 h-4 w-4" />
+                      Book Now
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </div>
           </div>
