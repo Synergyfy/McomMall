@@ -25,6 +25,8 @@ export interface ServiceBookingDetailsDto {
   serviceId: string;
   startTime: string;
   endTime: string;
+  name: string;
+  price: number;
 }
 
 export interface CreateCheckoutDto {

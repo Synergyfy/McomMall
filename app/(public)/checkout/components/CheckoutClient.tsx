@@ -94,6 +94,15 @@ export default function CheckoutClient() {
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
+  const serviceBookingsForOrder = Object.values(bookings).filter(
+    (booking) => booking && productIds.includes(booking.serviceId)
+  );
+
+  const servicesTotalPrice = serviceBookingsForOrder.reduce(
+    (total, booking) => total + (booking?.price || 0),
+    0
+  );
+
   const basePrice =
     (fromCart
       ? cart?.items.reduce(
@@ -104,9 +113,11 @@ export default function CheckoutClient() {
       ? product.price * quantity
       : 0) || 0;
 
+  const subtotal = basePrice + servicesTotalPrice;
+
   const totalDiscount =
     couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
-  const totalPrice = basePrice - totalDiscount;
+  const totalPrice = subtotal - totalDiscount;
 
   const handleApplyVoucher = async (code: string) => {
     setVoucherLoading(true);
@@ -380,6 +391,7 @@ export default function CheckoutClient() {
                   giftCardDiscount={giftCardDiscount}
                   voucherDiscount={voucherDiscount}
                   offerDiscount={offerDiscount}
+                  serviceBookings={serviceBookingsForOrder}
                 />
               </div>
             </div>

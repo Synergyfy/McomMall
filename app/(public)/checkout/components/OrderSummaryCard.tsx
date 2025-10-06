@@ -5,8 +5,10 @@ import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
-import { Minus, Plus, Ticket, Gift, Tag, Percent } from 'lucide-react';
+import { Minus, Plus, Ticket, Gift, Tag, Percent, Calendar } from 'lucide-react';
 import { CURRENCY } from '@/lib/utils';
+import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
+import { format } from 'date-fns';
 
 interface OrderSummaryCardProps {
   product?: Product;
@@ -20,6 +22,7 @@ interface OrderSummaryCardProps {
   giftCardDiscount: number;
   voucherDiscount: number;
   offerDiscount: number;
+  serviceBookings?: ServiceBookingDetailsDto[] | null;
 }
 
 export default function OrderSummaryCard({
@@ -34,6 +37,7 @@ export default function OrderSummaryCard({
   giftCardDiscount,
   voucherDiscount,
   offerDiscount,
+  serviceBookings,
 }: OrderSummaryCardProps) {
   const handleQuantityChange = (amount: number) => {
     setQuantity((prev) => Math.max(1, prev + amount));
@@ -70,6 +74,10 @@ export default function OrderSummaryCard({
       </div>
     );
   };
+
+  const servicesTotal = serviceBookings
+    ? serviceBookings.reduce((acc, booking) => acc + (booking?.price || 0), 0)
+    : 0;
 
   return (
     <motion.div
@@ -173,13 +181,41 @@ export default function OrderSummaryCard({
         )
       )}
 
+      {/* Booked Services */}
+      {serviceBookings && serviceBookings.length > 0 && (
+        <div className="space-y-4 border-t-2 border-gray-100 pt-4 mt-4">
+          <h3 className="text-lg font-semibold text-gray-800">Booked Services</h3>
+          {serviceBookings.map((booking) => (
+            <motion.div
+              key={booking.serviceId}
+              variants={itemVariants}
+              initial="hidden"
+              animate="visible"
+              className="flex items-center justify-between"
+            >
+              <div className="flex-1">
+                <p className="font-semibold text-gray-800">{booking.name}</p>
+                <p className="text-sm text-gray-500 flex items-center">
+                  <Calendar className="w-4 h-4 mr-2" />
+                  {format(new Date(booking.startTime), 'PPP, p')}
+                </p>
+              </div>
+              <p className="font-semibold text-gray-800">
+                {CURRENCY}
+                {booking.price.toFixed(2)}
+              </p>
+            </motion.div>
+          ))}
+        </div>
+      )}
+
       {/* Financial Breakdown */}
       <div className="mt-6 border-t-2 border-gray-100 pt-6 space-y-3 text-md">
         <div className="flex items-center justify-between">
           <p className="text-gray-600">Subtotal</p>
           <p className="font-semibold text-gray-800">
             {CURRENCY}
-            {basePrice.toFixed(2)}
+            {(basePrice + servicesTotal).toFixed(2)}
           </p>
         </div>
 

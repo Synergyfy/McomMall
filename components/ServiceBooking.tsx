@@ -28,6 +28,8 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
         serviceId: service.id,
         startTime: selectedDateTime.start.toISOString(),
         endTime: selectedDateTime.end.toISOString(),
+        name: service.name,
+        price: service.fixedPrice || 0,
       };
       onBookingConfirmation(bookingDetails);
       setIsBooking(false);
