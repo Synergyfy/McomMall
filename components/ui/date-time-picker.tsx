@@ -3,9 +3,16 @@ import React, { useState, useEffect } from 'react';
 import { Calendar } from './calendar';
 import { Button } from './button';
 import { Popover, PopoverContent, PopoverTrigger } from './popover';
-import { Calendar as CalendarIcon, Clock } from 'lucide-react';
+import { Calendar as CalendarIcon } from 'lucide-react';
 import { format, parse } from 'date-fns';
 import { cn } from '@/lib/utils';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 
 const timeSlots = [
   '09:00 AM', '10:00 AM', '11:00 AM', '12:00 PM',
@@ -42,6 +49,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onDateTimeChange
 
   const handleStartTimeChange = (time: string) => {
     setSelectedStartTime(time);
+    setSelectedEndTime(null); // Reset end time when start time changes
   };
 
   const handleEndTimeChange = (time: string) => {
@@ -49,7 +57,7 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onDateTimeChange
   };
 
   const getEndTimeSlots = () => {
-    if (!selectedStartTime) return timeSlots;
+    if (!selectedStartTime) return [];
     const startIndex = timeSlots.indexOf(selectedStartTime);
     return timeSlots.slice(startIndex + 1);
   };
@@ -79,40 +87,38 @@ export const DateTimePicker: React.FC<DateTimePickerProps> = ({ onDateTimeChange
         </PopoverContent>
       </Popover>
 
-      <div className="space-y-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <h4 className="text-lg font-semibold mb-2">Start Time</h4>
-          <div className="grid grid-cols-3 gap-2">
-            {timeSlots.map((time) => (
-              <Button
-                key={`start-${time}`}
-                variant={selectedStartTime === time ? 'default' : 'outline'}
-                onClick={() => handleStartTimeChange(time)}
-                className="flex items-center justify-center"
-              >
-                <Clock className="mr-2 h-4 w-4" />
-                {time}
-              </Button>
-            ))}
-          </div>
+          <Select onValueChange={handleStartTimeChange} value={selectedStartTime || ''}>
+            <SelectTrigger>
+              <SelectValue placeholder="Select start time" />
+            </SelectTrigger>
+            <SelectContent>
+              {timeSlots.map((time) => (
+                <SelectItem key={`start-${time}`} value={time}>
+                  {time}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
         </div>
 
         {selectedStartTime && (
           <div>
             <h4 className="text-lg font-semibold mb-2">End Time</h4>
-            <div className="grid grid-cols-3 gap-2">
-              {getEndTimeSlots().map((time) => (
-                <Button
-                  key={`end-${time}`}
-                  variant={selectedEndTime === time ? 'default' : 'outline'}
-                  onClick={() => handleEndTimeChange(time)}
-                  className="flex items-center justify-center"
-                >
-                  <Clock className="mr-2 h-4 w-4" />
-                  {time}
-                </Button>
-              ))}
-            </div>
+            <Select onValueChange={handleEndTimeChange} value={selectedEndTime || ''}>
+              <SelectTrigger>
+                <SelectValue placeholder="Select end time" />
+              </SelectTrigger>
+              <SelectContent>
+                {getEndTimeSlots().map((time) => (
+                  <SelectItem key={`end-${time}`} value={time}>
+                    {time}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
         )}
       </div>
