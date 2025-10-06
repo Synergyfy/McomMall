@@ -13,6 +13,8 @@ import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
@@ -45,6 +47,7 @@ export default function CheckoutClient() {
     productId || ''
   );
   const { cart, loading: isCartLoading } = useCart();
+  const { bookings } = useSelector((state: RootState) => state.booking);
   const [quantity, setQuantity] = useState(1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
 
@@ -194,6 +197,14 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
+      const currentProductIds = fromCart
+        ? cart?.items.map(item => item.product.id) || []
+        : productId ? [productId] : [];
+
+      const serviceBookings = Object.entries(bookings)
+        .filter(([pid, booking]) => currentProductIds.includes(pid) && booking)
+        .map(([, booking]) => booking);
+
       const checkoutData: CreateCheckoutDto = {
         payment: {
           paymentMethod,
@@ -204,6 +215,7 @@ export default function CheckoutClient() {
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
         voucherCode: voucherCode || undefined,
+        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
       };
 
       if (!fromCart && product) {
@@ -227,6 +239,8 @@ export default function CheckoutClient() {
       selectedOffer,
       giftCardCode,
       voucherCode,
+      bookings,
+      productIds,
     ]
   );
 

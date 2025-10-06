@@ -36,6 +36,7 @@ export interface PartnershipService {
   guestPrice?: number;
   media: string[];
   isQuoteModel: boolean;
+  duration?: number; // Duration in minutes
   created_at: string;
   updated_at: string;
 }

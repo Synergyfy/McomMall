@@ -21,6 +21,9 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import LoyaltyContent from '@/components/LoyaltyContent';
 import { useRouter } from 'next/navigation';
+import { ServiceBookingDetailsDto } from '@/service/order/types';
+import { useDispatch } from 'react-redux';
+import { addBooking } from '@/service/store/bookingSlice';
 
 const isImageUrl = (url: string) => {
     if (!url) return false;
@@ -33,6 +36,7 @@ type ProductDetailsProps = {
 
 export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
+  const dispatch = useDispatch();
   const { data: product, isLoading, isError } = useGetProductById(productId);
   const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(productId);
   const { addItemToCart } = useCart();
@@ -69,16 +73,29 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
     }
   };
 
+  const handleServiceBooked = (bookingDetails: ServiceBookingDetailsDto) => {
+    dispatch(addBooking({ productId, bookingDetails }));
+    toast.success('Service booking has been scheduled and added to your checkout details.');
+  };
+
   const handleAddToCart = () => {
     if (product) {
-      addItemToCart({ productId: product.id, quantity, variants: selectedVariants });
+      addItemToCart({
+        productId: product.id,
+        quantity,
+        variants: selectedVariants,
+      });
       toast.success('Added to cart');
     }
   };
 
   const handleOrderNow = () => {
     if (product) {
-      addItemToCart({ productId: product.id, quantity, variants: selectedVariants });
+      addItemToCart({
+        productId: product.id,
+        quantity,
+        variants: selectedVariants,
+      });
       router.push(`/cart`);
     }
   };
@@ -299,8 +316,10 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
               {servicesLoading ? (
                 <div className="text-center py-12">Loading services...</div>
               ) : (
-                // The isDashboardView prop defaults to false, so buttons are correctly rendered.
-                <ServiceList services={services || []} />
+                <ServiceList
+                  services={services || []}
+                  onServiceBooked={handleServiceBooked}
+                />
               )}
             </TabsContent>
           </Tabs>
