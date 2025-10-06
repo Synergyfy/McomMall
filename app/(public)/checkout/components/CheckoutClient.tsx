@@ -99,7 +99,7 @@ export default function CheckoutClient() {
     .map(([, booking]) => booking);
 
   const servicesTotalPrice = serviceBookingsForOrder.reduce(
-    (total, booking) => total + (booking?.price || 0),
+    (total, booking) => total + Number(booking?.price || 0),
     0
   );
 
