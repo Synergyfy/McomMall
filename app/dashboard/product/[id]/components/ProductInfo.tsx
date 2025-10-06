@@ -7,6 +7,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Star } from 'lucide-react';
 import { Product } from '@/service/store/products/types';
 import { cn } from '@/lib/utils';
+import { useGetServicesByProductId } from '@/service/partnerships/hooks';
+import ServiceList from '@/components/ServiceList';
 
 interface ProductInfoProps {
   product: Product;
@@ -14,6 +16,8 @@ interface ProductInfoProps {
 }
 
 export default function ProductInfo({ product, onAddPartner }: ProductInfoProps) {
+  const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(product.id);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -63,6 +67,15 @@ export default function ProductInfo({ product, onAddPartner }: ProductInfoProps)
           </p>
         </CardContent>
       </Card>
+
+      <div className="mt-6">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Associated Services</h2>
+        {servicesLoading ? (
+          <div className="text-center py-12">Loading services...</div>
+        ) : (
+          <ServiceList services={services || []} />
+        )}
+      </div>
     </div>
   );
 }

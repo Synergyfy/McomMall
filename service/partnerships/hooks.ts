@@ -3,6 +3,7 @@ import api from '@/service/api';
 import {
   CreatePartnershipRequestDto,
   PartnershipRequest,
+  PartnershipService,
   RespondToPartnershipRequestDto,
 } from './types';
 
@@ -84,5 +85,19 @@ export const useGetAcceptedPartners = () => {
   return useQuery<PartnershipRequest[], Error>({
     queryKey: ['accepted-partners'],
     queryFn: getAcceptedPartners,
+  });
+};
+
+// Get all services for a given product
+const getServicesByProductId = async (productId: string): Promise<PartnershipService[]> => {
+  const { data } = await api.get(`/partnerships/product/${productId}`);
+  return data;
+};
+
+export const useGetServicesByProductId = (productId: string) => {
+  return useQuery<PartnershipService[], Error>({
+    queryKey: ['product-services', productId],
+    queryFn: () => getServicesByProductId(productId),
+    enabled: !!productId,
   });
 };

@@ -10,9 +10,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useGetProductById } from '@/service/store/products/hook';
+import { useGetServicesByProductId } from '@/service/partnerships/hooks';
 import { ProductVariant } from '@/service/store/products/types';
 import { Button } from '@/components/ui/button';
 import { Star, Minus, Plus, Heart, CheckCircle, Truck, Shield } from 'lucide-react';
+import ServiceList from '@/components/ServiceList';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useCart } from '@/hooks/useCart';
 import { useWishlist } from '@/hooks/useWishlist';
@@ -32,6 +34,7 @@ type ProductDetailsProps = {
 export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
   const { data: product, isLoading, isError } = useGetProductById(productId);
+  const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(productId);
   const { addItemToCart } = useCart();
   const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
   const [quantity, setQuantity] = useState(1);
@@ -267,11 +270,12 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
         <div className="mt-20">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-4 text-lg p-2 h-auto">
+            <TabsList className="grid w-full grid-cols-5 text-lg p-2 h-auto">
               <TabsTrigger value="description" className="py-3">Description</TabsTrigger>
               <TabsTrigger value="reviews" className="py-3">Reviews</TabsTrigger>
               <TabsTrigger value="shipping" className="py-3">Shipping & Returns</TabsTrigger>
               <TabsTrigger value="promotions" className="py-3">Promotions</TabsTrigger>
+              <TabsTrigger value="services" className="py-3">Associated Services</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
               <p className="text-gray-700 whitespace-pre-wrap">
@@ -290,6 +294,13 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             </TabsContent>
             <TabsContent value="promotions" className="mt-6">
               <LoyaltyContent productId={productId} />
+            </TabsContent>
+            <TabsContent value="services" className="mt-6">
+              {servicesLoading ? (
+                <div className="text-center py-12">Loading services...</div>
+              ) : (
+                <ServiceList services={services || []} />
+              )}
             </TabsContent>
           </Tabs>
         </div>
