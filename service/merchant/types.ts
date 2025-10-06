@@ -1,5 +1,6 @@
 export interface IBusiness {
   id: string;
+  userId: string;
   createdAt: string;
   updatedAt: string;
   listingType: string[];
