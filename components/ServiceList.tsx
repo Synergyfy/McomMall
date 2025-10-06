@@ -55,25 +55,25 @@ const ServiceList: React.FC<ServiceListProps> = ({ services, isDashboardView = f
                 <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg space-y-3">
                   <h4 className="text-lg font-semibold text-orange-800 mb-2">Pricing Details</h4>
                   <div className="space-y-2">
-                    {service.pricingModel === 'fixed' && service.fixedPrice && (
+                    {service.pricingModel === 'fixed' && typeof service.fixedPrice === 'number' && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 flex items-center"><Tag className="mr-2 h-5 w-5 text-orange-500"/>Standard Price:</span>
                         <span className="font-bold text-2xl text-gray-900">${service.fixedPrice.toFixed(2)}</span>
                       </div>
                     )}
-                    {service.pricingModel === 'hourly' && service.hourlyRate && (
+                    {service.pricingModel === 'hourly' && typeof service.hourlyRate === 'number' && (
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 flex items-center"><Clock className="mr-2 h-5 w-5 text-orange-500"/>Hourly Rate:</span>
                         <span className="font-bold text-2xl text-gray-900">${service.hourlyRate.toFixed(2)}/hour</span>
                       </div>
                     )}
-                    {service.enableGuestPricing && service.guestPrice && (
+                    {service.enableGuestPricing && typeof service.guestPrice === 'number' && (
                       <div className="flex justify-between items-center text-green-700">
                         <span className="font-semibold flex items-center"><Users className="mr-2 h-5 w-5 text-green-500"/>Guest Price:</span>
                         <span className="font-bold text-2xl">${service.guestPrice.toFixed(2)}</span>
                       </div>
                     )}
-                    {service.isQuoteModel && (
+                    {service.pricingModel === 'quote' && (
                       <div className="text-center text-gray-500 py-2">
                         Contact us for a custom quote.
                       </div>
