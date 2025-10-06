@@ -1,5 +1,5 @@
 "use client";
-import React, { useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { PartnershipService } from '@/service/partnerships/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
@@ -18,9 +18,9 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
   const [selectedDateTime, setSelectedDateTime] = useState<{ start: Date; end: Date } | null>(null);
   const [isBooking, setIsBooking] = useState(false);
 
-  const handleDateTimeChange = (dateTime: { start: Date; end: Date } | null) => {
+  const handleDateTimeChange = useCallback((dateTime: { start: Date; end: Date } | null) => {
     setSelectedDateTime(dateTime);
-  };
+  }, []);
 
   const handleConfirmBooking = () => {
     if (selectedDateTime && onBookingConfirmation) {
