@@ -94,9 +94,9 @@ export default function CheckoutClient() {
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
-  const serviceBookingsForOrder = Object.values(bookings).filter(
-    (booking) => booking && productIds.includes(booking.serviceId)
-  );
+  const serviceBookingsForOrder = Object.entries(bookings)
+    .filter(([productId, booking]) => booking && productIds.includes(productId))
+    .map(([, booking]) => booking);
 
   const servicesTotalPrice = serviceBookingsForOrder.reduce(
     (total, booking) => total + (booking?.price || 0),
