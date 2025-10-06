@@ -1,9 +1,9 @@
 from playwright.sync_api import Page, expect
 import re
 
-def test_service_booking_flow_v2(page: Page):
+def test_final_booking_flow(page: Page):
     """
-    This test verifies the updated service booking flow with start and end times.
+    This test verifies the final service booking flow, including layout changes and bug fixes.
     """
     product_id = "d353d65a-e67e-4b1d-9201-f51745092d0d"
 
@@ -13,10 +13,8 @@ def test_service_booking_flow_v2(page: Page):
     # Wait for the main product title to be visible to ensure the page has loaded.
     expect(page.get_by_role("heading", level=1)).to_be_visible(timeout=20000)
 
-    # 2. Act: Click the "Associated Services" tab.
-    services_tab = page.get_by_role("tab", name="Associated Services")
-    expect(services_tab).to_be_visible()
-    services_tab.click()
+    # 2. Assert: Check that the "Partnered Services" section is visible, verifying the layout change.
+    expect(page.get_by_role("heading", name="Partnered Services")).to_be_visible()
 
     # 3. Act: Click the "Book This Service" button.
     book_button = page.locator('.//button[contains(., "Book This Service")]').first()
@@ -30,18 +28,16 @@ def test_service_booking_flow_v2(page: Page):
     # Pick the 20th day of the month.
     page.get_by_role("button", name=re.compile(r"20")).first.click()
 
-    # Select a start time.
-    start_time_button = page.get_by_role("button", name="09:00 AM")
-    expect(start_time_button).to_be_visible()
-    start_time_button.click()
+    # Select a start time from the dropdown.
+    page.get_by_role("combobox").first.click()
+    page.get_by_role("option", name="09:00 AM").click()
 
     # Assert that the "End Time" section is now visible.
     expect(page.get_by_role("heading", name="End Time")).to_be_visible()
 
-    # Select an end time.
-    end_time_button = page.get_by_role("button", name="11:00 AM")
-    expect(end_time_button).to_be_visible()
-    end_time_button.click()
+    # Select an end time from the dropdown.
+    page.get_by_role("combobox").last.click()
+    page.get_by_role("option", name="11:00 AM").click()
 
     # 6. Assert: Check for the confirmation text with start and end times.
     expect(page.get_by_text(re.compile(r"Selected: .* from 09:00 AM to 11:00 AM"))).to_be_visible()
@@ -55,4 +51,4 @@ def test_service_booking_flow_v2(page: Page):
     expect(page.get_by_text("Service booking has been scheduled and added to your checkout details.")).to_be_visible()
 
     # 9. Screenshot: Capture the final result for visual verification.
-    page.screenshot(path="jules-scratch/verification/verification_v2.png")
+    page.screenshot(path="jules-scratch/verification/final_verification.png")

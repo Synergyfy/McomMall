@@ -240,7 +240,8 @@ export default function CheckoutClient() {
       giftCardCode,
       voucherCode,
       bookings,
-      productIds,
+      cart,
+      productId,
     ]
   );
 

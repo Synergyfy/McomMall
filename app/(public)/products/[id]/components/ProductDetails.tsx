@@ -21,7 +21,7 @@ import { useWishlist } from '@/hooks/useWishlist';
 import { toast } from 'sonner';
 import LoyaltyContent from '@/components/LoyaltyContent';
 import { useRouter } from 'next/navigation';
-import { ServiceBookingDetailsDto } from '@/service/order/types';
+import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 import { useDispatch } from 'react-redux';
 import { addBooking } from '@/service/store/bookingSlice';
 
@@ -127,9 +127,9 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   return (
     <div className="bg-white">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-5 gap-12 items-start">
           {/* Image Gallery */}
-          <div className="space-y-4">
+          <div className="space-y-4 lg:col-span-2">
             <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
               <Image
                 src={mainImage}
@@ -159,7 +159,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           </div>
 
           {/* Product Info */}
-          <div className="space-y-8">
+          <div className="space-y-8 lg:col-span-3">
             <div className="space-y-3">
               <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 sm:text-5xl">
                 {product.title}
@@ -285,14 +285,31 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           </div>
         </div>
 
+        {/* Associated Services Section */}
+        {services && services.length > 0 && (
+          <div className="mt-20">
+            <h2 className="text-3xl font-extrabold tracking-tight text-gray-900 mb-8">
+              Partnered Services
+            </h2>
+            {servicesLoading ? (
+              <div className="text-center py-12">Loading services...</div>
+            ) : (
+              <ServiceList
+                services={services || []}
+                onServiceBooked={handleServiceBooked}
+              />
+            )}
+          </div>
+        )}
+
+        {/* Other Details Section */}
         <div className="mt-20">
           <Tabs defaultValue="description" className="w-full">
-            <TabsList className="grid w-full grid-cols-5 text-lg p-2 h-auto">
+            <TabsList className="grid w-full grid-cols-4 text-lg p-2 h-auto">
               <TabsTrigger value="description" className="py-3">Description</TabsTrigger>
               <TabsTrigger value="reviews" className="py-3">Reviews</TabsTrigger>
               <TabsTrigger value="shipping" className="py-3">Shipping & Returns</TabsTrigger>
               <TabsTrigger value="promotions" className="py-3">Promotions</TabsTrigger>
-              <TabsTrigger value="services" className="py-3">Associated Services</TabsTrigger>
             </TabsList>
             <TabsContent value="description" className="mt-6 p-8 border rounded-lg text-lg">
               <p className="text-gray-700 whitespace-pre-wrap">
@@ -311,16 +328,6 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
             </TabsContent>
             <TabsContent value="promotions" className="mt-6">
               <LoyaltyContent productId={productId} />
-            </TabsContent>
-            <TabsContent value="services" className="mt-6">
-              {servicesLoading ? (
-                <div className="text-center py-12">Loading services...</div>
-              ) : (
-                <ServiceList
-                  services={services || []}
-                  onServiceBooked={handleServiceBooked}
-                />
-              )}
             </TabsContent>
           </Tabs>
         </div>
