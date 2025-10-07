@@ -1,11 +1,22 @@
 "use client";
 
-import { useGetMyMembership, useCreateMembership } from "@/service/membership/hooks";
+import { useState } from "react";
+import { useGetMyMembership, useInitiatePayment } from "@/service/membership/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Star } from "lucide-react";
 import { MembershipTier } from "@/service/membership/types";
 import { toast } from "sonner";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import MembershipPayment from "./MembershipPayment";
+
+// It's safe to call loadStripe outside of a component’s render to avoid
+// recreating the Stripe object on every render.
+// This is your test publishable key.
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
+);
 
 const tiers = [
   {
@@ -28,80 +39,118 @@ const tiers = [
 
 const MembershipClient = () => {
   const { data: membership, isLoading, error } = useGetMyMembership();
-  const createMembership = useCreateMembership();
+  const initiatePayment = useInitiatePayment();
+  const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const handleUpgrade = (tier: MembershipTier) => {
-    createMembership.mutate({ tier }, {
-      onSuccess: () => {
-        toast.success(`Successfully upgraded to ${tier} membership!`);
+    setSelectedTier(tier);
+    initiatePayment.mutate({ tier }, {
+      onSuccess: (data) => {
+        setClientSecret(data.clientSecret);
       },
       onError: (error) => {
-        toast.error(`Failed to upgrade membership: ${error.message}`);
+        toast.error(`Failed to initiate payment: ${error.message}`);
+        setSelectedTier(null);
       }
     });
+  };
+
+  const handlePaymentSuccess = () => {
+    setClientSecret(null);
+    setSelectedTier(null);
+    // Membership data will be refetched automatically by react-query's invalidation
   };
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
 
   return (
-    <div className="container mx-auto p-4 md:p-8">
-      <h1 className="text-3xl font-bold mb-4">Membership</h1>
-      <p className="text-muted-foreground mb-8">
-        Manage your membership plan and unlock new features.
-      </p>
+    <Elements stripe={stripePromise}>
+      <div className="container mx-auto p-4 md:p-8">
+        <h1 className="text-3xl font-bold mb-4">Membership</h1>
+        <p className="text-muted-foreground mb-8">
+          Manage your membership plan and unlock new features.
+        </p>
 
-      {membership && (
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Your Current Plan</CardTitle>
-            <CardDescription>
-              You are currently on the{" "}
-              <span className="font-semibold text-primary">{membership.tier}</span> plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <p>
-              Your membership is {membership.isActive ? "active" : "inactive"} and
-              expires on {new Date(membership.expiresAt).toLocaleDateString()}.
-            </p>
-          </CardContent>
-        </Card>
-      )}
-
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {tiers.map((tier) => (
-          <Card key={tier.name} className={tier.highlight ? "border-primary" : ""}>
+        {membership && (
+          <Card className="mb-8">
             <CardHeader>
-              <CardTitle className="flex items-center justify-between">
-                {tier.name}
-                {tier.highlight && <Star className="text-primary" />}
-              </CardTitle>
-              <CardDescription>{tier.price}</CardDescription>
+              <CardTitle>Your Current Plan</CardTitle>
+              <CardDescription>
+                You are currently on the{" "}
+                <span className="font-semibold text-primary">{membership.tier}</span> plan.
+              </CardDescription>
             </CardHeader>
             <CardContent>
-              <ul className="space-y-2">
-                {tier.features.map((feature, index) => (
-                  <li key={index} className="flex items-center">
-                    <CheckCircle className="text-green-500 mr-2 h-4 w-4" />
-                    {feature}
-                  </li>
-                ))}
-              </ul>
+              <p>
+                Your membership is {membership.isActive ? "active" : "inactive"} and
+                expires on {new Date(membership.expiresAt).toLocaleDateString()}.
+              </p>
+            </CardContent>
+          </Card>
+        )}
+
+        {selectedTier && clientSecret ? (
+          <Card>
+            <CardHeader>
+              <CardTitle>Upgrade to {selectedTier}</CardTitle>
+              <CardDescription>
+                Complete your payment to upgrade your membership.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MembershipPayment
+                clientSecret={clientSecret}
+                tier={selectedTier}
+                onSuccess={handlePaymentSuccess}
+              />
             </CardContent>
             <CardFooter>
-              <Button
-                onClick={() => handleUpgrade(tier.name as MembershipTier)}
-                disabled={createMembership.isPending || membership?.tier === tier.name}
-                className="w-full"
-              >
-                {membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
+              <Button variant="outline" onClick={() => {
+                setSelectedTier(null);
+                setClientSecret(null);
+              }}>
+                Cancel
               </Button>
             </CardFooter>
           </Card>
-        ))}
+        ) : (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+            {tiers.map((tier) => (
+              <Card key={tier.name} className={tier.highlight ? "border-primary" : ""}>
+                <CardHeader>
+                  <CardTitle className="flex items-center justify-between">
+                    {tier.name}
+                    {tier.highlight && <Star className="text-primary" />}
+                  </CardTitle>
+                  <CardDescription>{tier.price}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <ul className="space-y-2">
+                    {tier.features.map((feature, index) => (
+                      <li key={index} className="flex items-center">
+                        <CheckCircle className="text-green-500 mr-2 h-4 w-4" />
+                        {feature}
+                      </li>
+                    ))}
+                  </ul>
+                </CardContent>
+                <CardFooter>
+                  <Button
+                    onClick={() => handleUpgrade(tier.name as MembershipTier)}
+                    disabled={initiatePayment.isPending || membership?.tier === tier.name}
+                    className="w-full"
+                  >
+                    {membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
+                  </Button>
+                </CardFooter>
+              </Card>
+            ))}
+          </div>
+        )}
       </div>
-    </div>
+    </Elements>
   );
 };
 
