@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useGetMyMembership, useInitiatePayment } from "@/service/membership/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,12 +11,11 @@ import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
 import MembershipPayment from "./MembershipPayment";
 
+const stripePublishableKey = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || "";
+
 // It's safe to call loadStripe outside of a component’s render to avoid
 // recreating the Stripe object on every render.
-// This is your test publishable key.
-const stripePromise = loadStripe(
-  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ""
-);
+const stripePromise = loadStripe(stripePublishableKey);
 
 const tiers = [
   {
@@ -42,8 +41,18 @@ const MembershipClient = () => {
   const initiatePayment = useInitiatePayment();
   const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const isStripeConfigured = !!stripePublishableKey;
+
+  useEffect(() => {
+    if (!isStripeConfigured) {
+      toast.error("Payment system is not configured. Please contact support.");
+    }
+  }, [isStripeConfigured]);
 
   const handleUpgrade = (tier: MembershipTier) => {
+    if (!isStripeConfigured) {
+      return;
+    }
     setSelectedTier(tier);
     initiatePayment.mutate({ tier: tier.toLowerCase() as LowercaseMembershipTier }, {
       onSuccess: (data) => {
@@ -139,7 +148,7 @@ const MembershipClient = () => {
                 <CardFooter>
                   <Button
                     onClick={() => handleUpgrade(tier.name as MembershipTier)}
-                    disabled={initiatePayment.isPending || membership?.tier === tier.name}
+                    disabled={!isStripeConfigured || initiatePayment.isPending || membership?.tier === tier.name}
                     className="w-full"
                   >
                     {membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
