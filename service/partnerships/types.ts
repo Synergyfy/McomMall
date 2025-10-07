@@ -23,3 +23,20 @@ export interface PartnershipRequest {
   created_at: string;
   updated_at: string;
 }
+
+export interface PartnershipService {
+  id: string;
+  name: string;
+  description: string;
+  businessId: string;
+  pricingModel: 'fixed' | 'hourly' | 'quote';
+  fixedPrice?: number;
+  hourlyRate?: number;
+  enableGuestPricing: boolean;
+  guestPrice?: number;
+  media: string[];
+  isQuoteModel: boolean;
+  duration?: number; // Duration in minutes
+  created_at: string;
+  updated_at: string;
+}

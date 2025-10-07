@@ -1,0 +1,349 @@
+
+> mcom_mall@0.1.0 build
+> next build
+
+   ▲ Next.js 15.4.5
+
+   Creating an optimized production build ...
+ ✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
+ ⚠ Compiled with warnings in 35.0s
+
+/_next//static/media/AutumnBanner.e568d911.png is 6.34 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
+
+   Linting and checking validity of types ...
+
+./app/(public)/checkout/components/PaymentForm.tsx
+20:3  Warning: 'totalPrice' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/[id]/components/ReviewCard.tsx
+7:32  Warning: 'ApiReview' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/[id]/components/ReviewsTabContent.tsx
+3:10  Warning: 'Review' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/[id]/components/VoucherPurchaseModal.tsx
+152:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/[id]/components/VoucherTabContent.tsx
+24:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/[id]/page.tsx
+2:10  Warning: 'getListingById' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/(public)/listings/page.tsx
+112:24  Warning: 'prevFilters' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-campaign/components/CampaignFilters.tsx
+2:22  Warning: 'FormErrors' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-campaign/page.tsx
+9:19  Warning: 'startOfToday' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-listing/components/AvailabilityCalendar.tsx
+33:9  Warning: 'getDayModifier' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-listing/components/BusinessTypeSelector.tsx
+9:3  Warning: 'Tooltip' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'TooltipContent' is defined but never used.  @typescript-eslint/no-unused-vars
+11:3  Warning: 'TooltipProvider' is defined but never used.  @typescript-eslint/no-unused-vars
+12:3  Warning: 'TooltipTrigger' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-listing/components/steps/product/ProductLocationStep.tsx
+49:9  Warning: 'handleAddressChange' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-listing/components/steps/service/BookingStep.tsx
+6:10  Warning: 'Input' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-listing/components/steps/service/CredentialsStep.tsx
+2:34  Warning: 'ServiceProviderData' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/add-new-add/page.tsx
+222:6  Warning: React Hook useMemo has a missing dependency: 'adPlacementOptions'. Either include it or remove the dependency array.  react-hooks/exhaustive-deps
+
+./app/dashboard/coupons/new/page.tsx
+280:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/dashboard/gift-card/email-design/page.tsx
+25:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
+25:16  Warning: 'CardContent' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/layout.tsx
+7:10  Warning: 'SubscriptionStatusEnum' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/members/components/promotions-manager.tsx
+13:3  Warning: 'Calendar' is defined but never used.  @typescript-eslint/no-unused-vars
+15:3  Warning: 'Info' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/members/components/rewards-and-transactions.tsx
+6:22  Warning: 'Trash2' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/offers/components/offer-form.tsx
+4:29  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/offers/components/offers-manager.tsx
+4:20  Warning: 'useMemo' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/offers/edit/[id]/page.tsx
+4:20  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/settings/page.tsx
+5:3  Warning: 'LayoutDashboard' is defined but never used.  @typescript-eslint/no-unused-vars
+6:3  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
+7:3  Warning: 'Tag' is defined but never used.  @typescript-eslint/no-unused-vars
+9:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
+10:3  Warning: 'HelpCircle' is defined but never used.  @typescript-eslint/no-unused-vars
+74:3  Warning: 'textColor' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/messages/components/ConversationSidebar.tsx
+6:10  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/messages/page.tsx
+9:10  Warning: 'Menu' is defined but never used.  @typescript-eslint/no-unused-vars
+9:16  Warning: 'X' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/my-bookings/component/MyBookingCard.tsx
+4:52  Warning: 'Building' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/my-bookings/page.tsx
+9:10  Warning: 'Badge' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/my-listings/page.tsx
+10:3  Warning: 'Calendar' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/my-profile/page.tsx
+414:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/services/edit/[id]/page.tsx
+21:10  Warning: 'CreateServiceDto' is defined but never used.  @typescript-eslint/no-unused-vars
+22:10  Warning: 'useAddService' is defined but never used.  @typescript-eslint/no-unused-vars
+53:41  Warning: 'isLoadingService' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/services/page.tsx
+43:10  Warning: 'Service' is defined but never used.  @typescript-eslint/no-unused-vars
+212:41  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/dashboard/store/orders/page.tsx
+34:6  Warning: 'Order' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/store/page.tsx
+146:9  Warning: 'className' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/store/products/add-product/page.tsx
+13:3  Warning: 'UploadCloud' is defined but never used.  @typescript-eslint/no-unused-vars
+22:8  Warning: 'Image' is defined but never used.  @typescript-eslint/no-unused-vars
+266:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+314:9  Warning: 'category' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/store/products/components/VariantManager.tsx
+14:13  Warning: 'Plus' is defined but never used.  @typescript-eslint/no-unused-vars
+23:20  Warning: 'register' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/store/products/edit/[id]/page.tsx
+1230:53  Warning: 'value' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/store/products/page.tsx
+463:33  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./app/dashboard/vouchers/(components)/VoucherProductModal.tsx
+11:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+51:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/vouchers/products/page.tsx
+23:10  Warning: 'useRouter' is defined but never used.  @typescript-eslint/no-unused-vars
+62:3  Warning: 'onEdit' is defined but never used.  @typescript-eslint/no-unused-vars
+140:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/homepage/components/McomVouchersCouponsSection.tsx
+5:10  Warning: 'Ticket' is defined but never used.  @typescript-eslint/no-unused-vars
+5:18  Warning: 'Percent' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/layout.tsx
+8:8  Warning: 'Auth' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/pricing/components/CoBrandedContent.tsx
+1:10  Warning: 'useState' is defined but never used.  @typescript-eslint/no-unused-vars
+8:10  Warning: 'CardFooter' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/pricing/components/PricingCard.tsx
+25:3  Warning: 'listingId' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/pricing/components/PricingCheckoutClient.tsx
+35:3  Warning: 'listingId' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/pricing/components/PricingNav.tsx
+12:3  Warning: 'orientation' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/BookingSidebar.tsx
+11:3  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/ClaimBusinessModal.tsx
+39:3  Warning: 'place_id' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/ContentTabs.tsx
+6:8  Warning: 'LocationSection' is defined but never used.  @typescript-eslint/no-unused-vars
+12:10  Warning: 'ReviewsTabContent' is defined but never used.  @typescript-eslint/no-unused-vars
+18:3  Warning: 'Clock' is defined but never used.  @typescript-eslint/no-unused-vars
+19:3  Warning: 'Info' is defined but never used.  @typescript-eslint/no-unused-vars
+20:3  Warning: 'Truck' is defined but never used.  @typescript-eslint/no-unused-vars
+21:3  Warning: 'Phone' is defined but never used.  @typescript-eslint/no-unused-vars
+22:3  Warning: 'Mail' is defined but never used.  @typescript-eslint/no-unused-vars
+23:3  Warning: 'Globe' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/Header.tsx
+17:30  Warning: 'ListItem' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/NavMenu.tsx
+7:10  Warning: 'businessCategories' is defined but never used.  @typescript-eslint/no-unused-vars
+235:29  Warning: 'index' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/OverviewSection.tsx
+27:3  Warning: 'isLoading' is defined but never used.  @typescript-eslint/no-unused-vars
+33:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+74:9  Warning: 'reviews' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/PayPalCheckoutButton.tsx
+7:10  Warning: 'toast' is defined but never used.  @typescript-eslint/no-unused-vars
+38:23  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+38:26  Warning: 'actions' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/ServiceBooking.tsx
+8:10  Warning: 'Zap' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./components/auth.tsx
+42:3  Warning: 'redirect' is defined but never used.  @typescript-eslint/no-unused-vars
+85:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/gift-card/GiftCardEmail.tsx
+73:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+79:11  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+
+./components/listingCard.tsx
+21:19  Warning: 'Listing' is defined but never used.  @typescript-eslint/no-unused-vars
+26:7  Warning: 'amenityIcons' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+37:7  Warning: 'amenityTooltips' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./components/ui/time-picker-input.tsx
+34:12  Warning: 'flag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+34:18  Warning: 'setFlag' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+35:12  Warning: 'prev' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./lib/menu-items.ts
+11:3  Warning: 'Bookmark' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./lib/validation.ts
+28:12  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
+   Collecting page data ...
+   Generating static pages (0/83) ...
+   Generating static pages (20/83)
+   Generating static pages (41/83)
+   Generating static pages (62/83)
+ ✓ Generating static pages (83/83)
+   Finalizing page optimization ...
+   Collecting build traces ...
+
+Route (app)                                       Size  First Load JS
+┌ ○ /                                          13.8 kB         203 kB
+├ ○ /_not-found                                  999 B         103 kB
+├ ○ /about-us                                  4.24 kB         160 kB
+├ ○ /add-listing                               1.89 kB         365 kB
+├ ƒ /api/upload                                  151 B         102 kB
+├ ƒ /api/upload/[folder]                         151 B         102 kB
+├ ƒ /api/upload/delete                           151 B         102 kB
+├ ○ /audit-calculator                          13.6 kB         197 kB
+├ ○ /autumn                                    1.09 kB         179 kB
+├ ○ /blog                                      4.17 kB         166 kB
+├ ○ /cart                                      7.66 kB         160 kB
+├ ○ /checkout                                  15.2 kB         257 kB
+├ ○ /contact-us                                4.86 kB         161 kB
+├ ○ /dashboard                                 12.5 kB         274 kB
+├ ○ /dashboard/ad-campaign                     10.3 kB         217 kB
+├ ○ /dashboard/add-campaign                    13.5 kB         272 kB
+├ ○ /dashboard/add-listing                     1.89 kB         365 kB
+├ ○ /dashboard/add-new-add                     4.77 kB         155 kB
+├ ○ /dashboard/bookings                        4.71 kB         198 kB
+├ ○ /dashboard/bookings/calendar-view          11.9 kB         247 kB
+├ ○ /dashboard/bookings/qr-scanner             1.73 kB         144 kB
+├ ○ /dashboard/coupons                         4.74 kB         206 kB
+├ ƒ /dashboard/coupons/edit/[id]               5.71 kB         244 kB
+├ ○ /dashboard/coupons/new                     7.87 kB         267 kB
+├ ƒ /dashboard/edit-listing/[id]               1.26 kB         365 kB
+├ ○ /dashboard/gift-card                       10.1 kB         190 kB
+├ ○ /dashboard/gift-card/admin                 6.34 kB         157 kB
+├ ○ /dashboard/gift-card/assets                10.1 kB         188 kB
+├ ○ /dashboard/gift-card/check-balance         5.77 kB         156 kB
+├ ○ /dashboard/gift-card/email-design            10 kB         150 kB
+├ ○ /dashboard/gift-card/settings              2.77 kB         140 kB
+├ ○ /dashboard/gift-card/templates             6.15 kB         177 kB
+├ ƒ /dashboard/gift-card/templates/edit/[id]   5.44 kB         224 kB
+├ ○ /dashboard/gift-card/templates/new         5.34 kB         224 kB
+├ ○ /dashboard/history/gift-card               4.32 kB         152 kB
+├ ○ /dashboard/history/my-vouchers             2.05 kB         180 kB
+├ ○ /dashboard/history/promotion-history        6.1 kB         152 kB
+├ ○ /dashboard/loyalty                           151 B         102 kB
+├ ○ /dashboard/loyalty/customer                 3.2 kB         118 kB
+├ ○ /dashboard/loyalty/members                 11.1 kB         233 kB
+├ ○ /dashboard/loyalty/offers                  8.51 kB         224 kB
+├ ƒ /dashboard/loyalty/offers/edit/[id]        1.49 kB         265 kB
+├ ○ /dashboard/loyalty/offers/new              1.03 kB         264 kB
+├ ○ /dashboard/loyalty/promotion               7.89 kB         210 kB
+├ ƒ /dashboard/loyalty/promotion/edit/[id]     8.08 kB         260 kB
+├ ○ /dashboard/loyalty/promotion/new           7.84 kB         260 kB
+├ ○ /dashboard/loyalty/settings                5.28 kB         146 kB
+├ ○ /dashboard/loyalty/time-bonus               6.2 kB         153 kB
+├ ○ /dashboard/marketing/my-partners           7.79 kB         207 kB
+├ ○ /dashboard/marketing/partnership-requests   5.7 kB         198 kB
+├ ○ /dashboard/messages                        7.57 kB         148 kB
+├ ○ /dashboard/my-bookings                     2.06 kB         186 kB
+├ ○ /dashboard/my-listings                     9.99 kB         227 kB
+├ ○ /dashboard/my-listings/active              1.69 kB         144 kB
+├ ○ /dashboard/my-listings/expired              1.7 kB         144 kB
+├ ○ /dashboard/my-listings/pending              1.7 kB         144 kB
+├ ○ /dashboard/my-profile                      7.38 kB         154 kB
+├ ○ /dashboard/my-subscription                 4.73 kB         223 kB
+├ ƒ /dashboard/product/[id]                    17.2 kB         224 kB
+├ ○ /dashboard/reviews                         6.64 kB         202 kB
+├ ○ /dashboard/services                        7.28 kB         184 kB
+├ ○ /dashboard/services/add-service            15.1 kB         242 kB
+├ ƒ /dashboard/services/edit/[id]              12.7 kB         231 kB
+├ ○ /dashboard/store                           11.8 kB         321 kB
+├ ○ /dashboard/store/orders                      12 kB         182 kB
+├ ○ /dashboard/store/products                  12.2 kB         196 kB
+├ ○ /dashboard/store/products/add-product      6.74 kB         269 kB
+├ ƒ /dashboard/store/products/edit/[id]        5.78 kB         225 kB
+├ ○ /dashboard/vouchers                        8.23 kB         154 kB
+├ ○ /dashboard/vouchers/products                 10 kB         241 kB
+├ ○ /dashboard/vouchers/redeem                 4.34 kB         202 kB
+├ ○ /dashboard/vouchers/sold                   2.03 kB         180 kB
+├ ○ /dashboard/wallet                          8.72 kB         188 kB
+├ ○ /dashboard/wishlist                         5.3 kB         150 kB
+├ ○ /faq                                       5.72 kB         162 kB
+├ ○ /listings                                  21.1 kB         261 kB
+├ ƒ /listings/[id]                             5.71 kB         336 kB
+├ ƒ /listings/[id]/gift-card                     72 kB         280 kB
+├ ○ /listings/claim/success                    3.13 kB         113 kB
+├ ○ /listings/pricing                          3.11 kB         105 kB
+├ ○ /manifest.webmanifest                        151 B         102 kB
+├ ○ /pricing                                   6.68 kB         244 kB
+├ ○ /privacy-policy                            3.95 kB         160 kB
+├ ƒ /products/[id]                             5.89 kB         244 kB
+├ ○ /seasons/autumn                            6.08 kB         179 kB
+├ ○ /seasons/spring                            6.09 kB         179 kB
+├ ○ /seasons/summer                            6.04 kB         179 kB
+├ ○ /seasons/winter                            5.97 kB         179 kB
+├ ƒ /services/[id]                             15.5 kB         260 kB
+├ ○ /spring                                    1.08 kB         179 kB
+├ ○ /summer                                    1.09 kB         179 kB
+├ ○ /terms-and-conditions                      3.74 kB         160 kB
+└ ○ /winter                                    1.07 kB         179 kB
++ First Load JS shared by all                   102 kB
+  ├ chunks/4814-cce6c4253e954ba6.js            45.2 kB
+  ├ chunks/4bd1b696-cc729d47eba2cee4.js        54.1 kB
+  └ other shared chunks (total)                2.89 kB
+
+
+ƒ Middleware                                   33.5 kB
+
+○  (Static)   prerendered as static content
+ƒ  (Dynamic)  server-rendered on demand
