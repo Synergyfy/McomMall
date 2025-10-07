@@ -17,6 +17,7 @@ import {
   pluginMenuItems,
   historyMenuItems,
   MenuItem,
+  barterExchangeMenuItems,
 } from '@/lib/menu-items';
 
 interface MenuContentProps {
@@ -54,6 +55,31 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const customerAccountMenu = accountMenuItems.filter(item =>
     ['My Profile', 'Logout'].includes(item.title)
   );
+
+
+ 
+  // Customer section
+const customerBarterExchangeMenu = barterExchangeMenuItems.filter(item =>
+  [
+    "Barter Exchange", 
+    "Add Exchange", 
+    "Exchange History", 
+    "Proposals", 
+    "Items listing", 
+    "Messages", 
+    "Rules & Policies"
+  ].includes(item.title)
+);
+
+// Admin section
+const adminBarterExchangeMenu = barterExchangeMenuItems.filter(item =>
+  [
+    "Admin Dashboard", 
+    "User Management", 
+    "Fraud & Safety", 
+    "Settings & Integrations"
+  ].includes(item.title)
+);
 
   const toggleSubMenu = (title: string) => {
     setOpenSubMenus(prev => ({ ...prev, [title]: !prev[title] }));
@@ -146,6 +172,13 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
             </h3>
             {renderMenuItems(productMenuItems)}
           </nav>
+          {/* Bertar Exchange section for non-customer role */}
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Bertar Exchange
+            </h3>
+            {renderMenuItems(adminBarterExchangeMenu)}
+          </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
               Service
@@ -181,6 +214,15 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
             </h3>
             {renderMenuItems(customerListingMenu)}
           </nav>
+          {/* Bertar Exchange section for customer role */}
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Barter Exchange
+            </h3>
+            {renderMenuItems(customerBarterExchangeMenu)}
+          </nav>
+
+    
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
               Store

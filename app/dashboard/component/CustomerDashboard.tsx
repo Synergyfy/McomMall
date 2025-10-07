@@ -73,7 +73,7 @@ const CustomerDashboard: FC = () => {
         },
         {
           title: 'Total Spent',
-          value: `£${customerStats?.totalSpent.toFixed(2) ?? '0.00'}`,
+          value: `£${(customerStats?.totalSpent ?? 0).toFixed(2)}`,
           icon: <Package className="h-8 w-8" />,
           color: 'text-blue-500',
         },

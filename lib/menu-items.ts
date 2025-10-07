@@ -19,6 +19,11 @@ import {
   Megaphone,
   CreditCard,
   History,
+  Shield,
+  Users,
+  BarChart3,
+  Scale,
+  FileText,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -71,6 +76,72 @@ export const productMenuItems: MenuItem[] = [
     icon: Plus,
   },
   { title: 'Orders', href: '/dashboard/store/orders', icon: ShoppingBag },
+];
+
+
+// ✅ unified menu items
+export const barterExchangeMenuItems: MenuItem[] = [
+  // ---- Customer/General ----
+  {
+    title: "Barter Exchange",
+    href: "/dashboard/barter-exchange",
+    icon: ShoppingCart,
+  },
+  {
+    title: "Add Exchange",
+    href: "/dashboard/barter-exchange/add-exchange",
+    icon: Plus,
+  },
+  {
+    title: "Exchange History",
+    href: "/dashboard/barter-exchange/history",
+    icon: History,
+  },
+  {
+    title: "Proposals",
+    href: "/dashboard/barter-exchange/proposals/create",
+    icon: Users,
+    subMenu: [
+      { title: "Manage Proposal", href: "/dashboard/barter-exchange/proposals/manage" },
+    ]
+  },
+  {
+    title: "Items listing",
+    href: "/dashboard/barter-exchange/items",
+    icon: Scale,
+  },
+  {
+    title: "Messages",
+    href: "/dashboard/barter-exchange/messages",
+    icon: MessageSquare,
+  },
+  {
+    title: "Rules & Policies",
+    href: "/dashboard/barter-exchange/rules",
+    icon: FileText,
+  },
+
+  // ---- Admin Only ----
+  {
+    title: "Admin Dashboard",
+    href: "/dashboard/barter-exchange/admin",
+    icon: BarChart3,
+  },
+  {
+    title: "User Management",
+    href: "/dashboard/barter-exchange/admin/users",
+    icon: Users,
+  },
+  {
+    title: "Fraud & Safety",
+    href: "/dashboard/barter-exchange/admin/fraud",
+    icon: Shield,
+  },
+  {
+    title: "Settings & Integrations",
+    href: "/dashboard/barter-exchange/admin/settings",
+    icon: Settings,
+  },
 ];
 
 export const serviceMenuItems: MenuItem[] = [
