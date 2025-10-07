@@ -4,19 +4,22 @@ import { useSearchParams } from 'next/navigation';
 import { useState, useEffect, useCallback } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
-import OrderSummary from './OrderSummary';
+import OrderSummaryCard from './OrderSummaryCard';
 import PaymentForm from './PaymentForm';
 import CouponCodeInput from './CouponCodeInput';
 import GiftCardInput from './GiftCardInput';
+import VoucherInput from './VoucherInput';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
-import { useRecordOrder } from '@/hooks/useRecordOrder';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
 import { useCheckGiftCardBalance } from '@/service/gift-card/hook';
+import { useApplyVoucher } from '@/service/vouchers/hook';
 import {
   useGetApplicableOffers,
   useApplyOffer,
@@ -25,6 +28,10 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
+import {
+  CreateCheckoutDto,
+  ServiceBookingDetailsDto,
+} from '@/hooks/useCheckout';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -38,22 +45,32 @@ export default function CheckoutClient() {
   const paymentIntentClientSecret = searchParams.get(
     'payment_intent_client_secret'
   );
+  const quantityFromUrl = searchParams.get('quantity');
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
   );
   const { cart, loading: isCartLoading } = useCart();
-  const [quantity, setQuantity] = useState(1);
+  const { bookings } = useSelector((state: RootState) => state.booking);
+  const [quantity, setQuantity] = useState(quantityFromUrl ? parseInt(quantityFromUrl, 10) : 1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
+
   const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
+  const [couponDiscount, setCouponDiscount] = useState(0);
   const [isCouponLoading, setCouponLoading] = useState(false);
+
   const [giftCardCode, setGiftCardCode] = useState('');
   const [giftCardDiscount, setGiftCardDiscount] = useState(0);
   const [isGiftCardLoading, setGiftCardLoading] = useState(false);
+
+  const [voucherCode, setVoucherCode] = useState('');
+  const [voucherDiscount, setVoucherDiscount] = useState(0);
+  const [isVoucherLoading, setVoucherLoading] = useState(false);
+
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
   const [isOfferLoading, setOfferLoading] = useState(false);
+
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>(
     PaymentMethod.STRIPE
   );
@@ -63,12 +80,12 @@ export default function CheckoutClient() {
 
   const router = useRouter();
   const { mutate: checkout } = useCheckout();
-  const { mutate: recordOrder } = useRecordOrder();
   const { mutateAsync: createPaymentIntent, isPending: isStripeLoading } =
     useStripePayment();
   const { createOrderMutation } = usePayPalPayment();
   const validateCoupon = useValidateCoupon();
   const { mutateAsync: checkGiftCardBalance } = useCheckGiftCardBalance();
+  const { mutateAsync: applyVoucher } = useApplyVoucher();
   const applyOffer = useApplyOffer();
 
   const productIds = fromCart
@@ -80,16 +97,56 @@ export default function CheckoutClient() {
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
-  const basePrice = fromCart
-    ? cart?.items.reduce(
-        (acc, item) => acc + item.product.price * item.quantity,
-        0
-      ) || 0
-    : product
-    ? product.price * quantity
-    : 0;
+  const serviceBookingsForOrder = Object.entries(bookings)
+    .filter(([productId, booking]) => booking && productIds.includes(productId))
+    .map(([, booking]) => booking)
+    .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
 
-  const totalPrice = basePrice - discount - offerDiscount - giftCardDiscount;
+  const servicesTotalPrice = serviceBookingsForOrder.reduce(
+    (total, booking) => total + Number(booking?.price || 0),
+    0
+  );
+
+  const basePrice =
+    (fromCart
+      ? cart?.items.reduce(
+          (acc, item) => acc + item.product.price * item.quantity,
+          0
+        )
+      : product
+      ? product.price * quantity
+      : 0) || 0;
+
+  const subtotal = basePrice + servicesTotalPrice;
+
+  const totalDiscount =
+    couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
+  const totalPrice = subtotal - totalDiscount;
+
+  const handleApplyVoucher = async (code: string) => {
+    setVoucherLoading(true);
+    try {
+      const result = await applyVoucher(code);
+      if (result.balance > 0) {
+        const applicableDiscount = Math.min(result.balance, basePrice);
+        setVoucherDiscount(applicableDiscount);
+        setVoucherCode(code);
+        setCouponDiscount(0);
+        setCouponCode('');
+        setOfferDiscount(0);
+        setSelectedOffer(null);
+        setGiftCardDiscount(0);
+        setGiftCardCode('');
+      } else {
+        alert('This voucher has no balance.');
+      }
+    } catch (error) {
+      console.error('Failed to apply voucher', error);
+      alert('Invalid or inapplicable voucher');
+    } finally {
+      setVoucherLoading(false);
+    }
+  };
 
   const handleApplyGiftCard = async (code: string) => {
     setGiftCardLoading(true);
@@ -99,10 +156,12 @@ export default function CheckoutClient() {
         const applicableDiscount = Math.min(result.currentBalance, basePrice);
         setGiftCardDiscount(applicableDiscount);
         setGiftCardCode(code);
-        setDiscount(0); // Reset coupon discount
+        setCouponDiscount(0); // Reset coupon discount
         setCouponCode('');
         setOfferDiscount(0); // Reset offer discount
         setSelectedOffer(null);
+        setVoucherDiscount(0);
+        setVoucherCode('');
       } else {
         alert('This gift card has no balance.');
       }
@@ -121,7 +180,7 @@ export default function CheckoutClient() {
         couponCode: code,
         productIds,
       });
-      setDiscount(result.discountAmount);
+      setCouponDiscount(result.discountAmount);
       setCouponCode(code);
       setOfferDiscount(0); // Reset offer discount
       setSelectedOffer(null);
@@ -142,7 +201,7 @@ export default function CheckoutClient() {
       });
       setOfferDiscount(result.discountAmount);
       setSelectedOffer(offerId);
-      setDiscount(0); // Reset coupon discount
+      setCouponDiscount(0); // Reset coupon discount
       setCouponCode('');
     } catch (error) {
       console.error('Failed to apply offer', error);
@@ -154,7 +213,16 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
-      const checkoutData = {
+      const currentProductIds = fromCart
+        ? cart?.items.map(item => item.product.id) || []
+        : productId ? [productId] : [];
+
+      const serviceBookings = Object.entries(bookings)
+        .filter(([pid, booking]) => currentProductIds.includes(pid) && booking)
+        .map(([, booking]) => booking)
+        .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
+
+      const checkoutData: CreateCheckoutDto = {
         payment: {
           paymentMethod,
           amount: totalPrice,
@@ -163,24 +231,20 @@ export default function CheckoutClient() {
         couponCode: couponCode || undefined,
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
+        voucherCode: voucherCode || undefined,
+        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
       };
 
-      if (fromCart) {
-        checkout(checkoutData, {
-          onSuccess: () => setSuccessModalOpen(true),
-        });
-      } else if (product) {
-        recordOrder(
-          {
-            ...checkoutData,
-            productId: product.id,
-            quantity,
-          },
-          {
-            onSuccess: () => setSuccessModalOpen(true),
-          }
-        );
+      if (!fromCart && product) {
+        checkoutData.directPurchase = {
+          productId: product.id,
+          quantity,
+        };
       }
+
+      checkout(checkoutData, {
+        onSuccess: () => setSuccessModalOpen(true),
+      });
     },
     [
       fromCart,
@@ -188,10 +252,13 @@ export default function CheckoutClient() {
       quantity,
       totalPrice,
       checkout,
-      recordOrder,
       couponCode,
       selectedOffer,
       giftCardCode,
+      voucherCode,
+      bookings,
+      cart,
+      productId,
     ]
   );
 
@@ -258,54 +325,81 @@ export default function CheckoutClient() {
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         transition={{ duration: 0.5 }}
-        className="container mx-auto px-4 py-12"
+        className="container mx-auto px-4 sm:px-6 lg:px-8 py-12"
       >
-        <h1 className="text-4xl font-extrabold text-center mb-12 text-gray-800">
-          Secure Checkout
-        </h1>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <OrderSummary
-              product={product}
-              cart={cart}
-              fromCart={fromCart}
-              quantity={quantity}
-              setQuantity={setQuantity}
-              discount={discount + offerDiscount}
-              totalPrice={totalPrice}
-            />
-            <div className="mt-8">
-              <CouponCodeInput
-                onApply={handleApplyCoupon}
-                isLoading={isCouponLoading}
-              />
-              <GiftCardInput
-                onApply={handleApplyGiftCard}
-                isLoading={isGiftCardLoading}
-              />
-              <ApplicableOffers
-                offers={applicableOffers || []}
-                onApply={handleApplyOffer}
-                isLoading={isOfferLoading || areOffersLoading}
-              />
-            </div>
-          </div>
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            {isStripeLoading ? (
-              <div className="flex justify-center items-center h-full">
-                <Loader className="animate-spin text-orange-600" size={32} />
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl lg:text-4xl font-extrabold text-center mb-12 text-gray-900">
+            Complete Your Purchase
+          </h1>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12">
+            {/* Left side: Payment and Discounts */}
+            <div className="lg:col-span-7 space-y-8">
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Payment Information
+                </h2>
+                {isStripeLoading ? (
+                  <div className="flex justify-center items-center h-48">
+                    <Loader className="animate-spin text-orange-600" size={32} />
+                  </div>
+                ) : (
+                  <PaymentForm
+                    totalPrice={totalPrice}
+                    onPaymentSuccess={(transactionId) =>
+                      handlePaymentSuccess(transactionId, paymentMethod)
+                    }
+                    setPaymentMethod={setPaymentMethod}
+                    clientSecret={clientSecret}
+                    orderID={orderID}
+                  />
+                )}
               </div>
-            ) : (
-              <PaymentForm
-                totalPrice={totalPrice}
-                onPaymentSuccess={(transactionId) =>
-                  handlePaymentSuccess(transactionId, paymentMethod)
-                }
-                setPaymentMethod={setPaymentMethod}
-                clientSecret={clientSecret}
-                orderID={orderID}
-              />
-            )}
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
+                <h2 className="text-2xl font-bold text-gray-800 mb-6">
+                  Discounts & Offers
+                </h2>
+                <div className="space-y-4">
+                  <CouponCodeInput
+                    onApply={handleApplyCoupon}
+                    isLoading={isCouponLoading}
+                  />
+                  <GiftCardInput
+                    onApply={handleApplyGiftCard}
+                    isLoading={isGiftCardLoading}
+                  />
+                  <VoucherInput
+                    onApply={handleApplyVoucher}
+                    isLoading={isVoucherLoading}
+                  />
+                  <ApplicableOffers
+                    offers={applicableOffers || []}
+                    onApply={handleApplyOffer}
+                    isLoading={isOfferLoading || areOffersLoading}
+                  />
+                </div>
+              </div>
+            </div>
+
+            {/* Right side: Order Summary */}
+            <div className="lg:col-span-5 mt-12 lg:mt-0">
+              <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8 sticky top-8">
+                <OrderSummaryCard
+                  product={product}
+                  cart={cart}
+                  fromCart={fromCart}
+                  quantity={quantity}
+                  setQuantity={setQuantity}
+                  basePrice={basePrice}
+                  totalPrice={totalPrice}
+                  couponDiscount={couponDiscount}
+                  giftCardDiscount={giftCardDiscount}
+                  voucherDiscount={voucherDiscount}
+                  offerDiscount={offerDiscount}
+                  serviceBookings={serviceBookingsForOrder}
+                />
+              </div>
+            </div>
           </div>
         </div>
       </motion.div>

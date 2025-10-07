@@ -75,7 +75,6 @@ export default function RootLayout({
           <AuthInitializer>
             <ServiceWorkerRegistrar />
             <Header />
-            {/* <Auth /> */}
             {children}
           </AuthInitializer>
         </ClientProviders>

@@ -8,6 +8,16 @@ export interface BundledService {
   updated_at: string;
 }
 
+export interface SearchServiceDto {
+  term: string;
+}
+
+import { IBusiness } from '../merchant/types';
+
+export interface IService extends Service {
+  business: IBusiness;
+}
+
 export interface CreateServiceDto {
   name: string;
   description?: string;

@@ -20,10 +20,10 @@ import {
   CreditCard,
   History,
   Shield,
-  Users,
   BarChart3,
   Scale,
   FileText,
+  Users,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -165,6 +165,21 @@ export const serviceMenuItems: MenuItem[] = [
       { title: 'Pending', href: '/dashboard/bookings?status=pending' },
       { title: 'Approved', href: '/dashboard/bookings?status=approved' },
       { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },
+    ],
+  },
+];
+
+export const marketingMenuItems: MenuItem[] = [
+  {
+    title: 'Partnerships',
+    href: '/dashboard/marketing/partnerships',
+    icon: Users,
+    subMenu: [
+      { title: 'My Partners', href: '/dashboard/marketing/my-partners' },
+      {
+        title: 'Partnership Requests',
+        href: '/dashboard/marketing/partnership-requests',
+      },
     ],
   },
 ];

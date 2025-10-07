@@ -16,6 +16,7 @@ import {
   accountMenuItems,
   pluginMenuItems,
   historyMenuItems,
+  marketingMenuItems,
   MenuItem,
   barterExchangeMenuItems,
 } from '@/lib/menu-items';
@@ -189,7 +190,7 @@ const adminBarterExchangeMenu = barterExchangeMenuItems.filter(item =>
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
               MARKETING
             </h3>
-            {renderMenuItems(pluginMenuItems)}
+            {renderMenuItems([...pluginMenuItems, ...marketingMenuItems])}
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
