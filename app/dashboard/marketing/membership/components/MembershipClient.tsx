@@ -1,17 +1,24 @@
 "use client";
 
-import { useGetMyMembership, useCreateMembership } from "@/service/membership/hooks";
+import { useState } from "react";
+import { useGetMyMembership, useInitiateMembershipPayment } from "@/service/membership/hooks";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Star } from "lucide-react";
 import { MembershipTier } from "@/service/membership/types";
 import { toast } from "sonner";
+import { loadStripe } from "@stripe/stripe-js";
+import { Elements } from "@stripe/react-stripe-js";
+import MembershipCheckoutForm from "./MembershipCheckoutForm";
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 const tiers = [
   {
     name: "BASIC",
     price: "Free",
     features: ["Basic analytics", "Standard support"],
+    isFree: true,
   },
   {
     name: "EXTENDED",
@@ -28,21 +35,59 @@ const tiers = [
 
 const MembershipClient = () => {
   const { data: membership, isLoading, error } = useGetMyMembership();
-  const createMembership = useCreateMembership();
+  const initiatePayment = useInitiateMembershipPayment();
+  const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
 
   const handleUpgrade = (tier: MembershipTier) => {
-    createMembership.mutate({ tier }, {
-      onSuccess: () => {
-        toast.success(`Successfully upgraded to ${tier} membership!`);
+    if (tier === "BASIC") {
+      toast.info("Basic plan is free and assigned by default.");
+      return;
+    }
+    setSelectedTier(tier);
+    initiatePayment.mutate({ tier }, {
+      onSuccess: (data) => {
+        setClientSecret(data.clientSecret);
       },
       onError: (error) => {
-        toast.error(`Failed to upgrade membership: ${error.message}`);
+        toast.error(`Failed to initiate payment: ${error.message}`);
+        setSelectedTier(null);
       }
     });
   };
 
+  const handleSuccess = () => {
+    setClientSecret(null);
+    setSelectedTier(null);
+  };
+
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
+
+  if (clientSecret && selectedTier) {
+    return (
+      <div className="container mx-auto p-4 md:p-8 max-w-md">
+        <Card>
+          <CardHeader>
+            <CardTitle>Complete Your Payment</CardTitle>
+            <CardDescription>
+              You are upgrading to the <span className="font-semibold text-primary">{selectedTier}</span> plan.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Elements stripe={stripePromise} options={{ clientSecret }}>
+              <MembershipCheckoutForm tier={selectedTier} onSuccess={handleSuccess} />
+            </Elements>
+          </CardContent>
+           <CardFooter>
+            <Button variant="outline" className="w-full" onClick={() => { setClientSecret(null); setSelectedTier(null); }}>
+              Cancel
+            </Button>
+          </CardFooter>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="container mx-auto p-4 md:p-8">
@@ -92,10 +137,10 @@ const MembershipClient = () => {
             <CardFooter>
               <Button
                 onClick={() => handleUpgrade(tier.name as MembershipTier)}
-                disabled={createMembership.isPending || membership?.tier === tier.name}
+                disabled={initiatePayment.isPending && selectedTier === tier.name || membership?.tier === tier.name}
                 className="w-full"
               >
-                {membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
+                {initiatePayment.isPending && selectedTier === tier.name ? "Loading..." : membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
               </Button>
             </CardFooter>
           </Card>

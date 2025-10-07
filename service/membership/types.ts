@@ -6,6 +6,11 @@ export interface CreateMembershipDto {
   tier: MembershipTier;
 }
 
+export interface VerifyPaymentDto {
+  paymentIntentId: string;
+  tier: MembershipTier;
+}
+
 export interface Membership {
   id: string;
   tier: MembershipTier;
