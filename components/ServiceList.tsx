@@ -1,7 +1,7 @@
 "use client";
 import { PartnershipService } from "@/service/partnerships/types";
 import ServiceBooking from "./ServiceBooking";
-import { ServiceBookingDetailsDto } from "@/service/order/types";
+import { ServiceBookingDetailsDto } from "@/hooks/useCheckout";
 
 interface ServiceListProps {
   services: PartnershipService[];

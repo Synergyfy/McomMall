@@ -28,7 +28,10 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
-import { CreateCheckoutDto } from '@/hooks/useCheckout';
+import {
+  CreateCheckoutDto,
+  ServiceBookingDetailsDto,
+} from '@/hooks/useCheckout';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -96,7 +99,8 @@ export default function CheckoutClient() {
 
   const serviceBookingsForOrder = Object.entries(bookings)
     .filter(([productId, booking]) => booking && productIds.includes(productId))
-    .map(([, booking]) => booking);
+    .map(([, booking]) => booking)
+    .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
 
   const servicesTotalPrice = serviceBookingsForOrder.reduce(
     (total, booking) => total + Number(booking?.price || 0),
@@ -215,7 +219,8 @@ export default function CheckoutClient() {
 
       const serviceBookings = Object.entries(bookings)
         .filter(([pid, booking]) => currentProductIds.includes(pid) && booking)
-        .map(([, booking]) => booking);
+        .map(([, booking]) => booking)
+        .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
 
       const checkoutData: CreateCheckoutDto = {
         payment: {
