@@ -13,6 +13,8 @@ import { useGetProductById } from '@/service/store/products/hook';
 import { useCart } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import { useStripePayment } from '@/hooks/useStripePayment';
 import { usePayPalPayment } from '@/hooks/usePayPalPayment';
 import { useValidateCoupon } from '@/service/coupons/hook';
@@ -26,7 +28,10 @@ import ApplicableOffers from './ApplicableOffers';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
-import { CreateCheckoutDto } from '@/hooks/useCheckout';
+import {
+  CreateCheckoutDto,
+  ServiceBookingDetailsDto,
+} from '@/hooks/useCheckout';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -40,12 +45,14 @@ export default function CheckoutClient() {
   const paymentIntentClientSecret = searchParams.get(
     'payment_intent_client_secret'
   );
+  const quantityFromUrl = searchParams.get('quantity');
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
   );
   const { cart, loading: isCartLoading } = useCart();
-  const [quantity, setQuantity] = useState(1);
+  const { bookings } = useSelector((state: RootState) => state.booking);
+  const [quantity, setQuantity] = useState(quantityFromUrl ? parseInt(quantityFromUrl, 10) : 1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
 
   const [couponCode, setCouponCode] = useState('');
@@ -90,6 +97,16 @@ export default function CheckoutClient() {
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
 
+  const serviceBookingsForOrder = Object.entries(bookings)
+    .filter(([productId, booking]) => booking && productIds.includes(productId))
+    .map(([, booking]) => booking)
+    .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
+
+  const servicesTotalPrice = serviceBookingsForOrder.reduce(
+    (total, booking) => total + Number(booking?.price || 0),
+    0
+  );
+
   const basePrice =
     (fromCart
       ? cart?.items.reduce(
@@ -100,9 +117,11 @@ export default function CheckoutClient() {
       ? product.price * quantity
       : 0) || 0;
 
+  const subtotal = basePrice + servicesTotalPrice;
+
   const totalDiscount =
     couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
-  const totalPrice = basePrice - totalDiscount;
+  const totalPrice = subtotal - totalDiscount;
 
   const handleApplyVoucher = async (code: string) => {
     setVoucherLoading(true);
@@ -194,6 +213,15 @@ export default function CheckoutClient() {
 
   const handlePaymentSuccess = useCallback(
     (transactionId: string, paymentMethod: PaymentMethod) => {
+      const currentProductIds = fromCart
+        ? cart?.items.map(item => item.product.id) || []
+        : productId ? [productId] : [];
+
+      const serviceBookings = Object.entries(bookings)
+        .filter(([pid, booking]) => currentProductIds.includes(pid) && booking)
+        .map(([, booking]) => booking)
+        .filter((booking): booking is ServiceBookingDetailsDto => booking !== null);
+
       const checkoutData: CreateCheckoutDto = {
         payment: {
           paymentMethod,
@@ -204,6 +232,7 @@ export default function CheckoutClient() {
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
         voucherCode: voucherCode || undefined,
+        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
       };
 
       if (!fromCart && product) {
@@ -227,6 +256,9 @@ export default function CheckoutClient() {
       selectedOffer,
       giftCardCode,
       voucherCode,
+      bookings,
+      cart,
+      productId,
     ]
   );
 
@@ -364,6 +396,7 @@ export default function CheckoutClient() {
                   giftCardDiscount={giftCardDiscount}
                   voucherDiscount={voucherDiscount}
                   offerDiscount={offerDiscount}
+                  serviceBookings={serviceBookingsForOrder}
                 />
               </div>
             </div>
