@@ -4,14 +4,22 @@ import { CreateMembershipDto, Membership, VerifyPaymentDto } from "./types";
 
 export const useInitiateMembershipPayment = () => {
   return useMutation<{ clientSecret: string }, Error, CreateMembershipDto>({
-    mutationFn: (data) => api.post("/membership/initiate-payment", data),
+    mutationFn: (data) =>
+      api.post("/membership/initiate-payment", {
+        ...data,
+        tier: data.tier.toLowerCase(),
+      }),
   });
 };
 
 export const useVerifyMembershipPayment = () => {
   const queryClient = useQueryClient();
   return useMutation<Membership, Error, VerifyPaymentDto>({
-    mutationFn: (data) => api.post("/membership/verify-payment", data),
+    mutationFn: (data) =>
+      api.post("/membership/verify-payment", {
+        ...data,
+        tier: data.tier.toLowerCase(),
+      }),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["my-membership"] });
     },
