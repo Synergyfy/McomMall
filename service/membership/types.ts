@@ -1,13 +1,14 @@
 import { User } from "@/service/user/types";
 
 export type MembershipTier = "BASIC" | "EXTENDED" | "PROFESSIONAL";
+export type LowercaseMembershipTier = "basic" | "extended" | "professional";
 
 export interface CreateMembershipDto {
   tier: MembershipTier;
 }
 
 export interface InitiatePaymentDto {
-  tier: MembershipTier;
+  tier: LowercaseMembershipTier;
 }
 
 export interface InitiatePaymentResponse {
@@ -16,7 +17,7 @@ export interface InitiatePaymentResponse {
 
 export interface VerifyPaymentDto {
   paymentIntentId: string;
-  tier: MembershipTier;
+  tier: LowercaseMembershipTier;
 }
 
 export interface Membership {

@@ -5,7 +5,7 @@ import { useGetMyMembership, useInitiatePayment } from "@/service/membership/hoo
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, Star } from "lucide-react";
-import { MembershipTier } from "@/service/membership/types";
+import { LowercaseMembershipTier, MembershipTier } from "@/service/membership/types";
 import { toast } from "sonner";
 import { loadStripe } from "@stripe/stripe-js";
 import { Elements } from "@stripe/react-stripe-js";
@@ -45,7 +45,7 @@ const MembershipClient = () => {
 
   const handleUpgrade = (tier: MembershipTier) => {
     setSelectedTier(tier);
-    initiatePayment.mutate({ tier }, {
+    initiatePayment.mutate({ tier: tier.toLowerCase() as LowercaseMembershipTier }, {
       onSuccess: (data) => {
         setClientSecret(data.clientSecret);
       },

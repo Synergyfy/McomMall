@@ -8,7 +8,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useVerifyPayment } from "@/service/membership/hooks";
-import { MembershipTier } from "@/service/membership/types";
+import { LowercaseMembershipTier, MembershipTier } from "@/service/membership/types";
 import { toast } from "sonner";
 
 interface MembershipPaymentProps {
@@ -60,7 +60,7 @@ const MembershipPayment = ({
 
     if (paymentIntent && paymentIntent.status === "succeeded") {
       verifyPayment.mutate(
-        { paymentIntentId: paymentIntent.id, tier },
+        { paymentIntentId: paymentIntent.id, tier: tier.toLowerCase() as LowercaseMembershipTier },
         {
           onSuccess: () => {
             toast.success("Payment successful! Your membership is now active.");
