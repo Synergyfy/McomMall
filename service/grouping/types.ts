@@ -32,9 +32,9 @@ export interface Group {
   size: 6 | 12;
   status: 'RECRUITING' | 'ACTIVE' | 'EXPIRED' | 'FAILED';
   recruitmentDeadline: string;
-  founder: User;
-  members: GroupMember[];
-  wallet: GroupWallet;
+  founder?: User;
+  members?: GroupMember[];
+  wallet?: GroupWallet;
   created_at: string;
   updated_at: string;
 }

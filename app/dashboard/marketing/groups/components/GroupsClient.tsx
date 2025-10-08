@@ -19,7 +19,8 @@ import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const GroupCard = ({ group }: { group: Group }) => {
-  const fundingProgress = (group.members.length / group.size) * 100;
+  const memberCount = group.members?.length ?? 0;
+  const fundingProgress = (memberCount / group.size) * 100;
 
   return (
     <Link href={`/dashboard/marketing/groups/${group.id}`} className="block">
@@ -40,18 +41,20 @@ const GroupCard = ({ group }: { group: Group }) => {
                 Members
               </span>
               <span className="text-sm font-semibold">
-                {group.members.length} / {group.size}
+                {memberCount} / {group.size}
               </span>
             </div>
             <Progress value={fundingProgress} className="w-full" />
           </div>
-          <div className="flex items-center text-sm text-muted-foreground">
-            <Wallet className="mr-2 h-4 w-4" />
-            Group Wallet Balance:{' '}
-            <span className="font-semibold text-primary ml-1">
-              £{group.wallet.balance.toFixed(2)}
-            </span>
-          </div>
+          {group.wallet && (
+            <div className="flex items-center text-sm text-muted-foreground">
+              <Wallet className="mr-2 h-4 w-4" />
+              Group Wallet Balance:{' '}
+              <span className="font-semibold text-primary ml-1">
+                £{group.wallet.balance.toFixed(2)}
+              </span>
+            </div>
+          )}
           <p className="text-xs text-muted-foreground pt-4">
             Recruitment deadline:{' '}
             {new Date(group.recruitmentDeadline).toLocaleDateString()}
