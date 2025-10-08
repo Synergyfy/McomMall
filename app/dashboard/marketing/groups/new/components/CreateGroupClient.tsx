@@ -67,7 +67,7 @@ const CreateGroupClient = () => {
     return <div>Loading membership status...</div>;
   }
 
-  if (membership?.tier !== "PROFESSIONAL") {
+  if (membership?.tier?.toUpperCase() !== 'PROFESSIONAL') {
     return (
       <div className="container mx-auto p-4 md:p-8 text-center">
         <Card className="max-w-md mx-auto">
