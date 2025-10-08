@@ -40,7 +40,7 @@ export interface Group {
   name: string;
   localArea: string;
   size: 6 | 12;
-  status: 'RECRUITING' | 'ACTIVE' | 'EXPIRED' | 'FAILED';
+  status: 'recruiting' | 'active' | 'expired' | 'failed';
   recruitmentDeadline: string;
   founder?: User;
   members?: GroupMember[];
