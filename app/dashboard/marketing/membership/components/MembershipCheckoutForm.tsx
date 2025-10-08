@@ -1,26 +1,32 @@
 "use client";
 
-import { useStripe, useElements, PaymentElement } from "@stripe/react-stripe-js";
-import { Button } from "@/components/ui/button";
-import { useState } from "react";
-import { toast } from "sonner";
-import { useVerifyMembershipPayment } from "@/service/membership/hooks";
-import { MembershipTier } from "@/service/membership/types";
+import {
+  PaymentElement,
+  useElements,
+  useStripe,
+} from '@stripe/react-stripe-js';
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { useVerifyMembershipPayment } from '@/service/membership/hooks';
+import { MembershipTier, PaymentMethod } from '@/service/membership/types';
+import { toast } from 'sonner';
 
 interface MembershipCheckoutFormProps {
   tier: MembershipTier;
   onSuccess: () => void;
 }
 
-const MembershipCheckoutForm = ({ tier, onSuccess }: MembershipCheckoutFormProps) => {
+const MembershipCheckoutForm = ({
+  tier,
+  onSuccess,
+}: MembershipCheckoutFormProps) => {
   const stripe = useStripe();
   const elements = useElements();
-  const [isLoading, setIsLoading] = useState(false);
   const verifyPayment = useVerifyMembershipPayment();
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-
     if (!stripe || !elements) {
       return;
     }
@@ -29,10 +35,7 @@ const MembershipCheckoutForm = ({ tier, onSuccess }: MembershipCheckoutFormProps
 
     const { error, paymentIntent } = await stripe.confirmPayment({
       elements,
-      confirmParams: {
-        return_url: `${window.location.origin}/dashboard/marketing/membership`,
-      },
-      redirect: "if_required",
+      redirect: 'if_required',
     });
 
     if (error) {
@@ -41,32 +44,37 @@ const MembershipCheckoutForm = ({ tier, onSuccess }: MembershipCheckoutFormProps
       return;
     }
 
-    if (paymentIntent && paymentIntent.status === "succeeded") {
+    if (paymentIntent && paymentIntent.status === 'succeeded') {
       verifyPayment.mutate(
-        { paymentIntentId: paymentIntent.id, tier },
+        {
+          paymentProvider: PaymentMethod.STRIPE,
+          transactionId: paymentIntent.id,
+          purchaseDetails: { tier },
+        },
         {
           onSuccess: () => {
-            toast.success("Payment successful! Your membership has been upgraded.");
+            toast.success('Payment successful! Your membership is active.');
             onSuccess();
           },
-          onError: (error) => {
-            toast.error(`Verification failed: ${error.message}`);
-          },
-          onSettled: () => {
+          onError: (error: any) => {
+            const errorMessage =
+              error.response?.data?.message || 'An unexpected error occurred.';
+            toast.error(`Payment verification failed: ${errorMessage}`);
             setIsLoading(false);
-          }
+          },
         }
       );
-    } else {
-        setIsLoading(false);
     }
   };
 
   return (
     <form onSubmit={handleSubmit}>
       <PaymentElement />
-      <Button disabled={!stripe || isLoading || verifyPayment.isPending} className="w-full mt-4">
-        {isLoading || verifyPayment.isPending ? "Processing..." : "Pay Now"}
+      <Button
+        disabled={isLoading || !stripe || !elements}
+        className="w-full mt-4"
+      >
+        {isLoading ? 'Processing...' : 'Pay Now'}
       </Button>
     </form>
   );

@@ -1,34 +1,38 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import api from "../api";
-import { CreateMembershipDto, Membership, VerifyPaymentDto } from "./types";
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import {
+  getMyMembership,
+  initiateMembershipPayment,
+  verifyMembershipPayment,
+} from './api';
+import {
+  InitiateMembershipPaymentDto,
+  Membership,
+  VerifyMembershipPaymentDto,
+} from './types';
+
+export const useGetMyMembership = () => {
+  return useQuery<Membership, Error>({
+    queryKey: ['my-membership'],
+    queryFn: getMyMembership,
+  });
+};
 
 export const useInitiateMembershipPayment = () => {
-  return useMutation<{ clientSecret: string }, Error, CreateMembershipDto>({
-    mutationFn: (data) =>
-      api.post("/membership/initiate-payment", {
-        ...data,
-        tier: data.tier.toLowerCase(),
-      }),
+  return useMutation<
+    { clientSecret?: string; orderId?: string; provider: string },
+    Error,
+    InitiateMembershipPaymentDto
+  >({
+    mutationFn: initiateMembershipPayment,
   });
 };
 
 export const useVerifyMembershipPayment = () => {
   const queryClient = useQueryClient();
-  return useMutation<Membership, Error, VerifyPaymentDto>({
-    mutationFn: (data) =>
-      api.post("/membership/verify-payment", {
-        ...data,
-        tier: data.tier.toLowerCase(),
-      }),
+  return useMutation<Membership, Error, VerifyMembershipPaymentDto>({
+    mutationFn: verifyMembershipPayment,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["my-membership"] });
+      queryClient.invalidateQueries({ queryKey: ['my-membership'] });
     },
-  });
-};
-
-export const useGetMyMembership = () => {
-  return useQuery<Membership, Error>({
-    queryKey: ["my-membership"],
-    queryFn: () => api.get("/membership/my"),
   });
 };

@@ -1,34 +1,56 @@
 "use client";
 
-import { useState } from "react";
-import { useGetMyMembership, useInitiateMembershipPayment } from "@/service/membership/hooks";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
-import { CheckCircle, Star } from "lucide-react";
-import { MembershipTier } from "@/service/membership/types";
-import { toast } from "sonner";
-import { loadStripe } from "@stripe/stripe-js";
-import { Elements } from "@stripe/react-stripe-js";
-import MembershipCheckoutForm from "./MembershipCheckoutForm";
+import { useState } from 'react';
+import {
+  useGetMyMembership,
+  useInitiateMembershipPayment,
+} from '@/service/membership/hooks';
+import { Button } from '@/components/ui/button';
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from '@/components/ui/card';
+import { CheckCircle, Star } from 'lucide-react';
+import { MembershipTier, PaymentMethod } from '@/service/membership/types';
+import { toast } from 'sonner';
+import { loadStripe } from '@stripe/stripe-js';
+import { Elements } from '@stripe/react-stripe-js';
+import MembershipCheckoutForm from './MembershipCheckoutForm';
+import MembershipPaypalCheckout from './MembershipPaypalCheckout';
+import { Separator } from '@/components/ui/separator';
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+);
 
 const tiers = [
   {
-    name: "BASIC",
-    price: "Free",
-    features: ["Basic analytics", "Standard support"],
+    name: 'BASIC',
+    price: 'Free',
+    features: ['Basic analytics', 'Standard support'],
     isFree: true,
   },
   {
-    name: "EXTENDED",
-    price: "£10/month",
-    features: ["Advanced analytics", "Priority support", "Early access to new features"],
+    name: 'EXTENDED',
+    price: '£10/month',
+    features: [
+      'Advanced analytics',
+      'Priority support',
+      'Early access to new features',
+    ],
   },
   {
-    name: "PROFESSIONAL",
-    price: "£25/month",
-    features: ["All Extended features", "Group creation", "Dedicated account manager"],
+    name: 'PROFESSIONAL',
+    price: '£25/month',
+    features: [
+      'All Extended features',
+      'Group creation',
+      'Dedicated account manager',
+    ],
     highlight: true,
   },
 ];
@@ -38,55 +60,110 @@ const MembershipClient = () => {
   const initiatePayment = useInitiateMembershipPayment();
   const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [
+    selectedPaymentProvider,
+    setSelectedPaymentProvider,
+  ] = useState<PaymentMethod | null>(null);
 
-  const handleUpgrade = (tier: MembershipTier) => {
-    if (tier === "BASIC") {
-      toast.info("Basic plan is free and assigned by default.");
+  const handleUpgrade = (tier: MembershipTier, provider: PaymentMethod) => {
+    if (tier === 'BASIC') {
+      toast.info('Basic plan is free and assigned by default.');
       return;
     }
     setSelectedTier(tier);
-    initiatePayment.mutate({ tier }, {
-      onSuccess: (data) => {
-        setClientSecret(data.clientSecret);
-      },
-      onError: (error) => {
-        toast.error(`Failed to initiate payment: ${error.message}`);
-        setSelectedTier(null);
+    setSelectedPaymentProvider(provider);
+    initiatePayment.mutate(
+      { tier, paymentProvider: provider },
+      {
+        onSuccess: (data) => {
+          if (data.provider === PaymentMethod.STRIPE && data.clientSecret) {
+            setClientSecret(data.clientSecret);
+          } else if (data.provider === PaymentMethod.PAYPAL && data.orderId) {
+            setOrderId(data.orderId);
+          } else {
+            toast.error('Invalid response from server.');
+            resetSelection();
+          }
+        },
+        onError: (error: any) => {
+          const errorMessage =
+            error.response?.data?.message || 'An unexpected error occurred.';
+          toast.error(`Failed to initiate payment: ${errorMessage}`);
+          resetSelection();
+        },
       }
-    });
+    );
   };
 
-  const handleSuccess = () => {
+  const resetSelection = () => {
     setClientSecret(null);
+    setOrderId(null);
     setSelectedTier(null);
+    setSelectedPaymentProvider(null);
   };
 
   if (isLoading) return <div>Loading...</div>;
   if (error) return <div>Error: {error.message}</div>;
 
-  if (clientSecret && selectedTier) {
-    return (
-      <div className="container mx-auto p-4 md:p-8 max-w-md">
-        <Card>
-          <CardHeader>
-            <CardTitle>Complete Your Payment</CardTitle>
-            <CardDescription>
-              You are upgrading to the <span className="font-semibold text-primary">{selectedTier}</span> plan.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <Elements stripe={stripePromise} options={{ clientSecret }}>
-              <MembershipCheckoutForm tier={selectedTier} onSuccess={handleSuccess} />
-            </Elements>
-          </CardContent>
-           <CardFooter>
-            <Button variant="outline" className="w-full" onClick={() => { setClientSecret(null); setSelectedTier(null); }}>
-              Cancel
-            </Button>
-          </CardFooter>
-        </Card>
-      </div>
-    );
+  if (selectedTier) {
+    if (clientSecret && selectedPaymentProvider === PaymentMethod.STRIPE) {
+      return (
+        <div className="container mx-auto p-4 md:p-8 max-w-md">
+          <Card>
+            <CardHeader>
+              <CardTitle>Complete Your Payment</CardTitle>
+              <CardDescription>
+                You are upgrading to the{' '}
+                <span className="font-semibold text-primary">{selectedTier}</span>{' '}
+                plan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Elements stripe={stripePromise} options={{ clientSecret }}>
+                <MembershipCheckoutForm
+                  tier={selectedTier}
+                  onSuccess={resetSelection}
+                />
+              </Elements>
+            </CardContent>
+            <CardFooter>
+              <Button
+                variant="outline"
+                className="w-full"
+                onClick={resetSelection}
+              >
+                Cancel
+              </Button>
+            </CardFooter>
+          </Card>
+        </div>
+      );
+    }
+    if (orderId && selectedPaymentProvider === PaymentMethod.PAYPAL) {
+      return (
+        <div className="container mx-auto p-4 md:p-8 max-w-md">
+          <Card>
+            <CardHeader>
+              <CardTitle>Complete Your PayPal Payment</CardTitle>
+              <CardDescription>
+                You are upgrading to the{' '}
+                <span className="font-semibold text-primary">{selectedTier}</span>{' '}
+                plan.
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <MembershipPaypalCheckout
+                orderId={orderId}
+                tier={selectedTier}
+                onSuccess={resetSelection}
+                onCancel={resetSelection}
+              />
+            </CardContent>
+          </Card>
+        </div>
+      );
+    }
   }
 
   return (
@@ -101,14 +178,18 @@ const MembershipClient = () => {
           <CardHeader>
             <CardTitle>Your Current Plan</CardTitle>
             <CardDescription>
-              You are currently on the{" "}
-              <span className="font-semibold text-primary">{membership.tier}</span> plan.
+              You are currently on the{' '}
+              <span className="font-semibold text-primary">
+                {membership.tier}
+              </span>{' '}
+              plan.
             </CardDescription>
           </CardHeader>
           <CardContent>
             <p>
-              Your membership is {membership.isActive ? "active" : "inactive"} and
-              expires on {new Date(membership.expiresAt).toLocaleDateString()}.
+              Your membership is {membership.isActive ? 'active' : 'inactive'}{' '}
+              and expires on{' '}
+              {new Date(membership.expiresAt).toLocaleDateString()}.
             </p>
           </CardContent>
         </Card>
@@ -116,7 +197,10 @@ const MembershipClient = () => {
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
         {tiers.map((tier) => (
-          <Card key={tier.name} className={tier.highlight ? "border-primary" : ""}>
+          <Card
+            key={tier.name}
+            className={tier.highlight ? 'border-primary' : ''}
+          >
             <CardHeader>
               <CardTitle className="flex items-center justify-between">
                 {tier.name}
@@ -134,14 +218,63 @@ const MembershipClient = () => {
                 ))}
               </ul>
             </CardContent>
-            <CardFooter>
-              <Button
-                onClick={() => handleUpgrade(tier.name as MembershipTier)}
-                disabled={initiatePayment.isPending && selectedTier === tier.name || membership?.tier === tier.name}
-                className="w-full"
-              >
-                {initiatePayment.isPending && selectedTier === tier.name ? "Loading..." : membership?.tier === tier.name ? "Current Plan" : "Upgrade"}
-              </Button>
+            <CardFooter className="flex flex-col items-stretch gap-3">
+              {tier.isFree || membership?.tier === tier.name ? (
+                <Button disabled className="w-full">
+                  {membership?.tier === tier.name
+                    ? 'Current Plan'
+                    : 'Assigned by Default'}
+                </Button>
+              ) : (
+                <>
+                  <Button
+                    onClick={() =>
+                      handleUpgrade(
+                        tier.name as MembershipTier,
+                        PaymentMethod.STRIPE
+                      )
+                    }
+                    disabled={
+                      initiatePayment.isPending &&
+                      selectedTier === tier.name &&
+                      selectedPaymentProvider === PaymentMethod.STRIPE
+                    }
+                    className="w-full"
+                  >
+                    {initiatePayment.isPending &&
+                    selectedTier === tier.name &&
+                    selectedPaymentProvider === PaymentMethod.STRIPE
+                      ? 'Loading...'
+                      : 'Upgrade with Stripe'}
+                  </Button>
+                  <div className="relative">
+                    <Separator />
+                    <span className="absolute left-1/2 -translate-x-1/2 -top-2.5 bg-card px-2 text-xs text-muted-foreground">
+                      OR
+                    </span>
+                  </div>
+                  <Button
+                    onClick={() =>
+                      handleUpgrade(
+                        tier.name as MembershipTier,
+                        PaymentMethod.PAYPAL
+                      )
+                    }
+                    disabled={
+                      initiatePayment.isPending &&
+                      selectedTier === tier.name &&
+                      selectedPaymentProvider === PaymentMethod.PAYPAL
+                    }
+                    className="w-full"
+                  >
+                    {initiatePayment.isPending &&
+                    selectedTier === tier.name &&
+                    selectedPaymentProvider === PaymentMethod.PAYPAL
+                      ? 'Loading...'
+                      : 'Upgrade with Paypal'}
+                  </Button>
+                </>
+              )}
             </CardFooter>
           </Card>
         ))}

@@ -1,14 +1,21 @@
-import { User } from "@/service/user/types";
-
 export type MembershipTier = "BASIC" | "EXTENDED" | "PROFESSIONAL";
 
-export interface CreateMembershipDto {
-  tier: MembershipTier;
+export enum PaymentMethod {
+  STRIPE = 'stripe',
+  PAYPAL = 'paypal',
 }
 
-export interface VerifyPaymentDto {
-  paymentIntentId: string;
+export interface InitiateMembershipPaymentDto {
   tier: MembershipTier;
+  paymentProvider: PaymentMethod;
+}
+
+export interface VerifyMembershipPaymentDto {
+  paymentProvider: PaymentMethod;
+  transactionId: string;
+  purchaseDetails: {
+    tier: MembershipTier;
+  };
 }
 
 export interface Membership {
@@ -16,38 +23,6 @@ export interface Membership {
   tier: MembershipTier;
   isActive: boolean;
   expiresAt: string;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface Group {
-  id: string;
-  name: string;
-  localArea: string;
-  size: 6 | 12;
-  status: "RECRUITING" | "ACTIVE" | "EXPIRED" | "FAILED";
-  recruitmentDeadline: string;
-  pitchUrl?: string;
-  founder: User;
-  members: GroupMember[];
-  wallet: GroupWallet;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GroupMember {
-  id: string;
-  status: "ACTIVE" | "INACTIVE";
-  user: User;
-  group: Group;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface GroupWallet {
-  id: string;
-  balance: number;
-  groupId: string;
   created_at: string;
   updated_at: string;
 }
