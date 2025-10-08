@@ -1,23 +1,14 @@
 import { User } from '../user/types';
-import { PaymentMethod } from '../membership/types';
-
-export interface InitiateContributionPaymentDto {
-  paymentProvider: PaymentMethod;
-}
-
-export interface VerifyContributionPaymentDto {
-  paymentProvider: PaymentMethod;
-  transactionId: string;
-}
 
 export interface CreateGroupDto {
   name: string;
   localArea: string;
   size: 6 | 12;
-  recruitmentDeadline: string; // ISO 8601 Date String
+  recruitmentDeadline: string;
+  pitchUrl?: string;
 }
 
-export type GroupMemberStatus = 'PENDING_PAYMENT' | 'ACTIVE';
+export type GroupMemberStatus = 'ACTIVE' | 'INACTIVE';
 
 export interface GroupWallet {
   id: string;
@@ -42,6 +33,7 @@ export interface Group {
   size: 6 | 12;
   status: 'recruiting' | 'active' | 'expired' | 'failed';
   recruitmentDeadline: string;
+  pitchUrl?: string;
   founder?: User;
   members?: GroupMember[];
   wallet?: GroupWallet;

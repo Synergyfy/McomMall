@@ -1,8 +1,8 @@
 import api from '../api';
 import {
-  InitiateMembershipPaymentDto,
+  CreateMembershipDto,
   Membership,
-  VerifyMembershipPaymentDto,
+  VerifyPaymentDto,
 } from './types';
 
 export const getMyMembership = async (): Promise<Membership | null> => {
@@ -18,32 +18,15 @@ export const getMyMembership = async (): Promise<Membership | null> => {
 };
 
 export const initiateMembershipPayment = async (
-  initiateMembershipPaymentDto: InitiateMembershipPaymentDto
-): Promise<{ clientSecret?: string; orderId?: string; provider: string }> => {
-  const payload = {
-    ...initiateMembershipPaymentDto,
-    tier: initiateMembershipPaymentDto.tier.toLowerCase(),
-  };
-  const response = await api.post(
-    '/membership/initiate-payment',
-    payload
-  );
+  dto: CreateMembershipDto
+): Promise<{ clientSecret: string }> => {
+  const response = await api.post('/membership/initiate-payment', dto);
   return response.data;
 };
 
 export const verifyMembershipPayment = async (
-  verifyMembershipPaymentDto: VerifyMembershipPaymentDto
+  dto: VerifyPaymentDto
 ): Promise<Membership> => {
-  const payload = {
-    ...verifyMembershipPaymentDto,
-    purchaseDetails: {
-      ...verifyMembershipPaymentDto.purchaseDetails,
-      tier: verifyMembershipPaymentDto.purchaseDetails.tier.toLowerCase(),
-    },
-  };
-  const response = await api.post(
-    '/membership/verify-payment',
-    payload
-  );
+  const response = await api.post('/membership/verify-payment', dto);
   return response.data;
 };

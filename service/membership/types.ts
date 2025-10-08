@@ -1,21 +1,12 @@
-export type MembershipTier = "BASIC" | "EXTENDED" | "PROFESSIONAL";
+export type MembershipTier = 'BASIC' | 'EXTENDED' | 'PROFESSIONAL';
 
-export enum PaymentMethod {
-  STRIPE = 'stripe',
-  PAYPAL = 'paypal',
-}
-
-export interface InitiateMembershipPaymentDto {
+export interface CreateMembershipDto {
   tier: MembershipTier;
-  paymentProvider: PaymentMethod;
 }
 
-export interface VerifyMembershipPaymentDto {
-  paymentProvider: PaymentMethod;
-  transactionId: string;
-  purchaseDetails: {
-    tier: MembershipTier;
-  };
+export interface VerifyPaymentDto {
+  paymentIntentId: string;
+  tier: MembershipTier;
 }
 
 export interface Membership {
