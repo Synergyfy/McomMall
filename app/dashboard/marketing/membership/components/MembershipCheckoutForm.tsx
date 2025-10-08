@@ -8,12 +8,16 @@ import {
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { useVerifyMembershipPayment } from '@/service/membership/hooks';
-import { MembershipTier, PaymentMethod } from '@/service/membership/types';
+import {
+  Membership,
+  MembershipTier,
+  PaymentMethod,
+} from '@/service/membership/types';
 import { toast } from 'sonner';
 
 interface MembershipCheckoutFormProps {
   tier: MembershipTier;
-  onSuccess: () => void;
+  onSuccess: (membership: Membership) => void;
 }
 
 const MembershipCheckoutForm = ({
@@ -52,9 +56,8 @@ const MembershipCheckoutForm = ({
           purchaseDetails: { tier },
         },
         {
-          onSuccess: () => {
-            toast.success('Payment successful! Your membership is active.');
-            onSuccess();
+          onSuccess: (membership) => {
+            onSuccess(membership);
           },
           onError: (error: any) => {
             const errorMessage =
@@ -64,6 +67,8 @@ const MembershipCheckoutForm = ({
           },
         }
       );
+    } else {
+      setIsLoading(false);
     }
   };
 

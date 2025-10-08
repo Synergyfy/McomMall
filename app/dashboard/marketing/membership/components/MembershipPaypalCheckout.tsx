@@ -6,14 +6,18 @@ import {
   OnApproveData,
 } from '@paypal/react-paypal-js';
 import { useVerifyMembershipPayment } from '@/service/membership/hooks';
-import { MembershipTier, PaymentMethod } from '@/service/membership/types';
+import {
+  Membership,
+  MembershipTier,
+  PaymentMethod,
+} from '@/service/membership/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
 interface MembershipPaypalCheckoutProps {
   orderId: string;
   tier: MembershipTier;
-  onSuccess: () => void;
+  onSuccess: (membership: Membership) => void;
   onCancel: () => void;
 }
 
@@ -34,9 +38,8 @@ const MembershipPaypalCheckout = ({
         purchaseDetails: { tier },
       },
       {
-        onSuccess: () => {
-          toast.success('Payment successful! Your membership is active.');
-          onSuccess();
+        onSuccess: (membership) => {
+          onSuccess(membership);
         },
         onError: (error: any) => {
           const errorMessage =
