@@ -11,7 +11,7 @@ import { useVerifyMembershipPayment } from '@/service/membership/hooks';
 import {
   Membership,
   MembershipTier,
-  PaymentMethod,
+  VerifyPaymentDto,
 } from '@/service/membership/types';
 import { toast } from 'sonner';
 
@@ -59,9 +59,8 @@ const MembershipCheckoutForm = ({
     if (paymentIntent && paymentIntent.status === 'succeeded') {
       verifyPayment.mutate(
         {
-          paymentProvider: PaymentMethod.STRIPE,
-          transactionId: paymentIntent.id,
-          purchaseDetails: { tier },
+          paymentIntentId: paymentIntent.id,
+          tier,
         },
         {
           onSuccess: (membership) => {

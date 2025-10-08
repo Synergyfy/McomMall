@@ -5,9 +5,9 @@ import {
   verifyMembershipPayment,
 } from './api';
 import {
-  InitiateMembershipPaymentDto,
+  CreateMembershipDto,
   Membership,
-  VerifyMembershipPaymentDto,
+  VerifyPaymentDto,
 } from './types';
 
 export const useGetMyMembership = () => {
@@ -18,18 +18,14 @@ export const useGetMyMembership = () => {
 };
 
 export const useInitiateMembershipPayment = () => {
-  return useMutation<
-    { clientSecret?: string; orderId?: string; provider: string },
-    Error,
-    InitiateMembershipPaymentDto
-  >({
+  return useMutation<{ clientSecret: string }, Error, CreateMembershipDto>({
     mutationFn: initiateMembershipPayment,
   });
 };
 
 export const useVerifyMembershipPayment = () => {
   const queryClient = useQueryClient();
-  return useMutation<Membership, Error, VerifyMembershipPaymentDto>({
+  return useMutation<Membership, Error, VerifyPaymentDto>({
     mutationFn: verifyMembershipPayment,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['my-membership'] });
