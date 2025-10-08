@@ -74,10 +74,14 @@ const CreateGroupClient = () => {
     setErrors(validationErrors);
 
     if (Object.keys(validationErrors).length === 0) {
+      const { pitchUrl, ...rest } = formData;
       const data: CreateGroupDto = {
-        ...formData,
+        ...rest,
         size: parseInt(formData.size, 10) as 6 | 12,
-        recruitmentDeadline: new Date(formData.recruitmentDeadline).toISOString(),
+        recruitmentDeadline: new Date(
+          formData.recruitmentDeadline
+        ).toISOString(),
+        ...(pitchUrl && { pitchUrl }),
       };
       createGroup.mutate(data, {
         onSuccess: () => {
