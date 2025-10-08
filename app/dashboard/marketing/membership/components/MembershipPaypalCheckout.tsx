@@ -3,7 +3,6 @@
 import {
   PayPalScriptProvider,
   PayPalButtons,
-  OnApproveData,
 } from '@paypal/react-paypal-js';
 import { useVerifyMembershipPayment } from '@/service/membership/hooks';
 import {
@@ -13,6 +12,14 @@ import {
 } from '@/service/membership/types';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
+
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
 interface MembershipPaypalCheckoutProps {
   orderId: string;
@@ -30,7 +37,7 @@ const MembershipPaypalCheckout = ({
   const verifyPayment = useVerifyMembershipPayment();
   const paypalClientId = process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID;
 
-  const handleApprove = async (data: OnApproveData) => {
+  const handleApprove = async (data: { orderID: string }) => {
     verifyPayment.mutate(
       {
         paymentProvider: PaymentMethod.PAYPAL,
@@ -41,9 +48,9 @@ const MembershipPaypalCheckout = ({
         onSuccess: (membership) => {
           onSuccess(membership);
         },
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
           const errorMessage =
-            error.response?.data?.message || 'An unexpected error occurred.';
+            error.response?.data?.message || error.message || 'An unexpected error occurred.';
           toast.error(`Payment verification failed: ${errorMessage}`);
         },
       }

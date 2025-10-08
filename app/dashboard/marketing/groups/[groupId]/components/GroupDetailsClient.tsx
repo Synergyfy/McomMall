@@ -11,10 +11,19 @@ import {
 } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Users, Wallet, CheckCircle, Hourglass } from 'lucide-react';
-import { useAuth } from '@/hooks/useAuth';
+import { Users, Wallet, CheckCircle, Hourglass, AlertTriangle } from 'lucide-react';
+import { useSelector } from 'react-redux';
 import { toast } from 'sonner';
 import { GroupMember } from '@/service/grouping/types';
+import { RootState } from '@/service/store/store';
+
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
 
 const MemberCard = ({ member }: { member: GroupMember }) => (
   <div className="flex items-center justify-between p-3 bg-secondary rounded-lg">
@@ -34,7 +43,7 @@ const MemberCard = ({ member }: { member: GroupMember }) => (
 );
 
 const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
-  const { userId } = useAuth();
+  const userId = useSelector((state: RootState) => state.auth.userId);
   const { data: group, isLoading, error } = useGetGroupById(groupId);
   const payContribution = usePayContribution();
 
@@ -45,9 +54,9 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
         onSuccess: () => {
           toast.success('Contribution paid successfully! Your membership is now active.');
         },
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
           const errorMessage =
-            error.response?.data?.message || 'An unexpected error occurred.';
+            error.response?.data?.message || error.message || 'An unexpected error occurred.';
           toast.error(`Failed to pay contribution: ${errorMessage}`);
         },
       }
@@ -55,8 +64,22 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
   };
 
   if (isLoading) return <div>Loading group details...</div>;
-  if (error) return <div>Error: {error.message}</div>;
-  if (!group) return <div>Group not found.</div>;
+  if (error) return (
+    <div className="container mx-auto p-4 md:p-8 text-center">
+        <Card className="max-w-md mx-auto">
+            <CardHeader>
+                <CardTitle className="flex items-center justify-center text-red-500">
+                    <AlertTriangle className="h-6 w-6 mr-2" />
+                    Error
+                </CardTitle>
+            </CardHeader>
+            <CardContent>
+                <p>Could not load group details: {error.message}</p>
+            </CardContent>
+        </Card>
+    </div>
+  );
+  if (!group || !group.members || !group.wallet) return <div>Group data is incomplete or not found.</div>;
 
   const currentUserMemberInfo = group.members.find(
     (m) => m.user.id === userId

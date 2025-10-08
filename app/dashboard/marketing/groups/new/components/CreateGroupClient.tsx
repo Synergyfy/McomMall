@@ -19,6 +19,14 @@ interface FormErrors {
   pitchUrl?: string;
 }
 
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 const CreateGroupClient = () => {
   const { data: membership, isLoading: isLoadingMembership } =
     useGetMyMembership();
@@ -94,9 +102,9 @@ const CreateGroupClient = () => {
             pitchUrl: '',
           });
         },
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
           const errorMessage =
-            error.response?.data?.message || 'An unexpected error occurred.';
+            error.response?.data?.message || error.message || 'An unexpected error occurred.';
           toast.error(`Failed to create group: ${errorMessage}`);
         },
       });

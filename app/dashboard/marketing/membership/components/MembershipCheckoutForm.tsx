@@ -15,6 +15,14 @@ import {
 } from '@/service/membership/types';
 import { toast } from 'sonner';
 
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 interface MembershipCheckoutFormProps {
   tier: MembershipTier;
   onSuccess: (membership: Membership) => void;
@@ -59,9 +67,9 @@ const MembershipCheckoutForm = ({
           onSuccess: (membership) => {
             onSuccess(membership);
           },
-          onError: (error: any) => {
+          onError: (error: ApiError) => {
             const errorMessage =
-              error.response?.data?.message || 'An unexpected error occurred.';
+              error.response?.data?.message || error.message || 'An unexpected error occurred.';
             toast.error(`Payment verification failed: ${errorMessage}`);
             setIsLoading(false);
           },

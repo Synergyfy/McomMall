@@ -28,6 +28,14 @@ import MembershipPaypalCheckout from './MembershipPaypalCheckout';
 import { Separator } from '@/components/ui/separator';
 import MembershipSuccessDialog from './MembershipSuccessDialog';
 
+interface ApiError extends Error {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+}
+
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
 );
@@ -96,9 +104,9 @@ const MembershipClient = () => {
             resetSelection();
           }
         },
-        onError: (error: any) => {
+        onError: (error: ApiError) => {
           const errorMessage =
-            error.response?.data?.message || 'An unexpected error occurred.';
+            error.response?.data?.message || error.message || 'An unexpected error occurred.';
           toast.error(`Failed to initiate payment: ${errorMessage}`);
           resetSelection();
         },
