@@ -20,9 +20,13 @@ export const getMyMembership = async (): Promise<Membership | null> => {
 export const initiateMembershipPayment = async (
   initiateMembershipPaymentDto: InitiateMembershipPaymentDto
 ): Promise<{ clientSecret?: string; orderId?: string; provider: string }> => {
+  const payload = {
+    ...initiateMembershipPaymentDto,
+    tier: initiateMembershipPaymentDto.tier.toLowerCase(),
+  };
   const response = await api.post(
     '/membership/initiate-payment',
-    initiateMembershipPaymentDto
+    payload
   );
   return response.data;
 };
@@ -30,9 +34,16 @@ export const initiateMembershipPayment = async (
 export const verifyMembershipPayment = async (
   verifyMembershipPaymentDto: VerifyMembershipPaymentDto
 ): Promise<Membership> => {
+  const payload = {
+    ...verifyMembershipPaymentDto,
+    purchaseDetails: {
+      ...verifyMembershipPaymentDto.purchaseDetails,
+      tier: verifyMembershipPaymentDto.purchaseDetails.tier.toLowerCase(),
+    },
+  };
   const response = await api.post(
     '/membership/verify-payment',
-    verifyMembershipPaymentDto
+    payload
   );
   return response.data;
 };
