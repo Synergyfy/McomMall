@@ -1,15 +1,40 @@
-import { Group, GroupMember } from "../membership/types";
+import { User } from '../user/types';
 
 export interface CreateGroupDto {
   name: string;
   localArea: string;
   size: 6 | 12;
-  recruitmentDeadline: string;
-  pitchUrl?: string;
+  recruitmentDeadline: string; // ISO 8601 Date String
 }
 
-export interface JoinGroupDto {
+export type GroupMemberStatus = 'PENDING_PAYMENT' | 'ACTIVE';
+
+export interface GroupWallet {
+  id: string;
+  balance: number;
   groupId: string;
+  created_at: string;
+  updated_at: string;
 }
 
-export type { Group, GroupMember };
+export interface GroupMember {
+  id: string;
+  status: GroupMemberStatus;
+  user: User;
+  created_at: string;
+  updated_at: string;
+}
+
+export interface Group {
+  id: string;
+  name: string;
+  localArea: string;
+  size: 6 | 12;
+  status: 'RECRUITING' | 'ACTIVE' | 'EXPIRED' | 'FAILED';
+  recruitmentDeadline: string;
+  founder: User;
+  members: GroupMember[];
+  wallet: GroupWallet;
+  created_at: string;
+  updated_at: string;
+}
