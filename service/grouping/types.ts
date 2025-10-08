@@ -1,4 +1,14 @@
 import { User } from '../user/types';
+import { PaymentMethod } from '../membership/types';
+
+export interface InitiateContributionPaymentDto {
+  paymentProvider: PaymentMethod;
+}
+
+export interface VerifyContributionPaymentDto {
+  paymentProvider: PaymentMethod;
+  transactionId: string;
+}
 
 export interface CreateGroupDto {
   name: string;

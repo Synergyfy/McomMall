@@ -1,5 +1,10 @@
 import api from '../api';
-import { CreateGroupDto, Group } from './types';
+import {
+  CreateGroupDto,
+  Group,
+  InitiateContributionPaymentDto,
+  VerifyContributionPaymentDto,
+} from './types';
 
 export const createGroup = async (groupData: CreateGroupDto): Promise<Group> => {
   const response = await api.post('/grouping', groupData);
@@ -21,7 +26,21 @@ export const joinGroup = async (groupId: string) => {
   return response.data;
 };
 
-export const payContribution = async (groupId: string) => {
-  const response = await api.post(`/grouping/${groupId}/pay`);
+export const initiateContributionPayment = async (
+  groupId: string,
+  dto: InitiateContributionPaymentDto
+): Promise<{ clientSecret?: string; orderId?: string; provider: string }> => {
+  const response = await api.post(
+    `/grouping/${groupId}/initiate-contribution`,
+    dto
+  );
+  return response.data;
+};
+
+export const verifyContributionPayment = async (
+  groupId: string,
+  dto: VerifyContributionPaymentDto
+) => {
+  const response = await api.post(`/grouping/${groupId}/verify-contribution`, dto);
   return response.data;
 };
