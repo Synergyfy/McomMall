@@ -11,7 +11,7 @@ export type GroupMemberStatus = 'PENDING_PAYMENT' | 'ACTIVE';
 
 export interface GroupWallet {
   id: string;
-  balance: number;
+  balance: number | string;
   groupId: string;
   created_at: string;
   updated_at: string;

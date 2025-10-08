@@ -109,7 +109,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
               <CardContent className="text-center">
                 <div className="flex items-center justify-center text-4xl font-bold text-primary">
                   <Wallet className="h-10 w-10 mr-4" />
-                  <span>£{group.wallet.balance.toFixed(2)}</span>
+                  <span>£{Number(group.wallet.balance).toFixed(2)}</span>
                 </div>
                 <p className="text-muted-foreground mt-2">
                   Total contributions from members.

@@ -51,7 +51,7 @@ const GroupCard = ({ group }: { group: Group }) => {
               <Wallet className="mr-2 h-4 w-4" />
               Group Wallet Balance:{' '}
               <span className="font-semibold text-primary ml-1">
-                £{group.wallet.balance.toFixed(2)}
+                £{Number(group.wallet.balance).toFixed(2)}
               </span>
             </div>
           )}
