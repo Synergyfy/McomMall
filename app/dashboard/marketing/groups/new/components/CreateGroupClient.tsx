@@ -1,66 +1,102 @@
 "use client";
 
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import * as z from "zod";
-import { Button } from "@/components/ui/button";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
-import { Input } from "@/components/ui/input";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
-import { useCreateGroup } from "@/service/grouping/hooks";
-import { useGetMyMembership } from "@/service/membership/hooks";
-import { toast } from "sonner";
-import Link from "next/link";
-import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { CreateGroupDto } from "@/service/grouping/types";
+import { useState } from 'react';
+import { Button } from '@/components/ui/button';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { useCreateGroup } from '@/service/grouping/hooks';
+import { useGetMyMembership } from '@/service/membership/hooks';
+import { toast } from 'sonner';
+import Link from 'next/link';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { CreateGroupDto } from '@/service/grouping/types';
+import { Label } from '@/components/ui/label';
 
-const formSchema = z.object({
-  name: z.string().min(2, "Name must be at least 2 characters."),
-  localArea: z.string().min(2, "Local area must be at least 2 characters."),
-  size: z.enum(["6", "12"]),
-  recruitmentDeadline: z.string().refine((val) => !isNaN(Date.parse(val)), {
-    message: "Invalid date format",
-  }),
-  pitchUrl: z.string().url().optional(),
-});
+interface FormErrors {
+  name?: string;
+  localArea?: string;
+  recruitmentDeadline?: string;
+  pitchUrl?: string;
+}
 
 const CreateGroupClient = () => {
-  const { data: membership, isLoading: isLoadingMembership } = useGetMyMembership();
+  const { data: membership, isLoading: isLoadingMembership } =
+    useGetMyMembership();
   const createGroup = useCreateGroup();
 
-  const form = useForm<z.infer<typeof formSchema>>({
-    resolver: zodResolver(formSchema),
-    defaultValues: {
-      name: "",
-      localArea: "",
-      size: "6",
-      recruitmentDeadline: "",
-      pitchUrl: "",
-    },
+  const [formData, setFormData] = useState({
+    name: '',
+    localArea: '',
+    size: '6',
+    recruitmentDeadline: '',
+    pitchUrl: '',
   });
 
-  const onSubmit = (values: z.infer<typeof formSchema>) => {
-    const data: CreateGroupDto = {
-        ...values,
-        size: parseInt(values.size, 10) as 6 | 12,
-        recruitmentDeadline: new Date(values.recruitmentDeadline).toISOString(),
-    };
-    createGroup.mutate(data, {
+  const [errors, setErrors] = useState<FormErrors>({});
+
+  const validate = (): FormErrors => {
+    const newErrors: FormErrors = {};
+    if (formData.name.length < 2) {
+      newErrors.name = 'Name must be at least 2 characters.';
+    }
+    if (formData.localArea.length < 2) {
+      newErrors.localArea = 'Local area must be at least 2 characters.';
+    }
+    if (!formData.recruitmentDeadline) {
+      newErrors.recruitmentDeadline = 'Recruitment deadline is required.';
+    } else if (
+      new Date(formData.recruitmentDeadline).getTime() < new Date().setHours(0, 0, 0, 0)
+    ) {
+      newErrors.recruitmentDeadline = 'Recruitment deadline cannot be in the past.';
+    }
+    if (formData.pitchUrl) {
+      try {
+        new URL(formData.pitchUrl);
+      } catch (_) {
+        newErrors.pitchUrl = 'Please enter a valid URL.';
+      }
+    }
+    return newErrors;
+  };
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
+
+  const handleRadioChange = (value: string) => {
+    setFormData((prev) => ({ ...prev, size: value }));
+  };
+
+  const handleSubmit = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+    const validationErrors = validate();
+    setErrors(validationErrors);
+
+    if (Object.keys(validationErrors).length === 0) {
+      const data: CreateGroupDto = {
+        ...formData,
+        size: parseInt(formData.size, 10) as 6 | 12,
+        recruitmentDeadline: new Date(formData.recruitmentDeadline).toISOString(),
+      };
+      createGroup.mutate(data, {
         onSuccess: () => {
-            toast.success("Group created successfully!");
-            form.reset();
+          toast.success('Group created successfully!');
+          setFormData({
+            name: '',
+            localArea: '',
+            size: '6',
+            recruitmentDeadline: '',
+            pitchUrl: '',
+          });
         },
-        onError: (error) => {
-            toast.error(`Failed to create group: ${error.message}`);
-        }
-    });
+        onError: (error: any) => {
+          const errorMessage =
+            error.response?.data?.message || 'An unexpected error occurred.';
+          toast.error(`Failed to create group: ${errorMessage}`);
+        },
+      });
+    }
   };
 
   if (isLoadingMembership) {
@@ -79,7 +115,9 @@ const CreateGroupClient = () => {
               You need to be a Professional member to create a group.
             </p>
             <Button asChild>
-              <Link href="/dashboard/marketing/membership">Upgrade Membership</Link>
+              <Link href="/dashboard/marketing/membership">
+                Upgrade Membership
+              </Link>
             </Button>
           </CardContent>
         </Card>
@@ -94,99 +132,91 @@ const CreateGroupClient = () => {
           <CardTitle>Create a New Group</CardTitle>
         </CardHeader>
         <CardContent>
-          <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
-              <FormField
-                control={form.control}
+          <form onSubmit={handleSubmit} className="space-y-6">
+            <div className="space-y-2">
+              <Label htmlFor="name">Group Name</Label>
+              <Input
+                id="name"
                 name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Group Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Local Retail Alliance" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.name}
+                onChange={handleChange}
+                placeholder="e.g., Local Retail Alliance"
               />
-              <FormField
-                control={form.control}
+              {errors.name && (
+                <p className="text-sm text-red-500">{errors.name}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="localArea">Local Area</Label>
+              <Input
+                id="localArea"
                 name="localArea"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Local Area</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Shoreditch" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.localArea}
+                onChange={handleChange}
+                placeholder="e.g., Shoreditch"
               />
-              <FormField
-                control={form.control}
-                name="size"
-                render={({ field }) => (
-                  <FormItem className="space-y-3">
-                    <FormLabel>Group Size</FormLabel>
-                    <FormControl>
-                      <RadioGroup
-                        onValueChange={field.onChange}
-                        defaultValue={field.value}
-                        className="flex flex-col space-y-1"
-                      >
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="6" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            6 Members
-                          </FormLabel>
-                        </FormItem>
-                        <FormItem className="flex items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <RadioGroupItem value="12" />
-                          </FormControl>
-                          <FormLabel className="font-normal">
-                            12 Members
-                          </FormLabel>
-                        </FormItem>
-                      </RadioGroup>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={form.control}
+              {errors.localArea && (
+                <p className="text-sm text-red-500">{errors.localArea}</p>
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <Label>Group Size</Label>
+              <RadioGroup
+                onValueChange={handleRadioChange}
+                value={formData.size}
+                className="flex space-x-4"
+              >
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="6" id="size-6" />
+                  <Label htmlFor="size-6" className="font-normal">
+                    6 Members
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-2">
+                  <RadioGroupItem value="12" id="size-12" />
+                  <Label htmlFor="size-12" className="font-normal">
+                    12 Members
+                  </Label>
+                </div>
+              </RadioGroup>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="recruitmentDeadline">Recruitment Deadline</Label>
+              <Input
+                id="recruitmentDeadline"
                 name="recruitmentDeadline"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Recruitment Deadline</FormLabel>
-                    <FormControl>
-                      <Input type="date" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                type="date"
+                value={formData.recruitmentDeadline}
+                onChange={handleChange}
               />
-              <FormField
-                control={form.control}
+              {errors.recruitmentDeadline && (
+                <p className="text-sm text-red-500">
+                  {errors.recruitmentDeadline}
+                </p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="pitchUrl">Pitch URL (Optional)</Label>
+              <Input
+                id="pitchUrl"
                 name="pitchUrl"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Pitch URL (Optional)</FormLabel>
-                    <FormControl>
-                      <Input placeholder="https://example.com/pitch.pdf" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
+                value={formData.pitchUrl}
+                onChange={handleChange}
+                placeholder="https://example.com/pitch.pdf"
               />
-              <Button type="submit" disabled={createGroup.isPending}>
-                {createGroup.isPending ? "Creating..." : "Create Group"}
-              </Button>
-            </form>
-          </Form>
+              {errors.pitchUrl && (
+                <p className="text-sm text-red-500">{errors.pitchUrl}</p>
+              )}
+            </div>
+
+            <Button type="submit" disabled={createGroup.isPending}>
+              {createGroup.isPending ? 'Creating...' : 'Create Group'}
+            </Button>
+          </form>
         </CardContent>
       </Card>
     </div>
