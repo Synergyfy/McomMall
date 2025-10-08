@@ -11,7 +11,7 @@ import {
 } from './types';
 
 export const useGetMyMembership = () => {
-  return useQuery<Membership, Error>({
+  return useQuery<Membership | null, Error>({
     queryKey: ['my-membership'],
     queryFn: getMyMembership,
   });

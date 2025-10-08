@@ -5,9 +5,16 @@ import {
   VerifyMembershipPaymentDto,
 } from './types';
 
-export const getMyMembership = async (): Promise<Membership> => {
-  const response = await api.get('/membership/my');
-  return response.data;
+export const getMyMembership = async (): Promise<Membership | null> => {
+  try {
+    const response = await api.get<Membership>('/membership/my');
+    return response.data;
+  } catch (error: any) {
+    if (error.response && error.response.status === 404) {
+      return null;
+    }
+    throw error;
+  }
 };
 
 export const initiateMembershipPayment = async (
