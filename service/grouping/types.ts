@@ -8,7 +8,20 @@ export interface CreateGroupDto {
   pitchUrl?: string;
 }
 
-export type GroupMemberStatus = 'ACTIVE' | 'INACTIVE';
+export type GroupMemberStatus =
+  | 'ACTIVE'
+  | 'INACTIVE'
+  | 'PENDING_PAYMENT'
+  | 'EXPIRED';
+
+export interface InitiateContributionPaymentDto {
+  paymentProvider: 'stripe' | 'paypal';
+}
+
+export interface VerifyContributionPaymentDto {
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+}
 
 export interface GroupWallet {
   id: string;

@@ -4,12 +4,39 @@ import {
   getMyGroups,
   getGroupById,
   joinGroup,
+  initiateContributionPayment,
+  verifyContributionPayment,
 } from './api';
 import {
   CreateGroupDto,
   Group,
   GroupMember,
+  InitiateContributionPaymentDto,
+  VerifyContributionPaymentDto,
 } from './types';
+
+export const useInitiateContributionPayment = () => {
+  return useMutation({
+    mutationFn: (variables: {
+      groupId: string;
+      data: InitiateContributionPaymentDto;
+    }) => initiateContributionPayment(variables.groupId, variables.data),
+  });
+};
+
+export const useVerifyContributionPayment = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (variables: {
+      groupId: string;
+      data: VerifyContributionPaymentDto;
+    }) => verifyContributionPayment(variables.groupId, variables.data),
+    onSuccess: (_data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
+      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+    },
+  });
+};
 
 export const useCreateGroup = () => {
   const queryClient = useQueryClient();
