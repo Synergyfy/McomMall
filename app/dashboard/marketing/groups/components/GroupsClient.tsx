@@ -18,7 +18,7 @@ import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
 const GroupCard = ({ group }: { group: Group }) => {
-  const memberCount = group.members?.length ?? 0;
+  const memberCount = group.memberCount ?? group.members?.length ?? 0;
   const fundingProgress = (memberCount / group.size) * 100;
 
   const statusColors = {

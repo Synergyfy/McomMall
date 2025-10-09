@@ -37,6 +37,7 @@ export interface Group {
   founderId: string;
   members?: GroupMember[];
   wallet?: GroupWallet;
+  memberCount?: number;
   created_at: string;
   updated_at: string;
 }
