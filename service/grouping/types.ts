@@ -18,6 +18,11 @@ export interface GroupWallet {
   updated_at: string;
 }
 
+export interface JoinGroupResponse {
+  clientSecret: string;
+  provider: 'stripe' | 'paypal';
+}
+
 export interface GroupMember {
   id: string;
   status: GroupMemberStatus;

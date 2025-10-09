@@ -16,7 +16,17 @@ export const getGroupById = async (groupId: string): Promise<Group> => {
   return response.data;
 };
 
-export const joinGroup = async (groupId: string) => {
+export const initiateGroupContribution = async (groupId: string) => {
   const response = await api.post(`/grouping/${groupId}/join`);
+  return response.data;
+};
+
+export const payContribution = async (
+  groupId: string,
+  paymentIntentId: string
+) => {
+  const response = await api.post(`/grouping/${groupId}/pay`, {
+    paymentIntentId,
+  });
   return response.data;
 };

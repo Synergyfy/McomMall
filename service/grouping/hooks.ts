@@ -3,12 +3,14 @@ import {
   createGroup,
   getMyGroups,
   getGroupById,
-  joinGroup,
+  initiateGroupContribution,
+  payContribution,
 } from './api';
 import {
   CreateGroupDto,
   Group,
   GroupMember,
+  JoinGroupResponse,
 } from './types';
 
 export const useCreateGroup = () => {
@@ -36,13 +38,19 @@ export const useGetGroupById = (groupId: string) => {
   });
 };
 
-export const useJoinGroup = () => {
-  const queryClient = useQueryClient();
-  return useMutation<GroupMember, Error, { groupId: string }>({
-    mutationFn: ({ groupId }) => joinGroup(groupId),
-    onSuccess: (_data, variables) => {
-      queryClient.invalidateQueries({ queryKey: ['my-groups'] });
-      queryClient.invalidateQueries({ queryKey: ['group', variables.groupId] });
-    },
+export const useInitiateGroupContribution = () => {
+  return useMutation<JoinGroupResponse, Error, { groupId: string }>({
+    mutationFn: ({ groupId }) => initiateGroupContribution(groupId),
+  });
+};
+
+export const usePayContribution = () => {
+  return useMutation<
+    GroupMember,
+    Error,
+    { groupId: string; paymentIntentId: string }
+  >({
+    mutationFn: ({ groupId, paymentIntentId }) =>
+      payContribution(groupId, paymentIntentId),
   });
 };
