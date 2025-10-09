@@ -102,7 +102,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
       </Card>
     </div>
   );
-  if (!group || !group.members || !group.wallet || !group.founder) return <div>Group data is incomplete or not found.</div>;
+  if (!group || !group.members || !group.wallet || !group.founderId) return <div>Group data is incomplete or not found.</div>;
 
   const isUserMember = group.members.some((m) => m.user.id === userId);
   const fundingProgress = (group.members.length / group.size) * 100;
@@ -169,7 +169,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                         </CardHeader>
                         <CardContent className="space-y-4">
                             {group.members.map((member) => (
-                                <MemberCard key={member.id} member={member} isFounder={member.user.id === group.founder!.id} />
+                                <MemberCard key={member.id} member={member} isFounder={member.user.id === group.founderId} />
                             ))}
                         </CardContent>
                     </Card>
@@ -180,7 +180,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                             <CardHeader className="text-center">
                                 <CardTitle className="text-2xl font-bold">Join this Group</CardTitle>
                                 <CardDescription className="text-green-100 mt-2">
-                                    Become a member and contribute to the group's success.
+                                    Become a member and contribute to the group&apos;s success.
                                 </CardDescription>
                             </CardHeader>
                             <CardContent className="px-6 pb-6">
@@ -191,7 +191,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                                     className="w-full bg-white text-green-600 hover:bg-gray-100"
                                 >
                                     <UserPlus className="mr-2 h-5 w-5" />
-                                    {joinGroup.isPending ? 'Processing...' : "Join & Contribute £250"}
+                                    {joinGroup.isPending ? "Processing..." : "Join and Contribute £250"}
                                 </Button>
                             </CardContent>
                         </Card>

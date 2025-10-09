@@ -31,10 +31,10 @@ export interface Group {
   name: string;
   localArea: string;
   size: 6 | 12;
-  status: 'recruiting' | 'active' | 'expired' | 'failed';
+  status: 'RECRUITING' | 'ACTIVE' | 'EXPIRED' | 'FAILED';
   recruitmentDeadline: string;
   pitchUrl?: string;
-  founder?: User;
+  founderId: string;
   members?: GroupMember[];
   wallet?: GroupWallet;
   created_at: string;

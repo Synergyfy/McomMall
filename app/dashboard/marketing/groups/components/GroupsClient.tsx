@@ -22,10 +22,10 @@ const GroupCard = ({ group }: { group: Group }) => {
   const fundingProgress = (memberCount / group.size) * 100;
 
   const statusColors = {
-    recruiting: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
-    active: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
-    expired: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
-    failed: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
+    RECRUITING: 'bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-300',
+    ACTIVE: 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300',
+    EXPIRED: 'bg-gray-100 text-gray-800 dark:bg-gray-700 dark:text-gray-300',
+    FAILED: 'bg-red-100 text-red-800 dark:bg-red-900/30 dark:text-red-300',
   };
 
   return (
