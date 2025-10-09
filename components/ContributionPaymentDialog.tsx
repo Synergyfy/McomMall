@@ -16,14 +16,10 @@ import {
   useVerifyContributionPayment,
 } from '@/service/grouping/hooks';
 import { loadStripe } from '@stripe/stripe-js';
-import {
-  EmbeddedCheckout,
-  EmbeddedCheckoutProvider,
-} from '@stripe/react-stripe-js';
 import { PayPalButtons, PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { toast } from 'sonner';
 import { SuccessDialog } from './SuccessDialog';
-import { CURRENCY } from '@/lib/utils';
+import { StripePaymentForm } from './StripePaymentForm';
 
 interface ContributionPaymentDialogProps {
   groupId: string;
@@ -148,13 +144,10 @@ export function ContributionPaymentDialog({
           )}
 
           {paymentProvider === 'stripe' && clientSecret && (
-            <EmbeddedCheckoutProvider
-              key={clientSecret}
-              stripe={stripePromise}
-              options={{ clientSecret }}
-            >
-              <EmbeddedCheckout />
-            </EmbeddedCheckoutProvider>
+            <StripePaymentForm
+              clientSecret={clientSecret}
+              stripePromise={stripePromise}
+            />
           )}
 
           {paymentProvider === 'paypal' && orderId && (
