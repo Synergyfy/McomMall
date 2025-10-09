@@ -20,8 +20,8 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { VoucherProductModal } from '../(components)/VoucherProductModal';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 // --- Reusable UI Components ---
 
@@ -51,13 +51,11 @@ const ActionButton: React.FC<{
 
 type VoucherProductRowProps = {
   product: VoucherProduct;
-  onEdit: (product: VoucherProduct) => void;
   onDelete: (productId: string) => void;
 };
 
 const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
   product,
-  onEdit,
   onDelete,
 }) => {
   const rowVariants = {
@@ -105,7 +103,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
-          <VoucherProductModal product={product} onSuccess={() => {}}>
+          <Link href={`/dashboard/vouchers/products/edit/${product.id}`}>
             <Button
               variant="outline"
               size="sm"
@@ -114,7 +112,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
               <Edit className="h-3 w-3" />
               <span>Edit</span>
             </Button>
-          </VoucherProductModal>
+          </Link>
           <ActionButton variant="delete" onClick={() => onDelete(product.id)}>
             <Trash2 className="h-3 w-3" />
             <span>Delete</span>
@@ -222,7 +220,6 @@ export default function VoucherProductsPage() {
                   <VoucherProductRow
                     key={product.id}
                     product={product}
-                    onEdit={() => {}}
                     onDelete={handleDeleteClick}
                   />
                 ))}
@@ -232,7 +229,7 @@ export default function VoucherProductsPage() {
         </div>
 
         <footer className="mt-8 flex justify-start">
-          <VoucherProductModal onSuccess={mutate}>
+          <Link href="/dashboard/vouchers/products/create">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -241,7 +238,7 @@ export default function VoucherProductsPage() {
               <PlusCircle className="h-5 w-5" />
               <span>Add New Product</span>
             </motion.button>
-          </VoucherProductModal>
+          </Link>
         </footer>
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

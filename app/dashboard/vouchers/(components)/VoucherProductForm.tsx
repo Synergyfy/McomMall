@@ -1,13 +1,9 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import {
-  CreateVoucherProductDto,
-  VoucherProduct,
-} from '@/service/vouchers/types';
+import React, { useState } from 'react';
+import { useFormContext, Controller, UseFormReturn } from 'react-hook-form';
+import { CreateVoucherProductDto } from '@/service/vouchers/types';
 import { Input } from '@/components/ui/input';
-import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import {
@@ -22,63 +18,24 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-type VoucherProductFormData = CreateVoucherProductDto;
-
 interface VoucherProductFormProps {
-  onSubmit: (data: CreateVoucherProductDto) => void;
-  initialData?: VoucherProduct;
-  isSubmitting?: boolean;
+  form: UseFormReturn<CreateVoucherProductDto>;
 }
 
 export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
-  onSubmit,
-  initialData,
-  isSubmitting,
+  form,
 }) => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
-
   const {
     register,
-    handleSubmit,
     control,
     setValue,
     watch,
     formState: { errors },
-  } = useForm<VoucherProductFormData>({
-    defaultValues: initialData
-      ? {
-          ...initialData,
-        }
-      : {
-          name: '',
-          fixedAmounts: [],
-          usage: 'both',
-          allowPartialRedemption: true,
-          isEnabled: true,
-          allowCustomAmount: false,
-        },
-  });
+  } = form;
 
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');
-
-  const handleFormSubmit = (data: VoucherProductFormData) => {
-    const processedData: CreateVoucherProductDto = {
-      ...data,
-      fixedAmounts: data.fixedAmounts || [],
-      expiryDays: data.expiryDays ? Number(data.expiryDays) : undefined,
-    };
-
-    if (!data.allowCustomAmount) {
-      delete processedData.minCustomAmount;
-      delete processedData.maxCustomAmount;
-    } else {
-      processedData.minCustomAmount = Number(data.minCustomAmount);
-      processedData.maxCustomAmount = Number(data.maxCustomAmount);
-    }
-
-    onSubmit(processedData);
-  };
 
   const handleFixedAmountKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -105,10 +62,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(handleFormSubmit)}
-      className="grid grid-cols-1 gap-6 sm:grid-cols-2"
-    >
+    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2">
       <div className="sm:col-span-2">
         <Label htmlFor="name">Product Name</Label>
         <Input
@@ -227,7 +181,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Input
           id="expiryDays"
           type="number"
-          {...register('expiryDays')}
+          {...register('expiryDays', { valueAsNumber: true })}
           className="mt-1"
         />
       </div>
@@ -283,16 +237,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           )}
         />
       </div>
-
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting
-            ? 'Submitting...'
-            : initialData
-            ? 'Update Product'
-            : 'Create Product'}
-        </Button>
-      </div>
-    </form>
+    </div>
   );
 };
