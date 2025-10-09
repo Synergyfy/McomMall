@@ -149,6 +149,7 @@ export function ContributionPaymentDialog({
 
           {paymentProvider === 'stripe' && clientSecret && (
             <EmbeddedCheckoutProvider
+              key={clientSecret}
               stripe={stripePromise}
               options={{ clientSecret }}
             >
