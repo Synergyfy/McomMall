@@ -141,59 +141,41 @@ export function ContributionPaymentDialog({
             </div>
           )}
 
-          {paymentProvider && (
-            <div>
-              {initiatePayment.isPending && (
-                <div className="flex justify-center items-center p-8">
-                  <p>Initializing Payment...</p>
-                </div>
-              )}
-              <div
-                style={{
-                  display:
-                    paymentProvider === 'stripe' && clientSecret
-                      ? 'block'
-                      : 'none',
-                }}
-              >
-                {clientSecret && (
-                  <EmbeddedCheckoutProvider
-                    stripe={stripePromise}
-                    options={{ clientSecret }}
-                  >
-                    <EmbeddedCheckout />
-                  </EmbeddedCheckoutProvider>
-                )}
-              </div>
-              <div
-                style={{
-                  display:
-                    paymentProvider === 'paypal' && orderId ? 'block' : 'none',
-                }}
-              >
-                {orderId && (
-                  <PayPalScriptProvider
-                    options={{
-                      clientId: NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-                      currency: CURRENCY,
-                    }}
-                  >
-                    <PayPalButtons
-                      style={{ layout: 'vertical' }}
-                      createOrder={async () => orderId}
-                      onApprove={async (data) => {
-                        handleVerifyPayment(data.orderID);
-                      }}
-                      onError={() => {
-                        toast.error(
-                          'An error occurred with your PayPal payment. Please try again.',
-                        );
-                      }}
-                    />
-                  </PayPalScriptProvider>
-                )}
-              </div>
+          {paymentProvider && initiatePayment.isPending && (
+            <div className="flex justify-center items-center p-8">
+              <p>Initializing Payment...</p>
             </div>
+          )}
+
+          {paymentProvider === 'stripe' && clientSecret && (
+            <EmbeddedCheckoutProvider
+              stripe={stripePromise}
+              options={{ clientSecret }}
+            >
+              <EmbeddedCheckout />
+            </EmbeddedCheckoutProvider>
+          )}
+
+          {paymentProvider === 'paypal' && orderId && (
+            <PayPalScriptProvider
+              options={{
+                clientId: NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+                currency: 'GBP',
+              }}
+            >
+              <PayPalButtons
+                style={{ layout: 'vertical' }}
+                createOrder={async () => orderId}
+                onApprove={async (data) => {
+                  handleVerifyPayment(data.orderID);
+                }}
+                onError={() => {
+                  toast.error(
+                    'An error occurred with your PayPal payment. Please try again.',
+                  );
+                }}
+              />
+            </PayPalScriptProvider>
           )}
 
           {!clientSecret && !orderId && (
