@@ -43,14 +43,17 @@ interface ApiError extends Error {
 }
 
 const getStatusBadge = (status: GroupMemberStatus) => {
+  const formattedStatus =
+    status.charAt(0).toUpperCase() + status.slice(1).replace(/_/g, ' ');
+
   switch (status) {
-    case 'ACTIVE':
+    case 'active':
       return {
         variant: 'default' as const,
         icon: <CheckCircle className="h-4 w-4 mr-1.5" />,
         text: 'Active',
       };
-    case 'PENDING_PAYMENT':
+    case 'pending_payment':
       return {
         variant: 'destructive' as const,
         icon: <AlertTriangle className="h-4 w-4 mr-1.5" />,
@@ -60,7 +63,7 @@ const getStatusBadge = (status: GroupMemberStatus) => {
       return {
         variant: 'secondary' as const,
         icon: <HelpCircle className="h-4 w-4 mr-1.5" />,
-        text: status,
+        text: formattedStatus,
       };
   }
 };
@@ -297,7 +300,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                 </CardContent>
               </Card>
             )}
-            {currentUserMember?.status === 'PENDING_PAYMENT' && (
+            {currentUserMember?.status === 'pending_payment' && (
               <Card className="bg-gradient-to-br from-orange-500 to-yellow-600 text-white shadow-lg">
                 <CardHeader className="text-center">
                   <CardTitle className="text-2xl font-bold">

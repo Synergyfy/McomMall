@@ -9,10 +9,10 @@ export interface CreateGroupDto {
 }
 
 export type GroupMemberStatus =
-  | 'ACTIVE'
-  | 'INACTIVE'
-  | 'PENDING_PAYMENT'
-  | 'EXPIRED';
+  | 'active'
+  | 'inactive'
+  | 'pending_payment'
+  | 'expired';
 
 export interface InitiateContributionPaymentDto {
   paymentProvider: 'stripe' | 'paypal';
