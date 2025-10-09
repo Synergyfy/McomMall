@@ -93,64 +93,6 @@ export function ContributionPaymentDialog({
     );
   };
 
-  const renderPaymentView = () => {
-    if (paymentProvider === 'stripe' && clientSecret) {
-      return (
-        <EmbeddedCheckoutProvider
-          stripe={stripePromise}
-          options={{ clientSecret }}
-        >
-          <EmbeddedCheckout />
-        </EmbeddedCheckoutProvider>
-      );
-    }
-
-    if (paymentProvider === 'paypal' && orderId) {
-      return (
-        <PayPalScriptProvider
-          options={{
-            clientId: NEXT_PUBLIC_PAYPAL_CLIENT_ID,
-            currency: CURRENCY,
-          }}
-        >
-          <PayPalButtons
-            style={{ layout: 'vertical' }}
-            createOrder={async () => orderId}
-            onApprove={async (data) => {
-              handleVerifyPayment(data.orderID);
-            }}
-            onError={() => {
-              toast.error(
-                'An error occurred with your PayPal payment. Please try again.',
-              );
-            }}
-          />
-        </PayPalScriptProvider>
-      );
-    }
-
-    return (
-      <div className="flex flex-col space-y-4">
-        <p>
-          To complete your membership, please pay the contribution amount. Select
-          your preferred payment method below.
-        </p>
-        <Button
-          onClick={() => handleInitiatePayment('stripe')}
-          disabled={initiatePayment.isPending}
-        >
-          Pay with Stripe
-        </Button>
-        <Button
-          onClick={() => handleInitiatePayment('paypal')}
-          disabled={initiatePayment.isPending}
-        >
-          Pay with PayPal
-        </Button>
-      </div>
-    );
-  };
-
   const resetState = () => {
     setPaymentProvider(null);
     setClientSecret(null);
@@ -177,7 +119,83 @@ export function ContributionPaymentDialog({
               Finalize your group membership by making your contribution.
             </DialogDescription>
           </DialogHeader>
-          {renderPaymentView()}
+
+          {!paymentProvider && (
+            <div className="flex flex-col space-y-4">
+              <p>
+                To complete your membership, please pay the contribution amount.
+                Select your preferred payment method below.
+              </p>
+              <Button
+                onClick={() => handleInitiatePayment('stripe')}
+                disabled={initiatePayment.isPending}
+              >
+                Pay with Stripe
+              </Button>
+              <Button
+                onClick={() => handleInitiatePayment('paypal')}
+                disabled={initiatePayment.isPending}
+              >
+                Pay with PayPal
+              </Button>
+            </div>
+          )}
+
+          {paymentProvider && (
+            <div>
+              {initiatePayment.isPending && (
+                <div className="flex justify-center items-center p-8">
+                  <p>Initializing Payment...</p>
+                </div>
+              )}
+              <div
+                style={{
+                  display:
+                    paymentProvider === 'stripe' && clientSecret
+                      ? 'block'
+                      : 'none',
+                }}
+              >
+                {clientSecret && (
+                  <EmbeddedCheckoutProvider
+                    stripe={stripePromise}
+                    options={{ clientSecret }}
+                  >
+                    <EmbeddedCheckout />
+                  </EmbeddedCheckoutProvider>
+                )}
+              </div>
+              <div
+                style={{
+                  display:
+                    paymentProvider === 'paypal' && orderId ? 'block' : 'none',
+                }}
+              >
+                {orderId && (
+                  <PayPalScriptProvider
+                    options={{
+                      clientId: NEXT_PUBLIC_PAYPAL_CLIENT_ID,
+                      currency: CURRENCY,
+                    }}
+                  >
+                    <PayPalButtons
+                      style={{ layout: 'vertical' }}
+                      createOrder={async () => orderId}
+                      onApprove={async (data) => {
+                        handleVerifyPayment(data.orderID);
+                      }}
+                      onError={() => {
+                        toast.error(
+                          'An error occurred with your PayPal payment. Please try again.',
+                        );
+                      }}
+                    />
+                  </PayPalScriptProvider>
+                )}
+              </div>
+            </div>
+          )}
+
           {!clientSecret && !orderId && (
             <DialogFooter>
               <Button variant="outline" onClick={() => setIsOpen(false)}>
