@@ -1,6 +1,7 @@
 "use client";
 
-import { useGetGroupById, useJoinGroup } from '@/service/grouping/hooks';
+import { useState } from 'react';
+import { useGetGroupById, useInitiateGroupContribution, usePayContribution } from '@/service/grouping/hooks';
 import { Button } from '@/components/ui/button';
 import {
   Card,
@@ -9,6 +10,12 @@ import {
   CardTitle,
   CardDescription,
 } from '@/components/ui/card';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Users, Wallet, CheckCircle, AlertTriangle, MapPin, CalendarDays, ArrowLeft, Crown, UserPlus } from 'lucide-react';
@@ -18,6 +25,8 @@ import { GroupMember } from '@/service/grouping/types';
 import { RootState } from '@/service/store/store';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
+import StripeCheckoutForm from '@/components/StripeCheckoutForm';
+import { useQueryClient } from '@tanstack/react-query';
 
 interface ApiError extends Error {
   response?: {
@@ -64,21 +73,50 @@ const GroupDetailsSkeleton = () => (
 
 const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
   const userId = useSelector((state: RootState) => state.auth.userId);
-  const { data: group, isLoading, error } = useGetGroupById(groupId);
-  const joinGroup = useJoinGroup();
+  const { data: group, isLoading, error, refetch } = useGetGroupById(groupId);
+  const initiateContribution = useInitiateGroupContribution();
+  const verifyPayment = usePayContribution();
+  const queryClient = useQueryClient();
 
-  const handleJoinGroup = () => {
-    joinGroup.mutate({ groupId }, {
-      onSuccess: () => {
-        toast.success("Successfully joined the group and paid your contribution!");
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [isPaymentModalOpen, setPaymentModalOpen] = useState(false);
+
+  const handleInitiateContribution = () => {
+    initiateContribution.mutate({ groupId }, {
+      onSuccess: (data) => {
+        if (data.provider === 'stripe' && data.clientSecret) {
+          setClientSecret(data.clientSecret);
+          setPaymentModalOpen(true);
+        } else {
+          toast.error("Could not initialize Stripe payment.");
+        }
       },
       onError: (error: ApiError) => {
         const errorMessage =
           error.response?.data?.message ||
           error.message ||
           'An unexpected error occurred.';
-        toast.error(`Failed to join group: ${errorMessage}`);
+        toast.error(`Failed to start payment: ${errorMessage}`);
       }
+    });
+  };
+
+  const handlePaymentSuccess = (paymentIntentId: string) => {
+    verifyPayment.mutate({ groupId, paymentIntentId }, {
+        onSuccess: () => {
+            toast.success("Contribution successful! Welcome to the group.");
+            setPaymentModalOpen(false);
+            setClientSecret(null);
+            queryClient.invalidateQueries({ queryKey: ['group', groupId] });
+            queryClient.invalidateQueries({ queryKey: ['my-groups'] });
+        },
+        onError: (error: ApiError) => {
+            const errorMessage =
+              error.response?.data?.message ||
+              error.message ||
+              'An unexpected error occurred.';
+            toast.error(`Payment verification failed: ${errorMessage}`);
+        }
     });
   };
 
@@ -108,98 +146,113 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
   const fundingProgress = (group.members.length / group.size) * 100;
 
   return (
-    <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
-        <div className="container mx-auto p-4 md:p-8">
-            <Link href="/dashboard/marketing/groups" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-6">
-                <ArrowLeft className="mr-2 h-4 w-4" />
-                Back to All Groups
-            </Link>
+    <>
+        <div className="bg-gray-50 dark:bg-gray-900 min-h-screen">
+            <div className="container mx-auto p-4 md:p-8">
+                <Link href="/dashboard/marketing/groups" className="inline-flex items-center text-sm font-medium text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200 mb-6">
+                    <ArrowLeft className="mr-2 h-4 w-4" />
+                    Back to All Groups
+                </Link>
 
-            <header className="mb-8">
-                <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-50">{group.name}</h1>
-                <p className="mt-2 text-lg text-gray-500 dark:text-gray-400 flex items-center">
-                    <MapPin className="mr-2 h-5 w-5" />
-                    {group.localArea}
-                </p>
-                {group.pitchUrl && (
-                    <a href={group.pitchUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
-                        View Pitch Document
-                    </a>
-                )}
-            </header>
+                <header className="mb-8">
+                    <h1 className="text-4xl font-extrabold tracking-tight text-gray-900 dark:text-gray-50">{group.name}</h1>
+                    <p className="mt-2 text-lg text-gray-500 dark:text-gray-400 flex items-center">
+                        <MapPin className="mr-2 h-5 w-5" />
+                        {group.localArea}
+                    </p>
+                    {group.pitchUrl && (
+                        <a href={group.pitchUrl} target="_blank" rel="noopener noreferrer" className="text-sm text-blue-600 hover:underline mt-2 inline-block">
+                            View Pitch Document
+                        </a>
+                    )}
+                </header>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Wallet Balance</CardTitle>
-                        <Wallet className="h-5 w-5 text-green-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-gray-900 dark:text-gray-50">£{Number(group.wallet.balance).toFixed(2)}</div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">From all active members</p>
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Members</CardTitle>
-                        <Users className="h-5 w-5 text-blue-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-4xl font-bold text-gray-900 dark:text-gray-50">{group.members.length} / {group.size}</div>
-                        <Progress value={fundingProgress} className="mt-2 h-2" />
-                    </CardContent>
-                </Card>
-                <Card>
-                    <CardHeader className="flex flex-row items-center justify-between pb-2">
-                        <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Recruitment</CardTitle>
-                        <CalendarDays className="h-5 w-5 text-orange-500" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-xl font-semibold text-gray-900 dark:text-gray-50">{new Date(group.recruitmentDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
-                        <p className="text-xs text-gray-500 dark:text-gray-400">Recruitment Deadline</p>
-                    </CardContent>
-                </Card>
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
                     <Card>
-                        <CardHeader>
-                            <CardTitle>Group Members</CardTitle>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Total Wallet Balance</CardTitle>
+                            <Wallet className="h-5 w-5 text-green-500" />
                         </CardHeader>
-                        <CardContent className="space-y-4">
-                            {group.members.map((member) => (
-                                <MemberCard key={member.id} member={member} isFounder={member.user.id === group.founderId} />
-                            ))}
+                        <CardContent>
+                            <div className="text-4xl font-bold text-gray-900 dark:text-gray-50">£{Number(group.wallet.balance).toFixed(2)}</div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">From all active members</p>
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Members</CardTitle>
+                            <Users className="h-5 w-5 text-blue-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-4xl font-bold text-gray-900 dark:text-gray-50">{group.members.length} / {group.size}</div>
+                            <Progress value={fundingProgress} className="mt-2 h-2" />
+                        </CardContent>
+                    </Card>
+                    <Card>
+                        <CardHeader className="flex flex-row items-center justify-between pb-2">
+                            <CardTitle className="text-sm font-medium text-gray-500 dark:text-gray-400">Recruitment</CardTitle>
+                            <CalendarDays className="h-5 w-5 text-orange-500" />
+                        </CardHeader>
+                        <CardContent>
+                            <div className="text-xl font-semibold text-gray-900 dark:text-gray-50">{new Date(group.recruitmentDeadline).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })}</div>
+                            <p className="text-xs text-gray-500 dark:text-gray-400">Recruitment Deadline</p>
                         </CardContent>
                     </Card>
                 </div>
-                <div>
-                    {!isUserMember && (
-                        <Card className="bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
-                            <CardHeader className="text-center">
-                                <CardTitle className="text-2xl font-bold">Join this Group</CardTitle>
-                                <CardDescription className="text-green-100 mt-2">
-                                    Become a member and contribute to the group&apos;s success.
-                                </CardDescription>
+
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Group Members</CardTitle>
                             </CardHeader>
-                            <CardContent className="px-6 pb-6">
-                                <Button
-                                    onClick={handleJoinGroup}
-                                    disabled={joinGroup.isPending}
-                                    size="lg"
-                                    className="w-full bg-white text-green-600 hover:bg-gray-100"
-                                >
-                                    <UserPlus className="mr-2 h-5 w-5" />
-                                    {joinGroup.isPending ? "Processing..." : "Join and Contribute £250"}
-                                </Button>
+                            <CardContent className="space-y-4">
+                                {group.members.map((member) => (
+                                    <MemberCard key={member.id} member={member} isFounder={member.user.id === group.founderId} />
+                                ))}
                             </CardContent>
                         </Card>
-                    )}
+                    </div>
+                    <div>
+                        {!isUserMember && (
+                            <Card className="bg-gradient-to-br from-green-500 to-teal-600 text-white shadow-lg">
+                                <CardHeader className="text-center">
+                                    <CardTitle className="text-2xl font-bold">Join this Group</CardTitle>
+                                    <CardDescription className="text-green-100 mt-2">
+                                        Become a member and contribute to the group&apos;s success.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="px-6 pb-6">
+                                    <Button
+                                        onClick={handleInitiateContribution}
+                                        disabled={initiateContribution.isPending || verifyPayment.isPending}
+                                        size="lg"
+                                        className="w-full bg-white text-green-600 hover:bg-gray-100"
+                                    >
+                                        <UserPlus className="mr-2 h-5 w-5" />
+                                        {initiateContribution.isPending ? "Initializing..." : "Join and Contribute £250"}
+                                    </Button>
+                                </CardContent>
+                            </Card>
+                        )}
+                    </div>
                 </div>
             </div>
         </div>
-    </div>
+        <Dialog open={isPaymentModalOpen} onOpenChange={setPaymentModalOpen}>
+            <DialogContent>
+                <DialogHeader>
+                    <DialogTitle>Complete Your Contribution</DialogTitle>
+                </DialogHeader>
+                {clientSecret && (
+                    <StripeCheckoutForm
+                        clientSecret={clientSecret}
+                        onPaymentSuccess={handlePaymentSuccess}
+                    />
+                )}
+            </DialogContent>
+        </Dialog>
+    </>
   );
 };
 
