@@ -41,6 +41,8 @@ import StatsCards from './component/StatsCards';
 import RecentActivities from './component/RecentActivities';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
+import GiftCardStats from './component/GiftCardStats';
+import GiftCardSalesChart from './component/GiftCardSalesChart';
 
 
 // --- TYPE DEFINITIONS ---
@@ -188,6 +190,8 @@ const DashboardPage: FC = () => {
               </div>
               {userRole === UserRole.OWNER && (
                 <div className="lg:col-span-2 space-y-8">
+                  <GiftCardStats />
+                  <GiftCardSalesChart />
                   <ListingPackages pkg={listingPackage} />
                   <ListingsViewsChart data={chartData} />
                 </div>

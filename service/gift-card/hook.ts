@@ -9,6 +9,11 @@ import {
   GiftCard,
   MyPurchase,
   GiftCardBalanceResponse,
+  InitiateReloadDto,
+  InitiateReloadResponse,
+  VerifyReloadDto,
+  GiftCardStatsDto,
+  GiftCardChartDataDto,
 } from './types';
 
 // API Functions
@@ -46,8 +51,28 @@ const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<Gift
   return data;
 };
 
+const initiateReload = async ({ code, reloadData }: { code: string, reloadData: InitiateReloadDto }): Promise<InitiateReloadResponse> => {
+  const { data } = await api.post<InitiateReloadResponse>(`/gift-cards/${code}/initiate-reload`, reloadData);
+  return data;
+};
+
+const verifyReload = async ({ code, verificationData }: { code: string, verificationData: VerifyReloadDto }): Promise<GiftCard> => {
+  const { data } = await api.post<GiftCard>(`/gift-cards/${code}/verify-reload`, verificationData);
+  return data;
+};
+
 const checkGiftCardBalance = async (code: string): Promise<GiftCardBalanceResponse> => {
   const { data } = await api.get<GiftCardBalanceResponse>(`/gift-cards/balance/${code}`);
+  return data;
+};
+
+const getGiftCardStats = async (): Promise<GiftCardStatsDto> => {
+  const { data } = await api.get<GiftCardStatsDto>('/merchant/gift-cards/stats');
+  return data;
+};
+
+const getGiftCardChartData = async (): Promise<GiftCardChartDataDto> => {
+  const { data } = await api.get<GiftCardChartDataDto>('/merchant/gift-cards/chart-data');
   return data;
 };
 
@@ -57,6 +82,20 @@ export const useGetGiftCardTemplates = () => {
   return useQuery<GiftCardTemplate[], Error>({
     queryKey: ['giftCardTemplates'],
     queryFn: fetchGiftCardTemplates,
+  });
+};
+
+export const useGetGiftCardStats = () => {
+  return useQuery<GiftCardStatsDto, Error>({
+    queryKey: ['giftCardStats'],
+    queryFn: getGiftCardStats,
+  });
+};
+
+export const useGetGiftCardChartData = () => {
+  return useQuery<GiftCardChartDataDto, Error>({
+    queryKey: ['giftCardChartData'],
+    queryFn: getGiftCardChartData,
   });
 };
 
@@ -87,6 +126,23 @@ export const useAddGiftCardTemplate = () => {
     mutationFn: addGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useInitiateReload = () => {
+  return useMutation<InitiateReloadResponse, Error, { code: string, reloadData: InitiateReloadDto }>({
+    mutationFn: initiateReload,
+  });
+};
+
+export const useVerifyReload = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard, Error, { code: string, verificationData: VerifyReloadDto }>({
+    mutationFn: verifyReload,
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['giftCard', variables.code] });
+      queryClient.invalidateQueries({ queryKey: ['myPurchases'] });
     },
   });
 };

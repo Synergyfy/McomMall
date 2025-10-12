@@ -28,6 +28,7 @@ const CreateGiftCardTemplatePage = () => {
     allowCustomAmount: false,
     minCustomAmount: undefined,
     maxCustomAmount: undefined,
+    allowReloading: false,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [isUploading, setIsUploading] = useState(false);
@@ -55,8 +56,8 @@ const CreateGiftCardTemplatePage = () => {
     setFormData((prev) => ({ ...prev, [field]: color.hex }));
   };
 
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, allowCustomAmount: checked }));
+  const handleSwitchChange = (checked: boolean, field: 'allowCustomAmount' | 'allowReloading') => {
+    setFormData((prev) => ({ ...prev, [field]: checked }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -264,8 +265,13 @@ const CreateGiftCardTemplatePage = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Switch id="allowCustomAmount" checked={formData.allowCustomAmount} onCheckedChange={handleSwitchChange} />
+              <Switch id="allowCustomAmount" checked={formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
               <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch id="allowReloading" checked={formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
+              <Label htmlFor="allowReloading">Allow Reloading</Label>
             </div>
 
             {formData.allowCustomAmount && (
