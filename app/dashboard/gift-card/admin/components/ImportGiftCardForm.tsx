@@ -13,7 +13,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { GiftCardTemplate } from '@/types/gift-card-template';
 
 interface ImportGiftCardFormProps {
@@ -25,7 +25,14 @@ interface ImportGiftCardDto {
   amount: number;
   recipientEmail?: string;
   recipientName?: string;
+  senderName?: string;
+  personalMessage?: string;
+}
 
+interface CSVRow {
+  amount: string;
+  recipientEmail?: string;
+  recipientName?: string;
   senderName?: string;
   personalMessage?: string;
 }
@@ -37,7 +44,6 @@ export const ImportGiftCardForm = ({
   const [templateId, setTemplateId] = useState('');
   const [file, setFile] = useState<File | null>(null);
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -48,11 +54,7 @@ export const ImportGiftCardForm = ({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (!file || !templateId) {
-      toast({
-        title: 'Error',
-        description: 'Please select a template and a CSV file.',
-        variant: 'destructive',
-      });
+      toast.error('Please select a template and a CSV file.');
       return;
     }
 
@@ -62,10 +64,11 @@ export const ImportGiftCardForm = ({
       header: true,
       skipEmptyLines: true,
       complete: async (results) => {
-        const transformedData: ImportGiftCardDto[] = results.data.map(
-          (row: any) => ({
-            amount: parseFloat(row.amount),
-            recipientEmail: row.recipientEmail || undefined,
+        const transformedData: ImportGiftCardDto[] = (
+          results.data as CSVRow[]
+        ).map((row) => ({
+          amount: parseFloat(row.amount),
+          recipientEmail: row.recipientEmail || undefined,
             recipientName: row.recipientName || undefined,
             senderName: row.senderName || undefined,
             personalMessage: row.personalMessage || undefined,
@@ -89,30 +92,22 @@ export const ImportGiftCardForm = ({
           }
 
           const result = await response.json();
-          toast({
-            title: 'Import Complete',
-            description: `Success: ${result.successCount}, Failures: ${result.errorCount}`,
-          });
+          toast.info(
+            `Import Complete - Success: ${result.successCount}, Failures: ${result.errorCount}`
+          );
           onSuccess();
         } catch (error) {
-          toast({
-            title: 'Error',
-            description:
-              error instanceof Error
-                ? error.message
-                : 'An unknown error occurred.',
-            variant: 'destructive',
-          });
+          toast.error(
+            error instanceof Error
+              ? error.message
+              : 'An unknown error occurred.'
+          );
         } finally {
           setIsLoading(false);
         }
       },
       error: (error) => {
-        toast({
-          title: 'Error',
-          description: `Failed to parse the CSV file: ${error.message}`,
-          variant: 'destructive',
-        });
+        toast.error(`Failed to parse the CSV file: ${error.message}`);
         setIsLoading(false);
       },
     });

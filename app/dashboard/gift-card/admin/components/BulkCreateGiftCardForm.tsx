@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { useToast } from '@/components/ui/use-toast';
+import { toast } from 'sonner';
 import { GiftCardTemplate } from '@/types/gift-card-template';
 
 interface BulkCreateGiftCardFormProps {
@@ -28,7 +28,6 @@ export const BulkCreateGiftCardForm = ({
   const [amount, setAmount] = useState('');
   const [quantity, setQuantity] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const { toast } = useToast();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -49,20 +48,12 @@ export const BulkCreateGiftCardForm = ({
         throw new Error('Failed to create gift cards in bulk.');
       }
 
-      toast({
-        title: 'Success',
-        description: `${quantity} gift cards created successfully.`,
-      });
+      toast.success(`${quantity} gift cards created successfully.`);
       onSuccess();
     } catch (error) {
-      toast({
-        title: 'Error',
-        description:
-          error instanceof Error
-            ? error.message
-            : 'An unknown error occurred.',
-        variant: 'destructive',
-      });
+      toast.error(
+        error instanceof Error ? error.message : 'An unknown error occurred.'
+      );
     } finally {
       setIsLoading(false);
     }

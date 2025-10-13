@@ -62,7 +62,7 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
                 onError: (err) => toast.error(err.message || 'Failed to verify reload.'),
               });
             }
-          } else if (data.provider === 'PAYPAL') {
+          } else if (data.provider === 'paypal') {
             // PayPal logic would go here
             toast.info('PayPal integration is not yet complete.');
           }

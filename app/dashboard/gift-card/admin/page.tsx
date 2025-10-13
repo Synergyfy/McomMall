@@ -34,12 +34,12 @@ import { cn } from '@/lib/utils';
 import {
   useGetMerchantGiftCards,
   useGetGiftCardHistory,
-  useGetGiftCardTemplates,
 } from '@/service/merchant/gift-card';
 import { MerchantGiftCard } from '@/types/merchant-gift-card';
 
 import { BulkCreateGiftCardForm } from './components/BulkCreateGiftCardForm';
 import { ImportGiftCardForm } from './components/ImportGiftCardForm';
+import { mockTemplates } from './components/mock-templates';
 
 // --- SUB-COMPONENTS ---
 
@@ -172,11 +172,6 @@ export default function GiftCardDashboardPage() {
     isError: isErrorGiftCards,
     refetch,
   } = useGetMerchantGiftCards();
-  const {
-    data: templatesResponse,
-    isLoading: isLoadingTemplates,
-    isError: isErrorTemplates,
-  } = useGetGiftCardTemplates();
 
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
@@ -189,10 +184,7 @@ export default function GiftCardDashboardPage() {
     () => giftCardResponse?.data || [],
     [giftCardResponse]
   );
-  const templates = useMemo(
-    () => templatesResponse?.data || [],
-    [templatesResponse]
-  );
+  const templates = mockTemplates;
 
   const filteredCards = useMemo(() => {
     if (!searchQuery) return giftCards;
@@ -204,7 +196,7 @@ export default function GiftCardDashboardPage() {
     );
   }, [searchQuery, giftCards]);
 
-  if (isLoadingGiftCards || isLoadingTemplates) {
+  if (isLoadingGiftCards) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p>Loading gift card data...</p>
@@ -212,7 +204,7 @@ export default function GiftCardDashboardPage() {
     );
   }
 
-  if (isErrorGiftCards || isErrorTemplates) {
+  if (isErrorGiftCards) {
     return (
       <div className="flex justify-center items-center h-screen">
         <p className="text-red-500">Failed to load gift card data.</p>
