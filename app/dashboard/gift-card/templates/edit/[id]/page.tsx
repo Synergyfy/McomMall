@@ -45,6 +45,7 @@ const EditGiftCardTemplatePage = () => {
         allowCustomAmount: template.allowCustomAmount,
         minCustomAmount: template.minCustomAmount,
         maxCustomAmount: template.maxCustomAmount,
+        allowReloading: template.allowReloading,
       });
       if (template.backgroundImageUrl) {
         setImagePreview(template.backgroundImageUrl);
@@ -69,8 +70,8 @@ const EditGiftCardTemplatePage = () => {
     setFormData((prev) => ({ ...prev, [field]: color.hex }));
   };
 
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData((prev) => ({ ...prev, allowCustomAmount: checked }));
+  const handleSwitchChange = (checked: boolean, field: 'allowCustomAmount' | 'allowReloading') => {
+    setFormData((prev) => ({ ...prev, [field]: checked }));
   };
 
   const handleImageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -282,8 +283,13 @@ const EditGiftCardTemplatePage = () => {
             </div>
 
             <div className="flex items-center space-x-2">
-              <Switch id="allowCustomAmount" checked={formData.allowCustomAmount} onCheckedChange={handleSwitchChange} />
+              <Switch id="allowCustomAmount" checked={!!formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
               <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
+            </div>
+
+            <div className="flex items-center space-x-2">
+              <Switch id="allowReloading" checked={!!formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
+              <Label htmlFor="allowReloading">Allow Reloading</Label>
             </div>
 
             {formData.allowCustomAmount && (

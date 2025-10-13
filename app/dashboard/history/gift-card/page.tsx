@@ -6,10 +6,12 @@ import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
+import ReloadModal from "./components/ReloadModal";
 
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [selectedPurchase, setSelectedPurchase] = useState<MyPurchase | null>(null);
 
   const formatGiftCardCode = (code: string) => {
     return code.replace(/(.{4})/g, "$1-").slice(0, -1);
@@ -96,6 +98,16 @@ const GiftCardHistoryPage = () => {
                 <div className="text-sm text-gray-500 mt-4 text-right">
                   Purchased on {format(new Date(purchase.createdAt), "PPP")}
                 </div>
+                 {purchase.isReloadable && (
+                    <div className="p-4 bg-gray-50">
+                      <button
+                        onClick={() => setSelectedPurchase(purchase)}
+                        className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
+                      >
+                        Reload
+                      </button>
+                    </div>
+                  )}
               </div>
             </div>
           ))
@@ -105,6 +117,12 @@ const GiftCardHistoryPage = () => {
           </div>
         )}
       </div>
+      {selectedPurchase && (
+        <ReloadModal
+          purchase={selectedPurchase}
+          onClose={() => setSelectedPurchase(null)}
+        />
+      )}
     </div>
   );
 };
