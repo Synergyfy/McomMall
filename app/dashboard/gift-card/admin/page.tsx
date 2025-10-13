@@ -2,9 +2,17 @@
 
 import * as React from 'react';
 import { useState, useMemo } from 'react';
-import { Search, Eye } from 'lucide-react';
+import { Search, Eye, PlusCircle, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import {
@@ -26,8 +34,12 @@ import { cn } from '@/lib/utils';
 import {
   useGetMerchantGiftCards,
   useGetGiftCardHistory,
+  useGetGiftCardTemplates,
 } from '@/service/merchant/gift-card';
 import { MerchantGiftCard } from '@/types/merchant-gift-card';
+
+import { BulkCreateGiftCardForm } from './components/BulkCreateGiftCardForm';
+import { ImportGiftCardForm } from './components/ImportGiftCardForm';
 
 // --- SUB-COMPONENTS ---
 
@@ -154,11 +166,33 @@ const ViewActivityDialog = ({
 
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardDashboardPage() {
-  const { data: giftCardResponse, isLoading, isError } = useGetMerchantGiftCards();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(null);
+  const {
+    data: giftCardResponse,
+    isLoading: isLoadingGiftCards,
+    isError: isErrorGiftCards,
+    refetch,
+  } = useGetMerchantGiftCards();
+  const {
+    data: templatesResponse,
+    isLoading: isLoadingTemplates,
+    isError: isErrorTemplates,
+  } = useGetGiftCardTemplates();
 
-  const giftCards = useMemo(() => giftCardResponse?.data || [], [giftCardResponse]);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
+    null
+  );
+  const [isBulkCreateOpen, setBulkCreateOpen] = useState(false);
+  const [isImportOpen, setImportOpen] = useState(false);
+
+  const giftCards = useMemo(
+    () => giftCardResponse?.data || [],
+    [giftCardResponse]
+  );
+  const templates = useMemo(
+    () => templatesResponse?.data || [],
+    [templatesResponse]
+  );
 
   const filteredCards = useMemo(() => {
     if (!searchQuery) return giftCards;
@@ -170,21 +204,27 @@ export default function GiftCardDashboardPage() {
     );
   }, [searchQuery, giftCards]);
 
-  if (isLoading) {
+  if (isLoadingGiftCards || isLoadingTemplates) {
     return (
-        <div className="flex justify-center items-center h-screen">
-            <p>Loading gift cards...</p>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <p>Loading gift card data...</p>
+      </div>
     );
   }
 
-  if (isError) {
+  if (isErrorGiftCards || isErrorTemplates) {
     return (
-        <div className="flex justify-center items-center h-screen">
-            <p className="text-red-500">Failed to load gift cards.</p>
-        </div>
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-red-500">Failed to load gift card data.</p>
+      </div>
     );
   }
+
+  const handleSuccess = () => {
+    setBulkCreateOpen(false);
+    setImportOpen(false);
+    refetch();
+  };
 
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
@@ -193,17 +233,36 @@ export default function GiftCardDashboardPage() {
 
         <Card>
           <CardContent className="p-4">
-            <div className="flex items-center gap-2 mb-4">
-              <Input
-                placeholder="Gift card number or recipient email"
-                value={searchQuery}
-                onChange={e => setSearchQuery(e.target.value)}
-                className="max-w-xs"
-              />
-              <Button>
-                <Search className="h-4 w-4 mr-2" />
-                Search
-              </Button>
+            <div className="flex items-center justify-between gap-2 mb-4">
+              <div className="flex items-center gap-2">
+                <Input
+                  placeholder="Gift card number or recipient email"
+                  value={searchQuery}
+                  onChange={(e) => setSearchQuery(e.target.value)}
+                  className="max-w-xs"
+                />
+                <Button>
+                  <Search className="h-4 w-4 mr-2" />
+                  Search
+                </Button>
+              </div>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline">Bulk Actions</Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuLabel>Admin Tools</DropdownMenuLabel>
+                  <DropdownMenuSeparator />
+                  <DropdownMenuItem onClick={() => setBulkCreateOpen(true)}>
+                    <PlusCircle className="h-4 w-4 mr-2" />
+                    Bulk Create
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setImportOpen(true)}>
+                    <Upload className="h-4 w-4 mr-2" />
+                    Import from CSV
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
 
             <div className="border rounded-md overflow-hidden">
@@ -284,6 +343,30 @@ export default function GiftCardDashboardPage() {
               onClose={() => setSelectedCard(null)}
             />
           )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isBulkCreateOpen} onOpenChange={setBulkCreateOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Create Gift Cards</DialogTitle>
+          </DialogHeader>
+          <BulkCreateGiftCardForm
+            templates={templates}
+            onSuccess={handleSuccess}
+          />
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={isImportOpen} onOpenChange={setImportOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Import Gift Cards from CSV</DialogTitle>
+          </DialogHeader>
+          <ImportGiftCardForm
+            templates={templates}
+            onSuccess={handleSuccess}
+          />
         </DialogContent>
       </Dialog>
     </div>
