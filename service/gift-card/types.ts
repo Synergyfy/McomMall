@@ -76,7 +76,7 @@ export interface MyPurchase {
     businessName: string;
   };
   createdAt: string;
-  allowReloading?: boolean;
+  isReloadable: boolean;
 }
 
 export interface GiftCardBalanceResponse {

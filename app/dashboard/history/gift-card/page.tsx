@@ -98,7 +98,7 @@ const GiftCardHistoryPage = () => {
                 <div className="text-sm text-gray-500 mt-4 text-right">
                   Purchased on {format(new Date(purchase.createdAt), "PPP")}
                 </div>
-                 {purchase.allowReloading && (
+                 {purchase.isReloadable && (
                     <div className="p-4 bg-gray-50">
                       <button
                         onClick={() => setSelectedPurchase(purchase)}
