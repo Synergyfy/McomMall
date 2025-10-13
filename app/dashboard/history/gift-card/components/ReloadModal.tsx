@@ -20,7 +20,7 @@ const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY 
 
 const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
   const [amount, setAmount] = useState<number | ''>('');
-  const [paymentProvider, setPaymentProvider] = useState<'STRIPE' | 'PAYPAL'>('STRIPE');
+  const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal'>('stripe');
   const initiateReloadMutation = useInitiateReload();
   const verifyReloadMutation = useVerifyReload();
   const stripe = useStripe();
@@ -37,7 +37,7 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
       { code: purchase.code, reloadData: { amount, paymentProvider } },
       {
         onSuccess: async (data) => {
-          if (data.provider === 'STRIPE' && data.clientSecret && stripe && elements) {
+          if (data.provider === 'stripe' && data.clientSecret && stripe && elements) {
             const cardElement = elements.getElement(CardElement);
             if (!cardElement) return;
             const { error, paymentIntent } = await stripe.confirmCardPayment(data.clientSecret, {
@@ -50,7 +50,7 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
               verifyReloadMutation.mutate({
                 code: purchase.code,
                 verificationData: {
-                  paymentProvider: 'STRIPE',
+                  paymentProvider: 'stripe',
                   transactionId: paymentIntent.id,
                   reloadDetails: { amount },
                 },
@@ -91,22 +91,22 @@ const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
         <div className="flex space-x-2">
           <Button
             type="button"
-            variant={paymentProvider === 'STRIPE' ? 'default' : 'outline'}
-            onClick={() => setPaymentProvider('STRIPE')}
+            variant={paymentProvider === 'stripe' ? 'default' : 'outline'}
+            onClick={() => setPaymentProvider('stripe')}
           >
             Stripe
           </Button>
           <Button
             type="button"
-            variant={paymentProvider === 'PAYPAL' ? 'default' : 'outline'}
-            onClick={() => setPaymentProvider('PAYPAL')}
+            variant={paymentProvider === 'paypal' ? 'default' : 'outline'}
+            onClick={() => setPaymentProvider('paypal')}
             disabled
           >
             PayPal (Coming Soon)
           </Button>
         </div>
       </div>
-      {paymentProvider === 'STRIPE' && (
+      {paymentProvider === 'stripe' && (
         <div>
           <Label>Card Details</Label>
           <div className="p-2 border rounded-md">

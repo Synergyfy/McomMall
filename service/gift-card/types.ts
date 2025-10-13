@@ -88,17 +88,17 @@ export interface GiftCardBalanceResponse {
 
 export interface InitiateReloadDto {
   amount: number;
-  paymentProvider: 'STRIPE' | 'PAYPAL';
+  paymentProvider: 'stripe' | 'paypal';
 }
 
 export interface InitiateReloadResponse {
-  provider: 'STRIPE' | 'PAYPAL';
+  provider: 'stripe' | 'paypal';
   clientSecret?: string;
   orderId?: string;
 }
 
 export interface VerifyReloadDto {
-  paymentProvider: 'STRIPE' | 'PAYPAL';
+  paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
   reloadDetails: {
     amount: number;
