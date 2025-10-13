@@ -26,10 +26,12 @@ import {
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogFooter,
 } from '@/components/ui/dialog';
+import { motion, AnimatePresence } from 'framer-motion';
 import { cn } from '@/lib/utils';
 import {
   useGetMerchantGiftCards,
@@ -346,29 +348,55 @@ export default function GiftCardDashboardPage() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={isBulkCreateOpen} onOpenChange={setBulkCreateOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Bulk Create Gift Cards</DialogTitle>
-          </DialogHeader>
-          <BulkCreateGiftCardForm
-            templates={templates}
-            onSuccess={handleSuccess}
-          />
-        </DialogContent>
-      </Dialog>
+      <AnimatePresence>
+        {isBulkCreateOpen && (
+          <Dialog open={isBulkCreateOpen} onOpenChange={setBulkCreateOpen}>
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.9 }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Bulk Create Gift Cards</DialogTitle>
+                  <DialogDescription>
+                    Create a large number of gift cards from a single template with the same initial value.
+                  </DialogDescription>
+                </DialogHeader>
+                <BulkCreateGiftCardForm
+                  templates={templates}
+                  onSuccess={handleSuccess}
+                />
+              </DialogContent>
+            </motion.div>
+          </Dialog>
+        )}
+      </AnimatePresence>
 
-      <Dialog open={isImportOpen} onOpenChange={setImportOpen}>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>Import Gift Cards from CSV</DialogTitle>
-          </DialogHeader>
-          <ImportGiftCardForm
-            templates={templates}
-            onSuccess={handleSuccess}
-          />
-        </DialogContent>
-      </Dialog>
+      <AnimatePresence>
+        {isImportOpen && (
+          <Dialog open={isImportOpen} onOpenChange={setImportOpen}>
+            <motion.div
+              initial={{ opacity: 0, y: 50 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 50 }}
+            >
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>Import Gift Cards from CSV</DialogTitle>
+                  <DialogDescription>
+                    Upload a CSV file to import gift cards. The file should contain columns for amount, recipientEmail, recipientName, senderName, and personalMessage.
+                  </DialogDescription>
+                </DialogHeader>
+                <ImportGiftCardForm
+                  templates={templates}
+                  onSuccess={handleSuccess}
+                />
+              </DialogContent>
+            </motion.div>
+          </Dialog>
+        )}
+      </AnimatePresence>
     </div>
   );
 }
