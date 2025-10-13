@@ -14,6 +14,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { GiftCardTemplate } from '@/types/gift-card-template';
+import { useBulkCreateGiftCards } from '@/service/gift-card/hook';
 
 interface BulkCreateGiftCardFormProps {
   templates: GiftCardTemplate[];
@@ -27,36 +28,26 @@ export const BulkCreateGiftCardForm = ({
   const [templateId, setTemplateId] = useState('');
   const [amount, setAmount] = useState('');
   const [quantity, setQuantity] = useState('');
-  const [isLoading, setIsLoading] = useState(false);
+  const bulkCreateMutation = useBulkCreateGiftCards();
 
-  const handleSubmit = async (e: React.FormEvent) => {
+  const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    setIsLoading(true);
-
-    try {
-      const response = await fetch('/merchant/gift-cards/bulk-create', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          templateId,
-          amount: parseFloat(amount),
-          quantity: parseInt(quantity, 10),
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to create gift cards in bulk.');
+    bulkCreateMutation.mutate(
+      {
+        templateId,
+        amount: parseFloat(amount),
+        quantity: parseInt(quantity, 10),
+      },
+      {
+        onSuccess: () => {
+          toast.success(`${quantity} gift cards created successfully.`);
+          onSuccess();
+        },
+        onError: (error) => {
+          toast.error(error.message || 'An unknown error occurred.');
+        },
       }
-
-      toast.success(`${quantity} gift cards created successfully.`);
-      onSuccess();
-    } catch (error) {
-      toast.error(
-        error instanceof Error ? error.message : 'An unknown error occurred.'
-      );
-    } finally {
-      setIsLoading(false);
-    }
+    );
   };
 
   return (
@@ -98,8 +89,8 @@ export const BulkCreateGiftCardForm = ({
           required
         />
       </div>
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? 'Creating...' : 'Create Gift Cards'}
+      <Button type="submit" disabled={bulkCreateMutation.isPending}>
+        {bulkCreateMutation.isPending ? 'Creating...' : 'Create Gift Cards'}
       </Button>
     </form>
   );

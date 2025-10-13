@@ -15,6 +15,7 @@ import {
 } from '@/components/ui/select';
 import { toast } from 'sonner';
 import { GiftCardTemplate } from '@/types/gift-card-template';
+import { useImportGiftCards } from '@/service/gift-card/hook';
 
 interface ImportGiftCardFormProps {
   templates: GiftCardTemplate[];
@@ -43,7 +44,7 @@ export const ImportGiftCardForm = ({
 }: ImportGiftCardFormProps) => {
   const [templateId, setTemplateId] = useState('');
   const [file, setFile] = useState<File | null>(null);
-  const [isLoading, setIsLoading] = useState(false);
+  const importMutation = useImportGiftCards();
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
@@ -58,12 +59,10 @@ export const ImportGiftCardForm = ({
       return;
     }
 
-    setIsLoading(true);
-
     Papa.parse(file, {
       header: true,
       skipEmptyLines: true,
-      complete: async (results) => {
+      complete: (results) => {
         const transformedData: ImportGiftCardDto[] = (
           results.data as CSVRow[]
         ).map((row) => ({
@@ -75,40 +74,26 @@ export const ImportGiftCardForm = ({
           })
         );
 
-        try {
-          const response = await fetch(
-            `/merchant/gift-cards/import/json?templateId=${templateId}`,
-            {
-              method: 'POST',
-              headers: {
-                'Content-Type': 'application/json',
-              },
-              body: JSON.stringify({ giftCards: transformedData }),
-            }
-          );
-
-          if (!response.ok) {
-            throw new Error('Failed to import gift cards.');
+        importMutation.mutate(
+          {
+            templateId,
+            importDto: { giftCards: transformedData },
+          },
+          {
+            onSuccess: (data) => {
+              toast.info(
+                `Import Complete - Success: ${data.successCount}, Failures: ${data.errorCount}`
+              );
+              onSuccess();
+            },
+            onError: (error) => {
+              toast.error(error.message || 'An unknown error occurred.');
+            },
           }
-
-          const result = await response.json();
-          toast.info(
-            `Import Complete - Success: ${result.successCount}, Failures: ${result.errorCount}`
-          );
-          onSuccess();
-        } catch (error) {
-          toast.error(
-            error instanceof Error
-              ? error.message
-              : 'An unknown error occurred.'
-          );
-        } finally {
-          setIsLoading(false);
-        }
+        );
       },
       error: (error) => {
         toast.error(`Failed to parse the CSV file: ${error.message}`);
-        setIsLoading(false);
       },
     });
   };
@@ -140,8 +125,8 @@ export const ImportGiftCardForm = ({
           required
         />
       </div>
-      <Button type="submit" disabled={isLoading}>
-        {isLoading ? 'Importing...' : 'Import Gift Cards'}
+      <Button type="submit" disabled={importMutation.isPending}>
+        {importMutation.isPending ? 'Importing...' : 'Import Gift Cards'}
       </Button>
     </form>
   );
