@@ -9,6 +9,7 @@ import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover
 import { useGetSalesAndRedemptions } from '@/service/gift-card/hook';
 import { Skeleton } from '@/components/ui/skeleton';
 import { format } from 'date-fns';
+import { formatCurrency } from '@/lib/utils';
 
 export const SalesAndRedemptions = () => {
   const [date, setDate] = useState<DateRange | undefined>();
@@ -92,13 +93,13 @@ export const SalesAndRedemptions = () => {
               <div>
                 <p className="text-sm text-gray-500">Total Sales</p>
                 <p className="text-lg font-semibold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.totalSales)}
+                  {formatCurrency(data.totalSales)}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-500">Total Redemptions</p>
                 <p className="text-lg font-semibold">
-                  {new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }).format(data.totalRedemptions)}
+                  {formatCurrency(data.totalRedemptions)}
                 </p>
               </div>
             </div>

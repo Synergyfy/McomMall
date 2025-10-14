@@ -3,6 +3,7 @@
 import { useGetSummaryStatistics } from '@/service/gift-card/hook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Skeleton } from '@/components/ui/skeleton';
+import { formatCurrency } from '@/lib/utils';
 
 export const SummaryDisplay = () => {
   const { data: summaryStats, isLoading } = useGetSummaryStatistics();
@@ -50,10 +51,7 @@ export const SummaryDisplay = () => {
         </CardHeader>
         <CardContent>
           <p className="text-2xl font-bold">
-            {new Intl.NumberFormat('en-US', {
-              style: 'currency',
-              currency: 'USD',
-            }).format(summaryStats.summary.totalLiability)}
+            {formatCurrency(summaryStats.summary.totalLiability)}
           </p>
         </CardContent>
       </Card>
