@@ -12,6 +12,7 @@ export interface GiftCardTemplate {
     expiryPeriodDays?: number;
     isActive: boolean;
     ownerId: string; // User UUID
+    allowReloading?: boolean;
 }
 
 export interface CreateGiftCardTemplateDto {
@@ -25,6 +26,7 @@ export interface CreateGiftCardTemplateDto {
   minCustomAmount?: number;
   maxCustomAmount?: number;
   expiryPeriodDays?: number;
+  allowReloading?: boolean;
 }
 
 export interface InitiatePurchaseDto {
@@ -60,6 +62,7 @@ export interface GiftCard {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  allowReloading?: boolean;
 }
 
 export interface MyPurchase {
@@ -73,6 +76,7 @@ export interface MyPurchase {
     businessName: string;
   };
   createdAt: string;
+  isReloadable: boolean;
 }
 
 export interface GiftCardBalanceResponse {
@@ -80,4 +84,62 @@ export interface GiftCardBalanceResponse {
   currentBalance: number;
   currency: string;
   expiryDate: string;
+}
+
+export interface InitiateReloadDto {
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+}
+
+export interface InitiateReloadResponse {
+  provider: 'stripe' | 'paypal';
+  clientSecret?: string;
+  orderId?: string;
+}
+
+export interface VerifyReloadDto {
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+  reloadDetails: {
+    amount: number;
+  };
+}
+
+export interface GiftCardStatsDto {
+  totalSold: number;
+  totalRedeemed: number;
+  outstandingLiability: number;
+  activeCards: number;
+}
+
+export interface GiftCardChartDataDto {
+  data: {
+    month: string;
+    sales: number;
+    redemptions: number;
+  }[];
+}
+
+export interface BulkCreateGiftCardDto {
+  templateId: string;
+  amount: number;
+  quantity: number;
+}
+
+export interface ImportGiftCardDto {
+  amount: number;
+  recipientEmail?: string;
+  recipientName?: string;
+  senderName?: string;
+  personalMessage?: string;
+}
+
+export interface ImportGiftCardsDto {
+  giftCards: ImportGiftCardDto[];
+}
+
+export interface ImportGiftCardResponse {
+  successCount: number;
+  errorCount: number;
+  errors: string[];
 }

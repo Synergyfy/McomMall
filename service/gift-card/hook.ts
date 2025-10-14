@@ -9,9 +9,27 @@ import {
   GiftCard,
   MyPurchase,
   GiftCardBalanceResponse,
+  InitiateReloadDto,
+  InitiateReloadResponse,
+  VerifyReloadDto,
+  GiftCardStatsDto,
+  GiftCardChartDataDto,
+  BulkCreateGiftCardDto,
+  ImportGiftCardsDto,
+  ImportGiftCardResponse,
 } from './types';
 
 // API Functions
+const bulkCreateGiftCards = async (bulkCreateDto: BulkCreateGiftCardDto): Promise<GiftCard[]> => {
+  const { data } = await api.post<GiftCard[]>('/merchant/gift-cards/bulk-create', bulkCreateDto);
+  return data;
+};
+
+const importGiftCards = async ({ templateId, importDto }: { templateId: string, importDto: ImportGiftCardsDto }): Promise<ImportGiftCardResponse> => {
+  const { data } = await api.post<ImportGiftCardResponse>(`/merchant/gift-cards/import/json?templateId=${templateId}`, importDto);
+  return data;
+};
+
 const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
   const { data } = await api.get<GiftCardTemplate[]>('/merchant/gift-cards/templates');
   return data;
@@ -46,8 +64,28 @@ const verifyPurchase = async (verificationData: VerifyPurchaseDto): Promise<Gift
   return data;
 };
 
+const initiateReload = async ({ code, reloadData }: { code: string, reloadData: InitiateReloadDto }): Promise<InitiateReloadResponse> => {
+  const { data } = await api.post<InitiateReloadResponse>(`/gift-cards/${code}/initiate-reload`, reloadData);
+  return data;
+};
+
+const verifyReload = async ({ code, verificationData }: { code: string, verificationData: VerifyReloadDto }): Promise<GiftCard> => {
+  const { data } = await api.post<GiftCard>(`/gift-cards/${code}/verify-reload`, verificationData);
+  return data;
+};
+
 const checkGiftCardBalance = async (code: string): Promise<GiftCardBalanceResponse> => {
   const { data } = await api.get<GiftCardBalanceResponse>(`/gift-cards/balance/${code}`);
+  return data;
+};
+
+const getGiftCardStats = async (): Promise<GiftCardStatsDto> => {
+  const { data } = await api.get<GiftCardStatsDto>('/merchant/gift-cards/stats');
+  return data;
+};
+
+const getGiftCardChartData = async (): Promise<GiftCardChartDataDto> => {
+  const { data } = await api.get<GiftCardChartDataDto>('/merchant/gift-cards/chart-data');
   return data;
 };
 
@@ -57,6 +95,20 @@ export const useGetGiftCardTemplates = () => {
   return useQuery<GiftCardTemplate[], Error>({
     queryKey: ['giftCardTemplates'],
     queryFn: fetchGiftCardTemplates,
+  });
+};
+
+export const useGetGiftCardStats = () => {
+  return useQuery<GiftCardStatsDto, Error>({
+    queryKey: ['giftCardStats'],
+    queryFn: getGiftCardStats,
+  });
+};
+
+export const useGetGiftCardChartData = () => {
+  return useQuery<GiftCardChartDataDto, Error>({
+    queryKey: ['giftCardChartData'],
+    queryFn: getGiftCardChartData,
   });
 };
 
@@ -87,6 +139,43 @@ export const useAddGiftCardTemplate = () => {
     mutationFn: addGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useBulkCreateGiftCards = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard[], Error, BulkCreateGiftCardDto>({
+    mutationFn: bulkCreateGiftCards,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
+    },
+  });
+};
+
+export const useImportGiftCards = () => {
+  const queryClient = useQueryClient();
+  return useMutation<ImportGiftCardResponse, Error, { templateId: string, importDto: ImportGiftCardsDto }>({
+    mutationFn: importGiftCards,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
+    },
+  });
+};
+
+export const useInitiateReload = () => {
+  return useMutation<InitiateReloadResponse, Error, { code: string, reloadData: InitiateReloadDto }>({
+    mutationFn: initiateReload,
+  });
+};
+
+export const useVerifyReload = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard, Error, { code: string, verificationData: VerifyReloadDto }>({
+    mutationFn: verifyReload,
+    onSuccess: (data, variables) => {
+      queryClient.invalidateQueries({ queryKey: ['giftCard', variables.code] });
+      queryClient.invalidateQueries({ queryKey: ['myPurchases'] });
     },
   });
 };

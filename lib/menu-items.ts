@@ -112,6 +112,16 @@ export const marketingMenuItems: MenuItem[] = [
       },
     ],
   },
+  {
+    title: 'Groups',
+    href: '/dashboard/marketing/groups',
+    icon: Users,
+    subMenu: [
+      { title: 'My Groups', href: '/dashboard/marketing/groups' },
+      { title: 'Create Group', href: '/dashboard/marketing/groups/new' },
+      { title: 'Membership', href: '/dashboard/marketing/membership' },
+    ],
+  },
 ];
 
 export const historyMenuItems: MenuItem[] = [
