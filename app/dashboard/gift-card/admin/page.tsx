@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Search, Eye, PlusCircle, Upload } from 'lucide-react';
 
 import { Button } from '@/components/ui/button';
@@ -32,6 +32,13 @@ import {
   DialogFooter,
 } from '@/components/ui/dialog';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import {
   useGetMerchantGiftCards,
@@ -168,27 +175,37 @@ const ViewActivityDialog = ({
 
 // --- MAIN PAGE COMPONENT ---
 export default function GiftCardDashboardPage() {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearch, setDebouncedSearch] = useState('');
+  const [page, setPage] = useState(1);
+  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
+    null
+  );
+
+  useEffect(() => {
+    const handler = setTimeout(() => {
+      setDebouncedSearch(searchQuery);
+      setPage(1);
+    }, 500);
+    return () => clearTimeout(handler);
+  }, [searchQuery]);
+
   const {
     data: giftCardResponse,
     isLoading: isLoadingGiftCards,
     isError: isErrorGiftCards,
     refetch,
-  } = useGetMerchantGiftCards();
+  } = useGetMerchantGiftCards({ page, limit: 10, search: debouncedSearch });
   const {
     data: templatesResponse,
     isLoading: isLoadingTemplates,
     isError: isErrorTemplates,
   } = useGetGiftCardTemplates();
-
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
-    null
-  );
   const [isBulkCreateOpen, setBulkCreateOpen] = useState(false);
   const [isImportOpen, setImportOpen] = useState(false);
 
   const giftCards = useMemo(
-    () => giftCardResponse?.data || [],
+    () => giftCardResponse?.data ?? [],
     [giftCardResponse]
   );
   const templates = useMemo(
@@ -196,15 +213,7 @@ export default function GiftCardDashboardPage() {
     [templatesResponse]
   );
 
-  const filteredCards = useMemo(() => {
-    if (!searchQuery) return giftCards;
-    const lowercasedQuery = searchQuery.toLowerCase();
-    return giftCards.filter(
-      card =>
-        card.code.toLowerCase().includes(lowercasedQuery) ||
-        card.recipientEmail.toLowerCase().includes(lowercasedQuery)
-    );
-  }, [searchQuery, giftCards]);
+  const filteredCards = giftCards;
 
   if (isLoadingGiftCards || isLoadingTemplates) {
     return (
@@ -329,6 +338,26 @@ export default function GiftCardDashboardPage() {
                 </TableBody>
               </Table>
             </div>
+            <Pagination className="mt-4">
+              <PaginationContent>
+                <PaginationItem>
+                  <PaginationPrevious
+                    onClick={() => setPage((p) => Math.max(1, p - 1))}
+                  />
+                </PaginationItem>
+                <PaginationItem>
+                  <PaginationNext
+                    onClick={() =>
+                      setPage((p) =>
+                        p < (giftCardResponse?.meta.totalPages || 1)
+                          ? p + 1
+                          : p
+                      )
+                    }
+                  />
+                </PaginationItem>
+              </PaginationContent>
+            </Pagination>
           </CardContent>
         </Card>
       </div>
