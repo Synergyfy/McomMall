@@ -28,7 +28,7 @@ export default function CouponCodeInput({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.4 }}
-      className="flex w-full items-center space-x-3"
+      className="flex flex-col sm:flex-row w-full items-stretch sm:items-center gap-2"
     >
       <Input
         type="text"
@@ -36,13 +36,13 @@ export default function CouponCodeInput({
         value={couponCode}
         onChange={(e) => setCouponCode(e.target.value)}
         disabled={isLoading}
-        className="h-12 text-lg"
+        className="h-12 text-lg flex-grow"
       />
-      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+      <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }} className="w-full sm:w-auto">
         <Button
           onClick={handleApply}
           disabled={isLoading}
-          className="h-12 text-lg font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-all duration-300"
+          className="h-12 text-lg font-semibold bg-orange-600 text-white hover:bg-orange-700 transition-all duration-300 w-full sm:w-auto"
         >
           {isLoading ? (
             <Loader className="animate-spin" />

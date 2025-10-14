@@ -44,31 +44,32 @@ export default function ApplicableOffers({
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5 }}
-      className="mt-8"
+      className="mt-6 sm:mt-8"
     >
       <h3 className="text-lg font-semibold mb-4 text-gray-700">
         Available Offers
       </h3>
-      <RadioGroup onValueChange={setSelectedOffer} value={selectedOffer || ''}>
+      <RadioGroup onValueChange={setSelectedOffer} value={selectedOffer || ''} className="space-y-3">
         {offers.map((offer) => (
-          <div
+          <Label
             key={offer.offerId}
-            className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50"
+            htmlFor={offer.offerId}
+            className="flex items-center space-x-3 p-4 border rounded-lg hover:bg-gray-50 cursor-pointer has-[:checked]:bg-orange-50 has-[:checked]:border-orange-500"
           >
             <RadioGroupItem value={offer.offerId} id={offer.offerId} />
-            <Label htmlFor={offer.offerId} className="flex-1 cursor-pointer">
+            <div className="flex-1">
               <p className="font-medium text-gray-800">{offer.offerName}</p>
               <p className="text-sm text-gray-500">
                 Cost: {offer.pointsCost} points
               </p>
-            </Label>
-          </div>
+            </div>
+          </Label>
         ))}
       </RadioGroup>
       <Button
         onClick={handleApply}
         disabled={!selectedOffer || isLoading}
-        className="w-full mt-6 bg-green-600 hover:bg-green-700"
+        className="w-full mt-6 bg-green-600 hover:bg-green-700 h-12 text-lg"
       >
         {isLoading ? 'Applying...' : 'Apply Offer'}
       </Button>
