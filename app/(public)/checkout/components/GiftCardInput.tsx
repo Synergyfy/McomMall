@@ -73,7 +73,7 @@ export default function GiftCardInput({
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.6 }}
-        className="flex w-full items-center space-x-3 mt-4"
+        className="flex flex-col sm:flex-row w-full items-stretch sm:items-center gap-2 mt-4"
       >
         <Input
           type="text"
@@ -81,22 +81,27 @@ export default function GiftCardInput({
           value={giftCardCode}
           onChange={(e) => setGiftCardCode(e.target.value)}
           disabled={isLoading}
-          className="h-12 text-lg"
+          className="h-12 text-lg flex-grow"
         />
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={() => setShowScanner(true)}
-            aria-label="Scan QR Code"
-            className="h-12 w-12 p-0"
+        <div className="flex items-center gap-2">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => setShowScanner(true)}
+              aria-label="Scan QR Code"
+              className="h-12 w-12 p-0"
+            >
+              <QrCode className="h-6 w-6" />
+            </Button>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex-grow sm:flex-grow-0"
           >
-            <QrCode className="h-6 w-6" />
-          </Button>
-        </motion.div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={handleApply}
-            disabled={isLoading || !giftCardCode}
-            className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition-all duration-300"
+            <Button
+              onClick={handleApply}
+              disabled={isLoading || !giftCardCode}
+              className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition-all duration-300 w-full"
           >
             {isLoading ? (
               <Loader className="animate-spin" />
@@ -105,6 +110,7 @@ export default function GiftCardInput({
             )}
           </Button>
         </motion.div>
+        </div>
       </motion.div>
 
       {showScanner && (

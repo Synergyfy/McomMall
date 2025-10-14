@@ -63,7 +63,7 @@ export default function VoucherInput({
 
   return (
     <>
-      <div className="flex items-center gap-2 mt-4">
+      <div className="flex flex-col sm:flex-row w-full items-stretch sm:items-center gap-2 mt-4">
         <Input
           type="text"
           value={code}
@@ -72,20 +72,25 @@ export default function VoucherInput({
           className="flex-grow h-12 text-lg"
           disabled={isLoading}
         />
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={() => setShowScanner(true)}
-            aria-label="Scan Voucher QR Code"
-            className="h-12 w-12 p-0"
+        <div className="flex items-center gap-2">
+          <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
+            <Button
+              onClick={() => setShowScanner(true)}
+              aria-label="Scan Voucher QR Code"
+              className="h-12 w-12 p-0"
+            >
+              <QrCode className="h-6 w-6" />
+            </Button>
+          </motion.div>
+          <motion.div
+            whileHover={{ scale: 1.05 }}
+            whileTap={{ scale: 0.95 }}
+            className="flex-grow sm:flex-grow-0"
           >
-            <QrCode className="h-6 w-6" />
-          </Button>
-        </motion.div>
-        <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
-          <Button
-            onClick={() => onApply(code)}
-            disabled={isLoading || !code}
-            className="h-12 text-lg font-semibold"
+            <Button
+              onClick={() => onApply(code)}
+              disabled={isLoading || !code}
+              className="h-12 text-lg font-semibold w-full"
           >
             {isLoading ? (
               <Loader className="animate-spin h-5 w-5" />
@@ -94,6 +99,7 @@ export default function VoucherInput({
             )}
           </Button>
         </motion.div>
+        </div>
       </div>
 
       {showScanner && (
