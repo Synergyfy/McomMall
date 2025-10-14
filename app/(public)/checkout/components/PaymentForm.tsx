@@ -39,21 +39,21 @@ export default function PaymentForm({
       transition={{ duration: 0.5, delay: 0.2 }}
       className="space-y-6"
     >
-      <h2 className="text-3xl font-bold text-gray-800">Payment Details</h2>
-      <div className="grid grid-cols-2 gap-4">
+      <h2 className="text-2xl sm:text-3xl font-bold text-gray-800">Payment Details</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
           <Button
             onClick={() => handleMethodChange(PaymentMethod.STRIPE)}
             variant={
               selectedMethod === PaymentMethod.STRIPE ? 'default' : 'outline'
             }
-            className={`w-full h-20 text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
+            className={`w-full h-16 sm:h-20 text-base sm:text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
               selectedMethod === PaymentMethod.STRIPE
                 ? 'bg-orange-600 text-white shadow-lg'
                 : 'bg-white'
             }`}
           >
-            <CreditCard className="h-7 w-7" />
+            <CreditCard className="h-6 w-6 sm:h-7 sm:w-7" />
             <span>Credit Card</span>
           </Button>
         </motion.div>
@@ -63,7 +63,7 @@ export default function PaymentForm({
             variant={
               selectedMethod === PaymentMethod.PAYPAL ? 'default' : 'outline'
             }
-            className={`w-full h-20 text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
+            className={`w-full h-16 sm:h-20 text-base sm:text-lg font-semibold flex items-center justify-center space-x-3 transition-all duration-300 ${
               selectedMethod === PaymentMethod.PAYPAL
                 ? 'bg-orange-600 text-white shadow-lg'
                 : 'bg-white'
