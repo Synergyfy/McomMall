@@ -106,7 +106,7 @@ export const ImportGiftCardForm = ({
           <SelectTrigger>
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
-          <SelectContent>
+          <SelectContent className="z-[100]">
             {templates.map((template) => (
               <SelectItem key={template.id} value={template.id}>
                 {template.name}
