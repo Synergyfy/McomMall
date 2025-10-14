@@ -6,7 +6,7 @@ import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
 import { Copy, Check } from "lucide-react";
 import { toast } from "sonner";
-import QRCode from "react-qr-code";
+import GiftCard from "./components/GiftCard";
 import ReloadModal from "./components/ReloadModal";
 
 const GiftCardHistoryPage = () => {
@@ -56,38 +56,7 @@ const GiftCardHistoryPage = () => {
               key={purchase.id}
               className="bg-white rounded-lg shadow-lg overflow-hidden"
             >
-              <div
-                className="relative p-6 flex flex-col justify-between text-white"
-                style={{
-                  backgroundColor: purchase.template?.backgroundColor || "#000",
-                  color: purchase.template?.textColor || "#fff",
-                  backgroundImage: `url(${purchase.template?.backgroundImageUrl})`,
-                  backgroundSize: "cover",
-                  backgroundPosition: "center",
-                  height: "200px",
-                }}
-              >
-                <div className="flex justify-between items-start">
-                  <h2 className="text-2xl font-bold">
-                    {purchase.purchaseBusiness.businessName}
-                  </h2>
-                  <div className="bg-white p-1 rounded-md">
-                    <QRCode
-                      value={purchase.code}
-                      size={64}
-                      fgColor={purchase.template?.textColor || "#000"}
-                      bgColor="#fff"
-                    />
-                  </div>
-                </div>
-                <div className="text-right">
-                  <p className="text-3xl font-bold">
-                    £{Number(purchase.currentBalance).toFixed(2)}
-                  </p>
-                  <p className="text-sm">Current Balance</p>
-                </div>
-              </div>
-
+              <GiftCard purchase={purchase} />
               <div className="p-6 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-700 mb-4">
                   <span className="font-semibold">Code:</span>
