@@ -77,11 +77,6 @@ export interface MyPurchase {
   };
   createdAt: string;
   isReloadable: boolean;
-  template: {
-    backgroundImageUrl?: string;
-    backgroundColor?: string;
-    textColor?: string;
-  };
 }
 
 export interface GiftCardBalanceResponse {
