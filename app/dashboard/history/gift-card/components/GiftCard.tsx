@@ -34,6 +34,11 @@ const GiftCard = ({ purchase }: GiftCardProps) => {
       .toPng(cardElement, {
         quality: 1,
         pixelRatio: 2,
+        cacheBust: true,
+        fetchRequestInit: {
+          mode: 'cors',
+          cache: 'no-cache',
+        },
       })
       .then((dataUrl) => {
         const link = document.createElement("a");
@@ -67,7 +72,7 @@ const GiftCard = ({ purchase }: GiftCardProps) => {
     >
       <div className="absolute top-4 right-4 gift-card-export-button">
         <Download
-          className="cursor-pointer hover:text-orange-400 transition-colors"
+          className="cursor-pointer text-white hover:text-orange-400 transition-colors"
           size={24}
           onClick={handleExport}
         />
