@@ -17,6 +17,8 @@ import {
   BulkCreateGiftCardDto,
   ImportGiftCardsDto,
   ImportGiftCardResponse,
+  SummaryStatisticsDto,
+  SalesAndRedemptionsDto,
 } from './types';
 
 // API Functions
@@ -89,6 +91,16 @@ const getGiftCardChartData = async (): Promise<GiftCardChartDataDto> => {
   return data;
 };
 
+const getSummaryStatistics = async (): Promise<SummaryStatisticsDto> => {
+  const { data } = await api.get<SummaryStatisticsDto>('/merchant/gift-cards/summary-statistics');
+  return data;
+};
+
+const getSalesAndRedemptions = async (params: { startDate?: string; endDate?: string }): Promise<SalesAndRedemptionsDto> => {
+  const { data } = await api.get<SalesAndRedemptionsDto>('/merchant/gift-cards/sales-and-redemptions', { params });
+  return data;
+};
+
 
 // React Query Hooks
 export const useGetGiftCardTemplates = () => {
@@ -109,6 +121,20 @@ export const useGetGiftCardChartData = () => {
   return useQuery<GiftCardChartDataDto, Error>({
     queryKey: ['giftCardChartData'],
     queryFn: getGiftCardChartData,
+  });
+};
+
+export const useGetSummaryStatistics = () => {
+  return useQuery<SummaryStatisticsDto, Error>({
+    queryKey: ['summaryStatistics'],
+    queryFn: getSummaryStatistics,
+  });
+};
+
+export const useGetSalesAndRedemptions = (startDate?: string, endDate?: string) => {
+  return useQuery<SalesAndRedemptionsDto, Error>({
+    queryKey: ['salesAndRedemptions', startDate, endDate],
+    queryFn: () => getSalesAndRedemptions({ startDate, endDate }),
   });
 };
 

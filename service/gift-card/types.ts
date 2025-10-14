@@ -148,3 +148,18 @@ export interface ImportGiftCardResponse {
   errorCount: number;
   errors: string[];
 }
+
+export interface Summary {
+  totalGiftCards: number;
+  totalLiability: number;
+}
+
+export interface SummaryStatisticsDto {
+  summary: Summary;
+  chartData: GiftCardChartDataDto;
+}
+
+export interface SalesAndRedemptionsDto {
+  totalSales: number;
+  totalRedemptions: number;
+}
