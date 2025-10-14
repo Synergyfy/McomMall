@@ -58,7 +58,7 @@ export const BulkCreateGiftCardForm = ({
           <SelectTrigger>
             <SelectValue placeholder="Select a template" />
           </SelectTrigger>
-          <SelectContent className="z-[100]">
+          <SelectContent className="z-[100000]">
             {templates.map((template) => (
               <SelectItem key={template.id} value={template.id}>
                 {template.name}
