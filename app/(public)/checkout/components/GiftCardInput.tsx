@@ -44,7 +44,7 @@ export default function GiftCardInput({
         onApply(decodedText);
       };
 
-      const onScanFailure = (error: any) => {
+      const onScanFailure = (error: unknown) => {
         console.warn(`Code scan error = ${error}`);
       };
 
