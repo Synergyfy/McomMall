@@ -23,7 +23,15 @@ export type MerchantGiftCard = {
   deletedAt: string | null;
 };
 
+export interface PaginationMeta {
+  totalItems: number;
+  itemCount: number;
+  itemsPerPage: number;
+  totalPages: number;
+  currentPage: number;
+}
+
 export type GetMerchantGiftCardsResponse = {
   data: MerchantGiftCard[];
-  total: number;
+  meta: PaginationMeta;
 };

@@ -14,9 +14,22 @@ import {
   VerifyReloadDto,
   GiftCardStatsDto,
   GiftCardChartDataDto,
+  BulkCreateGiftCardDto,
+  ImportGiftCardsDto,
+  ImportGiftCardResponse,
 } from './types';
 
 // API Functions
+const bulkCreateGiftCards = async (bulkCreateDto: BulkCreateGiftCardDto): Promise<GiftCard[]> => {
+  const { data } = await api.post<GiftCard[]>('/merchant/gift-cards/bulk-create', bulkCreateDto);
+  return data;
+};
+
+const importGiftCards = async ({ templateId, importDto }: { templateId: string, importDto: ImportGiftCardsDto }): Promise<ImportGiftCardResponse> => {
+  const { data } = await api.post<ImportGiftCardResponse>(`/merchant/gift-cards/import/json?templateId=${templateId}`, importDto);
+  return data;
+};
+
 const fetchGiftCardTemplates = async (): Promise<GiftCardTemplate[]> => {
   const { data } = await api.get<GiftCardTemplate[]>('/merchant/gift-cards/templates');
   return data;
@@ -126,6 +139,26 @@ export const useAddGiftCardTemplate = () => {
     mutationFn: addGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useBulkCreateGiftCards = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard[], Error, BulkCreateGiftCardDto>({
+    mutationFn: bulkCreateGiftCards,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
+    },
+  });
+};
+
+export const useImportGiftCards = () => {
+  const queryClient = useQueryClient();
+  return useMutation<ImportGiftCardResponse, Error, { templateId: string, importDto: ImportGiftCardsDto }>({
+    mutationFn: importGiftCards,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
     },
   });
 };

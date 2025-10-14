@@ -119,3 +119,27 @@ export interface GiftCardChartDataDto {
     redemptions: number;
   }[];
 }
+
+export interface BulkCreateGiftCardDto {
+  templateId: string;
+  amount: number;
+  quantity: number;
+}
+
+export interface ImportGiftCardDto {
+  amount: number;
+  recipientEmail?: string;
+  recipientName?: string;
+  senderName?: string;
+  personalMessage?: string;
+}
+
+export interface ImportGiftCardsDto {
+  giftCards: ImportGiftCardDto[];
+}
+
+export interface ImportGiftCardResponse {
+  successCount: number;
+  errorCount: number;
+  errors: string[];
+}
