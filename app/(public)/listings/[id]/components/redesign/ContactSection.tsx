@@ -10,6 +10,8 @@ import {
   Linkedin,
   Youtube,
   Globe,
+  Mail,
+  Phone,
 } from 'lucide-react';
 
 interface ContactSectionProps {
@@ -33,18 +35,24 @@ export default function ContactSection({ listing }: ContactSectionProps) {
       transition={{ duration: 0.5, delay: 1.4 }}
       className="p-8 bg-white rounded-lg shadow-md"
     >
-      <h2 className="text-2xl font-bold mb-4">Contact Us</h2>
-      <div className="flex flex-col md:flex-row gap-8">
-        <div>
-          <p className="text-gray-700 mb-2">
-            <strong>Email:</strong> {listing.businessEmail}
-          </p>
-          <p className="text-gray-700">
-            <strong>Phone:</strong> {listing.businessPhone}
-          </p>
+      <h2 className="text-3xl font-bold mb-6 text-gray-800">Contact Us</h2>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="space-y-4">
+          <div className="flex items-center gap-4">
+            <Mail className="h-6 w-6 text-orange-600" />
+            <a href={`mailto:${listing.businessEmail}`} className="text-gray-600 hover:text-orange-600">
+              {listing.businessEmail}
+            </a>
+          </div>
+          <div className="flex items-center gap-4">
+            <Phone className="h-6 w-6 text-orange-600" />
+            <a href={`tel:${listing.businessPhone}`} className="text-gray-600 hover:text-orange-600">
+              {listing.businessPhone}
+            </a>
+          </div>
         </div>
-        <div>
-          <h3 className="text-xl font-semibold mb-2">Follow Us</h3>
+        <div className="space-y-4">
+          <h3 className="text-xl font-semibold text-gray-800">Follow Us</h3>
           <div className="flex gap-4">
             {listing.socialLinks?.map((link) => (
               <a
@@ -52,7 +60,7 @@ export default function ContactSection({ listing }: ContactSectionProps) {
                 href={link.url}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="text-gray-500 hover:text-blue-500"
+                className="text-gray-500 hover:text-orange-600"
               >
                 {socialIconMap[link.platform as keyof typeof socialIconMap]}
               </a>

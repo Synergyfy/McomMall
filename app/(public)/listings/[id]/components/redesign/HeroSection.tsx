@@ -24,7 +24,7 @@ export default function HeroSection({ listing }: HeroSectionProps) {
         objectFit="cover"
         className="rounded-lg"
       />
-      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent" />
+      <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent rounded-lg" />
       <div className="absolute bottom-0 left-0 p-8 text-white">
         <motion.div
           initial={{ opacity: 0, x: -20 }}
@@ -41,7 +41,7 @@ export default function HeroSection({ listing }: HeroSectionProps) {
           />
           <div>
             <h1 className="text-4xl font-bold">{listing.businessName}</h1>
-            <p className="text-lg">{listing.shortDescription}</p>
+            <p className="text-lg text-gray-200">{listing.shortDescription}</p>
           </div>
         </motion.div>
       </div>
