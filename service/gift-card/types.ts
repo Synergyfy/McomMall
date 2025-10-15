@@ -171,5 +171,5 @@ export interface Transaction {
 
 export interface AdjustBalanceDto {
   amount: number;
-  note?: string;
+  notes?: string;
 }

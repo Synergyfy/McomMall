@@ -28,7 +28,7 @@ import { MerchantGiftCard } from '@/types/merchant-gift-card';
 
 const formSchema = z.object({
   amount: z.coerce.number().min(-1000).max(1000),
-  note: z.string().optional(),
+  notes: z.string().optional(),
 });
 
 interface AdjustBalanceDialogProps {
@@ -42,7 +42,7 @@ export const AdjustBalanceDialog = ({ card, isOpen, onClose }: AdjustBalanceDial
     resolver: zodResolver(formSchema),
     defaultValues: {
       amount: 0,
-      note: '',
+      notes: '',
     },
   });
 
@@ -50,7 +50,7 @@ export const AdjustBalanceDialog = ({ card, isOpen, onClose }: AdjustBalanceDial
 
   const onSubmit = (values: z.infer<typeof formSchema>) => {
     adjustBalance(
-      { code: card.code, dto: values },
+      { id: card.id, dto: values },
       {
         onSuccess: () => {
           toast.success('Balance adjusted successfully');
@@ -89,10 +89,10 @@ export const AdjustBalanceDialog = ({ card, isOpen, onClose }: AdjustBalanceDial
             />
             <FormField
               control={form.control}
-              name="note"
+              name="notes"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Note (optional)</FormLabel>
+                  <FormLabel>Notes (optional)</FormLabel>
                   <FormControl>
                     <Textarea {...field} />
                   </FormControl>

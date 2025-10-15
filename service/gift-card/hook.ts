@@ -102,8 +102,8 @@ const getSalesAndRedemptions = async (params: { startDate: string; endDate: stri
   return data;
 };
 
-const adjustBalance = async ({ code, dto }: { code: string; dto: AdjustBalanceDto }): Promise<GiftCard> => {
-  const { data } = await api.patch<GiftCard>(`/merchant/gift-cards/${code}/adjust-balance`, dto);
+const adjustBalance = async ({ id, dto }: { id: string; dto: AdjustBalanceDto }): Promise<GiftCard> => {
+  const { data } = await api.post<GiftCard>(`/merchant/gift-cards/${id}/adjust-balance`, dto);
   return data;
 };
 
@@ -171,7 +171,7 @@ export const useAddGiftCardTemplate = () => {
 
 export const useAdjustBalance = () => {
   const queryClient = useQueryClient();
-  return useMutation<GiftCard, Error, { code: string; dto: AdjustBalanceDto }>({
+  return useMutation<GiftCard, Error, { id: string; dto: AdjustBalanceDto }>({
     mutationFn: adjustBalance,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
