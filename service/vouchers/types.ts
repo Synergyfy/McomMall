@@ -8,6 +8,8 @@ export interface VoucherProduct {
   usage?: 'both' | 'online_only' | 'instore_only';
   allowPartialRedemption?: boolean;
   isEnabled?: boolean;
+  backgroundImage?: string;
+  textColor?: string;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -52,6 +54,8 @@ export interface CreateVoucherProductDto {
   usage: 'both' | 'online_only' | 'instore_only';
   allowPartialRedemption: boolean;
   isEnabled: boolean;
+  backgroundImage?: string;
+  textColor?: string;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;
