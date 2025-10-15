@@ -34,6 +34,7 @@ import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import { useMemo } from 'react';
+import { TransactionTypeBadge } from './TransactionTypeBadge';
 
 export const SalesAndRedemptions = () => {
   const [date, setDate] = useState<DateRange | undefined>({
@@ -156,28 +157,43 @@ export const SalesAndRedemptions = () => {
             </div>
           )}
           {data && (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Type</TableHead>
-                  <TableHead>Customer</TableHead>
-                  <TableHead>Gift Card</TableHead>
-                  <TableHead className="text-right">Amount</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {paginatedData.map((transaction) => (
-                  <TableRow key={transaction.id}>
-                    <TableCell>{format(new Date(transaction.createdAt), 'dd MMM yyyy, HH:mm')}</TableCell>
-                    <TableCell>{transaction.type}</TableCell>
-                    <TableCell>{transaction.customerName}</TableCell>
-                    <TableCell>{transaction.giftCardCode}</TableCell>
-                    <TableCell className="text-right">{formatCurrency(transaction.amount)}</TableCell>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    <TableHead className="w-[150px]">Date</TableHead>
+                    <TableHead className="w-[120px]">Type</TableHead>
+                    <TableHead>Customer</TableHead>
+                    <TableHead>Gift Card</TableHead>
+                    <TableHead className="text-right">Amount</TableHead>
                   </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+                </TableHeader>
+                <TableBody>
+                  {paginatedData.map((transaction, index) => (
+                    <TableRow
+                      key={transaction.id}
+                      className={index % 2 === 0 ? 'bg-gray-50' : ''}
+                    >
+                      <TableCell className="font-medium">
+                        {format(new Date(transaction.createdAt), 'dd MMM yyyy, HH:mm')}
+                      </TableCell>
+                      <TableCell>
+                        <TransactionTypeBadge type={transaction.type} />
+                      </TableCell>
+                      <TableCell>{transaction.customerName}</TableCell>
+                      <TableCell className="font-mono">{transaction.giftCardCode}</TableCell>
+                      <TableCell
+                        className={`text-right font-semibold ${
+                          transaction.amount < 0 ? 'text-red-600' : 'text-green-600'
+                        }`}
+                      >
+                        {formatCurrency(transaction.amount)}
+                      </TableCell>
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
+            </div>
           )}
           {totalPages > 1 && (
             <Pagination>
@@ -191,6 +207,11 @@ export const SalesAndRedemptions = () => {
                         e.preventDefault();
                         setCurrentPage(page);
                       }}
+                      className={`px-3 py-1 rounded-md transition-colors ${
+                        page === currentPage
+                          ? 'bg-blue-500 text-white'
+                          : 'hover:bg-blue-100'
+                      }`}
                     >
                       {page}
                     </PaginationLink>

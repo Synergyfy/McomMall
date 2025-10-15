@@ -360,6 +360,11 @@ export default function GiftCardDashboardPage() {
                           e.preventDefault();
                           setPage(pageNumber);
                         }}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          pageNumber === page
+                            ? 'bg-blue-500 text-white'
+                            : 'hover:bg-blue-100'
+                        }`}
                       >
                         {pageNumber}
                       </PaginationLink>
