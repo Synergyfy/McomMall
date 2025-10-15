@@ -321,6 +321,7 @@ export interface Product {
   salePrice?: number;
   shortDescription?: string;
   description: string;
+  media?: string[];
   imageUrl?: string;
   productUrl?: string;
   fileUrls?: string[];
@@ -378,6 +379,7 @@ export interface InHouseBusiness {
   bannerUrl?: string;
   logoAltText?: string;
   bannerAltText?: string;
+  media: string[];
   status: BusinessStatus;
   googlePlaceId?: string;
   isGoogleVerified: boolean;
