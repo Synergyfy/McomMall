@@ -132,6 +132,13 @@ function ProductPage({
             <div className="flex-grow">
               <h4 className="font-semibold">{product.title}</h4>
               <p className="text-gray-600">£{product.price.toFixed(2)}</p>
+              {product.points && product.points > 0 && (
+                <div className="mt-2">
+                  <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                    Earn {product.points} points
+                  </span>
+                </div>
+              )}
               {product.shortDescription && (
                 <p className="text-sm text-gray-500 mt-1">
                   {product.shortDescription}

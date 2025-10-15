@@ -343,6 +343,7 @@ export interface Product {
   createdAt?: string;
   updatedAt?: string;
   variants?: ProductVariant[];
+  points?: number;
 }
 
 export type CampaignType = string;
