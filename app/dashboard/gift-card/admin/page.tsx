@@ -52,6 +52,7 @@ import { ImportGiftCardForm } from './components/ImportGiftCardForm';
 import { SummaryDisplay } from './components/SummaryDisplay';
 import { GiftCardChart } from './components/GiftCardChart';
 import { SalesAndRedemptions } from './components/SalesAndRedemptions';
+import { AdjustBalanceDialog } from './components/AdjustBalanceDialog';
 
 // --- SUB-COMPONENTS ---
 
@@ -146,6 +147,7 @@ export default function GiftCardDashboardPage() {
   const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
     null
   );
+  const [isAdjustBalanceOpen, setAdjustBalanceOpen] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -334,6 +336,16 @@ export default function GiftCardDashboardPage() {
                               <Eye className="h-3 w-3 mr-1" />
                               View activity
                             </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setSelectedCard(card);
+                                setAdjustBalanceOpen(true);
+                              }}
+                            >
+                              Adjust Balance
+                            </Button>
                           </div>
                         </TableCell>
                       </TableRow>
@@ -443,6 +455,17 @@ export default function GiftCardDashboardPage() {
           </Dialog>
         )}
       </AnimatePresence>
+
+      {selectedCard && (
+        <AdjustBalanceDialog
+          card={selectedCard}
+          isOpen={isAdjustBalanceOpen}
+          onClose={() => {
+            setAdjustBalanceOpen(false);
+            setSelectedCard(null);
+          }}
+        />
+      )}
     </div>
   );
 }

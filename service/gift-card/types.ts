@@ -168,3 +168,8 @@ export interface Transaction {
   customerEmail: string;
   giftCardCode: string;
 }
+
+export interface AdjustBalanceDto {
+  amount: number;
+  note?: string;
+}

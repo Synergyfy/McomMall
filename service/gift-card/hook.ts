@@ -19,6 +19,7 @@ import {
   ImportGiftCardResponse,
   SummaryStatisticsDto,
   Transaction,
+  AdjustBalanceDto,
 } from './types';
 
 // API Functions
@@ -101,6 +102,11 @@ const getSalesAndRedemptions = async (params: { startDate: string; endDate: stri
   return data;
 };
 
+const adjustBalance = async ({ code, dto }: { code: string; dto: AdjustBalanceDto }): Promise<GiftCard> => {
+  const { data } = await api.patch<GiftCard>(`/merchant/gift-cards/${code}/adjust-balance`, dto);
+  return data;
+};
+
 
 // React Query Hooks
 export const useGetGiftCardTemplates = () => {
@@ -159,6 +165,17 @@ export const useAddGiftCardTemplate = () => {
     mutationFn: addGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useAdjustBalance = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard, Error, { code: string; dto: AdjustBalanceDto }>({
+    mutationFn: adjustBalance,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
+      queryClient.invalidateQueries({ queryKey: ['giftCardHistory'] });
     },
   });
 };
