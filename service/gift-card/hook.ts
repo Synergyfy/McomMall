@@ -18,7 +18,7 @@ import {
   ImportGiftCardsDto,
   ImportGiftCardResponse,
   SummaryStatisticsDto,
-  SalesAndRedemptionsDto,
+  Transaction,
 } from './types';
 
 // API Functions
@@ -96,8 +96,8 @@ const getSummaryStatistics = async (): Promise<SummaryStatisticsDto> => {
   return data;
 };
 
-const getSalesAndRedemptions = async (params: { startDate?: string; endDate?: string }): Promise<SalesAndRedemptionsDto> => {
-  const { data } = await api.get<SalesAndRedemptionsDto>('/merchant/gift-cards/sales-and-redemptions', { params });
+const getSalesAndRedemptions = async (params: { startDate: string; endDate: string }): Promise<Transaction[]> => {
+  const { data } = await api.get<Transaction[]>('/merchant/gift-cards/sales-and-redemptions', { params });
   return data;
 };
 
@@ -117,13 +117,6 @@ export const useGetGiftCardStats = () => {
   });
 };
 
-export const useGetGiftCardChartData = () => {
-  return useQuery<GiftCardChartDataDto, Error>({
-    queryKey: ['giftCardChartData'],
-    queryFn: getGiftCardChartData,
-  });
-};
-
 export const useGetSummaryStatistics = () => {
   return useQuery<SummaryStatisticsDto, Error>({
     queryKey: ['summaryStatistics'],
@@ -131,10 +124,11 @@ export const useGetSummaryStatistics = () => {
   });
 };
 
-export const useGetSalesAndRedemptions = (startDate?: string, endDate?: string) => {
-  return useQuery<SalesAndRedemptionsDto, Error>({
+export const useGetSalesAndRedemptions = (startDate: string, endDate: string) => {
+  return useQuery<Transaction[], Error>({
     queryKey: ['salesAndRedemptions', startDate, endDate],
     queryFn: () => getSalesAndRedemptions({ startDate, endDate }),
+    enabled: !!startDate && !!endDate,
   });
 };
 

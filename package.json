@@ -54,6 +54,8 @@
     "html-to-image": "^1.11.13",
     "html5-qrcode": "^2.3.8",
     "js-cookie": "^3.0.5",
+    "jspdf": "^3.0.3",
+    "jspdf-autotable": "^5.0.2",
     "leaflet": "^1.9.4",
     "lucide-react": "^0.536.0",
     "multer": "^2.0.2",

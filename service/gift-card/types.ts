@@ -159,7 +159,12 @@ export interface SummaryStatisticsDto {
   chartData: GiftCardChartDataDto;
 }
 
-export interface SalesAndRedemptionsDto {
-  totalSales: number;
-  totalRedemptions: number;
+export interface Transaction {
+  id: string;
+  type: 'PURCHASE' | 'REDEEM' | 'RELOAD' | 'ADJUSTMENT';
+  amount: number;
+  createdAt: string;
+  customerName: string;
+  customerEmail: string;
+  giftCardCode: string;
 }
