@@ -148,3 +148,28 @@ export interface ImportGiftCardResponse {
   errorCount: number;
   errors: string[];
 }
+
+export interface Summary {
+  totalGiftCards: number;
+  totalLiability: number;
+}
+
+export interface SummaryStatisticsDto {
+  summary: Summary;
+  chartData: GiftCardChartDataDto;
+}
+
+export interface Transaction {
+  id: string;
+  type: 'PURCHASE' | 'REDEEM' | 'RELOAD' | 'ADJUSTMENT';
+  amount: number;
+  createdAt: string;
+  customerName: string;
+  customerEmail: string;
+  giftCardCode: string;
+}
+
+export interface AdjustBalanceDto {
+  amount: number;
+  notes?: string;
+}

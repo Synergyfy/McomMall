@@ -15,6 +15,7 @@ export function formatEnumValue(value: string) {
 
 export const CURRENCY = '£';
 
-export function formatCurrency(amount: number) {
-  return `${CURRENCY}${amount.toFixed(2)}`;
+export function formatCurrency(amount: number | string) {
+  const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
+  return `${CURRENCY}${numericAmount.toFixed(2)}`;
 }
