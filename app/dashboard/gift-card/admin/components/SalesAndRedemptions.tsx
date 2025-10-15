@@ -12,6 +12,13 @@ import {
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Calendar } from '@/components/ui/calendar';
 import {
+  Pagination,
+  PaginationContent,
+  PaginationEllipsis,
+  PaginationItem,
+  PaginationLink,
+} from '@/components/ui/pagination';
+import {
   Table,
   TableBody,
   TableCell,
@@ -26,16 +33,32 @@ import { format, subDays } from 'date-fns';
 import { formatCurrency } from '@/lib/utils';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
+import { useMemo } from 'react';
 
 export const SalesAndRedemptions = () => {
   const [date, setDate] = useState<DateRange | undefined>({
     from: subDays(new Date(), 29),
     to: new Date(),
   });
+  const [currentPage, setCurrentPage] = useState(1);
+  const itemsPerPage = 10;
+
   const { data, isLoading } = useGetSalesAndRedemptions(
     date?.from ? format(date.from, 'yyyy-MM-dd') : '',
     date?.to ? format(date.to, 'yyyy-MM-dd') : ''
   );
+
+  const paginatedData = useMemo(() => {
+    if (!data) return [];
+    const startIndex = (currentPage - 1) * itemsPerPage;
+    const endIndex = startIndex + itemsPerPage;
+    return data.slice(startIndex, endIndex);
+  }, [data, currentPage, itemsPerPage]);
+
+  const totalPages = useMemo(() => {
+    if (!data) return 0;
+    return Math.ceil(data.length / itemsPerPage);
+  }, [data, itemsPerPage]);
 
   const handleExportCsv = () => {
     if (data) {
@@ -144,7 +167,7 @@ export const SalesAndRedemptions = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {data.map((transaction) => (
+                {paginatedData.map((transaction) => (
                   <TableRow key={transaction.id}>
                     <TableCell>{format(new Date(transaction.createdAt), 'dd MMM yyyy, HH:mm')}</TableCell>
                     <TableCell>{transaction.type}</TableCell>
@@ -155,6 +178,26 @@ export const SalesAndRedemptions = () => {
                 ))}
               </TableBody>
             </Table>
+          )}
+          {totalPages > 1 && (
+            <Pagination>
+              <PaginationContent>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <PaginationItem key={page}>
+                    <PaginationLink
+                      href="#"
+                      isActive={page === currentPage}
+                      onClick={(e) => {
+                        e.preventDefault();
+                        setCurrentPage(page);
+                      }}
+                    >
+                      {page}
+                    </PaginationLink>
+                  </PaginationItem>
+                ))}
+              </PaginationContent>
+            </Pagination>
           )}
         </div>
       </CardContent>

@@ -35,9 +35,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
+  PaginationLink,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import {
@@ -202,6 +202,47 @@ export default function GiftCardDashboardPage() {
     refetch();
   };
 
+  const totalPages = giftCardResponse?.meta.totalPages || 1;
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const visiblePages = 5; // Adjust this number to show more or less page numbers
+
+    if (totalPages <= visiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      let startPage = Math.max(1, page - Math.floor(visiblePages / 2));
+      let endPage = startPage + visiblePages - 1;
+
+      if (endPage > totalPages) {
+        endPage = totalPages;
+        startPage = endPage - visiblePages + 1;
+      }
+
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) {
+          pageNumbers.push('...');
+        }
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          pageNumbers.push('...');
+        }
+        pageNumbers.push(totalPages);
+      }
+    }
+
+    return pageNumbers;
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
@@ -309,22 +350,24 @@ export default function GiftCardDashboardPage() {
             </div>
             <Pagination className="mt-4">
               <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setPage((p) =>
-                        p < (giftCardResponse?.meta.totalPages || 1)
-                          ? p + 1
-                          : p
-                      )
-                    }
-                  />
-                </PaginationItem>
+                {renderPagination().map((pageNumber, index) => (
+                  <PaginationItem key={index}>
+                    {typeof pageNumber === 'number' ? (
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNumber);
+                        }}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    ) : (
+                      <PaginationEllipsis />
+                    )}
+                  </PaginationItem>
+                ))}
               </PaginationContent>
             </Pagination>
           </CardContent>
