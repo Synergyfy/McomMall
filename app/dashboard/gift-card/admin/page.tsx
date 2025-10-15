@@ -144,9 +144,8 @@ export default function GiftCardDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
-    null
-  );
+  const [cardForActivity, setCardForActivity] = useState<MerchantGiftCard | null>(null);
+  const [cardForAdjust, setCardForAdjust] = useState<MerchantGiftCard | null>(null);
   const [isAdjustBalanceOpen, setAdjustBalanceOpen] = useState(false);
 
   useEffect(() => {
@@ -331,7 +330,7 @@ export default function GiftCardDashboardPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSelectedCard(card)}
+                              onClick={() => setCardForActivity(card)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View activity
@@ -340,7 +339,7 @@ export default function GiftCardDashboardPage() {
                               variant="outline"
                               size="sm"
                               onClick={() => {
-                                setSelectedCard(card);
+                                setCardForAdjust(card);
                                 setAdjustBalanceOpen(true);
                               }}
                             >
@@ -393,14 +392,14 @@ export default function GiftCardDashboardPage() {
 
       {/* --- MODALS --- */}
       <Dialog
-        open={selectedCard !== null}
-        onOpenChange={() => setSelectedCard(null)}
+        open={cardForActivity !== null}
+        onOpenChange={() => setCardForActivity(null)}
       >
         <DialogContent>
-          {selectedCard && (
+          {cardForActivity && (
             <ViewActivityDialog
-              card={selectedCard}
-              onClose={() => setSelectedCard(null)}
+              card={cardForActivity}
+              onClose={() => setCardForActivity(null)}
             />
           )}
         </DialogContent>
@@ -456,13 +455,13 @@ export default function GiftCardDashboardPage() {
         )}
       </AnimatePresence>
 
-      {selectedCard && (
+      {cardForAdjust && (
         <AdjustBalanceDialog
-          card={selectedCard}
+          card={cardForAdjust}
           isOpen={isAdjustBalanceOpen}
           onClose={() => {
             setAdjustBalanceOpen(false);
-            setSelectedCard(null);
+            setCardForAdjust(null);
           }}
         />
       )}
