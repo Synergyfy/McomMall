@@ -135,7 +135,7 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
             {listingDataForPreview.products.length > 0 && (
               <ProductsSection products={listingDataForPreview.products} />
             )}
-            <ServicesSection />
+            <ServicesSection businessId={listingDataForPreview.id} />
             <PromotionsSection listing={listingDataForPreview} />
             <ContactSection listing={listingDataForPreview} />
           </div>

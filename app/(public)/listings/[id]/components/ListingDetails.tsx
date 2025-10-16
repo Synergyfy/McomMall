@@ -56,7 +56,7 @@ export default function ClientListingDetail({
             {inHouseListing.products && inHouseListing.products.length > 0 && (
               <ProductsSection products={inHouseListing.products} />
             )}
-            {inHouseListing.serviceProviderProfile && <ServicesSection />}
+            {inHouseListing.serviceProviderProfile && <ServicesSection businessId={inHouseListing.id} />}
             <PromotionsSection listing={inHouseListing} />
             <ContactSection listing={inHouseListing} />
           </div>
