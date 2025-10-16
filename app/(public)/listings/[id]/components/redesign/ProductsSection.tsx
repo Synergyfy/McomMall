@@ -73,7 +73,7 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
                       </Badge>
                     )}
                   </div>
-                  <div className="flex gap-2 w-full">
+                  <div className="flex flex-col gap-2 w-full">
                     <Button
                       variant="outline"
                       className="w-full border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
