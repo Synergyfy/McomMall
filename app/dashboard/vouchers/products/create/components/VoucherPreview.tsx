@@ -38,7 +38,7 @@ export const VoucherPreview: React.FC<VoucherPreviewProps> = ({
 
   return (
     <div
-      className="relative flex h-[250px] w-full max-w-md flex-col justify-between overflow-hidden rounded-xl bg-cover bg-center p-6 text-white shadow-lg"
+      className="relative flex h-[200px] w-full flex-col justify-between overflow-hidden rounded-xl bg-cover bg-center p-4 text-white shadow-lg"
       style={{
         backgroundImage: `url(${backgroundImage || '/placeholder.jpg'})`,
         color: textColor,
@@ -48,8 +48,8 @@ export const VoucherPreview: React.FC<VoucherPreviewProps> = ({
 
       <div className="relative z-10 flex items-start justify-between">
         <div>
-          <h2 className="text-2xl font-bold">{name}</h2>
-          <p className="text-sm opacity-90">{getAmountText()}</p>
+          <h2 className="text-xl font-bold">{name}</h2>
+          <p className="text-xs opacity-90">{getAmountText()}</p>
           {expiryDays && (
             <p className="mt-1 text-xs opacity-80">
               Expires in {expiryDays} days
@@ -57,7 +57,7 @@ export const VoucherPreview: React.FC<VoucherPreviewProps> = ({
           )}
         </div>
         <div className="rounded-lg bg-white p-1">
-          <QRCode value={voucherCode} size={64} />
+          <QRCode value={voucherCode} size={48} />
         </div>
       </div>
 

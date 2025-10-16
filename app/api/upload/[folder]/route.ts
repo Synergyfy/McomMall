@@ -7,12 +7,32 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-export async function POST(request: NextRequest, { params }: any) {
+const MAX_FILE_SIZE = 10 * 1024 * 1024; // 10MB
+const ALLOWED_FILE_TYPES = ['image/jpeg', 'image/png', 'image/gif'];
+
+export async function POST(
+  request: NextRequest,
+  { params }: { params: { folder: string } }
+) {
   const formData = await request.formData();
   const file = formData.get('file') as File;
 
   if (!file) {
     return NextResponse.json({ error: 'No file uploaded' }, { status: 400 });
+  }
+
+  if (file.size > MAX_FILE_SIZE) {
+    return NextResponse.json(
+      { error: 'File size exceeds the 10MB limit' },
+      { status: 400 }
+    );
+  }
+
+  if (!ALLOWED_FILE_TYPES.includes(file.type)) {
+    return NextResponse.json(
+      { error: 'Invalid file type. Only JPEG, PNG, and GIF are allowed' },
+      { status: 400 }
+    );
   }
 
   const bytes = await file.arrayBuffer();

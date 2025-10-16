@@ -22,6 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 import Uploader from '@/components/ui/Uploader';
+import { toast } from 'sonner';
 
 type VoucherProductFormData = Omit<
   CreateVoucherProductDto,
@@ -47,6 +48,7 @@ export const CreateVoucherProductForm: React.FC<VoucherProductFormProps> = ({
   const [allowCustomPrice, setAllowCustomPrice] = useState(
     !!initialData?.customAmount
   );
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
 
   const {
     register,
@@ -66,7 +68,37 @@ export const CreateVoucherProductForm: React.FC<VoucherProductFormProps> = ({
     }
   }, [initialData]);
 
-  const handleFormSubmit = (data: VoucherProductFormData) => {
+  const handleFileSelect = (file: File) => {
+    setSelectedFile(file);
+    setValue('backgroundImage', URL.createObjectURL(file));
+  };
+
+  const handleFormSubmit = async (data: VoucherProductFormData) => {
+    let imageUrl = data.backgroundImage;
+
+    if (selectedFile) {
+      const formData = new FormData();
+      formData.append('file', selectedFile);
+
+      try {
+        const response = await fetch('/api/upload/voucher-backgrounds', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Upload failed');
+        }
+
+        const { url } = await response.json();
+        imageUrl = url;
+      } catch (error) {
+        toast.error('Failed to upload image.');
+        console.error(error);
+        return;
+      }
+    }
+
     const {
       customAmountMin,
       customAmountMax,
@@ -75,6 +107,7 @@ export const CreateVoucherProductForm: React.FC<VoucherProductFormProps> = ({
 
     const processedData: CreateVoucherProductDto = {
       ...rest,
+      backgroundImage: imageUrl,
       fixedAmounts: data.fixedAmounts || [],
       customAmount:
         allowCustomPrice && customAmountMin && customAmountMax
@@ -137,10 +170,9 @@ export const CreateVoucherProductForm: React.FC<VoucherProductFormProps> = ({
             <img src={backgroundImage} alt="Background" className="h-32 w-full rounded-md object-cover" />
           </div>
         )}
-        <Uploader
-          onUpload={url => setValue('backgroundImage', url)}
-          folder="voucher-backgrounds"
-        />
+        <div className="h-64">
+          <Uploader onFileSelect={handleFileSelect} />
+        </div>
       </div>
 
       <div>
@@ -312,8 +344,7 @@ export const CreateVoucherProductForm: React.FC<VoucherProductFormProps> = ({
           )}
         />
       </div>
-
-      <div className="sm:col-span-2">
+      <div className="sm:col-span-2 mt-4">
         <Button type="submit" disabled={isSubmitting} className="w-full">
           {isSubmitting
             ? 'Submitting...'

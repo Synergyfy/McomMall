@@ -1,48 +1,22 @@
 'use client';
 
-import { useCallback, useState } from 'react';
+import { useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
 import { FaCloudUploadAlt } from 'react-icons/fa';
-import { toast } from 'sonner';
 
 interface UploaderProps {
-  onUpload: (url: string) => void;
-  folder: string;
+  onFileSelect: (file: File) => void;
 }
 
-const Uploader = ({ onUpload, folder }: UploaderProps) => {
-  const [loading, setLoading] = useState(false);
-
+const Uploader = ({ onFileSelect }: UploaderProps) => {
   const onDrop = useCallback(
-    async (acceptedFiles: File[]) => {
+    (acceptedFiles: File[]) => {
       const file = acceptedFiles[0];
-      if (!file) return;
-
-      setLoading(true);
-      const formData = new FormData();
-      formData.append('file', file);
-
-      try {
-        const response = await fetch(`/api/upload/${folder}`, {
-          method: 'POST',
-          body: formData,
-        });
-
-        if (!response.ok) {
-          throw new Error('Upload failed');
-        }
-
-        const { url } = await response.json();
-        onUpload(url);
-        toast.success('Image uploaded successfully!');
-      } catch (error) {
-        toast.error('Failed to upload image.');
-        console.error(error);
-      } finally {
-        setLoading(false);
+      if (file) {
+        onFileSelect(file);
       }
     },
-    [onUpload, folder]
+    [onFileSelect]
   );
 
   const { getRootProps, getInputProps, isDragActive } = useDropzone({
@@ -70,9 +44,7 @@ const Uploader = ({ onUpload, folder }: UploaderProps) => {
             isDragActive ? 'text-blue-600' : ''
           }`}
         />
-        {loading ? (
-          <p className="text-sm font-medium text-gray-600">Uploading...</p>
-        ) : isDragActive ? (
+        {isDragActive ? (
           <p className="text-sm font-medium text-blue-600">
             Drop the image here...
           </p>
