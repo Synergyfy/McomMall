@@ -1,51 +1,87 @@
+
 import React, { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Eye, Smartphone, Monitor } from 'lucide-react';
-import ListingPage from '@/app/(public)/listings/[id]/components/ListingPage';
 import { ListingFormData } from '../../types';
 import { InHouseBusiness } from '@/service/listings/types';
 
-type PreviewListing = Partial<InHouseBusiness>;
+// Import the new redesigned components
+import HeroSection from '@/app/(public)/listings/[id]/components/redesign/HeroSection';
+import AboutSection from '@/app/(public)/listings/[id]/components/redesign/AboutSection';
+import MediaGallery from '@/app/(public)/listings/[id]/components/redesign/MediaGallery';
+import ProductsSection from '@/app/(public)/listings/[id]/components/redesign/ProductsSection';
+import ServicesSection from '@/app/(public)/listings/[id]/components/redesign/ServicesSection';
+import PromotionsSection from '@/app/(public)/listings/[id]/components/redesign/PromotionsSection';
+import ContactSection from '@/app/(public)/listings/[id]/components/redesign/ContactSection';
 
 interface ListingPreviewProps {
   formData: ListingFormData;
 }
 
 const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
-  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>(
-    'desktop'
-  );
+  const [previewMode, setPreviewMode] = useState<'desktop' | 'mobile'>('desktop');
 
-  const listingDataForPreview: PreviewListing = {
-    businessName: formData.businessName,
-    categories: [
-      { name: formData.serviceData?.tradeCategory || 'Category', id: '', created_at: '', updated_at: '', description: '' },
-    ],
+  // Create a comprehensive listing object for the new components
+  const listingDataForPreview: InHouseBusiness = {
+    id: 'preview',
+    created_at: new Date().toISOString(),
+    updated_at: new Date().toISOString(),
+    listingType: ['product', 'service'],
+    businessName: formData.businessName || 'Business Name',
+    legalName: formData.legalName || '',
+    companyRegistrationNumber: formData.companyRegNo || '',
+    vatNumber: formData.vatNo || '',
+    shortDescription: formData.shortDesc || 'A short description of the business.',
+    about: formData.longDesc || 'About the business...',
+    website: formData.socials?.website || '',
+    businessPhone: formData.phone || '',
+    businessEmail: formData.email || '',
+    logoUrl: formData.logo?.url || '/placeholder-logo.png',
+    bannerUrl: formData.banner?.url || '/placeholder-banner.png',
+    logoAltText: formData.logo?.altText || '',
+    bannerAltText: formData.banner?.altText || '',
+    media: formData.media?.map(m => m.url).filter((url): url is string => !!url) || [],
+    status: 'DRAFT',
+    isGoogleVerified: false,
+    isClaimed: true,
     location: {
-      addressLine1: formData.address || '',
-      city: formData.city || '',
       id: '',
       created_at: '',
       updated_at: '',
-      postcode: '',
+      postcode: formData.postcode || '',
+      addressLine1: formData.address || 'Address Line 1',
       addressLine2: '',
+      city: formData.city || 'City',
       lat: 0,
       lng: 0,
-      showPublicly: false,
+      showPublicly: true,
       deliveryRadiusKm: 0,
       servicePostcodes: [],
-      serviceModel: null,
+      serviceModel: 'at_location',
+    },
+    categories: formData.serviceData?.tradeCategory ? [{ id: 'cat1', name: formData.serviceData.tradeCategory, created_at: '', updated_at: '', description: null }] : [],
+    socialLinks: [
+      { id: 'fb', platform: 'facebook', url: formData.socials?.facebook || '' },
+      { id: 'tw', platform: 'twitter', url: formData.socials?.twitter || '' },
+      { id: 'ig', platform: 'instagram', url: formData.socials?.instagram || '' },
+      { id: 'li', platform: 'linkedin', url: formData.socials?.linkedin || '' },
+    ].filter(link => link.url),
+    businessHours: [],
+    specialDays: [],
+    products: [],
+    campaigns: [],
+    user: {
+      id: '',
+      created_at: '',
+      updated_at: '',
+      name: '',
+      email: '',
+      phoneNumber: '',
+      isActive: true,
+      isEmailVerified: true,
+      role: 'owner'
     },
   };
-
-  const imageUrls =
-    formData.media && formData.media.length > 0
-      ? formData.media
-          .map(m => m.url)
-          .filter((url): url is string => typeof url === 'string')
-      : [
-          'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80',
-        ];
 
   return (
     <div className="rounded-lg border bg-card text-card-foreground shadow-sm">
@@ -82,25 +118,27 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
         </div>
       </div>
       <div
-        className={`p-4 ${
+        className={`bg-gray-100 p-4 transition-all duration-300 ${
           previewMode === 'mobile' ? 'max-w-sm mx-auto' : ''
         }`}
       >
         <div
-          className="w-full overflow-hidden rounded-lg"
-          style={{
-            border: '1px solid #e5e7eb',
-          }}
+          className="w-full overflow-hidden rounded-lg border"
         >
-          <ListingPage
-            listing={listingDataForPreview as InHouseBusiness}
-            isGoogle={false}
-            isWishlisted={false}
-            handleWishlistToggle={() => {}}
-            imageUrls={imageUrls}
-            placeId="preview"
-            isLoading={false}
-          />
+          {/* Using the new redesigned layout */}
+          <div className="space-y-8 p-4">
+            <HeroSection listing={listingDataForPreview} />
+            <AboutSection listing={listingDataForPreview} />
+            {listingDataForPreview.media.length > 0 && (
+              <MediaGallery media={listingDataForPreview.media} />
+            )}
+            {listingDataForPreview.products.length > 0 && (
+              <ProductsSection products={listingDataForPreview.products} />
+            )}
+            <ServicesSection businessId={listingDataForPreview.id} />
+            <PromotionsSection listing={listingDataForPreview} />
+            <ContactSection listing={listingDataForPreview} />
+          </div>
         </div>
       </div>
     </div>

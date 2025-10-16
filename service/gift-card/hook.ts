@@ -17,6 +17,9 @@ import {
   BulkCreateGiftCardDto,
   ImportGiftCardsDto,
   ImportGiftCardResponse,
+  SummaryStatisticsDto,
+  Transaction,
+  AdjustBalanceDto,
 } from './types';
 
 // API Functions
@@ -89,6 +92,21 @@ const getGiftCardChartData = async (): Promise<GiftCardChartDataDto> => {
   return data;
 };
 
+const getSummaryStatistics = async (): Promise<SummaryStatisticsDto> => {
+  const { data } = await api.get<SummaryStatisticsDto>('/merchant/gift-cards/summary-statistics');
+  return data;
+};
+
+const getSalesAndRedemptions = async (params: { startDate: string; endDate: string }): Promise<Transaction[]> => {
+  const { data } = await api.get<Transaction[]>('/merchant/gift-cards/sales-and-redemptions', { params });
+  return data;
+};
+
+const adjustBalance = async ({ id, dto }: { id: string; dto: AdjustBalanceDto }): Promise<GiftCard> => {
+  const { data } = await api.post<GiftCard>(`/merchant/gift-cards/${id}/adjust-balance`, dto);
+  return data;
+};
+
 
 // React Query Hooks
 export const useGetGiftCardTemplates = () => {
@@ -105,10 +123,18 @@ export const useGetGiftCardStats = () => {
   });
 };
 
-export const useGetGiftCardChartData = () => {
-  return useQuery<GiftCardChartDataDto, Error>({
-    queryKey: ['giftCardChartData'],
-    queryFn: getGiftCardChartData,
+export const useGetSummaryStatistics = () => {
+  return useQuery<SummaryStatisticsDto, Error>({
+    queryKey: ['summaryStatistics'],
+    queryFn: getSummaryStatistics,
+  });
+};
+
+export const useGetSalesAndRedemptions = (startDate: string, endDate: string) => {
+  return useQuery<Transaction[], Error>({
+    queryKey: ['salesAndRedemptions', startDate, endDate],
+    queryFn: () => getSalesAndRedemptions({ startDate, endDate }),
+    enabled: !!startDate && !!endDate,
   });
 };
 
@@ -139,6 +165,17 @@ export const useAddGiftCardTemplate = () => {
     mutationFn: addGiftCardTemplate,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCardTemplates'] });
+    },
+  });
+};
+
+export const useAdjustBalance = () => {
+  const queryClient = useQueryClient();
+  return useMutation<GiftCard, Error, { id: string; dto: AdjustBalanceDto }>({
+    mutationFn: adjustBalance,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['merchantGiftCards'] });
+      queryClient.invalidateQueries({ queryKey: ['giftCardHistory'] });
     },
   });
 };

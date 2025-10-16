@@ -321,6 +321,7 @@ export interface Product {
   salePrice?: number;
   shortDescription?: string;
   description: string;
+  media?: string[];
   imageUrl?: string;
   productUrl?: string;
   fileUrls?: string[];
@@ -343,6 +344,7 @@ export interface Product {
   createdAt?: string;
   updatedAt?: string;
   variants?: ProductVariant[];
+  points?: number;
 }
 
 export type CampaignType = string;
@@ -377,6 +379,7 @@ export interface InHouseBusiness {
   bannerUrl?: string;
   logoAltText?: string;
   bannerAltText?: string;
+  media: string[];
   status: BusinessStatus;
   googlePlaceId?: string;
   isGoogleVerified: boolean;

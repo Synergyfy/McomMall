@@ -35,9 +35,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import {
   Pagination,
   PaginationContent,
+  PaginationEllipsis,
   PaginationItem,
-  PaginationNext,
-  PaginationPrevious,
+  PaginationLink,
 } from '@/components/ui/pagination';
 import { cn } from '@/lib/utils';
 import {
@@ -49,46 +49,12 @@ import { MerchantGiftCard } from '@/types/merchant-gift-card';
 
 import { BulkCreateGiftCardForm } from './components/BulkCreateGiftCardForm';
 import { ImportGiftCardForm } from './components/ImportGiftCardForm';
+import { SummaryDisplay } from './components/SummaryDisplay';
+import { GiftCardChart } from './components/GiftCardChart';
+import { SalesAndRedemptions } from './components/SalesAndRedemptions';
+import { AdjustBalanceDialog } from './components/AdjustBalanceDialog';
 
 // --- SUB-COMPONENTS ---
-
-const HeaderStats = ({ cards }: { cards: MerchantGiftCard[] }) => {
-  const totalBalance = cards.reduce((sum, card) => sum + parseFloat(card.currentBalance), 0);
-  const activeCards = cards.filter(card => card.isActive && parseFloat(card.currentBalance) > 0).length;
-
-  return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Active Gift Cards
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold">
-            {activeCards.toLocaleString()}
-          </div>
-        </CardContent>
-      </Card>
-      <Card>
-        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-          <CardTitle className="text-sm font-medium">
-            Outstanding Balances
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-4xl font-bold">
-            £
-            {totalBalance.toLocaleString('en-GB', {
-              minimumFractionDigits: 2,
-              maximumFractionDigits: 2,
-            })}
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-};
 
 const ViewActivityDialog = ({
   card,
@@ -178,9 +144,9 @@ export default function GiftCardDashboardPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearch, setDebouncedSearch] = useState('');
   const [page, setPage] = useState(1);
-  const [selectedCard, setSelectedCard] = useState<MerchantGiftCard | null>(
-    null
-  );
+  const [cardForActivity, setCardForActivity] = useState<MerchantGiftCard | null>(null);
+  const [cardForAdjust, setCardForAdjust] = useState<MerchantGiftCard | null>(null);
+  const [isAdjustBalanceOpen, setAdjustBalanceOpen] = useState(false);
 
   useEffect(() => {
     const handler = setTimeout(() => {
@@ -237,12 +203,57 @@ export default function GiftCardDashboardPage() {
     refetch();
   };
 
+  const totalPages = giftCardResponse?.meta.totalPages || 1;
+
+  const renderPagination = () => {
+    const pageNumbers = [];
+    const visiblePages = 5; // Adjust this number to show more or less page numbers
+
+    if (totalPages <= visiblePages) {
+      for (let i = 1; i <= totalPages; i++) {
+        pageNumbers.push(i);
+      }
+    } else {
+      let startPage = Math.max(1, page - Math.floor(visiblePages / 2));
+      let endPage = startPage + visiblePages - 1;
+
+      if (endPage > totalPages) {
+        endPage = totalPages;
+        startPage = endPage - visiblePages + 1;
+      }
+
+      if (startPage > 1) {
+        pageNumbers.push(1);
+        if (startPage > 2) {
+          pageNumbers.push('...');
+        }
+      }
+
+      for (let i = startPage; i <= endPage; i++) {
+        pageNumbers.push(i);
+      }
+
+      if (endPage < totalPages) {
+        if (endPage < totalPages - 1) {
+          pageNumbers.push('...');
+        }
+        pageNumbers.push(totalPages);
+      }
+    }
+
+    return pageNumbers;
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
-        <HeaderStats cards={giftCards} />
+        <div className="space-y-6">
+          <SummaryDisplay />
+          <GiftCardChart />
+          <SalesAndRedemptions />
+        </div>
 
-        <Card>
+        <Card className="mt-6">
           <CardContent className="p-4">
             <div className="flex items-center justify-between gap-2 mb-4">
               <div className="flex items-center gap-2">
@@ -319,10 +330,20 @@ export default function GiftCardDashboardPage() {
                             <Button
                               variant="outline"
                               size="sm"
-                              onClick={() => setSelectedCard(card)}
+                              onClick={() => setCardForActivity(card)}
                             >
                               <Eye className="h-3 w-3 mr-1" />
                               View activity
+                            </Button>
+                            <Button
+                              variant="outline"
+                              size="sm"
+                              onClick={() => {
+                                setCardForAdjust(card);
+                                setAdjustBalanceOpen(true);
+                              }}
+                            >
+                              Adjust Balance
                             </Button>
                           </div>
                         </TableCell>
@@ -340,22 +361,29 @@ export default function GiftCardDashboardPage() {
             </div>
             <Pagination className="mt-4">
               <PaginationContent>
-                <PaginationItem>
-                  <PaginationPrevious
-                    onClick={() => setPage((p) => Math.max(1, p - 1))}
-                  />
-                </PaginationItem>
-                <PaginationItem>
-                  <PaginationNext
-                    onClick={() =>
-                      setPage((p) =>
-                        p < (giftCardResponse?.meta.totalPages || 1)
-                          ? p + 1
-                          : p
-                      )
-                    }
-                  />
-                </PaginationItem>
+                {renderPagination().map((pageNumber, index) => (
+                  <PaginationItem key={index}>
+                    {typeof pageNumber === 'number' ? (
+                      <PaginationLink
+                        href="#"
+                        isActive={pageNumber === page}
+                        onClick={(e) => {
+                          e.preventDefault();
+                          setPage(pageNumber);
+                        }}
+                        className={`px-3 py-1 rounded-md transition-colors ${
+                          pageNumber === page
+                            ? 'bg-blue-500 text-white'
+                            : 'hover:bg-blue-100'
+                        }`}
+                      >
+                        {pageNumber}
+                      </PaginationLink>
+                    ) : (
+                      <PaginationEllipsis />
+                    )}
+                  </PaginationItem>
+                ))}
               </PaginationContent>
             </Pagination>
           </CardContent>
@@ -364,14 +392,14 @@ export default function GiftCardDashboardPage() {
 
       {/* --- MODALS --- */}
       <Dialog
-        open={selectedCard !== null}
-        onOpenChange={() => setSelectedCard(null)}
+        open={cardForActivity !== null}
+        onOpenChange={() => setCardForActivity(null)}
       >
         <DialogContent>
-          {selectedCard && (
+          {cardForActivity && (
             <ViewActivityDialog
-              card={selectedCard}
-              onClose={() => setSelectedCard(null)}
+              card={cardForActivity}
+              onClose={() => setCardForActivity(null)}
             />
           )}
         </DialogContent>
@@ -426,6 +454,17 @@ export default function GiftCardDashboardPage() {
           </Dialog>
         )}
       </AnimatePresence>
+
+      {cardForAdjust && (
+        <AdjustBalanceDialog
+          card={cardForAdjust}
+          isOpen={isAdjustBalanceOpen}
+          onClose={() => {
+            setAdjustBalanceOpen(false);
+            setCardForAdjust(null);
+          }}
+        />
+      )}
     </div>
   );
 }
