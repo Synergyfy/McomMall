@@ -175,7 +175,18 @@ export const accountMenuItems: MenuItem[] = [
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 
+import { BarChart } from 'lucide-react';
+
 export const pluginMenuItems: MenuItem[] = [
+  {
+    title: 'Admin',
+    href: '/dashboard/admin',
+    icon: BarChart,
+    subMenu: [
+      { title: 'Vouchers', href: '/dashboard/admin/vouchers' },
+      { title: 'Promotions', href: '/dashboard/admin/promotions' },
+    ],
+  },
   {
     title: 'Loyalty & Reward',
     href: '/dashboard/loyalty',
