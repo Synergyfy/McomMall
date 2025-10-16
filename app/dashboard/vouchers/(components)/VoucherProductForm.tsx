@@ -21,6 +21,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {Image} from 'next/image';
+
 
 type VoucherProductFormData = Omit<
   CreateVoucherProductDto,
@@ -122,188 +124,200 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(handleFormSubmit)}
-      className="grid grid-cols-1 gap-6 sm:grid-cols-2"
-    >
-      <div className="sm:col-span-2">
-        <Label htmlFor="name">Product Name</Label>
-        <Input
-          id="name"
-          {...register('name', { required: 'Name is required' })}
-          className="mt-1"
-        />
-        {errors.name && <p className="text-red-500">{errors.name.message}</p>}
-      </div>
+    <div className="flex flex-col md:flex-row gap-8">
+        <form
+          onSubmit={handleSubmit(handleFormSubmit)}
+          className="grid grid-cols-1 gap-6 sm:grid-cols-2"
+        >
+          <div className="sm:col-span-2">
+            <Label htmlFor="name">Product Name</Label>
+            <Input
+              id="name"
+              {...register('name', { required: 'Name is required' })}
+              className="mt-1"
+            />
+            {errors.name && <p className="text-red-500">{errors.name.message}</p>}
+          </div>
 
-      <div className="sm:col-span-2">
-        <Label htmlFor="description">Description</Label>
-        <Textarea id="description" {...register('description')} className="mt-1" />
-      </div>
+          <div className="sm:col-span-2">
+            <Label htmlFor="description">Description</Label>
+            <Textarea id="description" {...register('description')} className="mt-1" />
+          </div>
 
-      <div className="sm:col-span-2">
-        <Label htmlFor="fixedAmounts">Fixed Amounts</Label>
-        <div className="mt-1 flex flex-wrap items-center gap-2">
-          <AnimatePresence>
-            {fixedAmounts.map(amount => (
-              <motion.div
-                key={amount}
-                initial={{ opacity: 0, scale: 0.5 }}
-                animate={{ opacity: 1, scale: 1 }}
-                exit={{ opacity: 0, scale: 0.5 }}
-                transition={{ duration: 0.2 }}
-              >
-                <Badge
-                  variant="secondary"
-                  className="flex items-center gap-1.5"
-                >
-                  {amount}
-                  <button
-                    type="button"
-                    onClick={() => removeFixedAmount(amount)}
-                    className="rounded-full hover:bg-gray-300"
+          <div className="sm:col-span-2">
+            <Label htmlFor="fixedAmounts">Fixed Amounts</Label>
+            <div className="mt-1 flex flex-wrap items-center gap-2">
+              <AnimatePresence>
+                {fixedAmounts.map(amount => (
+                  <motion.div
+                    key={amount}
+                    initial={{ opacity: 0, scale: 0.5 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    exit={{ opacity: 0, scale: 0.5 }}
+                    transition={{ duration: 0.2 }}
                   >
-                    <X className="h-3 w-3" />
-                  </button>
-                </Badge>
-              </motion.div>
-            ))}
-          </AnimatePresence>
-        </div>
-        <Input
-          id="fixedAmounts"
-          value={fixedAmountInput}
-          onChange={e => setFixedAmountInput(e.target.value)}
-          onKeyDown={handleFixedAmountKeyDown}
-          placeholder="Type amount and press Enter or comma"
-          className="mt-2"
-        />
-        {errors.fixedAmounts && (
-          <p className="mt-1 text-red-500">{errors.fixedAmounts.message}</p>
-        )}
-      </div>
-
-      <div className="sm:col-span-2">
-        <div className="flex items-center justify-between">
-          <Label htmlFor="allowCustomPrice">Allow Custom Price Range</Label>
-          <Switch
-            id="allowCustomPrice"
-            checked={allowCustomPrice}
-            onCheckedChange={setAllowCustomPrice}
-          />
-        </div>
-      </div>
-
-      {allowCustomPrice && (
-        <>
-          <div>
-            <Label htmlFor="customAmountMin">Min Price</Label>
+                    <Badge
+                      variant="secondary"
+                      className="flex items-center gap-1.5"
+                    >
+                      {amount}
+                      <button
+                        type="button"
+                        onClick={() => removeFixedAmount(amount)}
+                        className="rounded-full hover:bg-gray-300"
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
+                    </Badge>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
+            </div>
             <Input
-              id="customAmountMin"
-              type="number"
-              {...register('customAmountMin', {
-                valueAsNumber: true,
-                required: 'Min price is required',
-              })}
-              className="mt-1"
+              id="fixedAmounts"
+              value={fixedAmountInput}
+              onChange={e => setFixedAmountInput(e.target.value)}
+              onKeyDown={handleFixedAmountKeyDown}
+              placeholder="Type amount and press Enter or comma"
+              className="mt-2"
             />
-            {errors.customAmountMin && (
-              <p className="mt-1 text-red-500">
-                {errors.customAmountMin.message}
-              </p>
+            {errors.fixedAmounts && (
+              <p className="mt-1 text-red-500">{errors.fixedAmounts.message}</p>
             )}
           </div>
+
+          <div className="sm:col-span-2">
+            <div className="flex items-center justify-between">
+              <Label htmlFor="allowCustomPrice">Allow Custom Price Range</Label>
+              <Switch
+                id="allowCustomPrice"
+                checked={allowCustomPrice}
+                onCheckedChange={setAllowCustomPrice}
+              />
+            </div>
+          </div>
+
+          {allowCustomPrice && (
+            <>
+              <div>
+                <Label htmlFor="customAmountMin">Min Price</Label>
+                <Input
+                  id="customAmountMin"
+                  type="number"
+                  {...register('customAmountMin', {
+                    valueAsNumber: true,
+                    required: 'Min price is required',
+                  })}
+                  className="mt-1"
+                />
+                {errors.customAmountMin && (
+                  <p className="mt-1 text-red-500">
+                    {errors.customAmountMin.message}
+                  </p>
+                )}
+              </div>
+              <div>
+                <Label htmlFor="customAmountMax">Max Price</Label>
+                <Input
+                  id="customAmountMax"
+                  type="number"
+                  {...register('customAmountMax', {
+                    valueAsNumber: true,
+                    required: 'Max price is required',
+                  })}
+                  className="mt-1"
+                />
+                {errors.customAmountMax && (
+                  <p className="mt-1 text-red-500">
+                    {errors.customAmountMax.message}
+                  </p>
+                )}
+              </div>
+            </>
+          )}
+
           <div>
-            <Label htmlFor="customAmountMax">Max Price</Label>
+            <Label htmlFor="expiryDays">Expiry in Days (optional)</Label>
             <Input
-              id="customAmountMax"
+              id="expiryDays"
               type="number"
-              {...register('customAmountMax', {
-                valueAsNumber: true,
-                required: 'Max price is required',
-              })}
+              {...register('expiryDays')}
               className="mt-1"
             />
-            {errors.customAmountMax && (
-              <p className="mt-1 text-red-500">
-                {errors.customAmountMax.message}
-              </p>
-            )}
           </div>
-        </>
-      )}
 
-      <div>
-        <Label htmlFor="expiryDays">Expiry in Days (optional)</Label>
-        <Input
-          id="expiryDays"
-          type="number"
-          {...register('expiryDays')}
-          className="mt-1"
-        />
-      </div>
-
-      <div>
-        <Label htmlFor="usage">Usage</Label>
-        <Controller
-          name="usage"
-          control={control}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select usage type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="both">Online & In-store</SelectItem>
-                <SelectItem value="online_only">Online Only</SelectItem>
-                <SelectItem value="instore_only">In-store Only</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        />
-      </div>
-
-      <div className="flex items-center justify-between sm:col-span-2">
-        <Label htmlFor="allowPartialRedemption">
-          Allow Partial Redemption
-        </Label>
-        <Controller
-          name="allowPartialRedemption"
-          control={control}
-          render={({ field }) => (
-            <Switch
-              id="allowPartialRedemption"
-              checked={field.value}
-              onCheckedChange={field.onChange}
+          <div>
+            <Label htmlFor="usage">Usage</Label>
+            <Controller
+              name="usage"
+              control={control}
+              render={({ field }) => (
+                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select usage type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="both">Online & In-store</SelectItem>
+                    <SelectItem value="online_only">Online Only</SelectItem>
+                    <SelectItem value="instore_only">In-store Only</SelectItem>
+                  </SelectContent>
+                </Select>
+              )}
             />
-          )}
-        />
-      </div>
+          </div>
 
-      <div className="flex items-center justify-between sm:col-span-2">
-        <Label htmlFor="isEnabled">Enable Product for Purchase</Label>
-        <Controller
-          name="isEnabled"
-          control={control}
-          render={({ field }) => (
-            <Switch
-              id="isEnabled"
-              checked={field.value}
-              onCheckedChange={field.onChange}
+          <div className="flex items-center justify-between sm:col-span-2">
+            <Label htmlFor="allowPartialRedemption">
+              Allow Partial Redemption
+            </Label>
+            <Controller
+              name="allowPartialRedemption"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  id="allowPartialRedemption"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
             />
-          )}
-        />
-      </div>
+          </div>
 
-      <div className="sm:col-span-2">
-        <Button type="submit" disabled={isSubmitting} className="w-full">
-          {isSubmitting
-            ? 'Submitting...'
-            : initialData
-            ? 'Update Product'
-            : 'Create Product'}
-        </Button>
-      </div>
-    </form>
+          <div className="flex items-center justify-between sm:col-span-2">
+            <Label htmlFor="isEnabled">Enable Product for Purchase</Label>
+            <Controller
+              name="isEnabled"
+              control={control}
+              render={({ field }) => (
+                <Switch
+                  id="isEnabled"
+                  checked={field.value}
+                  onCheckedChange={field.onChange}
+                />
+              )}
+            />
+          </div>
+
+          <div className="sm:col-span-2">
+            <Button type="submit" disabled={isSubmitting} className="w-full">
+              {isSubmitting
+                ? 'Submitting...'
+                : initialData
+                ? 'Update Product'
+                : 'Create Product'}
+            </Button>
+          </div>
+        </form>
+        <div>
+            <div className="flex justify-center items-center h-full bg-black">
+               <Image
+                      src="/assets/voucher-illustration.png"
+                      alt="Voucher Illustration"
+                      width={600}
+                        height={400}
+                  />
+            </div>
+        </div>
+    </div>
   );
 };

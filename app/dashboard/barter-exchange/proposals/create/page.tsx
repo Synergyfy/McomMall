@@ -11,13 +11,16 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
+import { useGetMyProducts } from "@/service/store/products/hook";
+import { useGetMyServices } from "@/service/services/hook";
 
 // ✅ Schema
 const proposalSchema = z.object({
+  itemType: z.enum(["product", "service"]),
+  productId: z.string().optional(),
+  serviceId: z.string().optional(),
   offeredItem: z.string().min(2, "Enter the item you’re offering"),
   requestedItem: z.string().min(2, "Enter the item you want in return"),
-  message: z.string().optional(),
-  status: z.enum(["pending", "accepted", "declined"]).default("pending"),
 });
 
 type ProposalFormValues = z.infer<typeof proposalSchema>;
@@ -30,9 +33,14 @@ export default function CreateProposalPage() {
     defaultValues: {
       offeredItem: "",
       requestedItem: "",
-      message: "",
+      itemType: "product",
     },
   });
+
+  const { data: products, isPending: isProductsLoading } = useGetMyProducts();
+  const { data: services, isPending: isServicesLoading } = useGetMyServices();
+
+  const selectedItemType = form.watch("itemType");
 
   const onSubmit = async (values: ProposalFormValues) => {
     setIsSubmitting(true);
@@ -58,20 +66,125 @@ export default function CreateProposalPage() {
         <CardContent>
           <Form {...form}>
             <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-              {/* Offered Item */}
-              <FormField
-                control={form.control}
-                name="offeredItem"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Offered Item</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g. My old MacBook Air" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+            <FormField
+              control={form.control}
+              name="itemType"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Item Type</FormLabel>
+                  <FormControl>
+                    <Select onValueChange={field.onChange} value={field.value}>
+                      <SelectTrigger>
+                        <SelectValue placeholder="Select item type" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="product">Product</SelectItem>
+                        <SelectItem value="service">Service</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+              {selectedItemType === "product" && (
+                <FormField
+                  control={form.control}
+                  name="productId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Product</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={
+                            isProductsLoading ||
+                            !products ||
+                            products.length === 0
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                isProductsLoading
+                                  ? "Loading products..."
+                                  : products?.length
+                                  ? "Select a product"
+                                  : "No products available"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {products?.length ? (
+                              products.map((p) => (
+                                <SelectItem key={p.id} value={p.id}>
+                                  {p.title}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled value="none">
+                                No products available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
+
+              {/* Service Dropdown */}
+              {selectedItemType === "service" && (
+                <FormField
+                  control={form.control}
+                  name="serviceId"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormLabel>Select Service</FormLabel>
+                      <FormControl>
+                        <Select
+                          onValueChange={field.onChange}
+                          value={field.value}
+                          disabled={
+                            isServicesLoading ||
+                            !services ||
+                            services.length === 0
+                          }
+                        >
+                          <SelectTrigger>
+                            <SelectValue
+                              placeholder={
+                                isServicesLoading
+                                  ? "Loading services..."
+                                  : services?.length
+                                  ? "Select a service"
+                                  : "No services available"
+                              }
+                            />
+                          </SelectTrigger>
+                          <SelectContent>
+                            {services?.length ? (
+                              services.map((s) => (
+                                <SelectItem key={s.id} value={s.id}>
+                                  {s.name}
+                                </SelectItem>
+                              ))
+                            ) : (
+                              <SelectItem disabled value="none">
+                                No services available
+                              </SelectItem>
+                            )}
+                          </SelectContent>
+                        </Select>
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
+              )}
 
               {/* Requested Item */}
               <FormField
@@ -89,7 +202,7 @@ export default function CreateProposalPage() {
               />
 
               {/* Message */}
-              <FormField
+              {/* <FormField
                 control={form.control}
                 name="message"
                 render={({ field }) => (
@@ -101,7 +214,7 @@ export default function CreateProposalPage() {
                     <FormMessage />
                   </FormItem>
                 )}
-              />
+              /> */}
 
               <Button type="submit" className="w-full" disabled={isSubmitting}>
                 {isSubmitting ? "Submitting..." : "Create Proposal"}

@@ -19,6 +19,7 @@ import {
   useEditVoucherProduct,
 } from '@/service/hooks/useVoucherService';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 interface VoucherProductModalProps {
   children: React.ReactNode;
@@ -31,6 +32,7 @@ export const VoucherProductModal: React.FC<VoucherProductModalProps> = ({
   product,
   onSuccess,
 }) => {
+  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const addVoucherProduct = useAddVoucherProduct();
@@ -54,22 +56,33 @@ export const VoucherProductModal: React.FC<VoucherProductModalProps> = ({
       setIsSubmitting(false);
     }
   };
+  const navigateToProductsForm = () => {
+
+    // Implement navigation logic here, e.g., using Next.js router
+    router.push('/dashboard/vouchers/new');
+  }
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>
-            {product ? 'Edit Voucher Product' : 'Create New Voucher Product'}
-          </DialogTitle>
-        </DialogHeader>
-        <VoucherProductForm
-          onSubmit={handleSubmit}
-          initialData={product}
-          isSubmitting={isSubmitting}
-        />
-      </DialogContent>
-    </Dialog>
+    <div>
+      <button onClick={navigateToProductsForm}>{children}</button>
+
+    </div>
+    // <Dialog open={isOpen} onOpenChange={setIsOpen}>
+    //   <DialogTrigger asChild>{children}</DialogTrigger>
+    //   <DialogContent>
+    //     <DialogHeader>
+    //       <DialogTitle>
+    //         {product ? 'Edit Voucher Product' : 'Create New Voucher Product'}
+    //       </DialogTitle>
+    //     </DialogHeader>
+    //     <VoucherProductForm
+    //       onSubmit={handleSubmit}
+    //       initialData={product}
+    //       isSubmitting={isSubmitting}
+    //     />
+    //   </DialogContent>
+    // </Dialog>
+    
   );
-};
+}
+      

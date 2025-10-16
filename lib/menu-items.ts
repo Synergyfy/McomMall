@@ -110,38 +110,7 @@ export const barterExchangeMenuItems: MenuItem[] = [
     href: "/dashboard/barter-exchange/items",
     icon: Scale,
   },
-  {
-    title: "Messages",
-    href: "/dashboard/barter-exchange/messages",
-    icon: MessageSquare,
-  },
-  {
-    title: "Rules & Policies",
-    href: "/dashboard/barter-exchange/rules",
-    icon: FileText,
-  },
 
-  // ---- Admin Only ----
-  {
-    title: "Admin Dashboard",
-    href: "/dashboard/barter-exchange/admin",
-    icon: BarChart3,
-  },
-  {
-    title: "User Management",
-    href: "/dashboard/barter-exchange/admin/users",
-    icon: Users,
-  },
-  {
-    title: "Fraud & Safety",
-    href: "/dashboard/barter-exchange/admin/fraud",
-    icon: Shield,
-  },
-  {
-    title: "Settings & Integrations",
-    href: "/dashboard/barter-exchange/admin/settings",
-    icon: Settings,
-  },
 ];
 
 export const serviceMenuItems: MenuItem[] = [
@@ -270,6 +239,7 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/vouchers',
     icon: Settings,
     subMenu: [
+
       { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
       { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
       { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
