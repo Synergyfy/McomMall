@@ -22,8 +22,9 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { VoucherProductModal } from '../(components)/VoucherProductModal';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
+import { VoucherProductModal } from '../(components)/VoucherProductModal';
 
 // --- Reusable UI Components ---
 
@@ -221,7 +222,7 @@ export default function VoucherProductsPage() {
         </div>
 
         <footer className="mt-8 flex justify-start">
-          <VoucherProductModal onSuccess={mutate}>
+          <Link href="/dashboard/vouchers/products/create">
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
@@ -230,7 +231,7 @@ export default function VoucherProductsPage() {
               <PlusCircle className="h-5 w-5" />
               <span>Add New Product</span>
             </motion.button>
-          </VoucherProductModal>
+          </Link>
         </footer>
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
