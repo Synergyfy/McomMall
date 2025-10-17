@@ -147,3 +147,18 @@ body {
 .menuText {
   @apply text-lg;
 }
+
+@keyframes border-pulse {
+  0%, 100% {
+    border-color: rgba(234, 88, 12, 0.6);
+    box-shadow: 0 0 5px rgba(234, 88, 12, 0.2), inset 0 0 5px rgba(234, 88, 12, 0.1);
+  }
+  50% {
+    border-color: rgba(251, 146, 60, 1);
+    box-shadow: 0 0 20px rgba(251, 146, 60, 0.6), inset 0 0 10px rgba(251, 146, 60, 0.4);
+  }
+}
+
+.animate-border-pulse {
+  animation: border-pulse 2s infinite;
+}

@@ -33,38 +33,59 @@ export default function ContactSection({ listing }: ContactSectionProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 1.4 }}
-      className="p-8 bg-white rounded-lg shadow-md"
+      className="py-12"
     >
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">Contact Us</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div className="space-y-4">
-          <div className="flex items-center gap-4">
-            <Mail className="h-6 w-6 text-orange-600" />
-            <a href={`mailto:${listing.businessEmail}`} className="text-gray-600 hover:text-orange-600">
-              {listing.businessEmail}
-            </a>
-          </div>
-          <div className="flex items-center gap-4">
-            <Phone className="h-6 w-6 text-orange-600" />
-            <a href={`tel:${listing.businessPhone}`} className="text-gray-600 hover:text-orange-600">
-              {listing.businessPhone}
-            </a>
-          </div>
-        </div>
-        <div className="space-y-4">
-          <h3 className="text-xl font-semibold text-gray-800">Follow Us</h3>
-          <div className="flex gap-4">
-            {listing.socialLinks?.map((link) => (
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <div className="bg-white p-10 rounded-lg shadow-lg border-t-8 border-orange-600">
+          <h2 className="text-4xl font-extrabold mb-8 text-center text-gray-900">
+            Get in <span className="text-orange-600">Touch</span>
+          </h2>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-10 text-center">
+            <div className="flex flex-col items-center space-y-3">
+              <div className="p-4 bg-orange-100 rounded-full">
+                <Mail className="h-10 w-10 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800">Email Us</h3>
               <a
-                key={link.id}
-                href={link.url}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-gray-500 hover:text-orange-600"
+                href={`mailto:${listing.businessEmail}`}
+                className="text-gray-600 hover:text-orange-600 text-lg"
               >
-                {socialIconMap[link.platform as keyof typeof socialIconMap]}
+                {listing.businessEmail}
               </a>
-            ))}
+            </div>
+            <div className="flex flex-col items-center space-y-3">
+              <div className="p-4 bg-orange-100 rounded-full">
+                <Phone className="h-10 w-10 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800">Call Us</h3>
+              <a
+                href={`tel:${listing.businessPhone}`}
+                className="text-gray-600 hover:text-orange-600 text-lg"
+              >
+                {listing.businessPhone}
+              </a>
+            </div>
+            <div className="flex flex-col items-center space-y-3">
+              <div className="p-4 bg-orange-100 rounded-full">
+                <Globe className="h-10 w-10 text-orange-600" />
+              </div>
+              <h3 className="text-xl font-semibold text-gray-800">
+                Follow Us
+              </h3>
+              <div className="flex gap-5">
+                {listing.socialLinks?.map((link) => (
+                  <a
+                    key={link.id}
+                    href={link.url}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-gray-500 hover:text-orange-600 transform hover:scale-125 transition-transform"
+                  >
+                    {socialIconMap[link.platform as keyof typeof socialIconMap]}
+                  </a>
+                ))}
+              </div>
+            </div>
           </div>
         </div>
       </div>
