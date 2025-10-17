@@ -81,7 +81,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                 >
                   <Card className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white">
                     <CardHeader className="p-0 border-b border-orange-200/80">
-                      <div className="relative h-60 w-full">
+                    <div className="relative h-48 w-full">
                         <Image
                           src={
                             firstImageUrl ||
@@ -94,22 +94,22 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                         />
                       </div>
                     </CardHeader>
-                    <CardContent className="p-5 flex-grow">
-                      <CardTitle className="text-2xl font-bold text-gray-900 mb-3">
+                    <CardContent className="p-4 flex-grow">
+                      <CardTitle className="text-xl font-bold text-gray-900 mb-2">
                         {service.name}
                       </CardTitle>
-                      <p className="text-gray-600 text-base">
+                      <p className="text-gray-600 text-sm">
                         {service.description}
                       </p>
                     </CardContent>
-                    <CardFooter className="p-5 bg-gray-50/50 flex-col items-start space-y-4">
+                    <CardFooter className="p-4 bg-gray-50/50 flex-col items-start space-y-2">
                       <div className="flex justify-between items-center w-full">
-                        <p className="text-2xl font-extrabold text-orange-600">
+                        <p className="text-xl font-extrabold text-orange-600">
                           {getPriceDisplay(service)}
                         </p>
                       </div>
                       <Button
-                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 text-lg font-bold py-3 shadow-lg hover:shadow-xl"
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 font-bold shadow-md hover:shadow-lg"
                         onClick={(e) => handleBookNow(e, service)}
                       >
                         Book Now
