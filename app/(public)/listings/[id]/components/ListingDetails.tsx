@@ -10,6 +10,7 @@ import ProductsSection from './redesign/ProductsSection';
 import ServicesSection from './redesign/ServicesSection';
 import PromotionsSection from './redesign/PromotionsSection';
 import ContactSection from './redesign/ContactSection';
+import Footer from '@/components/Footer';
 
 type ClientListingDetailProps = {
   placeId: string;
@@ -44,24 +45,39 @@ export default function ClientListingDetail({
   const inHouseListing = listing as InHouseBusiness;
 
   return (
-    <div className="bg-gray-50 min-h-screen">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-12">
-        <div className="max-w-7xl mx-auto">
-          <div className="space-y-12">
-            <HeroSection listing={inHouseListing} />
-            <AboutSection listing={inHouseListing} />
-            {inHouseListing.media && inHouseListing.media.length > 0 && (
-              <MediaGallery media={inHouseListing.media} />
-            )}
-            {inHouseListing.products && inHouseListing.products.length > 0 && (
-              <ProductsSection products={inHouseListing.products} />
-            )}
-            {inHouseListing.serviceProviderProfile && <ServicesSection businessId={inHouseListing.id} />}
-            <PromotionsSection listing={inHouseListing} />
-            <ContactSection listing={inHouseListing} />
-          </div>
-        </div>
+    <div className="min-h-screen bg-gray-50">
+      <HeroSection listing={inHouseListing} />
+
+      <div className="bg-white">
+        {inHouseListing.media && inHouseListing.media.length > 0 && (
+          <MediaGallery media={inHouseListing.media} />
+        )}
       </div>
+
+      <div className="bg-gray-100">
+        {inHouseListing.products && inHouseListing.products.length > 0 && (
+          <ProductsSection products={inHouseListing.products} />
+        )}
+      </div>
+
+      <div className="bg-white">
+        {inHouseListing.serviceProviderProfile && (
+          <ServicesSection businessId={inHouseListing.id} />
+        )}
+      </div>
+
+      <div className="bg-gray-100">
+        <PromotionsSection listing={inHouseListing} />
+      </div>
+
+      <div className="bg-white">
+        <AboutSection listing={inHouseListing} />
+      </div>
+
+      <div className="bg-gray-100">
+        <ContactSection listing={inHouseListing} />
+      </div>
+      <Footer />
     </div>
   );
 }

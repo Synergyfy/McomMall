@@ -95,6 +95,9 @@ export interface User {
   isActive: boolean;
   isEmailVerified: boolean;
   role: string;
+  giftCard: boolean;
+  voucher: boolean;
+  promotion: boolean;
 }
 
 interface Category {
@@ -394,6 +397,9 @@ export interface InHouseBusiness {
   products: Product[];
   campaigns: Campaign[];
   user: User;
+  giftCard: boolean;
+  voucher: boolean;
+  promotion: boolean;
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];

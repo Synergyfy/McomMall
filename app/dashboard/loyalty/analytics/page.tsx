@@ -11,6 +11,7 @@ import {
 } from '@/components/ui/select';
 import { useEffect, useState } from 'react';
 import { useGetPromotions } from '@/service/admin';
+import { FeatureToggle } from '../../component/FeatureToggle';
 
 const PromotionAnalyticsPage = () => {
   const [promotionId, setPromotionId] = useState<string | undefined>();
@@ -24,26 +25,29 @@ const PromotionAnalyticsPage = () => {
 
   return (
     <div className="p-4 sm:p-6 lg:p-8">
-      <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-        <h1 className="text-3xl font-bold">Promotion Analytics</h1>
-        <Select value={promotionId} onValueChange={setPromotionId}>
-          <SelectTrigger className="w-full sm:w-[280px]">
-            <SelectValue placeholder="Select a promotion" />
-          </SelectTrigger>
-          <SelectContent>
-            {isLoading ? (
-              <SelectItem value="loading" disabled>
-                Loading...
-              </SelectItem>
-            ) : (
-              promotions?.map((promotion) => (
-                <SelectItem key={promotion.id} value={promotion.id}>
-                  {promotion.name}
+      <div className="flex flex-col sm:flex-row justify-between items-start mb-6 gap-4">
+        <div className="flex-1">
+          <h1 className="text-3xl font-bold">Promotion Analytics</h1>
+          <Select value={promotionId} onValueChange={setPromotionId}>
+            <SelectTrigger className="w-full sm:w-[280px] mt-4">
+              <SelectValue placeholder="Select a promotion" />
+            </SelectTrigger>
+            <SelectContent>
+              {isLoading ? (
+                <SelectItem value="loading" disabled>
+                  Loading...
                 </SelectItem>
-              ))
-            )}
-          </SelectContent>
-        </Select>
+              ) : (
+                promotions?.map(promotion => (
+                  <SelectItem key={promotion.id} value={promotion.id}>
+                    {promotion.name}
+                  </SelectItem>
+                ))
+              )}
+            </SelectContent>
+          </Select>
+        </div>
+        <FeatureToggle featureName="promotion" />
       </div>
       {promotionId && (
         <>

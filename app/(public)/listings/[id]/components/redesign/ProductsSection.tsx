@@ -42,57 +42,77 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.5, delay: 0.8 }}
+      className="py-12"
     >
-      <h2 className="text-3xl font-bold mb-6 text-gray-800">Our Products</h2>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-        {products.map((product) => {
-          const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl;
-          return (
-            <motion.div key={product.id} whileHover={{ y: -5 }} className="h-full">
-              <Card className="flex flex-col h-full rounded-lg overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                <CardHeader className="p-0">
-                  <div className="relative h-56 w-full">
-                    <Image
-                      src={firstImageUrl || '/placeholder-image.png'}
-                      alt={product.title}
-                      layout="fill"
-                      objectFit="cover"
-                    />
-                  </div>
-                </CardHeader>
-                <CardContent className="p-4 flex-grow">
-                  <CardTitle className="text-xl font-semibold text-gray-800 mb-2">{product.title}</CardTitle>
-                  <p className="text-gray-600 text-sm">{product.shortDescription}</p>
-                </CardContent>
-                <CardFooter className="p-4 bg-gray-50 flex-col items-start">
-                  <div className="flex justify-between items-center w-full mb-4">
-                    <p className="text-lg font-bold text-orange-600">£{product.price}</p>
-                    {product.points && (
-                      <Badge variant="outline" className="text-orange-600 border-orange-600">
-                        {product.points} Points
-                      </Badge>
-                    )}
-                  </div>
-                  <div className="flex flex-col gap-2 w-full">
-                    <Button
-                      variant="outline"
-                      className="w-full border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-                      onClick={(e) => handleAddToCart(e, product)}
-                    >
-                      Add to Cart
-                    </Button>
-                    <Button
-                      className="w-full bg-orange-600 hover:bg-orange-700 text-white"
-                      onClick={(e) => handleOrderNow(e, product)}
-                    >
-                      Buy Now
-                    </Button>
-                  </div>
-                </CardFooter>
-              </Card>
-            </motion.div>
-          )
-        })}
+      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
+        <h2 className="text-4xl font-extrabold mb-8 text-center text-gray-900">
+          Our <span className="text-orange-600">Products</span>
+        </h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {products.map((product) => {
+            const firstImageUrl =
+              product.fileUrls?.find(isImageUrl) || product.imageUrl;
+            return (
+              <motion.div
+                key={product.id}
+                whileHover={{ y: -8 }}
+                className="h-full"
+              >
+                <Card className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white">
+                  <CardHeader className="p-0 border-b border-orange-200/80">
+                    <div className="relative h-48 w-full">
+                      <Image
+                        src={firstImageUrl || '/placeholder-image.png'}
+                        alt={product.title}
+                        layout="fill"
+                        objectFit="cover"
+                        className="transition-transform duration-500 hover:scale-105"
+                      />
+                    </div>
+                  </CardHeader>
+                  <CardContent className="p-4 flex-grow">
+                    <CardTitle className="text-xl font-bold text-gray-900 mb-2">
+                      {product.title}
+                    </CardTitle>
+                    <p className="text-gray-600 text-sm">
+                      {product.shortDescription}
+                    </p>
+                  </CardContent>
+                  <CardFooter className="p-4 bg-gray-50/50 flex-col items-start space-y-2">
+                    <div className="flex justify-between items-center w-full">
+                      <p className="text-xl font-extrabold text-orange-600">
+                        £{product.price}
+                      </p>
+                      {product.points && (
+                        <Badge
+                          variant="default"
+                          className="bg-orange-100 text-orange-800 border-orange-300 text-sm font-semibold"
+                        >
+                          Earn {product.points} points
+                        </Badge>
+                      )}
+                    </div>
+                    <div className="flex flex-col gap-2 w-full">
+                      <Button
+                        variant="outline"
+                        className="w-full border-2 border-orange-600 text-orange-600 bg-transparent hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold"
+                        onClick={(e) => handleAddToCart(e, product)}
+                      >
+                        Add to Cart
+                      </Button>
+                      <Button
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 font-bold shadow-md hover:shadow-lg"
+                        onClick={(e) => handleOrderNow(e, product)}
+                      >
+                        Buy Now
+                      </Button>
+                    </div>
+                  </CardFooter>
+                </Card>
+              </motion.div>
+            );
+          })}
+        </div>
       </div>
     </motion.div>
   );

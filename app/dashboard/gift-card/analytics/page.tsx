@@ -46,6 +46,7 @@ import {
 } from '@/service/merchant/gift-card';
 import { useGetGiftCardTemplates } from '@/service/gift-card/hook';
 import { MerchantGiftCard } from '@/types/merchant-gift-card';
+import { FeatureToggle } from '../../component/FeatureToggle';
 
 import { BulkCreateGiftCardForm } from './components/BulkCreateGiftCardForm';
 import { ImportGiftCardForm } from './components/ImportGiftCardForm';
@@ -248,6 +249,9 @@ export default function GiftCardDashboardPage() {
     <div className="bg-gray-50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-7xl mx-auto">
         <div className="space-y-6">
+          <div className="flex justify-end">
+            <FeatureToggle featureName="giftCard" />
+          </div>
           <SummaryDisplay />
           <GiftCardChart />
           <SalesAndRedemptions />
