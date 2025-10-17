@@ -38,6 +38,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { Product } from '@/service/store/products/types';
@@ -290,7 +296,19 @@ export default function OfferForm({
         </CardHeader>
         <CardContent className="space-y-6">
           <div className="grid gap-2">
-            <Label htmlFor="offerScope">Offer Scope</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="offerScope">Offer Scope</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The scope of the offer.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <RadioGroup
               defaultValue="ALL_LISTINGS"
               onValueChange={
@@ -321,7 +339,19 @@ export default function OfferForm({
           </div>
           {formData.offerScope === 'SPECIFIC_LISTINGS' && (
             <div className="grid gap-2">
-              <Label htmlFor="businessIds">Businesses</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="businessIds">Businesses</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The businesses that this offer will be applied to.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Popover
                 open={openBusinessIds}
                 onOpenChange={setOpenBusinessIds}
@@ -381,7 +411,19 @@ export default function OfferForm({
             </div>
           )}
           <div className="grid gap-2">
-            <Label htmlFor="name">Offer Name</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="name">Offer Name</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The name of the offer.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input
               id="name"
               name="name"
@@ -393,7 +435,19 @@ export default function OfferForm({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="description">Description</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="description">Description</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>A short description for this offer.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Textarea
               id="description"
               name="description"
@@ -403,7 +457,19 @@ export default function OfferForm({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="points">Points</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="points">Points</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The number of points required to redeem this offer.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input
               id="points"
               name="points"
@@ -428,7 +494,19 @@ export default function OfferForm({
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="rewardCouponType">Reward Coupon Type</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="rewardCouponType">Reward Coupon Type</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The type of reward coupon.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Select
                 name="rewardCouponType"
                 value={formData.rewardCouponType}
@@ -460,7 +538,19 @@ export default function OfferForm({
 
           {formData.rewardCouponType === 'FIXED_CART_DISCOUNT' && (
             <div className="grid gap-2">
-              <Label htmlFor="discountAmount">Discount Amount</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="discountAmount">Discount Amount</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The amount of the discount.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="discountAmount"
                 name="discountAmount"
@@ -478,7 +568,19 @@ export default function OfferForm({
 
           {formData.rewardCouponType === 'PERCENTAGE_DISCOUNT' && (
             <div className="grid gap-2">
-              <Label htmlFor="discountPercentage">Discount Percentage</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="discountPercentage">Discount Percentage</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The percentage of the discount.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="discountPercentage"
                 name="discountPercentage"
@@ -496,7 +598,19 @@ export default function OfferForm({
 
           {formData.rewardCouponType === 'FREE_PRODUCTS' && (
             <div className="grid gap-2">
-              <Label htmlFor="freeProductId">Free Product</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="freeProductId">Free Product</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The product that will be given for free.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Select
                 name="freeProductId"
                 value={formData.freeProductId}
@@ -531,7 +645,19 @@ export default function OfferForm({
 
           {formData.rewardCouponType === 'BONUS_POINTS' && (
             <div className="grid gap-2">
-              <Label htmlFor="bonusPoints">Bonus Points</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="bonusPoints">Bonus Points</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The number of bonus points to be awarded.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="bonusPoints"
                 name="bonusPoints"
@@ -549,9 +675,24 @@ export default function OfferForm({
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="limitUsageToXProducts">
-                Limit Usage to X Products
-              </Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="limitUsageToXProducts">
+                  Limit Usage to X Products
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        The maximum number of products this offer can be
+                        applied to.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="limitUsageToXProducts"
                 name="limitUsageToXProducts"
@@ -562,7 +703,21 @@ export default function OfferForm({
               />
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="expireAfterXDays">Expire After X Days</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="expireAfterXDays">Expire After X Days</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        The number of days after which the offer will expire.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Input
                 id="expireAfterXDays"
                 name="expireAfterXDays"
@@ -593,7 +748,21 @@ export default function OfferForm({
                   handleSwitchChange('allowFreeShipping', checked)
                 }
               />
-              <Label htmlFor="allowFreeShipping">Allow Free Shipping</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="allowFreeShipping">Allow Free Shipping</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Check this box to allow free shipping for this offer.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -603,7 +772,22 @@ export default function OfferForm({
                   handleSwitchChange('individualUseOnly', checked)
                 }
               />
-              <Label htmlFor="individualUseOnly">Individual Use Only</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="individualUseOnly">Individual Use Only</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Check this box if the offer cannot be used in
+                        conjunction with other offers.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -613,7 +797,21 @@ export default function OfferForm({
                   handleSwitchChange('excludeSaleItems', checked)
                 }
               />
-              <Label htmlFor="excludeSaleItems">Exclude Sale Items</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="excludeSaleItems">Exclude Sale Items</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Check this box to exclude sale items from this offer.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
             <div className="flex items-center space-x-2">
               <Switch
@@ -623,11 +821,42 @@ export default function OfferForm({
                   handleSwitchChange('allowLimitToReset', checked)
                 }
               />
-              <Label htmlFor="allowLimitToReset">Allow Limit to Reset</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="allowLimitToReset">
+                  Allow Limit to Reset
+                </Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        Check this box to allow the usage limit to reset.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
             </div>
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="limitPerCustomer">Limit Per Customer</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="limitPerCustomer">Limit Per Customer</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>
+                      The maximum number of times a single customer can use
+                      this offer.
+                    </p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Input
               id="limitPerCustomer"
               name="limitPerCustomer"
@@ -638,7 +867,19 @@ export default function OfferForm({
             />
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="includedProductIds">Included Products</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="includedProductIds">Included Products</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The products that this offer will be applied to.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Popover
               open={openIncludedProducts}
               onOpenChange={setOpenIncludedProducts}
@@ -697,7 +938,19 @@ export default function OfferForm({
             )}
           </div>
           <div className="grid gap-2">
-            <Label htmlFor="excludedProductIds">Excluded Products</Label>
+            <div className="flex items-center gap-2">
+              <Label htmlFor="excludedProductIds">Excluded Products</Label>
+              <TooltipProvider>
+                <Tooltip>
+                  <TooltipTrigger asChild>
+                    <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                  </TooltipTrigger>
+                  <TooltipContent>
+                    <p>The products that this offer will not be applied to.</p>
+                  </TooltipContent>
+                </Tooltip>
+              </TooltipProvider>
+            </div>
             <Popover
               open={openExcludedProducts}
               onOpenChange={setOpenExcludedProducts}
@@ -752,7 +1005,19 @@ export default function OfferForm({
           </div>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div className="grid gap-2">
-              <Label htmlFor="beginDate">Begin Date</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="beginDate">Begin Date</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The date this offer will begin.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button
@@ -781,7 +1046,19 @@ export default function OfferForm({
               </Popover>
             </div>
             <div className="grid gap-2">
-              <Label htmlFor="endDate">End Date</Label>
+              <div className="flex items-center gap-2">
+                <Label htmlFor="endDate">End Date</Label>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>The date this offer will end.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </div>
               <Popover>
                 <PopoverTrigger asChild>
                   <Button

@@ -52,6 +52,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { Product } from '@/service/store/products/types';
@@ -270,7 +276,19 @@ export default function PromotionForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="name">Promotion Name</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="name">Promotion Name</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>The name of the promotion.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="name"
                   name="name"
@@ -284,7 +302,19 @@ export default function PromotionForm() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="description">Description</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="description">Description</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>A short description for this promotion.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Textarea
                   id="description"
                   name="description"
@@ -294,9 +324,21 @@ export default function PromotionForm() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="termsAndConditions">
-                  Terms and Conditions
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="termsAndConditions">
+                    Terms and Conditions
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>The terms and conditions of the promotion.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Textarea
                   id="termsAndConditions"
                   name="termsAndConditions"
@@ -311,7 +353,21 @@ export default function PromotionForm() {
                   checked={formData.isActive}
                   onCheckedChange={handleSwitchChange}
                 />
-                <Label htmlFor="isActive">Active</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="isActive">Active</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Whether the promotion is currently active or not.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
               </div>
             </CardContent>
           </Card>
@@ -326,7 +382,19 @@ export default function PromotionForm() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="promotionType">Promotion Type</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="promotionType">Promotion Type</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The type of promotion.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select
                     name="promotionType"
                     value={formData.promotionType}
@@ -352,7 +420,19 @@ export default function PromotionForm() {
                 </div>
                 {formData.promotionType === 'MULTIPLIER' && (
                   <div className="grid gap-2">
-                    <Label htmlFor="multiplier">Multiplier</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="multiplier">Multiplier</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The multiplier for the points earned.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
                       id="multiplier"
                       name="multiplier"
@@ -369,7 +449,19 @@ export default function PromotionForm() {
                 )}
                 {formData.promotionType === 'BONUS_POINTS' && (
                   <div className="grid gap-2">
-                    <Label htmlFor="bonusPoints">Bonus Points</Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="bonusPoints">Bonus Points</Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The number of bonus points to be awarded.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Input
                       id="bonusPoints"
                       name="bonusPoints"
@@ -387,7 +479,19 @@ export default function PromotionForm() {
               </div>
 
               <div className="grid gap-2">
-                <Label htmlFor="promotionScope">Promotion Scope</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="promotionScope">Promotion Scope</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>The scope of the promotion.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Select
                   name="promotionScope"
                   value={formData.promotionScope}
@@ -418,7 +522,22 @@ export default function PromotionForm() {
 
               {formData.promotionScope === 'SPECIFIC_LISTINGS' && (
                 <div className="grid gap-2">
-                  <Label htmlFor="businessIds">Select Businesses</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="businessIds">Select Businesses</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The businesses that this promotion will be
+                            applied to.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Popover open={openBusiness} onOpenChange={setOpenBusiness}>
                     <PopoverTrigger asChild>
                       <Button
@@ -475,9 +594,24 @@ export default function PromotionForm() {
               {formData.promotionScope === 'SPECIFIC_PRODUCTS' && (
                 <>
                   <div className="grid gap-2">
-                    <Label htmlFor="includedProductIds">
-                      Included Products
-                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="includedProductIds">
+                        Included Products
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              The products that this promotion will be applied
+                              to.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Popover
                       open={openIncludedProducts}
                       onOpenChange={setOpenIncludedProducts}
@@ -533,9 +667,24 @@ export default function PromotionForm() {
                     </Popover>
                   </div>
                   <div className="grid gap-2">
-                    <Label htmlFor="excludedProductIds">
-                      Excluded Products
-                    </Label>
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="excludedProductIds">
+                        Excluded Products
+                      </Label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>
+                              The products that this promotion will not be
+                              applied to.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                     <Popover
                       open={openExcludedProducts}
                       onOpenChange={setOpenExcludedProducts}
@@ -605,7 +754,22 @@ export default function PromotionForm() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="minimumSpend">Minimum Spend</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="minimumSpend">Minimum Spend</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The minimum amount that must be spent for the
+                            promotion to be valid.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="minimumSpend"
                     name="minimumSpend"
@@ -620,9 +784,24 @@ export default function PromotionForm() {
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="limitPerCustomer">
-                    Limit Per Customer
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="limitPerCustomer">
+                      Limit Per Customer
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The maximum number of times a single customer can
+                            use this promotion.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="limitPerCustomer"
                     name="limitPerCustomer"
@@ -635,7 +814,19 @@ export default function PromotionForm() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="beginDate">Begin Date</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="beginDate">Begin Date</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The date this promotion will begin.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -664,7 +855,19 @@ export default function PromotionForm() {
                   </Popover>
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="endDate">End Date</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="endDate">End Date</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The date this promotion will end.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
