@@ -13,7 +13,9 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { useUpdateUserProfile, useGetUserProfile } from '@/service/user/hook';
-import { toast } from 'sonner';
+import { Loader2 } from 'lucide-react';
+import { SuccessDialog } from '@/components/SuccessDialog';
+import { ErrorDialog } from '@/components/ErrorDialog';
 
 interface FeatureToggleProps {
   featureName: 'giftCard' | 'voucher' | 'promotion';
@@ -22,6 +24,8 @@ interface FeatureToggleProps {
 export function FeatureToggle({ featureName }: FeatureToggleProps) {
   const { data: user } = useGetUserProfile();
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
   const { mutate: updateUserProfile, isPending: isLoading } = useUpdateUserProfile();
 
   const isChecked = user?.[featureName] ?? false;
@@ -34,11 +38,11 @@ export function FeatureToggle({ featureName }: FeatureToggleProps) {
       { id: user.id, [featureName]: newStatus },
       {
         onSuccess: () => {
-          toast.success(`Feature ${newStatus ? 'enabled' : 'disabled'} successfully.`);
+          setIsSuccessDialogOpen(true);
           setIsModalOpen(false);
         },
         onError: () => {
-          toast.error('Failed to update feature status.');
+          setIsErrorDialogOpen(true);
           setIsModalOpen(false);
         },
       }
@@ -68,11 +72,22 @@ export function FeatureToggle({ featureName }: FeatureToggleProps) {
           <AlertDialogFooter>
             <AlertDialogCancel>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={handleToggle} disabled={isLoading}>
-              {isLoading ? 'Updating...' : 'Continue'}
+              {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+              Continue
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>
       </AlertDialog>
+      <SuccessDialog
+        isOpen={isSuccessDialogOpen}
+        onClose={() => setIsSuccessDialogOpen(false)}
+        message={`Feature ${isChecked ? 'enabled' : 'disabled'} successfully.`}
+      />
+      <ErrorDialog
+        isOpen={isErrorDialogOpen}
+        onClose={() => setIsErrorDialogOpen(false)}
+        message="Failed to update feature status."
+      />
     </>
   );
 }
