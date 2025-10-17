@@ -79,8 +79,14 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
       phoneNumber: '',
       isActive: true,
       isEmailVerified: true,
-      role: 'owner'
+        role: 'owner',
+        giftCard: true,
+        voucher: true,
+        promotion: true,
     },
+    giftCard: true,
+    voucher: true,
+    promotion: true,
   };
 
   return (

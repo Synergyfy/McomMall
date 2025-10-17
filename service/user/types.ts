@@ -17,6 +17,9 @@ export interface User {
   role:string;
   socials: Socials;
   profilePictureUrl?: string;
+  giftCard: boolean;
+  voucher: boolean;
+  promotion: boolean;
 }
 
 export interface UpdateUserDto {
@@ -24,6 +27,9 @@ export interface UpdateUserDto {
   phoneNumber?: string;
   socials?: Partial<Omit<Socials, 'id'>>;
   profilePictureUrl?: string;
+  giftCard?: boolean;
+  voucher?: boolean;
+  promotion?: boolean;
 }
 
 export interface CustomerStats {

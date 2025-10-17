@@ -179,20 +179,12 @@ import { BarChart } from 'lucide-react';
 
 export const pluginMenuItems: MenuItem[] = [
   {
-    title: 'Admin',
-    href: '/dashboard/admin',
-    icon: BarChart,
-    subMenu: [
-      { title: 'Vouchers', href: '/dashboard/admin/vouchers' },
-      { title: 'Promotions', href: '/dashboard/admin/promotions' },
-    ],
-  },
-  {
     title: 'Loyalty & Reward',
     href: '/dashboard/loyalty',
     icon: Settings,
     subMenu: [
       { title: 'Dashboard', href: '/dashboard/loyalty' },
+      { title: 'Analytics', href: '/dashboard/loyalty/analytics' },
       { title: 'Customer view', href: '/dashboard/loyalty/customer' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
       { title: 'Promotion', href: '/dashboard/loyalty/promotion' },
@@ -207,9 +199,9 @@ export const pluginMenuItems: MenuItem[] = [
     icon: Settings,
     subMenu: [
       { title: 'Dashboard', href: '/dashboard/gift-card' },
+      { title: 'Analytics', href: '/dashboard/gift-card/analytics' },
       { title: 'Templates', href: '/dashboard/gift-card/templates' },
       { title: 'Assets', href: '/dashboard/gift-card/assets' },
-      { title: 'Admin', href: '/dashboard/gift-card/admin' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
       { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
       { title: 'Settings', href: '/dashboard/gift-card/settings' },
@@ -221,6 +213,7 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/vouchers',
     icon: Settings,
     subMenu: [
+      { title: 'Analytics', href: '/dashboard/vouchers/analytics' },
       { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
       { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
       { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
