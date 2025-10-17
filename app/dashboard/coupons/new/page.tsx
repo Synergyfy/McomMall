@@ -54,6 +54,12 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 // --- Main Coupon Form Component ---
@@ -240,7 +246,19 @@ export default function CouponForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="couponCode">Coupon code</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="couponCode">Coupon code</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>The code customers will enter at checkout.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="couponCode"
                   name="couponCode"
@@ -254,7 +272,19 @@ export default function CouponForm() {
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="couponDescription">Coupon Description</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="couponDescription">Coupon Description</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>A short description for this coupon.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Textarea
                   id="couponDescription"
                   name="couponDescription"
@@ -264,7 +294,21 @@ export default function CouponForm() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label>Upload Widget Background</Label>
+                <div className="flex items-center gap-2">
+                  <Label>Upload Widget Background</Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Upload an image to display in the coupon widget.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <input
                   type="file"
                   ref={fileInputRef}
@@ -315,7 +359,21 @@ export default function CouponForm() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="discountType">Discount type</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="discountType">Discount type</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            Percentage-based or a fixed amount discount.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Select
                     name="discountType"
                     value={formData.discountType}
@@ -340,7 +398,19 @@ export default function CouponForm() {
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="couponAmount">Coupon amount</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="couponAmount">Coupon amount</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The value of the discount.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="couponAmount"
                     name="couponAmount"
@@ -355,7 +425,19 @@ export default function CouponForm() {
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="expiryDate">Coupon expiry date</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="expiryDate">Coupon expiry date</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>The date this coupon will expire.</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
@@ -465,7 +547,22 @@ export default function CouponForm() {
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
-                  <Label htmlFor="minSpend">Minimum spend</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="minSpend">Minimum spend</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The minimum amount that must be spent for the
+                            coupon to be valid.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="minSpend"
                     name="minSpend"
@@ -475,7 +572,22 @@ export default function CouponForm() {
                   />
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="maxSpend">Maximum spend</Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="maxSpend">Maximum spend</Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The maximum amount that can be spent for the
+                            coupon to be valid.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Input
                     id="maxSpend"
                     name="maxSpend"
@@ -487,10 +599,23 @@ export default function CouponForm() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="grid gap-2">
-                  <Label htmlFor="products" className="flex items-center">
-                    For products{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label htmlFor="products" className="flex items-center">
+                      For products{' '}
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            The products that this coupon can be applied to.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
                       <Button
@@ -545,13 +670,27 @@ export default function CouponForm() {
                   </Popover>
                 </div>
                 <div className="grid gap-2">
-                  <Label
-                    htmlFor="individualUseOnly"
-                    className="flex items-center"
-                  >
-                    Individual use only{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                  </Label>
+                  <div className="flex items-center gap-2">
+                    <Label
+                      htmlFor="individualUseOnly"
+                      className="flex items-center"
+                    >
+                      Individual use only{' '}
+                    </Label>
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>
+                            Check this box if the coupon cannot be used in
+                            conjunction with other coupons.
+                          </p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  </div>
                   <div className="flex items-center space-x-2 pt-2">
                     <Switch
                       id="individualUseOnly"
@@ -565,10 +704,24 @@ export default function CouponForm() {
                 </div>
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="allowedEmails" className="flex items-center">
-                  Allowed emails{' '}
-                  <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="allowedEmails" className="flex items-center">
+                    Allowed emails{' '}
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          A comma-separated list of email addresses that can
+                          use this coupon.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="allowedEmails"
                   name="allowedEmails"
@@ -590,9 +743,24 @@ export default function CouponForm() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerCoupon">
-                  Usage limit per coupon
-                </Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="usageLimitPerCoupon">
+                    Usage limit per coupon
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          The maximum number of times this coupon can be used
+                          in total.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="usageLimitPerCoupon"
                   name="usageLimitPerCoupon"
@@ -602,7 +770,24 @@ export default function CouponForm() {
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerUser">Usage limit per user</Label>
+                <div className="flex items-center gap-2">
+                  <Label htmlFor="usageLimitPerUser">
+                    Usage limit per user
+                  </Label>
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 text-gray-400 cursor-pointer" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          The maximum number of times a single user can use
+                          this coupon.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                </div>
                 <Input
                   id="usageLimitPerUser"
                   name="usageLimitPerUser"
