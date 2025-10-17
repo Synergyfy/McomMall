@@ -22,14 +22,7 @@ import { Badge } from '@/components/ui/badge';
 import { X } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
 
-type VoucherProductFormData = Omit<
-  CreateVoucherProductDto,
-  'fixedAmounts' | 'customAmount'
-> & {
-  fixedAmounts: number[];
-  customAmountMin?: number;
-  customAmountMax?: number;
-};
+type VoucherProductFormData = CreateVoucherProductDto;
 
 interface VoucherProductFormProps {
   onSubmit: (data: CreateVoucherProductDto) => void;
@@ -43,9 +36,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
   isSubmitting,
 }) => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
-  const [allowCustomPrice, setAllowCustomPrice] = useState(
-    !!initialData?.customAmount
-  );
 
   const {
     register,
@@ -58,41 +48,34 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     defaultValues: initialData
       ? {
           ...initialData,
-          customAmountMin: initialData.customAmount?.[0],
-          customAmountMax: initialData.customAmount?.[1],
         }
       : {
+          name: '',
           fixedAmounts: [],
           usage: 'both',
           allowPartialRedemption: true,
           isEnabled: true,
+          allowCustomAmount: false,
         },
   });
 
-  const fixedAmounts = watch('fixedAmounts');
-
-  useEffect(() => {
-    if (initialData) {
-      setAllowCustomPrice(!!initialData.customAmount);
-    }
-  }, [initialData]);
+  const fixedAmounts = watch('fixedAmounts') || [];
+  const allowCustomAmount = watch('allowCustomAmount');
 
   const handleFormSubmit = (data: VoucherProductFormData) => {
-    const {
-      customAmountMin,
-      customAmountMax,
-      ...rest
-    } = data;
-
     const processedData: CreateVoucherProductDto = {
-      ...rest,
+      ...data,
       fixedAmounts: data.fixedAmounts || [],
-      customAmount:
-        allowCustomPrice && customAmountMin && customAmountMax
-          ? [Number(customAmountMin), Number(customAmountMax)]
-          : undefined,
       expiryDays: data.expiryDays ? Number(data.expiryDays) : undefined,
     };
+
+    if (!data.allowCustomAmount) {
+      delete processedData.minCustomAmount;
+      delete processedData.maxCustomAmount;
+    } else {
+      processedData.minCustomAmount = Number(data.minCustomAmount);
+      processedData.maxCustomAmount = Number(data.maxCustomAmount);
+    }
 
     onSubmit(processedData);
   };
@@ -185,48 +168,54 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
 
       <div className="sm:col-span-2">
         <div className="flex items-center justify-between">
-          <Label htmlFor="allowCustomPrice">Allow Custom Price Range</Label>
-          <Switch
-            id="allowCustomPrice"
-            checked={allowCustomPrice}
-            onCheckedChange={setAllowCustomPrice}
+          <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
+          <Controller
+            name="allowCustomAmount"
+            control={control}
+            render={({ field }) => (
+              <Switch
+                id="allowCustomAmount"
+                checked={field.value}
+                onCheckedChange={field.onChange}
+              />
+            )}
           />
         </div>
       </div>
 
-      {allowCustomPrice && (
+      {allowCustomAmount && (
         <>
           <div>
-            <Label htmlFor="customAmountMin">Min Price</Label>
+            <Label htmlFor="minCustomAmount">Min Amount</Label>
             <Input
-              id="customAmountMin"
+              id="minCustomAmount"
               type="number"
-              {...register('customAmountMin', {
+              {...register('minCustomAmount', {
                 valueAsNumber: true,
-                required: 'Min price is required',
+                required: 'Min amount is required',
               })}
               className="mt-1"
             />
-            {errors.customAmountMin && (
+            {errors.minCustomAmount && (
               <p className="mt-1 text-red-500">
-                {errors.customAmountMin.message}
+                {errors.minCustomAmount.message}
               </p>
             )}
           </div>
           <div>
-            <Label htmlFor="customAmountMax">Max Price</Label>
+            <Label htmlFor="maxCustomAmount">Max Amount</Label>
             <Input
-              id="customAmountMax"
+              id="maxCustomAmount"
               type="number"
-              {...register('customAmountMax', {
+              {...register('maxCustomAmount', {
                 valueAsNumber: true,
-                required: 'Max price is required',
+                required: 'Max amount is required',
               })}
               className="mt-1"
             />
-            {errors.customAmountMax && (
+            {errors.maxCustomAmount && (
               <p className="mt-1 text-red-500">
-                {errors.customAmountMax.message}
+                {errors.maxCustomAmount.message}
               </p>
             )}
           </div>

@@ -88,6 +88,7 @@ export default function VoucherPurchaseModal({
   onPurchaseSuccess,
 }: VoucherPurchaseModalProps) {
   const [selectedAmount, setSelectedAmount] = useState<number | null>(null);
+  const [customAmountInput, setCustomAmountInput] = useState('');
   const [recipientName, setRecipientName] = useState('');
   const [recipientEmail, setRecipientEmail] = useState('');
   const [personalMessage, setPersonalMessage] = useState('');
@@ -103,9 +104,35 @@ export default function VoucherPurchaseModal({
   const initiatePurchase = useInitiateVoucherPurchase();
   const verifyPurchase = useVerifyVoucherPurchase();
 
+  const handleFixedAmountClick = (amount: number) => {
+    setSelectedAmount(amount);
+    setCustomAmountInput('');
+  };
+
+  const handleCustomAmountChange = (
+    e: React.ChangeEvent<HTMLInputElement>
+  ) => {
+    const value = e.target.value;
+    setCustomAmountInput(value);
+    const numericValue = parseFloat(value);
+    setSelectedAmount(isNaN(numericValue) ? null : numericValue);
+  };
+
   const handleInitiatePurchase = async () => {
     if (!selectedAmount) {
-      toast.error('Please select a voucher amount.');
+      toast.error('Please select or enter a voucher amount.');
+      return;
+    }
+
+    if (
+      customAmountInput &&
+      product.allowCustomAmount &&
+      (selectedAmount < (product.minCustomAmount ?? 0) ||
+        selectedAmount > (product.maxCustomAmount ?? Infinity))
+    ) {
+      toast.error(
+        `Amount must be between ${CURRENCY}${product.minCustomAmount} and ${CURRENCY}${product.maxCustomAmount}`
+      );
       return;
     }
 
@@ -180,6 +207,7 @@ export default function VoucherPurchaseModal({
 
   const resetForm = () => {
     setSelectedAmount(null);
+    setCustomAmountInput('');
     setRecipientName('');
     setRecipientEmail('');
     setPersonalMessage('');
@@ -202,17 +230,34 @@ export default function VoucherPurchaseModal({
             <div className="space-y-2">
               <Label>Select Amount</Label>
               <div className="flex flex-wrap gap-2">
-                {product.fixedAmounts.map(amount => (
+                {product.fixedAmounts?.map(amount => (
                   <Button
                     key={amount}
-                    variant={selectedAmount === amount ? 'default' : 'outline'}
-                    onClick={() => setSelectedAmount(amount)}
+                    variant={
+                      selectedAmount === amount && !customAmountInput
+                        ? 'default'
+                        : 'outline'
+                    }
+                    onClick={() => handleFixedAmountClick(amount)}
                   >
                     {CURRENCY}
                     {amount}
                   </Button>
                 ))}
               </div>
+              {product.allowCustomAmount && (
+                <div className="pt-2">
+                  <Label htmlFor="custom-amount">Or enter a custom amount</Label>
+                  <Input
+                    id="custom-amount"
+                    type="number"
+                    value={customAmountInput}
+                    onChange={handleCustomAmountChange}
+                    placeholder={`Between ${product.minCustomAmount} and ${product.maxCustomAmount}`}
+                    className="mt-1"
+                  />
+                </div>
+              )}
             </div>
             <div className="space-y-2">
               <Label htmlFor="recipientName">Recipient Name (Optional)</Label>
