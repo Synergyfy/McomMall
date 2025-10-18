@@ -54,6 +54,21 @@ export const useUpdateProduct = () => {
   });
 };
 
+const getProductsByBusiness = async (businessId: string, page: number, limit: number): Promise<{ data: Product[], total: number, page: number, limit: number }> => {
+  const { data } = await api.get(`/product/business/${businessId}`, {
+    params: { page, limit },
+  });
+  return data;
+};
+
+export const useGetProductsByBusiness = (businessId: string, page: number, limit: number) => {
+  return useQuery({
+    queryKey: ['products', businessId, page, limit],
+    queryFn: () => getProductsByBusiness(businessId, page, limit),
+    enabled: !!businessId,
+  });
+};
+
 const deleteProduct = async (id: string) => {
   const { data } = await api.delete(`/product/${id}`);
   return data;
