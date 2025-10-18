@@ -56,16 +56,20 @@ export const useGetServiceById = (id: string) => {
 };
 
 const getServicesByBusiness = async (
-  businessId: string
-): Promise<Service[]> => {
-  const { data } = await api.get(`/services/business/${businessId}`);
+  businessId: string,
+  page: number,
+  limit: number
+): Promise<{ data: Service[], total: number, page: number, limit: number }> => {
+  const { data } = await api.get(`/services/business/${businessId}`, {
+    params: { page, limit },
+  });
   return data;
 };
 
-export const useGetServicesByBusiness = (businessId: string) => {
+export const useGetServicesByBusiness = (businessId: string, page: number, limit: number) => {
   return useQuery({
-    queryKey: ['services-by-business', businessId],
-    queryFn: () => getServicesByBusiness(businessId),
+    queryKey: ['services-by-business', businessId, page, limit],
+    queryFn: () => getServicesByBusiness(businessId, page, limit),
     enabled: !!businessId,
   });
 };
