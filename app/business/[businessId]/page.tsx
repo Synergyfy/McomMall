@@ -7,6 +7,7 @@ import { useGetServicesByBusiness } from '@/service/services/hook';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
+import { Product } from '@/service/listings/types';
 
 const BusinessStorefrontPage = () => {
   const { businessId } = useParams();
@@ -66,11 +67,11 @@ const BusinessStorefrontPage = () => {
           {productsData && (
             <div>
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                {productsData.data.map(product => (
-                  <Card key={product.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
-                    {product.imageUrl ? (
+                {productsData.data.map((product: Product) => (
+                  <Card key={product.id} className="pt-0 overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                    {product.fileUrls?.length ? (
                       <img
-                        src={product.imageUrl}
+                        src={product.fileUrls[0]}
                         alt={product.title}
                         className="w-full h-40 object-cover"
                       />
