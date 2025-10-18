@@ -162,3 +162,12 @@ body {
 .animate-border-pulse {
   animation: border-pulse 2s infinite;
 }
+
+.image-placeholder {
+  background-color: #f0f0f0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #a0a0a0;
+  font-size: 0.875rem;
+}

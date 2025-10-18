@@ -65,14 +65,20 @@ const BusinessStorefrontPage = () => {
           {productsError && <p>Error loading products.</p>}
           {productsData && (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {productsData.data.map(product => (
-                  <Card key={product.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <img
-                      src={product.imageUrl || 'https://via.placeholder.com/400x300'}
-                      alt={product.title}
-                      className="w-full h-48 object-cover"
-                    />
+                  <Card key={product.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                    {product.imageUrl ? (
+                      <img
+                        src={product.imageUrl}
+                        alt={product.title}
+                        className="w-full h-40 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-40 image-placeholder">
+                        <span>No Image</span>
+                      </div>
+                    )}
                     <CardHeader>
                       <CardTitle>{product.title}</CardTitle>
                     </CardHeader>
@@ -129,14 +135,20 @@ const BusinessStorefrontPage = () => {
           {servicesError && <p>Error loading services.</p>}
           {servicesData && (
             <div>
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {servicesData.data.map(service => (
-                  <Card key={service.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
-                    <img
-                      src={service.images?.[0] || 'https://via.placeholder.com/400x300'}
-                      alt={service.name}
-                      className="w-full h-48 object-cover"
-                    />
+                  <Card key={service.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
+                    {service.images?.[0] ? (
+                      <img
+                        src={service.images[0]}
+                        alt={service.name}
+                        className="w-full h-40 object-cover"
+                      />
+                    ) : (
+                      <div className="w-full h-40 image-placeholder">
+                        <span>No Image</span>
+                      </div>
+                    )}
                     <CardHeader>
                       <CardTitle>{service.name}</CardTitle>
                     </CardHeader>
