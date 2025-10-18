@@ -46,62 +46,72 @@ const BusinessStorefrontPage = () => {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <header className="text-center mb-12">
-        <h1 className="text-4xl font-bold text-orange-600">
-          Welcome to Our Store
+      <header className="text-center py-16 bg-gray-50">
+        <h1 className="text-5xl font-extrabold text-gray-900 tracking-tight">
+          Welcome to <span className="text-orange-600">Our Store</span>
         </h1>
-        <p className="text-lg text-gray-600 mt-2">
-          Explore our products and services
+        <p className="mt-4 text-xl text-gray-500 max-w-2xl mx-auto">
+          Discover our exclusive collections and services, curated just for you.
         </p>
       </header>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <div className="flex flex-col gap-16">
         {/* Products Section */}
         <section>
-          <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
-            Products
+          <h2 className="text-4xl font-extrabold text-gray-900 text-center mb-12">
+            Our <span className="text-orange-600">Products</span>
           </h2>
           {productsLoading && <p>Loading products...</p>}
           {productsError && <p>Error loading products.</p>}
           {productsData && (
-            <div className="space-y-6">
-              {productsData.data.map(product => (
-                <Card key={product.id}>
-                  <CardHeader>
-                    <CardTitle>{product.title}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <p className="text-lg font-semibold text-orange-600">
-                      ${product.price}
-                    </p>
-                    {product.points && (
-                      <p className="text-sm text-gray-500">
-                        Earn {product.points} loyalty points
-                      </p>
-                    )}
-                    <Button
-                      onClick={() => handleAddToCart(product.id)}
-                      className="mt-4 w-full bg-orange-600 hover:bg-orange-700"
-                    >
-                      Add to Cart
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-              <div className="flex justify-between mt-6">
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {productsData.data.map(product => (
+                  <Card key={product.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <img
+                      src={product.imageUrl || 'https://via.placeholder.com/400x300'}
+                      alt={product.title}
+                      className="w-full h-48 object-cover"
+                    />
+                    <CardHeader>
+                      <CardTitle>{product.title}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 text-sm mb-4">{product.shortDescription}</p>
+                      <div className="flex justify-between items-center mb-4">
+                        <p className="text-xl font-bold text-orange-600">${product.price.toFixed(2)}</p>
+                        {product.points && (
+                          <span className="text-xs font-semibold text-green-600 bg-green-100 px-2 py-1 rounded-full">
+                            Earn {product.points} points
+                          </span>
+                        )}
+                      </div>
+                      <Button
+                        onClick={() => handleAddToCart(product.id)}
+                        className="w-full bg-orange-600 hover:bg-orange-700"
+                      >
+                        Add to Cart
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex justify-center items-center mt-8 space-x-4">
                 <Button
                   onClick={() => setProductsPage(p => Math.max(p - 1, 1))}
                   disabled={productsPage === 1}
+                  variant="outline"
                 >
                   Previous
                 </Button>
-                <span>
+                <span className="text-gray-600">
                   Page {productsPage} of{' '}
                   {Math.ceil(productsData.total / productsLimit)}
                 </span>
                 <Button
                   onClick={() => setProductsPage(p => p + 1)}
                   disabled={productsPage * productsLimit >= productsData.total}
+                  variant="outline"
                 >
                   Next
                 </Button>
@@ -112,42 +122,52 @@ const BusinessStorefrontPage = () => {
 
         {/* Services Section */}
         <section>
-          <h2 className="text-3xl font-bold mb-6 text-center text-gray-800">
-            Services
+          <h2 className="text-4xl font-extrabold text-gray-900 text-center mb-12">
+            Our <span className="text-orange-600">Services</span>
           </h2>
           {servicesLoading && <p>Loading services...</p>}
           {servicesError && <p>Error loading services.</p>}
           {servicesData && (
-            <div className="space-y-6">
-              {servicesData.data.map(service => (
-                <Card key={service.id}>
-                  <CardHeader>
-                    <CardTitle>{service.name}</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <Button
-                      onClick={() => handleBookNow(service.id)}
-                      className="mt-4 w-full bg-orange-600 hover:bg-orange-700"
-                    >
-                      Book Now
-                    </Button>
-                  </CardContent>
-                </Card>
-              ))}
-              <div className="flex justify-between mt-6">
+            <div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+                {servicesData.data.map(service => (
+                  <Card key={service.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300">
+                    <img
+                      src={service.images?.[0] || 'https://via.placeholder.com/400x300'}
+                      alt={service.name}
+                      className="w-full h-48 object-cover"
+                    />
+                    <CardHeader>
+                      <CardTitle>{service.name}</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-gray-600 text-sm mb-4">{service.description}</p>
+                      <Button
+                        onClick={() => handleBookNow(service.id)}
+                        className="w-full bg-orange-600 hover:bg-orange-700"
+                      >
+                        Book Now
+                      </Button>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+              <div className="flex justify-center items-center mt-8 space-x-4">
                 <Button
                   onClick={() => setServicesPage(p => Math.max(p - 1, 1))}
                   disabled={servicesPage === 1}
+                  variant="outline"
                 >
                   Previous
                 </Button>
-                <span>
+                <span className="text-gray-600">
                   Page {servicesPage} of{' '}
                   {Math.ceil(servicesData.total / servicesLimit)}
                 </span>
                 <Button
                   onClick={() => setServicesPage(p => p + 1)}
                   disabled={servicesPage * servicesLimit >= servicesData.total}
+                  variant="outline"
                 >
                   Next
                 </Button>
