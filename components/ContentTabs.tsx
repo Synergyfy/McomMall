@@ -177,11 +177,13 @@ function ServicePage({
   const isGoogle = isGoogleResult(listing);
   const businessId = isGoogle ? '' : (listing as InHouseBusiness).id;
 
+  const [page, setPage] = useState(1);
+  const limit = 6;
   const {
-    data: services,
+    data: servicesData,
     isLoading,
     isError,
-  } = useGetServicesByBusiness(businessId);
+  } = useGetServicesByBusiness(businessId, page, limit);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const handleBookNow = (e: React.MouseEvent, service: Service) => {
@@ -215,7 +217,7 @@ function ServicePage({
     return <p>Loading services...</p>;
   }
 
-  if (isError || !services || services.length === 0) {
+  if (isError || !servicesData || servicesData.data.length === 0) {
     return <p>No services available for this listing.</p>;
   }
 
@@ -223,7 +225,7 @@ function ServicePage({
     <div>
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
-        {services.map(service => {
+        {servicesData.data.map(service => {
           const firstImageUrl = service.images?.find(isImageUrl);
           return (
           <Link
@@ -259,6 +261,25 @@ function ServicePage({
             </Button>
           </Link>
         )})}
+      </div>
+      <div className="flex justify-center mt-6">
+        <Button
+          onClick={() => setPage(p => Math.max(p - 1, 1))}
+          disabled={page === 1}
+          className="mx-2"
+        >
+          Previous
+        </Button>
+        <span className="self-center">
+          Page {page} of {Math.ceil(servicesData.total / limit)}
+        </span>
+        <Button
+          onClick={() => setPage(p => p + 1)}
+          disabled={page * limit >= servicesData.total}
+          className="mx-2"
+        >
+          Next
+        </Button>
       </div>
       <BookingModal
         service={selectedService}

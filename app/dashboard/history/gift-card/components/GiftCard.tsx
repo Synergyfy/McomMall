@@ -14,6 +14,10 @@ interface GiftCardProps {
 const GiftCard = ({ purchase }: GiftCardProps) => {
   const cardRef = useRef<HTMLDivElement>(null);
 
+  const formatGiftCardCode = (code: string) => {
+    return code.replace(/(.{4})/g, "$1 ").trim();
+  };
+
   const handleExport = () => {
     if (!cardRef.current) {
       toast.error("Failed to find gift card element.");
@@ -60,19 +64,20 @@ const GiftCard = ({ purchase }: GiftCardProps) => {
   return (
     <div
       ref={cardRef}
-      className="relative p-6 flex flex-col justify-between text-white"
+      className="relative p-6 flex flex-col justify-between text-white rounded-xl shadow-lg"
       style={{
         backgroundColor: purchase.template?.backgroundColor || "#000",
         color: purchase.template?.textColor || "#fff",
         backgroundImage: `url(${purchase.template?.backgroundImageUrl})`,
         backgroundSize: "cover",
         backgroundPosition: "center",
-        height: "200px",
+        height: "220px",
+        fontFamily: "'Courier New', Courier, monospace",
       }}
     >
       <div className="absolute top-4 right-4 gift-card-export-button">
         <Download
-          className="cursor-pointer text-white hover:text-orange-400 transition-colors"
+          className="cursor-pointer hover:text-orange-400 transition-colors"
           size={24}
           onClick={handleExport}
         />
@@ -86,21 +91,29 @@ const GiftCard = ({ purchase }: GiftCardProps) => {
           <QRCode
             value={purchase.code}
             size={64}
-            fgColor={purchase.template?.textColor || "#000"}
-            bgColor="#fff"
+            fgColor={purchase.template?.backgroundColor || "#000"}
+            bgColor="#FFFFFF"
           />
         </div>
       </div>
 
-      <div className="text-center">
-        <p className="font-mono text-sm tracking-widest">{purchase.code}</p>
+      <div className="text-center my-4">
+        <p className="font-mono text-xl tracking-widest">
+          {formatGiftCardCode(purchase.code)}
+        </p>
       </div>
 
-      <div className="text-right gift-card-balance">
-        <p className="text-3xl font-bold">
-          £{Number(purchase.currentBalance).toFixed(2)}
-        </p>
-        <p className="text-sm">Current Balance</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <p className="text-sm">Recipient</p>
+          <p className="font-semibold">{purchase.recipientEmail}</p>
+        </div>
+        <div className="text-right gift-card-balance">
+          <p className="text-3xl font-bold">
+            £{Number(purchase.currentBalance).toFixed(2)}
+          </p>
+          <p className="text-sm">Current Balance</p>
+        </div>
       </div>
     </div>
   );

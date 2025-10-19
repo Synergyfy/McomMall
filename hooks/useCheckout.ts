@@ -38,6 +38,8 @@ export interface CreateCheckoutDto {
   voucherCode?: string;
   giftCardCode?: string;
   serviceBookings?: ServiceBookingDetailsDto[];
+  giftCardAmount?: number;
+  voucherAmount?: number;
 }
 
 const checkout = async (checkoutData: CreateCheckoutDto) => {
@@ -50,6 +52,8 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     voucherCode,
     giftCardCode,
     serviceBookings,
+    giftCardAmount,
+    voucherAmount,
   } = checkoutData;
   const { data } = await api.post('/order/checkout', {
     payment,
@@ -60,6 +64,8 @@ const checkout = async (checkoutData: CreateCheckoutDto) => {
     voucherCode,
     giftCardCode,
     serviceBookings,
+    giftCardAmount,
+    voucherAmount,
   });
   return data;
 };

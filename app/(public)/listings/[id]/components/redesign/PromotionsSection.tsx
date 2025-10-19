@@ -80,7 +80,7 @@ export default function PromotionsSection({ listing }: PromotionsSectionProps) {
             ))}
           </TabsList>
 
-          <div className="mt-8 p-6 border-4 border-orange-600/80 rounded-lg bg-white shadow-lg">
+          <div className="mt-8 p-6 border-2 border-orange-600/80 rounded-lg bg-white shadow-lg">
             <h3 className="text-3xl font-bold text-orange-600 mb-6 text-center">
               {getTabLabel(activeTab)}
             </h3>

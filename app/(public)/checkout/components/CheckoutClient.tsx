@@ -123,54 +123,50 @@ export default function CheckoutClient() {
     couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
   const totalPrice = subtotal - totalDiscount;
 
-  const handleApplyVoucher = async (code: string) => {
+  const handleCheckVoucherBalance = async (code: string) => {
     setVoucherLoading(true);
     try {
       const result = await applyVoucher(code);
-      if (result.balance > 0) {
-        const applicableDiscount = Math.min(result.balance, basePrice);
-        setVoucherDiscount(applicableDiscount);
-        setVoucherCode(code);
-        setCouponDiscount(0);
-        setCouponCode('');
-        setOfferDiscount(0);
-        setSelectedOffer(null);
-        setGiftCardDiscount(0);
-        setGiftCardCode('');
+      const balance = parseFloat(result.balance);
+      if (balance > 0) {
+        return balance;
       } else {
-        alert('This voucher has no balance.');
+        alert("This voucher has no balance.");
       }
     } catch (error) {
-      console.error('Failed to apply voucher', error);
-      alert('Invalid or inapplicable voucher');
+      console.error("Failed to apply voucher", error);
+      alert("Invalid or inapplicable voucher");
     } finally {
       setVoucherLoading(false);
     }
   };
 
-  const handleApplyGiftCard = async (code: string) => {
+  const handleApplyVoucherDiscount = (code: string, amount: number) => {
+    setVoucherDiscount(amount);
+    setVoucherCode(code);
+  };
+
+  const handleCheckGiftCardBalance = async (code: string) => {
     setGiftCardLoading(true);
     try {
       const result = await checkGiftCardBalance(code);
-      if (result.currentBalance > 0) {
-        const applicableDiscount = Math.min(result.currentBalance, basePrice);
-        setGiftCardDiscount(applicableDiscount);
-        setGiftCardCode(code);
-        setCouponDiscount(0); // Reset coupon discount
-        setCouponCode('');
-        setOfferDiscount(0); // Reset offer discount
-        setSelectedOffer(null);
-        setVoucherDiscount(0);
-        setVoucherCode('');
+      const balance = parseFloat(result.currentBalance);
+      if (balance > 0) {
+        return balance;
       } else {
-        alert('This gift card has no balance.');
+        alert("This gift card has no balance.");
       }
     } catch (error) {
-      console.error('Failed to apply gift card', error);
-      alert('Invalid or inapplicable gift card');
+      console.error("Failed to apply gift card", error);
+      alert("Invalid or inapplicable gift card");
     } finally {
       setGiftCardLoading(false);
     }
+  };
+
+  const handleApplyGiftCardDiscount = (code: string, amount: number) => {
+    setGiftCardDiscount(amount);
+    setGiftCardCode(code);
   };
 
   const handleApplyCoupon = async (code: string) => {
@@ -232,7 +228,10 @@ export default function CheckoutClient() {
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
         voucherCode: voucherCode || undefined,
-        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
+        serviceBookings:
+          serviceBookings.length > 0 ? serviceBookings : undefined,
+        giftCardAmount: giftCardDiscount || undefined,
+        voucherAmount: voucherDiscount || undefined,
       };
 
       if (!fromCart && product) {
@@ -365,11 +364,13 @@ export default function CheckoutClient() {
                     isLoading={isCouponLoading}
                   />
                   <GiftCardInput
-                    onApply={handleApplyGiftCard}
+                    onCheckBalance={handleCheckGiftCardBalance}
+                    onApply={handleApplyGiftCardDiscount}
                     isLoading={isGiftCardLoading}
                   />
                   <VoucherInput
-                    onApply={handleApplyVoucher}
+                    onCheckBalance={handleCheckVoucherBalance}
+                    onApply={handleApplyVoucherDiscount}
                     isLoading={isVoucherLoading}
                   />
                   <ApplicableOffers

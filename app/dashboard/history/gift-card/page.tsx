@@ -52,10 +52,7 @@ const GiftCardHistoryPage = () => {
       <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
         {purchases && purchases.length > 0 ? (
           purchases.map((purchase: MyPurchase) => (
-            <div
-              key={purchase.id}
-              className="bg-white rounded-lg shadow-lg overflow-hidden"
-            >
+            <div key={purchase.id} className="rounded-lg overflow-hidden">
               <GiftCard purchase={purchase} />
               <div className="p-6 bg-gray-50">
                 <div className="flex items-center gap-2 text-gray-700 mb-4">
@@ -71,10 +68,6 @@ const GiftCardHistoryPage = () => {
                     />
                   )}
                 </div>
-                <p className="text-gray-700 mb-2">
-                  <span className="font-semibold">Recipient:</span>{" "}
-                  {purchase.recipientEmail}
-                </p>
 
                 <div className="mt-4 pt-4 border-t border-gray-200">
                   <div className="flex justify-between items-center text-sm text-gray-600">

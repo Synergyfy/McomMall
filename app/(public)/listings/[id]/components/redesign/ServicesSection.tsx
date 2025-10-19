@@ -9,6 +9,7 @@ import { Service } from '@/service/services/types';
 import { useState } from 'react';
 import { BookingModal } from '@/components/BookingModal';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface ServicesSectionProps {
   businessId: string;
@@ -33,7 +34,10 @@ const getPriceDisplay = (service: Service) => {
 };
 
 export default function ServicesSection({ businessId }: ServicesSectionProps) {
-  const { data: services, isLoading, isError } = useGetServicesByBusiness(businessId);
+  const router = useRouter();
+  const [page, setPage] = useState(1);
+  const limit = 6;
+  const { data: servicesData, isLoading, isError } = useGetServicesByBusiness(businessId, page, limit);
   const [selectedService, setSelectedService] = useState<Service | null>(null);
 
   const handleBookNow = (e: React.MouseEvent, service: Service) => {
@@ -54,7 +58,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
     );
   }
 
-  if (isError || !services || services.length === 0) {
+  if (isError || !servicesData || servicesData.data.length === 0) {
     return null;
   }
 
@@ -71,7 +75,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
             Our <span className="text-orange-600">Services</span>
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-            {services.map((service) => {
+            {servicesData.data.map((service) => {
               const firstImageUrl = service.images?.find(isImageUrl);
               return (
                 <motion.div
@@ -79,9 +83,12 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                   whileHover={{ y: -8 }}
                   className="h-full"
                 >
-                  <Card className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white">
+                  <Card
+                    onClick={() => router.push(`/services/${service.id}`)}
+                    className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white cursor-pointer"
+                  >
                     <CardHeader className="p-0 border-b border-orange-200/80">
-                    <div className="relative h-48 w-full">
+                      <div className="relative h-48 w-full">
                         <Image
                           src={
                             firstImageUrl ||
@@ -119,6 +126,25 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                 </motion.div>
               );
             })}
+          </div>
+          <div className="flex justify-center mt-12">
+            <Button
+              onClick={() => setPage(p => Math.max(p - 1, 1))}
+              disabled={page === 1}
+              className="mx-2"
+            >
+              Previous
+            </Button>
+            <span className="self-center">
+                Page {page} of {Math.ceil(servicesData.total / limit)}
+            </span>
+            <Button
+              onClick={() => setPage(p => p + 1)}
+              disabled={page * limit >= servicesData.total}
+              className="mx-2"
+            >
+              Next
+            </Button>
           </div>
         </div>
       </motion.div>
