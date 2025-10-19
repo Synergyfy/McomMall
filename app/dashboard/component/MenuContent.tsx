@@ -73,28 +73,21 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               className="flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white"
               onClick={() => item.subMenu && toggleSubMenu(item.title)}
             >
-              {item.subMenu ? (
-                <div className="flex items-center space-x-2">
-                  <item.icon className="w-5 h-5 text-orange-500" />
-                  <span>{item.title}</span>
-                </div>
-              ) : (
-                <Link
-                  href={item.href}
-                  className="flex items-center space-x-2"
-                  onClick={e => {
-                    if (item.title === 'Logout') {
-                      e.preventDefault();
-                      handleLogout();
-                    } else if (onLinkClick) {
-                      onLinkClick();
-                    }
-                  }}
-                >
-                  <item.icon className="w-5 h-5 text-orange-500" />
-                  <span>{item.title}</span>
-                </Link>
-              )}
+              <Link
+                href={item.href}
+                className="flex items-center space-x-2"
+                onClick={e => {
+                  if (item.title === 'Logout') {
+                    e.preventDefault();
+                    handleLogout();
+                  } else if (onLinkClick) {
+                    onLinkClick();
+                  }
+                }}
+              >
+                <item.icon className="w-5 h-5 text-orange-500" />
+                <span>{item.title}</span>
+              </Link>
               {item.subMenu && (
                 <ChevronDown
                   className={`w-5 h-5 transition-transform ${
