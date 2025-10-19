@@ -228,7 +228,10 @@ export default function CheckoutClient() {
         offerId: selectedOffer || undefined,
         giftCardCode: giftCardCode || undefined,
         voucherCode: voucherCode || undefined,
-        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
+        serviceBookings:
+          serviceBookings.length > 0 ? serviceBookings : undefined,
+        giftCardAmount: giftCardDiscount || undefined,
+        voucherAmount: voucherDiscount || undefined,
       };
 
       if (!fromCart && product) {
