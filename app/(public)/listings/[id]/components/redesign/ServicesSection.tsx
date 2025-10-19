@@ -9,6 +9,7 @@ import { Service } from '@/service/services/types';
 import { useState } from 'react';
 import { BookingModal } from '@/components/BookingModal';
 import Image from 'next/image';
+import { useRouter } from 'next/navigation';
 
 interface ServicesSectionProps {
   businessId: string;
@@ -33,6 +34,7 @@ const getPriceDisplay = (service: Service) => {
 };
 
 export default function ServicesSection({ businessId }: ServicesSectionProps) {
+  const router = useRouter();
   const [page, setPage] = useState(1);
   const limit = 6;
   const { data: servicesData, isLoading, isError } = useGetServicesByBusiness(businessId, page, limit);
@@ -81,9 +83,12 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                   whileHover={{ y: -8 }}
                   className="h-full"
                 >
-                  <Card className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white">
+                  <Card
+                    onClick={() => router.push(`/services/${service.id}`)}
+                    className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white cursor-pointer"
+                  >
                     <CardHeader className="p-0 border-b border-orange-200/80">
-                    <div className="relative h-48 w-full">
+                      <div className="relative h-48 w-full">
                         <Image
                           src={
                             firstImageUrl ||

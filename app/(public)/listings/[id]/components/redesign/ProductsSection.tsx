@@ -58,7 +58,10 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
                 whileHover={{ y: -8 }}
                 className="h-full"
               >
-                <Card className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white">
+                <Card
+                  onClick={() => router.push(`/products/${product.id}`)}
+                  className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white cursor-pointer"
+                >
                   <CardHeader className="p-0 border-b border-orange-200/80">
                     <div className="relative h-48 w-full">
                       <Image
