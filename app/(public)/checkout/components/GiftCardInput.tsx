@@ -5,37 +5,37 @@ import { motion } from "framer-motion";
 import { Loader, QrCode, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
 interface GiftCardInputProps {
-  onApply: (
-    giftCardCode: string,
-    value: number,
-    valueType: "fixed" | "percentage"
-  ) => void;
+  onCheckBalance: (giftCardCode: string) => Promise<number | void>;
+  onApply: (giftCardCode: string, amount: number) => void;
   isLoading: boolean;
 }
 
 export default function GiftCardInput({
+  onCheckBalance,
   onApply,
   isLoading,
 }: GiftCardInputProps) {
   const [giftCardCode, setGiftCardCode] = useState("");
-  const [redemptionValue, setRedemptionValue] = useState<number | string>("");
-  const [valueType, setValueType] = useState<"fixed" | "percentage">("fixed");
+  const [balance, setBalance] = useState<number | null>(null);
+  const [redemptionAmount, setRedemptionAmount] = useState<number | string>("");
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
+  const handleCheckBalance = async () => {
+    if (giftCardCode) {
+      const newBalance = await onCheckBalance(giftCardCode);
+      if (typeof newBalance === "number") {
+        setBalance(newBalance);
+      }
+    }
+  };
+
   const handleApply = () => {
-    if (giftCardCode && redemptionValue) {
-      onApply(giftCardCode, Number(redemptionValue), valueType);
+    if (giftCardCode && redemptionAmount) {
+      onApply(giftCardCode, Number(redemptionAmount));
     }
   };
 
@@ -54,6 +54,11 @@ export default function GiftCardInput({
       const onScanSuccess = (decodedText: string) => {
         setGiftCardCode(decodedText);
         setShowScanner(false);
+        onCheckBalance(decodedText).then((newBalance) => {
+          if (typeof newBalance === "number") {
+            setBalance(newBalance);
+          }
+        });
       };
 
       const onScanFailure = (error: unknown) => {
@@ -77,10 +82,10 @@ export default function GiftCardInput({
         });
       }
     };
-  }, [showScanner, onApply]);
+  }, [showScanner, onCheckBalance]);
 
   return (
-    <>
+    <div className="space-y-4">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
@@ -91,31 +96,14 @@ export default function GiftCardInput({
           type="text"
           placeholder="Enter your gift card code"
           value={giftCardCode}
-          onChange={(e) => setGiftCardCode(e.target.value)}
+          onChange={(e) => {
+            setGiftCardCode(e.target.value);
+            setBalance(null);
+            setRedemptionAmount("");
+          }}
           disabled={isLoading}
           className="h-12 text-lg flex-grow"
         />
-        <Input
-          type="number"
-          placeholder="Amount"
-          value={redemptionValue}
-          onChange={(e) => setRedemptionValue(e.target.value)}
-          disabled={isLoading}
-          className="h-12 text-lg w-32"
-        />
-        <Select
-          value={valueType}
-          onValueChange={(value: "fixed" | "percentage") => setValueType(value)}
-          disabled={isLoading}
-        >
-          <SelectTrigger className="h-12 text-lg w-40">
-            <SelectValue placeholder="Type" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="fixed">Fixed</SelectItem>
-            <SelectItem value="percentage">Percentage</SelectItem>
-          </SelectContent>
-        </Select>
         <div className="flex items-center gap-2">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
@@ -132,20 +120,48 @@ export default function GiftCardInput({
             className="flex-grow sm:flex-grow-0"
           >
             <Button
-              onClick={handleApply}
-              disabled={isLoading || !giftCardCode || !redemptionValue}
-              className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition-all duration-300 w-full"
-          >
-            {isLoading ? (
-              <Loader className="animate-spin" />
-            ) : (
-              "Apply Gift Card"
-            )}
-          </Button>
-        </motion.div>
+              onClick={handleCheckBalance}
+              disabled={isLoading || !giftCardCode}
+              className="h-12 text-lg font-semibold bg-blue-600 text-white hover:bg-blue-700 transition-all duration-300 w-full"
+            >
+              {isLoading ? (
+                <Loader className="animate-spin" />
+              ) : (
+                "Check Balance"
+              )}
+            </Button>
+          </motion.div>
         </div>
       </motion.div>
-
+      {balance !== null && (
+        <motion.div
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="flex flex-col sm:flex-row items-center gap-4 p-4 bg-gray-100 rounded-lg"
+        >
+          <p className="text-lg font-semibold">
+            Balance: <span className="text-green-600">£{balance.toFixed(2)}</span>
+          </p>
+          <div className="flex-grow flex items-center gap-2">
+            <Input
+              type="number"
+              placeholder="Amount to redeem"
+              value={redemptionAmount}
+              onChange={(e) => setRedemptionAmount(e.target.value)}
+              disabled={isLoading}
+              className="h-12 text-lg flex-grow"
+              max={balance}
+            />
+            <Button
+              onClick={handleApply}
+              disabled={isLoading || !redemptionAmount || Number(redemptionAmount) > balance || Number(redemptionAmount) <= 0}
+              className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700"
+            >
+              {isLoading ? <Loader className="animate-spin" /> : "Apply"}
+            </Button>
+          </div>
+        </motion.div>
+      )}
       {showScanner && (
         <div className="fixed inset-0 bg-black bg-opacity-75 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-4 relative w-full max-w-md">
@@ -161,6 +177,6 @@ export default function GiftCardInput({
           </div>
         </div>
       )}
-    </>
+    </div>
   );
 }

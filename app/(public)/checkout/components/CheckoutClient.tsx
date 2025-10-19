@@ -59,25 +59,13 @@ export default function CheckoutClient() {
   const [couponDiscount, setCouponDiscount] = useState(0);
   const [isCouponLoading, setCouponLoading] = useState(false);
 
-  const [giftCardCode, setGiftCardCode] = useState("");
+  const [giftCardCode, setGiftCardCode] = useState('');
   const [giftCardDiscount, setGiftCardDiscount] = useState(0);
   const [isGiftCardLoading, setGiftCardLoading] = useState(false);
-  const [giftCardRedemptionValue, setGiftCardRedemptionValue] = useState<
-    number | string
-  >("");
-  const [giftCardValueType, setGiftCardValueType] = useState<
-    "fixed" | "percentage"
-  >("fixed");
 
-  const [voucherCode, setVoucherCode] = useState("");
+  const [voucherCode, setVoucherCode] = useState('');
   const [voucherDiscount, setVoucherDiscount] = useState(0);
   const [isVoucherLoading, setVoucherLoading] = useState(false);
-  const [voucherRedemptionValue, setVoucherRedemptionValue] = useState<
-    number | string
-  >("");
-  const [voucherValueType, setVoucherValueType] = useState<
-    "fixed" | "percentage"
-  >("fixed");
 
   const [selectedOffer, setSelectedOffer] = useState<string | null>(null);
   const [offerDiscount, setOfferDiscount] = useState(0);
@@ -135,37 +123,15 @@ export default function CheckoutClient() {
     couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
   const totalPrice = subtotal - totalDiscount;
 
-  const handleApplyVoucher = async (
-    code: string,
-    value: number,
-    valueType: "fixed" | "percentage"
-  ) => {
+  const handleCheckVoucherBalance = async (code: string) => {
     setVoucherLoading(true);
     try {
       const result = await applyVoucher(code);
-      if (result.balance <= 0) {
+      if (result.balance > 0) {
+        return result.balance;
+      } else {
         alert("This voucher has no balance.");
-        return;
       }
-
-      const totalAfterOffersAndCoupons = subtotal - couponDiscount - offerDiscount;
-
-      const redemptionAmount =
-        valueType === "fixed" ? value : result.balance * (value / 100);
-
-      const applicableDiscount = Math.min(
-        redemptionAmount,
-        totalAfterOffersAndCoupons,
-        result.balance
-      );
-
-      setVoucherDiscount(applicableDiscount);
-      setVoucherCode(code);
-      setVoucherRedemptionValue(value);
-      setVoucherValueType(valueType);
-      // Reset gift card if a voucher is applied
-      setGiftCardDiscount(0);
-      setGiftCardCode("");
     } catch (error) {
       console.error("Failed to apply voucher", error);
       alert("Invalid or inapplicable voucher");
@@ -174,45 +140,31 @@ export default function CheckoutClient() {
     }
   };
 
-  const handleApplyGiftCard = async (
-    code: string,
-    value: number,
-    valueType: "fixed" | "percentage"
-  ) => {
+  const handleApplyVoucherDiscount = (code: string, amount: number) => {
+    setVoucherDiscount(amount);
+    setVoucherCode(code);
+  };
+
+  const handleCheckGiftCardBalance = async (code: string) => {
     setGiftCardLoading(true);
     try {
       const result = await checkGiftCardBalance(code);
-      if (result.currentBalance <= 0) {
+      if (result.currentBalance > 0) {
+        return result.currentBalance;
+      } else {
         alert("This gift card has no balance.");
-        return;
       }
-
-      const totalAfterOffersAndCoupons = subtotal - couponDiscount - offerDiscount;
-
-      const redemptionAmount =
-        valueType === "fixed"
-          ? value
-          : result.currentBalance * (value / 100);
-
-      const applicableDiscount = Math.min(
-        redemptionAmount,
-        totalAfterOffersAndCoupons,
-        result.currentBalance
-      );
-
-      setGiftCardDiscount(applicableDiscount);
-      setGiftCardCode(code);
-      setGiftCardRedemptionValue(value);
-      setGiftCardValueType(valueType);
-      // Reset voucher if a gift card is applied
-      setVoucherDiscount(0);
-      setVoucherCode("");
     } catch (error) {
       console.error("Failed to apply gift card", error);
       alert("Invalid or inapplicable gift card");
     } finally {
       setGiftCardLoading(false);
     }
+  };
+
+  const handleApplyGiftCardDiscount = (code: string, amount: number) => {
+    setGiftCardDiscount(amount);
+    setGiftCardCode(code);
   };
 
   const handleApplyCoupon = async (code: string) => {
@@ -224,9 +176,11 @@ export default function CheckoutClient() {
       });
       setCouponDiscount(result.discountAmount);
       setCouponCode(code);
+      setOfferDiscount(0); // Reset offer discount
+      setSelectedOffer(null);
     } catch (error) {
-      console.error("Failed to apply coupon", error);
-      alert("Invalid or inapplicable coupon");
+      console.error('Failed to apply coupon', error);
+      alert('Invalid or inapplicable coupon');
     } finally {
       setCouponLoading(false);
     }
@@ -241,9 +195,11 @@ export default function CheckoutClient() {
       });
       setOfferDiscount(result.discountAmount);
       setSelectedOffer(offerId);
+      setCouponDiscount(0); // Reset coupon discount
+      setCouponCode('');
     } catch (error) {
-      console.error("Failed to apply offer", error);
-      alert("Failed to apply offer");
+      console.error('Failed to apply offer', error);
+      alert('Failed to apply offer');
     } finally {
       setOfferLoading(false);
     }
@@ -268,24 +224,9 @@ export default function CheckoutClient() {
         },
         couponCode: couponCode || undefined,
         offerId: selectedOffer || undefined,
-        redemption:
-          giftCardCode && giftCardDiscount
-            ? {
-                type: "gift_card",
-                code: giftCardCode,
-                value: Number(giftCardRedemptionValue),
-                valueType: giftCardValueType,
-              }
-            : voucherCode && voucherDiscount
-            ? {
-                type: "voucher",
-                code: voucherCode,
-                value: Number(voucherRedemptionValue),
-                valueType: voucherValueType,
-              }
-            : undefined,
-        serviceBookings:
-          serviceBookings.length > 0 ? serviceBookings : undefined,
+        giftCardCode: giftCardCode || undefined,
+        voucherCode: voucherCode || undefined,
+        serviceBookings: serviceBookings.length > 0 ? serviceBookings : undefined,
       };
 
       if (!fromCart && product) {
@@ -417,25 +358,21 @@ export default function CheckoutClient() {
                     onApply={handleApplyCoupon}
                     isLoading={isCouponLoading}
                   />
-                  {product?.giftCard && (
-                    <GiftCardInput
-                      onApply={handleApplyGiftCard}
-                      isLoading={isGiftCardLoading}
-                    />
-                  )}
-                  {product?.voucher && (
-                    <VoucherInput
-                      onApply={handleApplyVoucher}
-                      isLoading={isVoucherLoading}
-                    />
-                  )}
-                  {product?.promotion && (
-                    <ApplicableOffers
-                      offers={applicableOffers || []}
-                      onApply={handleApplyOffer}
-                      isLoading={isOfferLoading || areOffersLoading}
-                    />
-                  )}
+                  <GiftCardInput
+                    onCheckBalance={handleCheckGiftCardBalance}
+                    onApply={handleApplyGiftCardDiscount}
+                    isLoading={isGiftCardLoading}
+                  />
+                  <VoucherInput
+                    onCheckBalance={handleCheckVoucherBalance}
+                    onApply={handleApplyVoucherDiscount}
+                    isLoading={isVoucherLoading}
+                  />
+                  <ApplicableOffers
+                    offers={applicableOffers || []}
+                    onApply={handleApplyOffer}
+                    isLoading={isOfferLoading || areOffersLoading}
+                  />
                 </div>
               </div>
             </div>
