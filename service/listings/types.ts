@@ -348,6 +348,9 @@ export interface Product {
   updatedAt?: string;
   variants?: ProductVariant[];
   points?: number;
+  giftCard?: boolean;
+  voucher?: boolean;
+  promotion?: boolean;
 }
 
 export type CampaignType = string;

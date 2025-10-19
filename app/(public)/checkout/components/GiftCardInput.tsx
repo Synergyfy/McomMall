@@ -5,10 +5,21 @@ import { motion } from "framer-motion";
 import { Loader, QrCode, X } from "lucide-react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Html5QrcodeScanner } from "html5-qrcode";
 
 interface GiftCardInputProps {
-  onApply: (giftCardCode: string) => void;
+  onApply: (
+    giftCardCode: string,
+    value: number,
+    valueType: "fixed" | "percentage"
+  ) => void;
   isLoading: boolean;
 }
 
@@ -17,12 +28,14 @@ export default function GiftCardInput({
   isLoading,
 }: GiftCardInputProps) {
   const [giftCardCode, setGiftCardCode] = useState("");
+  const [redemptionValue, setRedemptionValue] = useState<number | string>("");
+  const [valueType, setValueType] = useState<"fixed" | "percentage">("fixed");
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
   const handleApply = () => {
-    if (giftCardCode) {
-      onApply(giftCardCode);
+    if (giftCardCode && redemptionValue) {
+      onApply(giftCardCode, Number(redemptionValue), valueType);
     }
   };
 
@@ -41,7 +54,6 @@ export default function GiftCardInput({
       const onScanSuccess = (decodedText: string) => {
         setGiftCardCode(decodedText);
         setShowScanner(false);
-        onApply(decodedText);
       };
 
       const onScanFailure = (error: unknown) => {
@@ -83,6 +95,27 @@ export default function GiftCardInput({
           disabled={isLoading}
           className="h-12 text-lg flex-grow"
         />
+        <Input
+          type="number"
+          placeholder="Amount"
+          value={redemptionValue}
+          onChange={(e) => setRedemptionValue(e.target.value)}
+          disabled={isLoading}
+          className="h-12 text-lg w-32"
+        />
+        <Select
+          value={valueType}
+          onValueChange={(value: "fixed" | "percentage") => setValueType(value)}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="h-12 text-lg w-40">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fixed">Fixed</SelectItem>
+            <SelectItem value="percentage">Percentage</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
@@ -100,7 +133,7 @@ export default function GiftCardInput({
           >
             <Button
               onClick={handleApply}
-              disabled={isLoading || !giftCardCode}
+              disabled={isLoading || !giftCardCode || !redemptionValue}
               className="h-12 text-lg font-semibold bg-green-600 text-white hover:bg-green-700 transition-all duration-300 w-full"
           >
             {isLoading ? (

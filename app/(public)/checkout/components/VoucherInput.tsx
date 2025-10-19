@@ -3,12 +3,23 @@
 import { useState, useEffect, useRef } from "react";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Loader, QrCode, X } from "lucide-react";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { motion } from "framer-motion";
 
 interface VoucherInputProps {
-  onApply: (code: string) => void;
+  onApply: (
+    code: string,
+    value: number,
+    valueType: "fixed" | "percentage"
+  ) => void;
   isLoading: boolean;
 }
 
@@ -17,6 +28,8 @@ export default function VoucherInput({
   isLoading,
 }: VoucherInputProps) {
   const [code, setCode] = useState("");
+  const [redemptionValue, setRedemptionValue] = useState<number | string>("");
+  const [valueType, setValueType] = useState<"fixed" | "percentage">("fixed");
   const [showScanner, setShowScanner] = useState(false);
   const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
@@ -35,7 +48,6 @@ export default function VoucherInput({
       const onScanSuccess = (decodedText: string) => {
         setCode(decodedText);
         setShowScanner(false);
-        onApply(decodedText);
       };
 
       const onScanFailure = (error: unknown) => {
@@ -61,6 +73,11 @@ export default function VoucherInput({
     };
   }, [showScanner, onApply]);
 
+  const handleApply = () => {
+    if (code && redemptionValue) {
+      onApply(code, Number(redemptionValue), valueType);
+    }
+  };
   return (
     <>
       <div className="flex flex-col sm:flex-row w-full items-stretch sm:items-center gap-2 mt-4">
@@ -72,6 +89,27 @@ export default function VoucherInput({
           className="flex-grow h-12 text-lg"
           disabled={isLoading}
         />
+        <Input
+          type="number"
+          placeholder="Amount"
+          value={redemptionValue}
+          onChange={(e) => setRedemptionValue(e.target.value)}
+          disabled={isLoading}
+          className="h-12 text-lg w-32"
+        />
+        <Select
+          value={valueType}
+          onValueChange={(value: "fixed" | "percentage") => setValueType(value)}
+          disabled={isLoading}
+        >
+          <SelectTrigger className="h-12 text-lg w-40">
+            <SelectValue placeholder="Type" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="fixed">Fixed</SelectItem>
+            <SelectItem value="percentage">Percentage</SelectItem>
+          </SelectContent>
+        </Select>
         <div className="flex items-center gap-2">
           <motion.div whileHover={{ scale: 1.05 }} whileTap={{ scale: 0.95 }}>
             <Button
@@ -88,8 +126,8 @@ export default function VoucherInput({
             className="flex-grow sm:flex-grow-0"
           >
             <Button
-              onClick={() => onApply(code)}
-              disabled={isLoading || !code}
+              onClick={handleApply}
+              disabled={isLoading || !code || !redemptionValue}
               className="h-12 text-lg font-semibold w-full"
           >
             {isLoading ? (
