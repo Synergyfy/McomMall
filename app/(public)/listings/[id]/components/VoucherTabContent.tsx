@@ -100,6 +100,13 @@ export default function VoucherTabContent({
                   {product.description}
                 </p>
               )}
+              {product.bonusThreshold && product.bonusAmount && (
+                <div className="mt-2">
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
+                        Buy for {CURRENCY}{product.bonusThreshold} and get {CURRENCY}{product.bonusAmount} extra!
+                    </span>
+                </div>
+              )}
               <div className="mt-4">
                 <h4 className="text-sm font-semibold text-gray-700">
                   Pricing Options:

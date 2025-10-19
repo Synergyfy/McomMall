@@ -227,6 +227,12 @@ export default function VoucherPurchaseModal({
         {!clientSecret && !paypalOrderId ? (
           <div className="grid gap-4 py-4">
             {/* Form fields */}
+            {product.bonusThreshold && product.bonusAmount && (
+                <div className="rounded-lg bg-green-50 p-4 text-green-700">
+                    <p className="font-bold">Bonus Offer!</p>
+                    <p>Buy a voucher for {CURRENCY}{product.bonusThreshold} or more and get an extra {CURRENCY}{product.bonusAmount} on us!</p>
+                </div>
+            )}
             <div className="space-y-2">
               <Label>Select Amount</Label>
               <div className="flex flex-wrap gap-2">
