@@ -90,6 +90,17 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
           false;
         const isActive = pathname === item.href || isParentActive;
 
+        const MenuItemContent = (
+          <div className="flex items-center space-x-2">
+            <item.icon
+              className={`w-5 h-5 ${
+                isActive ? 'text-orange-600' : 'text-orange-500'
+              }`}
+            />
+            <span>{item.title}</span>
+          </div>
+        );
+
         return (
           <li key={i}>
             <motion.div
@@ -103,25 +114,26 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                 }`}
                 onClick={() => item.subMenu && toggleSubMenu(item.title)}
               >
-                <Link
-                  href={item.href}
-                  className="flex items-center space-x-2"
-                  onClick={e => {
-                    if (item.title === 'Logout') {
-                      e.preventDefault();
-                      handleLogout();
-                    } else if (onLinkClick) {
-                      onLinkClick();
-                    }
-                  }}
-                >
-                  <item.icon
-                    className={`w-5 h-5 ${
-                      isActive ? 'text-orange-600' : 'text-orange-500'
-                    }`}
-                  />
-                  <span>{item.title}</span>
-                </Link>
+                {item.subMenu ? (
+                  <div className="flex items-center space-x-2">
+                    {MenuItemContent}
+                  </div>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className="flex items-center space-x-2"
+                    onClick={e => {
+                      if (item.title === 'Logout') {
+                        e.preventDefault();
+                        handleLogout();
+                      } else if (onLinkClick) {
+                        onLinkClick();
+                      }
+                    }}
+                  >
+                    {MenuItemContent}
+                  </Link>
+                )}
                 {item.subMenu && (
                   <ChevronDown
                     className={`w-5 h-5 transition-transform ${
