@@ -40,7 +40,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
-  { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
+  // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
 ];
 
 export const listingMenuItems: MenuItem[] = [
@@ -183,14 +183,14 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/loyalty',
     icon: Settings,
     subMenu: [
-      { title: 'Dashboard', href: '/dashboard/loyalty' },
+      // { title: 'Dashboard', href: '/dashboard/loyalty' },
       { title: 'Analytics', href: '/dashboard/loyalty/analytics' },
       { title: 'Customer view', href: '/dashboard/loyalty/customer' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
       { title: 'Promotion', href: '/dashboard/loyalty/promotion' },
       { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },
       { title: 'Offers', href: '/dashboard/loyalty/offers' },
-      { title: 'Settings', href: '/dashboard/loyalty/settings' },
+      // { title: 'Settings', href: '/dashboard/loyalty/settings' },
     ],
   },
   {
@@ -198,13 +198,13 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/gift-card',
     icon: Settings,
     subMenu: [
-      { title: 'Dashboard', href: '/dashboard/gift-card' },
+      // { title: 'Dashboard', href: '/dashboard/gift-card' },
       { title: 'Analytics', href: '/dashboard/gift-card/analytics' },
       { title: 'Templates', href: '/dashboard/gift-card/templates' },
       { title: 'Assets', href: '/dashboard/gift-card/assets' },
       { title: 'Check Balance', href: '/dashboard/gift-card/check-balance' },
-      { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
-      { title: 'Settings', href: '/dashboard/gift-card/settings' },
+      // { title: 'Email Designs', href: '/dashboard/gift-card/email-design' },
+      // { title: 'Settings', href: '/dashboard/gift-card/settings' },
     ],
   },
 
