@@ -127,8 +127,9 @@ export default function CheckoutClient() {
     setVoucherLoading(true);
     try {
       const result = await applyVoucher(code);
-      if (result.balance > 0) {
-        return result.balance;
+      const balance = parseFloat(result.balance);
+      if (balance > 0) {
+        return balance;
       } else {
         alert("This voucher has no balance.");
       }
@@ -149,8 +150,9 @@ export default function CheckoutClient() {
     setGiftCardLoading(true);
     try {
       const result = await checkGiftCardBalance(code);
-      if (result.currentBalance > 0) {
-        return result.currentBalance;
+      const balance = parseFloat(result.currentBalance);
+      if (balance > 0) {
+        return balance;
       } else {
         alert("This gift card has no balance.");
       }

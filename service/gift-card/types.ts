@@ -85,8 +85,8 @@ export interface MyPurchase {
 }
 
 export interface GiftCardBalanceResponse {
-  initialBalance: number;
-  currentBalance: number;
+  initialBalance: string;
+  currentBalance: string;
   currency: string;
   expiryDate: string;
 }

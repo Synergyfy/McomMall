@@ -31,8 +31,8 @@ export interface RedeemVoucherDto {
 export interface Voucher {
   id: string;
   code: string;
-  initialValue: number;
-  balance: number;
+  initialValue: string;
+  balance: string;
   status:
     | 'UNREDEEMED'
     | 'PARTIALLY_REDEEMED'

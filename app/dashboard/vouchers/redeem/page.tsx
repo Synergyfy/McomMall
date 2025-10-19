@@ -27,11 +27,11 @@ const VoucherDetailsCard = ({ voucher }: { voucher: Voucher }) => (
       </p>
       <p>
         <strong>Initial Value:</strong> {CURRENCY}
-        {voucher.initialValue.toFixed(2)}
+        {parseFloat(voucher.initialValue).toFixed(2)}
       </p>
       <p>
         <strong>New Balance:</strong> {CURRENCY}
-        {voucher.balance.toFixed(2)}
+        {parseFloat(voucher.balance).toFixed(2)}
       </p>
       <p>
         <strong>Status:</strong> {voucher.status.replace('_', ' ')}
