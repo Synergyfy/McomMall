@@ -1,9 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
 import { RootState } from '@/service/store/store';
@@ -28,9 +28,31 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const { userRole } = useSelector((state: RootState) => state.auth);
   const dispatch = useDispatch();
   const router = useRouter();
+  const pathname = usePathname();
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
   );
+
+  useEffect(() => {
+    const allMenuItems = [
+      ...mainMenuItems,
+      ...listingMenuItems,
+      ...productMenuItems,
+      ...serviceMenuItems,
+      ...accountMenuItems,
+      ...pluginMenuItems,
+      ...historyMenuItems,
+      ...marketingMenuItems,
+    ];
+
+    const activeMenuItem = allMenuItems.find(item =>
+      item.subMenu?.some(subItem => pathname.startsWith(subItem.href))
+    );
+
+    if (activeMenuItem) {
+      setOpenSubMenus(prev => ({ ...prev, [activeMenuItem.title]: true }));
+    }
+  }, [pathname]);
 
   const handleLogout = () => {
     dispatch(logout());
@@ -62,66 +84,84 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
   const renderMenuItems = (items: MenuItem[]) => (
     <ul className="space-y-1">
-      {items.map((item, i) => (
-        <li key={i}>
-          <motion.div
-            whileHover={{ scale: 1.02, backgroundColor: '#ffffff' }}
-            transition={{ duration: 0.2 }}
-            className="rounded-2xl"
-          >
-            <div
-              className="flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white"
-              onClick={() => item.subMenu && toggleSubMenu(item.title)}
+      {items.map((item, i) => {
+        const isParentActive =
+          item.subMenu?.some(subItem => pathname.startsWith(subItem.href)) ??
+          false;
+        const isActive = pathname === item.href || isParentActive;
+
+        return (
+          <li key={i}>
+            <motion.div
+              whileHover={{ scale: 1.02, backgroundColor: '#ffffff' }}
+              transition={{ duration: 0.2 }}
+              className="rounded-2xl"
             >
-              <Link
-                href={item.href}
-                className="flex items-center space-x-2"
-                onClick={e => {
-                  if (item.title === 'Logout') {
-                    e.preventDefault();
-                    handleLogout();
-                  } else if (onLinkClick) {
-                    onLinkClick();
-                  }
-                }}
+              <div
+                className={`flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white ${
+                  isActive ? 'text-orange-600' : ''
+                }`}
+                onClick={() => item.subMenu && toggleSubMenu(item.title)}
               >
-                <item.icon className="w-5 h-5 text-orange-500" />
-                <span>{item.title}</span>
-              </Link>
-              {item.subMenu && (
-                <ChevronDown
-                  className={`w-5 h-5 transition-transform ${
-                    openSubMenus[item.title] ? 'rotate-180' : ''
-                  }`}
-                />
+                <Link
+                  href={item.href}
+                  className="flex items-center space-x-2"
+                  onClick={e => {
+                    if (item.title === 'Logout') {
+                      e.preventDefault();
+                      handleLogout();
+                    } else if (onLinkClick) {
+                      onLinkClick();
+                    }
+                  }}
+                >
+                  <item.icon
+                    className={`w-5 h-5 ${
+                      isActive ? 'text-orange-600' : 'text-orange-500'
+                    }`}
+                  />
+                  <span>{item.title}</span>
+                </Link>
+                {item.subMenu && (
+                  <ChevronDown
+                    className={`w-5 h-5 transition-transform ${
+                      openSubMenus[item.title] ? 'rotate-180' : ''
+                    }`}
+                  />
+                )}
+              </div>
+            </motion.div>
+            <AnimatePresence>
+              {item.subMenu && openSubMenus[item.title] && (
+                <motion.ul
+                  initial={{ height: 0, opacity: 0 }}
+                  animate={{ height: 'auto', opacity: 1 }}
+                  exit={{ height: 0, opacity: 0 }}
+                  transition={{ duration: 0.3 }}
+                  className="ml-4 mt-1 space-y-1 overflow-hidden"
+                >
+                  {item.subMenu.map((subItem, j) => {
+                    const isSubMenuActive = pathname.startsWith(subItem.href);
+                    return (
+                      <li key={j}>
+                        <Link
+                          href={subItem.href}
+                          className={`block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8 ${
+                            isSubMenuActive ? 'text-orange-600' : ''
+                          }`}
+                          onClick={onLinkClick}
+                        >
+                          {subItem.title}
+                        </Link>
+                      </li>
+                    );
+                  })}
+                </motion.ul>
               )}
-            </div>
-          </motion.div>
-          <AnimatePresence>
-            {item.subMenu && openSubMenus[item.title] && (
-              <motion.ul
-                initial={{ height: 0, opacity: 0 }}
-                animate={{ height: 'auto', opacity: 1 }}
-                exit={{ height: 0, opacity: 0 }}
-                transition={{ duration: 0.3 }}
-                className="ml-4 mt-1 space-y-1 overflow-hidden"
-              >
-                {item.subMenu.map((subItem, j) => (
-                  <li key={j}>
-                    <Link
-                      href={subItem.href}
-                      className="block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8"
-                      onClick={onLinkClick}
-                    >
-                      {subItem.title}
-                    </Link>
-                  </li>
-                ))}
-              </motion.ul>
-            )}
-          </AnimatePresence>
-        </li>
-      ))}
+            </AnimatePresence>
+          </li>
+        );
+      })}
     </ul>
   );
 
