@@ -19,8 +19,14 @@ import {
 } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 type VoucherProductFormData = CreateVoucherProductDto;
 
@@ -75,6 +81,19 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     } else {
       processedData.minCustomAmount = Number(data.minCustomAmount);
       processedData.maxCustomAmount = Number(data.maxCustomAmount);
+    }
+
+    if (data.bonusThreshold || data.bonusAmount) {
+      if (!data.bonusThreshold || data.bonusThreshold <= 0) {
+        // This should be caught by form validation, but as a safeguard.
+        return;
+      }
+      if (!data.bonusAmount || data.bonusAmount <= 0) {
+        // This should be caught by form validation, but as a safeguard.
+        return;
+      }
+      processedData.bonusThreshold = Number(data.bonusThreshold);
+      processedData.bonusAmount = Number(data.bonusAmount);
     }
 
     onSubmit(processedData);
@@ -221,6 +240,60 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           </div>
         </>
       )}
+
+        <div>
+            <div className="flex items-center space-x-2">
+                <Label htmlFor="bonusThreshold">Bonus Threshold</Label>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>If a customer spends at least this much on a single voucher, they will receive a bonus amount.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+            <Input
+                id="bonusThreshold"
+                type="number"
+                {...register('bonusThreshold', { valueAsNumber: true })}
+                className="mt-1"
+            />
+            {errors.bonusThreshold && (
+                <p className="mt-1 text-red-500">
+                    {errors.bonusThreshold.message}
+                </p>
+            )}
+        </div>
+
+        <div>
+            <div className="flex items-center space-x-2">
+                <Label htmlFor="bonusAmount">Bonus Amount</Label>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Info className="h-4 w-4 text-gray-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                            <p>The extra amount to add to the voucher balance when the bonus threshold is met.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+            <Input
+                id="bonusAmount"
+                type="number"
+                {...register('bonusAmount', { valueAsNumber: true })}
+                className="mt-1"
+            />
+            {errors.bonusAmount && (
+                <p className="mt-1 text-red-500">
+                    {errors.bonusAmount.message}
+                </p>
+            )}
+        </div>
 
       <div>
         <Label htmlFor="expiryDays">Expiry in Days (optional)</Label>

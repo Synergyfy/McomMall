@@ -9,8 +9,14 @@ import { useAddGiftCardTemplate } from '@/service/gift-card/hook';
 import { CreateGiftCardTemplateDto } from '@/service/gift-card/types';
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
-import { X } from 'lucide-react';
+import { X, Info } from 'lucide-react';
 import { toast } from "sonner";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import Image from "next/image";
 import { SketchPicker, ColorResult } from 'react-color';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
@@ -41,7 +47,7 @@ const CreateGiftCardTemplatePage = () => {
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
-    if (name === "minCustomAmount" || name === "maxCustomAmount") {
+    if (name === "minCustomAmount" || name === "maxCustomAmount" || name === "bonusThreshold" || name === "bonusAmount") {
       const parsedValue = parseFloat(value);
       setFormData((prev) => ({
         ...prev,
@@ -116,6 +122,15 @@ const CreateGiftCardTemplatePage = () => {
       if (formData.minCustomAmount && formData.maxCustomAmount && formData.minCustomAmount >= formData.maxCustomAmount) {
         newErrors.maxCustomAmount = "Maximum amount must be greater than the minimum amount.";
       }
+    }
+
+    if (formData.bonusThreshold || formData.bonusAmount) {
+        if (!formData.bonusThreshold || formData.bonusThreshold <= 0) {
+            newErrors.bonusThreshold = "Bonus threshold must be a positive number.";
+        }
+        if (!formData.bonusAmount || formData.bonusAmount <= 0) {
+            newErrors.bonusAmount = "Bonus amount must be a positive number.";
+        }
     }
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -273,6 +288,56 @@ const CreateGiftCardTemplatePage = () => {
               <Switch id="allowReloading" checked={formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
               <Label htmlFor="allowReloading">Allow Reloading</Label>
             </div>
+
+    <div>
+        <div className="flex items-center space-x-2">
+            <Label htmlFor="bonusThreshold">Bonus Threshold</Label>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-gray-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>If a customer spends at least this much on a single gift card, they will receive a bonus amount.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
+        <Input
+            id="bonusThreshold"
+            name="bonusThreshold"
+            type="number"
+            value={formData.bonusThreshold || ''}
+            onChange={handleInputChange}
+            className="mt-1"
+        />
+        {errors.bonusThreshold && <p className="text-red-500 text-xs mt-1">{errors.bonusThreshold}</p>}
+    </div>
+
+    <div>
+        <div className="flex items-center space-x-2">
+            <Label htmlFor="bonusAmount">Bonus Amount</Label>
+            <TooltipProvider>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Info className="h-4 w-4 text-gray-500" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        <p>The extra amount to add to the gift card balance when the bonus threshold is met.</p>
+                    </TooltipContent>
+                </Tooltip>
+            </TooltipProvider>
+        </div>
+        <Input
+            id="bonusAmount"
+            name="bonusAmount"
+            type="number"
+            value={formData.bonusAmount || ''}
+            onChange={handleInputChange}
+            className="mt-1"
+        />
+        {errors.bonusAmount && <p className="text-red-500 text-xs mt-1">{errors.bonusAmount}</p>}
+    </div>
 
             {formData.allowCustomAmount && (
               <div className="grid grid-cols-2 gap-4">

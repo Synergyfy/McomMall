@@ -238,6 +238,12 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
             <h1 className="text-3xl font-bold mb-6">Create Your Gift Card</h1>
             <div className="space-y-2">
               <Accordion title="1. Choose Value" isOpen={true}>
+    {template.bonusAmount && template.bonusThreshold && (
+        <div className="mb-4 p-3 bg-green-100 border-l-4 border-green-500 text-green-700">
+            <p className="font-bold">Bonus Offer!</p>
+            <p>Buy a gift card for £{template.bonusThreshold} or more and get an extra £{template.bonusAmount} on us!</p>
+        </div>
+    )}
                 <div className="flex flex-wrap gap-2">
                   {template.fixedAmounts?.map((value) => (
                       <button
@@ -249,7 +255,7 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                             : "bg-white text-gray-800 border border-gray-300 hover:bg-gray-100"
                         }`}
                       >
-                        ${value}
+                        £{value}
                       </button>
                     ))}
                 </div>
@@ -265,7 +271,7 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                       value={customAmountInput}
                       onChange={handleCustomAmountChange}
                       placeholder={
-                        `Enter amount between $${template.minCustomAmount} and $${template.maxCustomAmount}`
+                        `Enter amount between £${template.minCustomAmount} and £${template.maxCustomAmount}`
                       }
                       className={`mt-1 block w-full px-3 py-2 border ${
                         errors.customAmount
@@ -652,8 +658,14 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
               <div className="space-y-4 text-sm">
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-600">Amount:</span>
-                  <span className="font-semibold">${formData.amount}</span>
+                  <span className="font-semibold">£{formData.amount}</span>
                 </div>
+                {template.bonusAmount && template.bonusThreshold && formData.amount >= template.bonusThreshold && (
+                    <div className="flex justify-between text-green-600">
+                        <span className="font-medium">Bonus:</span>
+                        <span className="font-semibold">£{template.bonusAmount}</span>
+                    </div>
+                )}
                 <div className="flex justify-between">
                   <span className="font-medium text-gray-600">
                     Recipient Name:
