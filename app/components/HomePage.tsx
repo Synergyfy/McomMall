@@ -108,6 +108,14 @@ const SwirlArrow = () => (
   </svg>
 );
 
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+
 // --- Main App Component ---
 export default function HomePage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
@@ -115,6 +123,7 @@ export default function HomePage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [location, setLocation] = useState('');
   const [searchError, setSearchError] = useState('');
+  const [searchType, setSearchType] = useState('product_service');
   const router = useRouter();
   const {
     data: recentListings,
@@ -157,7 +166,12 @@ export default function HomePage() {
     if (location) {
       query = `${searchQuery} in ${location}`;
     }
-    router.push(`/listings?queryText=${encodeURIComponent(query)}`);
+
+    if (searchType === 'product_service') {
+      router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
+    } else {
+      router.push(`/listings?queryText=${encodeURIComponent(query)}`);
+    }
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -217,6 +231,19 @@ export default function HomePage() {
               transition={{ duration: 0.8, delay: 0.4 }}
             >
               <div className="w-full md:w-auto flex-1 flex items-center border-b md:border-b-0 md:border-r border-gray-200 p-2">
+                <Select value={searchType} onValueChange={setSearchType}>
+                  <SelectTrigger className="w-[180px]">
+                    <SelectValue placeholder="Select type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="product_service">
+                      Products/Services
+                    </SelectItem>
+                    <SelectItem value="business_listing">
+                      Business/Listings
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
                 <Search className="text-gray-400 mr-2" size={20} />
                 <input
                   type="text"
