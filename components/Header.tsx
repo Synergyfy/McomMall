@@ -12,7 +12,6 @@ import {
   Menu as MenuIcon,
   X as XIcon,
 } from 'lucide-react';
-import AuthWithRedirect from './AuthWithRedirect';
 import { Suspense, useState } from 'react';
 import { NavMenu, menuItems, ListItem } from './NavMenu';
 import { usePathname } from 'next/navigation';
@@ -184,17 +183,18 @@ export default function Header() {
             {accessToken ? (
               <UserNav />
             ) : (
-              <Suspense fallback={<div>Loading...</div>}>
-                <AuthWithRedirect>
-                  <div className="hidden sm:flex items-center">
-                    <User className="w-4 h-4 mr-2" />
+              <div className="hidden sm:flex items-center space-x-2">
+                <Link href="/signin">
+                  <Button variant="outline" size="sm" className="text-white hover:text-red-400">
                     Sign In
-                  </div>
-                  <div className="sm:hidden">
-                    <User className="w-5 h-5" />
-                  </div>
-                </AuthWithRedirect>
-              </Suspense>
+                  </Button>
+                </Link>
+                <Link href="/signup">
+                  <Button variant="destructive" size="sm">
+                    Sign Up
+                  </Button>
+                </Link>
+              </div>
             )}
 
             {/* Mobile Nav Trigger */}
