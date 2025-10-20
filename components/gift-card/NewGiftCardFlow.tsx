@@ -239,9 +239,10 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
             <div className="space-y-2">
               <Accordion title="1. Choose Value" isOpen={true}>
     {template.bonusAmount && template.bonusThreshold && (
-        <div className="mb-4 p-3 bg-green-100 border-l-4 border-green-500 text-green-700">
-            <p className="font-bold">Bonus Offer!</p>
-            <p>Buy a gift card for £{template.bonusThreshold} or more and get an extra £{template.bonusAmount} on us!</p>
+        <div className="mb-4">
+            <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
+                Buy for £{template.bonusThreshold} and get £{template.bonusAmount} extra!
+            </span>
         </div>
     )}
                 <div className="flex flex-wrap gap-2">
