@@ -119,3 +119,14 @@ export interface Service extends AbstractBaseEntity {
   configurableAddons: ConfigurableAddon[];
   deletedAt?: Date | null;
 }
+
+export interface PaginatedResponse<T> {
+  items: T[];
+  meta: {
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
+    totalPages: number;
+    currentPage: number;
+  };
+}

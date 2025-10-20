@@ -2,17 +2,9 @@
 
 import React, { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
-import { useQuery } from '@tanstack/react-query';
 import { Search, MapPin } from 'lucide-react';
-import { Product, Service } from './types';
-
-const fetchSearchResults = async (query: string) => {
-  const response = await fetch(`/search?q=${encodeURIComponent(query)}`);
-  if (!response.ok) {
-    throw new Error('Network response was not ok');
-  }
-  return response.json();
-};
+import { useSearch } from '@/service/search/hook';
+import { Product, Service } from '@/service/search/types';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -21,12 +13,7 @@ const SearchResultsPage = () => {
   const [location, setLocation] = useState('');
 
   const query = searchParams.get('q') || '';
-
-  const { data, isLoading, isError } = useQuery({
-    queryKey: ['searchResults', query],
-    queryFn: () => fetchSearchResults(query),
-    enabled: !!query,
-  });
+  const { data, isLoading, isError } = useSearch(query);
 
   useEffect(() => {
     setSearchQuery(query);
