@@ -74,6 +74,14 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
                     </div>
                   </CardHeader>
                   <CardContent className="p-4 flex-grow">
+                    {product.bonusAmount && product.bonusThreshold && (
+                        <Badge
+                            variant="default"
+                            className="mb-2 bg-green-100 text-green-800 border-green-300 text-sm font-semibold"
+                        >
+                            Bonus: Buy for £{product.bonusThreshold} get £{product.bonusAmount} extra!
+                        </Badge>
+                    )}
                     <CardTitle className="text-xl font-bold text-gray-900 mb-2">
                       {product.title}
                     </CardTitle>

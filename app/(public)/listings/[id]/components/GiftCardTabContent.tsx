@@ -68,6 +68,13 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
           <div className="p-4">
             <h3 className="text-lg font-bold text-gray-900">{template.name}</h3>
             <p className="text-sm text-gray-600 mt-1">{template.description}</p>
+            {template.bonusThreshold && template.bonusAmount && (
+                <div className="mt-2">
+                    <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
+                        Buy for £{template.bonusThreshold} and get £{template.bonusAmount} extra!
+                    </span>
+                </div>
+            )}
             <div className="mt-4">
               <h4 className="text-sm font-semibold text-gray-700">Available Amounts:</h4>
               <div className="flex flex-wrap gap-2 mt-2">

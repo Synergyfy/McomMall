@@ -348,6 +348,8 @@ export interface Product {
   updatedAt?: string;
   variants?: ProductVariant[];
   points?: number;
+  bonusThreshold?: number;
+  bonusAmount?: number;
 }
 
 export type CampaignType = string;

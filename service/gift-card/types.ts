@@ -13,6 +13,8 @@ export interface GiftCardTemplate {
     isActive: boolean;
     ownerId: string; // User UUID
     allowReloading?: boolean;
+    bonusThreshold?: number;
+    bonusAmount?: number;
 }
 
 export interface CreateGiftCardTemplateDto {
@@ -27,6 +29,8 @@ export interface CreateGiftCardTemplateDto {
   maxCustomAmount?: number;
   expiryPeriodDays?: number;
   allowReloading?: boolean;
+  bonusThreshold?: number;
+  bonusAmount?: number;
 }
 
 export interface InitiatePurchaseDto {

@@ -56,11 +56,16 @@ export function FeatureToggle({ featureName }: FeatureToggleProps) {
           id={featureName}
           checked={isChecked}
           onCheckedChange={() => setIsModalOpen(true)}
+          className="h-6 w-12 data-[state=checked]:bg-orange-600"
         />
         <label htmlFor={featureName} className="text-sm font-medium">
           {isChecked ? 'Enabled' : 'Disabled'}
         </label>
       </div>
+      <p className="text-xs text-gray-500 mt-1">
+        When toggled on, the {featureName} feature will be available to all users.
+        When toggled off, it will be hidden.
+      </p>
       <AlertDialog open={isModalOpen} onOpenChange={setIsModalOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
