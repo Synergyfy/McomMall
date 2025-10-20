@@ -19,11 +19,11 @@ export default function ProductCard({ item }: ProductCardProps) {
   const description = item.shortDescription || item.description;
 
   const handleAddToCart = () => {
-    addItemToCart({ productId: item.id, quantity: 1 });
+    addItemToCart({ productId: item.id, quantity: 1, product: item });
   };
 
   const handleBuyNow = () => {
-    addItemToCart({ productId: item.id, quantity: 1 });
+    addItemToCart({ productId: item.id, quantity: 1, product: item });
     router.push('/checkout');
   };
 

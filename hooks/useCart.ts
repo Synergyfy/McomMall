@@ -4,12 +4,14 @@ import api from '@/service/api';
 import { useAuth } from '@/service/auth/hook';
 import { RootState, AppDispatch } from '@/service/store/store';
 import { setCart, setLoading } from '@/service/store/cartSlice';
+import { v4 as uuidv4 } from 'uuid';
 
 // DTOs
 export interface AddItemToCartDto {
   productId: string;
   quantity: number;
   variants?: Record<string, string>;
+  product?: any;
 }
 
 export interface UpdateCartItemDto {
@@ -20,9 +22,9 @@ export interface UpdateCartItemDto {
 // Cart interfaces
 export interface CartItem {
   id: string;
-  product: any; // You might want to replace 'any' with a proper Product interface
+  product: any;
   quantity: number;
-  cart: any;
+  cart?: any;
   created_at: Date;
   updated_at: Date;
 }
@@ -31,7 +33,7 @@ export interface Cart {
   id: string;
   items: CartItem[];
   total: number;
-  user: any; // You might want to replace 'any' with a proper User interface
+  user?: any;
   created_at: Date;
   updated_at: Date;
 }
@@ -52,7 +54,6 @@ export const useCart = () => {
         localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));
       } catch (error) {
         console.error('Failed to fetch cart:', error);
-        // Attempt to load from local storage if API fails
         const localCart = localStorage.getItem(CART_STORAGE_KEY);
         if (localCart) {
           dispatch(setCart(JSON.parse(localCart)));
@@ -65,11 +66,54 @@ export const useCart = () => {
     if (token) {
       fetchCart();
     } else {
+      const localCart = localStorage.getItem(CART_STORAGE_KEY);
+      if (localCart) {
+        dispatch(setCart(JSON.parse(localCart)));
+      }
       dispatch(setLoading(false));
     }
   }, [token, dispatch]);
 
   const addItemToCart = async (item: AddItemToCartDto) => {
+    if (!token) {
+      const localCartString = localStorage.getItem(CART_STORAGE_KEY);
+      let localCart: Cart = localCartString
+        ? JSON.parse(localCartString)
+        : {
+            id: uuidv4(),
+            items: [],
+            total: 0,
+            created_at: new Date(),
+            updated_at: new Date(),
+          };
+
+      const existingItem = localCart.items.find(
+        i => i.product.id === item.productId
+      );
+
+      if (existingItem) {
+        existingItem.quantity += item.quantity;
+      } else {
+        localCart.items.push({
+          id: uuidv4(),
+          product: item.product,
+          quantity: item.quantity,
+          created_at: new Date(),
+          updated_at: new Date(),
+        });
+      }
+
+      localCart.total = localCart.items.reduce(
+        (acc, item) => acc + (item.product.price || item.product.fixedPrice) * item.quantity,
+        0
+      );
+      localCart.updated_at = new Date();
+
+      localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(localCart));
+      dispatch(setCart(localCart));
+      return;
+    }
+
     try {
       const { data } = await api.post<Cart>('/cart/add', {
         productId: item.productId,
@@ -84,6 +128,21 @@ export const useCart = () => {
   };
 
   const updateCartItem = async (item: UpdateCartItemDto) => {
+    if (!token) {
+        const localCartString = localStorage.getItem(CART_STORAGE_KEY);
+        if (!localCartString) return;
+        let localCart: Cart = JSON.parse(localCartString);
+        const itemToUpdate = localCart.items.find(i => i.product.id === item.productId);
+
+        if (itemToUpdate) {
+            itemToUpdate.quantity = item.quantity;
+            localCart.total = localCart.items.reduce((acc, item) => acc + (item.product.price || item.product.fixedPrice) * item.quantity, 0);
+            localCart.updated_at = new Date();
+            localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(localCart));
+            dispatch(setCart(localCart));
+        }
+        return;
+    }
     try {
       const { data } = await api.patch<Cart>('/cart/update', item);
       dispatch(setCart(data));
@@ -94,6 +153,17 @@ export const useCart = () => {
   };
 
   const removeCartItem = async (productId: string) => {
+    if (!token) {
+        const localCartString = localStorage.getItem(CART_STORAGE_KEY);
+        if (!localCartString) return;
+        let localCart: Cart = JSON.parse(localCartString);
+        localCart.items = localCart.items.filter(i => i.product.id !== productId);
+        localCart.total = localCart.items.reduce((acc, item) => acc + (item.product.price || item.product.fixedPrice) * item.quantity, 0);
+        localCart.updated_at = new Date();
+        localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(localCart));
+        dispatch(setCart(localCart));
+        return;
+    }
     try {
       const { data } = await api.delete<Cart>(`/cart/remove/${productId}`);
       dispatch(setCart(data));
@@ -104,6 +174,11 @@ export const useCart = () => {
   };
 
   const clearCart = async () => {
+    if (!token) {
+        localStorage.removeItem(CART_STORAGE_KEY);
+        dispatch(setCart(null));
+        return;
+    }
     try {
       await api.delete('/cart');
       dispatch(setCart(null));
