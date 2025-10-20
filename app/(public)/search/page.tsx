@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { Search, MapPin } from 'lucide-react';
 import { useSearch } from '@/service/search/hook';
 import { Product, Service } from '@/service/search/types';
+import { CURRENCY } from '@/lib/utils';
+import Image from 'next/image';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -30,6 +32,19 @@ const SearchResultsPage = () => {
     if (event.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  const renderPrice = (item: Product | Service) => {
+    if ('price' in item) {
+      return `${CURRENCY}${item.price.toFixed(2)}`;
+    }
+    if ('pricePerHour' in item && item.pricePerHour) {
+      return `${CURRENCY}${item.pricePerHour.toFixed(2)}/hr`;
+    }
+    if ('fixedPrice' in item && item.fixedPrice) {
+      return `${CURRENCY}${item.fixedPrice.toFixed(2)}`;
+    }
+    return 'Price not available';
   };
 
   return (
@@ -78,10 +93,20 @@ const SearchResultsPage = () => {
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {data?.items?.map((item: Product | Service) => (
-              <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden">
-                <div className="p-4">
-                  <h2 className="font-bold text-lg mb-2">{'title' in item ? item.title : item.name}</h2>
-                  <p className="text-gray-600 text-sm">{'shortDescription' in item ? item.shortDescription : item.description}</p>
+              <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+                <div className="relative h-48 w-full">
+                  <Image
+                    src={item.media?.[0] || '/placeholder.png'}
+                    alt={'title' in item ? item.title : item.name}
+                    layout="fill"
+                    objectFit="cover"
+                  />
+                </div>
+                <div className="p-4 flex flex-col flex-grow">
+                  <h2 className="font-bold text-lg mb-2 truncate">{'title' in item ? item.title : item.name}</h2>
+                  <p className="text-gray-600 text-sm mb-4 flex-grow">{'shortDescription' in item ? item.shortDescription : item.description}</p>
+                  <p className="text-sm text-gray-500 mb-2">Sold by: {item.business.businessName}</p>
+                  <div className="text-lg font-bold text-orange-600">{renderPrice(item)}</div>
                 </div>
               </div>
             ))}
