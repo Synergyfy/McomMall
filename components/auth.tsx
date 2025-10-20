@@ -486,47 +486,69 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 )}
               </div>
             )}
-            {step === 'enter-email' && (
-              <div className="grid gap-3">
-                <Label htmlFor="email" className="text-lg">
-                  Email
-                </Label>
-                <Input
-                  id="email"
-                  name="email"
-                  value={formData.email}
-                  onChange={handleInputChange}
-                  placeholder="Your email"
-                  className={`sm:h-[3rem] ${
-                    errors.email ? 'border-orange-500' : ''
-                  }`}
-                />
-                {errors.email && (
-                  <p className="text-orange-500 text-sm">{errors.email}</p>
-                )}
+            {mode === 'register' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="email" className="text-lg">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Your email"
+                    className={`sm:h-[3rem] ${
+                      errors.email ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.email && (
+                    <p className="text-orange-500 text-sm">{errors.email}</p>
+                  )}
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="phoneNumber" className="text-lg">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="Your phone number"
+                    className={`sm:h-[3rem] ${
+                      errors.phoneNumber ? 'border-red-500' : ''
+                    }`}
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+                  )}
+                </div>
               </div>
+            ) : (
+              step === 'enter-email' && (
+                <div className="grid gap-3">
+                  <Label htmlFor="email" className="text-lg">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Your email"
+                    className={`sm:h-[3rem] ${
+                      errors.email ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.email && (
+                    <p className="text-orange-500 text-sm">{errors.email}</p>
+                  )}
+                </div>
+              )
             )}
-            {mode === 'register' && (
-              <div className="grid gap-3">
-                <Label htmlFor="phoneNumber" className="text-lg">
-                  Phone Number
-                </Label>
-                <Input
-                  id="phoneNumber"
-                  name="phoneNumber"
-                  value={formData.phoneNumber}
-                  onChange={handleInputChange}
-                  placeholder="Your phone number"
-                  className={`sm:h-[3rem] ${
-                    errors.phoneNumber ? 'border-red-500' : ''
-                  }`}
-                />
-                {errors.phoneNumber && (
-                  <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
-                )}
-              </div>
-            )}
-            {(mode === 'login' || mode === 'register') && (
+          {mode === 'register' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-3">
                 <Label htmlFor="password" className="text-lg">
                   Password
@@ -555,8 +577,6 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                   <p className="text-orange-500 text-sm">{errors.password}</p>
                 )}
               </div>
-            )}
-            {mode === 'register' && (
               <div className="grid gap-3">
                 <Label htmlFor="password2" className="text-lg">
                   Confirm Password
@@ -588,7 +608,39 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                     {errors.confirmPassword}
                   </p>
                 )}
+                </div>
               </div>
+          ) : (
+            mode === 'login' && (
+              <div className="grid gap-3">
+                <Label htmlFor="password" className="text-lg">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Your password"
+                    className={`sm:h-[3rem] pr-10 ${
+                      errors.password ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-orange-500 text-sm">{errors.password}</p>
+                )}
+                </div>
+            )
             )}
             {((mode === 'forgot-password' && step === 'enter-otp') ||
               mode === 'verify-email') && (
