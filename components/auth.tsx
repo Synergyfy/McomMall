@@ -1,21 +1,11 @@
 'use client';
 
 import { Button } from '@/components/ui/button';
-import {
-  Dialog,
-  DialogClose,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { TermsCondtion } from './terms-condition';
 import { RememberMe } from './remember-me';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { toast } from 'sonner';
 import {
   ErrorResponse,
@@ -27,25 +17,17 @@ import {
 } from '@/service/auth/hook';
 import { Eye, EyeOff } from 'lucide-react';
 import { UserRole } from '@/service/auth/types';
-import { useRouter } from 'next/navigation';
-import { useDispatch, useSelector } from 'react-redux';
-import { RootState, AppDispatch } from '@/service/store/store';
-import { setLoginModalOpen } from '@/service/store/uiSlice';
+import { useRouter, usePathname } from 'next/navigation';
 import { SuccessDialog } from './SuccessDialog';
 import { ErrorDialog } from './ErrorDialog';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
 type Step = 'enter-email' | 'enter-otp';
 
-const Auth = ({
-  children,
-  redirect,
-}: {
-  children?: React.ReactNode;
-  redirect: string | null;
-}) => {
-  const dispatch: AppDispatch = useDispatch();
-  const { isLoginModalOpen } = useSelector((state: RootState) => state.ui);
+const Auth = ({ redirect }: { redirect: string | null }) => {
+  const router = useRouter();
+  const pathname = usePathname();
+
   const [mode, setMode] = useState<Mode>('login');
   const [step, setStep] = useState<Step>('enter-email');
   const [emailForVerification, setEmailForVerification] = useState('');
@@ -82,10 +64,22 @@ const Auth = ({
   const { isPending: resetPasswordPending, mutateAsync: resetPasswordAsync } =
     useResetPassword();
 
-  const router = useRouter();
+  useEffect(() => {
+    if (pathname === '/signin') {
+      setMode('login');
+    } else if (pathname === '/signup') {
+      setMode('register');
+    }
+  }, [pathname]);
 
   const handleToggleMode = (newMode: Mode) => {
-    setMode(newMode);
+    if (newMode === 'login') {
+      router.push('/signin');
+    } else if (newMode === 'register') {
+      router.push('/signup');
+    } else {
+      setMode(newMode);
+    }
     setStep('enter-email');
     setSelectedRole(null);
     setFormData({
@@ -245,7 +239,8 @@ const Auth = ({
   };
 
   const handleSendOtp = async () => {
-    const email = mode === 'verify-email' ? emailForVerification : formData.email;
+    const email =
+      mode === 'verify-email' ? emailForVerification : formData.email;
     if (!email) {
       setDialogMessage('Email is required.');
       setIsErrorDialogOpen(true);
@@ -254,8 +249,7 @@ const Auth = ({
     try {
       await sendOtpAsync({
         email,
-        type:
-          mode === 'forgot-password' ? 'PASSWORD_RESET' : 'VERIFICATION',
+        type: mode === 'forgot-password' ? 'PASSWORD_RESET' : 'VERIFICATION',
       });
       setDialogMessage('OTP sent successfully');
       setIsSuccessDialogOpen(true);
@@ -274,8 +268,7 @@ const Auth = ({
       await validateOtpAsync({
         email: formData.email,
         otp: formData.otp,
-        type:
-          mode === 'forgot-password' ? 'PASSWORD_RESET' : 'VERIFICATION',
+        type: mode === 'forgot-password' ? 'PASSWORD_RESET' : 'VERIFICATION',
       });
       setDialogMessage('OTP validated successfully');
       setIsSuccessDialogOpen(true);
@@ -289,8 +282,11 @@ const Auth = ({
           toast.success('Login successful', {
             description: `Welcome, ${response.name}!`,
           });
-          handleToggleMode('login');
-          dispatch(setLoginModalOpen(false));
+          if (redirect) {
+            router.push(redirect);
+          } else {
+            router.push('/');
+          }
         } catch (error: unknown) {
           const err = error as ErrorResponse;
           toast.error('Failed to login', {
@@ -343,7 +339,9 @@ const Auth = ({
           type: 'VERIFICATION',
         });
         setEmailForVerification(formData.email);
-        setDialogMessage('Account created successfully! Please verify your email.');
+        setDialogMessage(
+          'Account created successfully! Please verify your email.'
+        );
         setIsSuccessDialogOpen(true);
         handleToggleMode('verify-email');
       } catch (error: unknown) {
@@ -361,8 +359,11 @@ const Auth = ({
         toast.success('Login successful', {
           description: `Welcome, ${response.name}!`,
         });
-        handleToggleMode('login');
-        dispatch(setLoginModalOpen(false));
+        if (redirect) {
+          router.push(redirect);
+        } else {
+          router.push('/');
+        }
       } catch (error: unknown) {
         const err = error as ErrorResponse;
         toast.error('Failed to login', {
@@ -373,21 +374,13 @@ const Auth = ({
   };
 
   return (
-    <Dialog
-      open={isLoginModalOpen}
-      onOpenChange={isOpen => dispatch(setLoginModalOpen(isOpen))}
-    >
-      <DialogTrigger asChild>
-        <Button
-          variant="outline"
-          className="text-orange-500 "
-          onClick={() => dispatch(setLoginModalOpen(true))}
-        >
-          {children || 'Sign In'}
-        </Button>
-      </DialogTrigger>
-      <DialogContent className="sm:min-w-[425px] mx-2">
-        <DialogHeader>
+    <div className="flex items-center justify-center min-h-screen bg-gray-50">
+      <div
+        className={`w-full ${
+          pathname === '/signup' ? 'max-w-2xl' : 'max-w-md'
+        } p-8 space-y-8 bg-white rounded-lg shadow-md`}
+      >
+        <div className="text-center">
           {mode !== 'forgot-password' && mode !== 'verify-email' && (
             <div>
               <div className="flex justify-center mb-4">
@@ -413,7 +406,7 @@ const Auth = ({
               <hr className="w-full bg-gray-400 " />
             </div>
           )}
-          <DialogTitle className="text-2xl text-orange-500 hover:text-orange-600">
+          <h1 className="text-2xl font-bold text-gray-900 mt-4">
             {mode === 'login' && 'Login'}
             {mode === 'register' &&
               `Create ${
@@ -425,8 +418,8 @@ const Auth = ({
               } Account`}
             {mode === 'forgot-password' && 'Reset Password'}
             {mode === 'verify-email' && 'Verify Email'}
-          </DialogTitle>
-          <DialogDescription className="">
+          </h1>
+          <p className="mt-2 text-sm text-gray-600">
             {mode === 'login' && 'Login to your account to continue.'}
             {mode === 'register' &&
               `Create a new ${
@@ -440,187 +433,126 @@ const Auth = ({
               'Enter your email to reset your password.'}
             {mode === 'verify-email' &&
               'Enter the OTP sent to your email to verify your account.'}
-          </DialogDescription>
-        </DialogHeader>
-        <div className="grid gap-1">
-          {mode === 'register' && (
-            <div>
-              <div className="flex gap-4 mb-4">
-                <Button
-                  variant="outline"
-                  className={`flex-1 px-4 py-2 text-gray-700 ${
-                    selectedRole === UserRole.CUSTOMER
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300'
-                  } rounded`}
-                  onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
-                >
-                  <span className="mr-2">👤</span> Customer
-                </Button>
-                <Button
-                  variant="outline"
-                  className={`flex-1 px-4 py-2 text-gray-700 ${
-                    selectedRole === UserRole.OWNER
-                      ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                      : 'bg-gray-200 hover:bg-gray-300'
-                  } rounded`}
-                  onClick={() => handleRoleSelect(UserRole.OWNER)}
-                >
-                  <span className="mr-2">🏠</span> Business
-                </Button>
+          </p>
+        </div>
+        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+          <div className="grid gap-1">
+            {mode === 'register' && (
+              <div>
+                <div className="flex gap-4 mb-4">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`flex-1 px-4 py-2 text-gray-700 ${
+                      selectedRole === UserRole.CUSTOMER
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    } rounded`}
+                    onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
+                  >
+                    <span className="mr-2">👤</span> Customer
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    className={`flex-1 px-4 py-2 text-gray-700 ${
+                      selectedRole === UserRole.OWNER
+                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                        : 'bg-gray-200 hover:bg-gray-300'
+                    } rounded`}
+                    onClick={() => handleRoleSelect(UserRole.OWNER)}
+                  >
+                    <span className="mr-2">🏠</span> Business
+                  </Button>
+                </div>
+                {errors.role && (
+                  <p className="text-orange-500 text-sm mt-1">{errors.role}</p>
+                )}
               </div>
-              {errors.role && (
-                <p className="text-orange-500 text-sm mt-1">{errors.role}</p>
-              )}
-            </div>
-          )}
-          {mode === 'register' && (
-            <div className="grid gap-3">
-              <Label htmlFor="fullName" className="text-lg">
-                Full Name
-              </Label>
-              <Input
-                id="fullName"
-                name="fullName"
-                value={formData.fullName}
-                onChange={handleInputChange}
-                placeholder="John Doe"
-                className={`sm:h-[3rem] ${
-                  errors.fullName ? 'border-orange-500' : ''
-                }`}
-              />
-              {errors.fullName && (
-                <p className="text-orange-500 text-sm">{errors.fullName}</p>
-              )}
-            </div>
-          )}
-          {step === 'enter-email' && (
-            <div className="grid gap-3">
-              <Label htmlFor="email" className="text-lg">
-                Email
-              </Label>
-              <Input
-                id="email"
-                name="email"
-                value={formData.email}
-                onChange={handleInputChange}
-                placeholder="Your email"
-                className={`sm:h-[3rem] ${
-                  errors.email ? 'border-orange-500' : ''
-                }`}
-              />
-              {errors.email && (
-                <p className="text-orange-500 text-sm">{errors.email}</p>
-              )}
-            </div>
-          )}
-          {mode === 'register' && (
-            <div className="grid gap-3">
-              <Label htmlFor="phoneNumber" className="text-lg">
-                Phone Number
-              </Label>
-              <Input
-                id="phoneNumber"
-                name="phoneNumber"
-                value={formData.phoneNumber}
-                onChange={handleInputChange}
-                placeholder="Your phone number"
-                className={`sm:h-[3rem] ${
-                  errors.phoneNumber ? 'border-red-500' : ''
-                }`}
-              />
-              {errors.phoneNumber && (
-                <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
-              )}
-            </div>
-          )}
-          {(mode === 'login' || mode === 'register') && (
-            <div className="grid gap-3">
-              <Label htmlFor="password" className="text-lg">
-                Password
-              </Label>
-              <div className="relative">
+            )}
+            {mode === 'register' && (
+              <div className="grid gap-3">
+                <Label htmlFor="fullName" className="text-lg">
+                  Full Name
+                </Label>
                 <Input
-                  id="password"
-                  name="password"
-                  type={showPassword ? 'text' : 'password'}
-                  value={formData.password}
+                  id="fullName"
+                  name="fullName"
+                  value={formData.fullName}
                   onChange={handleInputChange}
-                  placeholder="Your password"
-                  className={`sm:h-[3rem] pr-10 ${
-                    errors.password ? 'border-orange-500' : ''
+                  placeholder="John Doe"
+                  className={`sm:h-[3rem] ${
+                    errors.fullName ? 'border-orange-500' : ''
                   }`}
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                >
-                  {showPassword ? <EyeOff /> : <Eye />}
-                </button>
+                {errors.fullName && (
+                  <p className="text-orange-500 text-sm">{errors.fullName}</p>
+                )}
               </div>
-              {errors.password && (
-                <p className="text-orange-500 text-sm">{errors.password}</p>
-              )}
-            </div>
-          )}
-          {mode === 'register' && (
-            <div className="grid gap-3">
-              <Label htmlFor="password2" className="text-lg">
-                Confirm Password
-              </Label>
-              <div className="relative">
-                <Input
-                  id="password2"
-                  name="confirmPassword"
-                  type={showConfirmPassword ? 'text' : 'password'}
-                  value={formData.confirmPassword}
-                  onChange={handleInputChange}
-                  placeholder="Confirm password"
-                  className={`sm:h-[3rem] pr-10 ${
-                    errors.confirmPassword ? 'border-orange-500' : ''
-                  }`}
-                />
-                <button
-                  type="button"
-                  onClick={() =>
-                    setShowConfirmPassword(!showConfirmPassword)
-                  }
-                  className="absolute inset-y-0 right-0 flex items-center pr-3"
-                >
-                  {showConfirmPassword ? <EyeOff /> : <Eye />}
-                </button>
+            )}
+            {mode === 'register' ? (
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="grid gap-3">
+                  <Label htmlFor="email" className="text-lg">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Your email"
+                    className={`sm:h-[3rem] ${
+                      errors.email ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.email && (
+                    <p className="text-orange-500 text-sm">{errors.email}</p>
+                  )}
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="phoneNumber" className="text-lg">
+                    Phone Number
+                  </Label>
+                  <Input
+                    id="phoneNumber"
+                    name="phoneNumber"
+                    value={formData.phoneNumber}
+                    onChange={handleInputChange}
+                    placeholder="Your phone number"
+                    className={`sm:h-[3rem] ${
+                      errors.phoneNumber ? 'border-red-500' : ''
+                    }`}
+                  />
+                  {errors.phoneNumber && (
+                    <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+                  )}
+                </div>
               </div>
-              {errors.confirmPassword && (
-                <p className="text-red-orange text-sm">
-                  {errors.confirmPassword}
-                </p>
-              )}
-            </div>
-          )}
-          {((mode === 'forgot-password' && step === 'enter-otp') ||
-            mode === 'verify-email') && (
-            <div className="grid gap-3">
-              <Label htmlFor="otp" className="text-lg">
-                OTP
-              </Label>
-              <Input
-                id="otp"
-                name="otp"
-                value={formData.otp}
-                onChange={handleInputChange}
-                placeholder="Enter OTP"
-                className={`sm:h-[3rem] ${
-                  errors.otp ? 'border-orange-500' : ''
-                }`}
-              />
-              {errors.otp && (
-                <p className="text-orange-500 text-sm">{errors.otp}</p>
-              )}
-            </div>
-          )}
-          {mode === 'forgot-password' && step === 'enter-otp' && (
-            <>
+            ) : (
+              step === 'enter-email' && (
+                <div className="grid gap-3">
+                  <Label htmlFor="email" className="text-lg">
+                    Email
+                  </Label>
+                  <Input
+                    id="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleInputChange}
+                    placeholder="Your email"
+                    className={`sm:h-[3rem] ${
+                      errors.email ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.email && (
+                    <p className="text-orange-500 text-sm">{errors.email}</p>
+                  )}
+                </div>
+              )
+            )}
+          {mode === 'register' ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="grid gap-3">
                 <Label htmlFor="password" className="text-lg">
                   Password
@@ -646,9 +578,7 @@ const Auth = ({
                   </button>
                 </div>
                 {errors.password && (
-                  <p className="text-orange-500 text-sm">
-                    {errors.password}
-                  </p>
+                  <p className="text-orange-500 text-sm">{errors.password}</p>
                 )}
               </div>
               <div className="grid gap-3">
@@ -682,119 +612,235 @@ const Auth = ({
                     {errors.confirmPassword}
                   </p>
                 )}
+                </div>
               </div>
-            </>
-          )}
-        </div>
-        {mode === 'login' && (
-          <div className="flex justify-between">
-            <Button
-              variant="link"
-              className="justify-start primaryText p-0"
-              onClick={() => handleToggleMode('forgot-password')}
-            >
-              Forgotten your password? Reset
-            </Button>
-            <Button
-              variant="link"
-              className="justify-start primaryText p-0"
-              onClick={() => handleToggleMode('verify-email')}
-            >
-              Verify Email
-            </Button>
+          ) : (
+            mode === 'login' && (
+              <div className="grid gap-3">
+                <Label htmlFor="password" className="text-lg">
+                  Password
+                </Label>
+                <div className="relative">
+                  <Input
+                    id="password"
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    value={formData.password}
+                    onChange={handleInputChange}
+                    placeholder="Your password"
+                    className={`sm:h-[3rem] pr-10 ${
+                      errors.password ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 flex items-center pr-3"
+                  >
+                    {showPassword ? <EyeOff /> : <Eye />}
+                  </button>
+                </div>
+                {errors.password && (
+                  <p className="text-orange-500 text-sm">{errors.password}</p>
+                )}
+                </div>
+            )
+            )}
+            {((mode === 'forgot-password' && step === 'enter-otp') ||
+              mode === 'verify-email') && (
+              <div className="grid gap-3">
+                <Label htmlFor="otp" className="text-lg">
+                  OTP
+                </Label>
+                <Input
+                  id="otp"
+                  name="otp"
+                  value={formData.otp}
+                  onChange={handleInputChange}
+                  placeholder="Enter OTP"
+                  className={`sm:h-[3rem] ${
+                    errors.otp ? 'border-orange-500' : ''
+                  }`}
+                />
+                {errors.otp && (
+                  <p className="text-orange-500 text-sm">{errors.otp}</p>
+                )}
+              </div>
+            )}
+            {mode === 'forgot-password' && step === 'enter-otp' && (
+              <>
+                <div className="grid gap-3">
+                  <Label htmlFor="password" className="text-lg">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Your password"
+                      className={`sm:h-[3rem] pr-10 ${
+                        errors.password ? 'border-orange-500' : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-orange-500 text-sm">
+                      {errors.password}
+                    </p>
+                  )}
+                </div>
+                <div className="grid gap-3">
+                  <Label htmlFor="password2" className="text-lg">
+                    Confirm Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password2"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? 'text' : 'password'}
+                      value={formData.confirmPassword}
+                      onChange={handleInputChange}
+                      placeholder="Confirm password"
+                      className={`sm:h-[3rem] pr-10 ${
+                        errors.confirmPassword ? 'border-orange-500' : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setShowConfirmPassword(!showConfirmPassword)
+                      }
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {showConfirmPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                  {errors.confirmPassword && (
+                    <p className="text-red-orange text-sm">
+                      {errors.confirmPassword}
+                    </p>
+                  )}
+                </div>
+              </>
+            )}
           </div>
-        )}
-        {mode === 'register' && (
-          <TermsCondtion
-            isChecked={termsAccepted}
-            onChange={handleTermsChange}
-          />
-        )}
-        {mode === 'register' && errors.terms && (
-          <p className="text-orange-500 text-sm mt-1">{errors.terms}</p>
-        )}
-        {mode === 'login' && <RememberMe />}
-        <DialogFooter className="flex flex-col justify-between mt-4">
-          <DialogClose asChild className="hidden sm:block">
-            <Button variant="outline">Cancel</Button>
-          </DialogClose>
           {mode === 'login' && (
-            <Button
-              type="button"
-              className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
-              onClick={handleSubmit}
-              disabled={loginPending}
-            >
-              {loginPending ? 'Submitting...' : 'Submit'}
-            </Button>
+            <div className="flex justify-between">
+              <Button
+                type="button"
+                variant="link"
+                className="justify-start primaryText p-0"
+                onClick={() => handleToggleMode('forgot-password')}
+              >
+                Forgotten your password? Reset
+              </Button>
+              <Button
+                type="button"
+                variant="link"
+                className="justify-start primaryText p-0"
+                onClick={() => handleToggleMode('verify-email')}
+              >
+                Verify Email
+              </Button>
+            </div>
           )}
           {mode === 'register' && (
-            <Button
-              type="button"
-              className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
-              onClick={handleSubmit}
-              disabled={isPending}
-            >
-              {isPending ? 'Submitting...' : 'Submit'}
-            </Button>
+            <TermsCondtion
+              isChecked={termsAccepted}
+              onChange={handleTermsChange}
+            />
           )}
-          {mode === 'forgot-password' && (
-            <>
-              {step === 'enter-email' && (
+          {mode === 'register' && errors.terms && (
+            <p className="text-orange-500 text-sm mt-1">{errors.terms}</p>
+          )}
+          {mode === 'login' && <RememberMe />}
+          <div className="flex flex-col justify-between mt-4">
+            {mode === 'login' && (
+              <Button
+                type="submit"
+                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                disabled={loginPending}
+              >
+                {loginPending ? 'Submitting...' : 'Submit'}
+              </Button>
+            )}
+            {mode === 'register' && (
+              <Button
+                type="submit"
+                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                disabled={isPending}
+              >
+                {isPending ? 'Submitting...' : 'Submit'}
+              </Button>
+            )}
+            {mode === 'forgot-password' && (
+              <>
+                {step === 'enter-email' && (
+                  <Button
+                    type="button"
+                    className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                    onClick={handleSendOtp}
+                    disabled={sendOtpPending}
+                  >
+                    {sendOtpPending ? 'Sending...' : 'Send OTP'}
+                  </Button>
+                )}
+                {step === 'enter-otp' && (
+                  <Button
+                    type="button"
+                    className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                    onClick={handleResetPassword}
+                    disabled={resetPasswordPending}
+                  >
+                    {resetPasswordPending ? 'Resetting...' : 'Reset Password'}
+                  </Button>
+                )}
+              </>
+            )}
+            {mode === 'verify-email' && (
+              <div className="flex gap-4">
                 <Button
                   type="button"
-                  className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
+                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
                   onClick={handleSendOtp}
                   disabled={sendOtpPending}
                 >
-                  {sendOtpPending ? 'Sending...' : 'Send OTP'}
+                  {sendOtpPending ? 'Sending...' : 'Resend OTP'}
                 </Button>
-              )}
-              {step === 'enter-otp' && (
                 <Button
                   type="button"
-                  className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
-                  onClick={handleResetPassword}
-                  disabled={resetPasswordPending}
+                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
+                  onClick={handleValidateOtp}
+                  disabled={validateOtpPending}
                 >
-                  {resetPasswordPending ? 'Resetting...' : 'Reset Password'}
+                  {validateOtpPending ? 'Verifying...' : 'Verify'}
                 </Button>
-              )}
-            </>
-          )}
-          {mode === 'verify-email' && (
-            <>
-              <Button
-                type="button"
-                className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
-                onClick={handleSendOtp}
-                disabled={sendOtpPending}
-              >
-                {sendOtpPending ? 'Sending...' : 'Resend OTP'}
-              </Button>
-              <Button
-                type="button"
-                className="justify-start w-fit bg-orange-500 hover:bg-orange-600"
-                onClick={handleValidateOtp}
-                disabled={validateOtpPending}
-              >
-                {validateOtpPending ? 'Verifying...' : 'Verify'}
-              </Button>
-            </>
-          )}
-        </DialogFooter>
-      </DialogContent>
-      <SuccessDialog
-        isOpen={isSuccessDialogOpen}
-        onClose={() => setIsSuccessDialogOpen(false)}
-        message={dialogMessage}
-      />
-      <ErrorDialog
-        isOpen={isErrorDialogOpen}
-        onClose={() => setIsErrorDialogOpen(false)}
-        message={dialogMessage}
-      />
-    </Dialog>
+              </div>
+            )}
+          </div>
+        </form>
+        <SuccessDialog
+          isOpen={isSuccessDialogOpen}
+          onClose={() => setIsSuccessDialogOpen(false)}
+          message={dialogMessage}
+        />
+        <ErrorDialog
+          isOpen={isErrorDialogOpen}
+          onClose={() => setIsErrorDialogOpen(false)}
+          message={dialogMessage}
+        />
+      </div>
+    </div>
   );
 };
 
