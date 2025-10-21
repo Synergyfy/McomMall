@@ -7,6 +7,9 @@ import { useSearch } from '@/service/search/hook';
 import { Product, Service } from '@/service/search/types';
 import { CURRENCY } from '@/lib/utils';
 import Image from 'next/image';
+import { Button } from '@/components/ui/button';
+import { useCart } from '@/hooks/useCart';
+import { toast } from 'sonner';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -16,6 +19,7 @@ const SearchResultsPage = () => {
 
   const query = searchParams.get('q') || '';
   const { data, isLoading, isError } = useSearch(query);
+  const { addItemToCart } = useCart();
 
   useEffect(() => {
     setSearchQuery(query);
@@ -32,6 +36,20 @@ const SearchResultsPage = () => {
     if (event.key === 'Enter') {
       handleSearch();
     }
+  };
+
+  const handleAddToCart = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItemToCart({ productId: product.id, quantity: 1 });
+    toast.success(`${product.title} has been added to your cart.`);
+  };
+
+  const handleBuyNow = (e: React.MouseEvent, product: Product) => {
+    e.preventDefault();
+    e.stopPropagation();
+    addItemToCart({ productId: product.id, quantity: 1 });
+    router.push('/cart');
   };
 
   const renderPrice = (item: Product | Service) => {
@@ -117,6 +135,23 @@ const SearchResultsPage = () => {
                   <p className="text-gray-600 text-sm mb-4 flex-grow">{'shortDescription' in item ? item.shortDescription : item.description}</p>
                   {item.business && <p className="text-sm text-gray-500 mb-2">Sold by: {item.business.businessName}</p>}
                   <div className="text-lg font-bold text-orange-600">{renderPrice(item)}</div>
+                  {'productType' in item && (
+                    <div className="flex flex-col gap-2 mt-4">
+                      <Button
+                        variant="outline"
+                        className="w-full border-2 border-orange-600 text-orange-600 bg-transparent hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold"
+                        onClick={(e) => handleAddToCart(e, item as Product)}
+                      >
+                        Add to Cart
+                      </Button>
+                      <Button
+                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 font-bold shadow-md hover:shadow-lg"
+                        onClick={(e) => handleBuyNow(e, item as Product)}
+                      >
+                        Buy Now
+                      </Button>
+                    </div>
+                  )}
                 </div>
               </div>
             ))}
