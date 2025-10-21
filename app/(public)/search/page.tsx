@@ -10,6 +10,7 @@ import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { toast } from 'sonner';
+import { PricingModel } from '@/service/search/enums';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -58,17 +59,17 @@ const SearchResultsPage = () => {
     }
     if ('pricingModel' in item) {
       switch (item.pricingModel) {
-        case 'FIXED':
+        case PricingModel.FIXED:
           if (item.fixedPrice) {
             return `${CURRENCY}${parseFloat(item.fixedPrice).toFixed(2)}`;
           }
           break;
-        case 'PER_HOUR':
+        case PricingModel.PER_HOUR:
           if (item.pricePerHour) {
             return `${CURRENCY}${parseFloat(item.pricePerHour).toFixed(2)}/hr`;
           }
           break;
-        case 'PER_UNIT':
+        case PricingModel.PER_UNIT:
           if (item.pricePerUnit) {
             return `${CURRENCY}${parseFloat(item.pricePerUnit).toFixed(2)}/${item.unitName || 'unit'}`;
           }

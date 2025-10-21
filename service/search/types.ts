@@ -1,3 +1,5 @@
+import { PricingModel } from "./enums";
+
 // The base properties for most entities
 interface AbstractBaseEntity {
   id: string;
@@ -99,7 +101,7 @@ export interface Service extends AbstractBaseEntity {
   description?: string | null;
   media?: string[] | null;
   isActive: boolean;
-  pricingModel: 'FIXED' | 'PER_HOUR' | 'PER_UNIT' | 'TIERED' | 'PER_GUEST';
+  pricingModel: PricingModel;
   fixedPrice?: string | null;
   pricePerHour?: string | null;
   pricePerUnit?: string | null;
