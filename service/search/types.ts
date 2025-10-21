@@ -3,9 +3,9 @@ import { PricingModel } from "./enums";
 // The base properties for most entities
 interface AbstractBaseEntity {
   id: string;
-  created_at: Date;
-  updated_at: Date;
-  deleted_at: Date;
+  created_at: string;
+  updated_at: string;
+  deleted_at: string | null;
 }
 
 // Interface for a User
@@ -76,21 +76,27 @@ export interface Product extends AbstractBaseEntity {
 }
 
 // Interface for a Bundled Service (part of a Service)
-interface BundledService extends AbstractBaseEntity {
+export interface BundledService {
+  id: string;
   serviceId: string;
   name: string;
-  price: number;
-  deletedAt?: Date | null;
+  price: string;
+  deletedAt: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Interface for a Configurable Addon (part of a Service)
-interface ConfigurableAddon extends AbstractBaseEntity {
+export interface ConfigurableAddon {
+  id: string;
   serviceId: string;
   name: string;
-  price: number;
-  pricingType: 'ONE_OFF' | 'PER_UNIT';
-  unitName?: string | null;
-  deletedAt?: Date | null;
+  price: string;
+  pricingType: 'oneTime' | 'perGuest' | 'perUnit';
+  unitName: string;
+  deletedAt: string | null;
+  created_at: string;
+  updated_at: string;
 }
 
 // Interface for a Service
@@ -98,28 +104,29 @@ export interface Service extends AbstractBaseEntity {
   business?: Business;
   businessId: string;
   name: string;
-  description?: string | null;
+  description?: string;
   media?: string[] | null;
+  images: string[];
   isActive: boolean;
   pricingModel: PricingModel;
-  fixedPrice?: string | null;
-  pricePerHour?: string | null;
-  pricePerUnit?: string | null;
-  unitName?: string | null;
+  fixedPrice: string;
+  pricePerHour: string | null;
+  pricePerUnit: string | null;
+  unitName: string | null;
   enableGuestPricing: boolean;
-  guestPricingModel?: 'FIXED' | 'PER_PERSON' | 'FIXED_GROUP' | 'BASE_PLUS_PER_GUEST' | null;
-  minGuests?: number | null;
-  maxGuests?: number | null;
-  pricePerGuest?: number | null;
-  fixedGroupPrice?: number | null;
-  basePrice?: number | null;
-  baseGuests?: number | null;
-  additionalGuestPrice?: number | null;
+  guestPricingModel: string | null;
+  minGuests: number;
+  maxGuests: number;
+  pricePerGuest: string | null;
+  fixedGroupPrice: string | null;
+  basePrice: string | null;
+  baseGuests: string | null;
+  additionalGuestPrice: string | null;
   isQuoteModel: boolean;
-  bookingFee?: number | null;
+  bookingFee: string;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
-  deletedAt?: Date | null;
+  deletedAt: string | null;
 }
 
 export interface PaginatedResponse<T> {
