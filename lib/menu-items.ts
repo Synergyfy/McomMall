@@ -20,7 +20,6 @@ import {
   CreditCard,
   History,
   Users,
-  Activity,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -38,7 +37,6 @@ export interface MenuItem {
 // Export the menu item arrays
 export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
-  { title: 'Activity', href: '/dashboard/activity', icon: Activity },
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
