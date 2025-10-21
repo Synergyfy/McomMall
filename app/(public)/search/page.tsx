@@ -105,7 +105,7 @@ const SearchResultsPage = () => {
                 <div className="p-4 flex flex-col flex-grow">
                   <h2 className="font-bold text-lg mb-2 truncate">{'title' in item ? item.title : item.name}</h2>
                   <p className="text-gray-600 text-sm mb-4 flex-grow">{'shortDescription' in item ? item.shortDescription : item.description}</p>
-                  <p className="text-sm text-gray-500 mb-2">Sold by: {item.business.businessName}</p>
+                  {item.business && <p className="text-sm text-gray-500 mb-2">Sold by: {item.business.businessName}</p>}
                   <div className="text-lg font-bold text-orange-600">{renderPrice(item)}</div>
                 </div>
               </div>

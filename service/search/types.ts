@@ -48,7 +48,7 @@ interface Business extends AbstractBaseEntity {
 // Interface for a Product
 export interface Product extends AbstractBaseEntity {
   serviceProvider?: User;
-  business: Business;
+  business?: Business;
   title: string;
   productType: string;
   price: number;
@@ -93,7 +93,7 @@ interface ConfigurableAddon extends AbstractBaseEntity {
 
 // Interface for a Service
 export interface Service extends AbstractBaseEntity {
-  business: Business;
+  business?: Business;
   businessId: string;
   name: string;
   description?: string | null;
