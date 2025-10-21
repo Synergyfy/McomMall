@@ -185,12 +185,12 @@ export default function Header() {
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/signin">
-                  <Button variant="outline" size="sm" className="text-white hover:text-red-400">
+                  <Button variant="outline" size="sm" className="text-orange-600 hover:text-red-400">
                     Sign In
                   </Button>
                 </Link>
                 <Link href="/signup">
-                  <Button variant="destructive" size="sm">
+                  <Button  size="sm" className='bg-orange-500 hover:bg-orange-500 text-white'>
                     Sign Up
                   </Button>
                 </Link>
