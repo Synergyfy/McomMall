@@ -42,23 +42,28 @@ const SearchResultsPage = () => {
   };
 
   const handleAddToCart = (e: React.MouseEvent, product: Product) => {
-    e.preventDefault();
     e.stopPropagation();
     addItemToCart({ productId: product.id, quantity: 1 });
     toast.success(`${product.title} has been added to your cart.`);
   };
 
   const handleBuyNow = (e: React.MouseEvent, product: Product) => {
-    e.preventDefault();
     e.stopPropagation();
     addItemToCart({ productId: product.id, quantity: 1 });
     router.push('/cart');
   };
 
   const handleBookNow = (e: React.MouseEvent, service: Service) => {
-    e.preventDefault();
     e.stopPropagation();
     setSelectedService(service);
+  };
+
+  const handleCardClick = (item: Product | Service) => {
+    if ('productType' in item) {
+      router.push(`/products/${item.id}`);
+    } else {
+      router.push(`/services/${item.id}`);
+    }
   };
 
   const handleCloseModal = () => {
@@ -150,7 +155,11 @@ const SearchResultsPage = () => {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
               {data?.items?.map((item: Product | Service) => (
-                <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
+                <div
+                  key={item.id}
+                  className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col cursor-pointer"
+                  onClick={() => handleCardClick(item)}
+                >
                   <div className="relative h-48 w-full">
                     <Image
                       src={getImageUrl(item)}
