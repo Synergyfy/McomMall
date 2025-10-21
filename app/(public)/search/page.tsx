@@ -47,6 +47,16 @@ const SearchResultsPage = () => {
     return 'Price not available';
   };
 
+  const getImageUrl = (item: Product | Service) => {
+    if ('fileUrls' in item && item.fileUrls && item.fileUrls.length > 0) {
+      return item.fileUrls[0];
+    }
+    if (item.media && item.media.length > 0) {
+      return item.media[0];
+    }
+    return '/placeholder.png';
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen">
       <header className="bg-white shadow-sm sticky top-0 z-40">
@@ -96,7 +106,7 @@ const SearchResultsPage = () => {
               <div key={item.id} className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col">
                 <div className="relative h-48 w-full">
                   <Image
-                    src={item.media?.[0] || '/placeholder.png'}
+                    src={getImageUrl(item)}
                     alt={'title' in item ? item.title : item.name}
                     layout="fill"
                     objectFit="cover"
