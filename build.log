@@ -6,11 +6,14 @@
 
    Creating an optimized production build ...
  ✓ (serwist) Bundling the service worker script with the URL '/sw.js' and the scope '/'...
- ⚠ Compiled with warnings in 35.0s
+ ⚠ Compiled with warnings in 20.0s
 
 /_next//static/media/AutumnBanner.e568d911.png is 6.34 MB, and won't be precached. Configure maximumFileSizeToCacheInBytes to change this limit.
 
    Linting and checking validity of types ...
+
+./app/(public)/checkout/components/CheckoutClient.tsx
+248:5  Warning: React Hook useCallback has missing dependencies: 'giftCardDiscount' and 'voucherDiscount'. Either include them or remove the dependency array.  react-hooks/exhaustive-deps
 
 ./app/(public)/checkout/components/PaymentForm.tsx
 20:3  Warning: 'totalPrice' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -22,7 +25,7 @@
 3:10  Warning: 'Review' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/(public)/listings/[id]/components/VoucherPurchaseModal.tsx
-152:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+179:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/(public)/listings/[id]/components/VoucherTabContent.tsx
 24:9  Warning: 'router' is assigned a value but never used.  @typescript-eslint/no-unused-vars
@@ -32,6 +35,10 @@
 
 ./app/(public)/listings/page.tsx
 112:24  Warning: 'prevFilters' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/business/[businessId]/page.tsx
+73:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
+143:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
 
 ./app/dashboard/add-campaign/components/CampaignFilters.tsx
 2:22  Warning: 'FormErrors' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -63,12 +70,22 @@
 ./app/dashboard/coupons/new/page.tsx
 280:23  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
 
+./app/dashboard/gift-card/analytics/components/SalesAndRedemptions.tsx
+17:3  Warning: 'PaginationEllipsis' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/gift-card/analytics/page.tsx
+17:29  Warning: 'CardHeader' is defined but never used.  @typescript-eslint/no-unused-vars
+17:41  Warning: 'CardTitle' is defined but never used.  @typescript-eslint/no-unused-vars
+
 ./app/dashboard/gift-card/email-design/page.tsx
 25:10  Warning: 'Card' is defined but never used.  @typescript-eslint/no-unused-vars
 25:16  Warning: 'CardContent' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/dashboard/layout.tsx
 7:10  Warning: 'SubscriptionStatusEnum' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/loyalty/analytics/components/PromotionTransactionHistory.tsx
+13:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/dashboard/loyalty/members/components/promotions-manager.tsx
 13:3  Warning: 'Calendar' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -93,6 +110,18 @@
 9:3  Warning: 'Settings' is defined but never used.  @typescript-eslint/no-unused-vars
 10:3  Warning: 'HelpCircle' is defined but never used.  @typescript-eslint/no-unused-vars
 74:3  Warning: 'textColor' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/marketing/groups/[groupId]/components/GroupDetailsClient.tsx
+76:42  Warning: 'refetch' is assigned a value but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/marketing/groups/components/GroupsClient.tsx
+15:10  Warning: 'Users' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/marketing/groups/new/components/CreateGroupClient.tsx
+63:16  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
+
+./app/dashboard/marketing/membership/components/MembershipCheckoutForm.tsx
+14:3  Warning: 'VerifyPaymentDto' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/dashboard/messages/components/ConversationSidebar.tsx
 6:10  Warning: 'User' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -144,14 +173,20 @@
 ./app/dashboard/store/products/page.tsx
 463:33  Warning: Using `<img>` could result in slower LCP and higher bandwidth. Consider using `<Image />` from `next/image` or a custom image loader to automatically optimize images. This may incur additional usage or cost from your provider. See: https://nextjs.org/docs/messages/no-img-element  @next/next/no-img-element
 
+./app/dashboard/vouchers/(components)/VoucherProductForm.tsx
+3:27  Warning: 'useEffect' is defined but never used.  @typescript-eslint/no-unused-vars
+
 ./app/dashboard/vouchers/(components)/VoucherProductModal.tsx
 11:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
 51:14  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
 
+./app/dashboard/vouchers/analytics/components/VoucherTransactionHistory.tsx
+13:10  Warning: 'Button' is defined but never used.  @typescript-eslint/no-unused-vars
+
 ./app/dashboard/vouchers/products/page.tsx
-23:10  Warning: 'useRouter' is defined but never used.  @typescript-eslint/no-unused-vars
-62:3  Warning: 'onEdit' is defined but never used.  @typescript-eslint/no-unused-vars
-140:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
+21:10  Warning: 'useRouter' is defined but never used.  @typescript-eslint/no-unused-vars
+60:3  Warning: 'onEdit' is defined but never used.  @typescript-eslint/no-unused-vars
+151:16  Warning: 'error' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./app/homepage/components/McomVouchersCouponsSection.tsx
 5:10  Warning: 'Ticket' is defined but never used.  @typescript-eslint/no-unused-vars
@@ -229,110 +264,119 @@
 
 ./lib/menu-items.ts
 11:3  Warning: 'Bookmark' is defined but never used.  @typescript-eslint/no-unused-vars
+178:10  Warning: 'BarChart' is defined but never used.  @typescript-eslint/no-unused-vars
 
 ./lib/validation.ts
 28:12  Warning: '_' is defined but never used.  @typescript-eslint/no-unused-vars
 
 info  - Need to disable some ESLint rules? Learn more here: https://nextjs.org/docs/app/api-reference/config/eslint#disabling-rules
    Collecting page data ...
-   Generating static pages (0/83) ...
-   Generating static pages (20/83)
-   Generating static pages (41/83)
-   Generating static pages (62/83)
- ✓ Generating static pages (83/83)
+   Generating static pages (0/89) ...
+   Generating static pages (22/89)
+   Generating static pages (44/89)
+   Generating static pages (66/89)
+ ✓ Generating static pages (89/89)
    Finalizing page optimization ...
    Collecting build traces ...
 
 Route (app)                                       Size  First Load JS
-┌ ○ /                                          13.8 kB         203 kB
+┌ ○ /                                          13.7 kB         203 kB
 ├ ○ /_not-found                                  999 B         103 kB
 ├ ○ /about-us                                  4.24 kB         160 kB
-├ ○ /add-listing                               1.89 kB         365 kB
+├ ○ /add-listing                               1.95 kB         331 kB
 ├ ƒ /api/upload                                  151 B         102 kB
 ├ ƒ /api/upload/[folder]                         151 B         102 kB
 ├ ƒ /api/upload/delete                           151 B         102 kB
-├ ○ /audit-calculator                          13.6 kB         197 kB
+├ ○ /audit-calculator                          13.7 kB         197 kB
 ├ ○ /autumn                                    1.09 kB         179 kB
 ├ ○ /blog                                      4.17 kB         166 kB
-├ ○ /cart                                      7.66 kB         160 kB
-├ ○ /checkout                                  15.2 kB         257 kB
+├ ƒ /business/[businessId]                     7.48 kB         156 kB
+├ ○ /cart                                      7.68 kB         160 kB
+├ ○ /checkout                                   120 kB         366 kB
 ├ ○ /contact-us                                4.86 kB         161 kB
-├ ○ /dashboard                                 12.5 kB         274 kB
+├ ○ /dashboard                                   13 kB         275 kB
 ├ ○ /dashboard/ad-campaign                     10.3 kB         217 kB
 ├ ○ /dashboard/add-campaign                    13.5 kB         272 kB
-├ ○ /dashboard/add-listing                     1.89 kB         365 kB
-├ ○ /dashboard/add-new-add                     4.77 kB         155 kB
-├ ○ /dashboard/bookings                        4.71 kB         198 kB
-├ ○ /dashboard/bookings/calendar-view          11.9 kB         247 kB
-├ ○ /dashboard/bookings/qr-scanner             1.73 kB         144 kB
-├ ○ /dashboard/coupons                         4.74 kB         206 kB
+├ ○ /dashboard/add-listing                     1.95 kB         331 kB
+├ ○ /dashboard/add-new-add                     4.79 kB         155 kB
+├ ○ /dashboard/bookings                        5.09 kB         198 kB
+├ ○ /dashboard/bookings/calendar-view          8.83 kB         247 kB
+├ ○ /dashboard/bookings/qr-scanner             1.74 kB         144 kB
+├ ○ /dashboard/coupons                         4.76 kB         206 kB
 ├ ƒ /dashboard/coupons/edit/[id]               5.71 kB         244 kB
 ├ ○ /dashboard/coupons/new                     7.87 kB         267 kB
-├ ƒ /dashboard/edit-listing/[id]               1.26 kB         365 kB
-├ ○ /dashboard/gift-card                       10.1 kB         190 kB
-├ ○ /dashboard/gift-card/admin                 6.34 kB         157 kB
-├ ○ /dashboard/gift-card/assets                10.1 kB         188 kB
-├ ○ /dashboard/gift-card/check-balance         5.77 kB         156 kB
-├ ○ /dashboard/gift-card/email-design            10 kB         150 kB
-├ ○ /dashboard/gift-card/settings              2.77 kB         140 kB
-├ ○ /dashboard/gift-card/templates             6.15 kB         177 kB
-├ ƒ /dashboard/gift-card/templates/edit/[id]   5.44 kB         224 kB
-├ ○ /dashboard/gift-card/templates/new         5.34 kB         224 kB
-├ ○ /dashboard/history/gift-card               4.32 kB         152 kB
-├ ○ /dashboard/history/my-vouchers             2.05 kB         180 kB
-├ ○ /dashboard/history/promotion-history        6.1 kB         152 kB
+├ ƒ /dashboard/edit-listing/[id]               1.25 kB         330 kB
+├ ○ /dashboard/gift-card                       10.2 kB         191 kB
+├ ○ /dashboard/gift-card/analytics              173 kB         534 kB
+├ ○ /dashboard/gift-card/assets                10.1 kB         189 kB
+├ ○ /dashboard/gift-card/check-balance         5.79 kB         156 kB
+├ ○ /dashboard/gift-card/email-design          10.1 kB         151 kB
+├ ○ /dashboard/gift-card/settings              2.77 kB         141 kB
+├ ○ /dashboard/gift-card/templates             6.52 kB         178 kB
+├ ƒ /dashboard/gift-card/templates/edit/[id]   2.77 kB         225 kB
+├ ○ /dashboard/gift-card/templates/new         3.73 kB         229 kB
+├ ○ /dashboard/history/gift-card               19.4 kB         181 kB
+├ ○ /dashboard/history/my-vouchers             2.07 kB         180 kB
+├ ○ /dashboard/history/promotion-history       6.12 kB         152 kB
 ├ ○ /dashboard/loyalty                           151 B         102 kB
-├ ○ /dashboard/loyalty/customer                 3.2 kB         118 kB
+├ ○ /dashboard/loyalty/analytics               2.96 kB         345 kB
+├ ○ /dashboard/loyalty/customer                3.22 kB         118 kB
 ├ ○ /dashboard/loyalty/members                 11.1 kB         233 kB
-├ ○ /dashboard/loyalty/offers                  8.51 kB         224 kB
+├ ○ /dashboard/loyalty/offers                  8.53 kB         224 kB
 ├ ƒ /dashboard/loyalty/offers/edit/[id]        1.49 kB         265 kB
-├ ○ /dashboard/loyalty/offers/new              1.03 kB         264 kB
-├ ○ /dashboard/loyalty/promotion               7.89 kB         210 kB
-├ ƒ /dashboard/loyalty/promotion/edit/[id]     8.08 kB         260 kB
-├ ○ /dashboard/loyalty/promotion/new           7.84 kB         260 kB
-├ ○ /dashboard/loyalty/settings                5.28 kB         146 kB
-├ ○ /dashboard/loyalty/time-bonus               6.2 kB         153 kB
-├ ○ /dashboard/marketing/my-partners           7.79 kB         207 kB
-├ ○ /dashboard/marketing/partnership-requests   5.7 kB         198 kB
+├ ○ /dashboard/loyalty/offers/new              1.04 kB         264 kB
+├ ○ /dashboard/loyalty/promotion               7.91 kB         210 kB
+├ ƒ /dashboard/loyalty/promotion/edit/[id]     8.14 kB         261 kB
+├ ○ /dashboard/loyalty/promotion/new            7.9 kB         260 kB
+├ ○ /dashboard/loyalty/settings                 5.3 kB         146 kB
+├ ○ /dashboard/loyalty/time-bonus              6.21 kB         153 kB
+├ ○ /dashboard/marketing/groups                9.72 kB         152 kB
+├ ƒ /dashboard/marketing/groups/[groupId]      7.18 kB         182 kB
+├ ○ /dashboard/marketing/groups/new            7.15 kB         167 kB
+├ ○ /dashboard/marketing/membership             8.8 kB         175 kB
+├ ○ /dashboard/marketing/my-partners           7.81 kB         207 kB
+├ ○ /dashboard/marketing/partnership-requests  5.72 kB         198 kB
 ├ ○ /dashboard/messages                        7.57 kB         148 kB
-├ ○ /dashboard/my-bookings                     2.06 kB         186 kB
-├ ○ /dashboard/my-listings                     9.99 kB         227 kB
+├ ○ /dashboard/my-bookings                     5.63 kB         186 kB
+├ ○ /dashboard/my-listings                     9.95 kB         227 kB
 ├ ○ /dashboard/my-listings/active              1.69 kB         144 kB
 ├ ○ /dashboard/my-listings/expired              1.7 kB         144 kB
 ├ ○ /dashboard/my-listings/pending              1.7 kB         144 kB
-├ ○ /dashboard/my-profile                      7.38 kB         154 kB
-├ ○ /dashboard/my-subscription                 4.73 kB         223 kB
-├ ƒ /dashboard/product/[id]                    17.2 kB         224 kB
-├ ○ /dashboard/reviews                         6.64 kB         202 kB
-├ ○ /dashboard/services                        7.28 kB         184 kB
+├ ○ /dashboard/my-profile                       7.4 kB         154 kB
+├ ○ /dashboard/my-subscription                 6.49 kB         223 kB
+├ ƒ /dashboard/product/[id]                    13.9 kB         225 kB
+├ ○ /dashboard/reviews                         6.46 kB         202 kB
+├ ○ /dashboard/services                        7.33 kB         184 kB
 ├ ○ /dashboard/services/add-service            15.1 kB         242 kB
-├ ƒ /dashboard/services/edit/[id]              12.7 kB         231 kB
-├ ○ /dashboard/store                           11.8 kB         321 kB
+├ ƒ /dashboard/services/edit/[id]              12.7 kB         232 kB
+├ ○ /dashboard/store                           12.3 kB         322 kB
 ├ ○ /dashboard/store/orders                      12 kB         182 kB
-├ ○ /dashboard/store/products                  12.2 kB         196 kB
+├ ○ /dashboard/store/products                  12.3 kB         196 kB
 ├ ○ /dashboard/store/products/add-product      6.74 kB         269 kB
 ├ ƒ /dashboard/store/products/edit/[id]        5.78 kB         225 kB
-├ ○ /dashboard/vouchers                        8.23 kB         154 kB
-├ ○ /dashboard/vouchers/products                 10 kB         241 kB
-├ ○ /dashboard/vouchers/redeem                 4.34 kB         202 kB
-├ ○ /dashboard/vouchers/sold                   2.03 kB         180 kB
-├ ○ /dashboard/wallet                          8.72 kB         188 kB
-├ ○ /dashboard/wishlist                         5.3 kB         150 kB
+├ ○ /dashboard/vouchers                        8.26 kB         154 kB
+├ ○ /dashboard/vouchers/analytics              1.85 kB         335 kB
+├ ○ /dashboard/vouchers/products               10.6 kB         244 kB
+├ ○ /dashboard/vouchers/redeem                 4.36 kB         202 kB
+├ ○ /dashboard/vouchers/sold                   2.06 kB         180 kB
+├ ○ /dashboard/wallet                          8.74 kB         188 kB
+├ ○ /dashboard/wishlist                        5.33 kB         150 kB
 ├ ○ /faq                                       5.72 kB         162 kB
 ├ ○ /listings                                  21.1 kB         261 kB
-├ ƒ /listings/[id]                             5.71 kB         336 kB
-├ ƒ /listings/[id]/gift-card                     72 kB         280 kB
-├ ○ /listings/claim/success                    3.13 kB         113 kB
+├ ƒ /listings/[id]                              6.3 kB         304 kB
+├ ƒ /listings/[id]/gift-card                   72.5 kB         281 kB
+├ ○ /listings/claim/success                    3.15 kB         113 kB
 ├ ○ /listings/pricing                          3.11 kB         105 kB
 ├ ○ /manifest.webmanifest                        151 B         102 kB
-├ ○ /pricing                                   6.68 kB         244 kB
+├ ○ /pricing                                   4.59 kB         244 kB
 ├ ○ /privacy-policy                            3.95 kB         160 kB
-├ ƒ /products/[id]                             5.89 kB         244 kB
-├ ○ /seasons/autumn                            6.08 kB         179 kB
-├ ○ /seasons/spring                            6.09 kB         179 kB
-├ ○ /seasons/summer                            6.04 kB         179 kB
+├ ƒ /products/[id]                             9.32 kB         244 kB
+├ ○ /search                                    9.06 kB         269 kB
+├ ○ /seasons/autumn                            6.08 kB         180 kB
+├ ○ /seasons/spring                            6.09 kB         180 kB
+├ ○ /seasons/summer                            6.04 kB         180 kB
 ├ ○ /seasons/winter                            5.97 kB         179 kB
-├ ƒ /services/[id]                             15.5 kB         260 kB
+├ ƒ /services/[id]                             10.2 kB         261 kB
 ├ ○ /spring                                    1.08 kB         179 kB
 ├ ○ /summer                                    1.09 kB         179 kB
 ├ ○ /terms-and-conditions                      3.74 kB         160 kB
@@ -340,7 +384,7 @@ Route (app)                                       Size  First Load JS
 + First Load JS shared by all                   102 kB
   ├ chunks/4814-cce6c4253e954ba6.js            45.2 kB
   ├ chunks/4bd1b696-cc729d47eba2cee4.js        54.1 kB
-  └ other shared chunks (total)                2.89 kB
+  └ other shared chunks (total)                2.96 kB
 
 
 ƒ Middleware                                   33.5 kB

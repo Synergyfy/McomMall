@@ -153,11 +153,7 @@ export default function HomePage() {
       return;
     }
     setSearchError(''); // Clear error if search is valid
-    let query = searchQuery;
-    if (location) {
-      query = `${searchQuery} in ${location}`;
-    }
-    router.push(`/listings?queryText=${encodeURIComponent(query)}`);
+    router.push(`/search?q=${encodeURIComponent(searchQuery)}`);
   };
 
   const handleKeyDown = (event: React.KeyboardEvent<HTMLInputElement>) => {
