@@ -100,9 +100,9 @@ export interface Service extends AbstractBaseEntity {
   media?: string[] | null;
   isActive: boolean;
   pricingModel: 'FIXED' | 'PER_HOUR' | 'PER_UNIT' | 'TIERED' | 'PER_GUEST';
-  fixedPrice?: number | null;
-  pricePerHour?: number | null;
-  pricePerUnit?: number | null;
+  fixedPrice?: string | null;
+  pricePerHour?: string | null;
+  pricePerUnit?: string | null;
   unitName?: string | null;
   enableGuestPricing: boolean;
   guestPricingModel?: 'FIXED' | 'PER_PERSON' | 'FIXED_GROUP' | 'BASE_PLUS_PER_GUEST' | null;

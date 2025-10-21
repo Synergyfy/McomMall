@@ -53,14 +53,29 @@ const SearchResultsPage = () => {
   };
 
   const renderPrice = (item: Product | Service) => {
-    if ('price' in item) {
+    if ('price' in item && typeof item.price === 'number') {
       return `${CURRENCY}${item.price.toFixed(2)}`;
     }
-    if ('pricePerHour' in item && item.pricePerHour) {
-      return `${CURRENCY}${item.pricePerHour.toFixed(2)}/hr`;
-    }
-    if ('fixedPrice' in item && item.fixedPrice) {
-      return `${CURRENCY}${item.fixedPrice.toFixed(2)}`;
+    if ('pricingModel' in item) {
+      switch (item.pricingModel) {
+        case 'FIXED':
+          if (item.fixedPrice) {
+            return `${CURRENCY}${parseFloat(item.fixedPrice).toFixed(2)}`;
+          }
+          break;
+        case 'PER_HOUR':
+          if (item.pricePerHour) {
+            return `${CURRENCY}${parseFloat(item.pricePerHour).toFixed(2)}/hr`;
+          }
+          break;
+        case 'PER_UNIT':
+          if (item.pricePerUnit) {
+            return `${CURRENCY}${parseFloat(item.pricePerUnit).toFixed(2)}/${item.unitName || 'unit'}`;
+          }
+          break;
+        default:
+          return 'Price not available';
+      }
     }
     return 'Price not available';
   };
