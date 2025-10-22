@@ -25,6 +25,7 @@ import {
 import { toast } from 'sonner';
 import StripeCheckoutForm from '@/components/StripeCheckoutForm';
 import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
+import { Loader } from 'lucide-react';
 
 interface FundWalletProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
   const [provider, setProvider] = useState<'stripe' | 'paypal'>('stripe');
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
   const initiateFund = useInitiateFund();
   const verifyFund = useVerifyFund();
   const queryClient = useQueryClient();
@@ -64,6 +66,7 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
   };
 
   const handleVerifyFund = async (transactionId: string) => {
+    setIsProcessing(true);
     verifyFund.mutate(
       { transactionId, amount, paymentProvider: provider },
       {
@@ -71,9 +74,11 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
           toast.success('Funding successful');
           queryClient.invalidateQueries({ queryKey: ['wallet'] });
           onClose();
+          setIsProcessing(false);
         },
         onError: (error) => {
           toast.error(`Error verifying fund: ${error.message}`);
+          setIsProcessing(false);
         },
       }
     );
@@ -82,6 +87,14 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent>
+        {isProcessing && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex flex-col items-center justify-center z-10">
+            <Loader className="animate-spin text-orange-600" size={48} />
+            <p className="mt-4 text-lg font-semibold text-gray-700">
+              Processing payment... Please do not close this page.
+            </p>
+          </div>
+        )}
         <DialogHeader>
           <DialogTitle>Fund Your Wallet</DialogTitle>
           <DialogDescription>
