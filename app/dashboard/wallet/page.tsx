@@ -14,10 +14,6 @@ const Page = () => {
     return <WithdrawPage onBack={() => setShowWithdraw(false)} />;
   }
 
-  if (showFundWallet) {
-    return <FundWallet onBack={() => setShowFundWallet(false)} />;
-  }
-
   return (
     <div className="flex flex-col gap-5 overflow-auto">
       <div className="flex justify-end gap-3">
@@ -26,6 +22,10 @@ const Page = () => {
       </div>
       <WalletSummary />
       <EarningTable />
+      <FundWallet
+        isOpen={showFundWallet}
+        onClose={() => setShowFundWallet(false)}
+      />
     </div>
   );
 };
