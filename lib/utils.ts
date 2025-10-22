@@ -17,5 +17,8 @@ export const CURRENCY = '£';
 
 export function formatCurrency(amount: number | string) {
   const numericAmount = typeof amount === 'string' ? parseFloat(amount) : amount;
-  return `${CURRENCY}${numericAmount.toFixed(2)}`;
+  return `${CURRENCY}${numericAmount.toLocaleString('en-US', {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`;
 }

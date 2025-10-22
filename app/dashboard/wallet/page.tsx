@@ -1,7 +1,7 @@
 'use client';
 import React from 'react';
 import { WalletSummary } from './component/WalletSummary';
-import { EarningTable } from '../component/Tables';
+import { TransactionHistoryTable } from '../component/Tables';
 import WithdrawPage from './component/Withdraw';
 import { Button } from '@/components/ui/button';
 import FundWallet from './component/FundWallet';
@@ -21,7 +21,7 @@ const Page = () => {
         <Button onClick={() => setShowFundWallet(true)}>Fund Wallet</Button>
       </div>
       <WalletSummary />
-      <EarningTable />
+      <TransactionHistoryTable />
       <FundWallet
         isOpen={showFundWallet}
         onClose={() => setShowFundWallet(false)}
