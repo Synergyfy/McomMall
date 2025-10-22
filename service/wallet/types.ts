@@ -5,6 +5,7 @@ export interface Wallet {
   balance: string;
   totalOrders: number;
   withdrawableBalance: string;
+  spendableBalance: string;
 }
 
 export interface OrderItem {
@@ -26,4 +27,15 @@ export interface Order {
 export interface WalletData {
   wallet: Wallet;
   lastTenOrders: Order[];
+}
+
+export interface InitiateFundingDto {
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+}
+
+export interface VerifyFundingDto {
+  transactionId: string;
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
 }

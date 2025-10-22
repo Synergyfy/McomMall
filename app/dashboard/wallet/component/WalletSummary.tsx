@@ -1,5 +1,5 @@
 import { useWallet } from '@/service/wallet/hook';
-import { PiggyBank, PoundSterling, ShoppingCart } from 'lucide-react';
+import { PiggyBank, PoundSterling, ShoppingCart, Wallet } from 'lucide-react';
 
 const BalanceSummaryCard = ({ amount }: { amount: number }) => {
   return (
@@ -42,6 +42,20 @@ const OrderSummaryCard = ({ count }: { count: number }) => {
   );
 };
 
+const SpendableBalanceSummaryCard = ({ amount }: { amount: number }) => {
+  return (
+    <div className="bg-[#E9F8E6] text-[#3fad27] rounded p-4 flex items-center space-x-4 h-[160px]">
+      <div className="font-medium">
+        <p className="text-3xl">{amount.toFixed(2)}</p>
+        <p className="text-lg">Spendable Balance £</p>
+      </div>
+      <div className="text-[5rem] font-normal">
+        <Wallet size={80} />
+      </div>
+    </div>
+  );
+};
+
 export const WalletSummary = () => {
   const { data: walletData, isLoading } = useWallet();
 
@@ -52,9 +66,12 @@ export const WalletSummary = () => {
   return (
     <section>
       <h2 className="text-3xl font-medium">Wallet</h2>
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-6">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 p-6">
         <BalanceSummaryCard
           amount={parseFloat(walletData?.wallet.withdrawableBalance || '0')}
+        />
+        <SpendableBalanceSummaryCard
+          amount={parseFloat(walletData?.wallet.spendableBalance || '0')}
         />
         <EarningSummaryCard
           amount={parseFloat(walletData?.wallet.balance || '0')}
