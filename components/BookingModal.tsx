@@ -182,7 +182,7 @@ export function BookingModal({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={resetState}>
-        <DialogContent className="sm:max-w-[600px] relative">
+        <DialogContent className="sm:max-w-[600px] relative max-h-[90vh] overflow-y-auto">
           {verifyPayment.isPending && <LoadingOverlay />}
           <DialogHeader>
             <DialogTitle>
