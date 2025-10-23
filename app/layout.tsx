@@ -5,7 +5,6 @@ import './globals.css';
 import ClientProviders from '@/components/client-provider';
 import { Toaster } from 'sonner';
 import Header from '@/components/Header';
-import Auth from '@/components/auth';
 import AuthInitializer from '@/components/AuthInitializer';
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 

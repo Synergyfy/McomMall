@@ -10,7 +10,6 @@ import {
 import { useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
 import {
-  UploadCloud,
   Plus,
   Settings,
   Box,
@@ -19,7 +18,6 @@ import {
   Download,
   X,
 } from 'lucide-react';
-import Image from 'next/image';
 import React, { useState } from 'react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { uploadFile } from '@/lib/upload';
@@ -69,7 +67,6 @@ import {
 } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
-import { useRouter } from 'next/navigation';
 import { businessCategories } from '@/lib/business-categories';
 
 
@@ -263,7 +260,6 @@ const customResolver = (data: ProductFormValues) => {
 };
 
 export default function AddProductPage() {
-  const router = useRouter();
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const form = useForm<ProductFormValues>({
     resolver: customResolver,
@@ -310,8 +306,6 @@ export default function AddProductPage() {
   const { mutate: addProduct, isPending } = useAddProduct();
 
   const productType = form.watch('productType');
-
-  const category = form.watch('category');
 
   async function onSubmit(data: ProductFormValues) {
     const mediaUrls = await Promise.all(
