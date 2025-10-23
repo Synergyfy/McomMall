@@ -100,7 +100,7 @@ const ActivityTimerPage: FC = () => {
             An Error Occurred
           </h2>
           <p className="text-gray-500 mt-2">
-            We couldn't load the trial status. Please try again later.
+            We couldn&apos;t load the trial status. Please try again later.
           </p>
         </div>
       </div>
@@ -168,7 +168,7 @@ const ActivityTimerPage: FC = () => {
                     action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
                   })
                 }
-                disabled={isPending || (!isPaused && remainingPauses <= 0)}
+                disabled={isPending || (!isPaused && (remainingPauses ?? 0) <= 0)}
                 size="lg"
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
               >
