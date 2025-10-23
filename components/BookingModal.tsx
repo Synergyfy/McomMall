@@ -193,7 +193,7 @@ export function BookingModal({
 
           {step === 'booking' ? (
             <>
-              <div className="grid gap-4 py-4">
+              <div className="grid gap-4 py-4 max-h-[calc(90vh-200px)] overflow-y-auto">
                 <p>Price: {getPriceDisplay(service)}</p>
                 {service.configurableAddons && service.configurableAddons.length > 0 && (
                   <div>
