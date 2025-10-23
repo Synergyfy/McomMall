@@ -23,8 +23,8 @@ import {
   DialogClose,
 } from '@/components/ui/dialog';
 import { toast } from 'sonner';
-import StripeCheckoutForm from '@/components/StripeCheckoutForm';
-import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { Loader } from 'lucide-react';
 
 interface FundWalletProps {
@@ -136,13 +136,13 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
           {provider === 'stripe' && clientSecret && (
             <StripeCheckoutForm
               clientSecret={clientSecret}
-              onPaymentSuccess={handleVerifyFund}
+              onSuccess={handleVerifyFund}
             />
           )}
 
           {provider === 'paypal' && orderId && (
             <PayPalCheckoutButton
-              orderID={orderId}
+              orderId={orderId}
               onSuccess={handleVerifyFund}
             />
           )}

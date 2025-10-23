@@ -3,8 +3,8 @@
 import { useState } from 'react';
 import { motion } from 'framer-motion';
 import { CreditCard, Wallet } from 'lucide-react';
-import StripeCheckoutForm from '@/components/StripeCheckoutForm';
-import PayPalCheckoutButton from '@/components/PayPalCheckoutButton';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { Button } from '@/components/ui/button';
 import { PaymentMethod } from '@/service/bookings/types';
 
@@ -86,7 +86,7 @@ export default function PaymentForm({
           >
             <StripeCheckoutForm
               clientSecret={clientSecret}
-              onPaymentSuccess={onPaymentSuccess}
+              onSuccess={onPaymentSuccess}
             />
           </motion.div>
         )}
@@ -99,7 +99,7 @@ export default function PaymentForm({
             transition={{ duration: 0.3 }}
           >
             <PayPalCheckoutButton
-              orderID={orderID}
+              orderId={orderID}
               onSuccess={onPaymentSuccess}
             />
           </motion.div>

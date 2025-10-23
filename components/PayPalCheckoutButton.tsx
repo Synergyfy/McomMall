@@ -1,45 +1,46 @@
 'use client';
 
 import {
-  PayPalScriptProvider,
   PayPalButtons,
+  usePayPalScriptReducer,
 } from '@paypal/react-paypal-js';
 import { toast } from 'sonner';
 
-const PAYPAL_CLIENT_ID =
-  process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID || 'sb';
-
 interface PayPalCheckoutButtonProps {
-  orderID: string;
-  onSuccess: (orderId: string) => void;
+  orderId: string;
+  onSuccess: (transactionId: string) => void;
 }
 
-export default function PayPalCheckoutButton({
-  orderID,
+export function PayPalCheckoutButton({
+  orderId,
   onSuccess,
 }: PayPalCheckoutButtonProps) {
-  const onApprove = async (data: { orderID: string }) => {
-    onSuccess(data.orderID);
-  };
-
-  if (!orderID) {
-    return <div>Loading PayPal button...</div>;
-  }
+  const [{ isPending }] = usePayPalScriptReducer();
 
   return (
-    <PayPalScriptProvider
-      options={{
-        clientId: PAYPAL_CLIENT_ID,
-        currency: 'GBP',
-      }}
-    >
-      <PayPalButtons
-        style={{ layout: 'vertical' }}
-        createOrder={(_, actions) => {
-          return Promise.resolve(orderID);
-        }}
-        onApprove={onApprove}
-      />
-    </PayPalScriptProvider>
+    <div>
+      {isPending ? (
+        <div>Loading...</div>
+      ) : (
+        <PayPalButtons
+          createOrder={(data, actions) => {
+            return Promise.resolve(orderId);
+          }}
+          onApprove={async (data, actions) => {
+            if (actions.order) {
+              const details = await actions.order.capture();
+              if (details.id) {
+                onSuccess(details.id);
+              } else {
+                toast.error('Transaction ID not found.');
+              }
+            }
+          }}
+          onError={err => {
+            toast.error('An error occurred during the PayPal transaction.');
+          }}
+        />
+      )}
+    </div>
   );
 }

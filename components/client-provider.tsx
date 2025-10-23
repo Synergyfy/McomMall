@@ -32,7 +32,7 @@ const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-export default function ClientProviders({
+export function ClientProviders({
   children,
 }: {
   children: React.ReactNode;
