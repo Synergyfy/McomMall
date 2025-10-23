@@ -146,10 +146,10 @@ export function BookingModal({
 
   const handlePaymentSuccess = (transactionId: string) => {
     if (bookingId && service && paymentProvider) {
-      const totalAddonPrice = selectedAddons.reduce((acc, addonId) => {
+      const totalAddonPrice = service.configurableAddons ? selectedAddons.reduce((acc, addonId) => {
         const addon = service.configurableAddons.find(a => a.id === addonId);
-        return acc + (addon ? addon.price : 0);
-      }, 0);
+        return acc + (addon ? parseFloat(addon.price) : 0);
+      }, 0) : 0;
       const totalAmount = parseFloat(service.fixedPrice) + totalAddonPrice;
 
       verifyPayment.mutate({
@@ -195,7 +195,7 @@ export function BookingModal({
             <>
               <div className="grid gap-4 py-4">
                 <p>Price: {getPriceDisplay(service)}</p>
-                {service.configurableAddons.length > 0 && (
+                {service.configurableAddons && service.configurableAddons.length > 0 && (
                   <div>
                     <h4 className="font-semibold">Add-ons</h4>
                     {service.configurableAddons.map((addon) => (
