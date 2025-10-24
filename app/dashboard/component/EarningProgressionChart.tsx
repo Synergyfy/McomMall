@@ -36,7 +36,7 @@ const EarningProgressionChart = () => {
 
   const handleTimeRangeChange = (timeRange: string) => {
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
     switch (timeRange) {
       case '7days':
         startDate.setDate(now.getDate() - 7);
