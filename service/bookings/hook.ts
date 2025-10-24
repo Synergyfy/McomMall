@@ -46,17 +46,41 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
     return data;
 };
 
+const initiatePayment = async (payload: {
+  bookingId: string;
+  paymentProvider: 'stripe' | 'paypal';
+}) => {
+  const { data } = await api.post('/bookings/initiate-payment', payload);
+  return data;
+};
+
+const verifyPayment = async (payload: {
+  bookingId: string;
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+}) => {
+  const { data } = await api.post('/bookings/verify-payment', payload);
+  return data;
+};
+
+const markBookingComplete = async (bookingId: string) => {
+  const { data } = await api.put(`/bookings/${bookingId}/complete`);
+  return data;
+};
+
+
 // --- Custom Hooks ---
 
-export const useCreateBooking = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
+export const useCreateBooking = ({ onSuccess }: { onSuccess?: (data: any) => void } = {}) => {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: createBooking,
-    onSuccess: () => {
+    onSuccess: (data) => {
       queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
       queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
       toast.success('Booking created successfully!');
-      onSuccess?.();
+      onSuccess?.(data);
     },
     onError: (error: any) => {
       const errorMessage = error?.response?.data?.message || 'Failed to create booking. Please try again.';
@@ -135,4 +159,47 @@ export const useCancelBooking = () => {
             toast.error(errorMessage);
         },
     });
+};
+
+export const useInitiatePayment = () => {
+  return useMutation({
+    mutationFn: initiatePayment,
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to initiate payment. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useVerifyPayment = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: verifyPayment,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+      toast.success('Payment verified successfully!');
+      onSuccess?.();
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to verify payment. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useMarkBookingComplete = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: markBookingComplete,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+      toast.success('Booking marked as complete!');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to mark booking as complete. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
 };

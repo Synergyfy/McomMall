@@ -12,6 +12,7 @@ import { useCart } from '@/hooks/useCart';
 import { toast } from 'sonner';
 import { PricingModel } from '@/service/search/enums';
 import { BookingModal } from '@/components/BookingModal';
+import EmptyState from './EmptyState';
 
 const SearchResultsPage = () => {
   const searchParams = useSearchParams();
@@ -152,9 +153,9 @@ const SearchResultsPage = () => {
             <p>Loading...</p>
           ) : isError ? (
             <p>Error fetching results.</p>
-          ) : (
+          ) : data?.items && data.items.length > 0 ? (
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-              {data?.items?.map((item: Product | Service) => (
+              {data.items.map((item: Product | Service) => (
                 <div
                   key={item.id}
                   className="bg-white rounded-lg shadow-md overflow-hidden flex flex-col cursor-pointer"
@@ -203,6 +204,8 @@ const SearchResultsPage = () => {
                 </div>
               ))}
             </div>
+          ) : (
+            <EmptyState />
           )}
         </main>
       </div>

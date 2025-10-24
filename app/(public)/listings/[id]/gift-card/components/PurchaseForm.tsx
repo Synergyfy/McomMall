@@ -34,8 +34,8 @@ import {
   useInitiatePurchase,
   useVerifyPurchase,
 } from "@/service/gift-card/hook";
-import StripeCheckoutForm from "@/components/StripeCheckoutForm";
-import PayPalCheckoutButton from "@/components/PayPalCheckoutButton";
+import { StripeCheckoutForm } from "@/components/StripeCheckoutForm";
+import { PayPalCheckoutButton } from "@/components/PayPalCheckoutButton";
 import PaymentSuccessDialog from "@/components/PaymentSuccessDialog";
 import { toast } from "sonner";
 
@@ -158,7 +158,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     return (
       <StripeCheckoutForm
         clientSecret={purchaseResponse.clientSecret}
-        onPaymentSuccess={(paymentIntentId) => handleVerification(paymentIntentId)}
+        onSuccess={(paymentIntentId) => handleVerification(paymentIntentId)}
       />
     );
   }
@@ -167,7 +167,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     return (
       <div className="flex justify-center">
         <PayPalCheckoutButton
-          orderID={purchaseResponse.orderId}
+          orderId={purchaseResponse.orderId}
           onSuccess={(orderID) => handleVerification(orderID)}
         />
       </div>

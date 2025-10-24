@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { Open_Sans } from 'next/font/google';
 import 'leaflet/dist/leaflet.css';
 import './globals.css';
-import ClientProviders from '@/components/client-provider';
+import { ClientProviders } from '@/components/client-provider';
 import { Toaster } from 'sonner';
 import Header from '@/components/Header';
 import Auth from '@/components/auth';

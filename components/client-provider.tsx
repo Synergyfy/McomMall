@@ -9,6 +9,14 @@ import { Provider, useDispatch } from 'react-redux';
 import { store } from '@/service/store/store';
 import { loadAuthFromCookies } from '@/service/store/authSlice';
 import { useTokenRefresh } from '@/service/auth/useTokenRefresh';
+import { PayPalScriptProvider } from '@paypal/react-paypal-js';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+);
+
 const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   const dispatch = useDispatch();
   useTokenRefresh();
@@ -24,7 +32,7 @@ const AuthLoader = ({ children }: { children: React.ReactNode }) => {
   return <>{children}</>;
 };
 
-export default function ClientProviders({
+export function ClientProviders({
   children,
 }: {
   children: React.ReactNode;
@@ -34,7 +42,15 @@ export default function ClientProviders({
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <AuthLoader>{children}</AuthLoader>
+        <PayPalScriptProvider
+          options={{
+            clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+          }}
+        >
+          <Elements stripe={stripePromise}>
+            <AuthLoader>{children}</AuthLoader>
+          </Elements>
+        </PayPalScriptProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </Provider>

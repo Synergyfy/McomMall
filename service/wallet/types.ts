@@ -2,28 +2,41 @@ export interface Wallet {
   id: string;
   createdAt: string;
   updatedAt: string;
+  deletedAt: string | null;
   balance: string;
   totalOrders: number;
-  withdrawableBalance: string;
+  earningsBalance: string;
+  spendableBalance: string;
+  earningsFromOrders: string;
+  earningsFromGiftCard: string;
+  earningsFromVoucher: string;
+  earningsFromBookings: string;
+  pendingBalance: string;
 }
 
-export interface OrderItem {
+export interface Transaction {
   id: string;
-  quantity: number;
-  price: string;
-  product: {
-    id: string;
-    name: string;
-  };
-}
-
-export interface Order {
-  id: string;
-  total: string;
-  items: OrderItem[];
+  createdAt: string;
+  updatedAt: string;
+  deletedAt: string | null;
+  amount: string;
+  type: string;
+  description: string;
+  balanceAfter: string;
 }
 
 export interface WalletData {
   wallet: Wallet;
-  lastTenOrders: Order[];
+  transactionHistory: Transaction[];
+}
+
+export interface InitiateFundingDto {
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+}
+
+export interface VerifyFundingDto {
+  transactionId: string;
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
 }

@@ -11,8 +11,20 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog';
 import { Booking } from '@/service/bookings/types';
-import { useCancelBooking } from '@/service/bookings/hook';
+import { useCancelBooking, useMarkBookingComplete } from '@/service/bookings/hook';
+import { useState } from 'react';
 
 const InfoBlock: FC<{
   icon: React.ReactNode;
@@ -28,13 +40,20 @@ const InfoBlock: FC<{
   </div>
 );
 
-import { DollarSign, Briefcase } from 'lucide-react';
+import { DollarSign, Briefcase, CheckCircle } from 'lucide-react';
 
 const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const cancelBookingMutation = useCancelBooking();
+  const markCompleteMutation = useMarkBookingComplete();
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const handleCancel = () => {
     cancelBookingMutation.mutate(booking.id);
+  };
+
+  const handleMarkComplete = () => {
+    markCompleteMutation.mutate(booking.id);
+    setIsConfirmOpen(false);
   };
 
   const statusStyles: { [key: string]: { badge: string; border: string } } = {
@@ -109,10 +128,35 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                   <XCircle className="mr-2 h-4 w-4" />
                   Cancel Booking
                 </DropdownMenuItem>
+                <DropdownMenuItem
+                  onClick={() => setIsConfirmOpen(true)}
+                  disabled={booking.status.toUpperCase() !== 'APPROVED'}
+                >
+                  <CheckCircle className="mr-2 h-4 w-4" />
+                  Mark as Complete
+                </DropdownMenuItem>
               </DropdownMenuContent>
             </DropdownMenu>
           </div>
         </div>
+
+        <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+              <AlertDialogDescription>
+                This action will mark the booking as complete and release the
+                payment to the business owner. This cannot be undone.
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction onClick={handleMarkComplete}>
+                Continue
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
           <InfoBlock icon={<Calendar className="h-4 w-4" />} title="Booking Date">

@@ -25,7 +25,7 @@ import { GroupMember } from '@/service/grouping/types';
 import { RootState } from '@/service/store/store';
 import Link from 'next/link';
 import { Skeleton } from '@/components/ui/skeleton';
-import StripeCheckoutForm from '@/components/StripeCheckoutForm';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { useQueryClient } from '@tanstack/react-query';
 
 interface ApiError extends Error {
@@ -247,7 +247,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                 {clientSecret && (
                     <StripeCheckoutForm
                         clientSecret={clientSecret}
-                        onPaymentSuccess={handlePaymentSuccess}
+                        onSuccess={handlePaymentSuccess}
                     />
                 )}
             </DialogContent>
