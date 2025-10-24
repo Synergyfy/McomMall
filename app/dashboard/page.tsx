@@ -39,6 +39,7 @@ import { useRecentActivities } from '@/service/activities/hook';
 import { useGetStats } from '@/service/stats';
 import StatsCards from './component/StatsCards';
 import RecentActivities from './component/RecentActivities';
+import EarningProgressionChart from './component/EarningProgressionChart';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
 
@@ -59,17 +60,6 @@ const listingPackage: ListingPackage = {
   description: 'You have 0 listings posted out of 1, listed for 30 days',
 };
 
-const chartData: ChartData[] = [
-  { name: 'Jan', views: 0.2 },
-  { name: 'Feb', views: 0.4 },
-  { name: 'Mar', views: 0.3 },
-  { name: 'Apr', views: 0.6 },
-  { name: 'May', views: 0.5 },
-  { name: 'Jun', views: 0.8 },
-  { name: 'Jul', views: 0.7 },
-  { name: 'Aug', views: 1.0 },
-];
-
 // --- SUB-COMPONENTS ---
 const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
   <Card className="shadow-sm">
@@ -86,60 +76,6 @@ const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
         <p className="font-semibold text-gray-800">{pkg.name}</p>
         <p className="text-sm text-gray-500">{pkg.description}</p>
       </div>
-    </CardContent>
-  </Card>
-);
-
-const ListingsViewsChart: FC<{ data: ChartData[] }> = ({ data }) => (
-  <Card className="shadow-sm">
-    <CardHeader className="flex flex-row items-center justify-between">
-      <CardTitle className="text-lg font-semibold">
-        Your Listings Views
-      </CardTitle>
-      <DropdownMenu>
-        <DropdownMenuTrigger asChild>
-          <Button variant="outline" size="sm">
-            August 6, 2025 - August 12, 2025
-            <MoreHorizontal className="ml-2 h-4 w-4" />
-          </Button>
-        </DropdownMenuTrigger>
-        <DropdownMenuContent align="end">
-          <DropdownMenuItem>Last 7 Days</DropdownMenuItem>
-          <DropdownMenuItem>Last 30 Days</DropdownMenuItem>
-          <DropdownMenuItem>Last 90 Days</DropdownMenuItem>
-        </DropdownMenuContent>
-      </DropdownMenu>
-    </CardHeader>
-    <CardContent className="h-72">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart
-          data={data}
-          margin={{ top: 5, right: 20, left: -10, bottom: 5 }}
-        >
-          <CartesianGrid strokeDasharray="3 3" vertical={false} />
-          <XAxis
-            dataKey="name"
-            tickLine={false}
-            axisLine={false}
-            tick={{ fill: '#6b7280' }}
-          />
-          <YAxis tickLine={false} axisLine={false} tick={{ fill: '#6b7280' }} />
-          <Tooltip
-            contentStyle={{
-              backgroundColor: '#ffffff',
-              border: '1px solid #e5e7eb',
-              borderRadius: '0.5rem',
-            }}
-          />
-          <Line
-            type="monotone"
-            dataKey="views"
-            stroke="#ef4444"
-            strokeWidth={2}
-            dot={false}
-          />
-        </LineChart>
-      </ResponsiveContainer>
     </CardContent>
   </Card>
 );
@@ -189,7 +125,7 @@ const DashboardPage: FC = () => {
               {userRole === UserRole.OWNER && (
                 <div className="lg:col-span-2 space-y-8">
                   <ListingPackages pkg={listingPackage} />
-                  <ListingsViewsChart data={chartData} />
+                  <EarningProgressionChart />
                 </div>
               )}
             </div>
