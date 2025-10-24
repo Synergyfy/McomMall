@@ -184,16 +184,12 @@ export default function Header() {
               <UserNav />
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
-                <Link href="/signin">
+                <Link href="/getstarted">
                   <Button variant="outline" size="sm" className="text-orange-600 hover:text-red-400">
-                    Sign In
+                    Get Started
                   </Button>
                 </Link>
-                <Link href="/signup">
-                  <Button  size="sm" className='bg-orange-500 hover:bg-orange-500 text-white'>
-                    Sign Up
-                  </Button>
-                </Link>
+                
               </div>
             )}
 
