@@ -21,3 +21,17 @@ export interface CustomerStatsDto {
   totalAmountSpentOnVoucher: number;
   totalAmountSpentOnGiftCards: number;
 }
+
+export interface SalesChartData {
+  date: string;
+  giftCardSales: number;
+  voucherSales: number;
+  orderSales: number;
+  bookingPayments: number;
+}
+
+export interface SalesChartQuery {
+  startDate?: string;
+  endDate?: string;
+  allTime?: boolean;
+}

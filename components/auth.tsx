@@ -381,7 +381,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         } p-8 space-y-8 bg-white rounded-lg shadow-md`}
       >
         <div className="text-center">
-          {mode !== 'forgot-password' && mode !== 'verify-email' && (
+          {/* {mode !== 'forgot-password' && mode !== 'verify-email' && (
             <div>
               <div className="flex justify-center mb-4">
                 <Button
@@ -405,7 +405,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               </div>
               <hr className="w-full bg-gray-400 " />
             </div>
-          )}
+          )} */}
           <h1 className="text-2xl font-bold text-gray-900 mt-4">
             {mode === 'login' && 'Login'}
             {mode === 'register' &&
@@ -780,9 +780,11 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 className="justify-center w-full bg-orange-500 hover:bg-orange-600"
                 disabled={isPending}
               >
-                {isPending ? 'Submitting...' : 'Submit'}
+                {isPending ? 'Submitting...' : 'Sign Up'}
               </Button>
             )}
+
+            {/* add google */}
             {mode === 'forgot-password' && (
               <>
                 {step === 'enter-email' && (
