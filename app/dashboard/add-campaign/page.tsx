@@ -159,7 +159,6 @@ const AddListingPage = () => {
               formData={formData}
               setFormData={setFormData}
               categories={categories}
-              regions={mockRegions}
             />
 
             <AdPlacementSelector
