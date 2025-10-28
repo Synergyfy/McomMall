@@ -133,18 +133,10 @@ const ProductDataStep: React.FC<StepProps> = ({
       </div>
       <div>
         <Label>Variants</Label>
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <p className="text-sm text-muted-foreground">
-                Add variations of your product, like different colors, sizes, or materials.
-              </p>
-            </TooltipTrigger>
-            <TooltipContent>
-              <p>This helps customers choose the exact product they want.</p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
+        <p className="text-sm text-muted-foreground">
+          Add variations of your product. These can be different colors, sizes, materials, or any other option you want to offer.
+          You can choose from a list of common variant types or enter your own. For each variant, you can add a description and a quantity.
+        </p>
         <div className="space-y-4 mt-4">
           {productData.variants?.map((variant, index) => (
             <div key={index} className="border p-4 rounded-md space-y-2">

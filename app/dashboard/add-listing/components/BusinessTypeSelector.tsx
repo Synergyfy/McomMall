@@ -65,6 +65,7 @@ const BusinessTypeSelector: React.FC<BusinessTypeSelectorProps> = ({
           return (
             <motion.div
               key={type.id}
+              data-testid={`business-type-${type.id}`}
               variants={cardVariants}
               initial="hidden"
               animate="visible"
