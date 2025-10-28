@@ -200,6 +200,9 @@ const CalendarViewPage: FC = () => {
         <h1 className="text-3xl font-bold text-gray-800">
           Booking Calendar
         </h1>
+        <p className="text-sm text-gray-500 mt-1">
+          View and manage your bookings in a calendar format.
+        </p>
       </header>
       <CalendarView />
     </div>

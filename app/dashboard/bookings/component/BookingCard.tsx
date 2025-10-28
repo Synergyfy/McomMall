@@ -46,8 +46,14 @@ const InfoBlock: FC<{
 );
 
 import { DollarSign, Briefcase } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
+const BookingCard: FC<{
+  booking: Booking;
+  onClick: () => void;
+  onSelect: () => void;
+  isSelected: boolean;
+}> = ({ booking, onClick, onSelect, isSelected }) => {
   const declineBookingMutation = useDeclineBooking();
   const approveBookingMutation = useApproveBooking();
   const markCompleteMutation = useMarkBookingComplete();
@@ -107,17 +113,21 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
 
   return (
     <Card
-      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle}`}
+      onClick={onClick}
+      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle} cursor-pointer`}
     >
       <CardContent className="p-6 space-y-4">
         <div className="flex justify-between items-start">
-          <div>
+          <div className="flex items-center space-x-2">
+            <Checkbox checked={isSelected} onCheckedChange={onSelect} />
+            <div>
             <h2 className="text-xl font-bold text-gray-800">
               Booking #{booking.id.slice(0, 8)}
             </h2>
             <p className="text-sm text-gray-500">
               for {booking.service.name}
             </p>
+            </div>
           </div>
           <div className="flex items-center space-x-2">
             {getStatusBadge(booking.status)}

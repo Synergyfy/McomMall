@@ -1,69 +1,59 @@
 'use client';
 
-import React from 'react';
-import { motion } from 'framer-motion';
-import { QrCode, Clock } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { Html5QrcodeScanner } from 'html5-qrcode';
+import { QrCode } from 'lucide-react';
 
-const ComingSoonPage: React.FC = () => {
+const QRScannerPage: React.FC = () => {
+  const [scanResult, setScanResult] = useState<string | null>(null);
+
+  useEffect(() => {
+    const scanner = new Html5QrcodeScanner(
+      'reader',
+      {
+        qrbox: {
+          width: 250,
+          height: 250,
+        },
+        fps: 5,
+      },
+      false
+    );
+
+    function onScanSuccess(decodedText: string) {
+      setScanResult(decodedText);
+      scanner.clear();
+    }
+
+    function onScanFailure(error: any) {
+      console.warn(`Code scan error = ${error}`);
+    }
+
+    scanner.render(onScanSuccess, onScanFailure);
+
+    return () => {
+      scanner.clear();
+    };
+  }, []);
+
   return (
     <div className="flex min-h-[calc(100vh-theme(spacing.16))] flex-col items-center justify-center bg-gray-50 p-4 text-center">
-      <motion.div
-        initial={{ opacity: 0, y: -20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.5 }}
-        className="relative mb-6"
-      >
-        <QrCode className="h-24 w-24 text-gray-300" />
-        <motion.div
-          className="absolute -top-2 -right-2"
-          animate={{ rotate: [0, 15, -10, 10, 0] }}
-          transition={{
-            duration: 1.5,
-            repeat: Infinity,
-            repeatType: 'reverse',
-            ease: 'easeInOut',
-          }}
-        >
-          <Clock className="h-8 w-8 text-pink-500" />
-        </motion.div>
-      </motion.div>
-
-      <motion.h1
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.2, duration: 0.5 }}
-        className="mb-3 text-4xl font-bold tracking-tight text-gray-800"
-      >
-        Coming Soon!
-      </motion.h1>
-
-      <motion.p
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ delay: 0.4, duration: 0.5 }}
-        className="max-w-md text-lg text-gray-600"
-      >
-        We are working hard to bring you an amazing QR code scanning experience.
-        Stay tuned for updates!
-      </motion.p>
-
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{
-          delay: 0.6,
-          type: 'spring',
-          stiffness: 260,
-          damping: 20,
-        }}
-        className="mt-8 flex items-center space-x-2"
-      >
-        <div className="h-2 w-16 animate-pulse rounded-full bg-pink-300"></div>
-        <div className="h-2 w-8 animate-pulse rounded-full bg-gray-300"></div>
-        <div className="h-2 w-12 animate-pulse rounded-full bg-pink-300"></div>
-      </motion.div>
+      <QrCode className="h-24 w-24 text-gray-300 mb-6" />
+      <h1 className="mb-3 text-4xl font-bold tracking-tight text-gray-800">
+        QR Code Scanner
+      </h1>
+      <p className="max-w-md text-lg text-gray-600 mb-8">
+        Use this page to scan your customers' QR codes to verify their bookings.
+      </p>
+      {scanResult ? (
+        <div>
+          <p>Scan Result: {scanResult}</p>
+        </div>
+      ) : (
+        <div id="reader" style={{ width: '500px' }}></div>
+      )}
     </div>
   );
 };
 
-export default ComingSoonPage;
+export default QRScannerPage;

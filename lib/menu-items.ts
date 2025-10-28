@@ -36,6 +36,7 @@ export interface MenuItem {
 }
 
 // Export the menu item arrays
+import { QrCode } from 'lucide-react';
 export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
   {
@@ -46,6 +47,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
+  { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
   // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
 ];
 
@@ -97,7 +99,6 @@ export const serviceMenuItems: MenuItem[] = [
     icon: BookOpen,
     subMenu: [
       { title: 'Calendar View', href: '/dashboard/bookings/calendar-view' },
-      { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner' },
       { title: 'Pending', href: '/dashboard/bookings?status=pending' },
       { title: 'Approved', href: '/dashboard/bookings?status=approved' },
       { title: 'Cancelled', href: '/dashboard/bookings?status=cancelled' },

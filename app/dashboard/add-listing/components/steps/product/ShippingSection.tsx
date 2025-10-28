@@ -8,7 +8,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { Checkbox } from '@/components/ui/checkbox';
 
 interface ShippingSectionProps {
   formData: ListingFormData;
@@ -25,10 +25,14 @@ const ShippingSection: React.FC<ShippingSectionProps> = ({ formData, setFormData
     }));
   };
 
-  const handleDeliveryOptionsChange = (value: ('local' | 'uk-wide')[]) => {
+  const handleDeliveryOptionsChange = (option: 'local' | 'uk-wide') => {
+    const currentOptions = productData.deliveryOptions || [];
+    const newOptions = currentOptions.includes(option)
+      ? currentOptions.filter(item => item !== option)
+      : [...currentOptions, option];
     setFormData(prev => ({
       ...prev,
-      productData: { ...prev.productData, deliveryOptions: value },
+      productData: { ...prev.productData, deliveryOptions: newOptions },
     }));
   };
 
@@ -50,16 +54,22 @@ const ShippingSection: React.FC<ShippingSectionProps> = ({ formData, setFormData
       {productData.shippingMethod === 'delivery' && (
         <div>
           <Label>Delivery Options</Label>
-          <RadioGroup onValueChange={handleDeliveryOptionsChange}>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="local" id="local" />
-              <Label htmlFor="local">Local Delivery</Label>
-            </div>
-            <div className="flex items-center space-x-2">
-              <RadioGroupItem value="uk-wide" id="uk-wide" />
-              <Label htmlFor="uk-wide">UK-Wide Shipping</Label>
-            </div>
-          </RadioGroup>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="local"
+              onCheckedChange={() => handleDeliveryOptionsChange('local')}
+              checked={productData.deliveryOptions?.includes('local')}
+            />
+            <Label htmlFor="local">Local Delivery</Label>
+          </div>
+          <div className="flex items-center space-x-2">
+            <Checkbox
+              id="uk-wide"
+              onCheckedChange={() => handleDeliveryOptionsChange('uk-wide')}
+              checked={productData.deliveryOptions?.includes('uk-wide')}
+            />
+            <Label htmlFor="uk-wide">UK-Wide Shipping</Label>
+          </div>
         </div>
       )}
     </div>
