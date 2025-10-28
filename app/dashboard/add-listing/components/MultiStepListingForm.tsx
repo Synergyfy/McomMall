@@ -60,6 +60,7 @@ import ProductCategoryStep from './steps/product/ProductCategoryStep';
 import ProductLocationStep from './steps/product/ProductLocationStep';
 import ProductHoursStep from './steps/product/ProductHoursStep';
 import SellingModesStep from './steps/product/SellingModesStep';
+import ProductDataStep from './steps/product/ProductDataStep';
 import ServiceCategoryStep from './steps/service/ServiceCategoryStep';
 import ServiceAreaStep from './steps/service/ServiceAreaStep';
 import ServiceHoursStep from './steps/service/ServiceHoursStep';
@@ -291,6 +292,12 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: LayoutGrid,
         component: ProductCategoryStep,
         validationRules: validationRules.productCategory,
+      },
+      {
+        title: 'Product Data',
+        icon: LayoutGrid,
+        component: ProductDataStep,
+        validationRules: {},
       },
       {
         title: 'Location',

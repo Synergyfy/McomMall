@@ -36,10 +36,28 @@ export interface SpecialDay {
 }
 
 // Flow-specific data structures
+export interface VariantOption {
+  name: string;
+  quantity: number;
+}
+
+export interface ProductVariant {
+  name: string;
+  description: string;
+  options: VariantOption[];
+}
+
 export interface ProductSellerData {
   primaryCategory: string;
   subCategory: string;
   subCategories: string[];
+  variants?: ProductVariant[];
+  price?: number;
+  discountedPrice?: number;
+  sku?: string;
+  stockQuantity?: number;
+  shippingMethod?: 'free' | 'pickup' | 'delivery';
+  deliveryOptions?: ('local' | 'uk-wide')[];
   showAddressPublicly: boolean;
   deliveryArea: {
     type: 'radius' | 'postcodes';

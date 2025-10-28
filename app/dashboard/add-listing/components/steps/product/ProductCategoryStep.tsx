@@ -10,6 +10,7 @@ import {
 } from '@/components/ui/select';
 import { z } from 'zod';
 import { businessCategories } from '@/lib/business-categories';
+import { Input } from '@/components/ui/input';
 
 interface StepProps {
   formData: ListingFormData;
@@ -75,20 +76,15 @@ const ProductCategoryStep: React.FC<StepProps> = ({
     <div className="space-y-6">
       <div>
         <Label htmlFor="primaryCategory">
-          Sector
-          {isFieldOptional(schema!, 'productData.primaryCategory') && (
-            <span className="text-muted-foreground font-normal text-sm">
-              {' '}
-              (optional)
-            </span>
-          )}
+          Listings/Business
         </Label>
+        <p className="text-sm text-muted-foreground">Select the categories that best describe your product.</p>
         <Select
           value={productData.primaryCategory}
           onValueChange={handlePrimaryCategoryChange}
         >
           <SelectTrigger id="primaryCategory">
-            <SelectValue placeholder="Select a sector" />
+            <SelectValue placeholder="Select from your Listing" />
           </SelectTrigger>
           <SelectContent>
             {businessCategories.map(cat => (
@@ -105,7 +101,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
 
       <div>
         <Label htmlFor="subCategory">
-          Sub-Section
+          Sub Categories
         </Label>
         <Select
           value={selectedSubCategory}
@@ -127,9 +123,14 @@ const ProductCategoryStep: React.FC<StepProps> = ({
 
         {!productData.primaryCategory && (
           <p className="text-xs text-muted-foreground mt-1">
-            Please select a sector to see available sub-sections.
+            Please select a category to see available sub-categories.
           </p>
         )}
+
+      <div>
+        <Label htmlFor="tags">Tags</Label>
+        <Input id="tags" placeholder="Enter tags separated by commas" />
+      </div>
     </div>
   );
 };
