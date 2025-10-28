@@ -31,18 +31,37 @@ import {
   PaginationNext,
   PaginationPrevious,
 } from '@/components/ui/pagination';
-import { useGetBusinessBookings } from '@/service/bookings/hook';
+import {
+  useGetBusinessBookings,
+  useApproveBooking,
+  useDeclineBooking,
+} from '@/service/bookings/hook';
+import Papa from 'papaparse';
 import BookingCard from './component/BookingCard';
 
 const BookingsPage: FC = () => {
   const [days, setDays] = useState<number | undefined>(undefined);
   const { data: bookings, isLoading } = useGetBusinessBookings(days);
   const [currentPage, setCurrentPage] = useState<number>(1);
+  const [selectedBookings, setSelectedBookings] = useState<string[]>([]);
   const itemsPerPage: number = 4;
   const searchParams = useSearchParams();
   const statusParam = searchParams.get('status');
   const { newBookingsCount, newBookingIds } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
+  const approveBookingMutation = useApproveBooking();
+  const declineBookingMutation = useDeclineBooking();
+
+  const handleBulkAction = (action: 'approve' | 'decline') => {
+    selectedBookings.forEach(bookingId => {
+      if (action === 'approve') {
+        approveBookingMutation.mutate(bookingId);
+      } else {
+        declineBookingMutation.mutate(bookingId);
+      }
+    });
+    setSelectedBookings([]);
+  };
 
   useEffect(() => {
     if (newBookingsCount > 0) {
@@ -81,6 +100,35 @@ const BookingsPage: FC = () => {
     }
   };
 
+  const handleExport = () => {
+    if (filteredBookings) {
+      const csv = Papa.unparse(
+        filteredBookings.map(b => ({
+          ID: b.id,
+          Service: b.service.name,
+          Customer: b.user.name,
+          Date: new Date(b.createdAt).toLocaleDateString(),
+          Time: `${new Date(b.startTime).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })} - ${new Date(b.endTime).toLocaleTimeString([], {
+            hour: '2-digit',
+            minute: '2-digit',
+          })}`,
+          Status: b.status,
+          Price: b.payment.amount,
+        }))
+      );
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const link = document.createElement('a');
+      link.href = URL.createObjectURL(blob);
+      link.setAttribute('download', 'bookings.csv');
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+    }
+  };
+
   if (isLoading) {
     return <div>Loading bookings...</div>;
   }
@@ -88,7 +136,14 @@ const BookingsPage: FC = () => {
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">Business Bookings</h1>
+        <div>
+          <h1 className="text-3xl font-bold text-gray-800">
+            Business Bookings
+          </h1>
+          <p className="text-sm text-gray-500 mt-1">
+            Manage and view all your customer bookings.
+          </p>
+        </div>
         <Breadcrumb className="mt-2 sm:mt-0">
           <BreadcrumbList>
             <BreadcrumbItem>
@@ -105,9 +160,13 @@ const BookingsPage: FC = () => {
       <Card className="mb-8 shadow-sm">
         <CardContent className="p-4 flex justify-between items-center">
           <h2 className="font-semibold text-gray-700">Your Customer Bookings</h2>
-          <DropdownMenu>
-            <DropdownMenuTrigger asChild>
-              <Button variant="outline" size="sm">
+          <div className="flex items-center space-x-2">
+            <Button variant="outline" size="sm" onClick={handleExport}>
+              Export Orders
+            </Button>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm">
                 {days ? `Last ${days} Days` : 'All Time'}
                 <MoreHorizontal className="ml-2 h-4 w-4" />
               </Button>
@@ -130,9 +189,44 @@ const BookingsPage: FC = () => {
       <main className="space-y-6">
         {paginatedBookings.length > 0 ? (
           <>
+            <div className="flex justify-end mb-4">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button
+                    variant="outline"
+                    disabled={selectedBookings.length === 0}
+                  >
+                    Bulk Actions
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkAction('approve')}
+                  >
+                    Approve Selected
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleBulkAction('decline')}
+                  >
+                    Decline Selected
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
             <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
               {paginatedBookings.map(booking => (
-                <BookingCard key={booking.id} booking={booking} />
+                <BookingCard
+                  key={booking.id}
+                  booking={booking}
+                  isSelected={selectedBookings.includes(booking.id)}
+                  onSelect={isSelected => {
+                    setSelectedBookings(prev =>
+                      isSelected
+                        ? [...prev, booking.id]
+                        : prev.filter(id => id !== booking.id)
+                    );
+                  }}
+                />
               ))}
             </div>
 

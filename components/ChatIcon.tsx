@@ -28,10 +28,17 @@ export default function ChatIcon({
       router.push('/login');
       return;
     }
-    sendMessage({
-      content: `Hi, I'm interested in your listing: ${listingName}`,
-      receiverId: receiverId,
-    });
+    sendMessage(
+      {
+        content: `Hi, I'm interested in your listing: ${listingName}`,
+        receiverId: receiverId,
+      },
+      {
+        onSuccess: () => {
+          router.push('/dashboard/messages');
+        },
+      }
+    );
   };
 
   return (

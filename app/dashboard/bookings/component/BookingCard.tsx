@@ -13,6 +13,12 @@ import {
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import {
   AlertDialog,
   AlertDialogAction,
   AlertDialogCancel,
@@ -23,6 +29,13 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from '@/components/ui/alert-dialog';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from '@/components/ui/dialog';
 import { Booking } from '@/service/bookings/types';
 import {
   useDeclineBooking,
@@ -46,8 +59,13 @@ const InfoBlock: FC<{
 );
 
 import { DollarSign, Briefcase } from 'lucide-react';
+import { Checkbox } from '@/components/ui/checkbox';
 
-const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
+const BookingCard: FC<{
+  booking: Booking;
+  isSelected: boolean;
+  onSelect: (isSelected: boolean) => void;
+}> = ({ booking, isSelected, onSelect }) => {
   const declineBookingMutation = useDeclineBooking();
   const approveBookingMutation = useApproveBooking();
   const markCompleteMutation = useMarkBookingComplete();
@@ -95,10 +113,31 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
 
   const getStatusBadge = (status: string) => {
     const style = statusStyles[status] || statusStyles.default;
+    const statusExplanation: { [key: string]: string } = {
+      pending:
+        'Awaiting your approval. You can approve or decline this booking.',
+      confirmed:
+        'You have approved this booking. It is now awaiting completion.',
+      approved:
+        'You have approved this booking. It is now awaiting completion.',
+      declined: 'You have declined this booking.',
+      cancelled: 'The customer has cancelled this booking.',
+      completed: 'This booking has been successfully completed.',
+    };
+
     return (
-      <Badge variant="outline" className={style.badge}>
-        {status}
-      </Badge>
+      <TooltipProvider>
+        <Tooltip>
+          <TooltipTrigger>
+            <Badge variant="outline" className={style.badge}>
+              {status}
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>
+            <p>{statusExplanation[status] || 'Unknown status'}</p>
+          </TooltipContent>
+        </Tooltip>
+      </TooltipProvider>
     );
   };
 
@@ -106,128 +145,152 @@ const BookingCard: FC<{ booking: Booking }> = ({ booking }) => {
     statusStyles[booking.status]?.border || statusStyles.default.border;
 
   return (
-    <Card
-      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle}`}
-    >
-      <CardContent className="p-6 space-y-4">
-        <div className="flex justify-between items-start">
-          <div>
-            <h2 className="text-xl font-bold text-gray-800">
-              Booking #{booking.id.slice(0, 8)}
-            </h2>
-            <p className="text-sm text-gray-500">
-              for {booking.service.name}
-            </p>
-          </div>
-          <div className="flex items-center space-x-2">
-            {getStatusBadge(booking.status)}
-            <ChatIcon
-              receiverId={booking.user.id}
-              listingName={booking.service.name}
-            />
-            <DropdownMenu>
-              <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
-                  <MoreHorizontal className="h-4 w-4" />
-                </Button>
-              </DropdownMenuTrigger>
-              <DropdownMenuContent align="end">
-                <DropdownMenuItem
-                  onClick={handleApprove}
-                  disabled={booking.status.toUpperCase() !== 'PENDING'}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Approve Booking
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={handleDecline}
-                  disabled={booking.status.toUpperCase() !== 'PENDING'}
-                >
-                  <XCircle className="mr-2 h-4 w-4" />
-                  Decline Booking
-                </DropdownMenuItem>
-                <DropdownMenuItem
-                  onClick={() => setIsConfirmOpen(true)}
-                  disabled={booking.status.toUpperCase() !== 'APPROVED'}
-                >
-                  <CheckCircle className="mr-2 h-4 w-4" />
-                  Mark as Complete
-                </DropdownMenuItem>
-              </DropdownMenuContent>
-            </DropdownMenu>
-          </div>
+    <Dialog>
+      <DialogTrigger asChild>
+        <Card
+          className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle} cursor-pointer`}
+        >
+          <CardContent className="p-6 space-y-4">
+            <div className="flex justify-between items-start">
+              <div className="flex items-center space-x-4">
+                <Checkbox
+                  checked={isSelected}
+                  onCheckedChange={onSelect}
+                  className="mt-1"
+                />
+                <div>
+                  <h2 className="text-xl font-bold text-gray-800">
+                  Booking #{booking.id.slice(0, 8)}
+                </h2>
+                <p className="text-sm text-gray-500">
+                  for {booking.service.name}
+                </p>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+                {getStatusBadge(booking.status)}
+                <ChatIcon
+                  receiverId={booking.user.id}
+                  listingName={booking.service.name}
+                />
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" size="icon">
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    <DropdownMenuItem
+                      onClick={handleApprove}
+                      disabled={booking.status.toUpperCase() !== 'PENDING'}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Approve Booking
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleDecline}
+                      disabled={booking.status.toUpperCase() !== 'PENDING'}
+                    >
+                      <XCircle className="mr-2 h-4 w-4" />
+                      Decline Booking
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={() => setIsConfirmOpen(true)}
+                      disabled={booking.status.toUpperCase() !== 'APPROVED'}
+                    >
+                      <CheckCircle className="mr-2 h-4 w-4" />
+                      Mark as Complete
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+              <InfoBlock
+                icon={<Calendar className="h-4 w-4" />}
+                title="Booking Date"
+              >
+                <p>{new Date(booking.createdAt).toLocaleDateString()}</p>
+              </InfoBlock>
+              <InfoBlock
+                icon={<Clock className="h-4 w-4" />}
+                title="Booking Time"
+              >
+                <p>
+                  {new Date(booking.startTime).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}{' '}
+                  -{' '}
+                  {new Date(booking.endTime).toLocaleTimeString([], {
+                    hour: '2-digit',
+                    minute: '2-digit',
+                  })}
+                </p>
+              </InfoBlock>
+            </div>
+          </CardContent>
+        </Card>
+      </DialogTrigger>
+      <DialogContent className="sm:max-w-[425px]">
+        <DialogHeader>
+          <DialogTitle>Booking Details</DialogTitle>
+        </DialogHeader>
+        <div className="space-y-4">
+          {booking.user && (
+            <InfoBlock icon={<User className="h-4 w-4" />} title="Customer">
+              <p className="font-semibold">{booking.user.name}</p>
+              <p className="text-xs text-gray-500">{booking.user.email}</p>
+            </InfoBlock>
+          )}
+          {booking.service && (
+            <InfoBlock
+              icon={<Briefcase className="h-4 w-4" />}
+              title="Service"
+            >
+              <p className="font-semibold">{booking.service.name}</p>
+              <p className="text-xs text-gray-500">
+                {booking.service.description}
+              </p>
+            </InfoBlock>
+          )}
+          {booking.payment && (
+            <InfoBlock
+              icon={<DollarSign className="h-4 w-4" />}
+              title="Payment"
+            >
+              <p className="font-semibold">
+                {new Intl.NumberFormat('en-GB', {
+                  style: 'currency',
+                  currency: booking.payment.currency,
+                }).format(booking.payment.amount)}
+              </p>
+              <p className="text-xs text-gray-500">
+                via {booking.payment.paymentMethod}
+              </p>
+            </InfoBlock>
+          )}
         </div>
-
-        <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action will mark the booking as complete. If the customer
-                has also marked it as complete, the payment will be released.
-                This cannot be undone.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel>Cancel</AlertDialogCancel>
-              <AlertDialogAction onClick={handleMarkComplete}>
-                Continue
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-          <InfoBlock icon={<Calendar className="h-4 w-4" />} title="Booking Date">
-            <p>{new Date(booking.createdAt).toLocaleDateString()}</p>
-          </InfoBlock>
-          <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
-            <p>
-              {new Date(booking.startTime).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              -{' '}
-              {new Date(booking.endTime).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}
-            </p>
-          </InfoBlock>
-        </div>
-
-        {booking.user && (
-          <InfoBlock icon={<User className="h-4 w-4" />} title="Customer">
-            <p className="font-semibold">{booking.user.name}</p>
-            <p className="text-xs text-gray-500">{booking.user.email}</p>
-          </InfoBlock>
-        )}
-        {booking.service && (
-          <InfoBlock icon={<Briefcase className="h-4 w-4" />} title="Service">
-            <p className="font-semibold">{booking.service.name}</p>
-            <p className="text-xs text-gray-500">
-              {booking.service.description}
-            </p>
-          </InfoBlock>
-        )}
-        {booking.payment && (
-          <InfoBlock
-            icon={<DollarSign className="h-4 w-4" />}
-            title="Payment"
-          >
-            <p className="font-semibold">
-              {new Intl.NumberFormat('en-GB', {
-                style: 'currency',
-                currency: booking.payment.currency,
-              }).format(booking.payment.amount)}
-            </p>
-            <p className="text-xs text-gray-500">
-              via {booking.payment.paymentMethod}
-            </p>
-          </InfoBlock>
-        )}
-      </CardContent>
-    </Card>
+      </DialogContent>
+      <AlertDialog open={isConfirmOpen} onOpenChange={setIsConfirmOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action will mark the booking as complete. If the customer
+              has also marked it as complete, the payment will be released. This
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleMarkComplete}>
+              Continue
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </Dialog>
   );
 };
 
