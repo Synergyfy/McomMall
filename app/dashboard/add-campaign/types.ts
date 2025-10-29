@@ -8,6 +8,7 @@ export interface AdFormData {
   budget: number | string;
   category: string;
   region: string;
+  ukLocation?: string;
   locationSearch: string;
   forLoggedInUsers: boolean;
   placements: string[];

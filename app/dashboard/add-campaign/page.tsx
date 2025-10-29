@@ -1,33 +1,33 @@
-'use client';
-import React, { useMemo, useState } from 'react';
-import { AdFormData, FormErrors } from './types';
-import { GeneralAdSettings } from './components/GeneralAdSettings';
-import { CampaignFilters } from './components/CampaignFilters';
-import { AdPlacementSelector } from './components/AdPlacementSelector';
-import { Button } from '@/components/ui/button';
-import { adPlacements, mockRegions } from './data';
-import { isAfter, startOfToday } from 'date-fns';
-import { useAddCampaign } from '@/service/campaigns/hook';
-import { businessCategories } from '@/lib/business-categories';
+"use client";
+import React, { useMemo, useState } from "react";
+import { AdFormData, FormErrors } from "./types";
+import { GeneralAdSettings } from "./components/GeneralAdSettings";
+import { CampaignFilters } from "./components/CampaignFilters";
+import { AdPlacementSelector } from "./components/AdPlacementSelector";
+import { Button } from "@/components/ui/button";
+import { adPlacements, mockRegions } from "./data";
+import { isAfter, startOfToday } from "date-fns";
+import { useAddCampaign } from "@/service/campaigns/hook";
+import { businessCategories } from "@/lib/business-categories";
 import {
   AdPlacement,
   CampaignType,
   CreateCampaignDto,
-} from '@/service/campaigns/types';
-import { SuccessCampaignDialog } from './components/SuccessCampaignDialog';
-import { useGetUserListings } from '@/service/listings/hook';
-import { UserListing } from '@/service/listings/types';
+} from "@/service/campaigns/types";
+import { SuccessCampaignDialog } from "./components/SuccessCampaignDialog";
+import { useGetUserListings } from "@/service/listings/hook";
+import { UserListing } from "@/service/listings/types";
 
 const AddListingPage = () => {
   const [formData, setFormData] = useState<AdFormData>({
-    listing: '',
-    campaignType: 'ppv',
+    listing: "",
+    campaignType: "ppv",
     startDate: undefined,
     endDate: undefined,
-    budget: '',
-    category: '',
-    region: '',
-    locationSearch: '',
+    budget: "",
+    category: "",
+    region: "",
+    locationSearch: "",
     forLoggedInUsers: false,
     placements: [],
   });
@@ -43,7 +43,7 @@ const AddListingPage = () => {
   } = useGetUserListings();
 
   const categories = useMemo(() => {
-    return businessCategories.map(category => ({
+    return businessCategories.map((category) => ({
       value: category.name,
       label: category.name,
     }));
@@ -58,9 +58,9 @@ const AddListingPage = () => {
   }, [userListings]);
 
   const togglePlacement = (id: string) => {
-    setFormData(prev => {
+    setFormData((prev) => {
       const placements = prev.placements.includes(id)
-        ? prev.placements.filter(p => p !== id)
+        ? prev.placements.filter((p) => p !== id)
         : [...prev.placements, id];
       return { ...prev, placements };
     });
@@ -70,28 +70,28 @@ const AddListingPage = () => {
     const newErrors: FormErrors = {};
 
     if (!formData.listing) {
-      newErrors.listing = 'A listing must be selected.';
+      newErrors.listing = "A listing must be selected.";
     }
     if (!formData.startDate) {
-      newErrors.startDate = 'A start date is required.';
+      newErrors.startDate = "A start date is required.";
     } else if (!isAfter(formData.startDate, new Date())) {
-      newErrors.startDate = 'Start date must be in the future.';
+      newErrors.startDate = "Start date must be in the future.";
     }
 
     if (!formData.endDate) {
-      newErrors.endDate = 'An end date is required.';
+      newErrors.endDate = "An end date is required.";
     } else if (
       formData.startDate &&
       !isAfter(formData.endDate, formData.startDate)
     ) {
-      newErrors.endDate = 'End date must be after the start date.';
+      newErrors.endDate = "End date must be after the start date.";
     }
 
     if (!formData.budget || Number(formData.budget) <= 0) {
-      newErrors.budget = 'Budget must be a positive number.';
+      newErrors.budget = "Budget must be a positive number.";
     }
     if (formData.placements.length === 0) {
-      newErrors.placements = 'At least one ad placement must be selected.';
+      newErrors.placements = "At least one ad placement must be selected.";
     }
 
     setErrors(newErrors);
@@ -121,7 +121,7 @@ const AddListingPage = () => {
         displayOnlyIfCategory: formData.category || undefined,
         displayOnlyIfRegion: formData.region || undefined,
         enabledForLoggedInUser: formData.forLoggedInUsers,
-        adPlacement: formData.placements.map(p => adPlacementMapping[p]),
+        adPlacement: formData.placements.map((p) => adPlacementMapping[p]),
       };
 
       addCampaignMutation.mutate(campaignData, {
@@ -130,7 +130,7 @@ const AddListingPage = () => {
         },
       });
     } else {
-      console.log('Form validation failed:', errors);
+      console.log("Form validation failed:", errors);
     }
   };
 
@@ -155,18 +155,17 @@ const AddListingPage = () => {
               isError={isErrorListings}
             />
 
-            <CampaignFilters
-              formData={formData}
-              setFormData={setFormData}
-              categories={categories}
-              regions={mockRegions}
-            />
-
             <AdPlacementSelector
               placementsData={adPlacements}
               selectedPlacements={formData.placements}
               togglePlacement={togglePlacement}
               error={errors.placements}
+            />
+
+            <CampaignFilters
+              formData={formData}
+              setFormData={setFormData}
+              categories={categories}
             />
 
             <div className="flex justify-start">
@@ -176,7 +175,7 @@ const AddListingPage = () => {
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
                 disabled={addCampaignMutation.isPending}
               >
-                {addCampaignMutation.isPending ? 'Submitting...' : 'Submit Ad'}
+                {addCampaignMutation.isPending ? "Submitting..." : "Submit Ad"}
               </Button>
             </div>
           </form>
