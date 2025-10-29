@@ -439,27 +439,27 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
           <div className="grid gap-1">
             {mode === 'register' && (
               <div>
-                <div className="flex gap-4 mb-4">
+                <div className="flex border-b mb-4">
                   <Button
                     type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
+                    variant="ghost"
+                    className={`flex-1 py-3 text-center font-semibold focus:outline-none rounded-none ${
                       selectedRole === UserRole.CUSTOMER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
+                        ? 'border-b-2 border-orange-500 text-orange-500'
+                        : 'text-gray-500 hover:bg-gray-100'
+                    }`}
                     onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
                   >
                     <span className="mr-2">👤</span> Customer
                   </Button>
                   <Button
                     type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
+                    variant="ghost"
+                    className={`flex-1 py-3 text-center font-semibold focus:outline-none rounded-none ${
                       selectedRole === UserRole.OWNER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
+                        ? 'border-b-2 border-orange-500 text-orange-500'
+                        : 'text-gray-500 hover:bg-gray-100'
+                    }`}
                     onClick={() => handleRoleSelect(UserRole.OWNER)}
                   >
                     <span className="mr-2">🏠</span> Business
