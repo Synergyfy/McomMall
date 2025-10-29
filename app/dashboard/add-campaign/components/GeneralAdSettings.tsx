@@ -276,8 +276,9 @@ export const GeneralAdSettings = ({
 
         {/* Ad Campaign Type */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Ad Campaign Type
+          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+            Ad Campaign Type{''}
+            <InfoTooltip message="Choose between Pay Per View (PPV) or Pay Per Click (PPC) campaign types." />
           </label>
           <Select
             value={formData.campaignType}
@@ -331,8 +332,9 @@ export const GeneralAdSettings = ({
 
         {/* Budget */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1">
-            Budget
+          <label className="block text-sm font-medium text-gray-700 mb-1 flex items-center gap-1.5">
+            Budget{''}
+            <InfoTooltip message="Set your total budget for the ad campaign in GBP." />
           </label>
           <div className="relative">
             <Input
