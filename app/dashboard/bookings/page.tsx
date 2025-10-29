@@ -11,12 +11,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
-import {
   Breadcrumb,
   BreadcrumbItem,
   BreadcrumbLink,
@@ -155,45 +149,9 @@ const BookingsPage: FC = () => {
           <p className="text-sm text-gray-600 mt-2">
             This page displays all your customer bookings. You can approve, decline, or mark them as complete.
           </p>
-          <TooltipProvider>
-            <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
-              <span>Order Status Flow:</span>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline">Pending</Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Initial status of a booking upon creation.</p>
-                </TooltipContent>
-              </Tooltip>
-              <span>→</span>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="bg-green-100 text-green-800">Approved</Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Status after you have approved the booking.</p>
-                </TooltipContent>
-              </Tooltip>
-              <span>→</span>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="bg-blue-100 text-blue-800">Completed</Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Status when the service has been rendered and paid for.</p>
-                </TooltipContent>
-              </Tooltip>
-              <Tooltip>
-                <TooltipTrigger>
-                  <Badge variant="outline" className="bg-red-100 text-red-800">Cancelled</Badge>
-                </TooltipTrigger>
-                <TooltipContent>
-                  <p>Status if the booking is cancelled by either party.</p>
-                </TooltipContent>
-              </Tooltip>
-            </div>
-          </TooltipProvider>
+          <p className="text-sm text-gray-600 mt-2">
+            Orders move from <Badge variant="outline">pending</Badge> to <Badge variant="outline" className="bg-green-100 text-green-800">approved</Badge> once you approve them. Once the service is rendered, you can mark them as <Badge variant="outline" className="bg-blue-100 text-blue-800">completed</Badge>. If a customer cancels, the status will change to <Badge variant="outline" className="bg-red-100 text-red-800">cancelled</Badge>.
+          </p>
         </div>
         <Breadcrumb className="mt-2 sm:mt-0">
           <BreadcrumbList>
@@ -236,20 +194,20 @@ const BookingsPage: FC = () => {
       <div className="flex justify-end space-x-4 mb-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
-            <Button variant="outline" disabled={selectedBookings.length === 0}>
+            <Button variant="outline">
               Bulk Actions <MoreHorizontal className="ml-2 h-4 w-4" />
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end">
-            <DropdownMenuItem onClick={handleBulkApprove} disabled={selectedBookings.length === 0}>
+            <DropdownMenuItem onSelect={handleBulkApprove}>
               Approve Selected
             </DropdownMenuItem>
-            <DropdownMenuItem onClick={handleBulkDecline} disabled={selectedBookings.length === 0}>
+            <DropdownMenuItem onSelect={handleBulkDecline}>
               Decline Selected
             </DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-        <Button variant="outline" onClick={handleExport} disabled={!bookings || bookings.length === 0}>
+        <Button variant="outline" onClick={handleExport}>
           Export Orders
         </Button>
       </div>

@@ -2,8 +2,10 @@
 
 import * as React from 'react';
 import { useMemo, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
 import { useGetStoreOrders } from '@/service/store/orders/hook';
+import Papa from 'papaparse';
 import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
 import { type Order as ApiOrder } from '@/service/store/orders/types';
 
@@ -16,6 +18,12 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -27,12 +35,21 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
+import { MessageSquare } from 'lucide-react';
 
 // --- Type Definitions ---
 type OrderStatus = 'All' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 type BadgeStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
 type Order = {
   id: string;
+  userId: string;
   customerName: string;
   customerEmail: string;
   status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
@@ -87,9 +104,11 @@ const StatusBadge: React.FC<{ status: BadgeStatus }> = ({ status }) => {
 // --- MAIN DASHBOARD COMPONENT ---
 export default function OrdersDashboard() {
   const { data: apiOrders, isLoading } = useGetStoreOrders();
+  const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
   const [searchTerm, setSearchTerm] = React.useState('');
   const [selectedRows, setSelectedRows] = React.useState<string[]>([]);
+  const [selectedOrder, setSelectedOrder] = React.useState<Order | null>(null);
   const { newOrdersCount, newOrderIds } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
 
@@ -103,6 +122,7 @@ export default function OrdersDashboard() {
     if (!apiOrders) return [];
     return apiOrders.map((order: ApiOrder) => ({
       id: order.id,
+      userId: order.user?.id || '',
       customerName: order.user?.name || 'N/A',
       customerEmail: order.user?.email || 'N/A',
       // TODO: The API does not provide an order status. Defaulting to 'Processing'.
@@ -153,6 +173,29 @@ export default function OrdersDashboard() {
     console.log(`Performing '${action}' on orders:`, selectedRows);
   };
 
+  const handleExport = () => {
+    if (!orders) return;
+    const csv = Papa.unparse(
+      orders.map(order => ({
+        ID: order.id,
+        Customer: order.customerName,
+        Email: order.customerEmail,
+        Product: order.productName,
+        Status: order.status,
+        Items: order.itemCount,
+        Total: order.total,
+        Date: order.date,
+      }))
+    );
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-t;' });
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.setAttribute('download', 'orders.csv');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   const TABS: OrderStatus[] = [
     'All',
     'Processing',
@@ -167,6 +210,30 @@ export default function OrdersDashboard() {
 
   return (
     <>
+      {selectedOrder && (
+        <Dialog open={!!selectedOrder} onOpenChange={() => setSelectedOrder(null)}>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Order Details</DialogTitle>
+              <DialogDescription>
+                Full details for order #{selectedOrder.id}
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4">
+              <p><strong>Customer:</strong> {selectedOrder.customerName}</p>
+              <p><strong>Email:</strong> {selectedOrder.customerEmail}</p>
+              <p><strong>Product:</strong> {selectedOrder.productName}</p>
+              <p><strong>Status:</strong> {selectedOrder.status}</p>
+              <p><strong>Items:</strong> {selectedOrder.itemCount}</p>
+              <p><strong>Total:</strong> £{selectedOrder.total.toFixed(2)}</p>
+              <p><strong>Date:</strong> {formatDate(selectedOrder.date).main}</p>
+              <Button onClick={() => router.push(`/dashboard/messages?receiverId=${selectedOrder.userId}`)}>
+                <MessageSquare className="mr-2 h-4 w-4" /> Message Customer
+              </Button>
+            </div>
+          </DialogContent>
+        </Dialog>
+      )}
       <style jsx global>{`
         @media (max-width: 1023px) {
           .responsive-table thead {
@@ -202,9 +269,50 @@ export default function OrdersDashboard() {
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
         <div className="max-w-7xl mx-auto">
           <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">
-              Orders Dashboard
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Orders Dashboard
+              </h1>
+              <TooltipProvider>
+                <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
+                  <span>Order Status Flow:</span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="outline">Processing</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Initial status of an order after it has been placed.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>→</span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="secondary">Shipped</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Status after the order has been shipped to the customer.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <span>→</span>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="default">Delivered</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Status when the order has been successfully delivered.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="destructive">Cancelled</Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Status if the order is cancelled.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+              </TooltipProvider>
+            </div>
             <div className="flex items-center text-sm text-gray-500">
               <span>Home</span>
               <ChevronRight className="h-4 w-4 mx-1" />
@@ -233,7 +341,7 @@ export default function OrdersDashboard() {
                   </button>
                 ))}
               </div>
-              <Button className="mt-4 sm:mt-0 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white">
+              <Button className="mt-4 sm:mt-0 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white" onClick={handleExport} disabled={!orders || orders.length === 0}>
                 <Download className="mr-2 h-4 w-4" /> Export Orders
               </Button>
             </div>
@@ -253,18 +361,18 @@ export default function OrdersDashboard() {
                     Select All
                   </label>
                 </div>
-                <Select onValueChange={handleBulkAction}>
+                <Select onValueChange={handleBulkAction} disabled={selectedRows.length === 0}>
                   <SelectTrigger className="w-[180px]">
                     <SelectValue placeholder="Bulk Actions" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="delete" disabled>
+                    <SelectItem value="delete">
                       Delete Selected
                     </SelectItem>
-                    <SelectItem value="mark-shipped" disabled>
+                    <SelectItem value="mark-shipped">
                       Mark as Shipped
                     </SelectItem>
-                    <SelectItem value="mark-delivered" disabled>
+                    <SelectItem value="mark-delivered">
                       Mark as Delivered
                     </SelectItem>
                   </SelectContent>
@@ -387,7 +495,7 @@ export default function OrdersDashboard() {
                           </div>
                         </TableCell>
                         <TableCell className="responsive-cell">
-                          <Button variant="ghost" size="icon">
+                          <Button variant="ghost" size="icon" onClick={() => setSelectedOrder(order)}>
                             <MoreHorizontal className="h-4 w-4" />
                           </Button>
                         </TableCell>
