@@ -54,6 +54,11 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 
 // --- Main Coupon Form Component ---
@@ -241,6 +246,10 @@ export default function CouponForm() {
             <CardContent className="space-y-6">
               <div className="grid gap-2">
                 <Label htmlFor="couponCode">Coupon code</Label>
+                <p className="text-sm text-gray-500">
+                  Code Name that shoppers can be applied at the shopping cart
+                  or checkout page.
+                </p>
                 <Input
                   id="couponCode"
                   name="couponCode"
@@ -255,6 +264,9 @@ export default function CouponForm() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="couponDescription">Coupon Description</Label>
+                <p className="text-sm text-gray-500">
+                  A brief description of the coupon and what it offers.
+                </p>
                 <Textarea
                   id="couponDescription"
                   name="couponDescription"
@@ -333,6 +345,17 @@ export default function CouponForm() {
                       <SelectItem value="fixed">Fixed cart discount</SelectItem>
                     </SelectContent>
                   </Select>
+                  {formData.discountType === 'fixed' && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      This could provide a discount on a purchase. How much you
+                      want to remove from the purchase.
+                    </p>
+                  )}
+                  {formData.discountType === 'percentage' && (
+                    <p className="text-sm text-gray-500 mt-1">
+                      This could be % code off the purchase.
+                    </p>
+                  )}
                   {errors.discountType && (
                     <p className="text-base text-red-600 mt-1">
                       {errors.discountType}
@@ -341,13 +364,38 @@ export default function CouponForm() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="couponAmount">Coupon amount</Label>
-                  <Input
-                    id="couponAmount"
-                    name="couponAmount"
-                    type="number"
-                    value={formData.couponAmount}
-                    onChange={handleInputChange}
-                  />
+                  <div className="relative">
+                    <Input
+                      id="couponAmount"
+                      name="couponAmount"
+                      type="number"
+                      value={formData.couponAmount}
+                      onChange={e => {
+                        if (formData.discountType === 'percentage') {
+                          const value = Math.max(
+                            0,
+                            Math.min(100, Number(e.target.value))
+                          );
+                          setFormData(prev => ({
+                            ...prev,
+                            couponAmount: value.toString(),
+                          }));
+                        } else {
+                          handleInputChange(e);
+                        }
+                      }}
+                      className={
+                        formData.discountType === 'percentage'
+                          ? 'pr-8'
+                          : ''
+                      }
+                    />
+                    {formData.discountType === 'percentage' && (
+                      <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
+                        %
+                      </span>
+                    )}
+                  </div>
                   {errors.couponAmount && (
                     <p className="text-base text-red-600 mt-1">
                       {errors.couponAmount}
@@ -461,11 +509,18 @@ export default function CouponForm() {
                 <Tag className="h-6 w-6 mr-3 text-gray-500" />
                 Usage restrictions
               </h2>
+              <p className="text-sm text-gray-500">
+                Set rules for how this coupon can be used.
+              </p>
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <div className="grid gap-2">
                   <Label htmlFor="minSpend">Minimum spend</Label>
+                  <p className="text-sm text-gray-500">
+                    The minimum amount that must be spent for the coupon to be
+                    valid.
+                  </p>
                   <Input
                     id="minSpend"
                     name="minSpend"
@@ -476,6 +531,10 @@ export default function CouponForm() {
                 </div>
                 <div className="grid gap-2">
                   <Label htmlFor="maxSpend">Maximum spend</Label>
+                  <p className="text-sm text-gray-500">
+                    The maximum amount that can be spent for the coupon to be
+                    valid.
+                  </p>
                   <Input
                     id="maxSpend"
                     name="maxSpend"
@@ -488,8 +547,17 @@ export default function CouponForm() {
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="grid gap-2">
                   <Label htmlFor="products" className="flex items-center">
-                    For products{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                    For Listings{' '}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Choose which listings this coupon can be applied to.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </Label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
@@ -550,7 +618,17 @@ export default function CouponForm() {
                     className="flex items-center"
                   >
                     Individual use only{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          If enabled, this coupon cannot be used in conjunction
+                          with other coupons.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </Label>
                   <div className="flex items-center space-x-2 pt-2">
                     <Switch
@@ -567,7 +645,17 @@ export default function CouponForm() {
               <div className="grid gap-2">
                 <Label htmlFor="allowedEmails" className="flex items-center">
                   Allowed emails{' '}
-                  <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>
+                        A comma-separated list of email addresses that are
+                        allowed to use this coupon.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
                 </Label>
                 <Input
                   id="allowedEmails"
@@ -587,12 +675,18 @@ export default function CouponForm() {
                 <Tag className="h-6 w-6 mr-3 text-gray-500" />
                 Usage limits
               </h2>
+              <p className="text-sm text-gray-500">
+                Define how many times the coupon can be used.
+              </p>
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="grid gap-2">
                 <Label htmlFor="usageLimitPerCoupon">
                   Usage limit per coupon
                 </Label>
+                <p className="text-sm text-gray-500">
+                  The total number of times the coupon can be used.
+                </p>
                 <Input
                   id="usageLimitPerCoupon"
                   name="usageLimitPerCoupon"
@@ -603,6 +697,9 @@ export default function CouponForm() {
               </div>
               <div className="grid gap-2">
                 <Label htmlFor="usageLimitPerUser">Usage limit per user</Label>
+                <p className="text-sm text-gray-500">
+                  The number of times a single user can use the coupon.
+                </p>
                 <Input
                   id="usageLimitPerUser"
                   name="usageLimitPerUser"
