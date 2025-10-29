@@ -82,9 +82,10 @@ import { businessCategories } from '@/lib/business-categories';
 
 
 interface ProductFormValues {
-  title:string;
+  title: string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
+  subCategories: string[];
   tags: string[];
   price: number;
   discountedPrice?: number;
@@ -134,10 +135,10 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
-    if (!data.tags || data.tags.length === 0) {
-    errors.tags = {
+  if (!data.subCategories || data.subCategories.length === 0) {
+    errors.subCategories = {
       type: 'required',
-      message: 'Please select at least one tag.',
+      message: 'Please select at least one sub-category.',
     };
   }
   if (data.price === undefined || data.price < 0) {
@@ -290,6 +291,7 @@ export default function AddProductPage() {
       title: '',
       productType: 'physical',
       category: '',
+      subCategories: [],
       tags: [],
       price: 0,
       discountedPrice: undefined,
@@ -336,16 +338,11 @@ export default function AddProductPage() {
   const variants = form.watch('variants');
 
   useEffect(() => {
-    if (variants) {
-      const totalQuantity = variants.reduce((acc, variant) => {
-        return (
-          acc +
-          variant.options.reduce((acc, option) => {
-            return acc + Number(option.quantity);
-          }, 0)
-        );
+    if (form.watch('enableStockManagement')) {
+      const totalStock = variants.reduce((total, variant) => {
+        return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
       }, 0);
-      form.setValue('stockQuantity', totalQuantity);
+      form.setValue('stockQuantity', totalStock, { shouldValidate: true });
     }
   }, [variants, form]);
 
@@ -473,6 +470,9 @@ export default function AddProductPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-2xl">Product Data</CardTitle>
+                    <CardDescription>
+                      Set the type and price of your product.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <FormField
@@ -552,12 +552,18 @@ export default function AddProductPage() {
                         name="discountedPrice"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base">
-                              Discounted Price (£)
-                            </FormLabel>
-                            <FormDescription>
-                              The lowest price you are willing to sell this product.
-                            </FormDescription>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FormLabel className="text-base">
+                                    Discounted Price (£)
+                                  </FormLabel>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>The lowest price you are willing to sell this product.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 type="number"
@@ -575,14 +581,23 @@ export default function AddProductPage() {
                         name="price"
                         render={({ field, fieldState: { error } }) => (
                           <FormItem>
-                            <FormLabel
-                              className={cn(
-                                'text-base',
-                                error && 'text-red-500'
-                              )}
-                            >
-                              Price (£)
-                            </FormLabel>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FormLabel
+                                    className={cn(
+                                      'text-base',
+                                      error && 'text-red-500'
+                                    )}
+                                  >
+                                    Price (£)
+                                  </FormLabel>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>The regular price of the product. Must be higher than the discounted price.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 type="number"
@@ -658,8 +673,8 @@ export default function AddProductPage() {
                       <CardTitle className="flex items-center gap-2 text-2xl">
                         <Box className="w-6 h-6" /> Inventory & Shipping
                       </CardTitle>
-                      <CardDescription className="text-base">
-                        Manage inventory and shipping details for this product.
+                      <CardDescription>
+                        Manage stock and shipping settings for your physical products.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -668,12 +683,18 @@ export default function AddProductPage() {
                         name="sku"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base">
-                              SKU (Stock Keeping Unit)
-                            </FormLabel>
-                            <FormDescription>
-                              Enter a unique identifier for this product.
-                            </FormDescription>
+                            <TooltipProvider>
+                              <Tooltip>
+                                <TooltipTrigger asChild>
+                                  <FormLabel className="text-base">
+                                    SKU (Stock Keeping Unit)
+                                  </FormLabel>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                  <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
+                                </TooltipContent>
+                              </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 placeholder="e.g., TSHIRT-RED-L"
@@ -711,14 +732,16 @@ export default function AddProductPage() {
                                 <FormLabel className="text-base">
                                   Stock quantity
                                 </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder="0"
-                                    {...field}
-                                    className="text-base py-6"
-                                  />
-                                </FormControl>
+                                <div className="flex items-center gap-2">
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      {...field}
+                                      className="text-base py-6"
+                                    />
+                                  </FormControl>
+                                </div>
                                 <FormMessage className="text-red-500 text-base font-medium" />
                               </FormItem>
                             )}
@@ -1388,18 +1411,18 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Tags */}
+                {/* Sub-Categories */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardTitle className="text-2xl">Sub-Categories</CardTitle>
                     <CardDescription>
-                      Select tags for your product.
+                      Select sub-categories for your product.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
-                      name="tags"
+                      name="subCategories"
                       render={({ field }) => (
                         <FormItem>
                           <Popover>
@@ -1411,16 +1434,16 @@ export default function AddProductPage() {
                               >
                                 <Plus className="mr-2 h-4 w-4" />
                                 {field.value?.length > 0
-                                  ? 'Add more tags'
-                                  : 'Select tags'}
+                                  ? 'Add more sub-categories'
+                                  : 'Select sub-categories'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                               <Command>
-                                <CommandInput placeholder="Search tags..." />
+                                <CommandInput placeholder="Search sub-categories..." />
                                 <CommandList>
                                   <CommandEmpty>
-                                    No tags found.
+                                    No sub-categories found.
                                   </CommandEmpty>
                                   <CommandGroup>
                                     {businessCategories
@@ -1430,9 +1453,9 @@ export default function AddProductPage() {
                                           key={sc.name}
                                           value={sc.name}
                                           onSelect={() => {
-                                            const currentValue = form.getValues('tags') || [];
+                                            const currentValue = form.getValues('subCategories') || [];
                                             if (!currentValue.includes(sc.name)) {
-                                              form.setValue('tags', [...currentValue, sc.name], { shouldValidate: true });
+                                              form.setValue('subCategories', [...currentValue, sc.name], { shouldValidate: true });
                                             }
                                           }}
                                         >
@@ -1445,6 +1468,61 @@ export default function AddProductPage() {
                             </PopoverContent>
                           </Popover>
                           <div className="flex flex-wrap gap-2 mt-4">
+                            {field.value?.map(subCategory => (
+                              <Badge
+                                key={subCategory}
+                                variant="secondary"
+                                className="text-base"
+                              >
+                                {subCategory}
+                                <button
+                                  type="button"
+                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() => {
+                                    const currentValue = form.getValues('subCategories') || [];
+                                    form.setValue('subCategories', currentValue.filter(s => s !== subCategory), { shouldValidate: true });
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <FormMessage className="text-red-500 text-base font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Tags */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardDescription>
+                      Add tags to your product. Press Enter to add a new tag.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Input
+                            placeholder="e.g., Summer, T-shirt"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value) {
+                                e.preventDefault();
+                                const newTag = e.currentTarget.value.trim();
+                                if (newTag && !field.value.includes(newTag)) {
+                                  form.setValue('tags', [...field.value, newTag], { shouldValidate: true });
+                                }
+                                e.currentTarget.value = '';
+                              }
+                            }}
+                          />
+                          <div className="flex flex-wrap gap-2 mt-4">
                             {field.value?.map(tag => (
                               <Badge
                                 key={tag}
@@ -1456,8 +1534,7 @@ export default function AddProductPage() {
                                   type="button"
                                   className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                   onClick={() => {
-                                    const currentValue = form.getValues('tags') || [];
-                                    form.setValue('tags', currentValue.filter(s => s !== tag), { shouldValidate: true });
+                                    form.setValue('tags', field.value.filter(t => t !== tag), { shouldValidate: true });
                                   }}
                                 >
                                   <X className="h-3 w-3" />
@@ -1465,7 +1542,6 @@ export default function AddProductPage() {
                               </Badge>
                             ))}
                           </div>
-                          <FormMessage className="text-red-500 text-base font-medium" />
                         </FormItem>
                       )}
                     />

@@ -19,9 +19,24 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Plus } from 'lucide-react';
+import { X, Plus, Check, ChevronsUpDown } from 'lucide-react';
 import { ProductVariant } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
+import { predefinedVariantOptions } from '@/lib/variant-options';
+import {
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from '@/components/ui/popover';
+import { cn } from '@/lib/utils';
 
 interface VariantManagerProps {
   name: string;
@@ -79,11 +94,12 @@ export default function VariantManager({ name }: VariantManagerProps) {
                 {editingIndex !== null ? 'Edit Variant' : 'Add Variant'}
               </DialogTitle>
               <DialogDescription>
-                A variant is a version of your product with a specific set of options, like size or color.
+                Add variations to your product. For example, if you sell clothing, you can create a &quot;Size&quot; variant with options like &quot;Small&quot;, &quot;Medium&quot;, and &quot;Large&quot;. Each option can have its own quantity.
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-               <Select
+              <p className="text-sm font-medium">Variant Name</p>
+              <Select
                 onValueChange={(value) => {
                   if (value === 'custom') {
                     setIsCustomVariant(true);
@@ -93,7 +109,11 @@ export default function VariantManager({ name }: VariantManagerProps) {
                     setCurrentVariant({ ...currentVariant, name: value });
                   }
                 }}
-                defaultValue={isCustomVariant ? 'custom' : currentVariant?.name}
+                value={
+                  isCustomVariant
+                    ? 'custom'
+                    : currentVariant?.name || undefined
+                }
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose or Enter Name" />
@@ -101,26 +121,33 @@ export default function VariantManager({ name }: VariantManagerProps) {
                 <SelectContent>
                   <SelectItem value="Color">Color</SelectItem>
                   <SelectItem value="Size">Size</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
+                  <SelectItem value="custom">Custom (e.g., Material)</SelectItem>
                 </SelectContent>
               </Select>
-               {isCustomVariant && (
+              {isCustomVariant && (
                 <Input
                   placeholder="Variant Name (e.g., Material)"
                   value={currentVariant?.name || ''}
                   onChange={(e) =>
-                    setCurrentVariant({ ...currentVariant, name: e.target.value })
+                    setCurrentVariant({
+                      ...currentVariant,
+                      name: e.target.value,
+                    })
                   }
                 />
               )}
-              <div className="flex items-center gap-2">
-                <Input
-                  placeholder="Option (e.g., Red)"
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter' && e.currentTarget.value) {
-                      e.preventDefault();
+
+              <div className="pt-4 border-t">
+                <p className="text-sm font-medium">Variant Options</p>
+                <p className="text-xs text-gray-500 mb-2">
+                  Select from the list or type your own option and press Enter.
+                </p>
+                <div className="flex items-center gap-2">
+                  <VariantOptionInput
+                    variantName={currentVariant?.name || ''}
+                    onAddOption={(optionName) => {
                       const newOption = {
-                        name: e.currentTarget.value,
+                        name: optionName,
                         quantity: 0,
                       };
                       setCurrentVariant({
@@ -130,15 +157,20 @@ export default function VariantManager({ name }: VariantManagerProps) {
                           newOption,
                         ],
                       });
-                      e.currentTarget.value = '';
-                    }
-                  }}
-                />
+                    }}
+                  />
+                </div>
               </div>
+
               <div className="space-y-2">
                 {currentVariant?.options?.map((option, index) => (
-                  <div key={index} className="flex items-center gap-2">
-                    <Badge variant="secondary">{option.name}</Badge>
+                  <div
+                    key={index}
+                    className="flex items-center gap-2 p-2 border rounded-md"
+                  >
+                    <Badge variant="secondary" className="text-base">
+                      {option.name}
+                    </Badge>
                     <Input
                       type="number"
                       placeholder="Quantity"
@@ -212,5 +244,74 @@ export default function VariantManager({ name }: VariantManagerProps) {
         ))}
       </div>
     </div>
+  );
+}
+
+function VariantOptionInput({
+  variantName,
+  onAddOption,
+}: {
+  variantName: string;
+  onAddOption: (optionName: string) => void;
+}) {
+  const [open, setOpen] = useState(false);
+  const [value, setValue] = useState('');
+
+  const options =
+    predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          variant="outline"
+          role="combobox"
+          aria-expanded={open}
+          className="w-full justify-between"
+        >
+          {value || 'Select or create option...'}
+          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+        <Command>
+          <CommandInput
+            placeholder="Search or add option..."
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && e.currentTarget.value) {
+                e.preventDefault();
+                onAddOption(e.currentTarget.value);
+                setValue('');
+                setOpen(false);
+              }
+            }}
+          />
+          <CommandList>
+            <CommandEmpty>No options found. Type to create.</CommandEmpty>
+            <CommandGroup>
+              {options.map((option) => (
+                <CommandItem
+                  key={option}
+                  value={option}
+                  onSelect={(currentValue) => {
+                    onAddOption(currentValue);
+                    setValue('');
+                    setOpen(false);
+                  }}
+                >
+                  <Check
+                    className={cn(
+                      'mr-2 h-4 w-4',
+                      value === option ? 'opacity-100' : 'opacity-0'
+                    )}
+                  />
+                  {option}
+                </CommandItem>
+              ))}
+            </CommandGroup>
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
   );
 }

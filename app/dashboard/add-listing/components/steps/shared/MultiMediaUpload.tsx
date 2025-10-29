@@ -13,16 +13,27 @@ interface MediaFile {
 
 interface MultiMediaUploadProps {
   onMediaChange: (media: File[]) => void;
+  initialMedia?: string[];
   maxFiles?: number;
   maxSize?: number;
 }
 
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
+  initialMedia = [],
   maxFiles = 5,
   maxSize = 5 * 1024 * 1024, // 5MB default
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+
+  useEffect(() => {
+    const initialMediaFiles = initialMedia.map(url => ({
+      file: new File([], ''),
+      previewUrl: url,
+      type: 'image' as 'image' | 'video',
+    }));
+    setMediaFiles(initialMediaFiles);
+  }, [initialMedia]);
   const [error, setError] = useState<string | null>(null);
 
   const handleFiles = useCallback(
