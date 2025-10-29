@@ -19,7 +19,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, Plus, Check, ChevronsUpDown } from 'lucide-react';
+import { X, ChevronsUpDown } from 'lucide-react';
 import { ProductVariant } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
 import { predefinedVariantOptions } from '@/lib/variant-options';
@@ -43,40 +43,67 @@ interface VariantManagerProps {
 }
 
 export default function VariantManager({ name }: VariantManagerProps) {
-  const { control, register } = useFormContext();
+  const { control } = useFormContext();
   const { fields, append, remove, update } = useFieldArray({
     control,
     name,
   });
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [currentVariant, setCurrentVariant] = useState<Partial<ProductVariant> | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+
+  // Refactored state for the dialog
+  const [variantName, setVariantName] = useState('');
+  const [variantOptions, setVariantOptions] = useState<{ name: string; quantity: number }[]>([]);
   const [isCustomVariant, setIsCustomVariant] = useState(false);
 
   const openDialog = (variant?: ProductVariant, index?: number) => {
-    setCurrentVariant(
-      variant
-        ? { ...variant }
-        : { name: '', options: [] }
-    );
-    setEditingIndex(typeof index === 'number' ? index : null);
-    setIsCustomVariant(false);
+    if (variant) {
+      setEditingIndex(index as number);
+      setVariantName(variant.name);
+      setVariantOptions(variant.options || []);
+      const isPredefined = ['Color', 'Size'].includes(variant.name);
+      setIsCustomVariant(!isPredefined);
+    } else {
+      setEditingIndex(null);
+      setVariantName('');
+      setVariantOptions([]);
+      setIsCustomVariant(false);
+    }
     setIsDialogOpen(true);
   };
 
   const handleSave = () => {
-    if (currentVariant?.name && currentVariant?.options) {
+    if (variantName && variantOptions.length > 0) {
+      const variantData: ProductVariant = {
+        name: variantName,
+        options: variantOptions,
+      };
       if (editingIndex !== null) {
-        update(editingIndex, currentVariant as ProductVariant);
+        update(editingIndex, variantData);
       } else {
-        append(currentVariant as ProductVariant);
+        append(variantData);
       }
       setIsDialogOpen(false);
-      setCurrentVariant(null);
-      setEditingIndex(null);
     }
   };
+
+  const handleAddOption = (optionName: string) => {
+    if (optionName && !variantOptions.some(opt => opt.name.toLowerCase() === optionName.toLowerCase())) {
+        setVariantOptions([...variantOptions, { name: optionName, quantity: 0 }]);
+    }
+  };
+
+  const handleUpdateQuantity = (index: number, quantity: number) => {
+    const newOptions = [...variantOptions];
+    newOptions[index] = { ...newOptions[index], quantity: quantity >= 0 ? quantity : 0 };
+    setVariantOptions(newOptions);
+  };
+
+  const handleRemoveOption = (index: number) => {
+    setVariantOptions(variantOptions.filter((_, i) => i !== index));
+  };
+
 
   return (
     <div>
@@ -103,17 +130,13 @@ export default function VariantManager({ name }: VariantManagerProps) {
                 onValueChange={(value) => {
                   if (value === 'custom') {
                     setIsCustomVariant(true);
-                    setCurrentVariant({ ...currentVariant, name: '' });
+                    setVariantName('');
                   } else {
                     setIsCustomVariant(false);
-                    setCurrentVariant({ ...currentVariant, name: value });
+                    setVariantName(value);
                   }
                 }}
-                value={
-                  isCustomVariant
-                    ? 'custom'
-                    : currentVariant?.name || undefined
-                }
+                value={isCustomVariant ? 'custom' : variantName}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Choose or Enter Name" />
@@ -127,13 +150,8 @@ export default function VariantManager({ name }: VariantManagerProps) {
               {isCustomVariant && (
                 <Input
                   placeholder="Variant Name (e.g., Material)"
-                  value={currentVariant?.name || ''}
-                  onChange={(e) =>
-                    setCurrentVariant({
-                      ...currentVariant,
-                      name: e.target.value,
-                    })
-                  }
+                  value={variantName}
+                  onChange={(e) => setVariantName(e.target.value)}
                 />
               )}
 
@@ -142,28 +160,15 @@ export default function VariantManager({ name }: VariantManagerProps) {
                 <p className="text-xs text-gray-500 mb-2">
                   Select from the list or type your own option and press Enter.
                 </p>
-                <div className="flex items-center gap-2">
-                  <VariantOptionInput
-                    variantName={currentVariant?.name || ''}
-                    onAddOption={(optionName) => {
-                      const newOption = {
-                        name: optionName,
-                        quantity: 0,
-                      };
-                      setCurrentVariant({
-                        ...currentVariant,
-                        options: [
-                          ...(currentVariant?.options || []),
-                          newOption,
-                        ],
-                      });
-                    }}
-                  />
-                </div>
+                <VariantOptionInput
+                  variantName={variantName}
+                  onAddOption={handleAddOption}
+                  existingOptions={variantOptions.map(opt => opt.name)}
+                />
               </div>
 
               <div className="space-y-2">
-                {currentVariant?.options?.map((option, index) => (
+                {variantOptions.map((option, index) => (
                   <div
                     key={index}
                     className="flex items-center gap-2 p-2 border rounded-md"
@@ -175,32 +180,18 @@ export default function VariantManager({ name }: VariantManagerProps) {
                       type="number"
                       placeholder="Quantity"
                       value={option.quantity}
-                      onChange={(e) => {
-                        const newOptions = [...(currentVariant.options || [])];
-                        newOptions[index].quantity = parseInt(e.target.value);
-                        setCurrentVariant({
-                          ...currentVariant,
-                          options: newOptions,
-                        });
-                      }}
+                      onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value))}
                     />
                     <button
                       type="button"
-                      onClick={() => {
-                        setCurrentVariant({
-                          ...currentVariant,
-                          options: currentVariant.options?.filter(
-                            (_, i) => i !== index
-                          ),
-                        });
-                      }}
+                      onClick={() => handleRemoveOption(index)}
                     >
                       <X className="h-4 w-4" />
                     </button>
                   </div>
                 ))}
               </div>
-              <Button onClick={handleSave}>Save</Button>
+              <Button onClick={handleSave} disabled={!variantName || variantOptions.length === 0}>Save</Button>
             </div>
           </DialogContent>
         </Dialog>
@@ -250,12 +241,14 @@ export default function VariantManager({ name }: VariantManagerProps) {
 function VariantOptionInput({
   variantName,
   onAddOption,
+  existingOptions,
 }: {
   variantName: string;
   onAddOption: (optionName: string) => void;
+  existingOptions: string[];
 }) {
   const [open, setOpen] = useState(false);
-  const [value, setValue] = useState('');
+  const [inputValue, setInputValue] = useState('');
 
   const options =
     predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
@@ -268,8 +261,9 @@ function VariantOptionInput({
           role="combobox"
           aria-expanded={open}
           className="w-full justify-between"
+          disabled={!variantName}
         >
-          {value || 'Select or create option...'}
+          Select or create option...
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>
@@ -277,34 +271,29 @@ function VariantOptionInput({
         <Command>
           <CommandInput
             placeholder="Search or add option..."
+            value={inputValue}
+            onValueChange={setInputValue}
             onKeyDown={(e) => {
-              if (e.key === 'Enter' && e.currentTarget.value) {
+              if (e.key === 'Enter' && inputValue) {
                 e.preventDefault();
-                onAddOption(e.currentTarget.value);
-                setValue('');
+                onAddOption(inputValue);
+                setInputValue('');
                 setOpen(false);
               }
             }}
           />
           <CommandList>
-            <CommandEmpty>No options found. Type to create.</CommandEmpty>
+            <CommandEmpty>No options found. Type and press Enter to create.</CommandEmpty>
             <CommandGroup>
-              {options.map((option) => (
+              {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
                 <CommandItem
                   key={option}
                   value={option}
                   onSelect={(currentValue) => {
                     onAddOption(currentValue);
-                    setValue('');
                     setOpen(false);
                   }}
                 >
-                  <Check
-                    className={cn(
-                      'mr-2 h-4 w-4',
-                      value === option ? 'opacity-100' : 'opacity-0'
-                    )}
-                  />
                   {option}
                 </CommandItem>
               ))}
