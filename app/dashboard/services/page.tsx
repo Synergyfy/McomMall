@@ -124,6 +124,9 @@ export default function ServicesDashboard() {
             <h1 className="text-3xl font-bold text-gray-800">
               Services Dashboard
             </h1>
+            <p className="text-sm text-gray-600 mt-2">
+              Manage your services, view their status, and perform actions like editing or deleting them.
+            </p>
             <div className="flex items-center text-sm text-gray-500">
               <span>Home</span>
               <ChevronRight className="h-4 w-4 mx-1" />
