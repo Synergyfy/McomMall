@@ -20,14 +20,14 @@ import {
   X,
 } from 'lucide-react';
 import Image from 'next/image';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { uploadFile } from '@/lib/upload';
 import { toast } from 'sonner';
 
 import { useAddProduct } from '@/service/store/products/hook';
 import { SuccessDialog } from '../components/SuccessDialog';
-import { CreateProductDto } from '@/service/store/products/types';
+import { CreateProductDto, ProductVariant } from '@/service/store/products/types';
 
 import VariantManager from '../components/VariantManager';
 import { Badge } from '@/components/ui/badge';
@@ -67,7 +67,6 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
-import { ProductVariant } from '@/service/store/products/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Tooltip,
@@ -77,12 +76,11 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
 import { businessCategories } from '@/lib/business-categories';
 
 
 interface ProductFormValues {
-  title: string;
+  title:string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
   subCategories: string[];
@@ -135,7 +133,7 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
-  if (!data.subCategories || data.subCategories.length === 0) {
+    if (!data.subCategories || data.subCategories.length === 0) {
     errors.subCategories = {
       type: 'required',
       message: 'Please select at least one sub-category.',
@@ -147,14 +145,10 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Price must be a positive number.',
     };
   }
-  if (
-    data.discountedPrice !== undefined &&
-    data.price !== undefined &&
-    data.discountedPrice >= data.price
-  ) {
+  if (data.discountedPrice !== undefined && data.price < data.discountedPrice) {
     errors.price = {
-      type: 'validate',
-      message: 'Price must be greater than the discounted price.',
+        type: 'validate',
+        message: 'Price must be more than the discounted price.',
     };
   }
   if (!data.shortDescription?.trim()) {
@@ -321,6 +315,17 @@ export default function AddProductPage() {
     },
   });
 
+  const variants = form.watch('variants');
+  useEffect(() => {
+    if (form.watch('enableStockManagement')) {
+      const totalStock = variants.reduce((total, variant) => {
+        return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
+      }, 0);
+      form.setValue('stockQuantity', totalStock, { shouldValidate: true });
+    }
+  }, [variants, form]);
+
+
   const { fields, append, remove } = useFieldArray({
     control: form.control,
     name: 'files',
@@ -334,17 +339,6 @@ export default function AddProductPage() {
   const productType = form.watch('productType');
 
   const category = form.watch('category');
-
-  const variants = form.watch('variants');
-
-  useEffect(() => {
-    if (form.watch('enableStockManagement')) {
-      const totalStock = variants.reduce((total, variant) => {
-        return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
-      }, 0);
-      form.setValue('stockQuantity', totalStock, { shouldValidate: true });
-    }
-  }, [variants, form]);
 
   async function onSubmit(data: ProductFormValues) {
     const mediaUrls = await Promise.all(
@@ -458,8 +452,8 @@ export default function AddProductPage() {
  <Card>
                   <CardHeader>
                     <CardTitle className="text-2xl">Variants</CardTitle>
-                     <CardDescription>
-                      Add variations of this product, like different sizes or colors.
+                    <CardDescription>
+                        Add variants like color, size, etc. to your product. This will allow you to specify different options for your product.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
@@ -470,9 +464,6 @@ export default function AddProductPage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-2xl">Product Data</CardTitle>
-                    <CardDescription>
-                      Set the type and price of your product.
-                    </CardDescription>
                   </CardHeader>
                   <CardContent className="space-y-6">
                     <FormField
@@ -491,53 +482,57 @@ export default function AddProductPage() {
                               defaultValue={field.value}
                               className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
                             >
-                              <TooltipProvider>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="physical" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Physical
-                                      </FormLabel>
-                                    </FormItem>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>E.g., a t-shirt</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="downloadable" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Downloadable
-                                      </FormLabel>
-                                    </FormItem>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>E.g., a PDF file</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="virtual" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Virtual
-                                      </FormLabel>
-                                    </FormItem>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>E.g., a service</p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </TooltipProvider>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormControl>
+                                            <RadioGroupItem value="physical" />
+                                            </FormControl>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>A physical product that requires shipping.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <FormLabel className="font-normal text-base">
+                                  Physical
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormControl>
+                                            <RadioGroupItem value="downloadable" />
+                                            </FormControl>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>A product that can be downloaded after purchase.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <FormLabel className="font-normal text-base">
+                                  Downloadable
+                                </FormLabel>
+                              </FormItem>
+                              <FormItem className="flex items-center space-x-3 space-y-0">
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormControl>
+                                            <RadioGroupItem value="virtual" />
+                                            </FormControl>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>A virtual product that does not require shipping and is not downloadable.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <FormLabel className="font-normal text-base">
+                                  Virtual
+                                </FormLabel>
+                              </FormItem>
                             </RadioGroup>
                           </FormControl>
                           <FormMessage className="text-red-500 text-base font-medium" />
@@ -547,69 +542,54 @@ export default function AddProductPage() {
 
                     {/* Pricing */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
-                      <FormField
-                        control={form.control}
-                        name="discountedPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <FormLabel className="text-base">
-                                    Discounted Price (£)
-                                  </FormLabel>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>The lowest price you are willing to sell this product.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-base font-medium" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field, fieldState: { error } }) => (
-                          <FormItem>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <FormLabel
-                                    className={cn(
-                                      'text-base',
-                                      error && 'text-red-500'
-                                    )}
-                                  >
-                                    Price (£)
-                                  </FormLabel>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>The regular price of the product. Must be higher than the discounted price.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-base font-medium" />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                            control={form.control}
+                            name="discountedPrice"
+                            render={({ field }) => (
+                            <FormItem>
+                                <FormLabel className="text-base">
+                                Discounted Price (£)
+                                </FormLabel>
+                                <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                />
+                                </FormControl>
+                                <FormDescription>
+                                    The lowest price you are willing to sell this product.
+                                </FormDescription>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="price"
+                            render={({ field, fieldState: { error } }) => (
+                            <FormItem>
+                                <FormLabel
+                                className={cn(
+                                    'text-base',
+                                    error && 'text-red-500'
+                                )}
+                                >
+                                Price (£)
+                                </FormLabel>
+                                <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                            )}
+                        />
                     </div>
                   </CardContent>
                 </Card>
@@ -673,8 +653,8 @@ export default function AddProductPage() {
                       <CardTitle className="flex items-center gap-2 text-2xl">
                         <Box className="w-6 h-6" /> Inventory & Shipping
                       </CardTitle>
-                      <CardDescription>
-                        Manage stock and shipping settings for your physical products.
+                      <CardDescription className="text-base">
+                        Manage inventory and shipping details for this product.
                       </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-6">
@@ -683,18 +663,9 @@ export default function AddProductPage() {
                         name="sku"
                         render={({ field }) => (
                           <FormItem>
-                            <TooltipProvider>
-                              <Tooltip>
-                                <TooltipTrigger asChild>
-                                  <FormLabel className="text-base">
-                                    SKU (Stock Keeping Unit)
-                                  </FormLabel>
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                  <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
-                                </TooltipContent>
-                              </Tooltip>
-                            </TooltipProvider>
+                            <FormLabel className="text-base">
+                              SKU (Stock Keeping Unit)
+                            </FormLabel>
                             <FormControl>
                               <Input
                                 placeholder="e.g., TSHIRT-RED-L"
@@ -702,6 +673,9 @@ export default function AddProductPage() {
                                 className="text-base py-6"
                               />
                             </FormControl>
+                            <FormDescription>
+                                A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.
+                            </FormDescription>
                           </FormItem>
                         )}
                       />
@@ -732,16 +706,17 @@ export default function AddProductPage() {
                                 <FormLabel className="text-base">
                                   Stock quantity
                                 </FormLabel>
-                                <div className="flex items-center gap-2">
-                                  <FormControl>
-                                    <Input
-                                      type="number"
-                                      placeholder="0"
-                                      {...field}
-                                      className="text-base py-6"
-                                    />
-                                  </FormControl>
-                                </div>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="0"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormDescription>
+                                    Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.
+                                </FormDescription>
                                 <FormMessage className="text-red-500 text-base font-medium" />
                               </FormItem>
                             )}
@@ -1289,7 +1264,7 @@ export default function AddProductPage() {
                           >
                             <FormControl>
                               <SelectTrigger className="text-base py-6">
-                                <SelectValue placeholder="Select from your Listing (Select a business)" />
+                                <SelectValue placeholder="Select from your Listing" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -1393,7 +1368,7 @@ export default function AddProductPage() {
                                         key={cat.name}
                                         onSelect={() => {
                                           form.setValue('category', cat.name, { shouldValidate: true });
-                                          form.setValue('tags', [], { shouldValidate: true });
+                                          form.setValue('subCategories', [], { shouldValidate: true });
                                         }}
                                       >
                                         {cat.name}
@@ -1411,10 +1386,10 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Sub-Categories */}
+                {/* Sub Categories */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Sub-Categories</CardTitle>
+                    <CardTitle className="text-2xl">Sub Categories</CardTitle>
                     <CardDescription>
                       Select sub-categories for your product.
                     </CardDescription>
