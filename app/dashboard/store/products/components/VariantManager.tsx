@@ -115,7 +115,11 @@ export default function VariantManager({ name }: VariantManagerProps) {
               Add Variant
             </Button>
           </DialogTrigger>
-          <DialogContent>
+          <DialogContent
+            onInteractOutside={(e) => {
+              e.preventDefault();
+            }}
+          >
             <DialogHeader>
               <DialogTitle>
                 {editingIndex !== null ? 'Edit Variant' : 'Add Variant'}

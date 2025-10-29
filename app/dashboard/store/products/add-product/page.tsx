@@ -404,6 +404,7 @@ export default function AddProductPage() {
   }
 
   return (
+    <TooltipProvider>
     <div className="bg-gray-50 p-4 sm:p-6 lg:p-8 text-base">
       <div className="max-w-7xl mx-auto">
         <SuccessDialog
@@ -483,52 +484,54 @@ export default function AddProductPage() {
                               className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
                             >
                               <FormItem className="flex items-center space-x-3 space-y-0">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <FormControl>
-                                            <RadioGroupItem value="physical" />
-                                            </FormControl>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>A physical product that requires shipping.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormControl>
+                                      <RadioGroupItem value="physical" />
+                                    </FormControl>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A physical product that requires shipping.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                                 <FormLabel className="font-normal text-base">
                                   Physical
                                 </FormLabel>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <FormControl>
-                                            <RadioGroupItem value="downloadable" />
-                                            </FormControl>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>A product that can be downloaded after purchase.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormControl>
+                                      <RadioGroupItem value="downloadable" />
+                                    </FormControl>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A product that can be downloaded after
+                                      purchase.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                                 <FormLabel className="font-normal text-base">
                                   Downloadable
                                 </FormLabel>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <FormControl>
-                                            <RadioGroupItem value="virtual" />
-                                            </FormControl>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>A virtual product that does not require shipping and is not downloadable.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormControl>
+                                      <RadioGroupItem value="virtual" />
+                                    </FormControl>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A virtual product that does not require
+                                      shipping and is not downloadable.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                                 <FormLabel className="font-normal text-base">
                                   Virtual
                                 </FormLabel>
@@ -1541,5 +1544,6 @@ export default function AddProductPage() {
         </FormProvider>
       </div>
     </div>
+    </TooltipProvider>
   );
 }
