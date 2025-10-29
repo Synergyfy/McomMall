@@ -45,14 +45,7 @@ const SubNote = ({ text }: { text: string }) => (
   <p className="text-xs text-gray-500 mt-1">{text}</p>
 );
 
-type VoucherProductFormData = CreateVoucherProductDto & {
-  discountType: 'fixed_cart' | 'percent';
-  couponAmount: number;
-  minSpend: number;
-  maxSpend: number;
-  usageLimitPerCoupon: number;
-  usageLimitPerUser: number;
-};
+type VoucherProductFormData = CreateVoucherProductDto;
 
 interface VoucherProductFormProps {
   onSubmit: (data: CreateVoucherProductDto) => void;
@@ -78,8 +71,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     defaultValues: initialData
       ? {
           ...initialData,
-          discountType: initialData.discountType || 'fixed_cart',
-          couponAmount: initialData.couponAmount || 0,
         }
       : {
           name: '',
@@ -88,12 +79,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           allowPartialRedemption: true,
           isEnabled: true,
           allowCustomAmount: false,
-          discountType: 'fixed_cart',
-          couponAmount: 0,
-          minSpend: 0,
-          maxSpend: 0,
-          usageLimitPerCoupon: 0,
-          usageLimitPerUser: 0,
         },
   });
 
@@ -178,49 +163,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" {...register('description')} className="mt-1" />
         <SubNote text="A brief description of the coupon and what it offers." />
-      </div>
-
-      <div>
-        <Label htmlFor="discountType">Discount Type</Label>
-        <Controller
-          name="discountType"
-          control={control}
-          render={({ field }) => (
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
-              <SelectTrigger className="mt-1">
-                <SelectValue placeholder="Select discount type" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="fixed_cart">Fixed Cart Discount</SelectItem>
-                <SelectItem value="percent">Percentage Discount</SelectItem>
-              </SelectContent>
-            </Select>
-          )}
-        />
-        {watch('discountType') === 'fixed_cart' && (
-          <SubNote text="This coupon provides a fixed discount on the entire purchase." />
-        )}
-      </div>
-
-      <div>
-        <Label htmlFor="couponAmount">Coupon Amount</Label>
-        <div className="relative">
-          <Input
-            id="couponAmount"
-            type="number"
-            {...register('couponAmount', {
-              required: 'Coupon amount is required',
-              max: watch('discountType') === 'percent' ? 100 : undefined,
-            })}
-            className="mt-1"
-          />
-          {watch('discountType') === 'percent' && (
-            <span className="absolute inset-y-0 right-0 flex items-center pr-3">%</span>
-          )}
-        </div>
-        {errors.couponAmount && (
-          <p className="text-red-500">{errors.couponAmount.message}</p>
-        )}
       </div>
 
       <div className="sm:col-span-2">
@@ -320,40 +262,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           </div>
         </>
       )}
-
-      <div className="sm:col-span-2">
-        <h3 className="text-lg font-medium">Usage Restrictions</h3>
-        <SubNote text="Control who can use this coupon and how it can be used." />
-      </div>
-
-      <div>
-        <Label htmlFor="minSpend">Minimum Spend</Label>
-        <Input id="minSpend" type="number" {...register('minSpend')} className="mt-1" />
-        <SubNote text="The minimum amount that must be spent for the coupon to be valid." />
-      </div>
-
-      <div>
-        <Label htmlFor="maxSpend">Maximum Spend</Label>
-        <Input id="maxSpend" type="number" {...register('maxSpend')} className="mt-1" />
-        <SubNote text="The maximum amount that can be spent for the coupon to be valid." />
-      </div>
-
-      <div className="sm:col-span-2">
-        <h3 className="text-lg font-medium">Usage Limits</h3>
-        <SubNote text="Set limits on how many times the coupon can be used." />
-      </div>
-
-      <div>
-        <Label htmlFor="usageLimitPerCoupon">Usage Limit per Coupon</Label>
-        <Input id="usageLimitPerCoupon" type="number" {...register('usageLimitPerCoupon')} className="mt-1" />
-        <SubNote text="The total number of times the coupon can be used." />
-      </div>
-
-      <div>
-        <Label htmlFor="usageLimitPerUser">Usage Limit per User</Label>
-        <Input id="usageLimitPerUser" type="number" {...register('usageLimitPerUser')} className="mt-1" />
-        <SubNote text="The number of times a single user can use the coupon." />
-      </div>
 
         <div>
             <div className="flex items-center space-x-2">
