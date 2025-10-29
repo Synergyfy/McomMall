@@ -50,7 +50,7 @@ export default function GetStartedPage() {
 
         {/* Policy Text */}
         <p className="max-w-xs text-xs text-gray-300">
-          By proceeding to use CozaConnect, you agree to our{" "}
+          By proceeding to use McomMall, you agree to our{" "}
           <Link href="/terms" className="underline">
             terms of use
           </Link>{" "}

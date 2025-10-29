@@ -28,6 +28,23 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 
+const InfoTooltip = ({ text }: { text: string }) => (
+  <TooltipProvider>
+    <Tooltip>
+      <TooltipTrigger asChild>
+        <Info className="h-4 w-4 text-gray-500" />
+      </TooltipTrigger>
+      <TooltipContent>
+        <p>{text}</p>
+      </TooltipContent>
+    </Tooltip>
+  </TooltipProvider>
+);
+
+const SubNote = ({ text }: { text: string }) => (
+  <p className="text-xs text-gray-500 mt-1">{text}</p>
+);
+
 type VoucherProductFormData = CreateVoucherProductDto;
 
 interface VoucherProductFormProps {
@@ -129,18 +146,23 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
       className="grid grid-cols-1 gap-6 sm:grid-cols-2"
     >
       <div className="sm:col-span-2">
-        <Label htmlFor="name">Product Name</Label>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="name">Coupon Code</Label>
+          <InfoTooltip text="The code shoppers will use to apply the coupon." />
+        </div>
         <Input
           id="name"
           {...register('name', { required: 'Name is required' })}
           className="mt-1"
         />
+        <SubNote text="e.g., SUMMER2024" />
         {errors.name && <p className="text-red-500">{errors.name.message}</p>}
       </div>
 
       <div className="sm:col-span-2">
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" {...register('description')} className="mt-1" />
+        <SubNote text="A brief description of the coupon and what it offers." />
       </div>
 
       <div className="sm:col-span-2">

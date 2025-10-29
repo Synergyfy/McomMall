@@ -338,7 +338,43 @@ export default function ManageAdsPage() {
               </div>
             </Card>
 
-            {/* Campaign Filters */}
+           
+
+            {/* Select Ad Placement */}
+            <Card className="p-6">
+              <h2 className="mb-6 flex items-center gap-3 text-xl font-semibold">
+                <BarChart className="h-6 w-6 text-slate-500" /> Select Ad
+                Placement
+              </h2>
+              {errors.adPlacement && (
+                <p className="mb-4 text-center text-sm text-red-600">
+                  {errors.adPlacement}
+                </p>
+              )}
+              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
+                {adPlacementOptions.map(opt => (
+                  <AdPlacementCard
+                    key={opt.id}
+                    option={opt}
+                    isSelected={formData.adPlacement === opt.id}
+                    onSelect={() => handleInputChange('adPlacement', opt.id)}
+                  />
+                ))}
+              </div>
+              {budgetReach > 0 && (
+                <div className="mt-6 rounded-md bg-green-100 p-4 text-sm text-green-800">
+                  With your budget you can get up to:{' '}
+                  <strong className="font-semibold">
+                    {budgetReach.toLocaleString()}{' '}
+                    {formData.campaignType === 'pay_per_view'
+                      ? 'Views'
+                      : 'Clicks'}
+                  </strong>
+                </div>
+              )}
+            </Card>
+
+             {/* Campaign Filters */}
             <Card className="p-6">
               <h2 className="mb-6 flex items-center gap-3 text-xl font-semibold">
                 <Filter className="h-6 w-6 text-slate-500" /> Campaign Filters
@@ -408,40 +444,6 @@ export default function ManageAdsPage() {
                   />
                 </FormField>
               </div>
-            </Card>
-
-            {/* Select Ad Placement */}
-            <Card className="p-6">
-              <h2 className="mb-6 flex items-center gap-3 text-xl font-semibold">
-                <BarChart className="h-6 w-6 text-slate-500" /> Select Ad
-                Placement
-              </h2>
-              {errors.adPlacement && (
-                <p className="mb-4 text-center text-sm text-red-600">
-                  {errors.adPlacement}
-                </p>
-              )}
-              <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-                {adPlacementOptions.map(opt => (
-                  <AdPlacementCard
-                    key={opt.id}
-                    option={opt}
-                    isSelected={formData.adPlacement === opt.id}
-                    onSelect={() => handleInputChange('adPlacement', opt.id)}
-                  />
-                ))}
-              </div>
-              {budgetReach > 0 && (
-                <div className="mt-6 rounded-md bg-green-100 p-4 text-sm text-green-800">
-                  With your budget you can get up to:{' '}
-                  <strong className="font-semibold">
-                    {budgetReach.toLocaleString()}{' '}
-                    {formData.campaignType === 'pay_per_view'
-                      ? 'Views'
-                      : 'Clicks'}
-                  </strong>
-                </div>
-              )}
             </Card>
 
             <div className="flex justify-end">
