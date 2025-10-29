@@ -1,6 +1,9 @@
 export interface ProductVariant {
   name: string;
-  options: string[];
+  options: {
+    name: string;
+    quantity: number;
+  }[];
 }
 
 export interface CreateProductDto {

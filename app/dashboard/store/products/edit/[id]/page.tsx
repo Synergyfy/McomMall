@@ -62,6 +62,7 @@ import {
   CardHeader,
   CardTitle,
 } from '@/components/ui/card';
+import { ProductVariant } from '@/service/store/products/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { businessCategories } from '@/lib/business-categories';
@@ -77,7 +78,7 @@ interface ProductFormValues {
   category: string;
   price: number;
   discountedPrice?: number;
-  tags: string;
+  tags: string[];
   shortDescription: string;
   description:string;
   sku: string;
@@ -86,6 +87,7 @@ interface ProductFormValues {
   lowStockThreshold?: number;
   allowBackorders: 'no' | 'notify' | 'yes';
   allowSingleOrder: boolean;
+  shippingMethod: 'free' | 'pickup' | 'delivery';
   weight?: number;
   dimensions?: {
     length?: number;
@@ -103,7 +105,7 @@ interface ProductFormValues {
   productImages: FileList | null;
   businessId?: string;
   imageUrls?: string[];
-  variants: { name: string; options: string[] }[];
+  variants: ProductVariant[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -129,9 +131,6 @@ const customResolver = (data: ProductFormValues) => {
       type: 'min',
       message: 'Price must be a positive number.',
     };
-  }
-  if (!data.tags?.trim()) {
-    errors.tags = { type: 'required', message: 'Tags are required.' };
   }
   if (!data.shortDescription?.trim()) {
     errors.shortDescription = {
@@ -264,7 +263,7 @@ export default function EditProductPage() {
       category: '',
       price: 0,
       discountedPrice: undefined,
-      tags: '',
+      tags: [],
       shortDescription: '',
       description: '',
       sku: '',
@@ -299,7 +298,7 @@ export default function EditProductPage() {
         category: product.category,
         price: product.price,
         discountedPrice: product.salePrice,
-        tags: product.tags?.join(', '),
+        tags: product.tags || [],
         shortDescription: product.shortDescription,
         description: product.description,
         sku: product.sku,
@@ -373,7 +372,7 @@ export default function EditProductPage() {
       visibility: data.visibility,
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
-      tags: data.tags.split(',').map(tag => tag.trim()),
+      tags: data.tags,
       variants: data.variants,
     };
 

@@ -6,11 +6,19 @@ import { Button } from '@/components/ui/button';
 import {
   Dialog,
   DialogContent,
+  DialogDescription,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { X, Plus } from 'lucide-react';
 import { ProductVariant } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
@@ -29,10 +37,16 @@ export default function VariantManager({ name }: VariantManagerProps) {
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [currentVariant, setCurrentVariant] = useState<Partial<ProductVariant> | null>(null);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [isCustomVariant, setIsCustomVariant] = useState(false);
 
   const openDialog = (variant?: ProductVariant, index?: number) => {
-    setCurrentVariant(variant ? { ...variant } : { name: '', options: [] });
+    setCurrentVariant(
+      variant
+        ? { ...variant }
+        : { name: '', options: [] }
+    );
     setEditingIndex(typeof index === 'number' ? index : null);
+    setIsCustomVariant(false);
     setIsDialogOpen(true);
   };
 
@@ -64,26 +78,56 @@ export default function VariantManager({ name }: VariantManagerProps) {
               <DialogTitle>
                 {editingIndex !== null ? 'Edit Variant' : 'Add Variant'}
               </DialogTitle>
+              <DialogDescription>
+                A variant is a version of your product with a specific set of options, like size or color.
+              </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <Input
-                placeholder="Variant Name (e.g., Color)"
-                value={currentVariant?.name || ''}
-                onChange={(e) =>
-                  setCurrentVariant({ ...currentVariant, name: e.target.value })
-                }
-              />
+               <Select
+                onValueChange={(value) => {
+                  if (value === 'custom') {
+                    setIsCustomVariant(true);
+                    setCurrentVariant({ ...currentVariant, name: '' });
+                  } else {
+                    setIsCustomVariant(false);
+                    setCurrentVariant({ ...currentVariant, name: value });
+                  }
+                }}
+                defaultValue={isCustomVariant ? 'custom' : currentVariant?.name}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose or Enter Name" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Color">Color</SelectItem>
+                  <SelectItem value="Size">Size</SelectItem>
+                  <SelectItem value="custom">Custom</SelectItem>
+                </SelectContent>
+              </Select>
+               {isCustomVariant && (
+                <Input
+                  placeholder="Variant Name (e.g., Material)"
+                  value={currentVariant?.name || ''}
+                  onChange={(e) =>
+                    setCurrentVariant({ ...currentVariant, name: e.target.value })
+                  }
+                />
+              )}
               <div className="flex items-center gap-2">
                 <Input
                   placeholder="Option (e.g., Red)"
                   onKeyDown={(e) => {
                     if (e.key === 'Enter' && e.currentTarget.value) {
                       e.preventDefault();
+                      const newOption = {
+                        name: e.currentTarget.value,
+                        quantity: 0,
+                      };
                       setCurrentVariant({
                         ...currentVariant,
                         options: [
                           ...(currentVariant?.options || []),
-                          e.currentTarget.value,
+                          newOption,
                         ],
                       });
                       e.currentTarget.value = '';
@@ -91,13 +135,25 @@ export default function VariantManager({ name }: VariantManagerProps) {
                   }}
                 />
               </div>
-              <div className="flex flex-wrap gap-2">
+              <div className="space-y-2">
                 {currentVariant?.options?.map((option, index) => (
-                  <Badge key={index} variant="secondary">
-                    {option}
+                  <div key={index} className="flex items-center gap-2">
+                    <Badge variant="secondary">{option.name}</Badge>
+                    <Input
+                      type="number"
+                      placeholder="Quantity"
+                      value={option.quantity}
+                      onChange={(e) => {
+                        const newOptions = [...(currentVariant.options || [])];
+                        newOptions[index].quantity = parseInt(e.target.value);
+                        setCurrentVariant({
+                          ...currentVariant,
+                          options: newOptions,
+                        });
+                      }}
+                    />
                     <button
                       type="button"
-                      className="ml-1"
                       onClick={() => {
                         setCurrentVariant({
                           ...currentVariant,
@@ -107,9 +163,9 @@ export default function VariantManager({ name }: VariantManagerProps) {
                         });
                       }}
                     >
-                      <X className="h-3 w-3" />
+                      <X className="h-4 w-4" />
                     </button>
-                  </Badge>
+                  </div>
                 ))}
               </div>
               <Button onClick={handleSave}>Save</Button>
@@ -125,10 +181,14 @@ export default function VariantManager({ name }: VariantManagerProps) {
             className="flex items-center justify-between p-2 border rounded-md"
           >
             <div>
-                <p className="font-semibold">{(field as unknown as ProductVariant).name}</p>
-                <p className="text-sm text-gray-500">
-                {(field as unknown as ProductVariant).options.join(', ')}
-                </p>
+              <p className="font-semibold">
+                {(field as unknown as ProductVariant).name}
+              </p>
+              <p className="text-sm text-gray-500">
+                {(field as unknown as ProductVariant).options
+                  .map((o) => `${o.name} (${o.quantity})`)
+                  .join(', ')}
+              </p>
             </div>
             <div className="flex gap-2">
               <Button
