@@ -3,6 +3,7 @@
 import * as React from 'react';
 import { useMemo, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
 import { useGetStoreOrders } from '@/service/store/orders/hook';
 import Papa from 'papaparse';
@@ -45,14 +46,15 @@ import {
 import { MessageSquare } from 'lucide-react';
 
 // --- Type Definitions ---
-type OrderStatus = 'All' | 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
-type BadgeStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+type ActualOrderStatus = 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+type OrderStatus = 'All' | ActualOrderStatus;
+type BadgeStatus = ActualOrderStatus;
 type Order = {
   id: string;
   userId: string;
   customerName: string;
   customerEmail: string;
-  status: 'Processing' | 'Shipped' | 'Delivered' | 'Cancelled';
+  status: ActualOrderStatus;
   itemCount: number;
   total: number;
   date: string;
@@ -126,7 +128,7 @@ export default function OrdersDashboard() {
       customerName: order.user?.name || 'N/A',
       customerEmail: order.user?.email || 'N/A',
       // TODO: The API does not provide an order status. Defaulting to 'Processing'.
-      status: 'Processing',
+      status: 'Processing' as ActualOrderStatus,
       itemCount: order.quantity,
       total: order.payment?.amount || 0,
       date: order.created_at,
@@ -163,14 +165,9 @@ export default function OrdersDashboard() {
 
   const handleBulkAction = (action: string) => {
     if (selectedRows.length === 0) {
-      alert('Please select orders to perform a bulk action.');
       return;
     }
-    if (action === 'delete') {
-      // setOrders(prev => prev.filter(o => !selectedRows.includes(o.id)));
-      setSelectedRows([]);
-    }
-    console.log(`Performing '${action}' on orders:`, selectedRows);
+    toast.info(`'${action}' action is not yet implemented.`);
   };
 
   const handleExport = () => {
@@ -326,7 +323,13 @@ export default function OrdersDashboard() {
                 {TABS.map(tab => (
                   <button
                     key={tab}
-                    onClick={() => setActiveTab(tab)}
+                    onClick={() => {
+                      if (tab === 'All') {
+                        setActiveTab(tab);
+                      } else {
+                        toast.info('Filtering by status is not yet available.');
+                      }
+                    }}
                     className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${
                       activeTab === tab
                         ? 'bg-gray-100 font-semibold text-gray-800'
