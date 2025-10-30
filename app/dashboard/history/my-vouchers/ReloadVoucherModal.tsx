@@ -21,6 +21,12 @@ import {
 } from '@/service/hooks/useVoucherService';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(
+  process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
+);
 
 interface ReloadVoucherModalProps {
   voucher: Voucher;
@@ -151,7 +157,9 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
             </Button>
           </form>
         ) : clientSecret ? (
-          <StripeCheckoutForm clientSecret={clientSecret} onSuccess={onPaymentSuccess} />
+          <Elements stripe={stripePromise} options={{ clientSecret }}>
+            <StripeCheckoutForm clientSecret={clientSecret} onSuccess={onPaymentSuccess} />
+          </Elements>
         ) : orderId ? (
           <PayPalCheckoutButton orderId={orderId} onSuccess={onPaymentSuccess} />
         ) : null}
