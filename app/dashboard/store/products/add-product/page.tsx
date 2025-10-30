@@ -484,11 +484,14 @@ export default function AddProductPage() {
                               className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
                             >
                               <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="physical" />
+                                </FormControl>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <FormControl>
-                                      <RadioGroupItem value="physical" />
-                                    </FormControl>
+                                    <FormLabel className="font-normal text-base">
+                                      Physical
+                                    </FormLabel>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>
@@ -496,16 +499,16 @@ export default function AddProductPage() {
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
-                                <FormLabel className="font-normal text-base">
-                                  Physical
-                                </FormLabel>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="downloadable" />
+                                </FormControl>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <FormControl>
-                                      <RadioGroupItem value="downloadable" />
-                                    </FormControl>
+                                    <FormLabel className="font-normal text-base">
+                                      Downloadable
+                                    </FormLabel>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>
@@ -514,16 +517,16 @@ export default function AddProductPage() {
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
-                                <FormLabel className="font-normal text-base">
-                                  Downloadable
-                                </FormLabel>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
+                                <FormControl>
+                                  <RadioGroupItem value="virtual" />
+                                </FormControl>
                                 <Tooltip>
                                   <TooltipTrigger asChild>
-                                    <FormControl>
-                                      <RadioGroupItem value="virtual" />
-                                    </FormControl>
+                                    <FormLabel className="font-normal text-base">
+                                      Virtual
+                                    </FormLabel>
                                   </TooltipTrigger>
                                   <TooltipContent>
                                     <p>
@@ -532,9 +535,6 @@ export default function AddProductPage() {
                                     </p>
                                   </TooltipContent>
                                 </Tooltip>
-                                <FormLabel className="font-normal text-base">
-                                  Virtual
-                                </FormLabel>
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
