@@ -404,7 +404,6 @@ export default function AddProductPage() {
   }
 
   return (
-    <TooltipProvider>
     <div className="bg-gray-50 p-4 sm:p-6 lg:p-8 text-base">
       <div className="max-w-7xl mx-auto">
         <SuccessDialog
@@ -467,6 +466,7 @@ export default function AddProductPage() {
                     <CardTitle className="text-2xl">Product Data</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    <TooltipProvider>
                     <FormField
                       control={form.control}
                       name="productType"
@@ -594,6 +594,7 @@ export default function AddProductPage() {
                             )}
                         />
                     </div>
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
 
@@ -1544,6 +1545,5 @@ export default function AddProductPage() {
         </FormProvider>
       </div>
     </div>
-    </TooltipProvider>
   );
 }

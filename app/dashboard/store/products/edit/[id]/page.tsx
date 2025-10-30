@@ -131,14 +131,17 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
+    if (!data.subCategories || data.subCategories.length === 0) {
+    errors.subCategories = {
+      type: 'required',
+      message: 'Please select at least one sub-category.',
+    };
+  }
   if (data.price === undefined || data.price < 0) {
     errors.price = {
       type: 'min',
       message: 'Price must be a positive number.',
     };
-  }
-  if (!data.tags || data.tags.length === 0) {
-    errors.tags = { type: 'required', message: 'Tags are required.' };
   }
   if (!data.shortDescription?.trim()) {
     errors.shortDescription = {
@@ -305,12 +308,14 @@ export default function EditProductPage() {
         title: product.title,
         productType: product.productType as 'physical' | 'downloadable' | 'virtual',
         category: product.category,
+        subCategories: product.subCategories || [],
         price: product.price,
         discountedPrice: product.salePrice,
         tags: product.tags || [],
         shortDescription: product.shortDescription,
         description: product.description,
         sku: product.sku,
+        shippingMethod: product.shippingMethod || 'free',
         enableStockManagement: product.enableStockManagement,
         stockQuantity: product.stock,
         lowStockThreshold: product.stock, // Assuming this is the case
@@ -355,6 +360,8 @@ export default function EditProductPage() {
       bussinessId: data.businessId as string,
       title: data.title,
       category: data.category,
+      subCategories: data.subCategories,
+      shippingMethod: data.shippingMethod,
       productType: data.productType,
       price: Number(data.price),
       description: data.description,
@@ -500,25 +507,54 @@ export default function EditProductPage() {
                                 <FormControl>
                                   <RadioGroupItem value="physical" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Physical
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Physical
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A physical product that requires shipping.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="downloadable" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Downloadable
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Downloadable
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A product that can be downloaded after
+                                      purchase.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="virtual" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Virtual
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Virtual
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A virtual product that does not require
+                                      shipping and is not downloadable.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
@@ -657,6 +693,9 @@ export default function EditProductPage() {
                                 className="text-base py-6"
                               />
                             </FormControl>
+                            <FormDescription>
+                                A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.
+                            </FormDescription>
                           </FormItem>
                         )}
                       />
@@ -695,6 +734,9 @@ export default function EditProductPage() {
                                     className="text-base py-6"
                                   />
                                 </FormControl>
+                                <FormDescription>
+                                    Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.
+                                </FormDescription>
                                 <FormMessage className="text-red-500 text-base font-medium" />
                               </FormItem>
                             )}
@@ -865,6 +907,49 @@ export default function EditProductPage() {
                                     )}
                                   />
                                 </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="space-y-4 pt-4 border-t">
+                          <FormLabel className="text-lg">Delivery Details</FormLabel>
+                          <FormField
+                            control={form.control}
+                            name="shippingMethod"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-2"
+                                  >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="free" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Free Delivery
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="pickup" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Pickup
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="delivery" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Delivery Options
+                                      </FormLabel>
+                                    </FormItem>
+                                  </RadioGroup>
+                                </FormControl>
                               </FormItem>
                             )}
                           />
