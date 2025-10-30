@@ -14,6 +14,7 @@ import {
   Loader,
   ArrowRight,
 } from 'lucide-react';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import StyledNumber from '@/components/svgs/StyledNumber';
 
@@ -98,26 +99,31 @@ const ActivityTimerPage: FC = () => {
   const currentTaskKey = taskKeys[currentIndex];
   const isCompleted = tasks[currentTaskKey];
 
-  const taskDetails: Record<keyof TrialTasks, { title: string; description: string }> = {
+  const taskDetails: Record<keyof TrialTasks, { title: string; description: string; url: string }> = {
     createdBusiness: {
       title: 'Create a business profile',
       description: 'You need a business profile to start selling. Create one now.',
+      url: '/dashboard/my-profile',
     },
     createdProductOrService: {
       title: 'Add your first product or service',
       description: 'Add your first product or service to your store.',
+      url: '/dashboard/services/add-service',
     },
     createdPromotion: {
       title: 'Create a special promotion',
       description: 'Create a special promotion to attract customers.',
+      url: '/dashboard/loyalty/promotion/new',
     },
     createdOffer: {
       title: 'Launch an exciting offer',
       description: 'Launch an exciting offer to get more sales.',
+      url: '/dashboard/loyalty/offers/new',
     },
     createdCoupon: {
       title: 'Generate a discount coupon',
       description: 'Generate a discount coupon to reward your customers.',
+      url: '/dashboard/coupons/new',
     },
   };
 
@@ -211,16 +217,19 @@ const ActivityTimerPage: FC = () => {
               </h3>
               <p className="text-gray-400 mb-6">{currentTask.description}</p>
               <div className="flex items-center justify-between">
-                <button
-                  className={`flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors ${
-                    isCompleted
-                      ? 'bg-green-600 text-white'
-                      : 'bg-gray-600 text-gray-300'
-                  }`}
-                >
-                  <CheckCircle2 className="w-5 h-5 mr-2" />
-                  Done
-                </button>
+                {isCompleted ? (
+                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    Done
+                  </button>
+                ) : (
+                  <Link
+                    href={currentTask.url}
+                    className="flex items-center text-orange-400 hover:text-orange-300 font-medium"
+                  >
+                    Finish this activity
+                  </Link>
+                )}
                 <button
                   onClick={handleNext}
                   className="flex items-center text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed font-medium"
