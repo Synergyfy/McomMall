@@ -23,6 +23,7 @@ import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { InProgressDialog } from '@/components/InProgressDialog';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -47,6 +48,7 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
   const [orderId, setOrderId] = useState<string | null>(null);
   const [reloadAmount, setReloadAmount] = useState<number>(0);
   const [paymentProvider, setPaymentProvider] = useState<'stripe' | 'paypal' | null>(null);
+  const [isVerifying, setIsVerifying] = useState(false);
 
   const {
     control,
@@ -82,6 +84,7 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
 
   const onPaymentSuccess = async (transactionId: string) => {
     if (!paymentProvider) return;
+    setIsVerifying(true);
     try {
       await verifyReload(voucher.code, {
         paymentProvider,
@@ -97,16 +100,19 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
       setOrderId(null);
     } catch (error) {
       toast.error('Failed to verify reload.');
+    } finally {
+      setIsVerifying(false);
     }
   };
 
   return (
-    <Dialog open={isOpen} onOpenChange={setIsOpen}>
-      <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Reload Voucher</DialogTitle>
-        </DialogHeader>
+    <>
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogTrigger asChild>{children}</DialogTrigger>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reload Voucher</DialogTitle>
+          </DialogHeader>
         {!clientSecret && !orderId ? (
           <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div>
@@ -165,5 +171,10 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
         ) : null}
       </DialogContent>
     </Dialog>
+      <InProgressDialog
+        isOpen={isVerifying}
+        message="Verifying payment, please do not close this page."
+      />
+    </>
   );
 };
