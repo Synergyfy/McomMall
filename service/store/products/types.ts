@@ -10,6 +10,8 @@ export interface CreateProductDto {
   bussinessId: string;
   title: string;
   category: string;
+  subCategories?: string[];
+  shippingMethod?: 'free' | 'pickup' | 'delivery';
   productType: string;
   price: number;
   description: string;
