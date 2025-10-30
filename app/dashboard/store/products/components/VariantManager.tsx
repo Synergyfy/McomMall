@@ -109,7 +109,7 @@ export default function VariantManager({ name }: VariantManagerProps) {
     <div>
       <div className="flex justify-between items-center mb-4">
         <h3 className="text-lg font-medium">Variants</h3>
-        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen} modal={false}>
           <DialogTrigger asChild>
             <Button type="button" onClick={() => openDialog()}>
               Add Variant
