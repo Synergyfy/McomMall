@@ -10,9 +10,9 @@ import { ChevronDownIcon } from '@heroicons/react/20/solid'; // Icon
 const options: OptionKey[] = [
   'BUSINESS',
   'CUSTOMER',
-  'AGENT',
-  'ACCOUNT MANAGER',
-  'CONSULTANTS',
+  // 'AGENT',
+  // 'ACCOUNT MANAGER',
+  // 'CONSULTANTS',
 ];
 
 // --- Descriptions for each option ---
@@ -20,9 +20,9 @@ const optionInfo = {
   'CHOOSE YOUR STATUS': 'INFORMATION ABOUT THE OPTION CHOSEN AFTER THE OPTION IS SELECTED.',
   'BUSINESS': 'Information for BUSINESS: Manage your company profile, post jobs, and access corporate services.',
   'CUSTOMER': 'Information for CUSTOMER: Browse services, manage your bookings, and track your history.',
-  'AGENT': 'Information for AGENT: Access your dashboard, manage client requests, and track your earnings.',
-  'ACCOUNT MANAGER': 'Information for ACCOUNT MANAGER: Oversee your portfolio of clients and manage support tickets.',
-  'CONSULTANTS': 'Information for CONSULTANTS: Offer your expertise, manage your availability, and connect with businesses.',
+  // 'AGENT': 'Information for AGENT: Access your dashboard, manage client requests, and track your earnings.',
+  // 'ACCOUNT MANAGER': 'Information for ACCOUNT MANAGER: Oversee your portfolio of clients and manage support tickets.',
+  // 'CONSULTANTS': 'Information for CONSULTANTS: Offer your expertise, manage your availability, and connect with businesses.',
 };
 
 // CHANGE 2: Create a type from the keys of optionInfo
