@@ -205,7 +205,7 @@ const ActivityTimerPage: FC = () => {
         {/* New Task Display */}
         <div className="w-full max-w-3xl mx-auto">
           <h2 className="text-3xl font-bold text-gray-200 mb-8 ml-4">
-            Get started with Brevo
+            Get started with Mcommall
           </h2>
           <div className="bg-gray-800 shadow-xl rounded-2xl p-8 flex items-center">
             <div className="w-1/3 flex items-center justify-center">
