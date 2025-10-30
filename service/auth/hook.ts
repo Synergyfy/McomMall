@@ -131,7 +131,7 @@ export const useLogin = () => {
   const dispatch: AppDispatch = useDispatch();
   const login = async (payload: AuthInterface): Promise<LoginResponse> => {
     try {
-      const response = await api.post('auth/login', {
+      const response = await api.post('auth/', {
         ...payload,
       });
       return response.data;
