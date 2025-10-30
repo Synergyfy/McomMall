@@ -34,8 +34,26 @@ const ComingSoonPage: React.FC = () => {
         transition={{ delay: 0.2, duration: 0.5 }}
         className="mb-3 text-4xl font-bold tracking-tight text-gray-800"
       >
-        Coming Soon!
+        QR Scanner
       </motion.h1>
+
+      <motion.p
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        transition={{ delay: 0.4, duration: 0.5 }}
+        className="max-w-md text-lg text-gray-600 mb-6"
+      >
+        Use the QR scanner to easily check in attendees and validate tickets. Simply point your camera at the QR code to get started.
+      </motion.p>
+
+      <motion.h2
+        initial={{ opacity: 0, scale: 0.9 }}
+        animate={{ opacity: 1, scale: 1 }}
+        transition={{ delay: 0.2, duration: 0.5 }}
+        className="mb-3 text-2xl font-bold tracking-tight text-gray-800"
+      >
+        Coming Soon!
+      </motion.h2>
 
       <motion.p
         initial={{ opacity: 0 }}
