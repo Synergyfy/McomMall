@@ -103,6 +103,17 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
           {product.isEnabled ? 'Enabled' : 'Disabled'}
         </span>
       </td>
+      <td className="whitespace-nowrap px-6 py-4 text-sm">
+        <span
+          className={`rounded-full px-2.5 py-1 text-xs font-semibold ${
+            product.allowReloading
+              ? 'bg-blue-100 text-blue-800'
+              : 'bg-gray-100 text-gray-800'
+          }`}
+        >
+          {product.allowReloading ? 'Yes' : 'No'}
+        </span>
+      </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
           <VoucherProductModal product={product} onSuccess={() => {}}>
@@ -186,6 +197,7 @@ export default function VoucherProductsPage() {
                     'Pricing',
                     'Expiry (Days)',
                     'Status',
+                    'Reloadable',
                     'Actions',
                   ].map(header => (
                     <th
@@ -228,6 +240,11 @@ export default function VoucherProductsPage() {
                 ))}
               </motion.tbody>
             </table>
+          </div>
+          <div className="p-4 bg-gray-50 border-t border-slate-200">
+            <span className="text-xs text-gray-600">
+              Reloadable vouchers can be topped up by customers.
+            </span>
           </div>
         </div>
 

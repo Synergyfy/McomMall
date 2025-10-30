@@ -10,6 +10,8 @@ import {
   VerifyVoucherPurchaseDto,
   StripeVoucherPurchaseResponse,
   PayPalVoucherPurchaseResponse,
+  InitiateReloadDto,
+  VerifyReloadDto,
 } from '../vouchers/types';
 import api from '../api';
 import { useSelector } from 'react-redux';
@@ -78,6 +80,36 @@ export const useGetSoldVouchers = () => {
     isLoading: !error && !soldVouchers,
     isError: error,
   };
+};
+
+export const useInitiateVoucherReload = () => {
+  const initiateReload = async (
+    code: string,
+    reloadData: InitiateReloadDto
+  ): Promise<StripeVoucherPurchaseResponse | PayPalVoucherPurchaseResponse> => {
+    const response = await api.post(
+      `/vouchers/${code}/initiate-reload`,
+      reloadData
+    );
+    return response.data;
+  };
+  return initiateReload;
+};
+
+export const useVerifyVoucherReload = () => {
+  const { mutate } = useSWRConfig();
+  const verifyReload = async (
+    code: string,
+    verificationData: VerifyReloadDto
+  ): Promise<Voucher> => {
+    const response = await api.post(
+      `/vouchers/${code}/verify-reload`,
+      verificationData
+    );
+    mutate('/vouchers/my-vouchers');
+    return response.data;
+  };
+  return verifyReload;
 };
 
 export const useRedeemVoucherManual = () => {

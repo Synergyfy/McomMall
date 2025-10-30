@@ -131,7 +131,7 @@ export const useLogin = () => {
   const dispatch: AppDispatch = useDispatch();
   const login = async (payload: AuthInterface): Promise<LoginResponse> => {
     try {
-      const response = await api.post('auth', {
+      const response = await api.post('auth/', {
         ...payload,
       });
       return response.data;
@@ -140,7 +140,7 @@ export const useLogin = () => {
       throw new Error(
         err.response?.data?.message ||
           err.message ||
-          'Failed to create business'
+          'Failed to login. Please check your credentials and try again.'
       );
     }
   };

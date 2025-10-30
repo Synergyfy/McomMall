@@ -79,6 +79,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           allowPartialRedemption: true,
           isEnabled: true,
           allowCustomAmount: false,
+          allowReloading: false,
         },
   });
 
@@ -343,6 +344,21 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
                 <SelectItem value="instore_only">In-store Only</SelectItem>
               </SelectContent>
             </Select>
+          )}
+        />
+      </div>
+
+      <div className="flex items-center justify-between sm:col-span-2">
+        <Label htmlFor="allowReloading">Allow Reloading</Label>
+        <Controller
+          name="allowReloading"
+          control={control}
+          render={({ field }) => (
+            <Switch
+              id="allowReloading"
+              checked={field.value}
+              onCheckedChange={field.onChange}
+            />
           )}
         />
       </div>

@@ -12,6 +12,7 @@ export interface VoucherProduct {
   isEnabled?: boolean;
   bonusThreshold?: number;
   bonusAmount?: number;
+  allowReloading?: boolean;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -61,6 +62,7 @@ export interface CreateVoucherProductDto {
   allowPartialRedemption?: boolean;
   bonusThreshold?: number;
   bonusAmount?: number;
+  allowReloading?: boolean;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;
@@ -85,4 +87,19 @@ export interface PurchaseVoucherDto {
   voucherProductId: string;
   amount: number;
   recipientEmail?: string;
+}
+
+export interface InitiateReloadDto {
+  amount: number;
+  paymentProvider: 'stripe' | 'paypal';
+}
+
+interface ReloadDetailsDto {
+  amount: number;
+}
+
+export interface VerifyReloadDto {
+  reloadDetails: ReloadDetailsDto;
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
 }

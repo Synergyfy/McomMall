@@ -5,6 +5,9 @@ import { motion } from 'framer-motion';
 import { useGetMyVouchers } from '@/service/hooks/useVoucherService';
 import { Voucher } from '@/service/vouchers/types';
 import { CURRENCY } from '@/lib/utils';
+import { Button } from '@/components/ui/button';
+import { PlusCircle } from 'lucide-react';
+import { ReloadVoucherModal } from './ReloadVoucherModal';
 
 type MyVoucherRowProps = {
   voucher: Voucher;
@@ -69,6 +72,16 @@ const MyVoucherRow: React.FC<MyVoucherRowProps> = ({ voucher }) => {
           ? new Date(voucher.expiresAt).toLocaleDateString()
           : 'N/A'}
       </td>
+      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
+        {voucher.voucherProduct?.allowReloading && (
+          <ReloadVoucherModal voucher={voucher}>
+            <Button variant="outline" size="sm" className="flex items-center gap-1">
+              <PlusCircle className="h-4 w-4" />
+              <span>Reload</span>
+            </Button>
+          </ReloadVoucherModal>
+        )}
+      </td>
     </motion.tr>
   );
 };
@@ -109,6 +122,7 @@ export default function MyVouchersPage() {
                     'Status',
                     'Purchase Date',
                     'Expires At',
+                    'Actions',
                   ].map(header => (
                     <th
                       key={header}

@@ -280,9 +280,14 @@ const AddServicePage = () => {
       <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
         <div className="max-w-4xl mx-auto">
           <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-            <h1 className="text-3xl font-bold text-gray-800">
-              Add New Service
-            </h1>
+            <div>
+              <h1 className="text-3xl font-bold text-gray-800">
+                Add New Service
+              </h1>
+              <p className="text-sm text-gray-600 mt-2">
+                Please verify all service details before commencing.
+              </p>
+            </div>
             <div className="flex items-center text-sm text-gray-500">
               <span
                 onClick={() => router.push('/dashboard')}
