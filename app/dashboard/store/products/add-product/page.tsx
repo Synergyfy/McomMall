@@ -550,9 +550,18 @@ export default function AddProductPage() {
                             name="discountedPrice"
                             render={({ field }) => (
                             <FormItem>
-                                <FormLabel className="text-base">
-                                Discounted Price (£)
-                                </FormLabel>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Discounted Price (£)
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>The lowest price you are willing to sell this product.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                                 <FormControl>
                                 <Input
                                     type="number"
@@ -561,9 +570,6 @@ export default function AddProductPage() {
                                     className="text-base py-6"
                                 />
                                 </FormControl>
-                                <FormDescription>
-                                    The lowest price you are willing to sell this product.
-                                </FormDescription>
                                 <FormMessage className="text-red-500 text-base font-medium" />
                             </FormItem>
                             )}
@@ -667,9 +673,18 @@ export default function AddProductPage() {
                         name="sku"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base">
-                              SKU (Stock Keeping Unit)
-                            </FormLabel>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <FormLabel className="text-base">
+                                        SKU (Stock Keeping Unit)
+                                        </FormLabel>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 placeholder="e.g., TSHIRT-RED-L"
@@ -677,9 +692,6 @@ export default function AddProductPage() {
                                 className="text-base py-6"
                               />
                             </FormControl>
-                            <FormDescription>
-                                A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.
-                            </FormDescription>
                           </FormItem>
                         )}
                       />
@@ -707,9 +719,18 @@ export default function AddProductPage() {
                             name="stockQuantity"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-base">
-                                  Stock quantity
-                                </FormLabel>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Stock quantity
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -718,9 +739,6 @@ export default function AddProductPage() {
                                     className="text-base py-6"
                                   />
                                 </FormControl>
-                                <FormDescription>
-                                    Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.
-                                </FormDescription>
                                 <FormMessage className="text-red-500 text-base font-medium" />
                               </FormItem>
                             )}
