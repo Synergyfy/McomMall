@@ -54,8 +54,15 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
 
   const onSubmit = async (data: ReloadVoucherFormData) => {
     try {
-      const initiationResponse = await initiateReload(voucher.code, data);
-      setReloadAmount(data.amount);
+      const numericAmount = Number(data.amount);
+      if (isNaN(numericAmount) || numericAmount < 1) {
+        toast.error('Please enter a valid amount.');
+        return;
+      }
+
+      const payload = { ...data, amount: numericAmount };
+      const initiationResponse = await initiateReload(voucher.code, payload);
+      setReloadAmount(numericAmount);
       setPaymentProvider(data.paymentProvider);
       if (initiationResponse.provider === 'stripe') {
         setClientSecret(initiationResponse.clientSecret);
