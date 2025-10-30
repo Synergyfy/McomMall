@@ -110,7 +110,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
             >
               <div
                 className={`flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white ${
-                  isActive ? 'text-orange-600' : ''
+                  isActive ? 'bg-white text-orange-600' : ''
                 }`}
                 onClick={() => item.subMenu && toggleSubMenu(item.title)}
               >
@@ -159,7 +159,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                         <Link
                           href={subItem.href}
                           className={`block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8 ${
-                            isSubMenuActive ? 'text-orange-600' : ''
+                            isSubMenuActive ? 'bg-white text-orange-600' : ''
                           }`}
                           onClick={onLinkClick}
                         >
