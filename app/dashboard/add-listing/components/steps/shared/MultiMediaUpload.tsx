@@ -15,14 +15,17 @@ interface MultiMediaUploadProps {
   onMediaChange: (media: File[]) => void;
   maxFiles?: number;
   maxSize?: number;
+  initialMedia?: string[];
 }
 
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
   maxFiles = 5,
   maxSize = 5 * 1024 * 1024, // 5MB default
+  initialMedia = [],
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
+  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia);
   const [error, setError] = useState<string | null>(null);
 
   const handleFiles = useCallback(
@@ -130,6 +133,24 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       {error && <p className="text-sm text-red-600">{error}</p>}
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
+        {initialMediaFiles.map((url, index) => (
+            <div key={`initial-${index}`} className="relative aspect-square">
+                <Image
+                src={url}
+                alt={`initial preview ${index}`}
+                layout="fill"
+                objectFit="cover"
+                className="rounded-lg"
+                />
+                <button
+                onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
+                className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                aria-label="Delete file"
+                >
+                <X className="h-4 w-4" />
+                </button>
+            </div>
+            ))}
         {mediaFiles.map((mediaFile, index) => (
           <div key={index} className="relative aspect-square">
             {mediaFile.type === 'image' ? (

@@ -20,14 +20,14 @@ import {
   X,
 } from 'lucide-react';
 import Image from 'next/image';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { uploadFile } from '@/lib/upload';
 import { toast } from 'sonner';
 
 import { useAddProduct } from '@/service/store/products/hook';
 import { SuccessDialog } from '../components/SuccessDialog';
-import { CreateProductDto } from '@/service/store/products/types';
+import { CreateProductDto, ProductVariant } from '@/service/store/products/types';
 
 import VariantManager from '../components/VariantManager';
 import { Badge } from '@/components/ui/badge';
@@ -68,6 +68,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { businessCategories } from '@/lib/business-categories';
@@ -77,6 +83,7 @@ interface ProductFormValues {
   title:string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
+  subCategories: string[];
   tags: string[];
   price: number;
   discountedPrice?: number;
@@ -88,6 +95,7 @@ interface ProductFormValues {
   lowStockThreshold?: number;
   allowBackorders: 'no' | 'notify' | 'yes';
   allowSingleOrder: boolean;
+  shippingMethod: 'free' | 'pickup' | 'delivery';
   weight?: number;
   dimensions?: {
     length?: number;
@@ -104,7 +112,7 @@ interface ProductFormValues {
   enableReviews: boolean;
   media: File[];
   businessId?: string;
-  variants: { name: string; options: string[] }[];
+  variants: ProductVariant[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -125,16 +133,22 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
-    if (!data.tags || data.tags.length === 0) {
-    errors.tags = {
+    if (!data.subCategories || data.subCategories.length === 0) {
+    errors.subCategories = {
       type: 'required',
-      message: 'Please select at least one tag.',
+      message: 'Please select at least one sub-category.',
     };
   }
   if (data.price === undefined || data.price < 0) {
     errors.price = {
       type: 'min',
       message: 'Price must be a positive number.',
+    };
+  }
+  if (data.discountedPrice !== undefined && data.price < data.discountedPrice) {
+    errors.price = {
+        type: 'validate',
+        message: 'Price must be more than the discounted price.',
     };
   }
   if (!data.shortDescription?.trim()) {
@@ -271,6 +285,7 @@ export default function AddProductPage() {
       title: '',
       productType: 'physical',
       category: '',
+      subCategories: [],
       tags: [],
       price: 0,
       discountedPrice: undefined,
@@ -282,6 +297,7 @@ export default function AddProductPage() {
       lowStockThreshold: undefined,
       allowBackorders: 'no',
       allowSingleOrder: false,
+      shippingMethod: 'free',
       weight: undefined,
       dimensions: {
         length: undefined,
@@ -298,6 +314,17 @@ export default function AddProductPage() {
       variants: [],
     },
   });
+
+  const variants = form.watch('variants');
+  useEffect(() => {
+    if (form.watch('enableStockManagement')) {
+      const totalStock = variants.reduce((total, variant) => {
+        return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
+      }, 0);
+      form.setValue('stockQuantity', totalStock, { shouldValidate: true });
+    }
+  }, [variants, form]);
+
 
   const { fields, append, remove } = useFieldArray({
     control: form.control,
@@ -425,6 +452,9 @@ export default function AddProductPage() {
  <Card>
                   <CardHeader>
                     <CardTitle className="text-2xl">Variants</CardTitle>
+                    <CardDescription>
+                        Add variants like color, size, etc. to your product. This will allow you to specify different options for your product.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <VariantManager name="variants" />
@@ -436,6 +466,7 @@ export default function AddProductPage() {
                     <CardTitle className="text-2xl">Product Data</CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">
+                    <TooltipProvider>
                     <FormField
                       control={form.control}
                       name="productType"
@@ -456,25 +487,54 @@ export default function AddProductPage() {
                                 <FormControl>
                                   <RadioGroupItem value="physical" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Physical
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Physical
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A physical product that requires shipping.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="downloadable" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Downloadable
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Downloadable
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A product that can be downloaded after
+                                      purchase.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="virtual" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Virtual
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Virtual
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A virtual product that does not require
+                                      shipping and is not downloadable.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
@@ -485,52 +545,62 @@ export default function AddProductPage() {
 
                     {/* Pricing */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
-                      <FormField
-                        control={form.control}
-                        name="price"
-                        render={({ field, fieldState: { error } }) => (
-                          <FormItem>
-                            <FormLabel
-                              className={cn(
-                                'text-base',
-                                error && 'text-red-500'
-                              )}
-                            >
-                              Price (£)
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-base font-medium" />
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="discountedPrice"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">
-                              Discounted Price (£)
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-base font-medium" />
-                          </FormItem>
-                        )}
-                      />
+                        <FormField
+                            control={form.control}
+                            name="discountedPrice"
+                            render={({ field }) => (
+                            <FormItem>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Discounted Price (£)
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>The lowest price you are willing to sell this product.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                            )}
+                        />
+                        <FormField
+                            control={form.control}
+                            name="price"
+                            render={({ field, fieldState: { error } }) => (
+                            <FormItem>
+                                <FormLabel
+                                className={cn(
+                                    'text-base',
+                                    error && 'text-red-500'
+                                )}
+                                >
+                                Price (£)
+                                </FormLabel>
+                                <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                            )}
+                        />
                     </div>
+                    </TooltipProvider>
                   </CardContent>
                 </Card>
 
@@ -603,9 +673,18 @@ export default function AddProductPage() {
                         name="sku"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base">
-                              SKU (Stock Keeping Unit)
-                            </FormLabel>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <FormLabel className="text-base">
+                                        SKU (Stock Keeping Unit)
+                                        </FormLabel>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 placeholder="e.g., TSHIRT-RED-L"
@@ -640,9 +719,18 @@ export default function AddProductPage() {
                             name="stockQuantity"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-base">
-                                  Stock quantity
-                                </FormLabel>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Stock quantity
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -821,6 +909,49 @@ export default function AddProductPage() {
                                     )}
                                   />
                                 </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="space-y-4 pt-4 border-t">
+                          <FormLabel className="text-lg">Delivery Details</FormLabel>
+                          <FormField
+                            control={form.control}
+                            name="shippingMethod"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-2"
+                                  >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="free" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Free Delivery
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="pickup" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Pickup
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="delivery" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Delivery Options
+                                      </FormLabel>
+                                    </FormItem>
+                                  </RadioGroup>
+                                </FormControl>
                               </FormItem>
                             )}
                           />
@@ -1140,7 +1271,7 @@ export default function AddProductPage() {
                 {/* Business Listing */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Business</CardTitle>
+                    <CardTitle className="text-2xl">Listings/Business</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <FormField
@@ -1155,7 +1286,7 @@ export default function AddProductPage() {
                           >
                             <FormControl>
                               <SelectTrigger className="text-base py-6">
-                                <SelectValue placeholder="Select a business" />
+                                <SelectValue placeholder="Select from your Listing" />
                               </SelectTrigger>
                             </FormControl>
                             <SelectContent>
@@ -1225,6 +1356,9 @@ export default function AddProductPage() {
                           >
                             Category
                           </FormLabel>
+                          <FormDescription>
+                            Select a category for your product.
+                          </FormDescription>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -1256,7 +1390,7 @@ export default function AddProductPage() {
                                         key={cat.name}
                                         onSelect={() => {
                                           form.setValue('category', cat.name, { shouldValidate: true });
-                                          form.setValue('tags', [], { shouldValidate: true });
+                                          form.setValue('subCategories', [], { shouldValidate: true });
                                         }}
                                       >
                                         {cat.name}
@@ -1274,18 +1408,18 @@ export default function AddProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Tags */}
+                {/* Sub Categories */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardTitle className="text-2xl">Sub Categories</CardTitle>
                     <CardDescription>
-                      Select tags for your product.
+                      Select sub-categories for your product.
                     </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
-                      name="tags"
+                      name="subCategories"
                       render={({ field }) => (
                         <FormItem>
                           <Popover>
@@ -1297,16 +1431,16 @@ export default function AddProductPage() {
                               >
                                 <Plus className="mr-2 h-4 w-4" />
                                 {field.value?.length > 0
-                                  ? 'Add more tags'
-                                  : 'Select tags'}
+                                  ? 'Add more sub-categories'
+                                  : 'Select sub-categories'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                               <Command>
-                                <CommandInput placeholder="Search tags..." />
+                                <CommandInput placeholder="Search sub-categories..." />
                                 <CommandList>
                                   <CommandEmpty>
-                                    No tags found.
+                                    No sub-categories found.
                                   </CommandEmpty>
                                   <CommandGroup>
                                     {businessCategories
@@ -1316,9 +1450,9 @@ export default function AddProductPage() {
                                           key={sc.name}
                                           value={sc.name}
                                           onSelect={() => {
-                                            const currentValue = form.getValues('tags') || [];
+                                            const currentValue = form.getValues('subCategories') || [];
                                             if (!currentValue.includes(sc.name)) {
-                                              form.setValue('tags', [...currentValue, sc.name], { shouldValidate: true });
+                                              form.setValue('subCategories', [...currentValue, sc.name], { shouldValidate: true });
                                             }
                                           }}
                                         >
@@ -1331,6 +1465,61 @@ export default function AddProductPage() {
                             </PopoverContent>
                           </Popover>
                           <div className="flex flex-wrap gap-2 mt-4">
+                            {field.value?.map(subCategory => (
+                              <Badge
+                                key={subCategory}
+                                variant="secondary"
+                                className="text-base"
+                              >
+                                {subCategory}
+                                <button
+                                  type="button"
+                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() => {
+                                    const currentValue = form.getValues('subCategories') || [];
+                                    form.setValue('subCategories', currentValue.filter(s => s !== subCategory), { shouldValidate: true });
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <FormMessage className="text-red-500 text-base font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Tags */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardDescription>
+                      Add tags to your product. Press Enter to add a new tag.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="tags"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Input
+                            placeholder="e.g., Summer, T-shirt"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value) {
+                                e.preventDefault();
+                                const newTag = e.currentTarget.value.trim();
+                                if (newTag && !field.value.includes(newTag)) {
+                                  form.setValue('tags', [...field.value, newTag], { shouldValidate: true });
+                                }
+                                e.currentTarget.value = '';
+                              }
+                            }}
+                          />
+                          <div className="flex flex-wrap gap-2 mt-4">
                             {field.value?.map(tag => (
                               <Badge
                                 key={tag}
@@ -1342,8 +1531,7 @@ export default function AddProductPage() {
                                   type="button"
                                   className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
                                   onClick={() => {
-                                    const currentValue = form.getValues('tags') || [];
-                                    form.setValue('tags', currentValue.filter(s => s !== tag), { shouldValidate: true });
+                                    form.setValue('tags', field.value.filter(t => t !== tag), { shouldValidate: true });
                                   }}
                                 >
                                   <X className="h-3 w-3" />
@@ -1351,7 +1539,6 @@ export default function AddProductPage() {
                               </Badge>
                             ))}
                           </div>
-                          <FormMessage className="text-red-500 text-base font-medium" />
                         </FormItem>
                       )}
                     />

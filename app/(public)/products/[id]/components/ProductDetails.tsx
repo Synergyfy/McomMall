@@ -203,9 +203,9 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                         <SelectValue placeholder={`Select ${variant.name}`} />
                       </SelectTrigger>
                       <SelectContent>
-                        {variant.options.map((option: string) => (
-                          <SelectItem key={option} value={option} className="text-lg">
-                            {option}
+                        {variant.options.map((option) => (
+                          <SelectItem key={option.name} value={option.name} className="text-lg">
+                            {option.name}
                           </SelectItem>
                         ))}
                       </SelectContent>

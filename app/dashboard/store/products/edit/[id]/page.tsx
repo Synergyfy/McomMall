@@ -16,10 +16,13 @@ import {
   Trash2,
   Link as LinkIcon,
   Download,
+  X,
 } from 'lucide-react';
 import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
+import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { toast } from 'sonner';
+import { Badge } from '@/components/ui/badge';
 
 import { useGetProductById, useUpdateProduct } from '@/service/store/products/hook';
 import { UpdateSuccessDialog } from '../../components/UpdateSuccessDialog';
@@ -63,6 +66,12 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { businessCategories } from '@/lib/business-categories';
 
@@ -71,21 +80,25 @@ interface Listing {
   businessName: string;
 }
 
+import { ProductVariant } from '@/service/store/products/types';
+
 interface ProductFormValues {
   title: string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
+  subCategories: string[];
+  tags: string[];
   price: number;
   discountedPrice?: number;
-  tags: string;
   shortDescription: string;
-  description:string;
+  description: string;
   sku: string;
   enableStockManagement: boolean;
   stockQuantity?: number;
   lowStockThreshold?: number;
   allowBackorders: 'no' | 'notify' | 'yes';
   allowSingleOrder: boolean;
+  shippingMethod: 'free' | 'pickup' | 'delivery';
   weight?: number;
   dimensions?: {
     length?: number;
@@ -100,10 +113,10 @@ interface ProductFormValues {
   visibility: 'public' | 'private' | 'password-protected';
   purchaseNote?: string;
   enableReviews: boolean;
-  productImages: FileList | null;
+  media: File[];
   businessId?: string;
+  variants: ProductVariant[];
   imageUrls?: string[];
-  variants: { name: string; options: string[] }[];
 }
 
 const customResolver = (data: ProductFormValues) => {
@@ -124,14 +137,17 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
+    if (!data.subCategories || data.subCategories.length === 0) {
+    errors.subCategories = {
+      type: 'required',
+      message: 'Please select at least one sub-category.',
+    };
+  }
   if (data.price === undefined || data.price < 0) {
     errors.price = {
       type: 'min',
       message: 'Price must be a positive number.',
     };
-  }
-  if (!data.tags?.trim()) {
-    errors.tags = { type: 'required', message: 'Tags are required.' };
   }
   if (!data.shortDescription?.trim()) {
     errors.shortDescription = {
@@ -181,10 +197,10 @@ const customResolver = (data: ProductFormValues) => {
   }
   // On the edit page, we don't want to force the user to re-upload an image.
   // The backend should handle keeping the old image if a new one isn't provided.
-  if (data.productImages && data.productImages.length > 5) {
-    errors.productImages = {
+  if (data.media && data.media.length > 5) {
+    (errors.media as unknown as FieldError) = {
       type: 'max',
-      message: 'You can upload a maximum of 5 images.',
+      message: 'You can upload a maximum of 5 files.',
     };
   }
   if (!data.businessId) {
@@ -262,9 +278,10 @@ export default function EditProductPage() {
       title: '',
       productType: 'physical',
       category: '',
+      subCategories: [],
+      tags: [],
       price: 0,
       discountedPrice: undefined,
-      tags: '',
       shortDescription: '',
       description: '',
       sku: '',
@@ -273,6 +290,7 @@ export default function EditProductPage() {
       lowStockThreshold: undefined,
       allowBackorders: 'no',
       allowSingleOrder: false,
+      shippingMethod: 'free',
       weight: undefined,
       dimensions: {
         length: undefined,
@@ -284,9 +302,8 @@ export default function EditProductPage() {
       visibility: 'public',
       purchaseNote: '',
       enableReviews: true,
-      productImages: null,
+      media: [],
       businessId: '',
-      imageUrls: [],
       variants: [],
     },
   });
@@ -297,12 +314,14 @@ export default function EditProductPage() {
         title: product.title,
         productType: product.productType as 'physical' | 'downloadable' | 'virtual',
         category: product.category,
+        subCategories: product.subCategories || [],
         price: product.price,
         discountedPrice: product.salePrice,
-        tags: product.tags?.join(', '),
+        tags: product.tags || [],
         shortDescription: product.shortDescription,
         description: product.description,
         sku: product.sku,
+        shippingMethod: product.shippingMethod || 'free',
         enableStockManagement: product.enableStockManagement,
         stockQuantity: product.stock,
         lowStockThreshold: product.stock, // Assuming this is the case
@@ -323,7 +342,7 @@ export default function EditProductPage() {
         purchaseNote: product.purchaseNote,
         enableReviews: product.enableReviews,
         businessId: product.bussinessId,
-        productImages: null, // Not handled
+        media: [],
         imageUrls: product.fileUrls || [],
         variants: product.variants || [],
       });
@@ -347,6 +366,8 @@ export default function EditProductPage() {
       bussinessId: data.businessId as string,
       title: data.title,
       category: data.category,
+      subCategories: data.subCategories,
+      shippingMethod: data.shippingMethod,
       productType: data.productType,
       price: Number(data.price),
       description: data.description,
@@ -373,7 +394,7 @@ export default function EditProductPage() {
       visibility: data.visibility,
       purchaseNote: data.purchaseNote,
       enableReviews: data.enableReviews,
-      tags: data.tags.split(',').map(tag => tag.trim()),
+      tags: data.tags,
       variants: data.variants,
     };
 
@@ -492,25 +513,54 @@ export default function EditProductPage() {
                                 <FormControl>
                                   <RadioGroupItem value="physical" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Physical
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Physical
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A physical product that requires shipping.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="downloadable" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Downloadable
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Downloadable
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A product that can be downloaded after
+                                      purchase.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                               <FormItem className="flex items-center space-x-3 space-y-0">
                                 <FormControl>
                                   <RadioGroupItem value="virtual" />
                                 </FormControl>
-                                <FormLabel className="font-normal text-base">
-                                  Virtual
-                                </FormLabel>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="font-normal text-base">
+                                      Virtual
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      A virtual product that does not require
+                                      shipping and is not downloadable.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
                               </FormItem>
                             </RadioGroup>
                           </FormControl>
@@ -550,22 +600,31 @@ export default function EditProductPage() {
                         control={form.control}
                         name="discountedPrice"
                         render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">
-                              Discounted Price (£)
-                            </FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                placeholder="0.00"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                            <FormMessage className="text-red-500 text-base font-medium" />
-                          </FormItem>
+                            <FormItem>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Discounted Price (£)
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>The lowest price you are willing to sell this product.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
+                                <FormControl>
+                                <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
                         )}
-                      />
+                        />
                     </div>
                   </CardContent>
                 </Card>
@@ -639,9 +698,18 @@ export default function EditProductPage() {
                         name="sku"
                         render={({ field }) => (
                           <FormItem>
-                            <FormLabel className="text-base">
-                              SKU (Stock Keeping Unit)
-                            </FormLabel>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <FormLabel className="text-base">
+                                        SKU (Stock Keeping Unit)
+                                        </FormLabel>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
                             <FormControl>
                               <Input
                                 placeholder="e.g., TSHIRT-RED-L"
@@ -676,9 +744,18 @@ export default function EditProductPage() {
                             name="stockQuantity"
                             render={({ field }) => (
                               <FormItem>
-                                <FormLabel className="text-base">
-                                  Stock quantity
-                                </FormLabel>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <FormLabel className="text-base">
+                                            Stock quantity
+                                            </FormLabel>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p>Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                                 <FormControl>
                                   <Input
                                     type="number"
@@ -857,6 +934,49 @@ export default function EditProductPage() {
                                     )}
                                   />
                                 </div>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="space-y-4 pt-4 border-t">
+                          <FormLabel className="text-lg">Delivery Details</FormLabel>
+                          <FormField
+                            control={form.control}
+                            name="shippingMethod"
+                            render={({ field }) => (
+                              <FormItem className="space-y-3">
+                                <FormControl>
+                                  <RadioGroup
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                    className="flex flex-col space-y-2"
+                                  >
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="free" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Free Delivery
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="pickup" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Pickup
+                                      </FormLabel>
+                                    </FormItem>
+                                    <FormItem className="flex items-center space-x-3 space-y-0">
+                                      <FormControl>
+                                        <RadioGroupItem value="delivery" />
+                                      </FormControl>
+                                      <FormLabel className="font-normal text-base">
+                                        Delivery Options
+                                      </FormLabel>
+                                    </FormItem>
+                                  </RadioGroup>
+                                </FormControl>
                               </FormItem>
                             )}
                           />
@@ -1218,75 +1338,27 @@ export default function EditProductPage() {
                   </CardContent>
                 </Card>
 
-                {/* Product Images */}
+                {/* Product Media */}
                 <Card>
                   <CardHeader>
-                    <CardTitle className="text-2xl">Product Images</CardTitle>
+                    <CardTitle className="text-2xl">Product Media</CardTitle>
                   </CardHeader>
                   <CardContent>
                     <FormField
                       control={form.control}
-                      name="productImages"
-                      render={({ field: { onChange, value, ...rest } }) => (
-                        <>
-                          <div className="flex items-center justify-center w-full">
-                            <label
-                              htmlFor="dropzone-file"
-                              className="relative flex flex-col items-center justify-center w-full h-32 border-2 border-gray-300 border-dashed rounded-lg cursor-pointer bg-gray-50 hover:bg-gray-100"
-                            >
-                              <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                <UploadCloud className="w-8 h-8 mb-2 text-gray-400" />
-                                <p className="mb-1 text-sm text-gray-500">
-                                  <span className="font-semibold">
-                                    Click to upload
-                                  </span>{' '}
-                                  or drag and drop
-                                </p>
-                                <p className="text-xs text-gray-500">
-                                  SVG, PNG, JPG or GIF (MAX. 800x400px)
-                                </p>
-                              </div>
-                              <input
-                                id="dropzone-file"
-                                type="file"
-                                multiple
-                                className="hidden"
-                                {...rest}
-                                onChange={event => {
-                                  onChange(event.target.files);
-                                }}
-                              />
-                            </label>
-                          </div>
+                      name="media"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <MultiMediaUpload
+                              onMediaChange={field.onChange}
+                              initialMedia={product?.fileUrls}
+                            />
+                          </FormControl>
                           <FormMessage className="text-red-500 text-base font-medium" />
-                        </>
+                        </FormItem>
                       )}
                     />
-                    <div className="grid grid-cols-3 gap-4 mt-4">
-                      {form.watch('imageUrls')?.map((url, index) => (
-                        <div key={index} className="relative h-24">
-                          <Image
-                            src={url}
-                            alt={`Product image ${index + 1}`}
-                            fill
-                            className="object-cover rounded-lg"
-                          />
-                        </div>
-                      ))}
-                      {form.watch('productImages') &&
-                        Array.from(form.watch('productImages') as FileList).map(
-                          (file, index) => (
-                            <div key={index} className="relative h-24">
-                              <Image
-                                src={URL.createObjectURL(file)}
-                                alt={`New product image ${index + 1}`}
-                                fill
-                                className="object-cover rounded-lg"
-                              />
-                            </div>
-                          )
-                        )}
-                    </div>
                   </CardContent>
                 </Card>
 
@@ -1297,7 +1369,7 @@ export default function EditProductPage() {
                       control={form.control}
                       name="category"
                       render={({ field, fieldState: { error } }) => (
-                        <FormItem>
+                        <FormItem className="flex flex-col">
                           <FormLabel
                             className={cn(
                               'text-2xl font-semibold',
@@ -1306,6 +1378,9 @@ export default function EditProductPage() {
                           >
                             Category
                           </FormLabel>
+                          <FormDescription>
+                            Select a category for your product.
+                          </FormDescription>
                           <Popover>
                             <PopoverTrigger asChild>
                               <FormControl>
@@ -1336,7 +1411,8 @@ export default function EditProductPage() {
                                         value={cat.name}
                                         key={cat.name}
                                         onSelect={() => {
-                                          form.setValue('category', cat.name);
+                                          form.setValue('category', cat.name, { shouldValidate: true });
+                                          form.setValue('subCategories', [], { shouldValidate: true });
                                         }}
                                       >
                                         {cat.name}
@@ -1354,10 +1430,97 @@ export default function EditProductPage() {
                   </CardContent>
                 </Card>
 
+                {/* Sub Categories */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-2xl">Sub Categories</CardTitle>
+                    <CardDescription>
+                      Select sub-categories for your product.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="subCategories"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Popover>
+                            <PopoverTrigger asChild>
+                              <Button
+                                variant="outline"
+                                className="w-full justify-start text-base py-6"
+                                disabled={!form.watch('category')}
+                              >
+                                <Plus className="mr-2 h-4 w-4" />
+                                {field.value?.length > 0
+                                  ? 'Add more sub-categories'
+                                  : 'Select sub-categories'}
+                              </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                              <Command>
+                                <CommandInput placeholder="Search sub-categories..." />
+                                <CommandList>
+                                  <CommandEmpty>
+                                    No sub-categories found.
+                                  </CommandEmpty>
+                                  <CommandGroup>
+                                    {businessCategories
+                                      .find(c => c.name === form.watch('category'))
+                                      ?.subCategories.map(sc => (
+                                        <CommandItem
+                                          key={sc.name}
+                                          value={sc.name}
+                                          onSelect={() => {
+                                            const currentValue = form.getValues('subCategories') || [];
+                                            if (!currentValue.includes(sc.name)) {
+                                              form.setValue('subCategories', [...currentValue, sc.name], { shouldValidate: true });
+                                            }
+                                          }}
+                                        >
+                                          {sc.name}
+                                        </CommandItem>
+                                      ))}
+                                  </CommandGroup>
+                                </CommandList>
+                              </Command>
+                            </PopoverContent>
+                          </Popover>
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {field.value?.map(subCategory => (
+                              <Badge
+                                key={subCategory}
+                                variant="secondary"
+                                className="text-base"
+                              >
+                                {subCategory}
+                                <button
+                                  type="button"
+                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() => {
+                                    const currentValue = form.getValues('subCategories') || [];
+                                    form.setValue('subCategories', currentValue.filter(s => s !== subCategory), { shouldValidate: true });
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
+                          <FormMessage className="text-red-500 text-base font-medium" />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
                 {/* Tags */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="text-2xl">Tags</CardTitle>
+                    <CardDescription>
+                      Add tags to your product. Press Enter to add a new tag.
+                    </CardDescription>
                   </CardHeader>
                   <CardContent>
                     <FormField
@@ -1365,17 +1528,39 @@ export default function EditProductPage() {
                       name="tags"
                       render={({ field }) => (
                         <FormItem>
-                          <FormControl>
-                            <Input
-                              placeholder="e.g., summer, new, sale"
-                              {...field}
-                              className="text-base py-6"
-                            />
-                          </FormControl>
-                          <FormDescription className="text-sm">
-                            Separate tags with commas.
-                          </FormDescription>
-                          <FormMessage className="text-red-500 text-base font-medium" />
+                          <Input
+                            placeholder="e.g., Summer, T-shirt"
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter' && e.currentTarget.value) {
+                                e.preventDefault();
+                                const newTag = e.currentTarget.value.trim();
+                                if (newTag && !field.value.includes(newTag)) {
+                                  form.setValue('tags', [...field.value, newTag], { shouldValidate: true });
+                                }
+                                e.currentTarget.value = '';
+                              }
+                            }}
+                          />
+                          <div className="flex flex-wrap gap-2 mt-4">
+                            {field.value?.map(tag => (
+                              <Badge
+                                key={tag}
+                                variant="secondary"
+                                className="text-base"
+                              >
+                                {tag}
+                                <button
+                                  type="button"
+                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                  onClick={() => {
+                                    form.setValue('tags', field.value.filter(t => t !== tag), { shouldValidate: true });
+                                  }}
+                                >
+                                  <X className="h-3 w-3" />
+                                </button>
+                              </Badge>
+                            ))}
+                          </div>
                         </FormItem>
                       )}
                     />
