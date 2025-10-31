@@ -1,27 +1,26 @@
-'use client';
+"use client";
 
-import { FC, useState, useEffect, useRef } from 'react';
-import { useGetTrialStatus, usePauseOrPlay } from '@/service/payments/hook';
-import {
-  TrialAction,
-  TrialTasks,
-} from '@/service/payments/types';
-import { motion } from 'framer-motion';
+import { FC, useState, useEffect, useRef } from "react";
+import { useGetTrialStatus, usePauseOrPlay } from "@/service/payments/hook";
+import { TrialAction, TrialTasks } from "@/service/payments/types";
+import { motion } from "framer-motion";
 import {
   PlayIcon,
   PauseIcon,
   CheckCircle2,
   Loader,
   ArrowRight,
-} from 'lucide-react';
-import Link from 'next/link';
-import { Button } from '@/components/ui/button';
-import StyledNumber from '@/components/svgs/StyledNumber';
+} from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import StyledNumber from "@/components/svgs/StyledNumber";
 
 const TimeCard: FC<{ value: string; unit: string }> = ({ value, unit }) => (
-  <div className="flex flex-col items-center justify-center bg-gray-800 p-4 rounded-lg w-24 h-24">
-    <span className="text-4xl font-bold tracking-tight">{value}</span>
-    <span className="text-sm font-light uppercase text-gray-400">{unit}</span>
+  <div className="flex flex-col items-center justify-center bg-orange-600 p-4 rounded-lg w-24 h-24">
+    <span className="text-4xl font-bold tracking-tight text-white">
+      {value}
+    </span>
+    <span className="text-sm font-light uppercase text-white">{unit}</span>
   </div>
 );
 
@@ -56,10 +55,10 @@ const ActivityTimerPage: FC = () => {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return {
-      days: String(days).padStart(2, '0'),
-      hours: String(hours).padStart(2, '0'),
-      minutes: String(minutes).padStart(2, '0'),
-      seconds: String(seconds).padStart(2, '0'),
+      days: String(days).padStart(2, "0"),
+      hours: String(hours).padStart(2, "0"),
+      minutes: String(minutes).padStart(2, "0"),
+      seconds: String(seconds).padStart(2, "0"),
     };
   };
 
@@ -88,42 +87,41 @@ const ActivityTimerPage: FC = () => {
     );
   }
 
-  const {
-    tasks,
-    isPaused,
-    isTrialPausable,
-    remainingPauses,
-  } = trialStatus;
+  const { tasks, isPaused, isTrialPausable, remainingPauses } = trialStatus;
 
   const taskKeys = Object.keys(tasks) as (keyof TrialTasks)[];
   const currentTaskKey = taskKeys[currentIndex];
   const isCompleted = tasks[currentTaskKey];
 
-  const taskDetails: Record<keyof TrialTasks, { title: string; description: string; url: string }> = {
+  const taskDetails: Record<
+    keyof TrialTasks,
+    { title: string; description: string; url: string }
+  > = {
     createdBusiness: {
-      title: 'Create a business profile',
-      description: 'You need a business profile to start selling. Create one now.',
-      url: '/dashboard/my-profile',
+      title: "Create a business profile",
+      description:
+        "You need a business profile to start selling. Create one now.",
+      url: "/dashboard/my-profile",
     },
     createdProductOrService: {
-      title: 'Add your first product or service',
-      description: 'Add your first product or service to your store.',
-      url: '/dashboard/services/add-service',
+      title: "Add your first product or service",
+      description: "Add your first product or service to your store.",
+      url: "/dashboard/services/add-service",
     },
     createdPromotion: {
-      title: 'Create a special promotion',
-      description: 'Create a special promotion to attract customers.',
-      url: '/dashboard/loyalty/promotion/new',
+      title: "Create a special promotion",
+      description: "Create a special promotion to attract customers.",
+      url: "/dashboard/loyalty/promotion/new",
     },
     createdOffer: {
-      title: 'Launch an exciting offer',
-      description: 'Launch an exciting offer to get more sales.',
-      url: '/dashboard/loyalty/offers/new',
+      title: "Launch an exciting offer",
+      description: "Launch an exciting offer to get more sales.",
+      url: "/dashboard/loyalty/offers/new",
     },
     createdCoupon: {
-      title: 'Generate a discount coupon',
-      description: 'Generate a discount coupon to reward your customers.',
-      url: '/dashboard/coupons/new',
+      title: "Generate a discount coupon",
+      description: "Generate a discount coupon to reward your customers.",
+      url: "/dashboard/coupons/new",
     },
   };
 
@@ -136,7 +134,7 @@ const ActivityTimerPage: FC = () => {
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gray-900 text-white p-4 sm:p-6 md:p-8">
+    <div className="min-h-[calc(100vh-8rem)] bg-white text-black p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="text-center mb-8">
@@ -151,7 +149,7 @@ const ActivityTimerPage: FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-4 text-lg text-gray-400"
+            className="mt-4 text-lg text-black"
           >
             Complete the tasks below to make the most of your trial period.
           </motion.p>
@@ -178,7 +176,9 @@ const ActivityTimerPage: FC = () => {
                     action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
                   })
                 }
-                disabled={isPending || (!isPaused && (remainingPauses ?? 0) <= 0)}
+                disabled={
+                  isPending || (!isPaused && (remainingPauses ?? 0) <= 0)
+                }
                 size="lg"
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
               >
@@ -194,9 +194,9 @@ const ActivityTimerPage: FC = () => {
                   </>
                 )}
               </Button>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-black">
                 ({remainingPauses} pause
-                {remainingPauses !== 1 ? 's' : ''} left)
+                {remainingPauses !== 1 ? "s" : ""} left)
               </span>
             </div>
           )}
@@ -204,10 +204,10 @@ const ActivityTimerPage: FC = () => {
 
         {/* New Task Display */}
         <div className="w-full max-w-3xl mx-auto">
-          <h2 className="text-3xl font-bold text-gray-200 mb-8 ml-4">
-            Get started with Brevo
+          <h2 className="text-3xl font-bold text-black mb-8 ml-4">
+            Get started with Mcommall
           </h2>
-          <div className="bg-gray-800 shadow-xl rounded-2xl p-8 flex items-center">
+          {/* <div className="bg-gray-800 shadow-xl rounded-2xl p-8 flex items-center">
             <div className="w-1/3 flex items-center justify-center">
               <StyledNumber number={currentIndex + 1} />
             </div>
@@ -233,6 +233,42 @@ const ActivityTimerPage: FC = () => {
                 <button
                   onClick={handleNext}
                   className="flex items-center text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed font-medium"
+                  disabled={currentIndex >= taskKeys.length - 1}
+                >
+                  Next activity <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </div>
+          </div> */}
+
+          <div className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8 flex items-center">
+            <div className="w-1/3 flex items-center justify-center text-orange-500">
+              <span className="text-orange-500">
+                <StyledNumber number={currentIndex + 1} />
+              </span>
+            </div>
+            <div className="w-2/3 pl-12">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                {currentTask.title}
+              </h3>
+              <p className="text-black mb-6">{currentTask.description}</p>
+              <div className="flex items-center justify-between">
+                {isCompleted ? (
+                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    Done
+                  </button>
+                ) : (
+                  <Link
+                    href={currentTask.url}
+                    className="flex items-center text-orange-500 hover:text-orange-400 font-medium"
+                  >
+                    Finish this activity
+                  </Link>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="flex items-center text-blue-500 hover:text-blue-400 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
                   disabled={currentIndex >= taskKeys.length - 1}
                 >
                   Next activity <ArrowRight className="w-4 h-4 ml-2" />

@@ -8,7 +8,7 @@ const StyledNumber: React.FC<StyledNumberProps> = ({ number }) => {
   return (
     <div className="relative w-48 h-48 flex items-center justify-center">
       {/* Background number */}
-      <span className="absolute text-9xl font-extrabold text-gray-200 opacity-20 select-none">
+      <span className="absolute text-9xl font-extrabold text-orange-700 opacity-75 select-none">
         {number}
       </span>
 
