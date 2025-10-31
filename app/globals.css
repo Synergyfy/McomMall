@@ -171,3 +171,9 @@ body {
   color: #a0a0a0;
   font-size: 0.875rem;
 }
+
+@media (min-width: 768px) {
+  .clip-ellipse {
+    clip-path: ellipse(100% 100% at 0% 50%);
+  }
+}
