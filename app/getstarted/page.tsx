@@ -45,44 +45,10 @@ export default function GetStartedPage() {
       </div>
 
       {/* Left Section (60%) */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 clip-ellipse">
-        <Image
-          src="/getstartedpage/getstartedimage.jpg"
-          alt="Buy and Sell on Mcom"
-          layout="fill"
-          objectFit="cover"
-          quality={80}
-          className="-z-10"
-        />
-        <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
-        <div className="w-full max-w-sm pt-40">
-          {' '}
-          {/* Increased pt for header clearance */}
-          <h2 className="mb-6 text-2xl font-semibold">Buy and Sell on Mcom</h2>
-          <p className="mb-6 text-gray-300">
-            Join our marketplace to discover, buy, and sell products and
-            services with ease.
-          </p>
-          <Link
-            href="/signup"
-            className="mb-4 block w-full rounded-lg bg-white py-3 text-lg font-semibold text-gray-900 transition-transform hover:scale-105"
-          >
-            Create Account
-          </Link>
-          <p className="text-gray-200">
-            I already have an account.{' '}
-            <Link
-              href="/signin"
-              className="font-semibold text-white underline"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-
-      {/* Right Section (40%) */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5">
+      <div
+        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5"
+        style={{ clipPath: 'polygon(0 0, 100% 0, 95% 100%, 0 100%)' }}
+      >
         <Image
           src="/getstartedpage/getstartedimage.jpg"
           alt="Earn with Us"
@@ -131,6 +97,46 @@ export default function GetStartedPage() {
           >
             Continue
           </Link>
+        </div>
+      </div>
+
+      {/* Right Section (40%) */}
+      <div
+        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
+        style={{ clipPath: 'polygon(5% 0, 100% 0, 100% 100%, 0 100%)' }}
+      >
+        <Image
+          src="/getstartedpage/getstartedimage.jpg"
+          alt="Buy and Sell on Mcom"
+          layout="fill"
+          objectFit="cover"
+          quality={80}
+          className="-z-10"
+        />
+        <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
+        <div className="w-full max-w-sm pt-40">
+          {' '}
+          {/* Increased pt for header clearance */}
+          <h2 className="mb-6 text-2xl font-semibold">Buy and Sell on Mcom</h2>
+          <p className="mb-6 text-gray-300">
+            Join our marketplace to discover, buy, and sell products and
+            services with ease.
+          </p>
+          <Link
+            href="/signup"
+            className="mb-4 block w-full rounded-lg bg-white py-3 text-lg font-semibold text-gray-900 transition-transform hover:scale-105"
+          >
+            Create Account
+          </Link>
+          <p className="text-gray-200">
+            I already have an account.{' '}
+            <Link
+              href="/signin"
+              className="font-semibold text-white underline"
+            >
+              Sign in
+            </Link>
+          </p>
         </div>
       </div>
 
