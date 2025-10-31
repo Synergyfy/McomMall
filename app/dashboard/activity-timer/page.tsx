@@ -195,14 +195,14 @@ const ActivityTimerPage: FC = () => {
           <h2 className="text-3xl font-bold text-black mb-8 ml-4">
             Get started with Mcommall
           </h2>
-          <div className="flex overflow-x-auto space-x-4 p-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
             {taskKeys.map((taskKey, index) => {
               const task = taskDetails[taskKey];
               const isCompleted = tasks[taskKey];
               return (
                 <div
                   key={taskKey}
-                  className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8 flex-shrink-0 w-[calc(50%-0.5rem)]"
+                  className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8"
                 >
                   <div className="flex items-center">
                     <div className="w-1/3 flex items-center justify-center text-orange-500">
