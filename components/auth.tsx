@@ -20,6 +20,12 @@ import { UserRole } from '@/service/auth/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { SuccessDialog } from './SuccessDialog';
 import { ErrorDialog } from './ErrorDialog';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
 type Step = 'enter-email' | 'enter-otp';
@@ -374,301 +380,175 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div
-        className={`w-full ${
-          pathname === '/signup' ? 'max-w-2xl' : 'max-w-md'
-        } p-8 space-y-8 bg-white rounded-lg shadow-md`}
-      >
-        <div className="text-center">
-          {/* {mode !== 'forgot-password' && mode !== 'verify-email' && (
-            <div>
-              <div className="flex justify-center mb-4">
-                <Button
-                  variant="link"
-                  className={`mr-4 text-lg ${
-                    mode === 'login' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('login')}
-                >
-                  Log In
-                </Button>
-                <Button
-                  variant="link"
-                  className={`text-lg ${
-                    mode === 'register' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('register')}
-                >
-                  Register
-                </Button>
-              </div>
-              <hr className="w-full bg-gray-400 " />
-            </div>
-          )} */}
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">
-            {mode === 'login' && 'Login'}
-            {mode === 'register' &&
-              `Create ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'Customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'Business'
-                  : ''
-              } Account`}
-            {mode === 'forgot-password' && 'Reset Password'}
-            {mode === 'verify-email' && 'Verify Email'}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {mode === 'login' && 'Login to your account to continue.'}
-            {mode === 'register' &&
-              `Create a new ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'business'
-                  : ''
-              } account to get started.`}
-            {mode === 'forgot-password' &&
-              'Enter your email to reset your password.'}
-            {mode === 'verify-email' &&
-              'Enter the OTP sent to your email to verify your account.'}
-          </p>
-        </div>
-        <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
-          <div className="grid gap-1">
-            {mode === 'register' && (
-              <div>
-                <div className="flex gap-4 mb-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
-                      selectedRole === UserRole.CUSTOMER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
-                    onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
-                  >
-                    <span className="mr-2">👤</span> Customer
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
-                      selectedRole === UserRole.OWNER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
-                    onClick={() => handleRoleSelect(UserRole.OWNER)}
-                  >
-                    <span className="mr-2">🏠</span> Business
-                  </Button>
+    <TooltipProvider>
+      <div className="flex items-center justify-center min-h-screen bg-gray-50">
+        <div
+          className={`w-full ${
+            pathname === '/signup' ? 'max-w-2xl' : 'max-w-md'
+          } p-8 space-y-8 bg-white rounded-lg shadow-md`}
+        >
+          <div className="text-center">
+            <h1 className="text-2xl font-bold text-gray-900 mt-4">
+              {mode === 'login' && 'Login'}
+              {mode === 'register' &&
+                `Create ${
+                  selectedRole === UserRole.CUSTOMER
+                    ? 'Customer'
+                    : selectedRole === UserRole.OWNER
+                    ? 'Business'
+                    : ''
+                } Account`}
+              {mode === 'forgot-password' && 'Reset Password'}
+              {mode === 'verify-email' && 'Verify Email'}
+            </h1>
+            <p className="mt-2 text-sm text-gray-600">
+              {mode === 'login' && 'Login to your account to continue.'}
+              {mode === 'register' &&
+                `Create a new ${
+                  selectedRole === UserRole.CUSTOMER
+                    ? 'customer'
+                    : selectedRole === UserRole.OWNER
+                    ? 'business'
+                    : ''
+                } account to get started.`}
+              {mode === 'forgot-password' &&
+                'Enter your email to reset your password.'}
+              {mode === 'verify-email' &&
+                'Enter the OTP sent to your email to verify your account.'}
+            </p>
+          </div>
+          <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
+            <div className="grid gap-1">
+              {mode === 'register' && (
+                <div>
+                  <div className="flex gap-4 mb-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`flex-1 px-4 py-2 text-gray-700 ${
+                            selectedRole === UserRole.CUSTOMER
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300'
+                          } rounded`}
+                          onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
+                        >
+                          <span className="mr-2">👤</span> Customer
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sign up as a customer to book services and purchase products.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`flex-1 px-4 py-2 text-gray-700 ${
+                            selectedRole === UserRole.OWNER
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300'
+                          } rounded`}
+                          onClick={() => handleRoleSelect(UserRole.OWNER)}
+                        >
+                          <span className="mr-2">🏠</span> Business
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Sign up as a business to offer services and sell products.</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                  {errors.role && (
+                    <p className="text-orange-500 text-sm mt-1">{errors.role}</p>
+                  )}
                 </div>
-                {errors.role && (
-                  <p className="text-orange-500 text-sm mt-1">{errors.role}</p>
-                )}
-              </div>
-            )}
-            {mode === 'register' && (
-              <div className="grid gap-3">
-                <Label htmlFor="fullName" className="text-lg">
-                  Full Name
-                </Label>
-                <Input
-                  id="fullName"
-                  name="fullName"
-                  value={formData.fullName}
-                  onChange={handleInputChange}
-                  placeholder="John Doe"
-                  className={`sm:h-[3rem] ${
-                    errors.fullName ? 'border-orange-500' : ''
-                  }`}
-                />
-                {errors.fullName && (
-                  <p className="text-orange-500 text-sm">{errors.fullName}</p>
-                )}
-              </div>
-            )}
+              )}
+              {mode === 'register' && (
+                <div className="grid gap-3">
+                  <Label htmlFor="fullName" className="text-lg">
+                    Full Name
+                  </Label>
+                  <Input
+                    id="fullName"
+                    name="fullName"
+                    value={formData.fullName}
+                    onChange={handleInputChange}
+                    placeholder="John Doe"
+                    className={`sm:h-[3rem] ${
+                      errors.fullName ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.fullName && (
+                    <p className="text-orange-500 text-sm">{errors.fullName}</p>
+                  )}
+                </div>
+              )}
+              {mode === 'register' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-3">
+                    <Label htmlFor="email" className="text-lg">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Your email"
+                      className={`sm:h-[3rem] ${
+                        errors.email ? 'border-orange-500' : ''
+                      }`}
+                    />
+                    {errors.email && (
+                      <p className="text-orange-500 text-sm">{errors.email}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="phoneNumber" className="text-lg">
+                      Phone Number
+                    </Label>
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder="Your phone number"
+                      className={`sm:h-[3rem] ${
+                        errors.phoneNumber ? 'border-red-500' : ''
+                      }`}
+                    />
+                    {errors.phoneNumber && (
+                      <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
+                    )}
+                  </div>
+                </div>
+              ) : (
+                step === 'enter-email' && (
+                  <div className="grid gap-3">
+                    <Label htmlFor="email" className="text-lg">
+                      Email
+                    </Label>
+                    <Input
+                      id="email"
+                      name="email"
+                      value={formData.email}
+                      onChange={handleInputChange}
+                      placeholder="Your email"
+                      className={`sm:h-[3rem] ${
+                        errors.email ? 'border-orange-500' : ''
+                      }`}
+                    />
+                    {errors.email && (
+                      <p className="text-orange-500 text-sm">{errors.email}</p>
+                    )}
+                  </div>
+                )
+              )}
             {mode === 'register' ? (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div className="grid gap-3">
-                  <Label htmlFor="email" className="text-lg">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Your email"
-                    className={`sm:h-[3rem] ${
-                      errors.email ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  {errors.email && (
-                    <p className="text-orange-500 text-sm">{errors.email}</p>
-                  )}
-                </div>
-                <div className="grid gap-3">
-                  <Label htmlFor="phoneNumber" className="text-lg">
-                    Phone Number
-                  </Label>
-                  <Input
-                    id="phoneNumber"
-                    name="phoneNumber"
-                    value={formData.phoneNumber}
-                    onChange={handleInputChange}
-                    placeholder="Your phone number"
-                    className={`sm:h-[3rem] ${
-                      errors.phoneNumber ? 'border-red-500' : ''
-                    }`}
-                  />
-                  {errors.phoneNumber && (
-                    <p className="text-red-500 text-sm">{errors.phoneNumber}</p>
-                  )}
-                </div>
-              </div>
-            ) : (
-              step === 'enter-email' && (
-                <div className="grid gap-3">
-                  <Label htmlFor="email" className="text-lg">
-                    Email
-                  </Label>
-                  <Input
-                    id="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="Your email"
-                    className={`sm:h-[3rem] ${
-                      errors.email ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  {errors.email && (
-                    <p className="text-orange-500 text-sm">{errors.email}</p>
-                  )}
-                </div>
-              )
-            )}
-          {mode === 'register' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="password" className="text-lg">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Your password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.password ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-orange-500 text-sm">{errors.password}</p>
-                )}
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="password2" className="text-lg">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password2"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.confirmPassword ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showConfirmPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-orange text-sm">
-                    {errors.confirmPassword}
-                  </p>
-                )}
-                </div>
-              </div>
-          ) : (
-            mode === 'login' && (
-              <div className="grid gap-3">
-                <Label htmlFor="password" className="text-lg">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Your password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.password ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-orange-500 text-sm">{errors.password}</p>
-                )}
-                </div>
-            )
-            )}
-            {((mode === 'forgot-password' && step === 'enter-otp') ||
-              mode === 'verify-email') && (
-              <div className="grid gap-3">
-                <Label htmlFor="otp" className="text-lg">
-                  OTP
-                </Label>
-                <Input
-                  id="otp"
-                  name="otp"
-                  value={formData.otp}
-                  onChange={handleInputChange}
-                  placeholder="Enter OTP"
-                  className={`sm:h-[3rem] ${
-                    errors.otp ? 'border-orange-500' : ''
-                  }`}
-                />
-                {errors.otp && (
-                  <p className="text-orange-500 text-sm">{errors.otp}</p>
-                )}
-              </div>
-            )}
-            {mode === 'forgot-password' && step === 'enter-otp' && (
-              <>
                 <div className="grid gap-3">
                   <Label htmlFor="password" className="text-lg">
                     Password
@@ -694,9 +574,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                     </button>
                   </div>
                   {errors.password && (
-                    <p className="text-orange-500 text-sm">
-                      {errors.password}
-                    </p>
+                    <p className="text-orange-500 text-sm">{errors.password}</p>
                   )}
                 </div>
                 <div className="grid gap-3">
@@ -730,119 +608,238 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                       {errors.confirmPassword}
                     </p>
                   )}
+                  </div>
                 </div>
-              </>
-            )}
-          </div>
-          {mode === 'login' && (
-            <div className="flex justify-between">
-              <Button
-                type="button"
-                variant="link"
-                className="justify-start primaryText p-0"
-                onClick={() => handleToggleMode('forgot-password')}
-              >
-                Forgotten your password? Reset
-              </Button>
-              <Button
-                type="button"
-                variant="link"
-                className="justify-start primaryText p-0"
-                onClick={() => handleToggleMode('verify-email')}
-              >
-                Verify Email
-              </Button>
+            ) : (
+              mode === 'login' && (
+                <div className="grid gap-3">
+                  <Label htmlFor="password" className="text-lg">
+                    Password
+                  </Label>
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? 'text' : 'password'}
+                      value={formData.password}
+                      onChange={handleInputChange}
+                      placeholder="Your password"
+                      className={`sm:h-[3rem] pr-10 ${
+                        errors.password ? 'border-orange-500' : ''
+                      }`}
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute inset-y-0 right-0 flex items-center pr-3"
+                    >
+                      {showPassword ? <EyeOff /> : <Eye />}
+                    </button>
+                  </div>
+                  {errors.password && (
+                    <p className="text-orange-500 text-sm">{errors.password}</p>
+                  )}
+                  </div>
+              )
+              )}
+              {((mode === 'forgot-password' && step === 'enter-otp') ||
+                mode === 'verify-email') && (
+                <div className="grid gap-3">
+                  <Label htmlFor="otp" className="text-lg">
+                    OTP
+                  </Label>
+                  <Input
+                    id="otp"
+                    name="otp"
+                    value={formData.otp}
+                    onChange={handleInputChange}
+                    placeholder="Enter OTP"
+                    className={`sm:h-[3rem] ${
+                      errors.otp ? 'border-orange-500' : ''
+                    }`}
+                  />
+                  {errors.otp && (
+                    <p className="text-orange-500 text-sm">{errors.otp}</p>
+                  )}
+                </div>
+              )}
+              {mode === 'forgot-password' && step === 'enter-otp' && (
+                <>
+                  <div className="grid gap-3">
+                    <Label htmlFor="password" className="text-lg">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Your password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.password ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-orange-500 text-sm">
+                        {errors.password}
+                      </p>
+                    )}
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="password2" className="text-lg">
+                      Confirm Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password2"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Confirm password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.confirmPassword ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showConfirmPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-red-orange text-sm">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
+                  </div>
+                </>
+              )}
             </div>
-          )}
-          {mode === 'register' && (
-            <TermsCondtion
-              isChecked={termsAccepted}
-              onChange={handleTermsChange}
-            />
-          )}
-          {mode === 'register' && errors.terms && (
-            <p className="text-orange-500 text-sm mt-1">{errors.terms}</p>
-          )}
-          {mode === 'login' && <RememberMe />}
-          <div className="flex flex-col justify-between mt-4">
             {mode === 'login' && (
-              <Button
-                type="submit"
-                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                disabled={loginPending}
-              >
-                {loginPending ? 'Submitting...' : 'Submit'}
-              </Button>
-            )}
-            {mode === 'register' && (
-              <Button
-                type="submit"
-                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                disabled={isPending}
-              >
-                {isPending ? 'Submitting...' : 'Sign Up'}
-              </Button>
-            )}
-
-            {/* add google */}
-            {mode === 'forgot-password' && (
-              <>
-                {step === 'enter-email' && (
-                  <Button
-                    type="button"
-                    className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                    onClick={handleSendOtp}
-                    disabled={sendOtpPending}
-                  >
-                    {sendOtpPending ? 'Sending...' : 'Send OTP'}
-                  </Button>
-                )}
-                {step === 'enter-otp' && (
-                  <Button
-                    type="button"
-                    className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                    onClick={handleResetPassword}
-                    disabled={resetPasswordPending}
-                  >
-                    {resetPasswordPending ? 'Resetting...' : 'Reset Password'}
-                  </Button>
-                )}
-              </>
-            )}
-            {mode === 'verify-email' && (
-              <div className="flex gap-4">
+              <div className="flex justify-between">
                 <Button
                   type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleSendOtp}
-                  disabled={sendOtpPending}
+                  variant="link"
+                  className="justify-start primaryText p-0"
+                  onClick={() => handleToggleMode('forgot-password')}
                 >
-                  {sendOtpPending ? 'Sending...' : 'Resend OTP'}
+                  Forgotten your password? Reset
                 </Button>
                 <Button
                   type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleValidateOtp}
-                  disabled={validateOtpPending}
+                  variant="link"
+                  className="justify-start primaryText p-0"
+                  onClick={() => handleToggleMode('verify-email')}
                 >
-                  {validateOtpPending ? 'Verifying...' : 'Verify'}
+                  Verify Email
                 </Button>
               </div>
             )}
-          </div>
-        </form>
-        <SuccessDialog
-          isOpen={isSuccessDialogOpen}
-          onClose={() => setIsSuccessDialogOpen(false)}
-          message={dialogMessage}
-        />
-        <ErrorDialog
-          isOpen={isErrorDialogOpen}
-          onClose={() => setIsErrorDialogOpen(false)}
-          message={dialogMessage}
-        />
+            {mode === 'register' && (
+              <TermsCondtion
+                isChecked={termsAccepted}
+                onChange={handleTermsChange}
+              />
+            )}
+            {mode === 'register' && errors.terms && (
+              <p className="text-orange-500 text-sm mt-1">{errors.terms}</p>
+            )}
+            {mode === 'login' && <RememberMe />}
+            <div className="flex flex-col justify-between mt-4">
+              {mode === 'login' && (
+                <Button
+                  type="submit"
+                  className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                  disabled={loginPending}
+                >
+                  {loginPending ? 'Submitting...' : 'Submit'}
+                </Button>
+              )}
+              {mode === 'register' && (
+                <Button
+                  type="submit"
+                  className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                  disabled={isPending}
+                >
+                  {isPending ? 'Submitting...' : 'Sign Up'}
+                </Button>
+              )}
+
+              {/* add google */}
+              {mode === 'forgot-password' && (
+                <>
+                  {step === 'enter-email' && (
+                    <Button
+                      type="button"
+                      className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                      onClick={handleSendOtp}
+                      disabled={sendOtpPending}
+                    >
+                      {sendOtpPending ? 'Sending...' : 'Send OTP'}
+                    </Button>
+                  )}
+                  {step === 'enter-otp' && (
+                    <Button
+                      type="button"
+                      className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                      onClick={handleResetPassword}
+                      disabled={resetPasswordPending}
+                    >
+                      {resetPasswordPending ? 'Resetting...' : 'Reset Password'}
+                    </Button>
+                  )}
+                </>
+              )}
+              {mode === 'verify-email' && (
+                <div className="flex gap-4">
+                  <Button
+                    type="button"
+                    className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
+                    onClick={handleSendOtp}
+                    disabled={sendOtpPending}
+                  >
+                  {sendOtpPending ? 'Sending...' : 'Resend OTP'}
+                  </Button>
+                  <Button
+                    type="button"
+                    className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
+                    onClick={handleValidateOtp}
+                    disabled={validateOtpPending}
+                  >
+                    {validateOtpPending ? 'Verifying...' : 'Verify'}
+                  </Button>
+                </div>
+              )}
+            </div>
+          </form>
+          <SuccessDialog
+            isOpen={isSuccessDialogOpen}
+            onClose={() => setIsSuccessDialogOpen(false)}
+            message={dialogMessage}
+          />
+          <ErrorDialog
+            isOpen={isErrorDialogOpen}
+            onClose={() => setIsErrorDialogOpen(false)}
+            message={dialogMessage}
+          />
+        </div>
       </div>
-    </div>
+    </TooltipProvider>
   );
 };
 
