@@ -49,12 +49,12 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
     >
       <div className="flex justify-end">
         <div className="bg-white p-1 rounded-md">
-            <QRCode value={name || 'sample-code'} size={64} />
+            <QRCode value="DUMMY-CODE" size={64} />
         </div>
       </div>
       <div className="flex justify-between items-end">
         <div>
-          <p className="text-lg font-semibold">{name || 'COUPON CODE'}</p>
+          <p className="text-lg font-semibold">{name || 'Voucher Name'}</p>
           <p className="text-sm">
             Expires:{' '}
             {expiryDays ? `${expiryDays} days after purchase` : 'Never'}
@@ -63,7 +63,7 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
             {allowReloading ? 'Reloadable' : 'Not Reloadable'}
           </p>
         </div>
-        <div className="text-center">
+        <div className="w-24 h-24 bg-white rounded-full flex flex-col items-center justify-center text-black">
             <p className="text-2xl font-bold">£50.00</p>
             <p className="text-sm">Balance</p>
         </div>

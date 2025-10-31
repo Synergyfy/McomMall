@@ -59,11 +59,12 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     control,
     setValue,
     watch,
-    formState: { errors },
+    formState: { errors, isSubmitting: formIsSubmitting },
   } = form;
 
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');
+  const id = watch('id');
 
   const handleFixedAmountKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -95,15 +96,15 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     >
       <div className="sm:col-span-2">
         <div className="flex items-center space-x-2">
-          <Label htmlFor="name">Coupon Code</Label>
-          <InfoTooltip text="The code shoppers will use to apply the coupon." />
+          <Label htmlFor="name">Name</Label>
+          <InfoTooltip text="The name of the voucher product." />
         </div>
         <Input
           id="name"
           {...register('name', { required: 'Name is required' })}
           className="mt-1"
         />
-        <SubNote text="e.g., SUMMER2024" />
+        <SubNote text="e.g., Summer Sale Voucher" />
         {errors.name && <p className="text-red-500">{errors.name.message}</p>}
       </div>
 
@@ -365,9 +366,11 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
       </div>
 
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting || formIsSubmitting} className="w-full">
           {isSubmitting
             ? 'Submitting...'
+            : id
+            ? 'Update Product'
             : 'Create Product'}
         </Button>
       </div>

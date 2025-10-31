@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Trash2, PlusCircle } from 'lucide-react';
+import { Edit, Trash2, PlusCircle } from 'lucide-react';
 import {
   useGetVoucherProducts,
   useDeleteVoucherProduct,
@@ -27,12 +27,13 @@ import { Button } from '@/components/ui/button';
 
 const ActionButton: React.FC<{
   children: React.ReactNode;
-  variant: 'delete';
+  variant: 'edit' | 'delete';
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }> = ({ children, variant, onClick }) => {
   const baseClasses =
     'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition-transform duration-200 ease-in-out hover:scale-105';
   const variants = {
+    edit: 'bg-green-500 hover:bg-green-600',
     delete: 'bg-red-500 hover:bg-red-600',
   };
   return (
@@ -57,6 +58,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
   product,
   onDelete,
 }) => {
+  const router = useRouter();
   const rowVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },
@@ -113,6 +115,16 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
+          <Link href={`/dashboard/vouchers/products/edit/${product.id}`}>
+            <Button
+              variant="outline"
+              size="sm"
+              className="flex items-center gap-1"
+            >
+              <Edit className="h-3 w-3" />
+              <span>Edit</span>
+            </Button>
+          </Link>
           <ActionButton variant="delete" onClick={() => onDelete(product.id)}>
             <Trash2 className="h-3 w-3" />
             <span>Delete</span>

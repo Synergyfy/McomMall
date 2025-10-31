@@ -41,7 +41,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
               : 'Not Reloadable'}
           </p>
         </div>
-        <div className="text-center">
+        <div className="w-24 h-24 bg-white rounded-full flex flex-col items-center justify-center text-black">
           <p className="text-2xl font-bold">£{Number(voucher.balance).toFixed(2)}</p>
           <p className="text-sm">Balance</p>
         </div>
