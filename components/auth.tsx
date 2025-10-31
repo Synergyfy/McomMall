@@ -16,6 +16,12 @@ import {
   useResetPassword,
 } from '@/service/auth/hook';
 import { Eye, EyeOff } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { UserRole } from '@/service/auth/types';
 import { useRouter, usePathname } from 'next/navigation';
 import { SuccessDialog } from './SuccessDialog';
@@ -439,32 +445,55 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
           <div className="grid gap-1">
             {mode === 'register' && (
               <div>
-                <div className="flex gap-4 mb-4">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
-                      selectedRole === UserRole.CUSTOMER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
-                    onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
-                  >
-                    <span className="mr-2">👤</span> Customer
-                  </Button>
-                  <Button
-                    type="button"
-                    variant="outline"
-                    className={`flex-1 px-4 py-2 text-gray-700 ${
-                      selectedRole === UserRole.OWNER
-                        ? 'bg-orange-500 hover:bg-orange-600 text-white'
-                        : 'bg-gray-200 hover:bg-gray-300'
-                    } rounded`}
-                    onClick={() => handleRoleSelect(UserRole.OWNER)}
-                  >
-                    <span className="mr-2">🏠</span> Business
-                  </Button>
-                </div>
+                <TooltipProvider>
+                  <div className="flex gap-4 mb-4">
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`flex-1 px-4 py-2 text-gray-700 ${
+                            selectedRole === UserRole.CUSTOMER
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300'
+                          } rounded`}
+                          onClick={() => handleRoleSelect(UserRole.CUSTOMER)}
+                        >
+                          <span className="mr-2">👤</span> Customer
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          As a customer, you can discover unique products, enjoy
+                          seamless booking, and manage your orders all in one
+                          place.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          className={`flex-1 px-4 py-2 text-gray-700 ${
+                            selectedRole === UserRole.OWNER
+                              ? 'bg-orange-500 hover:bg-orange-600 text-white'
+                              : 'bg-gray-200 hover:bg-gray-300'
+                          } rounded`}
+                          onClick={() => handleRoleSelect(UserRole.OWNER)}
+                        >
+                          <span className="mr-2">🏠</span> Business
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          As a business, you can showcase your products, manage
+                          your inventory, and connect with a wide customer base.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
+                </TooltipProvider>
                 {errors.role && (
                   <p className="text-orange-500 text-sm mt-1">{errors.role}</p>
                 )}
