@@ -27,7 +27,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
         </div>
       </div>
       <div className="flex justify-between items-end">
-        <div>
+        <div className="bg-white p-4 rounded-lg text-black">
           <p className="text-lg font-semibold">{voucher.code}</p>
           <p className="text-sm">
             Expires:{' '}
