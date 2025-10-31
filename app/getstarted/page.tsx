@@ -44,10 +44,6 @@ export default function GetStartedPage() {
         <h1 className="text-4xl font-bold">Lets Make living life easier.</h1>
       </div>
 
-<<<<<<< HEAD
-      {/* Left Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-1/2">
-=======
       {/* Left Section (60%) */}
       <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 clip-ellipse">
         <Image
@@ -87,7 +83,6 @@ export default function GetStartedPage() {
 
       {/* Right Section (40%) */}
       <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5">
->>>>>>> ff8ba48b67db325c5e247d9fbc8db9d789e039f3
         <Image
           src="/getstartedpage/getstartedimage.jpg"
           alt="Earn with Us"
@@ -97,13 +92,9 @@ export default function GetStartedPage() {
           className="-z-10"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
-<<<<<<< HEAD
-        <div className="w-full max-w-sm">
-=======
         <div className="w-full max-w-sm pt-40">
           {' '}
           {/* Increased pt for header clearance */}
->>>>>>> ff8ba48b67db325c5e247d9fbc8db9d789e039f3
           <h2 className="mb-6 text-2xl font-semibold">Earn with Us</h2>
           <div className="relative w-full text-left">
             <button
@@ -143,44 +134,6 @@ export default function GetStartedPage() {
         </div>
       </div>
 
-<<<<<<< HEAD
-      {/* Right Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-1/2">
-        <Image
-          src="/getstartedpage/getstartedimage.jpg"
-          alt="Buy and Sell on Mcom"
-          layout="fill"
-          objectFit="cover"
-          quality={80}
-          className="-z-10"
-        />
-        <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
-        <div className="w-full max-w-sm">
-          <h2 className="mb-6 text-2xl font-semibold">Buy and Sell on Mcom</h2>
-          <p className="mb-6 text-gray-300">
-            Join our marketplace to discover, buy, and sell products and
-            services with ease.
-          </p>
-          <Link
-            href="/signup"
-            className="mb-4 block w-full rounded-lg bg-white py-3 text-lg font-semibold text-gray-900 transition-transform hover:scale-105"
-          >
-            Create Account
-          </Link>
-          <p className="text-gray-200">
-            I already have an account.{' '}
-            <Link
-              href="/signin"
-              className="font-semibold text-white underline"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </div>
-
-=======
->>>>>>> ff8ba48b67db325c5e247d9fbc8db9d789e039f3
       {/* Absolute positioned footer */}
       <p className="absolute bottom-6 left-1/2 z-20 w-full max-w-md -translate-x-1/2 px-4 text-center text-xs text-gray-400">
         By proceeding to use McomMall, you agree to our{' '}
