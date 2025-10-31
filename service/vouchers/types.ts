@@ -52,6 +52,7 @@ export interface Voucher {
 }
 
 export interface CreateVoucherProductDto {
+  id?: string;
   name: string;
   description?: string;
   fixedAmounts?: number[];

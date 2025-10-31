@@ -64,7 +64,6 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
 
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');
-  const id = watch('id');
 
   const handleFixedAmountKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -369,7 +368,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Button type="submit" disabled={isSubmitting || formIsSubmitting} className="w-full">
           {isSubmitting
             ? 'Submitting...'
-            : id
+            : form.getValues('id')
             ? 'Update Product'
             : 'Create Product'}
         </Button>

@@ -48,7 +48,7 @@ export default function NewVoucherProductPage() {
         imageUrl = result.secure_url;
       }
 
-      const expiryDays = data.expiryDays ? parseInt(data.expiryDays as any, 10) : undefined;
+      const expiryDays = data.expiryDays;
       if (expiryDays !== undefined && (isNaN(expiryDays) || expiryDays < 1)) {
         toast.error('Expiry days must be a positive number.');
         setIsSubmitting(false);

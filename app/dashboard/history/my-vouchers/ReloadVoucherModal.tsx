@@ -57,8 +57,8 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
     reset,
   } = useForm<ReloadVoucherFormData>();
 
-  const initiateReload = useInitiateVoucherReload();
-  const verifyReload = useVerifyVoucherReload();
+  const initiateReload = useInitiateVoucherReload(voucher.code);
+  const verifyReload = useVerifyVoucherReload(voucher.code);
 
   const onSubmit = async (data: ReloadVoucherFormData) => {
     try {
@@ -69,7 +69,7 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
       }
 
       const payload = { ...data, amount: numericAmount };
-      const initiationResponse = await initiateReload(voucher.code, payload);
+      const initiationResponse = await initiateReload.mutateAsync(payload);
       setReloadAmount(numericAmount);
       setPaymentProvider(data.paymentProvider);
       if (initiationResponse.provider === 'stripe') {
@@ -86,7 +86,7 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
     if (!paymentProvider) return;
     setIsVerifying(true);
     try {
-      await verifyReload(voucher.code, {
+      await verifyReload.mutateAsync({
         paymentProvider,
         transactionId,
         reloadDetails: {
