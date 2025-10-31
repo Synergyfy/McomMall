@@ -58,7 +58,14 @@ export default function EditVoucherProductPage() {
         }
       }
 
-      await editVoucherProduct(id as string, { ...data, backgroundImage: imageUrl });
+      const expiryDays = data.expiryDays ? parseInt(data.expiryDays as any, 10) : undefined;
+      if (expiryDays !== undefined && (isNaN(expiryDays) || expiryDays < 1)) {
+        toast.error('Expiry days must be a positive number.');
+        setIsSubmitting(false);
+        return;
+      }
+
+      await editVoucherProduct(id as string, { ...data, backgroundImage: imageUrl, expiryDays });
       toast.success('Voucher product updated successfully!');
       router.push('/dashboard/vouchers/products');
     } catch (error) {
