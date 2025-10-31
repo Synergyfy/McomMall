@@ -267,8 +267,9 @@ export default function McomEgiftCard() {
                         preserveAspectRatio="none"
                       >
                         <path
-                          d="M0,20 C100,40 300,0 400,20 L400,40 L0,40 Z"
-                          fill="rgba(255,255,255,0.15)"
+                          d="M0,20 L400,0"
+                          stroke="rgba(255,255,255,0.3)"
+                          strokeWidth="1"
                         />
                       </svg>
                     </div>
