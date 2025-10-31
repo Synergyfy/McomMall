@@ -20,7 +20,7 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { VoucherProductModal } from '../(components)/VoucherProductModal';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 // --- Reusable UI Components ---
@@ -51,15 +51,14 @@ const ActionButton: React.FC<{
 
 type VoucherProductRowProps = {
   product: VoucherProduct;
-  onEdit: (product: VoucherProduct) => void;
   onDelete: (productId: string) => void;
 };
 
 const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
   product,
-  onEdit,
   onDelete,
 }) => {
+  const router = useRouter();
   const rowVariants = {
     hidden: { opacity: 0, y: -10 },
     visible: { opacity: 1, y: 0 },
@@ -116,7 +115,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
-          <VoucherProductModal product={product} onSuccess={() => {}}>
+          <Link href={`/dashboard/vouchers/products/edit/${product.id}`}>
             <Button
               variant="outline"
               size="sm"
@@ -125,7 +124,7 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
               <Edit className="h-3 w-3" />
               <span>Edit</span>
             </Button>
-          </VoucherProductModal>
+          </Link>
           <ActionButton variant="delete" onClick={() => onDelete(product.id)}>
             <Trash2 className="h-3 w-3" />
             <span>Delete</span>
@@ -159,6 +158,7 @@ export default function VoucherProductsPage() {
         toast.success('Voucher product deleted successfully!');
         setIsDeleteDialogOpen(false);
         setSelectedProductId(null);
+        mutate();
       } catch (error) {
         toast.error('Failed to delete voucher product.');
       }
@@ -234,7 +234,6 @@ export default function VoucherProductsPage() {
                   <VoucherProductRow
                     key={product.id}
                     product={product}
-                    onEdit={() => {}}
                     onDelete={handleDeleteClick}
                   />
                 ))}
@@ -249,16 +248,16 @@ export default function VoucherProductsPage() {
         </div>
 
         <footer className="mt-8 flex justify-start">
-          <VoucherProductModal onSuccess={mutate}>
-            <motion.button
+          <Link href="/dashboard/vouchers/products/new">
+            <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
             >
               <PlusCircle className="h-5 w-5" />
               <span>Add New Product</span>
-            </motion.button>
-          </VoucherProductModal>
+            </motion.div>
+          </Link>
         </footer>
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>

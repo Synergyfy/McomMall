@@ -1,11 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller } from 'react-hook-form';
-import {
-  CreateVoucherProductDto,
-  VoucherProduct,
-} from '@/service/vouchers/types';
+import React, { useState } from 'react';
+import { Controller, UseFormReturn } from 'react-hook-form';
+import { CreateVoucherProductDto } from '@/service/vouchers/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -48,74 +45,25 @@ const SubNote = ({ text }: { text: string }) => (
 type VoucherProductFormData = CreateVoucherProductDto;
 
 interface VoucherProductFormProps {
-  onSubmit: (data: CreateVoucherProductDto) => void;
-  initialData?: VoucherProduct;
+  form: UseFormReturn<VoucherProductFormData>;
   isSubmitting?: boolean;
 }
 
 export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
-  onSubmit,
-  initialData,
+  form,
   isSubmitting,
 }) => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
-
   const {
     register,
-    handleSubmit,
     control,
     setValue,
     watch,
-    formState: { errors },
-  } = useForm<VoucherProductFormData>({
-    defaultValues: initialData
-      ? {
-          ...initialData,
-        }
-      : {
-          name: '',
-          fixedAmounts: [],
-          usage: 'both',
-          allowPartialRedemption: true,
-          isEnabled: true,
-          allowCustomAmount: false,
-          allowReloading: false,
-        },
-  });
+    formState: { errors, isSubmitting: formIsSubmitting },
+  } = form;
 
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');
-
-  const handleFormSubmit = (data: VoucherProductFormData) => {
-    const processedData: CreateVoucherProductDto = {
-      ...data,
-      fixedAmounts: data.fixedAmounts || [],
-      expiryDays: data.expiryDays ? Number(data.expiryDays) : undefined,
-    };
-
-    if (!data.allowCustomAmount) {
-      delete processedData.minCustomAmount;
-      delete processedData.maxCustomAmount;
-    } else {
-      processedData.minCustomAmount = Number(data.minCustomAmount);
-      processedData.maxCustomAmount = Number(data.maxCustomAmount);
-    }
-
-    if (data.bonusThreshold || data.bonusAmount) {
-      if (!data.bonusThreshold || data.bonusThreshold <= 0) {
-        // This should be caught by form validation, but as a safeguard.
-        return;
-      }
-      if (!data.bonusAmount || data.bonusAmount <= 0) {
-        // This should be caught by form validation, but as a safeguard.
-        return;
-      }
-      processedData.bonusThreshold = Number(data.bonusThreshold);
-      processedData.bonusAmount = Number(data.bonusAmount);
-    }
-
-    onSubmit(processedData);
-  };
 
   const handleFixedAmountKeyDown = (
     e: React.KeyboardEvent<HTMLInputElement>
@@ -142,21 +90,20 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
   };
 
   return (
-    <form
-      onSubmit={handleSubmit(handleFormSubmit)}
+    <div
       className="grid grid-cols-1 gap-6 sm:grid-cols-2"
     >
       <div className="sm:col-span-2">
         <div className="flex items-center space-x-2">
-          <Label htmlFor="name">Coupon Code</Label>
-          <InfoTooltip text="The code shoppers will use to apply the coupon." />
+          <Label htmlFor="name">Name</Label>
+          <InfoTooltip text="The name of the voucher product." />
         </div>
         <Input
           id="name"
           {...register('name', { required: 'Name is required' })}
           className="mt-1"
         />
-        <SubNote text="e.g., SUMMER2024" />
+        <SubNote text="e.g., Summer Sale Voucher" />
         {errors.name && <p className="text-red-500">{errors.name.message}</p>}
       </div>
 
@@ -164,6 +111,28 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Label htmlFor="description">Description</Label>
         <Textarea id="description" {...register('description')} className="mt-1" />
         <SubNote text="A brief description of the coupon and what it offers." />
+      </div>
+
+      <div className="sm:col-span-2">
+        <Label htmlFor="backgroundImage">Background Image</Label>
+        <Input
+          id="backgroundImage"
+          type="file"
+          {...register('backgroundImage')}
+          className="mt-1"
+        />
+        <SubNote text="Upload a background image for the voucher card." />
+      </div>
+
+      <div className="sm:col-span-2">
+        <Label htmlFor="textColor">Text Color</Label>
+        <Input
+          id="textColor"
+          type="color"
+          {...register('textColor')}
+          className="mt-1"
+        />
+        <SubNote text="Select a text color for the voucher card." />
       </div>
 
       <div className="sm:col-span-2">
@@ -396,14 +365,14 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
       </div>
 
       <div className="sm:col-span-2">
-        <Button type="submit" disabled={isSubmitting} className="w-full">
+        <Button type="submit" disabled={isSubmitting || formIsSubmitting} className="w-full">
           {isSubmitting
             ? 'Submitting...'
-            : initialData
+            : form.getValues('id')
             ? 'Update Product'
             : 'Create Product'}
         </Button>
       </div>
-    </form>
+    </div>
   );
 };

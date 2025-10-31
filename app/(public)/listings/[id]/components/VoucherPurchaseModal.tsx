@@ -148,7 +148,7 @@ export default function VoucherPurchaseModal({
     setPurchaseDetails(details);
 
     try {
-      const response = await initiatePurchase(details);
+      const response = await initiatePurchase.mutateAsync(details);
       if (response.provider === 'stripe') {
         setClientSecret(response.clientSecret);
       } else {
@@ -169,7 +169,7 @@ export default function VoucherPurchaseModal({
     }
     setIsLoading(true);
     try {
-      const verifiedVoucher = await verifyPurchase({
+      const verifiedVoucher = await verifyPurchase.mutateAsync({
         paymentProvider: 'stripe',
         transactionId,
         purchaseDetails,
@@ -190,7 +190,7 @@ export default function VoucherPurchaseModal({
     }
     setIsLoading(true);
     try {
-      const verifiedVoucher = await verifyPurchase({
+      const verifiedVoucher = await verifyPurchase.mutateAsync({
         paymentProvider: 'paypal',
         transactionId: orderId,
         purchaseDetails,

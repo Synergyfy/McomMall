@@ -55,7 +55,7 @@ export default function RedeemVoucherPage() {
     setIsSubmitting(true);
     setRedeemedVoucher(null);
     try {
-      const result = await redeemVoucher(data);
+      const result = await redeemVoucher.mutateAsync(data);
       toast.success('Voucher redeemed successfully!');
       setRedeemedVoucher(result);
       reset();
