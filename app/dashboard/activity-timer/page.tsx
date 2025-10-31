@@ -1,60 +1,40 @@
-'use client';
+"use client";
 
-import { FC, useState, useEffect } from 'react';
-import { useGetTrialStatus, usePauseOrPlay } from '@/service/payments/hook';
-import {
-  TrialAction,
-  TrialTasks,
-  TrialStatusResponse,
-} from '@/service/payments/types';
-import { motion } from 'framer-motion';
+import { FC, useState, useEffect, useRef } from "react";
+import { useGetTrialStatus, usePauseOrPlay } from "@/service/payments/hook";
+import { TrialAction, TrialTasks } from "@/service/payments/types";
+import { motion } from "framer-motion";
 import {
   PlayIcon,
   PauseIcon,
   CheckCircle2,
-  XCircle,
-  Clock,
   Loader,
-} from 'lucide-react';
-import { Button } from '@/components/ui/button';
-
-const TaskItem: FC<{ completed: boolean; label: string }> = ({
-  completed,
-  label,
-}) => (
-  <motion.li
-    layout
-    initial={{ opacity: 0, y: 20 }}
-    animate={{ opacity: 1, y: 0 }}
-    exit={{ opacity: 0, y: -20 }}
-    className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
-      completed ? 'bg-green-100 text-green-800' : 'bg-gray-100 text-gray-700'
-    }`}
-  >
-    <span className="font-medium">{label}</span>
-    {completed ? (
-      <CheckCircle2 className="w-6 h-6 text-green-500" />
-    ) : (
-      <XCircle className="w-6 h-6 text-red-400" />
-    )}
-  </motion.li>
-);
+  ArrowRight,
+} from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import StyledNumber from "@/components/svgs/StyledNumber";
 
 const TimeCard: FC<{ value: string; unit: string }> = ({ value, unit }) => (
-  <div className="flex flex-col items-center justify-center bg-gray-800 p-4 rounded-lg w-24 h-24">
-    <span className="text-4xl font-bold tracking-tight">{value}</span>
-    <span className="text-sm font-light uppercase text-gray-400">{unit}</span>
+  <div className="flex flex-col items-center justify-center bg-orange-600 p-4 rounded-lg w-24 h-24">
+    <span className="text-4xl font-bold tracking-tight text-white">
+      {value}
+    </span>
+    <span className="text-sm font-light uppercase text-white">{unit}</span>
   </div>
 );
 
 const ActivityTimerPage: FC = () => {
   const { data: trialStatus, isLoading, error } = useGetTrialStatus();
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
-  const [timeLeft, setTimeLeft] = useState(trialStatus?.remainingTime ?? 0);
+  const [timeLeft, setTimeLeft] = useState(0);
+  const [currentIndex, setCurrentIndex] = useState(0);
+  const timerInitialized = useRef(false);
 
   useEffect(() => {
-    if (trialStatus) {
+    if (trialStatus && timerInitialized.current === false) {
       setTimeLeft(trialStatus.remainingTime);
+      timerInitialized.current = true;
     }
   }, [trialStatus]);
 
@@ -75,10 +55,10 @@ const ActivityTimerPage: FC = () => {
     const minutes = Math.floor((totalSeconds % 3600) / 60);
     const seconds = totalSeconds % 60;
     return {
-      days: String(days).padStart(2, '0'),
-      hours: String(hours).padStart(2, '0'),
-      minutes: String(minutes).padStart(2, '0'),
-      seconds: String(seconds).padStart(2, '0'),
+      days: String(days).padStart(2, "0"),
+      hours: String(hours).padStart(2, "0"),
+      minutes: String(minutes).padStart(2, "0"),
+      seconds: String(seconds).padStart(2, "0"),
     };
   };
 
@@ -107,26 +87,54 @@ const ActivityTimerPage: FC = () => {
     );
   }
 
-  const {
-    tasks,
-    isPaused,
-    isTrialPausable,
-    remainingPauses,
-  } = trialStatus;
-  const completedTasks = Object.values(tasks).filter(Boolean).length;
-  const totalTasks = Object.keys(tasks).length;
-  const progress = totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0;
+  const { tasks, isPaused, isTrialPausable, remainingPauses } = trialStatus;
 
-  const taskLabels: Record<keyof TrialTasks, string> = {
-    createdBusiness: 'Create a business profile',
-    createdProductOrService: 'Add your first product or service',
-    createdPromotion: 'Create a special promotion',
-    createdOffer: 'Launch an exciting offer',
-    createdCoupon: 'Generate a discount coupon',
+  const taskKeys = Object.keys(tasks) as (keyof TrialTasks)[];
+  const currentTaskKey = taskKeys[currentIndex];
+  const isCompleted = tasks[currentTaskKey];
+
+  const taskDetails: Record<
+    keyof TrialTasks,
+    { title: string; description: string; url: string }
+  > = {
+    createdBusiness: {
+      title: "Create a business profile",
+      description:
+        "You need a business profile to start selling. Create one now.",
+      url: "/dashboard/my-profile",
+    },
+    createdProductOrService: {
+      title: "Add your first product or service",
+      description: "Add your first product or service to your store.",
+      url: "/dashboard/services/add-service",
+    },
+    createdPromotion: {
+      title: "Create a special promotion",
+      description: "Create a special promotion to attract customers.",
+      url: "/dashboard/loyalty/promotion/new",
+    },
+    createdOffer: {
+      title: "Launch an exciting offer",
+      description: "Launch an exciting offer to get more sales.",
+      url: "/dashboard/loyalty/offers/new",
+    },
+    createdCoupon: {
+      title: "Generate a discount coupon",
+      description: "Generate a discount coupon to reward your customers.",
+      url: "/dashboard/coupons/new",
+    },
+  };
+
+  const currentTask = taskDetails[currentTaskKey];
+
+  const handleNext = () => {
+    if (currentIndex < taskKeys.length - 1) {
+      setCurrentIndex(currentIndex + 1);
+    }
   };
 
   return (
-    <div className="min-h-[calc(100vh-8rem)] bg-gray-900 text-white p-4 sm:p-6 md:p-8">
+    <div className="min-h-[calc(100vh-8rem)] bg-white text-black p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         {/* Header */}
         <header className="text-center mb-8">
@@ -141,7 +149,7 @@ const ActivityTimerPage: FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-4 text-lg text-gray-400"
+            className="mt-4 text-lg text-black"
           >
             Complete the tasks below to make the most of your trial period.
           </motion.p>
@@ -168,7 +176,9 @@ const ActivityTimerPage: FC = () => {
                     action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
                   })
                 }
-                disabled={isPending || (!isPaused && (remainingPauses ?? 0) <= 0)}
+                disabled={
+                  isPending || (!isPaused && (remainingPauses ?? 0) <= 0)
+                }
                 size="lg"
                 className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
               >
@@ -184,48 +194,89 @@ const ActivityTimerPage: FC = () => {
                   </>
                 )}
               </Button>
-              <span className="text-sm text-gray-400">
+              <span className="text-sm text-black">
                 ({remainingPauses} pause
-                {remainingPauses !== 1 ? 's' : ''} left)
+                {remainingPauses !== 1 ? "s" : ""} left)
               </span>
             </div>
           )}
         </motion.section>
 
-        {/* Progress Bar and Task List */}
-        <motion.section
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.5 }}
-          className="bg-gray-800 p-6 rounded-xl shadow-2xl"
-        >
-          <div className="mb-6">
-            <div className="flex justify-between items-center mb-2">
-              <h3 className="text-lg font-semibold">Your Progress</h3>
-              <span className="text-lg font-bold text-orange-400">
-                {completedTasks} / {totalTasks} Done
+        {/* New Task Display */}
+        <div className="w-full max-w-3xl mx-auto">
+          <h2 className="text-3xl font-bold text-black mb-8 ml-4">
+            Get started with Mcommall
+          </h2>
+          {/* <div className="bg-gray-800 shadow-xl rounded-2xl p-8 flex items-center">
+            <div className="w-1/3 flex items-center justify-center">
+              <StyledNumber number={currentIndex + 1} />
+            </div>
+            <div className="w-2/3 pl-12">
+              <h3 className="text-2xl font-bold text-white mb-3">
+                {currentTask.title}
+              </h3>
+              <p className="text-gray-400 mb-6">{currentTask.description}</p>
+              <div className="flex items-center justify-between">
+                {isCompleted ? (
+                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    Done
+                  </button>
+                ) : (
+                  <Link
+                    href={currentTask.url}
+                    className="flex items-center text-orange-400 hover:text-orange-300 font-medium"
+                  >
+                    Finish this activity
+                  </Link>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="flex items-center text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed font-medium"
+                  disabled={currentIndex >= taskKeys.length - 1}
+                >
+                  Next activity <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
+            </div>
+          </div> */}
+
+          <div className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8 flex items-center">
+            <div className="w-1/3 flex items-center justify-center text-orange-500">
+              <span className="text-orange-500">
+                <StyledNumber number={currentIndex + 1} />
               </span>
             </div>
-            <div className="w-full bg-gray-700 rounded-full h-2.5">
-              <motion.div
-                className="bg-orange-600 h-2.5 rounded-full"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 0.8, ease: 'easeInOut' }}
-              />
+            <div className="w-2/3 pl-12">
+              <h3 className="text-2xl font-bold text-gray-900 mb-3">
+                {currentTask.title}
+              </h3>
+              <p className="text-black mb-6">{currentTask.description}</p>
+              <div className="flex items-center justify-between">
+                {isCompleted ? (
+                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
+                    <CheckCircle2 className="w-5 h-5 mr-2" />
+                    Done
+                  </button>
+                ) : (
+                  <Link
+                    href={currentTask.url}
+                    className="flex items-center text-orange-500 hover:text-orange-400 font-medium"
+                  >
+                    Finish this activity
+                  </Link>
+                )}
+                <button
+                  onClick={handleNext}
+                  className="flex items-center text-blue-500 hover:text-blue-400 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
+                  disabled={currentIndex >= taskKeys.length - 1}
+                >
+                  Next activity <ArrowRight className="w-4 h-4 ml-2" />
+                </button>
+              </div>
             </div>
           </div>
-
-          <ul className="space-y-4">
-            {Object.entries(tasks).map(([key, completed]) => (
-              <TaskItem
-                key={key}
-                completed={completed}
-                label={taskLabels[key as keyof TrialTasks]}
-              />
-            ))}
-          </ul>
-        </motion.section>
+        </div>
       </div>
     </div>
   );
