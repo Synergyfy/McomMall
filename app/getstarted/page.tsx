@@ -44,8 +44,8 @@ export default function GetStartedPage() {
         <h1 className="text-4xl font-bold">Lets Make living life easier.</h1>
       </div>
 
-      {/* Left Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-1/2">
+      {/* Left Section (40%) */}
+      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5">
         <Image
           src="/getstartedpage/getstartedimage.jpg"
           alt="Earn with Us"
@@ -55,7 +55,9 @@ export default function GetStartedPage() {
           className="-z-10"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm pt-24">
+          {' '}
+          {/* Added pt-24 for header clearance */}
           <h2 className="mb-6 text-2xl font-semibold">Earn with Us</h2>
           <div className="relative w-full text-left">
             <button
@@ -95,8 +97,8 @@ export default function GetStartedPage() {
         </div>
       </div>
 
-      {/* Right Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-1/2">
+      {/* Right Section (60%) */}
+      <div className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5">
         <Image
           src="/getstartedpage/getstartedimage.jpg"
           alt="Buy and Sell on Mcom"
@@ -106,7 +108,9 @@ export default function GetStartedPage() {
           className="-z-10"
         />
         <div className="absolute inset-0 -z-10 bg-black/60" aria-hidden="true" />
-        <div className="w-full max-w-sm">
+        <div className="w-full max-w-sm pt-24">
+          {' '}
+          {/* Added pt-24 for header clearance */}
           <h2 className="mb-6 text-2xl font-semibold">Buy and Sell on Mcom</h2>
           <p className="mb-6 text-gray-300">
             Join our marketplace to discover, buy, and sell products and
