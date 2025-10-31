@@ -9,7 +9,6 @@ import {
   PauseIcon,
   CheckCircle2,
   Loader,
-  ArrowRight,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -28,7 +27,6 @@ const ActivityTimerPage: FC = () => {
   const { data: trialStatus, isLoading, error } = useGetTrialStatus();
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const [timeLeft, setTimeLeft] = useState(0);
-  const [currentIndex, setCurrentIndex] = useState(0);
   const timerInitialized = useRef(false);
 
   useEffect(() => {
@@ -90,8 +88,6 @@ const ActivityTimerPage: FC = () => {
   const { tasks, isPaused, isTrialPausable, remainingPauses } = trialStatus;
 
   const taskKeys = Object.keys(tasks) as (keyof TrialTasks)[];
-  const currentTaskKey = taskKeys[currentIndex];
-  const isCompleted = tasks[currentTaskKey];
 
   const taskDetails: Record<
     keyof TrialTasks,
@@ -123,14 +119,6 @@ const ActivityTimerPage: FC = () => {
       description: "Generate a discount coupon to reward your customers.",
       url: "/dashboard/coupons/new",
     },
-  };
-
-  const currentTask = taskDetails[currentTaskKey];
-
-  const handleNext = () => {
-    if (currentIndex < taskKeys.length - 1) {
-      setCurrentIndex(currentIndex + 1);
-    }
   };
 
   return (
@@ -203,78 +191,52 @@ const ActivityTimerPage: FC = () => {
         </motion.section>
 
         {/* New Task Display */}
-        <div className="w-full max-w-3xl mx-auto">
+        <div className="w-full mx-auto">
           <h2 className="text-3xl font-bold text-black mb-8 ml-4">
             Get started with Mcommall
           </h2>
-          {/* <div className="bg-gray-800 shadow-xl rounded-2xl p-8 flex items-center">
-            <div className="w-1/3 flex items-center justify-center">
-              <StyledNumber number={currentIndex + 1} />
-            </div>
-            <div className="w-2/3 pl-12">
-              <h3 className="text-2xl font-bold text-white mb-3">
-                {currentTask.title}
-              </h3>
-              <p className="text-gray-400 mb-6">{currentTask.description}</p>
-              <div className="flex items-center justify-between">
-                {isCompleted ? (
-                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Done
-                  </button>
-                ) : (
-                  <Link
-                    href={currentTask.url}
-                    className="flex items-center text-orange-400 hover:text-orange-300 font-medium"
-                  >
-                    Finish this activity
-                  </Link>
-                )}
-                <button
-                  onClick={handleNext}
-                  className="flex items-center text-blue-400 hover:text-blue-300 disabled:text-gray-500 disabled:cursor-not-allowed font-medium"
-                  disabled={currentIndex >= taskKeys.length - 1}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+            {taskKeys.map((taskKey, index) => {
+              const task = taskDetails[taskKey];
+              const isCompleted = tasks[taskKey];
+              return (
+                <div
+                  key={taskKey}
+                  className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8"
                 >
-                  Next activity <ArrowRight className="w-4 h-4 ml-2" />
-                </button>
-              </div>
-            </div>
-          </div> */}
-
-          <div className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8 flex items-center">
-            <div className="w-1/3 flex items-center justify-center text-orange-500">
-              <span className="text-orange-500">
-                <StyledNumber number={currentIndex + 1} />
-              </span>
-            </div>
-            <div className="w-2/3 pl-12">
-              <h3 className="text-2xl font-bold text-gray-900 mb-3">
-                {currentTask.title}
-              </h3>
-              <p className="text-black mb-6">{currentTask.description}</p>
-              <div className="flex items-center justify-between">
-                {isCompleted ? (
-                  <button className="flex items-center justify-center px-5 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
-                    <CheckCircle2 className="w-5 h-5 mr-2" />
-                    Done
-                  </button>
-                ) : (
-                  <Link
-                    href={currentTask.url}
-                    className="flex items-center text-orange-500 hover:text-orange-400 font-medium"
-                  >
-                    Finish this activity
-                  </Link>
-                )}
-                <button
-                  onClick={handleNext}
-                  className="flex items-center text-blue-500 hover:text-blue-400 disabled:text-gray-400 disabled:cursor-not-allowed font-medium"
-                  disabled={currentIndex >= taskKeys.length - 1}
-                >
-                  Next activity <ArrowRight className="w-4 h-4 ml-2" />
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center">
+                    <div className="w-1/3 flex items-center justify-center text-orange-500">
+                      <span className="text-orange-500">
+                        <StyledNumber number={index + 1} />
+                      </span>
+                    </div>
+                    <div className="w-2/3 pl-6">
+                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                        {task.title}
+                      </h3>
+                      <p className="text-black mb-4 text-sm">
+                        {task.description}
+                      </p>
+                      <div className="flex items-center justify-between">
+                        {isCompleted ? (
+                          <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
+                            <CheckCircle2 className="w-4 h-4 mr-2" />
+                            Done
+                          </button>
+                        ) : (
+                          <Link
+                            href={task.url}
+                            className="flex items-center text-orange-500 hover:text-orange-400 font-medium text-sm"
+                          >
+                            Finish this activity
+                          </Link>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>
