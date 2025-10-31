@@ -10,7 +10,18 @@ import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function NewVoucherProductPage() {
-  const { control, handleSubmit, watch } = useForm<CreateVoucherProductDto>();
+  const form = useForm<CreateVoucherProductDto>({
+    defaultValues: {
+      name: '',
+      fixedAmounts: [],
+      usage: 'both',
+      allowPartialRedemption: true,
+      isEnabled: true,
+      allowCustomAmount: false,
+      allowReloading: false,
+      textColor: '#000000',
+    },
+  });
   const addVoucherProduct = useAddVoucherProduct();
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -52,12 +63,12 @@ export default function NewVoucherProductPage() {
       <h1 className="text-4xl font-bold text-slate-800 mb-8">
         Create New Voucher Product
       </h1>
-      <form onSubmit={handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-2 gap-8">
         <div>
-          <VoucherProductForm control={control} isSubmitting={isSubmitting} />
+          <VoucherProductForm form={form} isSubmitting={isSubmitting} />
         </div>
         <div>
-          <VoucherCardPreview control={control} />
+          <VoucherCardPreview control={form.control} />
         </div>
       </form>
     </div>

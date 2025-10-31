@@ -1,11 +1,8 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
-import { useForm, Controller, Control } from 'react-hook-form';
-import {
-  CreateVoucherProductDto,
-  VoucherProduct,
-} from '@/service/vouchers/types';
+import React, { useState } from 'react';
+import { Controller, UseFormReturn } from 'react-hook-form';
+import { CreateVoucherProductDto } from '@/service/vouchers/types';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -48,35 +45,22 @@ const SubNote = ({ text }: { text: string }) => (
 type VoucherProductFormData = CreateVoucherProductDto;
 
 interface VoucherProductFormProps {
-  control: Control<VoucherProductFormData>;
+  form: UseFormReturn<VoucherProductFormData>;
   isSubmitting?: boolean;
 }
 
 export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
-  control,
+  form,
   isSubmitting,
 }) => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
-
   const {
     register,
-    handleSubmit,
+    control,
     setValue,
     watch,
     formState: { errors },
-  } = useForm<VoucherProductFormData>({
-    control,
-    defaultValues: {
-      name: '',
-      fixedAmounts: [],
-      usage: 'both',
-      allowPartialRedemption: true,
-      isEnabled: true,
-      allowCustomAmount: false,
-      allowReloading: false,
-      textColor: '#000000',
-    },
-  });
+  } = form;
 
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');

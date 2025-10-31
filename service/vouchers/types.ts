@@ -13,6 +13,8 @@ export interface VoucherProduct {
   bonusThreshold?: number;
   bonusAmount?: number;
   allowReloading?: boolean;
+  backgroundImage?: string;
+  textColor?: string;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -63,6 +65,8 @@ export interface CreateVoucherProductDto {
   bonusThreshold?: number;
   bonusAmount?: number;
   allowReloading?: boolean;
+  backgroundImage?: any;
+  textColor?: string;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;

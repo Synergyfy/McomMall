@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, PlusCircle } from 'lucide-react';
+import { Trash2, PlusCircle } from 'lucide-react';
 import {
   useGetVoucherProducts,
   useDeleteVoucherProduct,
@@ -20,20 +20,19 @@ import {
 } from '@/components/ui/alert-dialog';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
-import { VoucherProductModal } from '../(components)/VoucherProductModal';
+import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 
 // --- Reusable UI Components ---
 
 const ActionButton: React.FC<{
   children: React.ReactNode;
-  variant: 'edit' | 'delete';
+  variant: 'delete';
   onClick: (e: React.MouseEvent<HTMLButtonElement>) => void;
 }> = ({ children, variant, onClick }) => {
   const baseClasses =
     'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition-transform duration-200 ease-in-out hover:scale-105';
   const variants = {
-    edit: 'bg-green-500 hover:bg-green-600',
     delete: 'bg-red-500 hover:bg-red-600',
   };
   return (
@@ -51,13 +50,11 @@ const ActionButton: React.FC<{
 
 type VoucherProductRowProps = {
   product: VoucherProduct;
-  onEdit: (product: VoucherProduct) => void;
   onDelete: (productId: string) => void;
 };
 
 const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
   product,
-  onEdit,
   onDelete,
 }) => {
   const rowVariants = {
@@ -116,16 +113,6 @@ const VoucherProductRow: React.FC<VoucherProductRowProps> = ({
       </td>
       <td className="whitespace-nowrap px-6 py-4">
         <div className="flex items-center gap-2">
-          <VoucherProductModal product={product} onSuccess={() => {}}>
-            <Button
-              variant="outline"
-              size="sm"
-              className="flex items-center gap-1"
-            >
-              <Edit className="h-3 w-3" />
-              <span>Edit</span>
-            </Button>
-          </VoucherProductModal>
           <ActionButton variant="delete" onClick={() => onDelete(product.id)}>
             <Trash2 className="h-3 w-3" />
             <span>Delete</span>
@@ -159,6 +146,7 @@ export default function VoucherProductsPage() {
         toast.success('Voucher product deleted successfully!');
         setIsDeleteDialogOpen(false);
         setSelectedProductId(null);
+        mutate();
       } catch (error) {
         toast.error('Failed to delete voucher product.');
       }
@@ -234,7 +222,6 @@ export default function VoucherProductsPage() {
                   <VoucherProductRow
                     key={product.id}
                     product={product}
-                    onEdit={() => {}}
                     onDelete={handleDeleteClick}
                   />
                 ))}
@@ -249,16 +236,16 @@ export default function VoucherProductsPage() {
         </div>
 
         <footer className="mt-8 flex justify-start">
-          <VoucherProductModal onSuccess={mutate}>
-            <motion.button
+          <Link href="/dashboard/vouchers/products/new">
+            <motion.div
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
               className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
             >
               <PlusCircle className="h-5 w-5" />
               <span>Add New Product</span>
-            </motion.button>
-          </VoucherProductModal>
+            </motion.div>
+          </Link>
         </footer>
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
