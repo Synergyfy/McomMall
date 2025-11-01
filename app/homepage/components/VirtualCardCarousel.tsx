@@ -99,7 +99,7 @@ export default function McomEgiftCard() {
   }, []);
 
   return (
-    <section style={{ clipPath: 'polygon(0 0, 100% 0, 100% calc(100% - 5vw), 0 100%)' }}>
+    <section>
       <header className="text-3xl font-bold text-center mb-5 sm:text-5xl">
         Mcom VCards
       </header>
@@ -259,6 +259,19 @@ export default function McomEgiftCard() {
                       <p className="mt-1 text-white/90 text-sm">{p.tagline}</p>
                     </div>
 
+                    {/* Divider with fancy SVG wave */}
+                    <div className="relative mt-6 h-10">
+                      <svg
+                        className="absolute inset-0 w-full h-10"
+                        viewBox="0 0 400 40"
+                        preserveAspectRatio="none"
+                      >
+                        <path
+                          d="M0,20 C100,40 300,0 400,20 L400,40 L0,40 Z"
+                          fill="rgba(255,255,255,0.15)"
+                        />
+                      </svg>
+                    </div>
 
                     {/* INFO GRID */}
                     <div className="px-6 mt-2 grid grid-cols-1 gap-2 text-[13px] text-white/95">
