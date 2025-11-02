@@ -285,7 +285,7 @@ export function BookingModal({
             <div className="py-4">
               {paymentProvider === 'stripe' && clientSecret && (
                 <Elements stripe={stripePromise} options={{ clientSecret }}>
-                  <StripeCheckoutForm clientSecret={clientSecret} onSuccess={handlePaymentSuccess} />
+                  <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={handlePaymentSuccess} />
                 </Elements>
               )}
               {paymentProvider === 'paypal' && orderId && (
@@ -297,8 +297,8 @@ export function BookingModal({
                     }}
                   >
                     <PayPalCheckoutButton
-                      orderId={orderId}
-                      onSuccess={handlePaymentSuccess}
+                      orderID={orderId}
+                      onPaymentSuccess={handlePaymentSuccess}
                     />
                   </PayPalScriptProvider>
                 </ClientProviders>

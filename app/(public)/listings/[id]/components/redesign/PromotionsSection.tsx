@@ -7,6 +7,7 @@ import VoucherTabContent from '@/app/(public)/listings/[id]/components/VoucherTa
 import { InHouseBusiness } from '@/service/listings/types';
 import LoyaltyContent from '@/components/LoyaltyContent';
 import GiftCardTabContent from '@/app/(public)/listings/[id]/components/GiftCardTabContent';
+import CouponTabContent from '@/app/(public)/listings/[id]/components/CouponTabContent';
 
 interface PromotionsSectionProps {
   listing: InHouseBusiness;
@@ -20,6 +21,7 @@ export default function PromotionsSection({ listing }: PromotionsSectionProps) {
 
   const availableTabs = [
     { value: 'voucher', label: 'Vouchers', enabled: voucher },
+    { value: 'coupon', label: 'Coupons', enabled: true }, // Assuming coupons are always enabled for now
     {
       value: 'loyalty',
       label: 'Loyalty & Rewards',
@@ -40,7 +42,8 @@ export default function PromotionsSection({ listing }: PromotionsSectionProps) {
   const getGridColsClass = (count: number) => {
     if (count === 1) return 'grid-cols-1';
     if (count === 2) return 'sm:grid-cols-2';
-    return 'sm:grid-cols-3';
+    if (count === 3) return 'sm:grid-cols-3';
+    return 'sm:grid-cols-4';
   };
 
   const getTabLabel = (value: string) => {
@@ -89,6 +92,9 @@ export default function PromotionsSection({ listing }: PromotionsSectionProps) {
                 <VoucherTabContent businessId={listing.id} />
               </TabsContent>
             )}
+            <TabsContent value="coupon">
+              <CouponTabContent businessId={listing.id} />
+            </TabsContent>
             {promotion && (
               <TabsContent value="loyalty">
                 <LoyaltyContent businessId={listing.id} />

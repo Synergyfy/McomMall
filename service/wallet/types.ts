@@ -10,6 +10,7 @@ export interface Wallet {
   earningsFromOrders: string;
   earningsFromGiftCard: string;
   earningsFromVoucher: string;
+  earningsFromCoupons: string;
   earningsFromBookings: string;
   pendingBalance: string;
 }

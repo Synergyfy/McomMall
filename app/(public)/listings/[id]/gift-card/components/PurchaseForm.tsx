@@ -158,7 +158,7 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     return (
       <StripeCheckoutForm
         clientSecret={purchaseResponse.clientSecret}
-        onSuccess={(paymentIntentId) => handleVerification(paymentIntentId)}
+        onPaymentSuccess={(paymentIntentId) => handleVerification(paymentIntentId)}
       />
     );
   }
@@ -167,8 +167,8 @@ const PurchaseForm = ({ template }: PurchaseFormProps) => {
     return (
       <div className="flex justify-center">
         <PayPalCheckoutButton
-          orderId={purchaseResponse.orderId}
-          onSuccess={(orderID) => handleVerification(orderID)}
+          orderID={purchaseResponse.orderId}
+          onPaymentSuccess={(orderID) => handleVerification(orderID)}
         />
       </div>
     );

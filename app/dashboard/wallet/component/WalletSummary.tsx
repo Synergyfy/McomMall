@@ -39,6 +39,7 @@ export const WalletSummary = () => {
     earningsFromGiftCard,
     earningsFromVoucher,
     earningsFromBookings,
+    earningsFromCoupons,
   } = walletData.wallet;
 
   const totalBalance =
@@ -102,6 +103,11 @@ export const WalletSummary = () => {
             title="From Bookings"
             amount={parseFloat(earningsFromBookings)}
             icon={<Briefcase size={20} />}
+          />
+          <EarningSource
+            title="From Coupons"
+            amount={parseFloat(earningsFromCoupons)}
+            icon={<Ticket size={20} />}
           />
         </div>
       </div>

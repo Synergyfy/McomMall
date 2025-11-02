@@ -64,7 +64,6 @@ export const listingMenuItems: MenuItem[] = [
       { title: 'Expired', href: '/dashboard/my-listings/expired' },
     ],
   },
-  { title: 'Coupons', href: '/dashboard/coupons', icon: ShoppingCart },
   { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
 ];
 
@@ -147,6 +146,11 @@ export const historyMenuItems: MenuItem[] = [
     href: '/dashboard/history/my-vouchers',
     icon: CreditCard,
   },
+  {
+    title: 'My Coupons',
+    href: '/dashboard/history/my-coupons',
+    icon: CreditCard,
+  },
 ];
 
 export const businessCategories = [
@@ -224,6 +228,17 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
       { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
       { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
+    ],
+  },
+  {
+    title: 'Coupons',
+    href: '/dashboard/coupons',
+    icon: Settings,
+    subMenu: [
+      { title: 'Analytics', href: '/dashboard/coupons/analytics' },
+      { title: 'Coupon Products', href: '/dashboard/coupons/products' },
+      { title: 'Sold Coupons', href: '/dashboard/coupons/sold' },
+      { title: 'Redeem Coupon', href: '/dashboard/coupons/redeem' },
     ],
   },
 ];

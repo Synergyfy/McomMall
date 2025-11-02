@@ -86,7 +86,7 @@ export default function PaymentForm({
           >
             <StripeCheckoutForm
               clientSecret={clientSecret}
-              onSuccess={onPaymentSuccess}
+              onPaymentSuccess={onPaymentSuccess}
             />
           </motion.div>
         )}
@@ -99,8 +99,8 @@ export default function PaymentForm({
             transition={{ duration: 0.3 }}
           >
             <PayPalCheckoutButton
-              orderId={orderID}
-              onSuccess={onPaymentSuccess}
+              orderID={orderID}
+              onPaymentSuccess={onPaymentSuccess}
             />
           </motion.div>
         )}
