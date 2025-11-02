@@ -8,16 +8,17 @@ import {
 import { useState } from 'react';
 import { Button } from './ui/button';
 import { toast } from 'sonner';
+import { Elements } from '@stripe/react-stripe-js';
+import { loadStripe } from '@stripe/stripe-js';
+
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
 interface StripeCheckoutFormProps {
   clientSecret: string;
   onPaymentSuccess: (transactionId: string) => void;
 }
 
-export function StripeCheckoutForm({
-  clientSecret,
-  onPaymentSuccess,
-}: StripeCheckoutFormProps) {
+function CheckoutForm({ clientSecret, onPaymentSuccess }: StripeCheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
   const [isLoading, setIsLoading] = useState(false);
@@ -56,5 +57,13 @@ export function StripeCheckoutForm({
         {isLoading ? 'Processing...' : 'Pay now'}
       </Button>
     </form>
+  );
+}
+
+export function StripeCheckoutForm({ clientSecret, onPaymentSuccess }: StripeCheckoutFormProps) {
+  return (
+    <Elements stripe={stripePromise} options={{ clientSecret }}>
+      <CheckoutForm clientSecret={clientSecret} onPaymentSuccess={onPaymentSuccess} />
+    </Elements>
   );
 }
