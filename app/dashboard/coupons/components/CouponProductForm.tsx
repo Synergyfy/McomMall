@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect } from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { Button } from '@/components/ui/button';
@@ -16,6 +16,10 @@ import {
 import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { CreateCouponProductDto, CouponProduct, UpdateCouponProductDto } from '@/service/coupon-products/types';
+import { X } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { SketchPicker } from 'react-color';
+import Image from 'next/image';
 
 const formSchema = z.object({
   name: z.string().min(2, {
@@ -30,7 +34,7 @@ const formSchema = z.object({
   bonusThreshold: z.coerce.number().optional(),
   bonusAmount: z.coerce.number().optional(),
   expiryDays: z.coerce.number().optional(),
-  backgroundImage: z.string().optional(),
+  backgroundImage: z.any().optional(),
   textColor: z.string().optional(),
 });
 
@@ -53,8 +57,8 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
         bonusThreshold: 0,
         bonusAmount: 0,
         expiryDays: 0,
-        backgroundImage: '',
-        textColor: '',
+        backgroundImage: null,
+        textColor: '#000000',
       };
     }
     return {
@@ -66,8 +70,8 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
       bonusThreshold: couponProduct.bonusThreshold ?? 0,
       bonusAmount: couponProduct.bonusAmount ?? 0,
       expiryDays: couponProduct.expiryDays ?? 0,
-      backgroundImage: couponProduct.backgroundImage ?? '',
-      textColor: couponProduct.textColor ?? '',
+      backgroundImage: couponProduct.backgroundImage ?? null,
+      textColor: couponProduct.textColor ?? '#000000',
     };
   }, [couponProduct]);
 
@@ -76,18 +80,33 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
     defaultValues: sanitizedDefaultValues,
   });
 
-  const [fixedAmounts, setFixedAmounts] = React.useState<number[]>(couponProduct?.fixedAmounts || []);
+  const [fixedAmountInput, setFixedAmountInput] = React.useState('');
+  const fixedAmounts = form.watch('fixedAmounts') || [];
+  const allowCustomAmount = form.watch('allowCustomAmount');
+  const [imagePreview, setImagePreview] = React.useState<string | null>(couponProduct?.backgroundImage || null);
 
   useEffect(() => {
     form.reset(sanitizedDefaultValues);
-    if (couponProduct) {
-      setFixedAmounts(couponProduct.fixedAmounts || []);
-    }
+    setImagePreview(couponProduct?.backgroundImage || null);
   }, [sanitizedDefaultValues, form, couponProduct]);
 
+  const handleFixedAmountKeyDown = (e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === ',' || e.key === 'Enter') {
+      e.preventDefault();
+      const value = parseFloat(fixedAmountInput.trim());
+      if (!isNaN(value) && value > 0 && !fixedAmounts.includes(value)) {
+        form.setValue('fixedAmounts', [...fixedAmounts, value]);
+      }
+      setFixedAmountInput('');
+    }
+  };
+
+  const removeFixedAmount = (amount: number) => {
+    form.setValue('fixedAmounts', fixedAmounts.filter((a) => a !== amount));
+  };
+
   function handleSubmit(values: z.infer<typeof formSchema>) {
-    const data = { ...values, fixedAmounts };
-    onSubmit(data);
+    onSubmit(values);
   }
 
   return (
@@ -121,38 +140,23 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
         />
         <div>
           <FormLabel>Fixed Amounts</FormLabel>
-          {fixedAmounts.map((amount, index) => (
-            <div key={index} className="flex items-center gap-2 mt-2">
-              <Input
-                type="number"
-                value={amount}
-                onChange={(e) => {
-                  const newAmounts = [...fixedAmounts];
-                  newAmounts[index] = Number(e.target.value);
-                  setFixedAmounts(newAmounts);
-                }}
-              />
-              <Button
-                type="button"
-                variant="destructive"
-                onClick={() => {
-                  const newAmounts = [...fixedAmounts];
-                  newAmounts.splice(index, 1);
-                  setFixedAmounts(newAmounts);
-                }}
-              >
-                Remove
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => setFixedAmounts([...fixedAmounts, 0])}
-            className="mt-2"
-          >
-            Add Fixed Amount
-          </Button>
+          <Input
+            value={fixedAmountInput}
+            onChange={(e) => setFixedAmountInput(e.target.value)}
+            onKeyDown={handleFixedAmountKeyDown}
+            placeholder="Enter amount and press , or Enter"
+            className="mt-1"
+          />
+          <div className="flex flex-wrap gap-2 mt-2">
+            {fixedAmounts.map((amount) => (
+              <div key={amount} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
+                £{amount}
+                <button type="button" onClick={() => removeFixedAmount(amount)} className="ml-2">
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+            ))}
+          </div>
         </div>
         <FormField
           control={form.control}
@@ -171,32 +175,36 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
             </FormItem>
           )}
         />
-        <FormField
-          control={form.control}
-          name="minCustomAmount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Min Custom Amount</FormLabel>
-              <FormControl>
-                <Input type="number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
-        <FormField
-          control={form.control}
-          name="maxCustomAmount"
-          render={({ field }) => (
-            <FormItem>
-              <FormLabel>Max Custom Amount</FormLabel>
-              <FormControl>
-                <Input type="number" {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
+        {allowCustomAmount && (
+          <>
+            <FormField
+              control={form.control}
+              name="minCustomAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Min Custom Amount</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="maxCustomAmount"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Max Custom Amount</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </>
+        )}
         <FormField
           control={form.control}
           name="allowReloading"
@@ -258,23 +266,47 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
           name="backgroundImage"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Background Image URL</FormLabel>
+              <FormLabel>Background Image</FormLabel>
               <FormControl>
-                <Input placeholder="https://example.com/image.png" {...field} />
+                <Input
+                  type="file"
+                  onChange={(e) => {
+                    const file = e.target.files?.[0];
+                    if (file) {
+                      field.onChange(e.target.files);
+                      setImagePreview(URL.createObjectURL(file));
+                    }
+                  }}
+                />
               </FormControl>
               <FormMessage />
             </FormItem>
           )}
         />
+        {imagePreview && (
+          <div className="mt-4">
+            <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+          </div>
+        )}
         <FormField
           control={form.control}
           name="textColor"
           render={({ field }) => (
             <FormItem>
               <FormLabel>Text Color</FormLabel>
-              <FormControl>
-                <Input placeholder="#FFFFFF" {...field} />
-              </FormControl>
+              <Popover>
+                <PopoverTrigger asChild>
+                  <FormControl>
+                    <Button variant="outline" className="w-full justify-start text-left font-normal">
+                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: field.value }} />
+                      {field.value}
+                    </Button>
+                  </FormControl>
+                </PopoverTrigger>
+                <PopoverContent className="p-0">
+                  <SketchPicker color={field.value} onChangeComplete={(color) => field.onChange(color.hex)} />
+                </PopoverContent>
+              </Popover>
               <FormMessage />
             </FormItem>
           )}

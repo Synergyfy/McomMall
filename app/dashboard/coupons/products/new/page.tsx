@@ -6,21 +6,44 @@ import { CouponCardPreview } from '@/app/dashboard/coupons/components/CouponCard
 import { CreateCouponProductDto, UpdateCouponProductDto } from '@/service/coupon-products/types';
 import { useCreateCouponProduct } from '@/service/coupon-products/hooks';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 const NewCouponProductPage = () => {
   const form = useForm<CreateCouponProductDto>();
   const createCouponProduct = useCreateCouponProduct();
+  const router = useRouter();
+  const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const handleSubmit = (data: CreateCouponProductDto | UpdateCouponProductDto) => {
-    createCouponProduct.mutate(data as CreateCouponProductDto, {
-      onSuccess: () => {
-        toast.success('Coupon product created successfully!');
-        form.reset();
-      },
-      onError: () => {
-        toast.error('Failed to create coupon product.');
-      },
-    });
+  const handleSubmit = async (data: CreateCouponProductDto | UpdateCouponProductDto) => {
+    setIsSubmitting(true);
+    try {
+      let imageUrl: string | undefined;
+      if (data.backgroundImage && data.backgroundImage.length > 0) {
+        const file = data.backgroundImage[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/upload/coupons', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Failed to upload image');
+        }
+
+        const result = await response.json();
+        imageUrl = result.secure_url;
+      }
+
+      await createCouponProduct.mutateAsync({ ...data, backgroundImage: imageUrl } as CreateCouponProductDto);
+      toast.success('Coupon product created successfully!');
+      router.push('/dashboard/coupons/products');
+    } catch (error) {
+      toast.error('An error occurred while creating the coupon product.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
