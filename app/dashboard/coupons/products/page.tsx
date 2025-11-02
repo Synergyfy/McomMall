@@ -3,16 +3,8 @@
 import React, { useState } from 'react';
 import { useGetCouponProducts, useDeleteCouponProduct } from '@/service/coupon-products/hooks';
 import { Button } from '@/components/ui/button';
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { useRouter } from 'next/navigation';
-import { Loader, Edit, Trash2 } from 'lucide-react';
+import { Loader } from 'lucide-react';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -24,6 +16,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { toast } from 'sonner';
+import { CouponProductCard } from '@/app/dashboard/coupons/components/CouponProductCard';
 
 const CouponProductsPage = () => {
   const { data: couponProducts, isLoading } = useGetCouponProducts();
@@ -67,43 +60,15 @@ const CouponProductsPage = () => {
           Add New Coupon Product
         </Button>
       </div>
-      <Table>
-        <TableHeader>
-          <TableRow>
-            <TableHead>Name</TableHead>
-            <TableHead>Description</TableHead>
-            <TableHead>Enabled</TableHead>
-            <TableHead>Actions</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {couponProducts?.map((product) => (
-            <TableRow key={product.id}>
-              <TableCell>{product.name}</TableCell>
-              <TableCell>{product.description}</TableCell>
-              <TableCell>{product.isEnabled ? 'Yes' : 'No'}</TableCell>
-              <TableCell>
-                <div className="flex gap-2">
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    onClick={() => router.push(`/dashboard/coupons/products/edit/${product.id}`)}
-                  >
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button
-                    variant="destructive"
-                    size="icon"
-                    onClick={() => handleDeleteClick(product.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </TableCell>
-            </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {couponProducts?.map((product) => (
+          <CouponProductCard
+            key={product.id}
+            product={product}
+            onDelete={handleDeleteClick}
+          />
+        ))}
+      </div>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
           <AlertDialogHeader>
