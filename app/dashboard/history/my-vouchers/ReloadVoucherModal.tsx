@@ -164,10 +164,10 @@ export const ReloadVoucherModal: React.FC<ReloadVoucherModalProps> = ({
           </form>
         ) : clientSecret ? (
           <Elements stripe={stripePromise} options={{ clientSecret }}>
-            <StripeCheckoutForm clientSecret={clientSecret} onSuccess={onPaymentSuccess} />
+            <StripeCheckoutForm clientSecret={clientSecret} onPaymentSuccess={onPaymentSuccess} />
           </Elements>
         ) : orderId ? (
-          <PayPalCheckoutButton orderId={orderId} onSuccess={onPaymentSuccess} />
+          <PayPalCheckoutButton orderID={orderId} onPaymentSuccess={onPaymentSuccess} />
         ) : null}
       </DialogContent>
     </Dialog>

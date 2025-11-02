@@ -247,7 +247,7 @@ const GroupDetailsClient = ({ groupId }: { groupId: string }) => {
                 {clientSecret && (
                     <StripeCheckoutForm
                         clientSecret={clientSecret}
-                        onSuccess={handlePaymentSuccess}
+                        onPaymentSuccess={handlePaymentSuccess}
                     />
                 )}
             </DialogContent>

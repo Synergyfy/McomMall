@@ -7,13 +7,13 @@ import {
 import { toast } from 'sonner';
 
 interface PayPalCheckoutButtonProps {
-  orderId: string;
-  onSuccess: (transactionId: string) => void;
+  orderID: string;
+  onPaymentSuccess: (transactionId: string) => void;
 }
 
 export function PayPalCheckoutButton({
-  orderId,
-  onSuccess,
+  orderID,
+  onPaymentSuccess,
 }: PayPalCheckoutButtonProps) {
   const [{ isPending }] = usePayPalScriptReducer();
 
@@ -24,13 +24,13 @@ export function PayPalCheckoutButton({
       ) : (
         <PayPalButtons
           createOrder={(data, actions) => {
-            return Promise.resolve(orderId);
+            return Promise.resolve(orderID);
           }}
           onApprove={async (data, actions) => {
             if (actions.order) {
               const details = await actions.order.capture();
               if (details.id) {
-                onSuccess(details.id);
+                onPaymentSuccess(details.id);
               } else {
                 toast.error('Transaction ID not found.');
               }

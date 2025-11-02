@@ -98,6 +98,7 @@ export interface User {
   giftCard: boolean;
   voucher: boolean;
   promotion: boolean;
+  coupon?: boolean;
 }
 
 interface Category {

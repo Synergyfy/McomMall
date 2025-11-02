@@ -11,12 +11,12 @@ import { toast } from 'sonner';
 
 interface StripeCheckoutFormProps {
   clientSecret: string;
-  onSuccess: (transactionId: string) => void;
+  onPaymentSuccess: (transactionId: string) => void;
 }
 
 export function StripeCheckoutForm({
   clientSecret,
-  onSuccess,
+  onPaymentSuccess,
 }: StripeCheckoutFormProps) {
   const stripe = useStripe();
   const elements = useElements();
@@ -43,7 +43,7 @@ export function StripeCheckoutForm({
     }
 
     if (paymentIntent) {
-      onSuccess(paymentIntent.id);
+      onPaymentSuccess(paymentIntent.id);
     }
 
     setIsLoading(false);

@@ -136,14 +136,14 @@ const FundWallet: React.FC<FundWalletProps> = ({ isOpen, onClose }) => {
           {provider === 'stripe' && clientSecret && (
             <StripeCheckoutForm
               clientSecret={clientSecret}
-              onSuccess={handleVerifyFund}
+              onPaymentSuccess={handleVerifyFund}
             />
           )}
 
           {provider === 'paypal' && orderId && (
             <PayPalCheckoutButton
-              orderId={orderId}
-              onSuccess={handleVerifyFund}
+              orderID={orderId}
+              onPaymentSuccess={handleVerifyFund}
             />
           )}
         </div>
