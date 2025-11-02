@@ -5,8 +5,9 @@ import { useGetPublicCouponProductsByBusiness } from '@/service/coupon-products/
 import { CouponProduct } from '@/service/coupon-products/types';
 import { Button } from '@/components/ui/button';
 import { CURRENCY } from '@/lib/utils';
-// import CouponPurchaseModal from './CouponPurchaseModal';
-// import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
+import CouponPurchaseModal from './CouponPurchaseModal';
+import { Coupon } from '@/service/my-coupons/types';
+import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
 
 interface CouponTabContentProps {
   businessId: string;
@@ -25,7 +26,7 @@ export default function CouponTabContent({
   const [selectedProduct, setSelectedProduct] = useState<CouponProduct | null>(
     null
   );
-  // const [purchasedCoupon, setPurchasedCoupon] = useState<Coupon | null>(null);
+  const [purchasedCoupon, setPurchasedCoupon] = useState<Coupon | null>(null);
 
   if (isLoading) {
     return (
@@ -72,15 +73,15 @@ export default function CouponTabContent({
     setSelectedProduct(null);
   };
 
-  // const handlePurchaseSuccess = (coupon: Coupon) => {
-  //   handleClosePurchaseModal();
-  //   setPurchasedCoupon(coupon);
-  //   setIsSuccessModalOpen(true);
-  // };
+  const handlePurchaseSuccess = (coupon: Coupon) => {
+    handleClosePurchaseModal();
+    setPurchasedCoupon(coupon);
+    setIsSuccessModalOpen(true);
+  };
 
   const handleCloseSuccessModal = () => {
     setIsSuccessModalOpen(false);
-    // setPurchasedCoupon(null);
+    setPurchasedCoupon(null);
   };
 
   return (
@@ -139,7 +140,7 @@ export default function CouponTabContent({
         ))}
       </div>
 
-      {/* {selectedProduct && (
+      {selectedProduct && (
         <CouponPurchaseModal
           product={selectedProduct}
           isOpen={isPurchaseModalOpen}
@@ -155,7 +156,7 @@ export default function CouponTabContent({
           couponCode={purchasedCoupon.code}
           recipientEmail={purchasedCoupon.recipientEmail}
         />
-      )} */}
+      )}
     </>
   );
 }

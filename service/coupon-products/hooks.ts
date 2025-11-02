@@ -37,6 +37,26 @@ export const useCreateCouponProduct = () => {
   });
 };
 
+export const useInitiateCouponPurchase = () => {
+  return useMutation({
+    mutationFn: (data: { couponProductId: string; amount: number; paymentMethod: 'stripe' | 'paypal' }) => {
+      return api.post('/coupons/initiate-purchase', data);
+    },
+  });
+};
+
+export const useVerifyCouponPurchase = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: { purchaseDetails: any; paymentProvider: 'stripe' | 'paypal'; transactionId: string }) => {
+      return api.post('/coupons/verify-purchase', data);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['my-coupons'] });
+    },
+  });
+};
+
 export const useGetPublicCouponProductsByBusiness = (businessId: string) => {
   return useQuery<CouponProduct[]>({
     queryKey: ['public-coupon-products', businessId],

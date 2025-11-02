@@ -1,4 +1,3 @@
-import { CouponProduct } from "@/service/coupon-products/types";
 
 export interface Coupon {
   id: string;
@@ -7,20 +6,11 @@ export interface Coupon {
   balance: number;
   status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled';
   expiresAt: Date | null;
-  buyer: any; // The user who purchased the coupon
-  owner: any; // The business owner who created the template
-  couponProduct: CouponProduct;
-}
-
-export interface InitiateReloadDto {
-  amount: number;
-  paymentMethod: 'stripe' | 'paypal';
-}
-
-export interface VerifyReloadDto {
-  transactionId: string;
-  amount: number;
-  paymentProvider: 'stripe' | 'paypal';
+  buyer: any; // User
+  owner: any; // User
+  recipientName?: string;
+  recipientEmail?: string;
+  couponProduct: any; // CouponProduct
 }
 
 export interface InitiateCouponPurchaseDto {
@@ -38,6 +28,17 @@ export interface VerifyCouponPurchaseDto {
     personalMessage?: string;
     deliveryDate?: Date;
   };
+  paymentProvider: 'stripe' | 'paypal';
+  transactionId: string;
+}
+
+export interface InitiateReloadDto {
+  amount: number;
+  paymentMethod: 'stripe' | 'paypal';
+}
+
+export interface VerifyReloadDto {
+  amount: number;
   paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
 }
