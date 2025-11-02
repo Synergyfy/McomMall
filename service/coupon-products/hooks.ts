@@ -37,6 +37,14 @@ export const useCreateCouponProduct = () => {
   });
 };
 
+export const useGetPublicCouponProductsByBusiness = (businessId: string) => {
+  return useQuery<CouponProduct[]>({
+    queryKey: ['public-coupon-products', businessId],
+    queryFn: () => api.get(`/coupons/products/business/${businessId}`).then(res => res.data),
+    enabled: !!businessId,
+  });
+};
+
 export const useEditCouponProduct = (id: string) => {
   const queryClient = useQueryClient();
   return useMutation({
