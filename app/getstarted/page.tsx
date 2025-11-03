@@ -44,10 +44,9 @@ export default function GetStartedPage() {
         <h1 className="text-4xl font-bold">Lets Make living life easier.</h1>
       </div>
 
-      {/* Left Section (60%) */}
+      {/* Left Section (40%) */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5"
-        style={{ clipPath: 'polygon(0 0, 100% 0, 95% 100%, 0 100%)' }}
+        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
       >
         <Image
           src="/getstartedpage/getstartedimage.jpg"
@@ -100,10 +99,9 @@ export default function GetStartedPage() {
         </div>
       </div>
 
-      {/* Right Section (40%) */}
+      {/* Right Section (60%) */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
-        style={{ clipPath: 'polygon(5% 0, 100% 0, 100% 100%, 0 100%)' }}
+        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5"
       >
         <Image
           src="/getstartedpage/getstartedimage.jpg"
