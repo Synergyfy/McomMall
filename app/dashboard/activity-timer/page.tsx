@@ -94,30 +94,30 @@ const ActivityTimerPage: FC = () => {
     { title: string; description: string; url: string }
   > = {
     createdBusiness: {
-      title: "Create a business profile",
+      title: "Add Business Listing",
       description:
-        "You need a business profile to start selling. Create one now.",
-      url: "/dashboard/my-profile",
+        "What it means: Create a profile for your business to start selling.",
+      url: "/dashboard/add-listing",
     },
     createdProductOrService: {
-      title: "Add your first product or service",
-      description: "Add your first product or service to your store.",
-      url: "/dashboard/services/add-service",
+      title: "Import your Contact Information",
+      description: "What it means: Upload your contact database that you will like to let them know your offer on MCOM.",
+      url: "/dashboard/my-profile",
     },
     createdPromotion: {
-      title: "Create a special promotion",
-      description: "Create a special promotion to attract customers.",
-      url: "/dashboard/loyalty/promotion/new",
+      title: "Add at least 1 product/service",
+      description: "What it means: The business creates a product or service listing on the platform. How we check it: The system looks for at least one active product linked to the account.",
+      url: "/dashboard/services/add-service",
     },
     createdOffer: {
-      title: "Launch an exciting offer",
-      description: "Launch an exciting offer to get more sales.",
-      url: "/dashboard/loyalty/offers/new",
+      title: "List at least 1 barter offer",
+      description: "What it means: The business publishes an offer they will barter or exchange with others. How we check it: The system checks that a barter offer record exists and is active.",
+      url: "/dashboard/add-listing",
     },
     createdCoupon: {
-      title: "Generate a discount coupon",
-      description: "Generate a discount coupon to reward your customers.",
-      url: "/dashboard/coupons/new",
+      title: "Connect with at least 1 other business",
+      description: "What it means: The business sends or accepts a connection (network) request with another verified business. How we check it: The system looks for at least one confirmed connection between accounts.",
+      url: "/dashboard/messages",
     },
   };
 
