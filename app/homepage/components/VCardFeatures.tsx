@@ -137,7 +137,10 @@ export default function VCardFeaturesSection() {
   Button.displayName = 'Button';
 
   return (
-    <section className="bg-gray-50 w-full py-16 md:py-24">
+    <section
+      className="bg-gray-50 w-full py-16 md:py-24"
+      style={{ clipPath: 'polygon(0 5vw, 100% 0, 100% 100%, 0 100%)' }}
+    >
       <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
         {/* Header */}
         <div className="flex items-center justify-between mb-8 md:mb-12">
