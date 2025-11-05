@@ -60,16 +60,23 @@ export const useGetTrialStatus = () => {
         isTrialPausable,
       };
     } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      // Don't throw an error for 404, it just means no trial exists
-      if (err.response?.status === 404) {
-        return null;
-      }
-      throw new Error(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch trial status'
-      );
+      console.error("Failed to fetch trial status:", error);
+      // Return a default/mock object on error to prevent UI crashing
+      return {
+        isActive: false,
+        remainingTime: 0,
+        tasks: {
+          createdBusiness: false,
+          createdProductOrService: false,
+          createdPromotion: false,
+          createdOffer: false,
+          createdCoupon: false,
+        },
+        pauses: [],
+        isPaused: false,
+        isTrialPausable: false,
+        remainingPauses: 0,
+      };
     }
   };
 
