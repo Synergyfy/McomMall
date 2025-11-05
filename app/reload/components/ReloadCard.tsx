@@ -3,6 +3,22 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import React, { useState, useEffect } from 'react';
+import { useGetMyPurchaseById } from '@/service/gift-card/hook';
+import { useGetMyVoucherById } from '@/service/hooks/useVoucherService';
+import { useGetCoupon } from '@/service/coupons/hook';
+import { useInitiateFund } from '@/service/wallet/hooks/useInitiateFund';
+import { useVerifyFund } from '@/service/wallet/hooks/useVerifyFund';
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { toast } from 'sonner';
+import { Loader } from 'lucide-react';
 
 interface ReloadCardProps {
   type: 'giftcard' | 'voucher' | 'coupon';
@@ -10,51 +26,93 @@ interface ReloadCardProps {
 }
 
 const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
-  const [amount, setAmount] = useState('');
-  const [isReloaded, setIsReloaded] = useState(false);
-  const [cardDetails, setCardDetails] = useState({
-    title: '',
-    balance: 0,
-    image: '',
-  });
+  const [amount, setAmount] = useState(0);
+  const [provider, setProvider] = useState<'stripe' | 'paypal'>('stripe');
+  const [clientSecret, setClientSecret] = useState<string | null>(null);
+  const [orderId, setOrderId] = useState<string | null>(null);
+  const [isProcessing, setIsProcessing] = useState(false);
+  const initiateFund = useInitiateFund();
+  const verifyFund = useVerifyFund();
 
-  useEffect(() => {
-    // Mock data fetching based on type, using cardId to generate unique details
-    const hashCode = (s: string) =>
-      s.split('').reduce((a, b) => {
-        a = (a << 5) - a + b.charCodeAt(0);
-        return a & a;
-      }, 0);
+  const { data: giftCard, isLoading: isLoadingGiftCard } = useGetMyPurchaseById(
+    cardId
+  );
+  const { myVoucher, isLoading: isLoadingVoucher } = useGetMyVoucherById(
+    cardId
+  );
+  const { coupon, isLoading: isLoadingCoupon } = useGetCoupon(cardId);
 
-    const mockData = {
-      giftcard: {
-        title: 'Gift Card',
-        balance: 100 + (hashCode(cardId) % 50),
-        image: `https://placehold.co/600x400/orange/white?text=Gift+Card\\n${cardId}`,
-      },
-      voucher: {
-        title: 'Voucher',
-        balance: 50 + (hashCode(cardId) % 25),
-        image: `https://placehold.co/600x400/blue/white?text=Voucher\\n${cardId}`,
-      },
-      coupon: {
-        title: 'Coupon',
-        balance: 25 + (hashCode(cardId) % 10),
-        image: `https://placehold.co/600x400/green/white?text=Coupon\\n${cardId}`,
-      },
-    };
-    if (mockData[type]) {
-      setCardDetails(mockData[type]);
-    }
-  }, [type, cardId]);
-
-  const handleReload = (e: React.FormEvent) => {
-    e.preventDefault();
-    // payment logic here
-    setIsReloaded(true);
+  const cardDetails = {
+    giftcard: {
+      title: 'Gift Card',
+      balance: giftCard?.balance,
+      image: giftCard?.giftCardTemplate?.backgroundImage,
+    },
+    voucher: {
+      title: 'Voucher',
+      balance: myVoucher?.balance,
+      image: myVoucher?.voucherProduct?.backgroundImage,
+    },
+    coupon: {
+      title: 'Coupon',
+      balance: coupon?.balance,
+      image: coupon?.couponProduct?.backgroundImage,
+    },
   };
 
-  if (!cardDetails.title) {
+  const currentCard = cardDetails[type];
+  const isLoading = isLoadingGiftCard || isLoadingVoucher || isLoadingCoupon;
+
+  const handleInitiateFund = async () => {
+    if (amount < 10) {
+      toast.error('Minimum reload amount is 10 GBP');
+      return;
+    }
+    initiateFund.mutate(
+      { amount, paymentProvider: provider },
+      {
+        onSuccess: (data) => {
+          if (data.clientSecret) {
+            setClientSecret(data.clientSecret);
+          }
+          if (data.orderId) {
+            setOrderId(data.orderId);
+          }
+        },
+        onError: (error) => {
+          toast.error(`Error initiating reload: ${error.message}`);
+        },
+      }
+    );
+  };
+
+  const handleVerifyFund = async (transactionId: string) => {
+    setIsProcessing(true);
+    verifyFund.mutate(
+      { transactionId, amount, paymentProvider: provider },
+      {
+        onSuccess: () => {
+          toast.success('Reload successful');
+          setIsProcessing(false);
+          // TODO: Invalidate queries to refetch card balance
+        },
+        onError: (error) => {
+          toast.error(`Error verifying reload: ${error.message}`);
+          setIsProcessing(false);
+        },
+      }
+    );
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <Loader className="animate-spin text-orange-600" size={48} />
+      </div>
+    );
+  }
+
+  if (!currentCard.balance) {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-red-500">Card not found</h1>
@@ -65,54 +123,82 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
       <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md">
+        {isProcessing && (
+          <div className="absolute inset-0 bg-white bg-opacity-75 flex flex-col items-center justify-center z-10">
+            <Loader className="animate-spin text-orange-600" size={48} />
+            <p className="mt-4 text-lg font-semibold text-gray-700">
+              Processing payment... Please do not close this page.
+            </p>
+          </div>
+        )}
         <div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Reload Your {cardDetails.title}
+          <h2 className="mt-6 text-center text-4xl font-extrabold text-gray-900">
+            Reload Your {currentCard.title}
           </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
+          <p className="mt-2 text-center text-lg text-gray-600">
             You are reloading this {type}. Please enter the amount you would
             like to add and complete the payment below.
           </p>
         </div>
         <div className="flex flex-col items-center">
           <img
-            src={cardDetails.image}
-            alt={cardDetails.title}
-            className="w-48 h-auto"
+            src={currentCard.image}
+            alt={currentCard.title}
+            className="w-64 h-auto"
           />
-          <h3 className="text-xl font-bold">{cardDetails.title}</h3>
-          <p className="text-lg">Balance: ₦{cardDetails.balance}</p>
+          <h3 className="text-2xl font-bold">{currentCard.title}</h3>
+          <p className="text-xl">Balance: ₦{currentCard.balance}</p>
         </div>
-        {!isReloaded ? (
-          <form className="space-y-6" onSubmit={handleReload}>
-            <div>
-              <Label htmlFor="amount">Amount</Label>
+        {!clientSecret && !orderId && (
+          <>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="amount">Amount (GBP)</Label>
               <Input
                 id="amount"
-                name="amount"
                 type="number"
-                required
-                className="w-full px-3 py-2 border border-gray-300 rounded-md"
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={(e) => setAmount(parseFloat(e.target.value))}
               />
             </div>
+            <div className="flex flex-col gap-3">
+              <Label htmlFor="provider">Payment Provider</Label>
+              <Select
+                onValueChange={(value: 'stripe' | 'paypal') =>
+                  setProvider(value)
+                }
+                defaultValue={provider}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select a payment provider" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="stripe">Stripe</SelectItem>
+                  <SelectItem value="paypal">PayPal</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
             <Button
-              type="submit"
-              className="w-full py-2 px-4 bg-indigo-600 text-white rounded-md"
+              onClick={handleInitiateFund}
+              disabled={initiateFund.isPending}
+              className="w-full"
             >
-              Proceed to Payment
+              {initiateFund.isPending ? 'Processing...' : 'Continue'}
             </Button>
-          </form>
-        ) : (
-          <div className="text-center">
-            <h3 className="text-2xl font-bold text-green-500">
-              Reload Successful!
-            </h3>
-            <p className="text-lg">
-              New Balance: ₦{cardDetails.balance + Number(amount)}
-            </p>
-          </div>
+          </>
+        )}
+
+        {provider === 'stripe' && clientSecret && (
+          <StripeCheckoutForm
+            clientSecret={clientSecret}
+            onPaymentSuccess={handleVerifyFund}
+          />
+        )}
+
+        {provider === 'paypal' && orderId && (
+          <PayPalCheckoutButton
+            orderID={orderId}
+            onPaymentSuccess={handleVerifyFund}
+          />
         )}
       </div>
     </div>

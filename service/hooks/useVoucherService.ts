@@ -102,6 +102,20 @@ export const useDeleteVoucherProduct = () => {
 };
 
 // Hook for a customer to get their own vouchers
+export const useGetMyVoucherById = (id: string) => {
+  const {
+    data: myVoucher,
+    isLoading,
+    isError,
+  } = useQuery({
+    queryKey: ['myVoucher', id],
+    queryFn: () => getMyVoucherById(id),
+    enabled: !!id,
+  });
+
+  return { myVoucher, isLoading, isError };
+};
+
 export const useGetMyVouchers = () => {
   const {
     data: myVouchers,
