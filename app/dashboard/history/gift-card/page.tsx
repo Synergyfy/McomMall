@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useGetMyPurchases } from "@/service/gift-card/hook";
 import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import GiftCard from "./components/GiftCard";
 import ReloadModal from "./components/ReloadModal";
@@ -12,6 +12,7 @@ import ReloadModal from "./components/ReloadModal";
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<MyPurchase | null>(
     null
   );
@@ -21,6 +22,15 @@ const GiftCardHistoryPage = () => {
       setCopiedCode(code);
       toast.success("Copied to clipboard!");
       setTimeout(() => setCopiedCode(null), 2000);
+    });
+  };
+
+  const handleShare = (purchase: MyPurchase) => {
+    const shareLink = `${window.location.origin}/reload/giftcard/${purchase.id}`;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setCopiedLink(purchase.id);
+      toast.success("Share link copied!");
+      setTimeout(() => setCopiedLink(null), 2000);
     });
   };
 
@@ -81,12 +91,22 @@ const GiftCardHistoryPage = () => {
                 </div>
 
                 {purchase.isReloadable && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex items-center gap-2">
                     <button
                       onClick={() => setSelectedPurchase(purchase)}
                       className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
                     >
                       Reload Gift Card
+                    </button>
+                    <button
+                      onClick={() => handleShare(purchase)}
+                      className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                    >
+                      {copiedLink === purchase.id ? (
+                        <Check size={16} />
+                      ) : (
+                        <Share2 size={16} />
+                      )}
                     </button>
                   </div>
                 )}

@@ -4,6 +4,8 @@ import React from 'react';
 import { Coupon } from '@/service/my-coupons/types';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
+import { Share2, Check } from 'lucide-react';
+import { toast } from 'sonner';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -11,6 +13,16 @@ interface CouponCardProps {
 }
 
 export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
+  const [copiedLink, setCopiedLink] = React.useState<string | null>(null);
+
+  const handleShare = (coupon: Coupon) => {
+    const shareLink = `${window.location.origin}/reload/coupon/${coupon.id}`;
+    navigator.clipboard.writeText(shareLink).then(() => {
+      setCopiedLink(coupon.id);
+      toast.success("Share link copied!");
+      setTimeout(() => setCopiedLink(null), 2000);
+    });
+  };
   const { couponProduct } = coupon;
   const cardStyle = {
     backgroundColor: couponProduct.backgroundImage ? 'transparent' : '#f0f0f0',
@@ -45,7 +57,21 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
           </p>
         </div>
         {couponProduct.allowReloading && (
-          <Button onClick={() => onReload(coupon)}>Reload</Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => onReload(coupon)}>Reload</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleShare(coupon)}
+              className="p-2"
+            >
+              {copiedLink === coupon.id ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Share2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>
