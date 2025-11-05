@@ -10,7 +10,7 @@ const mockProducts = [
     name: 'iPhone 13',
     category: 'Electronics',
     description: 'The latest iPhone with a stunning display.',
-    image: 'https://placehold.co/600x400/png',
+    image: 'marketplace/assets/iphone13.jpg',
   },
   {
     id: 2,
