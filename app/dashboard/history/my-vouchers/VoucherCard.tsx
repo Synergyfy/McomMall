@@ -6,25 +6,14 @@ import { QRCode } from 'react-qrcode-logo';
 import { Button } from '@/components/ui/button';
 import { PlusCircle, Share2, Check } from 'lucide-react';
 import { ReloadVoucherModal } from './ReloadVoucherModal';
+import { useShareLink } from '@/lib/hooks/useShareLink';
 
 interface VoucherCardProps {
   voucher: Voucher;
 }
 
-import { toast } from 'sonner';
-
 export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
-  const [copiedLink, setCopiedLink] = React.useState<string | null>(null);
-
-  const handleShare = (voucher: Voucher) => {
-    const shareLink = `${window.location.origin}/reload/voucher/${voucher.id}`;
-    navigator.clipboard.writeText(shareLink).then(() => {
-      setCopiedLink(voucher.id);
-      toast.success("Share link copied!");
-      setTimeout(() => setCopiedLink(null), 2000);
-    });
-  };
-
+  const { copiedLink, handleShare } = useShareLink();
   return (
     <div
       className="w-full aspect-[1.586] rounded-xl shadow-lg p-6 flex flex-col justify-between bg-cover bg-center"
@@ -70,7 +59,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
           <Button
             variant="outline"
             size="sm"
-            onClick={() => handleShare(voucher)}
+            onClick={() => handleShare('voucher', voucher.id)}
             className="p-2"
           >
             {copiedLink === voucher.id ? (

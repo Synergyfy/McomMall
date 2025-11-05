@@ -10,7 +10,7 @@ interface ReloadCardProps {
 }
 
 const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
-  const [amount, setAmount]       = useState('');
+  const [amount, setAmount] = useState('');
   const [isReloaded, setIsReloaded] = useState(false);
   const [cardDetails, setCardDetails] = useState({
     title: '',
@@ -19,34 +19,32 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
   });
 
   useEffect(() => {
-    // Mock data fetching
+    // Mock data fetching based on type, using cardId to generate unique details
+    const hashCode = (s: string) =>
+      s.split('').reduce((a, b) => {
+        a = (a << 5) - a + b.charCodeAt(0);
+        return a & a;
+      }, 0);
+
     const mockData = {
       giftcard: {
-        '123': {
-          title: 'Gift Card',
-          balance: 100,
-          image: '/placeholder.svg',
-        },
+        title: 'Gift Card',
+        balance: 100 + (hashCode(cardId) % 50),
+        image: `https://placehold.co/600x400/orange/white?text=Gift+Card\\n${cardId}`,
       },
       voucher: {
-        '456': {
-          title: 'Voucher',
-          balance: 50,
-          image: '/placeholder.svg',
-        },
+        title: 'Voucher',
+        balance: 50 + (hashCode(cardId) % 25),
+        image: `https://placehold.co/600x400/blue/white?text=Voucher\\n${cardId}`,
       },
       coupon: {
-        '789': {
-          title: 'Coupon',
-          balance: 25,
-          image: '/placeholder.svg',
-        },
+        title: 'Coupon',
+        balance: 25 + (hashCode(cardId) % 10),
+        image: `https://placehold.co/600x400/green/white?text=Coupon\\n${cardId}`,
       },
     };
-    // @ts-ignore
-    if (mockData[type] && mockData[type][cardId]) {
-      // @ts-ignore
-      setCardDetails(mockData[type][cardId]);
+    if (mockData[type]) {
+      setCardDetails(mockData[type]);
     }
   }, [type, cardId]);
 

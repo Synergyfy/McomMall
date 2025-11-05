@@ -8,29 +8,21 @@ import { Copy, Check, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import GiftCard from "./components/GiftCard";
 import ReloadModal from "./components/ReloadModal";
+import { useShareLink } from "@/lib/hooks/useShareLink";
 
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
   const [copiedCode, setCopiedCode] = useState<string | null>(null);
-  const [copiedLink, setCopiedLink] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<MyPurchase | null>(
     null
   );
+  const { copiedLink, handleShare } = useShareLink();
 
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
       setCopiedCode(code);
       toast.success("Copied to clipboard!");
       setTimeout(() => setCopiedCode(null), 2000);
-    });
-  };
-
-  const handleShare = (purchase: MyPurchase) => {
-    const shareLink = `${window.location.origin}/reload/giftcard/${purchase.id}`;
-    navigator.clipboard.writeText(shareLink).then(() => {
-      setCopiedLink(purchase.id);
-      toast.success("Share link copied!");
-      setTimeout(() => setCopiedLink(null), 2000);
     });
   };
 
@@ -99,7 +91,7 @@ const GiftCardHistoryPage = () => {
                       Reload Gift Card
                     </button>
                     <button
-                      onClick={() => handleShare(purchase)}
+                      onClick={() => handleShare('giftcard', purchase.id)}
                       className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
                     >
                       {copiedLink === purchase.id ? (

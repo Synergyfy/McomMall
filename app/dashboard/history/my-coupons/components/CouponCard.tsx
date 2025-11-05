@@ -5,7 +5,7 @@ import { Coupon } from '@/service/my-coupons/types';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
 import { Share2, Check } from 'lucide-react';
-import { toast } from 'sonner';
+import { useShareLink } from '@/lib/hooks/useShareLink';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -13,16 +13,7 @@ interface CouponCardProps {
 }
 
 export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
-  const [copiedLink, setCopiedLink] = React.useState<string | null>(null);
-
-  const handleShare = (coupon: Coupon) => {
-    const shareLink = `${window.location.origin}/reload/coupon/${coupon.id}`;
-    navigator.clipboard.writeText(shareLink).then(() => {
-      setCopiedLink(coupon.id);
-      toast.success("Share link copied!");
-      setTimeout(() => setCopiedLink(null), 2000);
-    });
-  };
+  const { copiedLink, handleShare } = useShareLink();
   const { couponProduct } = coupon;
   const cardStyle = {
     backgroundColor: couponProduct.backgroundImage ? 'transparent' : '#f0f0f0',
@@ -62,7 +53,7 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => handleShare(coupon)}
+              onClick={() => handleShare('coupon', coupon.id)}
               className="p-2"
             >
               {copiedLink === coupon.id ? (
