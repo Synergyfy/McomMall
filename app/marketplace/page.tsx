@@ -10,42 +10,42 @@ const mockProducts = [
     name: 'iPhone 13',
     category: 'Electronics',
     description: 'The latest iPhone with a stunning display.',
-    image: '/images/mock/iphone13.jpg', // Placeholder image path
+    image: 'https://placehold.co/600x400/png',
   },
   {
     id: 2,
     name: 'Men’s Sneakers',
     category: 'Fashion',
     description: 'Comfortable and stylish sneakers for everyday wear.',
-    image: '/images/mock/sneakers.jpg',
+    image: 'https://placehold.co/600x400/png',
   },
   {
     id: 3,
     name: 'Luxury Watch',
     category: 'Fashion',
     description: 'An elegant timepiece for any occasion.',
-    image: '/images/mock/watch.jpg',
+    image: 'https://placehold.co/600x400/png',
   },
   {
     id: 4,
     name: 'Wireless Headphones',
     category: 'Electronics',
     description: 'High-fidelity sound without the wires.',
-    image: '/images/mock/headphones.jpg',
+    image: 'https://placehold.co/600x400/png',
   },
    {
     id: 5,
     name: 'Cozy Armchair',
     category: 'Home',
     description: 'A perfect chair for reading and relaxing.',
-    image: '/images/mock/armchair.jpg',
+    image: 'https://placehold.co/600x400/png',
   },
    {
     id: 6,
     name: 'Travel Backpack',
     category: 'Travel',
     description: 'Durable and spacious backpack for your adventures.',
-    image: '/images/mock/backpack.jpg',
+    image: 'https://placehold.co/600x400/png',
   },
 ];
 
@@ -98,8 +98,9 @@ export default function MarketplacePage() {
                <Image
                 src={product.image}
                 alt={product.name}
-                layout="fill"
-                objectFit="cover"
+                width={600}
+                height={400}
+                className="w-full h-full object-cover"
               />
             </div>
             <div className="p-4">
