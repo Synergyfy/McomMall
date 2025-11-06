@@ -68,7 +68,11 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         }
       : null;
 
-  const isLoading = isLoadingGiftCard || isLoadingVoucher || isLoadingCoupon;
+  const isLoading = {
+    giftcard: isLoadingGiftCard,
+    voucher: isLoadingVoucher,
+    coupon: isLoadingCoupon,
+  }[type];
 
   const handleInitiateFund = async () => {
     if (amount < 10) {
