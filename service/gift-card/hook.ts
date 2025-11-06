@@ -253,11 +253,11 @@ const getMyPurchaseById = async (id: string): Promise<MyPurchase> => {
   return data;
 };
 
-export const useGetMyPurchaseById = (id: string) => {
+export const useGetMyPurchaseById = (id: string, enabled: boolean = true) => {
   return useQuery<MyPurchase, Error>({
     queryKey: ['myPurchase', id],
     queryFn: () => getMyPurchaseById(id),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 };
 

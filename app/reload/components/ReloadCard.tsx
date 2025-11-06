@@ -35,32 +35,39 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
   const verifyFund = useVerifyFund();
 
   const { data: giftCard, isLoading: isLoadingGiftCard } = useGetMyPurchaseById(
-    cardId
+    cardId,
+    type === 'giftcard'
   );
   const { myVoucher, isLoading: isLoadingVoucher } = useGetMyVoucherById(
-    cardId
+    cardId,
+    type === 'voucher'
   );
-  const { coupon, isLoading: isLoadingCoupon } = useGetCoupon(cardId);
+  const { coupon, isLoading: isLoadingCoupon } = useGetCoupon(
+    cardId,
+    type === 'coupon'
+  );
 
-  const cardDetails = {
-    giftcard: {
-      title: 'Gift Card',
-      balance: giftCard?.balance,
-      image: giftCard?.giftCardTemplate?.backgroundImage,
-    },
-    voucher: {
-      title: 'Voucher',
-      balance: myVoucher?.balance,
-      image: myVoucher?.voucherProduct?.backgroundImage,
-    },
-    coupon: {
-      title: 'Coupon',
-      balance: coupon?.balance,
-      image: coupon?.couponProduct?.backgroundImage,
-    },
-  };
+  const currentCard =
+    type === 'giftcard' && giftCard
+      ? {
+          title: 'Gift Card',
+          balance: giftCard.currentBalance,
+          image: giftCard.template.backgroundImageUrl ?? '',
+        }
+      : type === 'voucher' && myVoucher
+      ? {
+          title: 'Voucher',
+          balance: parseFloat(myVoucher.balance),
+          image: myVoucher.voucherProduct?.backgroundImage ?? '',
+        }
+      : type === 'coupon' && coupon
+      ? {
+          title: 'Coupon',
+          balance: parseFloat(coupon.couponAmount),
+          image: coupon.widgetBackgroundUrl ?? '',
+        }
+      : null;
 
-  const currentCard = cardDetails[type];
   const isLoading = isLoadingGiftCard || isLoadingVoucher || isLoadingCoupon;
 
   const handleInitiateFund = async () => {
@@ -112,7 +119,7 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     );
   }
 
-  if (!currentCard.balance) {
+  if (!currentCard) {
     return (
       <div className="flex items-center justify-center h-screen">
         <h1 className="text-2xl font-bold text-red-500">Card not found</h1>

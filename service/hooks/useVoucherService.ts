@@ -6,6 +6,7 @@ import {
   editVoucherProduct,
   deleteVoucherProduct,
   getMyVouchers,
+  getMyVoucherById,
   initiateVoucherReload,
   verifyVoucherReload,
   getVoucherProduct,
@@ -102,7 +103,7 @@ export const useDeleteVoucherProduct = () => {
 };
 
 // Hook for a customer to get their own vouchers
-export const useGetMyVoucherById = (id: string) => {
+export const useGetMyVoucherById = (id: string, enabled: boolean = true) => {
   const {
     data: myVoucher,
     isLoading,
@@ -110,7 +111,7 @@ export const useGetMyVoucherById = (id: string) => {
   } = useQuery({
     queryKey: ['myVoucher', id],
     queryFn: () => getMyVoucherById(id),
-    enabled: !!id,
+    enabled: !!id && enabled,
   });
 
   return { myVoucher, isLoading, isError };
