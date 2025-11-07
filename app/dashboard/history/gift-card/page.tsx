@@ -4,10 +4,11 @@ import { useState } from "react";
 import { useGetMyPurchases } from "@/service/gift-card/hook";
 import { MyPurchase } from "@/service/gift-card/types";
 import { format } from "date-fns";
-import { Copy, Check } from "lucide-react";
+import { Copy, Check, Share2 } from "lucide-react";
 import { toast } from "sonner";
 import GiftCard from "./components/GiftCard";
 import ReloadModal from "./components/ReloadModal";
+import { useShareLink } from "@/lib/hooks/useShareLink";
 
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
@@ -15,6 +16,7 @@ const GiftCardHistoryPage = () => {
   const [selectedPurchase, setSelectedPurchase] = useState<MyPurchase | null>(
     null
   );
+  const { copiedLink, handleShare } = useShareLink();
 
   const handleCopy = (code: string) => {
     navigator.clipboard.writeText(code).then(() => {
@@ -49,7 +51,7 @@ const GiftCardHistoryPage = () => {
         </p>
       </header>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-3">
+      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
         {purchases && purchases.length > 0 ? (
           purchases.map((purchase: MyPurchase) => (
             <div key={purchase.id} className="rounded-lg overflow-hidden">
@@ -81,12 +83,22 @@ const GiftCardHistoryPage = () => {
                 </div>
 
                 {purchase.isReloadable && (
-                  <div className="mt-4">
+                  <div className="mt-4 flex items-center gap-2">
                     <button
                       onClick={() => setSelectedPurchase(purchase)}
                       className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
                     >
                       Reload Gift Card
+                    </button>
+                    <button
+                      onClick={() => handleShare('giftcard', purchase.id)}
+                      className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
+                    >
+                      {copiedLink === purchase.id ? (
+                        <Check size={16} />
+                      ) : (
+                        <Share2 size={16} />
+                      )}
                     </button>
                   </div>
                 )}

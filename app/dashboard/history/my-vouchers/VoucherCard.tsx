@@ -4,14 +4,16 @@ import React from 'react';
 import { Voucher } from '@/service/vouchers/types';
 import { QRCode } from 'react-qrcode-logo';
 import { Button } from '@/components/ui/button';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Share2, Check } from 'lucide-react';
 import { ReloadVoucherModal } from './ReloadVoucherModal';
+import { useShareLink } from '@/lib/hooks/useShareLink';
 
 interface VoucherCardProps {
   voucher: Voucher;
 }
 
 export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
+  const { copiedLink, handleShare } = useShareLink();
   return (
     <div
       className="w-full aspect-[1.586] rounded-xl shadow-lg p-6 flex flex-col justify-between bg-cover bg-center"
@@ -47,13 +49,25 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
         </div>
       </div>
       {voucher.voucherProduct?.allowReloading && (
-        <div className="mt-4">
+        <div className="mt-4 flex items-center gap-2">
           <ReloadVoucherModal voucher={voucher}>
             <Button variant="outline" size="sm" className="w-full flex items-center gap-1">
               <PlusCircle className="h-4 w-4" />
               <span>Reload</span>
             </Button>
           </ReloadVoucherModal>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => handleShare('voucher', voucher.id)}
+            className="p-2"
+          >
+            {copiedLink === voucher.id ? (
+              <Check className="h-4 w-4" />
+            ) : (
+              <Share2 className="h-4 w-4" />
+            )}
+          </Button>
         </div>
       )}
     </div>
