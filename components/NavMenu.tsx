@@ -202,10 +202,6 @@ export const menuItems = [
     title: 'Pricing',
     href: '/pricing',
   },
-    {
-    title: 'Marketplace',
-    href: '/marketplace',
-  },
 ];
 
 // --- Animation Variants ---

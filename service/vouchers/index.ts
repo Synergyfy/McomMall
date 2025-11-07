@@ -51,6 +51,11 @@ export const getMyVouchers = async (): Promise<Voucher[]> => {
   return data;
 };
 
+export const getMyVoucherById = async (id: string): Promise<Voucher> => {
+  const { data } = await api.get<Voucher>(`/vouchers/my-vouchers/${id}`);
+  return data;
+};
+
 export const initiateVoucherReload = async (
   code: string,
   reloadDto: InitiateReloadDto

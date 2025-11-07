@@ -26,8 +26,11 @@ export const useGetCoupons = () => {
   };
 };
 
-export const useGetCoupon = (id: string) => {
-  const { data: coupon, error } = useSWR<Coupon>(`/coupons/${id}`, fetcher);
+export const useGetCoupon = (id: string, enabled: boolean = true) => {
+  const { data: coupon, error } = useSWR<Coupon>(
+    enabled ? `/coupons/${id}` : null,
+    fetcher
+  );
 
   return {
     coupon,
