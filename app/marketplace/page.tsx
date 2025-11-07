@@ -103,13 +103,13 @@ export default function MarketplacePage() {
           {/* Treasure Hunt Section */}
           <div className="bg-black text-white p-8 rounded-lg flex flex-col md:flex-row items-center shadow-lg h-full">
             <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">JUMIA <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
+              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">Mcom <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
               <p className="text-sm text-gray-300 mb-4">31 OCT - 01 DEC</p>
               <h1 className="text-4xl font-extrabold">TREASURE HUNT</h1>
               <p className="text-lg mb-4">Find it, keep it</p>
               <p className="text-md">Aeon 90Litres Chest Freezer</p>
               <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#1,799</div>
-              <p className="text-sm">Fri Nov 7th, 12pm</p>
+              <p className="text-sm">Fri dec 7th, 12pm</p>
               <p className="text-xs text-gray-500 mt-2">T&Cs apply</p>
             </div>
             <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center items-center relative">
@@ -136,7 +136,7 @@ export default function MarketplacePage() {
                         <Store size={24} className="text-yellow-500" />
                     </div>
                     <div>
-                        <p className="font-bold">Sell on Jumia</p>
+                        <p className="font-bold">Sell on Mcom</p>
                     </div>
                 </div>
                 <div className="flex items-center space-x-4">
@@ -149,7 +149,7 @@ export default function MarketplacePage() {
                 </div>
             </div>
             <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-                <h2 className="text-2xl font-bold flex items-center justify-center">JUMIA <Star className="ml-2" /></h2>
+                <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
                 <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
                 <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
             </div>
