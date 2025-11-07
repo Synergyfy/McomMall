@@ -1,9 +1,17 @@
 'use client';
 
 import { useState } from 'react';
+import { useForm } from 'react-hook-form';
 
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
+
+  const onSubmit = (data:any) => console.log(data);
 
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row">
@@ -44,7 +52,7 @@ export default function AgentGetStartedPage() {
             <h2 className="mb-4 text-center text-2xl font-bold text-gray-800">
               Quick Profile
             </h2>
-            <form className="space-y-3">
+            <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
               <div>
                 <label
                   htmlFor="name"
@@ -55,8 +63,14 @@ export default function AgentGetStartedPage() {
                 <input
                   type="text"
                   id="name"
+                  {...register('name', { required: 'Name is required' })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.name.message as string}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -68,8 +82,25 @@ export default function AgentGetStartedPage() {
                 <input
                   type="text"
                   id="contact"
+                  {...register('contact', {
+                    required: 'Email or phone number is required',
+                    validate: (value) => {
+                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                      const phoneRegex = /^\+?[0-9\s-]{7,15}$/;
+                      return (
+                        emailRegex.test(value) ||
+                        phoneRegex.test(value) ||
+                        'Invalid email or phone number format'
+                      );
+                    },
+                  })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
+                {errors.contact && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.contact.message as string || 'Invalid email or phone number'}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -138,7 +169,8 @@ export default function AgentGetStartedPage() {
                 />
               </div>
               <button
-                type="submit"
+                type="button"
+                onClick={handleSubmit(onSubmit)}
                 className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700"
               >
                 Submit Application
