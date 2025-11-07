@@ -75,14 +75,14 @@ export default function MarketplacePage() {
   const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
 
   return (
-    <div className="bg-gray-100">
+    <div className="bg-gray-100 pt-28">
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* 1. Category Sidebar */}
         <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
           <ul className="space-y-2">
             {visibleCategories.map((category, index) => (
-              <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium">
+              <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
                 {category.icon}
                 <span>{category.name}</span>
               </li>
@@ -103,13 +103,13 @@ export default function MarketplacePage() {
           {/* Treasure Hunt Section */}
           <div className="bg-black text-white p-8 rounded-lg flex flex-col md:flex-row items-center shadow-lg h-full">
             <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">Mcom <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
+              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">JUMIA <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
               <p className="text-sm text-gray-300 mb-4">31 OCT - 01 DEC</p>
               <h1 className="text-4xl font-extrabold">TREASURE HUNT</h1>
               <p className="text-lg mb-4">Find it, keep it</p>
               <p className="text-md">Aeon 90Litres Chest Freezer</p>
               <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#1,799</div>
-              <p className="text-sm">Fri dec 7th, 12pm</p>
+              <p className="text-sm">Fri Nov 7th, 12pm</p>
               <p className="text-xs text-gray-500 mt-2">T&Cs apply</p>
             </div>
             <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center items-center relative">
@@ -122,7 +122,7 @@ export default function MarketplacePage() {
         {/* 3. Right Sidebar */}
         <div className="lg:col-span-3 space-y-6">
             <div className="bg-white p-4 rounded-lg shadow-sm">
-                <div className="flex items-center space-x-4 mb-4 pb-4 border-b">
+                <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
                     <div className="bg-gray-100 p-2 rounded-full">
                         <Phone size={24} className="text-yellow-500" />
                     </div>
@@ -131,15 +131,15 @@ export default function MarketplacePage() {
                         <p className="text-sm text-gray-600">0700-600-0000</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-4 mb-4 pb-4 border-b">
+                <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
                     <div className="bg-gray-100 p-2 rounded-full">
                         <Store size={24} className="text-yellow-500" />
                     </div>
                     <div>
-                        <p className="font-bold">Sell on Mcom</p>
+                        <p className="font-bold">Sell on Jumia</p>
                     </div>
                 </div>
-                <div className="flex items-center space-x-4">
+                <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
                     <div className="bg-gray-100 p-2 rounded-full">
                         <Truck size={24} className="text-yellow-500" />
                     </div>
@@ -149,7 +149,7 @@ export default function MarketplacePage() {
                 </div>
             </div>
             <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-                <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
+                <h2 className="text-2xl font-bold flex items-center justify-center">JUMIA <Star className="ml-2" /></h2>
                 <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
                 <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
             </div>
@@ -164,11 +164,11 @@ export default function MarketplacePage() {
             </button>
             <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
             {visibleItems.map((item, index) => (
-                <div key={index} className="text-center flex-shrink-0">
-                <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
+                <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
                     <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
                 </div>
-                <p className="text-xs md:text-sm font-medium">{item.title}</p>
+                <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
                 </div>
             ))}
             </div>
