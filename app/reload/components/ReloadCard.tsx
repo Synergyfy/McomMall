@@ -115,7 +115,15 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     );
   };
 
-  if (isLoading) {
+  const [isFetched, setIsFetched] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      setIsFetched(true);
+    }
+  }, [isLoading]);
+
+  if (!isFetched) {
     return (
       <div className="flex justify-center items-center h-screen">
         <Loader className="animate-spin text-orange-600" size={48} />
@@ -123,13 +131,15 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     );
   }
 
-  if (!currentCard) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <h1 className="text-2xl font-bold text-red-500">Card not found</h1>
-      </div>
-    );
-  }
+  const cardToDisplay =
+    currentCard ??
+    ({
+      title: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
+      balance: 0.0,
+      image: `https://via.placeholder.com/400x250.png/FF7F50/FFFFFF?text=Dummy+${
+        type.charAt(0).toUpperCase() + type.slice(1)
+      }`,
+    } as { title: string; balance: number; image: string });
 
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-gray-100">
@@ -144,7 +154,7 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         )}
         <div>
           <h2 className="mt-6 text-center text-4xl font-extrabold text-gray-900">
-            Reload Your {currentCard.title}
+            Reload Your {cardToDisplay.title}
           </h2>
           <p className="mt-2 text-center text-lg text-gray-600">
             You are reloading this {type}. Please enter the amount you would
@@ -153,12 +163,12 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         </div>
         <div className="flex flex-col items-center">
           <img
-            src={currentCard.image}
-            alt={currentCard.title}
+            src={cardToDisplay.image}
+            alt={cardToDisplay.title}
             className="w-64 h-auto"
           />
-          <h3 className="text-2xl font-bold">{currentCard.title}</h3>
-          <p className="text-xl">Balance: ₦{currentCard.balance}</p>
+          <h3 className="text-2xl font-bold">{cardToDisplay.title}</h3>
+          <p className="text-xl">Balance: ₦{cardToDisplay.balance}</p>
         </div>
         {!clientSecret && !orderId && (
           <>
