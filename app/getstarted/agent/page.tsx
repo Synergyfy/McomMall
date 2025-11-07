@@ -48,7 +48,7 @@ export default function AgentGetStartedPage() {
       {/* Right Section */}
       <div className="relative flex w-full flex-col items-center justify-center bg-orange-600 p-4 md:p-8 pt-24">
         {showForm ? (
-          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+          <div className="w-full max-w-md rounded-lg bg-white p-12 shadow-2xl">
             <h2 className="mb-4 text-center text-2xl font-bold text-gray-800">
               Quick Profile
             </h2>
@@ -112,8 +112,23 @@ export default function AgentGetStartedPage() {
                 <textarea
                   id="bio"
                   rows={3}
+                  {...register('bio', {
+                    minLength: {
+                      value: 50,
+                      message: 'Bio must be at least 50 characters',
+                    },
+                    maxLength: {
+                      value: 120,
+                      message: 'Bio must be less than 120 characters',
+                    },
+                  })}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 ></textarea>
+                 {errors.bio && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.bio.message as string}
+                  </p>
+                )}
               </div>
               <div>
                 <label
@@ -125,6 +140,7 @@ export default function AgentGetStartedPage() {
                 <input
                   type="text"
                   id="rate"
+                  {...register('rate')}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
@@ -138,6 +154,7 @@ export default function AgentGetStartedPage() {
                 <input
                   type="text"
                   id="location"
+                  {...register('location')}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
@@ -151,6 +168,7 @@ export default function AgentGetStartedPage() {
                 <input
                   type="url"
                   id="portfolio"
+                  {...register('portfolio')}
                   className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
@@ -165,6 +183,7 @@ export default function AgentGetStartedPage() {
                 <input
                   type="file"
                   id="verification"
+                  {...register('verification')}
                   className="mt-1 block w-full"
                 />
               </div>
