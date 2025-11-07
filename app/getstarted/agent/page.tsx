@@ -8,7 +8,7 @@ export default function AgentGetStartedPage() {
   return (
     <main className="flex min-h-screen w-full">
       {/* Left Section */}
-      <div className="relative flex h-screen w-full flex-col bg-gray-100 p-12 md:w-1/2">
+      <div className="relative flex h-screen w-full flex-col bg-gray-100 p-12 md:w-1/2 pt-24">
         <div className="max-w-md">
           <h1 className="mb-4 text-4xl font-bold text-gray-800">
             Become an Agent
@@ -38,7 +38,7 @@ export default function AgentGetStartedPage() {
       </div>
 
       {/* Right Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center bg-orange-600 p-8 md:w-1/2">
+      <div className="relative flex h-screen w-full flex-col items-center justify-center bg-orange-600 p-8 md:w-1/2 pt-24">
         {showForm ? (
           <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-2xl">
             <h2 className="mb-6 text-center text-3xl font-bold text-gray-800">
@@ -139,7 +139,7 @@ export default function AgentGetStartedPage() {
               </div>
               <button
                 type="submit"
-                className="w-full rounded-lg bg-gray-800 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-gray-900"
+                className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700"
               >
                 Submit Application
               </button>
