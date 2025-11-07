@@ -6,9 +6,9 @@ export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
 
   return (
-    <main className="flex min-h-screen w-full">
+    <main className="flex min-h-screen w-full flex-col md:flex-row">
       {/* Left Section */}
-      <div className="relative flex h-screen w-full flex-col bg-gray-100 p-12 md:w-1/2 pt-24">
+      <div className="relative flex w-full flex-col bg-gray-100 p-12 md:w-1/2 pt-24">
         <div className="max-w-md">
           <h1 className="mb-4 text-4xl font-bold text-gray-800">
             Become an Agent
@@ -38,13 +38,13 @@ export default function AgentGetStartedPage() {
       </div>
 
       {/* Right Section */}
-      <div className="relative flex h-screen w-full flex-col items-center justify-center bg-orange-600 p-8 md:w-1/2 pt-24">
+      <div className="relative flex w-full flex-col items-center justify-center bg-orange-600 p-4 md:p-8 pt-24">
         {showForm ? (
-          <div className="w-full max-w-md rounded-lg bg-white p-8 shadow-2xl">
-            <h2 className="mb-6 text-center text-3xl font-bold text-gray-800">
+          <div className="w-full max-w-md rounded-lg bg-white p-6 shadow-2xl">
+            <h2 className="mb-4 text-center text-2xl font-bold text-gray-800">
               Quick Profile
             </h2>
-            <form className="space-y-4">
+            <form className="space-y-3">
               <div>
                 <label
                   htmlFor="name"
