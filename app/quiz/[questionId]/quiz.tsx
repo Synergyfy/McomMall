@@ -64,7 +64,7 @@ export default function Quiz() {
         <div className="mt-8 flex justify-end">
           <button
             onClick={handleNextClick}
-            disabled={!selectedAnswer}
+            disabled={selectedAnswer !== correctAnswer}
             className="px-8 py-3 bg-yellow-500 text-black font-bold rounded-lg shadow-md hover:bg-yellow-600 disabled:bg-gray-300 disabled:cursor-not-allowed transition-colors duration-200"
           >
             {questionId < quizData.length ? 'Next' : 'Finish'}
