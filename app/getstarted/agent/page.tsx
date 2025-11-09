@@ -112,6 +112,34 @@ export default function AgentGetStartedPage() {
                   </p>
                 )}
               </div>
+               <div>
+                <label
+                  htmlFor="contact"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Phone
+                </label>
+                <input
+                  type="text"
+                  id="contact"
+                  {...register('contact', {
+                    required: ' phone number is required',
+                    validate: (value) => {
+                      const phoneRegex = /^\+?[0-9\s-]{7,15}$/;
+                      return (
+                        phoneRegex.test(value) ||
+                        'Invalid email or phone number format'
+                      );
+                    },
+                  })}
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.contact && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.contact.message as string || 'Invalid email or phone number'}
+                  </p>
+                )}
+              </div>
               <div>
                 <label
                   htmlFor="bio"
