@@ -9,9 +9,19 @@ export default function AgentGetStartedPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm<FormData>();
 
-  const onSubmit = (data:any) => console.log(data);
+  interface FormData {
+    name: string;
+    contact: string;
+    bio: string;
+    rate: string;
+    location: string;
+    portfolio: string;
+    verification: FileList;
+  }
+
+  const onSubmit = (data: FormData) => console.log(data);
 
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row">

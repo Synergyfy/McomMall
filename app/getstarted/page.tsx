@@ -127,7 +127,7 @@ export default function GetStartedPage() {
             {infoText}
           </p>
           <Link
-            href={selectedStatus === 'AGENT' ? '/getstarted/agent' : '/signup'}
+            href={selectedStatus === 'AGENT' ? '/question-page' : '/signup'}
             className="mt-6 block w-full rounded-lg bg-orange-600 py-3 text-center text-lg font-semibold text-white shadow-lg transition-transform hover:scale-105 hover:bg-orange-700"
           >
             Continue
