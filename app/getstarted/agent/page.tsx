@@ -64,7 +64,7 @@ export default function AgentGetStartedPage() {
                   type="text"
                   id="name"
                   {...register('name', { required: 'Name is required' })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.name && (
                   <p className="mt-1 text-sm text-red-600">
@@ -94,7 +94,7 @@ export default function AgentGetStartedPage() {
                       );
                     },
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.contact && (
                   <p className="mt-1 text-sm text-red-600">
@@ -122,7 +122,7 @@ export default function AgentGetStartedPage() {
                       message: 'Bio must be less than 120 characters',
                     },
                   })}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 ></textarea>
                  {errors.bio && (
                   <p className="mt-1 text-sm text-red-600">
@@ -141,7 +141,7 @@ export default function AgentGetStartedPage() {
                   type="text"
                   id="rate"
                   {...register('rate')}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -155,7 +155,7 @@ export default function AgentGetStartedPage() {
                   type="text"
                   id="location"
                   {...register('location')}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
               <div>
@@ -169,7 +169,7 @@ export default function AgentGetStartedPage() {
                   type="url"
                   id="portfolio"
                   {...register('portfolio')}
-                  className="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-s00 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
               {/* Hidden until asked */}
