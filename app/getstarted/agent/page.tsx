@@ -2,16 +2,21 @@
 
 import { useState } from 'react';
 import { useForm } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
   const {
     register,
     handleSubmit,
     formState: { errors },
   } = useForm();
 
-  const onSubmit = (data:any) => console.log(data);
+  const onSubmit = (data:any) => {
+    console.log(data);
+    router.push('/quiz/0');
+  };
 
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row">
