@@ -58,7 +58,26 @@ export default function AgentGetStartedPage() {
                   htmlFor="name"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Full name / Business name
+                  Full name 
+                </label>
+                <input
+                  type="text"
+                  id="name"
+                  {...register('name', { required: 'Name is required' })}
+                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.name && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.name.message as string}
+                  </p>
+                )}
+              </div>
+               <div>
+                <label
+                  htmlFor="name"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Business name
                 </label>
                 <input
                   type="text"
@@ -77,7 +96,7 @@ export default function AgentGetStartedPage() {
                   htmlFor="contact"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Email / Phone
+                  Email
                 </label>
                 <input
                   type="text"
@@ -99,6 +118,34 @@ export default function AgentGetStartedPage() {
                 {errors.contact && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.contact.message as string || 'Invalid email or phone number'}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="contact"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                 Phone
+                </label>
+                <input
+                  type="text"
+                  id="contact"
+                  {...register('contact', {
+                    required: ' phone number is required',
+                    validate: (value) => {
+                      const phoneRegex = /^\+?[0-9\s-]{7,15}$/;
+                      return (
+                        phoneRegex.test(value) ||
+                        'Invalid phone number format'
+                      );
+                    },
+                  })}
+                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.contact && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.contact.message as string || 'phone number'}
                   </p>
                 )}
               </div>
