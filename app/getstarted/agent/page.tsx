@@ -17,6 +17,7 @@ interface AgentFormValues {
 
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
+  const router = useRouter();
   const {
     register,
     handleSubmit,
