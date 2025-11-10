@@ -134,7 +134,7 @@ export const AssetForm: React.FC<AssetFormProps> = ({ asset, onClose }) => {
       </CardHeader>
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-          <div>
+          <div>f
             <label htmlFor="name" className="block text-sm font-medium text-gray-700">Asset Name</label>
             <Input id="name" {...register('name', { required: 'Name is required' })} disabled={isLoading} />
             {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name.message}</p>}

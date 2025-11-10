@@ -70,7 +70,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body className={`${opensans.variable} antialiased overflow-hidden`}>
+      <body className={`${opensans.variable} antialiased`}>
         <ClientProviders>
           <AuthInitializer>
             <ServiceWorkerRegistrar />
