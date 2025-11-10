@@ -25,6 +25,7 @@ import {
   useApplyOffer,
 } from '@/service/offers/hook';
 import ApplicableOffers from './ApplicableOffers';
+import ShippingDetailsForm from './ShippingDetailsForm';
 import { PaymentMethod } from '@/service/bookings/types';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { useRouter } from 'next/navigation';
@@ -334,6 +335,7 @@ export default function CheckoutClient() {
           <div className="grid grid-cols-1 lg:grid-cols-12 lg:gap-x-12">
             {/* Left side: Payment and Discounts */}
             <div className="lg:col-span-7 space-y-8">
+              <ShippingDetailsForm />
               <div className="bg-white rounded-2xl shadow-lg p-6 lg:p-8">
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
                   Payment Information
