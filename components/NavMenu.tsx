@@ -163,6 +163,10 @@ export const menuItems = [
     href: '/',
   },
   {
+    title: 'Marketplace',
+    href: '/marketplace',
+  },
+  {
     title: 'Seasons',
     content: (
       <div className="w-64 p-4">
