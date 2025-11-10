@@ -4,6 +4,16 @@ import { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { useRouter } from 'next/navigation';
 
+type FormData = {
+  name: string;
+  contact: string;
+  bio: string;
+  rate: string;
+  location: string;
+  portfolio: string;
+  verification: FileList;
+};
+
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
@@ -11,9 +21,9 @@ export default function AgentGetStartedPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm();
+  } = useForm<FormData>();
 
-  const onSubmit = (data:any) => {
+  const onSubmit = (data: FormData) => {
     console.log(data);
     router.push('/quiz/0');
   };
