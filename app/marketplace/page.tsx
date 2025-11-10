@@ -108,7 +108,7 @@ export default function MarketplacePage() {
               <h1 className="text-4xl font-extrabold">TREASURE HUNT</h1>
               <p className="text-lg mb-4">Find it, keep it</p>
               <p className="text-md">Aeon 90Litres Chest Freezer</p>
-              <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#1,799</div>
+              <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#Free</div>
               <p className="text-sm">Fri Nov 7th, 12pm</p>
               <p className="text-xs text-gray-500 mt-2">T&Cs apply</p>
             </div>
