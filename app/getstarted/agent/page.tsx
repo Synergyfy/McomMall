@@ -53,7 +53,7 @@ export default function AgentGetStartedPage() {
         confirm_password,
         name,
         phoneNumber: phone,
-        role: 'agent' as any,
+        role: 'customer' as any,
       });
 
       toast.success('Account created successfully! Logging you in...');

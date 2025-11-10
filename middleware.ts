@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const customerAllowedPaths = [
   '/dashboard',
+  '/dashboard/agent',
   '/dashboard/my-bookings',
   '/dashboard/messages',
   '/dashboard/wallet',
