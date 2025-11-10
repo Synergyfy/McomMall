@@ -27,7 +27,7 @@ export default function AgentGetStartedPage() {
 
   const onSubmit: SubmitHandler<AgentFormValues> = (data) => {
     console.log(data);
-    router.push('/quiz/0');
+    router.push('/dashboard/agent');
   };
 
   return (
