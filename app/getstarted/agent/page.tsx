@@ -1,18 +1,19 @@
 'use client';
 
 import { useState } from 'react';
-import { useForm } from 'react-hook-form';
-import { useRouter } from 'next/navigation';
+import { useForm, SubmitHandler } from 'react-hook-form';
 
-type FormData = {
+interface AgentFormValues {
   name: string;
-  contact: string;
+  businessName: string;
+  email: string;
+  phone: string;
   bio: string;
-  rate: string;
-  location: string;
-  portfolio: string;
-  verification: FileList;
-};
+  rate?: string;
+  location?: string;
+  portfolio?: string;
+  verification?: FileList;
+}
 
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
@@ -21,12 +22,9 @@ export default function AgentGetStartedPage() {
     register,
     handleSubmit,
     formState: { errors },
-  } = useForm<FormData>();
+  } = useForm<AgentFormValues>();
 
-  const onSubmit = (data: FormData) => {
-    console.log(data);
-    router.push('/quiz/0');
-  };
+  const onSubmit: SubmitHandler<AgentFormValues> = (data) => console.log(data);
 
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row">
@@ -73,7 +71,7 @@ export default function AgentGetStartedPage() {
                   htmlFor="name"
                   className="block text-sm font-medium text-gray-700"
                 >
-                  Full name 
+                  Full name
                 </label>
                 <input
                   type="text"
@@ -87,80 +85,74 @@ export default function AgentGetStartedPage() {
                   </p>
                 )}
               </div>
-               <div>
+              <div>
                 <label
-                  htmlFor="name"
+                  htmlFor="businessName"
                   className="block text-sm font-medium text-gray-700"
                 >
                   Business name
                 </label>
                 <input
                   type="text"
-                  id="name"
-                  {...register('name', { required: 'Name is required' })}
+                  id="businessName"
+                  {...register('businessName', {
+                    required: 'Business name is required',
+                  })}
                   className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
                 />
-                {errors.name && (
+                {errors.businessName && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.name.message as string}
+                    {errors.businessName.message as string}
                   </p>
                 )}
               </div>
               <div>
                 <label
-                  htmlFor="contact"
+                  htmlFor="email"
                   className="block text-sm font-medium text-gray-700"
                 >
                   Email
                 </label>
                 <input
-                  type="text"
-                  id="contact"
-                  {...register('contact', {
-                    required: 'Email or phone number is required',
-                    validate: (value) => {
-                      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-                      const phoneRegex = /^\+?[0-9\s-]{7,15}$/;
-                      return (
-                        emailRegex.test(value) ||
-                        phoneRegex.test(value) ||
-                        'Invalid email or phone number format'
-                      );
+                  type="email"
+                  id="email"
+                  {...register('email', {
+                    required: 'Email is required',
+                    pattern: {
+                      value: /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i,
+                      message: 'Invalid email address',
                     },
                   })}
                   className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
-                {errors.contact && (
+                {errors.email && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.contact.message as string || 'Invalid email or phone number'}
+                    {errors.email.message as string}
                   </p>
                 )}
               </div>
               <div>
                 <label
-                  htmlFor="contact"
+                  htmlFor="phone"
                   className="block text-sm font-medium text-gray-700"
                 >
-                 Phone
+                  Phone
                 </label>
                 <input
-                  type="text"
-                  id="contact"
-                  {...register('contact', {
-                    required: ' phone number is required',
-                    validate: (value) => {
-                      const phoneRegex = /^\+?[0-9\s-]{7,15}$/;
-                      return (
-                        phoneRegex.test(value) ||
-                        'Invalid phone number format'
-                      );
+                  type="tel"
+                  id="phone"
+                  {...register('phone', {
+                    required: 'Phone number is required',
+                    pattern: {
+                      value: /^\+?[0-9\s-]{7,15}$/,
+                      message: 'Invalid phone number format',
                     },
                   })}
                   className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
-                {errors.contact && (
+                {errors.phone && (
                   <p className="mt-1 text-sm text-red-600">
-                    {errors.contact.message as string || 'phone number'}
+                    {errors.phone.message as string}
                   </p>
                 )}
               </div>
@@ -186,7 +178,7 @@ export default function AgentGetStartedPage() {
                   })}
                   className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 ></textarea>
-                 {errors.bio && (
+                {errors.bio && (
                   <p className="mt-1 text-sm text-red-600">
                     {errors.bio.message as string}
                   </p>
