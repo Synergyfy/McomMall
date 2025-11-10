@@ -11,6 +11,7 @@ export enum UserRole {
   ADMIN = 'admin',
   OWNER = 'owner',
   CUSTOMER = 'customer',
+  AGENT = 'agent',
 }
 
 export interface AuthInterface {
