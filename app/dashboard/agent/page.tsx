@@ -1,4 +1,3 @@
-
 import {
   Bell,
   Home,
@@ -205,7 +204,7 @@ export default function AgentDashboard() {
             <h2 className="text-xl font-semibold">Completed Tasks & History</h2>
             <div className="border p-4 rounded-md mt-4">
               <h3 className="font-semibold">Completed Task Title</h3>
-              <p className="text-sm text-muted-foreground">Client Feedback: "Great work!"</p>
+              <p className="text-sm text-muted-foreground">Client Feedback: &quot;Great work!&quot;</p>
               <div className="flex justify-between items-center mt-2">
                 <span className="font-bold">Rating: 5/5</span>
                 <span>Earnings: $75</span>
