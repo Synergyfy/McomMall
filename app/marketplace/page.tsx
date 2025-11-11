@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
-import ProductSection from './components/ProductSection';
+import HorizontalScrollSection from './components/HorizontalScrollSection';
 import {
   Smartphone,
   Watch,
@@ -185,6 +185,35 @@ export default function MarketplacePage() {
               </div>
             </div>
           </div>
+
+          {/* Promotional Carousel */}
+          <div className="mt-6 bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex items-center justify-between">
+                <button onClick={handlePrev} disabled={!canGoPrev} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronLeft size={24} />
+                </button>
+                <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
+                {visibleItems.map((item, index) => (
+                    <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                        <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+                    </div>
+                    <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
+                    </div>
+                ))}
+                </div>
+                 <button onClick={handleNext} disabled={!canGoNext} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                    <ChevronRight size={24} />
+                </button>
+              </div>
+          </div>
+
+          {/* New Sections */}
+          <div className="mt-6 space-y-6">
+            <HorizontalScrollSection title="Trending" items={trendingItems} />
+            <HorizontalScrollSection title="Gift Cards" items={giftCardItems} />
+            <HorizontalScrollSection title="Coupons" items={couponItems} />
+          </div>
         </div>
 
         {/* Right Ad Section */}
@@ -193,35 +222,6 @@ export default function MarketplacePage() {
             <p className="text-center font-bold">Ad Space</p>
           </div>
         </div>
-      </div>
-
-      {/* Promotional Carousel */}
-      <div className="mt-6 bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between">
-            <button onClick={handlePrev} disabled={!canGoPrev} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <ChevronLeft size={24} />
-            </button>
-            <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-            {visibleItems.map((item, index) => (
-                <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
-                <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                    <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
-                </div>
-                <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
-                </div>
-            ))}
-            </div>
-             <button onClick={handleNext} disabled={!canGoNext} className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
-                <ChevronRight size={24} />
-            </button>
-          </div>
-      </div>
-
-      {/* New Sections */}
-      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
-        <ProductSection title="Trending" items={trendingItems} />
-        <ProductSection title="Gift Cards" items={giftCardItems} />
-        <ProductSection title="Coupons" items={couponItems} />
       </div>
     </div>
     </div>
