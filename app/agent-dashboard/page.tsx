@@ -1,4 +1,5 @@
 'use client';
+
 import {
   Bell,
   Home,
@@ -71,7 +72,7 @@ export default function AgentDashboard() {
   }
 
   return (
-    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
+    <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr] pt-7 mt-9 ">
       {/* Left Navigation */}
       <div className="hidden border-r bg-muted/40 md:block">
         <div className="flex h-full max-h-screen flex-col gap-4">
@@ -150,11 +151,13 @@ export default function AgentDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Right Content */}
       <div className="flex flex-col">
-        {/* Top Header */}
-        <header className="flex h-20 items-center gap-6 border-b bg-muted/40 px-6 lg:h-[80px] lg:px-8">
+        {/* Top Header (non-sticky now) */}
+        <header className="flex h-20 items-center gap-6 border-b bg-muted/40 px-6 pt-4 mt-6 lg:h-[80px] lg:px-8">
           <div className="w-full flex-1">
-            {/* Mobile menu button can be added here */}
+            {/* Placeholder for menu/search */}
           </div>
           <div className="flex items-center gap-6">
             <div className="text-xl">
@@ -167,13 +170,16 @@ export default function AgentDashboard() {
           </div>
         </header>
 
-        {/* Main Dashboard Content */}
-        <main className="flex flex-1 flex-col gap-8 p-8 pt-24 lg:gap-10 lg:p-10 lg:pt-24">
+        {/* Main Dashboard Content (moved down using padding) */}
+        <main className="flex flex-1 flex-col gap-8 p-8 pt-24 lg:gap-10 lg:p-10 lg:pt-28">
           {/* A. Greeting & Status */}
           <div className="rounded-lg border p-8">
             <h1 className="text-4xl font-bold">Welcome, Agent!</h1>
             <p className="text-muted-foreground text-xl mt-2">
-              Here is your SOP: <Link href="#" className="text-primary hover:underline">How to deliver good work</Link>
+              Here is your SOP:{' '}
+              <Link href="#" className="text-primary hover:underline">
+                How to deliver good work
+              </Link>
             </p>
             <div className="mt-8">
               <div className="flex items-center gap-4">
@@ -200,22 +206,21 @@ export default function AgentDashboard() {
             </div>
           </div>
 
-          {/* B. Available Tasks panel */}
+          {/* Other panels (B–G) remain unchanged */}
+          
+ {/* B. Available Tasks panel */}
           <div className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Available Tasks</h2>
-            {/* Filtering options */}
             <div className="flex gap-6 my-8">
               <input type="text" placeholder="Filter by skill" className="border px-4 py-3 rounded-md text-xl"/>
               <input type="text" placeholder="Filter by pay" className="border px-4 py-3 rounded-md text-xl"/>
               <input type="date" className="border px-4 py-3 rounded-md text-xl"/>
             </div>
-            {/* Task list */}
             <div className="space-y-8">
-              {/* Task card */}
               <div className="border p-6 rounded-md">
                 <h3 className="font-semibold text-2xl">Task Title</h3>
                 <p className="text-xl text-muted-foreground mt-2">Brief description of the task...</p>
-                <div className="flex justify-between items-center mt-6">
+                <div className="flex justify-between items-center mt-6 flex-wrap gap-4">
                   <span className="font-bold text-2xl">$50</span>
                   <span className="text-lg">Deadline: 2024-12-01</span>
                   <span className="text-lg bg-primary/10 text-primary px-4 py-2 rounded-full">Required Skill</span>
@@ -236,7 +241,7 @@ export default function AgentDashboard() {
           {/* D. Completed Tasks & History */}
           <div className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Completed Tasks & History</h2>
-             <div className="flex items-center justify-center h-40">
+            <div className="flex items-center justify-center h-40">
               <p className="text-muted-foreground text-xl">You have not completed any tasks yet.</p>
             </div>
           </div>
@@ -244,27 +249,26 @@ export default function AgentDashboard() {
           {/* E. Earnings and Payouts */}
           <div className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Earnings & Payouts</h2>
-             <div className="flex items-center justify-center h-40">
+            <div className="flex items-center justify-center h-40">
               <p className="text-muted-foreground text-xl">Earnings and payout information will be displayed here.</p>
             </div>
           </div>
 
           {/* F. Training and Upskills */}
-           <div className="rounded-lg border p-8">
+          <div className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Training and Upskills</h2>
-             <div className="flex items-center justify-center h-40">
-                <p className="text-muted-foreground text-xl">Access new training modules here to improve your skills.</p>
+            <div className="flex items-center justify-center h-40">
+              <p className="text-muted-foreground text-xl">Access new training modules here to improve your skills.</p>
             </div>
           </div>
 
           {/* G. Support and Disputes */}
-           <div className="rounded-lg border p-8">
+          <div className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Support and Disputes</h2>
-             <div className="flex items-center justify-center h-40">
+            <div className="flex items-center justify-center h-40">
               <p className="text-muted-foreground text-xl">Contact support or manage disputes from this section.</p>
             </div>
           </div>
-
         </main>
       </div>
     </div>
