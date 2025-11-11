@@ -1,17 +1,17 @@
 export const quizData = [
   {
-    question: 'Which Olympic sport takes place in a velodrome?',
-    options: ['Cycling', 'Athletics', 'Baseball', 'Soccer'],
-    correctAnswer: 'Cycling',
+    question: 'Which 3 elements should a promotional social post include?',
+    options: ['Headline, Visual, Call to action', 'Hashtag, Long paragraph, Link', 'Only product name'],
+    correctAnswer: 'Headline, Visual, Call to action',
   },
   {
-    question: 'What is the capital of France?',
-    options: ['London', 'Paris', 'Berlin', 'Rome'],
-    correctAnswer: 'Paris',
+    question: 'Which is the best subjectline for a sale email', 
+    options: ['Big sale - CLick here', 'Get 25% off your next order today', 'Read this please'],
+    correctAnswer: 'Get 25% off your next order today',
   },
   {
-    question: 'What is the largest planet in our solar system?',
-    options: ['Mars', 'Jupiter', 'Venus', 'Saturn'],
-    correctAnswer: 'Jupiter',
+    question: 'what tool would you use to speed up image creation',
+    options: ['Excel', 'Canva', 'Powerpoint'],
+    correctAnswer: 'Canva',
   },
 ];

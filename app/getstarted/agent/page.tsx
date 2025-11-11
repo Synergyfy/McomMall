@@ -2,7 +2,7 @@
 
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
-import { useForm, SubmitHandler, useWatch } from 'react-hook-form';
+import { useForm, SubmitHandler } from 'react-hook-form';
 import { useCreateUser, useLogin } from '@/service/auth/hook';
 import { toast } from 'sonner';
 
@@ -23,24 +23,27 @@ interface AgentFormValues {
 export default function AgentGetStartedPage() {
   const [showForm, setShowForm] = useState(false);
   const router = useRouter();
+
   const {
     register,
     handleSubmit,
     watch,
     formState: { errors },
   } = useForm<AgentFormValues>();
+
   const passwordValue = watch('password');
-  const { mutateAsync: createUser, isPending: isCreatingUser } =
-    useCreateUser();
+  const { mutateAsync: createUser, isPending: isCreatingUser } = useCreateUser();
   const { mutateAsync: login, isPending: isLoggingIn } = useLogin();
   const isPending = isCreatingUser || isLoggingIn;
 
   const onSubmit: SubmitHandler<AgentFormValues> = async (data) => {
     const { email, password, name, phone, confirm_password } = data;
+
     if (!password || !confirm_password) {
       toast.error('Password and confirmation are required.');
       return;
     }
+
     if (password !== confirm_password) {
       toast.error('Passwords do not match.');
       return;
@@ -53,11 +56,10 @@ export default function AgentGetStartedPage() {
         confirm_password,
         name,
         phoneNumber: phone,
-        role: 'customer' as any,
+        role: 'agent' as any,
       });
 
       toast.success('Account created successfully! Logging you in...');
-
       await login({ email, password });
 
       toast.success('Login successful! Redirecting to dashboard...');
@@ -72,7 +74,7 @@ export default function AgentGetStartedPage() {
   return (
     <main className="flex min-h-screen w-full flex-col md:flex-row">
       {/* Left Section */}
-      <div className="relative flex w-full flex-col bg-gray-100 p-12 md:w-1/2 pt-24">
+      <div className="flex w-full md:w-1/2 flex-col bg-gray-100 p-12 pt-24">
         <div className="max-w-md">
           <h1 className="mb-4 text-4xl font-bold text-gray-800">
             Become an Agent
@@ -85,7 +87,7 @@ export default function AgentGetStartedPage() {
           <h2 className="mb-3 text-2xl font-semibold text-gray-800">
             Benefits of Being an Agent:
           </h2>
-          <ul className="mb-8 list-disc list-inside text-gray-600">
+          <ul className="mb-8 list-disc list-inside text-gray-600 space-y-1">
             <li>Competitive commission rates</li>
             <li>Access to a wide range of clients</li>
             <li>Flexible work schedule</li>
@@ -102,111 +104,38 @@ export default function AgentGetStartedPage() {
       </div>
 
       {/* Right Section */}
-      <div className="relative flex w-full flex-col items-center justify-center bg-orange-600 p-4 md:p-8 pt-24">
+      <div className="flex w-full md:w-1/2 flex-col items-center justify-center bg-orange-600 p-6 md:p-12 pt-24">
         {showForm ? (
-          <div className="w-full max-w-md rounded-lg bg-white p-12 shadow-2xl">
+          <div className="w-full max-w-md rounded-lg bg-white p-10 shadow-2xl">
             <h2 className="mb-4 text-center text-2xl font-bold text-gray-800">
               Quick Profile
             </h2>
-            <form onSubmit={(e) => e.preventDefault()} className="space-y-3">
+
+            <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
+              {/* Name */}
               <div>
-                <label
-                  htmlFor="name"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Full name
                 </label>
                 <input
                   type="text"
-                  id="name"
                   {...register('name', { required: 'Name is required' })}
-                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.name && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="text-sm text-red-600">
                     {errors.name.message as string}
                   </p>
                 )}
               </div>
+
+              {/* Email */}
               <div>
-                <label
-                  htmlFor="confirm_password"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Confirm Password
-                </label>
-                <input
-                  type="password"
-                  id="confirm_password"
-                  {...register('confirm_password', {
-                    required: 'Please confirm your password',
-                    validate: value =>
-                      value === passwordValue || 'Passwords do not match',
-                  })}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-                />
-                {errors.confirm_password && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.confirm_password.message as string}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="password"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Password
-                </label>
-                <input
-                  type="password"
-                  id="password"
-                  {...register('password', {
-                    required: 'Password is required',
-                    minLength: {
-                      value: 8,
-                      message: 'Password must be at least 8 characters',
-                    },
-                  })}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-                />
-                {errors.password && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.password.message as string}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="businessName"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Business name
-                </label>
-                <input
-                  type="text"
-                  id="businessName"
-                  {...register('businessName', {
-                    required: 'Business name is required',
-                  })}
-                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
-                />
-                {errors.businessName && (
-                  <p className="mt-1 text-sm text-red-600">
-                    {errors.businessName.message as string}
-                  </p>
-                )}
-              </div>
-              <div>
-                <label
-                  htmlFor="email"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Email
                 </label>
                 <input
                   type="email"
-                  id="email"
                   {...register('email', {
                     required: 'Email is required',
                     pattern: {
@@ -214,24 +143,85 @@ export default function AgentGetStartedPage() {
                       message: 'Invalid email address',
                     },
                   })}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.email && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="text-sm text-red-600">
                     {errors.email.message as string}
                   </p>
                 )}
               </div>
+
+              {/* Password */}
               <div>
-                <label
-                  htmlFor="phone"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
+                  Password
+                </label>
+                <input
+                  type="password"
+                  {...register('password', {
+                    required: 'Password is required',
+                    minLength: {
+                      value: 8,
+                      message: 'Password must be at least 8 characters',
+                    },
+                  })}
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.password && (
+                  <p className="text-sm text-red-600">
+                    {errors.password.message as string}
+                  </p>
+                )}
+              </div>
+
+              {/* Confirm Password */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Confirm Password
+                </label>
+                <input
+                  type="password"
+                  {...register('confirm_password', {
+                    required: 'Please confirm your password',
+                    validate: (value) =>
+                      value === passwordValue || 'Passwords do not match',
+                  })}
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.confirm_password && (
+                  <p className="text-sm text-red-600">
+                    {errors.confirm_password.message as string}
+                  </p>
+                )}
+              </div>
+
+              {/* Business Name */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  Business name
+                </label>
+                <input
+                  type="text"
+                  {...register('businessName', {
+                    required: 'Business name is required',
+                  })}
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.businessName && (
+                  <p className="text-sm text-red-600">
+                    {errors.businessName.message as string}
+                  </p>
+                )}
+              </div>
+
+              {/* Phone */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
                   Phone
                 </label>
                 <input
                   type="tel"
-                  id="phone"
                   {...register('phone', {
                     required: 'Phone number is required',
                     pattern: {
@@ -239,23 +229,21 @@ export default function AgentGetStartedPage() {
                       message: 'Invalid phone number format',
                     },
                   })}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.phone && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="text-sm text-red-600">
                     {errors.phone.message as string}
                   </p>
                 )}
               </div>
+
+              {/* Bio */}
               <div>
-                <label
-                  htmlFor="bio"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Short bio (50–120 characters)
                 </label>
                 <textarea
-                  id="bio"
                   rows={3}
                   {...register('bio', {
                     minLength: {
@@ -267,75 +255,52 @@ export default function AgentGetStartedPage() {
                       message: 'Bio must be less than 120 characters',
                     },
                   })}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 ></textarea>
                 {errors.bio && (
-                  <p className="mt-1 text-sm text-red-600">
+                  <p className="text-sm text-red-600">
                     {errors.bio.message as string}
                   </p>
                 )}
               </div>
+
+              {/* Optional Fields */}
               <div>
-                <label
-                  htmlFor="rate"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Hourly or per-session rate (optional)
                 </label>
                 <input
                   type="text"
-                  id="rate"
                   {...register('rate')}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
+
               <div>
-                <label
-                  htmlFor="location"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Country / Timezone / Languages
                 </label>
                 <input
                   type="text"
-                  id="location"
                   {...register('location')}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
+
               <div>
-                <label
-                  htmlFor="portfolio"
-                  className="block text-sm font-medium text-gray-700"
-                >
+                <label className="block text-sm font-medium text-gray-700">
                   Portfolio link / sample work
                 </label>
                 <input
                   type="url"
-                  id="portfolio"
                   {...register('portfolio')}
-                  className="mt-1 block w-full border-1 rounded-sm border-gray-s00 shadow-sm focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
               </div>
-              {/* Hidden until asked */}
-              <div className="hidden">
-                <label
-                  htmlFor="verification"
-                  className="block text-sm font-medium text-gray-700"
-                >
-                  Upload ID / verification docs
-                </label>
-                <input
-                  type="file"
-                  id="verification"
-                  {...register('verification')}
-                  className="mt-1 block w-full"
-                />
-              </div>
+
               <button
-                type="button"
+                type="submit"
                 disabled={isPending}
-                onClick={handleSubmit(onSubmit)}
                 className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700 disabled:opacity-50"
               >
                 {isPending ? 'Submitting...' : 'Submit Application'}
