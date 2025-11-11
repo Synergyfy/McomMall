@@ -85,6 +85,8 @@ export default function QuestionPage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+          </div>
+
   );
 }

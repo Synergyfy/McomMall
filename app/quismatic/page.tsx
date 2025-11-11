@@ -51,7 +51,7 @@ export default function QuismaticPage() {
         </Suspense>
         <div className="flex justify-center space-x-4">
           <button
-            onClick={() => router.push('/dashboard/agent')}
+            onClick={() => router.push('/agent-dashboard')}
             className="rounded-lg bg-gray-300 px-8 py-3 font-semibold text-gray-800 shadow-lg transition-transform hover:scale-105 hover:bg-gray-400"
           >
             Return to Dashboard
