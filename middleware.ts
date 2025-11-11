@@ -19,6 +19,11 @@ export function middleware(request: NextRequest) {
   const refreshToken = request.cookies.get('refresh')?.value;
   const userRole = request.cookies.get('userRole')?.value;
 
+  // Allow public access to the agent dashboard
+  if (request.nextUrl.pathname.startsWith('/dashboard/agent')) {
+    return NextResponse.next();
+  }
+
   if (!accessToken && !refreshToken) {
     if (request.nextUrl.pathname.startsWith('/dashboard')) {
       return NextResponse.redirect(new URL('/', request.url));
