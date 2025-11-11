@@ -19,9 +19,56 @@ import {
   FileText,
 } from 'lucide-react';
 
+'use client';
+import {
+  Bell,
+  Home,
+  LineChart,
+  Package,
+  Package2,
+  Settings,
+  ShoppingCart,
+  Users,
+  CheckCircle,
+  Clock,
+  HelpCircle,
+  Briefcase,
+  DollarSign,
+  Award,
+  User,
+  MessageSquare,
+  FileText,
+} from 'lucide-react';
+
 import Link from 'next/link';
+import { useState, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
+import { quizData } from '@/app/quiz/quiz-data';
 
 export default function AgentDashboard() {
+  const [quizScore, setQuizScore] = useState<string | null>(null);
+  const [quizProgress, setQuizProgress] = useState<{ questionId: number; score: number } | null>(null);
+  const router = useRouter();
+
+  useEffect(() => {
+    const score = localStorage.getItem('quizScore');
+    const progress = localStorage.getItem('quizProgress');
+    if (score) {
+      setQuizScore(score);
+    }
+    if (progress) {
+      setQuizProgress(JSON.parse(progress));
+    }
+  }, []);
+
+  const handleStartQuiz = () => {
+    if (quizProgress) {
+      router.push(`/quiz/${quizProgress.questionId}?score=${quizProgress.score}`);
+    } else {
+      router.push('/quiz/0');
+    }
+  };
+
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
       {/* Left Navigation */}
@@ -70,9 +117,9 @@ export default function AgentDashboard() {
                 <DollarSign className="h-4 w-4" />
                 Earnings & Payouts
               </Link>
-              <Link
-                href="/quiz/0"
-                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <Award className="h-4 w-4" />
                 Training
@@ -130,7 +177,13 @@ export default function AgentDashboard() {
             <div className="mt-4">
               <div className="flex items-center gap-2">
                 <span className="font-semibold">Certification Badge:</span>
-                <span className="text-green-500">Quiz Score: 95%</span>
+                {quizScore ? (
+                  <span className="text-green-500">
+                    Quiz Score: {quizScore}/{quizData.length}
+                  </span>
+                ) : (
+                  <span className="text-red-500">Not yet certified</span>
+                )}
               </div>
               <div className="mt-2">
                 <p className="text-sm font-medium">Progress to Account Manager</p>
@@ -140,7 +193,7 @@ export default function AgentDashboard() {
                 <div className="text-xs text-muted-foreground flex justify-between">
                   <span>Tasks: 50/100</span>
                   <span>Avg Rating: 4.8/5.0</span>
-                  <span>Quiz Score: 95%</span>
+                  {quizScore && <span>Quiz Score: {quizScore}/{quizData.length}</span>}
                 </div>
               </div>
             </div>
@@ -237,7 +290,9 @@ export default function AgentDashboard() {
               <h3 className="font-semibold">Suggested Modules</h3>
               <p className="text-sm text-muted-foreground">Based on your quiz results and performance.</p>
               <h3 className="font-semibold mt-4">Required Modules to Unlock Account Manager</h3>
-              <Link href="/quiz/0" className="text-primary hover:underline">Complete the certification quiz</Link>
+              <button onClick={handleStartQuiz} className="text-primary hover:underline">
+                {quizProgress ? 'Resume Certification Quiz' : 'Complete the Certification Quiz'}
+              </button>
             </div>
           </div>
 
