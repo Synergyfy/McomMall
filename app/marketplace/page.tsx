@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Smartphone,
@@ -19,6 +19,7 @@ import {
   Truck,
   Star
 } from 'lucide-react';
+import { motion, AnimatePresence } from 'framer-motion';
 
 // Mock Data
 const categories = [
@@ -51,9 +52,57 @@ const promotionalItems = [
 const ITEMS_PER_VIEW = 8;
 const CATEGORIES_TO_SHOW = 8;
 
+const treasureHuntSlides = [
+    {
+      brand: 'JUMIA',
+      tagline: 'BLACK FRIDAY',
+      duration: '31 OCT - 01 DEC',
+      title: 'TREASURE HUNT',
+      subtitle: 'Find it, keep it',
+      productName: 'Aeon 90Litres Chest Freezer',
+      price: '#1,799',
+      schedule: 'Fri Nov 7th, 12pm',
+      imageSrc: 'https://placehold.co/400x300/e0e0e0/000000?text=Freezer',
+      terms: 'T&Cs apply',
+    },
+    {
+      brand: 'AMAZON',
+      tagline: 'CYBER MONDAY',
+      duration: '02 DEC - 03 DEC',
+      title: 'LIGHTNING DEAL',
+      subtitle: 'Grab it fast',
+      productName: 'Echo Dot (5th Gen)',
+      price: '#2,499',
+      schedule: 'Mon Dec 2nd, 9am',
+      imageSrc: 'https://placehold.co/400x300/3498db/ffffff?text=Echo+Dot',
+      terms: 'Limited stock',
+    },
+    {
+      brand: 'EBAY',
+      tagline: 'WINTER SALE',
+      duration: '15 DEC - 15 JAN',
+      title: 'AUCTION FRENZY',
+      subtitle: 'Bid and win',
+      productName: 'Vintage Leather Jacket',
+      price: 'Starting at #500',
+      schedule: 'Daily auctions',
+      imageSrc: 'https://placehold.co/400x300/e74c3c/ffffff?text=Jacket',
+      terms: 'Bidding rules apply',
+    },
+  ];
+
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [showAllCategories, setShowAllCategories] = useState(false);
+  const [activeSlide, setActiveSlide] = useState(0);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setActiveSlide((prev) => (prev + 1) % treasureHuntSlides.length);
+    }, 10000); // 10 seconds
+
+    return () => clearInterval(timer);
+  }, []);
 
   const handleNext = () => {
     setCarouselIndex((prevIndex) => {
@@ -101,20 +150,42 @@ export default function MarketplacePage() {
         {/* 2. Main Content */}
         <div className="lg:col-span-7">
           {/* Treasure Hunt Section */}
-          <div className="bg-black text-white p-8 rounded-lg flex flex-col md:flex-row items-center shadow-lg h-full">
-            <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">JUMIA <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
-              <p className="text-sm text-gray-300 mb-4">31 OCT - 01 DEC</p>
-              <h1 className="text-4xl font-extrabold">TREASURE HUNT</h1>
-              <p className="text-lg mb-4">Find it, keep it</p>
-              <p className="text-md">Aeon 90Litres Chest Freezer</p>
-              <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#1,799</div>
-              <p className="text-sm">Fri Nov 7th, 12pm</p>
-              <p className="text-xs text-gray-500 mt-2">T&Cs apply</p>
-            </div>
-            <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center items-center relative">
-              <Image src="https://placehold.co/400x300/e0e0e0/000000?text=Product" alt="Chest Freezer" width={400} height={300} className="rounded-lg object-cover" />
-              <button className="absolute bottom-4 right-4 bg-white text-black px-6 py-2 rounded-md font-bold text-lg hover:bg-gray-200 transition-colors">DISCOVER</button>
+          <div className="bg-black text-white p-8 rounded-lg flex flex-col items-center shadow-lg h-full relative overflow-hidden">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSlide}
+                initial={{ opacity: 0, x: 50 }}
+                animate={{ opacity: 1, x: 0 }}
+                exit={{ opacity: 0, x: -50 }}
+                transition={{ duration: 0.5 }}
+                className="flex flex-col md:flex-row items-center w-full"
+              >
+                <div className="md:w-1/2 text-center md:text-left">
+                  <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">{treasureHuntSlides[activeSlide].brand} <Star className="ml-2 text-yellow-400" /> {treasureHuntSlides[activeSlide].tagline}</h2>
+                  <p className="text-sm text-gray-300 mb-4">{treasureHuntSlides[activeSlide].duration}</p>
+                  <h1 className="text-4xl font-extrabold">{treasureHuntSlides[activeSlide].title}</h1>
+                  <p className="text-lg mb-4">{treasureHuntSlides[activeSlide].subtitle}</p>
+                  <p className="text-md">{treasureHuntSlides[activeSlide].productName}</p>
+                  <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">{treasureHuntSlides[activeSlide].price}</div>
+                  <p className="text-sm">{treasureHuntSlides[activeSlide].schedule}</p>
+                  <p className="text-xs text-gray-500 mt-2">{treasureHuntSlides[activeSlide].terms}</p>
+                </div>
+                <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center items-center relative">
+                  <Image src={treasureHuntSlides[activeSlide].imageSrc} alt={treasureHuntSlides[activeSlide].productName} width={400} height={300} className="rounded-lg object-cover" />
+                  <button className="absolute bottom-4 right-4 bg-white text-black px-6 py-2 rounded-md font-bold text-lg hover:bg-gray-200 transition-colors">DISCOVER</button>
+                </div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
+                {treasureHuntSlides.map((_, index) => (
+                    <button
+                    key={index}
+                    onClick={() => setActiveSlide(index)}
+                    className={`h-2 w-2 rounded-full transition-colors ${
+                        activeSlide === index ? 'bg-white' : 'bg-gray-500'
+                    }`}
+                    />
+                ))}
             </div>
           </div>
         </div>
