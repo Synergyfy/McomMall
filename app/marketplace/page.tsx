@@ -63,18 +63,27 @@ const trendingItems = [
   { name: 'Wireless Headphones', image: 'https://placehold.co/200x200/png', price: '₦25,000' },
   { name: 'Smart Fitness Tracker', image: 'https://placehold.co/200x200/png', price: '₦18,000' },
   { name: 'Portable Blender', image: 'https://placehold.co/200x200/png', price: '₦10,000' },
+  { name: 'Gaming Keyboard', image: 'https://placehold.co/200x200/png', price: '₦22,000' },
+  { name: 'VR Headset', image: 'https://placehold.co/200x200/png', price: '₦150,000' },
+  { name: 'Drone with Camera', image: 'https://placehold.co/200x200/png', price: '₦75,000' },
 ];
 
 const giftCardItems = [
   { name: 'Amazon Gift Card', image: 'https://placehold.co/200x200/png', price: '$25' },
   { name: 'Steam Gift Card', image: 'https://placehold.co/200x200/png', price: '$50' },
   { name: 'Netflix Gift Card', image: 'https://placehold.co/200x200/png', price: '$15' },
+  { name: 'Spotify Gift Card', image: 'https://placehold.co/200x200/png', price: '$10' },
+  { name: 'Google Play Gift Card', image: 'https://placehold.co/200x200/png', price: '$25' },
+  { name: 'Apple App Store Gift Card', image: 'https://placehold.co/200x200/png', price: '$25' },
 ];
 
 const couponItems = [
   { name: '10% Off Electronics', image: 'https://placehold.co/200x200/png', price: 'Code: ELEC10' },
   { name: 'Free Shipping on Fashion', image: 'https://placehold.co/200x200/png', price: 'Code: SHIPIT' },
   { name: '20% Off Home Goods', image: 'https://placehold.co/200x200/png', price: 'Code: HOME20' },
+  { name: 'Buy One Get One Free', image: 'https://placehold.co/200x200/png', price: 'Code: BOGO' },
+  { name: '$5 Off Your Next Order', image: 'https://placehold.co/200x200/png', price: 'Code: 5OFF' },
+  { name: 'Free Drink with Purchase', image: 'https://placehold.co/200x200/png', price: 'Code: DRINKUP' },
 ];
 
 const ITEMS_PER_VIEW = 8;
@@ -152,15 +161,6 @@ export default function MarketplacePage() {
                   <div className="bg-white p-4 rounded-lg shadow-sm">
                     <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
                       <div className="bg-gray-100 p-2 rounded-full">
-                        <Phone size={24} className="text-yellow-500" />
-                      </div>
-                      <div>
-                        <p className="font-bold">CALL TO ORDER</p>
-                        <p className="text-sm text-gray-600">0700-600-0000</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                      <div className="bg-gray-100 p-2 rounded-full">
                         <Store size={24} className="text-yellow-500" />
                       </div>
                       <div>
@@ -218,8 +218,21 @@ export default function MarketplacePage() {
 
         {/* Right Ad Section */}
         <div className="hidden lg:block lg:col-span-2">
-          <div className="bg-white p-4 rounded-lg shadow-sm h-full">
-            <p className="text-center font-bold">Ad Space</p>
+          <div className="space-y-6">
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                <div className="bg-gray-100 p-2 rounded-full">
+                  <Phone size={24} className="text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-bold">CALL TO ORDER</p>
+                  <p className="text-sm text-gray-600">0700-600-0000</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-white p-4 rounded-lg shadow-sm h-full">
+              <p className="text-center font-bold">Ad Space</p>
+            </div>
           </div>
         </div>
       </div>
