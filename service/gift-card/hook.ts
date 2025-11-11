@@ -248,6 +248,19 @@ const fetchMyPurchases = async (): Promise<MyPurchase[]> => {
   return data;
 };
 
+const getMyPurchaseById = async (id: string): Promise<MyPurchase> => {
+  const { data } = await api.get<MyPurchase>(`/gift-cards/my-purchases/${id}`);
+  return data;
+};
+
+export const useGetMyPurchaseById = (id: string, enabled: boolean = true) => {
+  return useQuery<MyPurchase, Error>({
+    queryKey: ['myPurchase', id],
+    queryFn: () => getMyPurchaseById(id),
+    enabled: !!id && enabled,
+  });
+};
+
 export const useGetMyPurchases = () => {
   return useQuery<MyPurchase[], Error>({
     queryKey: ['myPurchases'],

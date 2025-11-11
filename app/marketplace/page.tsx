@@ -2,6 +2,7 @@
 
 import { useState } from 'react';
 import Image from 'next/image';
+import ProductSection from './components/ProductSection';
 import {
   Smartphone,
   Watch,
@@ -48,13 +49,39 @@ const promotionalItems = [
     { title: 'More Deals', image: 'https://placehold.co/200x200/png' },
   ];
 
+const treasureHuntItems = [
+  { name: 'Smart Watch', image: 'https://placehold.co/200x200/png', price: '₦15,000' },
+  { name: 'Wireless Earbuds', image: 'https://placehold.co/200x200/png', price: '₦8,000' },
+  { name: 'Laptop Stand', image: 'https://placehold.co/200x200/png', price: '₦5,000' },
+  { name: 'Bluetooth Speaker', image: 'https://placehold.co/200x200/png', price: '₦12,000' },
+  { name: 'Gaming Mouse', image: 'https://placehold.co/200x200/png', price: '₦7,500' },
+  { name: 'Portable Charger', image: 'https://placehold.co/200x200/png', price: '₦6,000' },
+  { name: 'USB-C Hub', image: 'https://placehold.co/200x200/png', price: '₦4,500' },
+];
+
+const trendingItems = [
+  { name: 'Wireless Headphones', image: 'https://placehold.co/200x200/png', price: '₦25,000' },
+  { name: 'Smart Fitness Tracker', image: 'https://placehold.co/200x200/png', price: '₦18,000' },
+  { name: 'Portable Blender', image: 'https://placehold.co/200x200/png', price: '₦10,000' },
+];
+
+const giftCardItems = [
+  { name: 'Amazon Gift Card', image: 'https://placehold.co/200x200/png', price: '$25' },
+  { name: 'Steam Gift Card', image: 'https://placehold.co/200x200/png', price: '$50' },
+  { name: 'Netflix Gift Card', image: 'https://placehold.co/200x200/png', price: '$15' },
+];
+
+const couponItems = [
+  { name: '10% Off Electronics', image: 'https://placehold.co/200x200/png', price: 'Code: ELEC10' },
+  { name: 'Free Shipping on Fashion', image: 'https://placehold.co/200x200/png', price: 'Code: SHIPIT' },
+  { name: '20% Off Home Goods', image: 'https://placehold.co/200x200/png', price: 'Code: HOME20' },
+];
+
 const ITEMS_PER_VIEW = 8;
 const CATEGORIES_TO_SHOW = 8;
 
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [showAllCategories, setShowAllCategories] = useState(false);
-
   const handleNext = () => {
     setCarouselIndex((prevIndex) => {
       const nextIndex = prevIndex + 1;
@@ -70,7 +97,6 @@ export default function MarketplacePage() {
   };
 
   const visibleItems = promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
-  const visibleCategories = showAllCategories ? categories : categories.slice(0, CATEGORIES_TO_SHOW);
   const canGoPrev = carouselIndex > 0;
   const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
 
@@ -78,81 +104,94 @@ export default function MarketplacePage() {
     <div className="bg-gray-100 pt-28">
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* 1. Category Sidebar */}
-        <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
-          <ul className="space-y-2">
-            {visibleCategories.map((category, index) => (
-              <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
-                {category.icon}
-                <span>{category.name}</span>
-              </li>
-            ))}
-          </ul>
-          {!showAllCategories && (
-            <button
-              onClick={() => setShowAllCategories(true)}
-              className="mt-4 w-full text-center text-sm font-medium text-blue-600 hover:underline"
-            >
-              More categories
-            </button>
-          )}
+        {/* Left Ad Section */}
+        <div className="hidden lg:block lg:col-span-2">
+          <div className="bg-white p-4 rounded-lg shadow-sm h-full">
+            <p className="text-center font-bold">Ad Space</p>
+          </div>
         </div>
 
-        {/* 2. Main Content */}
-        <div className="lg:col-span-7">
-          {/* Treasure Hunt Section */}
-          <div className="bg-black text-white p-8 rounded-lg flex flex-col md:flex-row items-center shadow-lg h-full">
-            <div className="md:w-1/2 text-center md:text-left">
-              <h2 className="text-3xl font-bold flex items-center justify-center md:justify-start">Mcom <Star className="ml-2 text-yellow-400" /> BLACK FRIDAY</h2>
-              <p className="text-sm text-gray-300 mb-4">31 OCT - 01 DEC</p>
-              <h1 className="text-4xl font-extrabold">TREASURE HUNT</h1>
-              <p className="text-lg mb-4">Find it, keep it</p>
-              <p className="text-md">Aeon 90Litres Chest Freezer</p>
-              <div className="bg-yellow-400 text-black font-bold text-4xl my-2 px-4 py-2 rounded-full inline-block">#1,799</div>
-              <p className="text-sm">Fri Nov 7th, 12pm</p>
-              <p className="text-xs text-gray-500 mt-2">T&Cs apply</p>
+        {/* Main Content */}
+        <div className="lg:col-span-8">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* 1. Category Sidebar */}
+            <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm">
+              <div className="h-96 overflow-y-auto">
+                <ul className="space-y-2">
+                  {categories.map((category, index) => (
+                    <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
+                      {category.icon}
+                      <span>{category.name}</span>
+                    </li>
+                  ))}
+                </ul>
+              </div>
             </div>
-            <div className="md:w-1/2 mt-6 md:mt-0 flex justify-center items-center relative">
-              <Image src="https://placehold.co/400x300/e0e0e0/000000?text=Product" alt="Chest Freezer" width={400} height={300} className="rounded-lg object-cover" />
-              <button className="absolute bottom-4 right-4 bg-white text-black px-6 py-2 rounded-md font-bold text-lg hover:bg-gray-200 transition-colors">DISCOVER</button>
+
+            {/* 2. Treasure Hunt and Right Sidebar */}
+            <div className="lg:col-span-9">
+              {/* Treasure Hunt Section */}
+              <div className="bg-white p-4 rounded-lg shadow-sm">
+                <h2 className="text-xl font-bold mb-4">Treasure Hunt</h2>
+                <div className="flex overflow-x-auto space-x-4">
+                  {treasureHuntItems.map((item, index) => (
+                    <div key={index} className="flex-shrink-0 w-48 text-center">
+                      <div className="w-48 h-48 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
+                        <Image src={item.image} alt={item.name} width={192} height={192} className="object-cover" />
+                      </div>
+                      <p className="font-medium">{item.name}</p>
+                      <p className="text-lg font-bold text-blue-600">{item.price}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              {/* 3. Right Sidebar Content */}
+              <div className="mt-6">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                  <div className="bg-white p-4 rounded-lg shadow-sm">
+                    <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                      <div className="bg-gray-100 p-2 rounded-full">
+                        <Phone size={24} className="text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="font-bold">CALL TO ORDER</p>
+                        <p className="text-sm text-gray-600">0700-600-0000</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                      <div className="bg-gray-100 p-2 rounded-full">
+                        <Store size={24} className="text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="font-bold">Sell on mcom</p>
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                      <div className="bg-gray-100 p-2 rounded-full">
+                        <Truck size={24} className="text-yellow-500" />
+                      </div>
+                      <div>
+                        <p className="font-bold">Send Your Packages</p>
+                      </div>
+                    </div>
+                  </div>
+                  <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
+                    <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
+                    <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
+                    <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         </div>
 
-        {/* 3. Right Sidebar */}
-        <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-                <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                    <div className="bg-gray-100 p-2 rounded-full">
-                        <Phone size={24} className="text-yellow-500" />
-                    </div>
-                    <div>
-                        <p className="font-bold">CALL TO ORDER</p>
-                        <p className="text-sm text-gray-600">0700-600-0000</p>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                    <div className="bg-gray-100 p-2 rounded-full">
-                        <Store size={24} className="text-yellow-500" />
-                    </div>
-                    <div>
-                        <p className="font-bold">Sell on mcom</p>
-                    </div>
-                </div>
-                <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                    <div className="bg-gray-100 p-2 rounded-full">
-                        <Truck size={24} className="text-yellow-500" />
-                    </div>
-                    <div>
-                        <p className="font-bold">Send Your Packages</p>
-                    </div>
-                </div>
-            </div>
-            <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-                <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
-                <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
-                <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
-            </div>
+        {/* Right Ad Section */}
+        <div className="hidden lg:block lg:col-span-2">
+          <div className="bg-white p-4 rounded-lg shadow-sm h-full">
+            <p className="text-center font-bold">Ad Space</p>
+          </div>
         </div>
       </div>
 
@@ -176,6 +215,13 @@ export default function MarketplacePage() {
                 <ChevronRight size={24} />
             </button>
           </div>
+      </div>
+
+      {/* New Sections */}
+      <div className="mt-6 grid grid-cols-1 md:grid-cols-3 gap-6">
+        <ProductSection title="Trending" items={trendingItems} />
+        <ProductSection title="Gift Cards" items={giftCardItems} />
+        <ProductSection title="Coupons" items={couponItems} />
       </div>
     </div>
     </div>
