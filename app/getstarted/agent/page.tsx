@@ -3,15 +3,16 @@
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
+<<<<<<< HEAD
 import { useCreateUser, useLogin } from '@/service/auth/hook';
 import { toast } from 'sonner';
+=======
+>>>>>>> ae3041940be815630537730718f197f4a018c5ea
 
 interface AgentFormValues {
   name: string;
   businessName: string;
   email: string;
-  password?: string;
-  confirm_password?: string;
   phone: string;
   bio: string;
   rate?: string;
@@ -27,9 +28,9 @@ export default function AgentGetStartedPage() {
   const {
     register,
     handleSubmit,
-    watch,
     formState: { errors },
   } = useForm<AgentFormValues>();
+<<<<<<< HEAD
 
   const passwordValue = watch('password');
   const { mutateAsync: createUser, isPending: isCreatingUser } = useCreateUser();
@@ -69,6 +70,12 @@ export default function AgentGetStartedPage() {
         `Operation failed: ${error.message || 'An unknown error occurred'}`
       );
     }
+=======
+
+  const onSubmit: SubmitHandler<AgentFormValues> = (data) => {
+    console.log(data);
+    router.push('/dashboard/agent');
+>>>>>>> ae3041940be815630537730718f197f4a018c5ea
   };
 
   return (
@@ -131,7 +138,35 @@ export default function AgentGetStartedPage() {
 
               {/* Email */}
               <div>
+<<<<<<< HEAD
                 <label className="block text-sm font-medium text-gray-700">
+=======
+                <label
+                  htmlFor="businessName"
+                  className="block text-sm font-medium text-gray-700"
+                >
+                  Business name
+                </label>
+                <input
+                  type="text"
+                  id="businessName"
+                  {...register('businessName', {
+                    required: 'Business name is required',
+                  })}
+                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
+                />
+                {errors.businessName && (
+                  <p className="mt-1 text-sm text-red-600">
+                    {errors.businessName.message as string}
+                  </p>
+                )}
+              </div>
+              <div>
+                <label
+                  htmlFor="email"
+                  className="block text-sm font-medium text-gray-700"
+                >
+>>>>>>> ae3041940be815630537730718f197f4a018c5ea
                   Email
                 </label>
                 <input
@@ -299,11 +334,17 @@ export default function AgentGetStartedPage() {
               </div>
 
               <button
+<<<<<<< HEAD
                 type="submit"
                 disabled={isPending}
                 className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700 disabled:opacity-50"
+=======
+                type="button"
+                onClick={handleSubmit(onSubmit)}
+                className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700"
+>>>>>>> ae3041940be815630537730718f197f4a018c5ea
               >
-                {isPending ? 'Submitting...' : 'Submit Application'}
+                Submit Application
               </button>
             </form>
           </div>

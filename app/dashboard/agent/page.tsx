@@ -157,12 +157,12 @@ export default function AgentDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm">
-              <p className="font-semibold">Today: $125.00</p>
-              <p className="text-xs text-muted-foreground">This Month: $1,850.00</p>
+              <p className="font-semibold">Today's Earnings: --</p>
+              <p className="text-xs text-muted-foreground">Monthly Earnings: --</p>
             </div>
             <Bell className="h-5 w-5" />
             <User className="h-6 w-6 rounded-full" />
-            <span className="text-sm font-semibold">Certified Agent</span>
+            <span className="text-sm font-semibold">Agent</span>
           </div>
         </header>
 

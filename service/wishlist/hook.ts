@@ -7,10 +7,10 @@ import { RootState } from '../store/store';
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export const useWishlist = () => {
-  const { userRole } = useSelector((state: RootState) => state.auth);
+  const { accessToken } = useSelector((state: RootState) => state.auth);
 
-  // Only fetch wishlist if the user is not an agent
-  const shouldFetch = userRole !== 'agent';
+  // Only fetch wishlist if the user is authenticated
+  const shouldFetch = !!accessToken;
   const { data, error, mutate } = useSWR<Wishlist>(
     shouldFetch ? '/wishlist' : null,
     fetcher
