@@ -31,9 +31,21 @@ export default function QuismaticPage() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-lg rounded-lg bg-white p-8 text-center shadow-lg">
-        <h1 className="mb-4 text-4xl font-bold text-gray-800">Quiz Complete!</h1>
+    <div className="bg-gray-100">
+      <header className="bg-white shadow-md p-4 flex justify-between items-center">
+        <h1 className="text-xl font-bold">Quiz Results</h1>
+        <button
+          onClick={() => router.push('/dashboard/agent')}
+          className="rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Back to Dashboard
+        </button>
+      </header>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="w-full max-w-lg rounded-lg bg-white p-8 text-center shadow-lg">
+          <h1 className="mb-4 text-4xl font-bold text-gray-800">
+            Quiz Complete!
+          </h1>
         <Suspense fallback={<div>Loading score...</div>}>
           <ScoreDisplay />
         </Suspense>

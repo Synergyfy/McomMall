@@ -43,6 +43,7 @@ import {
 import Link from 'next/link';
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
+import { quizData } from '@/app/quiz/quiz-data';
 
 export default function AgentDashboard() {
   const [quizScore, setQuizScore] = useState<string | null>(null);
@@ -177,7 +178,9 @@ export default function AgentDashboard() {
               <div className="flex items-center gap-2">
                 <span className="font-semibold">Certification Badge:</span>
                 {quizScore ? (
-                  <span className="text-green-500">Quiz Score: {quizScore}%</span>
+                  <span className="text-green-500">
+                    Quiz Score: {quizScore}/{quizData.length}
+                  </span>
                 ) : (
                   <span className="text-red-500">Not yet certified</span>
                 )}
@@ -190,7 +193,7 @@ export default function AgentDashboard() {
                 <div className="text-xs text-muted-foreground flex justify-between">
                   <span>Tasks: 50/100</span>
                   <span>Avg Rating: 4.8/5.0</span>
-                  {quizScore && <span>Quiz Score: {quizScore}%</span>}
+                  {quizScore && <span>Quiz Score: {quizScore}/{quizData.length}</span>}
                 </div>
               </div>
             </div>
