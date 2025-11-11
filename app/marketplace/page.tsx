@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import HorizontalScrollSection from './components/HorizontalScrollSection';
-import Slideshow from './components/Slideshow';
+import Carousel from './components/Carousel';
 import {
   Smartphone,
   Watch,
@@ -88,9 +88,9 @@ const couponItems = [
 ];
 
 const slideshowImages = [
-  { image: 'https://placehold.co/800x400/png', alt: 'Slide 1' },
-  { image: 'https://placehold.co/800x400/png', alt: 'Slide 2' },
-  { image: 'https://placehold.co/800x400/png', alt: 'Slide 3' },
+  { image: '/jum.jpg', alt: 'Slide 1' },
+  { image: '/jum.jpg', alt: 'Slide 2' },
+  { image: '/jum.jpg', alt: 'Slide 3' },
 ];
 
 const ITEMS_PER_VIEW = 8;
@@ -120,61 +120,24 @@ export default function MarketplacePage() {
     <div className="bg-gray-100 pt-28">
     <div className="container mx-auto px-4 py-8">
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-        {/* Left Ad Section */}
+        {/* Left Category Section */}
         <div className="hidden lg:block lg:col-span-2">
           <div className="bg-white p-4 rounded-lg shadow-sm h-full">
-            <p className="text-center font-bold">Ad Space</p>
+            {categories.map((category, index) => (
+              <div key={index} className="flex items-center space-x-2 cursor-pointer hover:text-blue-600 mb-2">
+                {category.icon}
+                <span className="font-medium text-sm">{category.name}</span>
+              </div>
+            ))}
           </div>
         </div>
 
         {/* Main Content */}
         <div className="lg:col-span-8">
-          {/* Horizontal Category Bar */}
-          <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
-            <div className="flex overflow-x-auto space-x-6">
-              {categories.map((category, index) => (
-                <div key={index} className="flex-shrink-0 flex items-center space-x-2 cursor-pointer hover:text-blue-600">
-                  {category.icon}
-                  <span className="font-medium text-sm">{category.name}</span>
-                </div>
-              ))}
-            </div>
-          </div>
-
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* 2. Treasure Hunt and Right Sidebar */}
+            {/* Carousel Section */}
             <div className="lg:col-span-12">
-              {/* Slideshow Section */}
-              <Slideshow slides={slideshowImages} />
-
-              {/* 3. Right Sidebar Content */}
-              <div className="mt-6">
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div className="bg-white p-4 rounded-lg shadow-sm">
-                    <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                      <div className="bg-gray-100 p-2 rounded-full">
-                        <Store size={24} className="text-yellow-500" />
-                      </div>
-                      <div>
-                        <p className="font-bold">Sell on mcom</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                      <div className="bg-gray-100 p-2 rounded-full">
-                        <Truck size={24} className="text-yellow-500" />
-                      </div>
-                      <div>
-                        <p className="font-bold">Send Your Packages</p>
-                      </div>
-                    </div>
-                  </div>
-                  <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-                    <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
-                    <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
-                    <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
-                  </div>
-                </div>
-              </div>
+              <Carousel slides={slideshowImages} />
             </div>
           </div>
 
@@ -222,8 +185,28 @@ export default function MarketplacePage() {
                 </div>
               </div>
             </div>
-            <div className="bg-white p-4 rounded-lg shadow-sm h-full">
-              <p className="text-center font-bold">Ad Space</p>
+            <div className="bg-white p-4 rounded-lg shadow-sm">
+              <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                <div className="bg-gray-100 p-2 rounded-full">
+                  <Store size={24} className="text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-bold">Sell on mcom</p>
+                </div>
+              </div>
+              <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
+                <div className="bg-gray-100 p-2 rounded-full">
+                  <Truck size={24} className="text-yellow-500" />
+                </div>
+                <div>
+                  <p className="font-bold">Send Your Packages</p>
+                </div>
+              </div>
+            </div>
+            <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
+              <h2 className="text-2xl font-bold flex items-center justify-center">Mcom <Star className="ml-2" /></h2>
+              <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
+              <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
             </div>
           </div>
         </div>
