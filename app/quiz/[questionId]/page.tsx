@@ -28,7 +28,10 @@ export default function QuestionPage() {
     if (questionId < quizData.length - 1) {
       router.push(`/quiz/${questionId + 1}?score=${newScore}`);
     } else {
-      router.push(`/quismatic?score=${newScore}`);
+      // Store the final score in localStorage
+      localStorage.setItem('quizScore', newScore.toString());
+      // Redirect to the agent dashboard
+      router.push(`/agent-dashboard?fromQuiz=true`);
     }
   };
 
