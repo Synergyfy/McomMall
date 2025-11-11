@@ -4,6 +4,8 @@ import React from 'react';
 import { Coupon } from '@/service/my-coupons/types';
 import { Button } from '@/components/ui/button';
 import { formatCurrency } from '@/lib/utils';
+import { Share2, Check } from 'lucide-react';
+import { useShareLink } from '@/lib/hooks/useShareLink';
 
 interface CouponCardProps {
   coupon: Coupon;
@@ -11,6 +13,7 @@ interface CouponCardProps {
 }
 
 export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
+  const { copiedLink, handleShare } = useShareLink();
   const { couponProduct } = coupon;
   const cardStyle = {
     backgroundColor: couponProduct.backgroundImage ? 'transparent' : '#f0f0f0',
@@ -45,7 +48,21 @@ export const CouponCard: React.FC<CouponCardProps> = ({ coupon, onReload }) => {
           </p>
         </div>
         {couponProduct.allowReloading && (
-          <Button onClick={() => onReload(coupon)}>Reload</Button>
+          <div className="flex items-center gap-2">
+            <Button onClick={() => onReload(coupon)}>Reload</Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleShare('coupon', coupon.id)}
+              className="p-2"
+            >
+              {copiedLink === coupon.id ? (
+                <Check className="h-4 w-4" />
+              ) : (
+                <Share2 className="h-4 w-4" />
+              )}
+            </Button>
+          </div>
         )}
       </div>
     </div>
