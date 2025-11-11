@@ -1,18 +1,14 @@
 'use client';
-
 import { useRouter } from 'next/navigation';
 import { useState } from 'react';
 import { useForm, SubmitHandler } from 'react-hook-form';
-<<<<<<< HEAD
-import { useCreateUser, useLogin } from '@/service/auth/hook';
-import { toast } from 'sonner';
-=======
->>>>>>> ae3041940be815630537730718f197f4a018c5ea
 
 interface AgentFormValues {
   name: string;
   businessName: string;
   email: string;
+  password: string;
+  confirm_password: string;
   phone: string;
   bio: string;
   rate?: string;
@@ -22,60 +18,19 @@ interface AgentFormValues {
 }
 
 export default function AgentGetStartedPage() {
-  const [showForm, setShowForm] = useState(false);
   const router = useRouter();
-
+  const [showForm, setShowForm] = useState(false);
   const {
     register,
     handleSubmit,
     formState: { errors },
+    watch,
   } = useForm<AgentFormValues>();
-<<<<<<< HEAD
-
   const passwordValue = watch('password');
-  const { mutateAsync: createUser, isPending: isCreatingUser } = useCreateUser();
-  const { mutateAsync: login, isPending: isLoggingIn } = useLogin();
-  const isPending = isCreatingUser || isLoggingIn;
-
-  const onSubmit: SubmitHandler<AgentFormValues> = async (data) => {
-    const { email, password, name, phone, confirm_password } = data;
-
-    if (!password || !confirm_password) {
-      toast.error('Password and confirmation are required.');
-      return;
-    }
-
-    if (password !== confirm_password) {
-      toast.error('Passwords do not match.');
-      return;
-    }
-
-    try {
-      await createUser({
-        email,
-        password,
-        confirm_password,
-        name,
-        phoneNumber: phone,
-        role: 'agent' as any,
-      });
-
-      toast.success('Account created successfully! Logging you in...');
-      await login({ email, password });
-
-      toast.success('Login successful! Redirecting to dashboard...');
-      router.push('/dashboard/agent');
-    } catch (error: any) {
-      toast.error(
-        `Operation failed: ${error.message || 'An unknown error occurred'}`
-      );
-    }
-=======
 
   const onSubmit: SubmitHandler<AgentFormValues> = (data) => {
     console.log(data);
-    router.push('/dashboard/agent');
->>>>>>> ae3041940be815630537730718f197f4a018c5ea
+    router.push('/agent-dashboard');
   };
 
   return (
@@ -138,9 +93,6 @@ export default function AgentGetStartedPage() {
 
               {/* Email */}
               <div>
-<<<<<<< HEAD
-                <label className="block text-sm font-medium text-gray-700">
-=======
                 <label
                   htmlFor="businessName"
                   className="block text-sm font-medium text-gray-700"
@@ -166,7 +118,6 @@ export default function AgentGetStartedPage() {
                   htmlFor="email"
                   className="block text-sm font-medium text-gray-700"
                 >
->>>>>>> ae3041940be815630537730718f197f4a018c5ea
                   Email
                 </label>
                 <input
@@ -221,25 +172,6 @@ export default function AgentGetStartedPage() {
                     required: 'Please confirm your password',
                     validate: (value) =>
                       value === passwordValue || 'Passwords do not match',
-                  })}
-                  className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
-                />
-                {errors.confirm_password && (
-                  <p className="text-sm text-red-600">
-                    {errors.confirm_password.message as string}
-                  </p>
-                )}
-              </div>
-
-              {/* Business Name */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700">
-                  Business name
-                </label>
-                <input
-                  type="text"
-                  {...register('businessName', {
-                    required: 'Business name is required',
                   })}
                   className="mt-1 w-full rounded-sm border border-gray-400 p-2 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
@@ -334,15 +266,9 @@ export default function AgentGetStartedPage() {
               </div>
 
               <button
-<<<<<<< HEAD
-                type="submit"
-                disabled={isPending}
-                className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700 disabled:opacity-50"
-=======
                 type="button"
                 onClick={handleSubmit(onSubmit)}
                 className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700"
->>>>>>> ae3041940be815630537730718f197f4a018c5ea
               >
                 Submit Application
               </button>

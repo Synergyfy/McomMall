@@ -1,24 +1,3 @@
-
-import {
-  Bell,
-  Home,
-  LineChart,
-  Package,
-  Package2,
-  Settings,
-  ShoppingCart,
-  Users,
-  CheckCircle,
-  Clock,
-  HelpCircle,
-  Briefcase,
-  DollarSign,
-  Award,
-  User,
-  MessageSquare,
-  FileText,
-} from 'lucide-react';
-
 'use client';
 import {
   Bell,
@@ -123,7 +102,7 @@ export default function AgentDashboard() {
               >
                 <Award className="h-4 w-4" />
                 Training
-              </Link>
+              </button>
               <Link
                 href="#"
                 className="flex items-center gap-3 rounded-lg px-3 py-2 text-muted-foreground transition-all hover:text-primary"
@@ -157,7 +136,7 @@ export default function AgentDashboard() {
           </div>
           <div className="flex items-center gap-4">
             <div className="text-sm">
-              <p className="font-semibold">Today's Earnings: --</p>
+              <p className="font-semibold">Today&apos;s Earnings: --</p>
               <p className="text-xs text-muted-foreground">Monthly Earnings: --</p>
             </div>
             <Bell className="h-5 w-5" />

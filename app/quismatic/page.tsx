@@ -65,5 +65,6 @@ export default function QuismaticPage() {
         </div>
       </div>
     </div>
+    </div>
   );
 }
