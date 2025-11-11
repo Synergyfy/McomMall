@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import HorizontalScrollSection from './components/HorizontalScrollSection';
+import Slideshow from './components/Slideshow';
 import {
   Smartphone,
   Watch,
@@ -86,6 +87,12 @@ const couponItems = [
   { name: 'Free Drink with Purchase', image: 'https://placehold.co/200x200/png', price: 'Code: DRINKUP' },
 ];
 
+const slideshowImages = [
+  { image: 'https://placehold.co/800x400/png', alt: 'Slide 1' },
+  { image: 'https://placehold.co/800x400/png', alt: 'Slide 2' },
+  { image: 'https://placehold.co/800x400/png', alt: 'Slide 3' },
+];
+
 const ITEMS_PER_VIEW = 8;
 const CATEGORIES_TO_SHOW = 8;
 
@@ -122,38 +129,23 @@ export default function MarketplacePage() {
 
         {/* Main Content */}
         <div className="lg:col-span-8">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* 1. Category Sidebar */}
-            <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm">
-              <div className="h-96 overflow-y-auto">
-                <ul className="space-y-2">
-                  {categories.map((category, index) => (
-                    <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
-                      {category.icon}
-                      <span>{category.name}</span>
-                    </li>
-                  ))}
-                </ul>
-              </div>
-            </div>
-
-            {/* 2. Treasure Hunt and Right Sidebar */}
-            <div className="lg:col-span-9">
-              {/* Treasure Hunt Section */}
-              <div className="bg-white p-4 rounded-lg shadow-sm">
-                <h2 className="text-xl font-bold mb-4">Treasure Hunt</h2>
-                <div className="flex overflow-x-auto space-x-4">
-                  {treasureHuntItems.map((item, index) => (
-                    <div key={index} className="flex-shrink-0 w-48 text-center">
-                      <div className="w-48 h-48 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden">
-                        <Image src={item.image} alt={item.name} width={192} height={192} className="object-cover" />
-                      </div>
-                      <p className="font-medium">{item.name}</p>
-                      <p className="text-lg font-bold text-blue-600">{item.price}</p>
-                    </div>
-                  ))}
+          {/* Horizontal Category Bar */}
+          <div className="bg-white p-4 rounded-lg shadow-sm mb-6">
+            <div className="flex overflow-x-auto space-x-6">
+              {categories.map((category, index) => (
+                <div key={index} className="flex-shrink-0 flex items-center space-x-2 cursor-pointer hover:text-blue-600">
+                  {category.icon}
+                  <span className="font-medium text-sm">{category.name}</span>
                 </div>
-              </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
+            {/* 2. Treasure Hunt and Right Sidebar */}
+            <div className="lg:col-span-12">
+              {/* Slideshow Section */}
+              <Slideshow slides={slideshowImages} />
 
               {/* 3. Right Sidebar Content */}
               <div className="mt-6">
