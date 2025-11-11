@@ -54,7 +54,7 @@ const CATEGORIES_TO_SHOW = 8;
 
 const treasureHuntSlides = [
     {
-      brand: 'JUMIA',
+      brand: 'MCOM',
       tagline: 'BLACK FRIDAY',
       duration: '31 OCT - 01 DEC',
       title: 'TREASURE HUNT',
@@ -207,7 +207,7 @@ export default function MarketplacePage() {
                         <Store size={24} className="text-yellow-500" />
                     </div>
                     <div>
-                        <p className="font-bold">Sell on Jumia</p>
+                        <p className="font-bold">Sell on Mcom</p>
                     </div>
                 </div>
                 <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
@@ -220,7 +220,7 @@ export default function MarketplacePage() {
                 </div>
             </div>
             <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-                <h2 className="text-2xl font-bold flex items-center justify-center">JUMIA <Star className="ml-2" /></h2>
+                <h2 className="text-2xl font-bold flex items-center justify-center">MCom <Star className="ml-2" /></h2>
                 <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
                 <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
             </div>
