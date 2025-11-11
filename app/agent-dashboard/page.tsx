@@ -2,12 +2,8 @@
 import {
   Bell,
   Home,
-  LineChart,
-  Package,
   Package2,
   Settings,
-  ShoppingCart,
-  Users,
   CheckCircle,
   Clock,
   HelpCircle,
@@ -15,8 +11,6 @@ import {
   DollarSign,
   Award,
   User,
-  MessageSquare,
-  FileText,
 } from 'lucide-react';
 
 import Link from 'next/link';
@@ -25,28 +19,56 @@ import { useRouter } from 'next/navigation';
 import { quizData } from '@/app/quiz/quiz-data';
 
 export default function AgentDashboard() {
-  const [quizScore, setQuizScore] = useState<string | null>(null);
-  const [quizProgress, setQuizProgress] = useState<{ questionId: number; score: number } | null>(null);
+  const [quizScore, setQuizScore] = useState<number | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
 
   useEffect(() => {
     const score = localStorage.getItem('quizScore');
-    const progress = localStorage.getItem('quizProgress');
-    if (score) {
-      setQuizScore(score);
-    }
-    if (progress) {
-      setQuizProgress(JSON.parse(progress));
-    }
+    setQuizScore(score ? parseInt(score, 10) : null);
+    setIsLoading(false);
   }, []);
 
   const handleStartQuiz = () => {
-    if (quizProgress) {
-      router.push(`/quiz/${quizProgress.questionId}?score=${quizProgress.score}`);
-    } else {
-      router.push('/quiz/0');
-    }
+    localStorage.removeItem('quizProgress');
+    localStorage.removeItem('quizScore');
+    router.push('/quiz/0');
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center min-h-screen">
+        <p>Loading...</p>
+      </div>
+    );
+  }
+
+  const hasPassedQuiz = quizScore !== null && quizScore >= 2;
+
+  if (!hasPassedQuiz) {
+    return (
+      <div className="flex flex-col justify-center items-center min-h-screen bg-muted/40">
+        <div className="rounded-lg border bg-background p-8 text-center shadow-lg max-w-md">
+          <h1 className="text-3xl font-bold">Welcome, Agent!</h1>
+          <p className="text-muted-foreground mt-2">
+            To unlock your dashboard and start accepting tasks, you must pass the certification quiz.
+          </p>
+          <p className="mt-1">You need to score at least 2 out of {quizData.length} to pass.</p>
+          {quizScore !== null && (
+            <p className="text-red-500 font-bold mt-3 text-lg">
+              Your last score was {quizScore}/{quizData.length}. Please try again.
+            </p>
+          )}
+          <button
+            onClick={handleStartQuiz}
+            className="mt-6 bg-primary text-primary-foreground px-6 py-3 rounded-md text-lg font-semibold hover:bg-primary/90 transition-colors"
+          >
+            {quizScore === null ? 'Start Certification Quiz' : 'Try Again'}
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
@@ -60,7 +82,7 @@ export default function AgentDashboard() {
             </Link>
           </div>
           <div className="flex-1">
-            <nav className="grid items-start px-2 text-sm font-medium lg:px-4">
+            <nav className="grid items-start px-2 text-base font-medium lg:px-4">
               <Link
                 href="#"
                 className="flex items-center gap-3 rounded-lg bg-muted px-3 py-2 text-primary transition-all hover:text-primary"
@@ -146,7 +168,7 @@ export default function AgentDashboard() {
         </header>
 
         {/* Main Dashboard Content */}
-        <main className="flex flex-1 flex-col gap-4 p-4 lg:gap-6 lg:p-6">
+        <main className="flex flex-1 flex-col gap-4 p-4 pt-6 lg:gap-6 lg:p-6 lg:pt-8">
           {/* A. Greeting & Status */}
           <div className="rounded-lg border p-4">
             <h1 className="text-2xl font-bold">Welcome, Agent!</h1>
@@ -270,7 +292,7 @@ export default function AgentDashboard() {
               <p className="text-sm text-muted-foreground">Based on your quiz results and performance.</p>
               <h3 className="font-semibold mt-4">Required Modules to Unlock Account Manager</h3>
               <button onClick={handleStartQuiz} className="text-primary hover:underline">
-                {quizProgress ? 'Resume Certification Quiz' : 'Complete the Certification Quiz'}
+                Complete the Certification Quiz
               </button>
             </div>
           </div>
