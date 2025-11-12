@@ -93,7 +93,6 @@ const treasureHuntSlides = [
 
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
-  const [showAllCategories, setShowAllCategories] = useState(false);
   const [activeSlide, setActiveSlide] = useState(0);
 
   useEffect(() => {
@@ -119,7 +118,6 @@ export default function MarketplacePage() {
   };
 
   const visibleItems = promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
-  const visibleCategories = showAllCategories ? categories : categories.slice(0, CATEGORIES_TO_SHOW);
   const canGoPrev = carouselIndex > 0;
   const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
 
@@ -129,22 +127,14 @@ export default function MarketplacePage() {
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
         {/* 1. Category Sidebar */}
         <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
-          <ul className="space-y-2">
-            {visibleCategories.map((category, index) => (
+          <ul className="space-y-2 h-96 overflow-y-auto">
+            {categories.map((category, index) => (
               <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
                 {category.icon}
                 <span>{category.name}</span>
               </li>
             ))}
           </ul>
-          {!showAllCategories && (
-            <button
-              onClick={() => setShowAllCategories(true)}
-              className="mt-4 w-full text-center text-sm font-medium text-blue-600 hover:underline"
-            >
-              More categories
-            </button>
-          )}
         </div>
 
         {/* 2. Main Content */}
