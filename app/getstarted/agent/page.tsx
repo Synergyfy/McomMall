@@ -41,7 +41,7 @@ export default function AgentGetStartedPage() {
           <h1 className="mb-4 text-4xl font-bold text-gray-800">
             Become an Agent
           </h1>
-          <p className="mb-6 text-gray-600">
+          <p className="mb-6 text-gray-600 text-2xl">
             Join our network of professional agents and unlock a world of
             opportunities. Enjoy the flexibility of working on your own terms
             while we provide the tools and support you need to succeed.
@@ -49,7 +49,7 @@ export default function AgentGetStartedPage() {
           <h2 className="mb-3 text-2xl font-semibold text-gray-800">
             Benefits of Being an Agent:
           </h2>
-          <ul className="mb-8 list-disc list-inside text-gray-600 space-y-1">
+          <ul className="mb-8 list-disc list-inside text-gray-600 text-2xl">
             <li>Competitive commission rates</li>
             <li>Access to a wide range of clients</li>
             <li>Flexible work schedule</li>
@@ -66,7 +66,7 @@ export default function AgentGetStartedPage() {
       </div>
 
       {/* Right Section */}
-      <div className="flex w-full md:w-1/2 flex-col items-center justify-center bg-orange-600 p-6 md:p-12 pt-24">
+      <div className="flex w-full md:w-1/2 flex-col items-center justify-center bg-orange-600 p-8 md:min-h-screen">
         {showForm ? (
           <div className="w-full max-w-md rounded-lg bg-white p-10 shadow-2xl">
             <h2 className="mb-4 text-center text-2xl font-bold text-gray-800">
@@ -105,7 +105,7 @@ export default function AgentGetStartedPage() {
                   {...register('businessName', {
                     required: 'Business name is required',
                   })}
-                  className="mt-1 block border-1 rounded-sm w-full border-gray-400 shadow-md focus:border-orange-500 focus:ring-orange-500"
+                  className="mt-1 block w-full rounded-sm border border-gray-400 shadow-sm focus:border-orange-500 focus:ring-orange-500"
                 />
                 {errors.businessName && (
                   <p className="mt-1 text-sm text-red-600">
@@ -113,6 +113,7 @@ export default function AgentGetStartedPage() {
                   </p>
                 )}
               </div>
+
               <div>
                 <label
                   htmlFor="email"
@@ -266,8 +267,7 @@ export default function AgentGetStartedPage() {
               </div>
 
               <button
-                type="button"
-                onClick={handleSubmit(onSubmit)}
+                type="submit"
                 className="w-full rounded-lg bg-orange-600 py-3 text-lg font-semibold text-white transition-transform hover:scale-105 hover:bg-orange-700"
               >
                 Submit Application
