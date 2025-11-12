@@ -3,6 +3,7 @@ import type { NextRequest } from 'next/server';
 
 const customerAllowedPaths = [
   '/dashboard',
+  '/dashboard/agent',
   '/dashboard/my-bookings',
   '/dashboard/messages',
   '/dashboard/wallet',
@@ -17,6 +18,11 @@ export function middleware(request: NextRequest) {
   const accessToken = request.cookies.get('access')?.value;
   const refreshToken = request.cookies.get('refresh')?.value;
   const userRole = request.cookies.get('userRole')?.value;
+
+  // Allow public access to the agent dashboard
+  if (request.nextUrl.pathname.startsWith('/dashboard/agent')) {
+    return NextResponse.next();
+  }
 
   if (!accessToken && !refreshToken) {
     if (request.nextUrl.pathname.startsWith('/dashboard')) {

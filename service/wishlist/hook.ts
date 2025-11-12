@@ -1,11 +1,20 @@
 import useSWR from 'swr';
 import api from '../api';
 import { Wishlist, AddToWishlistDto } from './types';
+import { useSelector } from 'react-redux';
+import { RootState } from '../store/store';
 
 const fetcher = (url: string) => api.get(url).then(res => res.data);
 
 export const useWishlist = () => {
-  const { data, error, mutate } = useSWR<Wishlist>('/wishlist', fetcher);
+  const { accessToken } = useSelector((state: RootState) => state.auth);
+
+  // Only fetch wishlist if the user is authenticated
+  const shouldFetch = !!accessToken;
+  const { data, error, mutate } = useSWR<Wishlist>(
+    shouldFetch ? '/wishlist' : null,
+    fetcher
+  );
 
   const addItem = async (item: AddToWishlistDto) => {
     try {
