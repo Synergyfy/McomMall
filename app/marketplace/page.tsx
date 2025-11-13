@@ -99,46 +99,7 @@ export default function MarketplacePage() {
   return (
     <div className="bg-gray-100 pt-28">
       <div className="container mx-auto px-4 py-8">
-        {/* Flash Sales Section */}
-        <div className="bg-red-600 text-white p-4 rounded-lg shadow-md mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-2xl font-bold">Flash Sales</h2>
-              <div className="text-xl">
-                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-              </div>
-            </div>
-            <Link href="/flash-sales">
-              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
-            </Link>
-          </div>
-          <div className="mt-4 flex space-x-4 overflow-x-auto">
-            {promotionalItems.slice(0, 6).map((item) => (
-              <Link key={item.id} href={`/products/${item.id}`}>
-                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
-                  <div className="relative">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={150}
-                      height={150}
-                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">-24%</div>
-                  </div>
-                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">${(Math.random() * 80 + 10).toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 line-through">${(Math.random() * 40 + 90).toFixed(2)}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
-                  </div>
-                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
-
+      
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. Category Sidebar */}
           <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
@@ -271,7 +232,45 @@ export default function MarketplacePage() {
             </button>
           </div>
         </div>
-
+ {/* Flash Sales Section */}
+        <div className="bg-orange-600 text-white p-4 rounded-lg shadow-md mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold">Flash Sales</h2>
+              <div className="text-xl">
+                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+              </div>
+            </div>
+            <Link href="/flash-sales">
+              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
+            </Link>
+          </div>
+          <div className="mt-4 flex space-x-4 overflow-x-auto">
+            {promotionalItems.slice(0, 6).map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
+                  <div className="relative">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={150}
+                      height={150}
+                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">-24%</div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
+                  <p className="mt-1 text-lg font-bold">${(Math.random() * 80 + 10).toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">${(Math.random() * 40 + 90).toFixed(2)}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
         {/* Filtered Products Grid */}
         <div className="mt-6">
           <h2 className="text-2xl font-bold mb-4">{selectedCategory || 'All Products'}</h2>
@@ -297,6 +296,7 @@ export default function MarketplacePage() {
             ))}
           </div>
         </div>
+        
       </div>
     </div>
   );
