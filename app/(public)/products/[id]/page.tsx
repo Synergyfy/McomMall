@@ -13,9 +13,9 @@ interface Product {
   title: string;
   image: string;
   category: string;
-  price: number; // Added price
-  description: string; // Added description
-  // Add other relevant fields as needed
+  price: number;
+  discountedPrice?: number;
+  description: string;
 }
 
 export default function ProductPage() {
@@ -28,10 +28,8 @@ export default function ProductPage() {
       const foundProduct = promotionalItems.find((item) => item.id === productId);
 
       if (foundProduct) {
-        // For demonstration, we'll add some mock details to the found product
         setProduct({
           ...foundProduct,
-          price: Math.floor(Math.random() * 100) + 20, // Mock price
           description: `This is a detailed description for ${foundProduct.title}. It highlights the key features and benefits of the product, ensuring customers have all the information they need.`,
         });
       }
@@ -64,7 +62,16 @@ export default function ProductPage() {
         <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-3xl font-bold mb-4">{product.title}</h1>
           <p className="text-gray-600 text-lg mb-4">{product.category}</p>
-          <p className="text-2xl font-semibold text-blue-600 mb-6">${product.price.toFixed(2)}</p>
+          <div className="flex items-center mb-6">
+            {product.discountedPrice ? (
+              <>
+                <p className="text-2xl font-semibold text-red-600 mr-4">${product.discountedPrice.toFixed(2)}</p>
+                <p className="text-xl font-medium text-gray-500 line-through">${product.price.toFixed(2)}</p>
+              </>
+            ) : (
+              <p className="text-2xl font-semibold text-blue-600">${product.price.toFixed(2)}</p>
+            )}
+          </div>
           <p className="text-gray-800 mb-6">{product.description}</p>
 
           <Link href={`/checkout?productId=${product.id}`}>

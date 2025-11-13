@@ -5,7 +5,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import {
   Smartphone,
-  Watch,
   Laptop,
   Home,
   Shirt,
@@ -41,7 +40,6 @@ const categories = [
 
 const ITEMS_PER_VIEW = 8;
 
-// Updated treasureHuntSlides with one image per slide
 const treasureHuntSlides = [
   { imageSrc: 'images/landscap.jpg' },
   { imageSrc: 'images/summer.jpg' },
@@ -74,10 +72,6 @@ export default function MarketplacePage() {
     });
   };
 
-  const visibleItems = promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
-  const canGoPrev = carouselIndex > 0;
-  const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
-
   const filteredItems = selectedCategory
     ? promotionalItems.filter((item) => item.category === selectedCategory)
     : promotionalItems;
@@ -96,10 +90,12 @@ export default function MarketplacePage() {
     return () => clearInterval(countdown);
   }, []);
 
+  // Use a separate, unfiltered list for the flash sales
+  const flashSaleItems = promotionalItems.slice(0, 6);
+
   return (
     <div className="bg-gray-100 pt-28">
       <div className="container mx-auto px-4 py-8">
-      
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. Category Sidebar */}
           <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
@@ -206,13 +202,13 @@ export default function MarketplacePage() {
           <div className="flex items-center justify-between">
             <button
               onClick={handlePrev}
-              disabled={!canGoPrev}
+              disabled={carouselIndex <= 0}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={24} />
             </button>
             <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-              {promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item, index) => (
+              {promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item) => (
                 <Link key={item.id} href={`/products/${item.id}`}>
                   <div className="text-center flex-shrink-0 group cursor-pointer">
                     <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
@@ -225,52 +221,14 @@ export default function MarketplacePage() {
             </div>
             <button
               onClick={handleNext}
-              disabled={!canGoNext}
+              disabled={carouselIndex + ITEMS_PER_VIEW >= promotionalItems.length}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight size={24} />
             </button>
           </div>
         </div>
- {/* Flash Sales Section */}
-        <div className="bg-orange-600 text-white p-4 rounded-lg shadow-md mb-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-2xl font-bold">Flash Sales</h2>
-              <div className="text-xl">
-                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-              </div>
-            </div>
-            <Link href="/flash-sales">
-              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
-            </Link>
-          </div>
-          <div className="mt-4 flex space-x-4 overflow-x-auto">
-            {promotionalItems.slice(0, 6).map((item) => (
-              <Link key={item.id} href={`/products/${item.id}`}>
-                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
-                  <div className="relative">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={150}
-                      height={150}
-                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">-24%</div>
-                  </div>
-                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">${(Math.random() * 80 + 10).toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 line-through">${(Math.random() * 40 + 90).toFixed(2)}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
-                  </div>
-                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
+
         {/* Filtered Products Grid */}
         <div className="mt-6">
           <h2 className="text-2xl font-bold mb-4">{selectedCategory || 'All Products'}</h2>
@@ -289,14 +247,55 @@ export default function MarketplacePage() {
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-medium group-hover:underline">{item.title}</p>
-                    <p className="text-lg font-semibold mt-2">${(Math.random() * 100 + 20).toFixed(2)}</p>
+                    <p className="text-lg font-semibold mt-2">${item.price.toFixed(2)}</p>
                   </div>
                 </div>
               </Link>
             ))}
           </div>
         </div>
-        
+
+        {/* Flash Sales Section */}
+        <div className="bg-red-600 text-white p-4 rounded-lg shadow-md mt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold">Flash Sales</h2>
+              <div className="text-xl">
+                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+              </div>
+            </div>
+            <Link href="/flash-sales">
+              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
+            </Link>
+          </div>
+          <div className="mt-4 flex space-x-4 overflow-x-auto">
+            {flashSaleItems.map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
+                  <div className="relative">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={150}
+                      height={150}
+                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
+                  <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
