@@ -17,37 +17,38 @@ import {
   Phone,
   Store,
   Truck,
-  Star
+  Star,
+  LayoutGrid,
+  Building,
+  Car,
+  Tag,
+  Wrench,
+  Users,
+  Briefcase,
+  Calendar,
+  Utensils,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { listings, categories } from '../../lib/listing-data';
 
-// Mock Data
-const categories = [
-  { name: 'Appliances', icon: <Home /> },
-  { name: 'Phones & Tablets', icon: <Smartphone /> },
-  { name: 'Health & Beauty', icon: <Heart /> },
-  { name: 'Home & Office', icon: <Laptop /> },
-  { name: 'Electronics', icon: <ShoppingCart /> },
-  { name: 'Fashion', icon: <Shirt /> },
-  { name: 'Supermarket', icon: <ShoppingCart /> },
-  { name: 'Computing', icon: <Laptop /> },
-  { name: 'Baby Products', icon: <PlusCircle /> },
-  { name: 'Gaming', icon: <Percent /> },
-  { name: 'Musical Instruments', icon: <PlusCircle /> },
-  { name: 'Other categories', icon: <PlusCircle /> },
-];
+const iconComponents: { [key: string]: React.ElementType } = {
+  LayoutGrid,
+  Home,
+  Building,
+  Car,
+  Tag,
+  Wrench,
+  Smartphone,
+  Users,
+  Briefcase,
+  Calendar,
+  Utensils,
+};
 
-const promotionalItems = [
-  { title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png' },
-  { title: 'Awoof Deals', image: 'https://placehold.co/200x200/png' },
-  { title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png' },
-  { title: 'Send Packages Securely', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unbeatable Offers', image: 'https://placehold.co/200x200/png' },
-  { title: 'Earn While You Shop', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unlock Your Deal', image: 'https://placehold.co/200x200/png' },
-  { title: 'Deals Reloaded', image: 'https://placehold.co/200x200/png' },
-  { title: 'More Deals', image: 'https://placehold.co/200x200/png' },
-];
+const CategoryIcon = ({ name }: { name: string }) => {
+  const Icon = iconComponents[name];
+  return Icon ? <Icon /> : <PlusCircle />;
+};
 
 const ITEMS_PER_VIEW = 8;
 
@@ -72,7 +73,7 @@ export default function MarketplacePage() {
   const handleNext = () => {
     setCarouselIndex((prevIndex) => {
       const nextIndex = prevIndex + 1;
-      return nextIndex > promotionalItems.length - ITEMS_PER_VIEW ? prevIndex : nextIndex;
+      return nextIndex > listings.length - ITEMS_PER_VIEW ? prevIndex : nextIndex;
     });
   };
 
@@ -83,9 +84,9 @@ export default function MarketplacePage() {
     });
   };
 
-  const visibleItems = promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
+  const visibleItems = listings.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
   const canGoPrev = carouselIndex > 0;
-  const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
+  const canGoNext = carouselIndex + ITEMS_PER_VIEW < listings.length;
 
   return (
     <div className="bg-gray-100 pt-28">
@@ -96,7 +97,7 @@ export default function MarketplacePage() {
             <ul className="space-y-2 h-96 overflow-y-auto">
               {categories.map((category, index) => (
                 <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
-                  {category.icon}
+                  <CategoryIcon name={category.icon} />
                   <span>{category.name}</span>
                 </li>
               ))}
@@ -191,7 +192,7 @@ export default function MarketplacePage() {
               {visibleItems.map((item, index) => (
                 <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
                   <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                    <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+                    <Image src={item.imageUrl} alt={item.title} width={128} height={128} className="object-cover" />
                   </div>
                   <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
                 </div>
