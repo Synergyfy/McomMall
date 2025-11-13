@@ -118,7 +118,7 @@ export default function AgentDashboard() {
                 Active Tasks
               </button>
               <button
-                onClick={handle_start_quiz}
+                onClick={handleStartQuiz}
                 className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <CheckCircle className="h-6 w-6" />
