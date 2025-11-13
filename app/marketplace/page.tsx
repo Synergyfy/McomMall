@@ -52,23 +52,24 @@ const CategoryIcon = ({ name }: { name: string }) => {
 
 const ITEMS_PER_VIEW = 8;
 
-// Updated treasureHuntSlides with one image per slide
-const treasureHuntSlides = [
-  { imageSrc: 'images/landscap.jpg' },
-  { imageSrc: 'images/summer.jpg' },
-  { imageSrc: 'images/winter.jpg' },
-];
-
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState('All');
+
+  const treasureHuntSlides = listings.slice(0, 3);
+
+  const handleCategoryClick = (category: string) => {
+    setSelectedCategory(category);
+    setCarouselIndex(0); // Reset carousel index when category changes
+  };
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % treasureHuntSlides.length);
     }, 10000); // 10 seconds
     return () => clearInterval(timer);
-  }, []);
+  }, [treasureHuntSlides.length]);
 
   const handleNext = () => {
     setCarouselIndex((prevIndex) => {
@@ -84,9 +85,14 @@ export default function MarketplacePage() {
     });
   };
 
-  const visibleItems = listings.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
+  const filteredListings =
+    selectedCategory === 'All'
+      ? listings
+      : listings.filter((listing) => listing.category === selectedCategory);
+
+  const visibleItems = filteredListings.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
   const canGoPrev = carouselIndex > 0;
-  const canGoNext = carouselIndex + ITEMS_PER_VIEW < listings.length;
+  const canGoNext = carouselIndex + ITEMS_PER_VIEW < filteredListings.length;
 
   return (
     <div className="bg-gray-100 pt-28">
@@ -96,7 +102,13 @@ export default function MarketplacePage() {
           <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
             <ul className="space-y-2 h-96 overflow-y-auto">
               {categories.map((category, index) => (
-                <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
+                <li
+                  key={index}
+                  onClick={() => handleCategoryClick(category.name)}
+                  className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
+                    selectedCategory === category.name ? 'bg-gray-200' : ''
+                  }`}
+                >
                   <CategoryIcon name={category.icon} />
                   <span>{category.name}</span>
                 </li>
@@ -118,7 +130,7 @@ export default function MarketplacePage() {
                   className="w-full h-full relative"
                 >
                   <Image
-                    src={treasureHuntSlides[activeSlide].imageSrc}
+                    src={treasureHuntSlides[activeSlide].imageUrl}
                     alt={`Treasure hunt image ${activeSlide + 1}`}
                     fill
                     className="object-cover rounded-lg"
