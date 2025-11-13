@@ -82,9 +82,63 @@ export default function MarketplacePage() {
     ? promotionalItems.filter((item) => item.category === selectedCategory)
     : promotionalItems;
 
+  const [timeLeft, setTimeLeft] = useState({ hours: 1, minutes: 11, seconds: 1 });
+
+  useEffect(() => {
+    const countdown = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(countdown);
+  }, []);
+
   return (
     <div className="bg-gray-100 pt-28">
       <div className="container mx-auto px-4 py-8">
+        {/* Flash Sales Section */}
+        <div className="bg-red-600 text-white p-4 rounded-lg shadow-md mb-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold">Flash Sales</h2>
+              <div className="text-xl">
+                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+              </div>
+            </div>
+            <Link href="/flash-sales">
+              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
+            </Link>
+          </div>
+          <div className="mt-4 flex space-x-4 overflow-x-auto">
+            {promotionalItems.slice(0, 6).map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
+                  <div className="relative">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={150}
+                      height={150}
+                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">-24%</div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
+                  <p className="mt-1 text-lg font-bold">${(Math.random() * 80 + 10).toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">${(Math.random() * 40 + 90).toFixed(2)}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. Category Sidebar */}
           <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
@@ -197,7 +251,7 @@ export default function MarketplacePage() {
               <ChevronLeft size={24} />
             </button>
             <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-              {filteredItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item, index) => (
+              {promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item, index) => (
                 <Link key={item.id} href={`/products/${item.id}`}>
                   <div className="text-center flex-shrink-0 group cursor-pointer">
                     <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
@@ -215,6 +269,32 @@ export default function MarketplacePage() {
             >
               <ChevronRight size={24} />
             </button>
+          </div>
+        </div>
+
+        {/* Filtered Products Grid */}
+        <div className="mt-6">
+          <h2 className="text-2xl font-bold mb-4">{selectedCategory || 'All Products'}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredItems.map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer">
+                  <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={200}
+                      height={200}
+                      className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm font-medium group-hover:underline">{item.title}</p>
+                    <p className="text-lg font-semibold mt-2">${(Math.random() * 100 + 20).toFixed(2)}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>

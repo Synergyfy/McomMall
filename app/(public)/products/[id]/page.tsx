@@ -1,40 +1,79 @@
-
+// app/(public)/products/[id]/page.tsx
 'use client';
 
-import React from 'react';
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
-import { promotionalItems } from '@/lib/listing-data';
 import Image from 'next/image';
 import Link from 'next/link';
+import { promotionalItems } from '@/lib/listing-data';
 
-const ProductDetailPage = () => {
+// Full product type, combining promotional item data with details
+interface Product {
+  id: number;
+  title: string;
+  image: string;
+  category: string;
+  price: number; // Added price
+  description: string; // Added description
+  // Add other relevant fields as needed
+}
+
+export default function ProductPage() {
   const { id } = useParams();
-  const product = promotionalItems.find((item) => item.id === parseInt(id as string));
+  const [product, setProduct] = useState<Product | null>(null);
+
+  useEffect(() => {
+    if (id) {
+      const productId = parseInt(id as string, 10);
+      const foundProduct = promotionalItems.find((item) => item.id === productId);
+
+      if (foundProduct) {
+        // For demonstration, we'll add some mock details to the found product
+        setProduct({
+          ...foundProduct,
+          price: Math.floor(Math.random() * 100) + 20, // Mock price
+          description: `This is a detailed description for ${foundProduct.title}. It highlights the key features and benefits of the product, ensuring customers have all the information they need.`,
+        });
+      }
+    }
+  }, [id]);
 
   if (!product) {
-    return <div>Product not found</div>;
+    return (
+      <div className="flex justify-center items-center h-screen">
+        <p className="text-xl">Loading product...</p>
+      </div>
+    );
   }
 
   return (
     <div className="container mx-auto px-4 py-8 pt-28">
       <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-        <div>
-          <Image src={product.image} alt={product.title} width={500} height={500} className="rounded-lg" />
+        {/* Product Image */}
+        <div className="bg-white rounded-lg shadow-md p-6">
+          <Image
+            src={product.image}
+            alt={product.title}
+            width={500}
+            height={500}
+            className="object-contain w-full h-full"
+          />
         </div>
-        <div>
+
+        {/* Product Details */}
+        <div className="bg-white rounded-lg shadow-md p-6">
           <h1 className="text-3xl font-bold mb-4">{product.title}</h1>
-          <p className="text-lg text-gray-700 mb-4">
-            This is a mock description for the product. More details about the product will be displayed here.
-          </p>
-          <Link href="/checkout">
-            <button className="bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded">
-              Checkout
-            </button>
+          <p className="text-gray-600 text-lg mb-4">{product.category}</p>
+          <p className="text-2xl font-semibold text-blue-600 mb-6">${product.price.toFixed(2)}</p>
+          <p className="text-gray-800 mb-6">{product.description}</p>
+
+          <Link href={`/checkout?productId=${product.id}`}>
+            <div className="w-full bg-blue-600 text-white text-center py-3 rounded-lg hover:bg-blue-700 transition-colors cursor-pointer">
+              Proceed to Checkout
+            </div>
           </Link>
         </div>
       </div>
     </div>
   );
-};
-
-export default ProductDetailPage;
+}
