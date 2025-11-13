@@ -1,5 +1,5 @@
 
-export default function TrainingTab() {
+export default function TrainingTab({ handleStartQuiz }: { handleStartQuiz: () => void }) {
   return (
     <>
       {/* F. Training and Upskills */}
@@ -11,7 +11,12 @@ export default function TrainingTab() {
               <h3 className="font-semibold text-2xl">Advanced SOP Training</h3>
               <p className="text-muted-foreground text-lg">Complete this to unlock higher-paying tasks.</p>
             </div>
-            <button className="bg-secondary text-secondary-foreground px-5 py-3 rounded-md text-xl">Start Now</button>
+            <button
+              onClick={handleStartQuiz}
+              className="bg-secondary text-secondary-foreground px-5 py-3 rounded-md text-xl"
+            >
+              Start Now
+            </button>
           </div>
         </div>
       </div>

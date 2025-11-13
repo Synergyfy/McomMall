@@ -102,8 +102,8 @@ export default function AgentDashboard() {
               <span className="">Agent Dashboard</span>
             </Link>
           </div>
-          <div className="flex-1">
-            <nav className="grid items-start px-4 text-2xl font-medium lg:px-6">
+          <div className="flex-1 overflow-y-auto">
+            <nav className="grid items-start px-4 text-lg font-medium lg:px-6">
               <button
                 onClick={() => setActiveTab('home')}
                 className={`flex items-center gap-4 rounded-lg px-4 py-3 transition-all hover:text-primary ${
@@ -219,7 +219,7 @@ export default function AgentDashboard() {
           {activeTab === 'active-tasks' && <ActiveTasksTab />}
           {activeTab === 'completed-tasks' && <CompletedTasksTab />}
           {activeTab === 'earnings' && <EarningsTab />}
-          {activeTab === 'training' && <TrainingTab />}
+          {activeTab === 'training' && <TrainingTab handleStartQuiz={handleStartQuiz} />}
           {activeTab === 'support' && <SupportTab />}
         </main>
       </div>
