@@ -189,9 +189,9 @@ export default function AgentDashboard() {
           </div>
         </div>
       </div>
-      <div className="flex flex-col md:ml-[220px] lg:ml-[280px]">
+      <div className="flex flex-col md:ml-[220px] lg:ml-[280px] h-screen">
         {/* Top Header */}
-        <header className="flex h-20 items-center gap-6 border-b bg-muted/40 px-6 lg:h-[80px] lg:px-8">
+        <header className="sticky top-0 flex h-20 items-center gap-6 border-b bg-background px-6 lg:h-[80px] lg:px-8 z-10">
           <div className="w-full flex-1">
             {/* Mobile menu button can be added here */}
           </div>
@@ -207,7 +207,7 @@ export default function AgentDashboard() {
         </header>
 
         {/* Main Dashboard Content */}
-        <main className="flex flex-1 flex-col gap-8 p-8 pt-24 lg:gap-10 lg:p-10 lg:pt-24">
+        <main className="flex-1 overflow-y-auto p-8 pt-6 flex flex-col gap-8 lg:p-10 lg:pt-8">
           {showSuccessMessage && (
             <div className="bg-green-100 border-l-4 border-green-500 text-green-700 p-4 mb-6" role="alert">
               <p className="font-bold text-2xl">You Passed! Welcome to the Dashboard!</p>
