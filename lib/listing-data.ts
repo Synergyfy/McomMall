@@ -155,6 +155,18 @@ export const categories = [
   { name: 'Eat & Drink', icon: 'Utensils' },
 ];
 
+export const promotionalItems = [
+  { id: 1, title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png', category: 'Appliances' },
+  { id: 2, title: 'Awoof Deals', image: 'https://placehold.co/200x200/png', category: 'Phones & Tablets' },
+  { id: 3, title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png', category: 'Health & Beauty' },
+  { id: 4, title: 'Send Packages Securely', image: 'https://placehold.co/200x200/png', category: 'Home & Office' },
+  { id: 5, title: 'Unbeatable Offers', image: 'https://placehold.co/200x200/png', category: 'Electronics' },
+  { id: 6, title: 'Earn While You Shop', image: 'https://placehold.co/200x200/png', category: 'Fashion' },
+  { id: 7, title: 'Unlock Your Deal', image: 'https://placehold.co/200x200/png', category: 'Supermarket' },
+  { id: 8, title: 'Deals Reloaded', image: 'https://placehold.co/200x200/png', category: 'Computing' },
+  { id: 9, title: 'More Deals', image: 'https://placehold.co/200x200/png', category: 'Baby Products' },
+];
+
 // This object contains the *extra* details for a listing page.
 // In a real app, this data would be fetched from your database for a specific ID.
 export const extraDetailedData = {

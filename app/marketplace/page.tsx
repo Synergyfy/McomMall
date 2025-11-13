@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Smartphone,
   Watch,
@@ -20,6 +21,7 @@ import {
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { promotionalItems } from '@/lib/listing-data';
 
 // Mock Data
 const categories = [
@@ -37,18 +39,6 @@ const categories = [
   { name: 'Other categories', icon: <PlusCircle /> },
 ];
 
-const promotionalItems = [
-  { title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png' },
-  { title: 'Awoof Deals', image: 'https://placehold.co/200x200/png' },
-  { title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png' },
-  { title: 'Send Packages Securely', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unbeatable Offers', image: 'https://placehold.co/200x200/png' },
-  { title: 'Earn While You Shop', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unlock Your Deal', image: 'https://placehold.co/200x200/png' },
-  { title: 'Deals Reloaded', image: 'https://placehold.co/200x200/png' },
-  { title: 'More Deals', image: 'https://placehold.co/200x200/png' },
-];
-
 const ITEMS_PER_VIEW = 8;
 
 // Updated treasureHuntSlides with one image per slide
@@ -61,6 +51,7 @@ const treasureHuntSlides = [
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -87,6 +78,10 @@ export default function MarketplacePage() {
   const canGoPrev = carouselIndex > 0;
   const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
 
+  const filteredItems = selectedCategory
+    ? promotionalItems.filter((item) => item.category === selectedCategory)
+    : promotionalItems;
+
   return (
     <div className="bg-gray-100 pt-28">
       <div className="container mx-auto px-4 py-8">
@@ -94,8 +89,22 @@ export default function MarketplacePage() {
           {/* 1. Category Sidebar */}
           <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
             <ul className="space-y-2 h-96 overflow-y-auto">
+              <li
+                className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
+                  !selectedCategory ? 'bg-gray-100' : ''
+                }`}
+                onClick={() => setSelectedCategory(null)}
+              >
+                <span>All</span>
+              </li>
               {categories.map((category, index) => (
-                <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
+                <li
+                  key={index}
+                  className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
+                    selectedCategory === category.name ? 'bg-gray-100' : ''
+                  }`}
+                  onClick={() => setSelectedCategory(category.name)}
+                >
                   {category.icon}
                   <span>{category.name}</span>
                 </li>
@@ -188,13 +197,15 @@ export default function MarketplacePage() {
               <ChevronLeft size={24} />
             </button>
             <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-              {visibleItems.map((item, index) => (
-                <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
-                  <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                    <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+              {filteredItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item, index) => (
+                <Link key={item.id} href={`/products/${item.id}`}>
+                  <div className="text-center flex-shrink-0 group cursor-pointer">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                      <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+                    </div>
+                    <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
                   </div>
-                  <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
-                </div>
+                </Link>
               ))}
             </div>
             <button
