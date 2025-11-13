@@ -96,69 +96,69 @@ export default function AgentDashboard() {
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-4 text-2xl font-medium lg:px-6">
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg bg-muted px-4 py-3 text-primary transition-all hover:text-primary w-full text-left"
+              <Link
+                href="#"
+                className="flex items-center gap-4 rounded-lg bg-muted px-4 py-3 text-primary transition-all hover:text-primary"
               >
                 <Home className="h-6 w-6" />
                 Home
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#available-tasks"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <Briefcase className="h-6 w-6" />
                 Available Tasks
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#active-tasks"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <Clock className="h-6 w-6" />
                 Active Tasks
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#completed-tasks"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <CheckCircle className="h-6 w-6" />
                 Completed Tasks
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#earnings"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <DollarSign className="h-6 w-6" />
                 Earnings & Payouts
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#training"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <Award className="h-6 w-6" />
                 Training
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <User className="h-6 w-6" />
                 Profile
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <Settings className="h-6 w-6" />
                 Settings
-              </button>
-              <button
-                onClick={handleStartQuiz}
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
+              </Link>
+              <Link
+                href="#support"
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
               >
                 <HelpCircle className="h-6 w-6" />
                 Help & Support
-              </button>
+              </Link>
             </nav>
           </div>
         </div>
@@ -221,7 +221,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* B. Available Tasks panel */}
-          <div className="rounded-lg border p-8">
+          <div id="available-tasks" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Available Tasks</h2>
             {/* Filtering options */}
             <div className="flex gap-6 my-8">
@@ -246,7 +246,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* C. Active Tasks */}
-          <div className="rounded-lg border p-8">
+          <div id="active-tasks" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Active Tasks</h2>
             <div className="space-y-8 mt-8">
               {/* Active task card */}
@@ -271,7 +271,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* D. Completed Tasks & History */}
-          <div className="rounded-lg border p-8">
+          <div id="completed-tasks" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Completed Tasks & History</h2>
             <div className="space-y-8 mt-8">
               {/* Completed task card */}
@@ -289,7 +289,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* E. Earnings and Payouts */}
-          <div className="rounded-lg border p-8">
+          <div id="earnings" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Earnings & Payouts</h2>
             <div className="grid grid-cols-2 gap-8 mt-8">
               <div className="border p-6 rounded-md">
@@ -308,7 +308,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* F. Training and Upskills */}
-           <div className="rounded-lg border p-8">
+           <div id="training" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Training and Upskills</h2>
             <div className="space-y-6 mt-8">
               <div className="border p-6 rounded-md flex justify-between items-center">
@@ -322,7 +322,7 @@ export default function AgentDashboard() {
           </div>
 
           {/* G. Support and Disputes */}
-           <div className="rounded-lg border p-8">
+           <div id="support" className="rounded-lg border p-8">
             <h2 className="text-3xl font-semibold">Support and Disputes</h2>
             <div className="mt-8">
               <p className="text-xl">Have an issue with a task or payment? Our support team is here to help.</p>
