@@ -96,41 +96,41 @@ export default function AgentDashboard() {
           </div>
           <div className="flex-1">
             <nav className="grid items-start px-4 text-2xl font-medium lg:px-6">
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg bg-muted px-4 py-3 text-primary transition-all hover:text-primary"
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg bg-muted px-4 py-3 text-primary transition-all hover:text-primary w-full text-left"
               >
                 <Home className="h-6 w-6" />
                 Home
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <Briefcase className="h-6 w-6" />
                 Available Tasks
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <Clock className="h-6 w-6" />
                 Active Tasks
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handle_start_quiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <CheckCircle className="h-6 w-6" />
                 Completed Tasks
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <DollarSign className="h-6 w-6" />
                 Earnings & Payouts
-              </Link>
+              </button>
               <button
                 onClick={handleStartQuiz}
                 className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
@@ -138,27 +138,27 @@ export default function AgentDashboard() {
                 <Award className="h-6 w-6" />
                 Training
               </button>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <User className="h-6 w-6" />
                 Profile
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <Settings className="h-6 w-6" />
                 Settings
-              </Link>
-              <Link
-                href="#"
-                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary"
+              </button>
+              <button
+                onClick={handleStartQuiz}
+                className="flex items-center gap-4 rounded-lg px-4 py-3 text-muted-foreground transition-all hover:text-primary w-full text-left"
               >
                 <HelpCircle className="h-6 w-6" />
                 Help & Support
-              </Link>
+              </button>
             </nav>
           </div>
         </div>
