@@ -98,8 +98,8 @@ export default function MarketplacePage() {
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. Category Sidebar */}
-          <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
-            <ul className="space-y-2 h-96 overflow-y-auto">
+          <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm">
+            <ul className="space-y-2 h-96 overflow-y-auto overflow-x-hidden">
               <li
                 className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
                   !selectedCategory ? 'bg-gray-100' : ''
@@ -124,7 +124,7 @@ export default function MarketplacePage() {
           </div>
 
           {/* 2. Main Content */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-6">
             {/* Treasure Hunt Section */}
             <div className="rounded-lg shadow-lg h-96 relative overflow-hidden">
               <AnimatePresence mode="wait">
@@ -288,9 +288,9 @@ export default function MarketplacePage() {
                   <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
                   <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${Math.random() * 50 + 50}%` }}></div>
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
                   </div>
-                  <p className="text-xs mt-1 text-gray-600">{Math.floor(Math.random() * 50) + 50} items left</p>
+                  <p className="text-xs mt-1 text-gray-600">{item.items_left} items left</p>
                 </div>
               </Link>
             ))}
