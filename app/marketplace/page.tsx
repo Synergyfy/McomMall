@@ -2,9 +2,9 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import {
   Smartphone,
-  Watch,
   Laptop,
   Home,
   Shirt,
@@ -20,6 +20,7 @@ import {
   Star
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
+import { promotionalItems } from '@/lib/listing-data';
 
 // Mock Data
 const categories = [
@@ -37,21 +38,8 @@ const categories = [
   { name: 'Other categories', icon: <PlusCircle /> },
 ];
 
-const promotionalItems = [
-  { title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png' },
-  { title: 'Awoof Deals', image: 'https://placehold.co/200x200/png' },
-  { title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png' },
-  { title: 'Send Packages Securely', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unbeatable Offers', image: 'https://placehold.co/200x200/png' },
-  { title: 'Earn While You Shop', image: 'https://placehold.co/200x200/png' },
-  { title: 'Unlock Your Deal', image: 'https://placehold.co/200x200/png' },
-  { title: 'Deals Reloaded', image: 'https://placehold.co/200x200/png' },
-  { title: 'More Deals', image: 'https://placehold.co/200x200/png' },
-];
-
 const ITEMS_PER_VIEW = 8;
 
-// Updated treasureHuntSlides with one image per slide
 const treasureHuntSlides = [
   { imageSrc: 'images/landscap.jpg' },
   { imageSrc: 'images/summer.jpg' },
@@ -61,6 +49,7 @@ const treasureHuntSlides = [
 export default function MarketplacePage() {
   const [carouselIndex, setCarouselIndex] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
+  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -83,19 +72,50 @@ export default function MarketplacePage() {
     });
   };
 
-  const visibleItems = promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW);
-  const canGoPrev = carouselIndex > 0;
-  const canGoNext = carouselIndex + ITEMS_PER_VIEW < promotionalItems.length;
+  const filteredItems = selectedCategory
+    ? promotionalItems.filter((item) => item.category === selectedCategory)
+    : promotionalItems;
+
+  const [timeLeft, setTimeLeft] = useState({ hours: 1, minutes: 11, seconds: 1 });
+
+  useEffect(() => {
+    const countdown = setInterval(() => {
+      setTimeLeft(prev => {
+        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
+        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
+        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
+        return prev;
+      });
+    }, 1000);
+    return () => clearInterval(countdown);
+  }, []);
+
+  // Use a separate, unfiltered list for the flash sales
+  const flashSaleItems = promotionalItems.slice(0, 6);
 
   return (
     <div className="bg-gray-100 pt-28">
       <div className="container mx-auto px-4 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
           {/* 1. Category Sidebar */}
-          <div className="lg:col-span-2 bg-white p-4 rounded-lg shadow-sm">
-            <ul className="space-y-2 h-96 overflow-y-auto">
+          <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm">
+            <ul className="space-y-2 h-96 overflow-y-auto overflow-x-hidden">
+              <li
+                className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
+                  !selectedCategory ? 'bg-gray-100' : ''
+                }`}
+                onClick={() => setSelectedCategory(null)}
+              >
+                <span>All</span>
+              </li>
               {categories.map((category, index) => (
-                <li key={index} className="flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors">
+                <li
+                  key={index}
+                  className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
+                    selectedCategory === category.name ? 'bg-gray-100' : ''
+                  }`}
+                  onClick={() => setSelectedCategory(category.name)}
+                >
                   {category.icon}
                   <span>{category.name}</span>
                 </li>
@@ -104,7 +124,7 @@ export default function MarketplacePage() {
           </div>
 
           {/* 2. Main Content */}
-          <div className="lg:col-span-7">
+          <div className="lg:col-span-6">
             {/* Treasure Hunt Section */}
             <div className="rounded-lg shadow-lg h-96 relative overflow-hidden">
               <AnimatePresence mode="wait">
@@ -182,28 +202,98 @@ export default function MarketplacePage() {
           <div className="flex items-center justify-between">
             <button
               onClick={handlePrev}
-              disabled={!canGoPrev}
+              disabled={carouselIndex <= 0}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronLeft size={24} />
             </button>
             <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-              {visibleItems.map((item, index) => (
-                <div key={index} className="text-center flex-shrink-0 group cursor-pointer">
-                  <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                    <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+              {promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item) => (
+                <Link key={item.id} href={`/products/${item.id}`}>
+                  <div className="text-center flex-shrink-0 group cursor-pointer">
+                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
+                      <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
+                    </div>
+                    <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
                   </div>
-                  <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
-                </div>
+                </Link>
               ))}
             </div>
             <button
               onClick={handleNext}
-              disabled={!canGoNext}
+              disabled={carouselIndex + ITEMS_PER_VIEW >= promotionalItems.length}
               className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ChevronRight size={24} />
             </button>
+          </div>
+        </div>
+
+        {/* Filtered Products Grid */}
+        <div className="mt-6">
+          <h2 className="text-2xl font-bold mb-4">{selectedCategory || 'All Products'}</h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
+            {filteredItems.map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer">
+                  <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={200}
+                      height={200}
+                      className="object-cover transition-transform duration-300 group-hover:scale-110"
+                    />
+                  </div>
+                  <div className="p-4">
+                    <p className="text-sm font-medium group-hover:underline">{item.title}</p>
+                    <p className="text-lg font-semibold mt-2">${item.price.toFixed(2)}</p>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
+        {/* Flash Sales Section */}
+        <div className="bg-red-600 text-white p-4 rounded-lg shadow-md mt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold">Flash Sales</h2>
+              <div className="text-xl">
+                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+              </div>
+            </div>
+            <Link href="/flash-sales">
+              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
+            </Link>
+          </div>
+          <div className="mt-4 flex space-x-4 overflow-x-auto">
+            {flashSaleItems.map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
+                  <div className="relative">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={150}
+                      height={150}
+                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
+                  <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-600">{item.items_left} items left</p>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
