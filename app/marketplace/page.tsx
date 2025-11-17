@@ -228,6 +228,47 @@ export default function MarketplacePage() {
             </button>
           </div>
         </div>
+         {/* Flash Sales Section */}
+        <div className="bg-orange-600 text-white p-4 rounded-lg shadow-md mt-6">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <h2 className="text-2xl font-bold">Flash Sales</h2>
+              <div className="text-xl">
+                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
+              </div>
+            </div>
+            <Link href="/flash-sales">
+              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
+            </Link>
+          </div>
+          <div className="mt-4 flex space-x-4 overflow-x-auto">
+            {flashSaleItems.map((item) => (
+              <Link key={item.id} href={`/products/${item.id}`}>
+                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
+                  <div className="relative">
+                    <Image
+                      src={item.image}
+                      alt={item.title}
+                      width={150}
+                      height={150}
+                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
+                    />
+                    <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                      -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
+                    </div>
+                  </div>
+                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
+                  <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
+                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
+                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
+                  </div>
+                  <p className="text-xs mt-1 text-gray-600">{item.items_left} items left</p>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
 
         {/* Filtered Products Grid */}
         <div className="mt-6">
@@ -255,47 +296,6 @@ export default function MarketplacePage() {
           </div>
         </div>
 
-        {/* Flash Sales Section */}
-        <div className="bg-red-600 text-white p-4 rounded-lg shadow-md mt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-2xl font-bold">Flash Sales</h2>
-              <div className="text-xl">
-                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-              </div>
-            </div>
-            <Link href="/flash-sales">
-              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
-            </Link>
-          </div>
-          <div className="mt-4 flex space-x-4 overflow-x-auto">
-            {flashSaleItems.map((item) => (
-              <Link key={item.id} href={`/products/${item.id}`}>
-                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
-                  <div className="relative">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={150}
-                      height={150}
-                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
-                    />
-                    <div className="absolute top-1 right-1 bg-red-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
-                    </div>
-                  </div>
-                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
-                  </div>
-                  <p className="text-xs mt-1 text-gray-600">{item.items_left} items left</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
       </div>
     </div>
   );
