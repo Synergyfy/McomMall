@@ -4,6 +4,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -234,19 +235,23 @@ export default function WinterExhibitionPage() {
             — for businesses & consumers.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Join the Winter Exhibition
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Discover Winter Deals
-            </Button>
+            <Link href="/exhibition">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
+              >
+                Join the Winter Exhibition
+              </Button>
+            </Link>
+            <Link href="/marketplace">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
+              >
+                Discover Winter Deals
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </section>
@@ -512,12 +517,14 @@ export default function WinterExhibitionPage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Join as a Business
-            </Button>
+            <Link href="/exhibition">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
+              >
+                Join as a Business
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -550,13 +557,15 @@ export default function WinterExhibitionPage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Start Exploring Deals
-            </Button>
+            <Link href="/marketplace">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
+              >
+                Start Exploring Deals
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -582,19 +591,23 @@ export default function WinterExhibitionPage() {
             Make This Winter Unforgettable with MCOM Virtual Exhibition
           </h2>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Showcase Your Business
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Discover Offers
-            </Button>
+            <Link href="/exhibition">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
+              >
+                Showcase Your Business
+              </Button>
+            </Link>
+            <Link href="/marketplace">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
+              >
+                Discover Offers
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </section>
