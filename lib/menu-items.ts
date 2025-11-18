@@ -22,6 +22,7 @@ import {
   Users,
   Timer,
   QrCode,
+  Scan,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -239,6 +240,15 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Coupon Products', href: '/dashboard/coupons/products' },
       { title: 'Sold Coupons', href: '/dashboard/coupons/sold' },
       { title: 'Redeem Coupon', href: '/dashboard/coupons/redeem' },
+    ],
+  },
+  {
+    title: 'Hotspot Campaigns',
+    href: '/dashboard/hotspot-campaigns',
+    icon: Scan,
+    subMenu: [
+      { title: 'All Campaigns', href: '/dashboard/hotspot-campaigns' },
+      { title: 'New Campaign', href: '/dashboard/hotspot-campaigns/new' },
     ],
   },
 ];
