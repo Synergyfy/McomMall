@@ -6,6 +6,7 @@ import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Eye, Save } from 'lucide-react';
+import { toast } from 'sonner';
 
 const HotspotEditorPage = () => {
   const params = useParams();
@@ -68,9 +69,10 @@ const HotspotEditorPage = () => {
     const campaignIndex = mockCampaigns.findIndex(c => c.id === campaign.id);
     if (campaignIndex !== -1) {
       mockCampaigns[campaignIndex] = campaign;
-      alert('Changes saved successfully!');
+      toast.success('Changes saved successfully!');
+      router.push('/dashboard/hotspot-campaigns');
     } else {
-      alert('Error: Campaign not found.');
+      toast.error('Error: Campaign not found.');
     }
   };
 
