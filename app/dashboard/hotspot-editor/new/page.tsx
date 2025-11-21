@@ -23,7 +23,7 @@ const NewHotspotCampaignPage = () => {
         };
 
         mockCampaigns.push(newCampaign);
-        router.push(`/dashboard/hotspot-campaigns/edit/${newCampaign.id}`);
+        router.push(`/dashboard/hotspot-editor/edit/${newCampaign.id}?type=campaign`);
       };
       reader.readAsDataURL(media[0]);
     } else {

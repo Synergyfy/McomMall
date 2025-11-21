@@ -24,6 +24,18 @@ export default function HeroSection({ listing }: HeroSectionProps) {
         objectFit="cover"
         className="rounded-lg"
       />
+      {listing.bannerHotspots?.map(hotspot => (
+        <a
+            key={hotspot.id}
+            href={hotspot.link}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="absolute w-6 h-6 rounded-full bg-red-500/80 border-2 border-white cursor-pointer transform -translate-x-1/2 -translate-y-1/2 flex items-center justify-center shadow-xl hover:scale-125 transition-transform"
+            style={{ left: `${hotspot.x}%`, top: `${hotspot.y}%` }}
+          >
+            <div className="w-2 h-2 bg-white rounded-full"></div>
+          </a>
+      ))}
       <div className="absolute inset-0 bg-gradient-to-t from-black/80 to-transparent rounded-lg" />
       <div className="absolute bottom-0 left-0 p-8 text-white">
         <motion.div

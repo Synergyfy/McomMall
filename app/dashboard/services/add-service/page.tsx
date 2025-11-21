@@ -36,6 +36,7 @@ import {
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import Link from 'next/link';
 
 interface ServiceError {
   name?: string;
@@ -86,6 +87,7 @@ const AddServicePage = () => {
   const { data: listings, isLoading: isLoadingListings } =
     useGetUserListings();
   const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
+  const [newServiceId, setNewServiceId] = React.useState<string | null>(null);
 
   const [formData, setFormData] = React.useState<CreateServiceDto>({
     name: '',
@@ -132,7 +134,9 @@ const AddServicePage = () => {
       }
 
       addService(serviceData, {
-        onSuccess: () => {
+        onSuccess: (data) => {
+          // Assuming the hook returns the created service with its ID
+          setNewServiceId(data.id);
           queryClient.invalidateQueries({ queryKey: ['my-services'] });
           setShowSuccessDialog(true);
         },
@@ -769,6 +773,22 @@ const AddServicePage = () => {
                             {errors.media}
                         </p>
                     )}
+                </CardContent>
+            </Card>
+
+            <Card>
+                <CardHeader>
+                    <CardTitle>Interactive Hotspots</CardTitle>
+                    <CardDescription>
+                        Add clickable hotspots to your service image. You must save the service first.
+                    </CardDescription>
+                </CardHeader>
+                <CardContent>
+                    <Button asChild variant="outline" disabled={!newServiceId}>
+                        <Link href={`/dashboard/hotspot-editor/edit/${newServiceId}?type=service`}>
+                            Add/Edit Hotspots
+                        </Link>
+                    </Button>
                 </CardContent>
             </Card>
 

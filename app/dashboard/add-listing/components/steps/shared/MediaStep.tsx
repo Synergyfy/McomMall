@@ -1,6 +1,8 @@
 import React from 'react';
 import { ListingFormData } from '../../../types';
 import MultiMediaUpload from './MultiMediaUpload';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
 import SingleImageInput from '../../../../../../components/SingleImageInput';
 import { z } from 'zod';
 
@@ -54,8 +56,16 @@ const MediaStep: React.FC<StepProps> = ({ setFormData, errors }) => {
             className="aspect-video"
           />
           {errors.banner && (
-            <p className="text-sm text-red-500 mt-2">{errors.banner}</p>
+          <p className="text-sm text-red-500 mt-2">{errors.banner}</p>
           )}
+          <div className="mt-4">
+            <Button asChild variant="outline" disabled={!formData.id}>
+                <Link href={`/dashboard/hotspot-editor/edit/${formData.id}?type=banner`}>
+                    Add/Edit Hotspots
+                </Link>
+            </Button>
+            {!formData.id && <p className="text-xs text-gray-500 mt-1">You must save the listing before adding hotspots to the banner.</p>}
+          </div>
         </div>
       </div>
 

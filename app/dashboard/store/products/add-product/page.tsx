@@ -77,6 +77,7 @@ import {
 import { cn } from '@/lib/utils';
 import { useRouter } from 'next/navigation';
 import { businessCategories } from '@/lib/business-categories';
+import Link from 'next/link';
 
 
 interface ProductFormValues {
@@ -279,6 +280,7 @@ const customResolver = (data: ProductFormValues) => {
 export default function AddProductPage() {
   const router = useRouter();
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
+  const [newProductId, setNewProductId] = useState<string | null>(null);
   const form = useForm<ProductFormValues>({
     resolver: customResolver,
     defaultValues: {
@@ -381,7 +383,8 @@ export default function AddProductPage() {
     };
 
     addProduct(productData, {
-      onSuccess: () => {
+      onSuccess: (data) => {
+        setNewProductId(data.id);
         form.reset();
         setIsSuccessDialogOpen(true);
       },
@@ -1338,6 +1341,23 @@ export default function AddProductPage() {
                       )}
                     />
                   </CardContent>
+                </Card>
+
+                 {/* Hotspot Editor Button */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">Interactive Hotspots</CardTitle>
+                        <CardDescription>
+                            Add clickable hotspots to your product image. You must save the product first.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="outline" disabled={!newProductId}>
+                            <Link href={`/dashboard/hotspot-editor/edit/${newProductId}?type=product`}>
+                                Add/Edit Hotspots
+                            </Link>
+                        </Button>
+                    </CardContent>
                 </Card>
 
                 {/* Category */}

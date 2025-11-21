@@ -244,11 +244,11 @@ export const pluginMenuItems: MenuItem[] = [
   },
   {
     title: 'Hotspot Campaigns',
-    href: '/dashboard/hotspot-campaigns',
+    href: '/dashboard/hotspot-editor',
     icon: Scan,
     subMenu: [
-      { title: 'All Campaigns', href: '/dashboard/hotspot-campaigns' },
-      { title: 'New Campaign', href: '/dashboard/hotspot-campaigns/new' },
+      { title: 'All Campaigns', href: '/dashboard/hotspot-editor' },
+      { title: 'New Campaign', href: '/dashboard/hotspot-editor/new' },
     ],
   },
 ];

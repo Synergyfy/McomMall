@@ -21,6 +21,7 @@ import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { CreateServiceDto, UpdateServiceDto } from '@/service/services/types';
 import { useAddService } from '@/service/services/hook';
 import { UserListing } from '@/service/listings/types';
+import Link from 'next/link';
 
 interface ServiceError {
   name?: string;
@@ -783,6 +784,16 @@ const EditServicePage = () => {
               >
                 <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
               </Button>
+            </div>
+
+            <div className="mb-6">
+                <h3 className="text-lg font-medium">Interactive Hotspots</h3>
+                <p className="text-sm text-muted-foreground">Add clickable hotspots to your service image.</p>
+                <Button asChild variant="outline" className="mt-2">
+                    <Link href={`/dashboard/hotspot-editor/edit/${serviceId}?type=service`}>
+                        Add/Edit Hotspots
+                    </Link>
+                </Button>
             </div>
 
             <div className="flex justify-end">

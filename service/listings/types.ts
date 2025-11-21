@@ -43,6 +43,7 @@ export interface GoogleReview {
 }
 
 import { Review as ApiReview } from '../reviews/types';
+import { Hotspot } from '@/lib/listing-data';
 
 export type { ApiReview };
 
@@ -405,6 +406,7 @@ export interface InHouseBusiness {
   giftCard: boolean;
   voucher: boolean;
   promotion: boolean;
+  bannerHotspots?: Hotspot[];
 }
 
 export type InHouseBusinessResults = InHouseBusiness[];
