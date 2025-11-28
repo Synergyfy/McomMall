@@ -1,6 +1,6 @@
 'use client';
 import { useRouter, useParams, useSearchParams } from 'next/navigation';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { quizData } from '../quiz-data';
 
 export default function QuestionPage() {
@@ -14,6 +14,11 @@ export default function QuestionPage() {
 
   const [selectedAnswer, setSelectedAnswer] = useState<string | null>(null);
 
+  useEffect(() => {
+    // Save progress to local storage whenever questionId or score changes
+    localStorage.setItem('quizProgress', JSON.stringify({ questionId, score }));
+  }, [questionId, score]);
+
   const handleNext = () => {
     let newScore = score;
     if (selectedAnswer === currentQuestion.correctAnswer) {
@@ -23,7 +28,10 @@ export default function QuestionPage() {
     if (questionId < quizData.length - 1) {
       router.push(`/quiz/${questionId + 1}?score=${newScore}`);
     } else {
-      router.push(`/quismatic?score=${newScore}`);
+      // Store the final score in localStorage
+      localStorage.setItem('quizScore', newScore.toString());
+      // Redirect to the agent dashboard
+      router.push(`/agent-dashboard?fromQuiz=true`);
     }
   };
 
@@ -32,9 +40,19 @@ export default function QuestionPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-gray-100">
-      <div className="w-full max-w-2xl rounded-lg bg-white p-8 shadow-lg">
-        <div className="mb-6 rounded-lg bg-yellow-400 p-4 text-center">
+    <div className="bg-gray-100">
+      <header className="bg-white shadow-md p-4 flex justify-between items-center">
+        <h1 className="text-xl font-bold">Certification Quiz</h1>
+        <button
+          onClick={() => router.push('/dashboard/agent')}
+          className="rounded-lg bg-gray-300 px-4 py-2 font-semibold text-gray-800 transition-colors hover:bg-gray-400"
+        >
+          Back to Dashboard
+        </button>
+      </header>
+      <div className="flex min-h-screen items-center justify-center">
+        <div className="w-full max-w-2xl rounded-lg bg-white p-8 shadow-lg">
+          <div className="mb-6 rounded-lg bg-yellow-400 p-4 text-center">
           <h1 className="text-2xl font-bold text-gray-800">
             {currentQuestion.question}
           </h1>
@@ -54,7 +72,13 @@ export default function QuestionPage() {
             </button>
           ))}
         </div>
-        <div className="mt-8 text-right">
+        <div className="mt-8 flex justify-between">
+          <button
+            onClick={() => router.push('/dashboard/agent')}
+            className="rounded-lg bg-gray-300 px-8 py-3 font-semibold text-gray-800 shadow-lg transition-transform hover:scale-105 hover:bg-gray-400"
+          >
+            Back to Dashboard
+          </button>
           <button
             onClick={handleNext}
             disabled={!selectedAnswer}
@@ -64,6 +88,8 @@ export default function QuestionPage() {
           </button>
         </div>
       </div>
-    </div>
+      </div>
+          </div>
+
   );
 }

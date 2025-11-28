@@ -47,7 +47,7 @@ export const useCreateUser = () => {
   const mutation = useMutation({
     mutationFn: create,
   });
-  return mutation;
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
 };
 
 export const useSendOtp = () => {
@@ -167,7 +167,7 @@ export const useLogin = () => {
       setBearerToken(data.auth.accessToken);
     },
   });
-  return mutation;
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
 };
 
 export const useRefreshToken = () => {
