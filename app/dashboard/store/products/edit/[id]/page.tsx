@@ -9,7 +9,6 @@ import {
 } from 'react-hook-form';
 import { useGetUserListings } from '@/service/listings/hook';
 import {
-  UploadCloud,
   Plus,
   Settings,
   Box,
@@ -18,7 +17,6 @@ import {
   Download,
   X,
 } from 'lucide-react';
-import Image from 'next/image';
 import React, { useState, useEffect } from 'react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { toast } from 'sonner';

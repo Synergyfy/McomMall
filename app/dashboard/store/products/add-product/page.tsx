@@ -277,7 +277,6 @@ const customResolver = (data: ProductFormValues) => {
 };
 
 export default function AddProductPage() {
-  const router = useRouter();
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const form = useForm<ProductFormValues>({
     resolver: customResolver,
@@ -337,8 +336,6 @@ export default function AddProductPage() {
   const { mutate: addProduct, isPending } = useAddProduct();
 
   const productType = form.watch('productType');
-
-  const category = form.watch('category');
 
   async function onSubmit(data: ProductFormValues) {
     const mediaUrls = await Promise.all(

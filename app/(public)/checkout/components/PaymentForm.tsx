@@ -17,7 +17,6 @@ interface PaymentFormProps {
 }
 
 export default function PaymentForm({
-  totalPrice,
   onPaymentSuccess,
   clientSecret,
   orderID,
