@@ -14,7 +14,7 @@ import {
 } from 'lucide-react';
 
 import Link from 'next/link';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { quizData } from '@/app/quiz/quiz-data';
 import HomeTab from './components/HomeTab';
@@ -25,7 +25,7 @@ import EarningsTab from './components/EarningsTab';
 import TrainingTab from './components/TrainingTab';
 import SupportTab from './components/SupportTab';
 
-export default function AgentDashboard() {
+function AgentDashboardContent() {
   const [quizScore, setQuizScore] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [showSuccessMessage, setShowSuccessMessage] = useState(false);
@@ -224,5 +224,13 @@ export default function AgentDashboard() {
         </main>
       </div>
     </div>
+  );
+}
+
+export default function AgentDashboard() {
+  return (
+    <Suspense fallback={<div>Loading...</div>}>
+      <AgentDashboardContent />
+    </Suspense>
   );
 }

@@ -134,7 +134,13 @@ export const useDeleteListing = () => {
   return mutation;
 };
 
-export const useGetBusinessData = ({ id }: { id: string }) => {
+export const useGetBusinessData = ({
+  id,
+  enabled,
+}: {
+  id: string;
+  enabled?: boolean;
+}) => {
   const fetcher = async () => {
     try {
       const response = await api.get(`listings/${id}`);
@@ -150,7 +156,7 @@ export const useGetBusinessData = ({ id }: { id: string }) => {
   const query = useQuery({
     queryFn: fetcher,
     queryKey: ['FETCH_BUSINESS_DATA', id],
-    enabled: !!id,
+    enabled: (enabled ?? true) && !!id,
   });
 
   return query;

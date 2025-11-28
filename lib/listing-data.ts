@@ -101,7 +101,7 @@ export interface PromotionalItem {
 }
 
 
-export let promotionalItems: PromotionalItem[] = [
+export const promotionalItems: PromotionalItem[] = [
   { id: 1, title: 'Do Pass Yourself', image: 'https://placehold.co/200x200/png', category: 'Appliances', price: 120.00, discountedPrice: 99.99, items_left: 15, hotspots: [{id: 'hs1', x: 50, y: 50, link: '/some-product'}] },
   { id: 2, title: 'Awoof Deals', image: 'https://placehold.co/200x200/png', category: 'Phones & Tablets', price: 850.00, discountedPrice: 799.99, items_left: 10 },
   { id: 3, title: 'Up to 80% Off', image: 'https://placehold.co/200x200/png', category: 'Health & Beauty', price: 50.00, discountedPrice: 39.99, items_left: 25 },

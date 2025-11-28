@@ -82,6 +82,7 @@ export interface ServiceProviderData {
 
 // Main form data structure
 export interface ListingFormData {
+  id?: string;
   businessTypes: ('Product' | 'Service')[];
 
   // Shared Business Information

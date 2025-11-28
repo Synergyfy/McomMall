@@ -4,6 +4,7 @@ import { useParams, useRouter, useSearchParams } from 'next/navigation';
 import { mockCampaigns, Campaign } from '@/lib/hotspot-data';
 import { promotionalItems, PromotionalItem, Hotspot } from '@/lib/listing-data';
 import { useGetServiceById, useUpdateService } from '@/service/services/hook';
+import { UpdateServiceDto } from '@/service/services/types';
 import { useGetBusinessData, useEditListing } from '@/service/listings/hook';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
@@ -136,7 +137,39 @@ const HotspotEditorContent = () => {
             toast.error('Error: Product not found.');
         }
     } else if (itemType === 'service') {
-        updateService({ ...serviceData, id: item.id, hotspots: item.hotspots }, {
+        if (!serviceData) {
+            toast.error('Service data not loaded.');
+            return;
+        }
+
+        const payload: UpdateServiceDto = {
+            ...serviceData,
+            id: item.id,
+            hotspots: item.hotspots,
+            fixedPrice: serviceData.fixedPrice ? Number(serviceData.fixedPrice) : undefined,
+            pricePerHour: serviceData.pricePerHour ? Number(serviceData.pricePerHour) : undefined,
+            pricePerUnit: serviceData.pricePerUnit ? Number(serviceData.pricePerUnit) : undefined,
+            pricePerGuest: serviceData.pricePerGuest ? Number(serviceData.pricePerGuest) : undefined,
+            fixedGroupPrice: serviceData.fixedGroupPrice ? Number(serviceData.fixedGroupPrice) : undefined,
+            basePrice: serviceData.basePrice ? Number(serviceData.basePrice) : undefined,
+            baseGuests: serviceData.baseGuests ? Number(serviceData.baseGuests) : undefined,
+            additionalGuestPrice: serviceData.additionalGuestPrice ? Number(serviceData.additionalGuestPrice) : undefined,
+            bookingFee: serviceData.bookingFee ? Number(serviceData.bookingFee) : undefined,
+            unitName: serviceData.unitName || undefined,
+            guestPricingModel: (serviceData.guestPricingModel as 'perGuest' | 'fixedGroup' | 'baseWithAdditional' | undefined) || undefined,
+            bundledServices: serviceData.bundledServices?.map(bs => ({
+                name: bs.name,
+                price: bs.price ? Number(bs.price) : undefined
+            })),
+            configurableAddons: serviceData.configurableAddons?.map(ca => ({
+                name: ca.name,
+                price: ca.price ? Number(ca.price) : undefined,
+                pricingType: ca.pricingType,
+                unitName: ca.unitName
+            }))
+        };
+
+        updateService(payload, {
             onSuccess: () => {
                 toast.success('Service hotspots saved successfully!');
                 router.push('/dashboard/services');
@@ -146,6 +179,10 @@ const HotspotEditorContent = () => {
             }
         });
     } else if (itemType === 'banner') {
+        if (!listingData) {
+            toast.error('Listing data not loaded.');
+            return;
+        }
         editListing({ listingId: item.id, payload: { ...listingData, bannerHotspots: item.hotspots } }, {
             onSuccess: () => {
                 toast.success('Banner hotspots saved successfully!');

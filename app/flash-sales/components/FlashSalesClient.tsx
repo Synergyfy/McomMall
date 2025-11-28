@@ -49,7 +49,7 @@ export default function FlashSalesClient() {
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-medium group-hover:underline">{item.title}</p>
-                    <p className="text-lg font-semibold mt-2">${item.discountedPrice.toFixed(2)}</p>
+                    <p className="text-lg font-semibold mt-2">${(item.discountedPrice ?? item.price).toFixed(2)}</p>
                     <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
                   </div>
                 </div>

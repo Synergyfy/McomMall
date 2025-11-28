@@ -13,7 +13,7 @@ interface StepProps {
   schema?: z.ZodSchema<unknown>;
 }
 
-const MediaStep: React.FC<StepProps> = ({ setFormData, errors }) => {
+const MediaStep: React.FC<StepProps> = ({ formData, setFormData, errors }) => {
   const handleLogoChange = (file: File | null) => {
     setFormData(prev => ({ ...prev, logo: { file, altText: 'logo' } }));
   };
