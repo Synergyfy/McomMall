@@ -12,7 +12,7 @@ export interface Campaign {
   hotspots: Hotspot[];
 }
 
-export let mockCampaigns: Campaign[] = [
+export const mockCampaigns: Campaign[] = [
   {
     id: '1',
     name: 'Summer Sale Showcase',
