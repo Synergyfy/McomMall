@@ -74,6 +74,7 @@ import {
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
 import { businessCategories } from '@/lib/business-categories';
+import Link from 'next/link';
 
 interface Listing {
   id: string;
@@ -1360,6 +1361,23 @@ export default function EditProductPage() {
                       )}
                     />
                   </CardContent>
+                </Card>
+
+                {/* Hotspot Editor Button */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-2xl">Interactive Hotspots</CardTitle>
+                        <CardDescription>
+                            Add clickable hotspots to your product image.
+                        </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <Button asChild variant="outline">
+                            <Link href={`/dashboard/hotspot-editor/edit/${id}?type=product`}>
+                                Add/Edit Hotspots
+                            </Link>
+                        </Button>
+                    </CardContent>
                 </Card>
 
                 {/* Category */}

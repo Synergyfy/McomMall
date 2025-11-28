@@ -253,12 +253,14 @@ export default function MarketplacePage() {
                       height={150}
                       className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
                     />
-                    <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                      -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
-                    </div>
+                    {item.discountedPrice && (
+                      <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
+                        -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
+                      </div>
+                    )}
                   </div>
                   <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">${item.discountedPrice.toFixed(2)}</p>
+                  <p className="mt-1 text-lg font-bold">${(item.discountedPrice ?? item.price).toFixed(2)}</p>
                   <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                     <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>

@@ -47,11 +47,11 @@ const getServiceById = async (id: string): Promise<Service> => {
   return data;
 };
 
-export const useGetServiceById = (id: string) => {
+export const useGetServiceById = (id: string, enabled: boolean = true) => {
   return useQuery({
     queryKey: ['service', id],
     queryFn: () => getServiceById(id),
-    enabled: !!id,
+    enabled: enabled && !!id,
   });
 };
 

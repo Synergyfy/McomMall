@@ -8,6 +8,7 @@ export interface BundledService {
   updated_at: string;
 }
 
+import { Hotspot } from '@/lib/listing-data';
 export interface SearchServiceDto {
   term: string;
 }
@@ -47,6 +48,7 @@ export interface CreateServiceDto {
     pricingType: 'oneTime' | 'perGuest' | 'perUnit';
     unitName?: string;
   }[];
+  hotspots?: Hotspot[];
 }
 
 export interface UpdateServiceDto extends CreateServiceDto {
@@ -90,6 +92,7 @@ export interface Service {
   bookingFee: string;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
+  hotspots?: Hotspot[];
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
