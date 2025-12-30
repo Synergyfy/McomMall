@@ -170,6 +170,49 @@ export const useLogin = () => {
   return { ...mutation, mutateAsync: mutation.mutateAsync };
 };
 
+export const useSsoLogin = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const ssoLogin = async (token: string): Promise<LoginResponse> => {
+    try {
+      const response = await api.post('auth/sso', {
+        token,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'SSO login failed'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: ssoLogin,
+    onSuccess: data => {
+      dispatch(
+        setAuthTokens({
+          accessToken: data.auth.accessToken,
+          refreshToken: data.auth.refreshToken,
+        })
+      );
+      dispatch(
+        setUserData({
+          id: data.userId,
+          userName: data.name,
+          userRole: String(data.role),
+          packageInfo: data.packageInfo
+            ? { planType: data.packageInfo.planType }
+            : null,
+        })
+      );
+      setBearerToken(data.auth.accessToken);
+    },
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
 export const useRefreshToken = () => {
   const dispatch: AppDispatch = useDispatch();
   const refresh = async (
