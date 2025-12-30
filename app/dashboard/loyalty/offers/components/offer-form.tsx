@@ -44,7 +44,7 @@ import { Product } from '@/service/store/products/types';
 import { CreateOfferDto, UpdateOfferDto } from '@/service/offers/types';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { useGetUserListings } from '@/service/listings/hook';
-import { InHouseBusiness } from '@/service/listings/types';
+import { InHouseBusiness, UserListing } from '@/service/listings/types';
 
 interface FormData {
   name: string;
@@ -347,7 +347,7 @@ export default function OfferForm({
                       {isLoadingListings ? (
                         <CommandItem>Loading...</CommandItem>
                       ) : (
-                        listings?.map((listing: InHouseBusiness) => (
+                        listings?.data?.map((listing: UserListing) => (
                           <CommandItem
                             key={listing.id}
                             onSelect={() =>

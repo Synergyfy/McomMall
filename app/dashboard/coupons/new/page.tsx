@@ -41,7 +41,7 @@ import {
 } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
 import { useGetUserListings } from '@/service/listings/hook';
-import { InHouseBusiness } from '@/service/listings/types';
+import { InHouseBusiness, UserListing } from '@/service/listings/types';
 import {
   Command,
   CommandEmpty,
@@ -581,7 +581,7 @@ export default function CouponForm() {
                           {isLoadingListings ? (
                             <CommandItem>Loading...</CommandItem>
                           ) : (
-                          listings?.map((listing: InHouseBusiness) => (
+                          listings?.data?.map((listing: UserListing) => (
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {

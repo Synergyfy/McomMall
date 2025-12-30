@@ -291,7 +291,7 @@ export default function ActiveListingsPage() {
           ) : isError ? (
             <div className="rounded-3xl border border-red-100 bg-red-50/50 p-12 text-center">
               <h3 className="text-lg font-bold text-red-800">Connection Error</h3>
-              <p className="text-red-600/70">{(error as any)?.message || "Failed to load active listings"}</p>
+              <p className="text-red-600/70">{error?.message || "Failed to load active listings"}</p>
               <Button onClick={() => window.location.reload()} variant="outline" className="mt-6">Retry Connection</Button>
             </div>
           ) : listings.length > 0 ? (
@@ -311,7 +311,7 @@ export default function ActiveListingsPage() {
               </div>
               <div>
                 <h3 className="text-xl font-bold text-slate-900">No active listings</h3>
-                <p className="text-slate-500">You haven't published any listings yet or they are currently pending.</p>
+                <p className="text-slate-500">You haven&apos;t published any listings yet or they are currently pending.</p>
               </div>
               <Button onClick={() => router.push('/dashboard/add-listing')} variant="outline">Create your first listing</Button>
             </div>

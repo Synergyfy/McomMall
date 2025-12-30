@@ -8,6 +8,7 @@ import {
   GooglePlaceResults,
   InHouseBusinessResults,
   RecentListings,
+  UserListing,
 } from './types';
 
 export interface ErrorResponse {

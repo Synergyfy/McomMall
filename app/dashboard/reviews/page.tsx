@@ -175,7 +175,7 @@ export default function ReviewsPage() {
                     className="w-full rounded-md border-gray-300 text-sm shadow-sm focus:border-blue-500 focus:ring-blue-500 sm:w-auto"
                   >
                     <option value="">All Businesses</option>
-                    {businesses?.map((business: UserListing) => (
+                    {businesses?.data?.map((business: UserListing) => (
                       <option key={business.id} value={business.id}>
                         {business.businessName}
                       </option>
