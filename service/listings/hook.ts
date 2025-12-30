@@ -272,10 +272,21 @@ export const useGetPlacePhoto = (photoReference: string) => {
   return query;
 };
 
-export const useGetUserListings = () => {
-  const fetch = async () => {
+export interface PaginatedResponse<T> {
+  data: T[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+  };
+}
+
+export const useGetUserListings = (page = 1, limit = 10) => {
+  const fetch = async (): Promise<PaginatedResponse<UserListing>> => {
     try {
-      const response = await api.get('listings/mine');
+      const response = await api.get('listings/mine', {
+        params: { page, limit },
+      });
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -289,7 +300,7 @@ export const useGetUserListings = () => {
 
   const query = useQuery({
     queryFn: fetch,
-    queryKey: ['FETCH_USER_LISTINGS'],
+    queryKey: ['FETCH_USER_LISTINGS', page, limit],
   });
   return query;
 };
