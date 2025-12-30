@@ -4,21 +4,13 @@ import type { NextConfig } from 'next';
 const withSerwist = withSerwistInit({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
+  disable: process.env.NODE_ENV === 'development',
 });
 
 const nextConfig: NextConfig = {
   /* config options here */
-  eslint: {
-    ignoreDuringBuilds: true,
-  },
   images: {
     unoptimized: true,
-    domains: [
-      'source.unsplash.com',
-      'images.unsplash.com',
-      'ext.same-assets.com',
-      'ugc.same-assets.com',
-    ],
     remotePatterns: [
       {
         protocol: 'https',
