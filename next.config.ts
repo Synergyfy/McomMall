@@ -8,7 +8,9 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   /* config options here */
-  allowedDevOrigins: ['*.preview.same-app.com'],
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
   images: {
     unoptimized: true,
     domains: [
