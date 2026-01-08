@@ -63,10 +63,10 @@ const BookingsPage: FC = () => {
         Customer: booking.user.name,
         Status: booking.status,
         Date: new Date(booking.createdAt).toLocaleDateString(),
-        Time: `${new Date(booking.startTime).toLocaleTimeString([], {
+        Time: `£{new Date(booking.startTime).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
-        })} - ${new Date(booking.endTime).toLocaleTimeString([], {
+        })} - £{new Date(booking.endTime).toLocaleTimeString([], {
           hour: '2-digit',
           minute: '2-digit',
         })}`,
@@ -172,7 +172,7 @@ const BookingsPage: FC = () => {
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
               <Button variant="outline" size="sm">
-                {days ? `Last ${days} Days` : 'All Time'}
+                {days ? `Last £{days} Days` : 'All Time'}
                 <MoreHorizontal className="ml-2 h-4 w-4" />
               </Button>
             </DropdownMenuTrigger>

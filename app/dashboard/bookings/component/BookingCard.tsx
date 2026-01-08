@@ -1,17 +1,26 @@
-'use client';
+"use client";
 
-import type { FC } from 'react';
-import { Calendar, User, Clock, MoreHorizontal, XCircle, CheckCircle, MessageSquare } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import ChatIcon from '@/components/ChatIcon';
-import { Card, CardContent } from '@/components/ui/card';
+import type { FC } from "react";
+import { PoundSterling } from "lucide-react";
+import {
+  Calendar,
+  User,
+  Clock,
+  MoreHorizontal,
+  XCircle,
+  CheckCircle,
+  MessageSquare,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import ChatIcon from "@/components/ChatIcon";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -22,16 +31,16 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Booking } from '@/service/bookings/types';
+} from "@/components/ui/alert-dialog";
+import { Booking } from "@/service/bookings/types";
 import {
   useDeclineBooking,
   useApproveBooking,
   useMarkBookingComplete,
-} from '@/service/bookings/hook';
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
-import BookingDetailsModal from './BookingDetailsModal';
+} from "@/service/bookings/hook";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import BookingDetailsModal from "./BookingDetailsModal";
 
 const InfoBlock: FC<{
   icon: React.ReactNode;
@@ -47,8 +56,8 @@ const InfoBlock: FC<{
   </div>
 );
 
-import { DollarSign, Briefcase } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
+import { DollarSign, Briefcase } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 
 const BookingCard: FC<{
   booking: Booking;
@@ -66,11 +75,11 @@ const BookingCard: FC<{
   };
 
   const handleDecline = () => {
-    handleStatusChange('decline', booking.id);
+    handleStatusChange("decline", booking.id);
   };
 
   const handleApprove = () => {
-    handleStatusChange('approve', booking.id);
+    handleStatusChange("approve", booking.id);
   };
 
   const handleMarkComplete = () => {
@@ -79,7 +88,7 @@ const BookingCard: FC<{
   };
 
   const [confirmationStatus, setConfirmationStatus] = useState<{
-    action: 'approve' | 'decline' | null;
+    action: "approve" | "decline" | null;
     bookingId: string | null;
   }>({
     action: null,
@@ -87,16 +96,16 @@ const BookingCard: FC<{
   });
 
   const handleStatusChange = (
-    action: 'approve' | 'decline',
+    action: "approve" | "decline",
     bookingId: string
   ) => {
     setConfirmationStatus({ action, bookingId });
   };
 
   const confirmStatusChange = () => {
-    if (confirmationStatus.action === 'approve') {
+    if (confirmationStatus.action === "approve") {
       approveBookingMutation.mutate(confirmationStatus.bookingId as string);
-    } else if (confirmationStatus.action === 'decline') {
+    } else if (confirmationStatus.action === "decline") {
       declineBookingMutation.mutate(confirmationStatus.bookingId as string);
     }
     setConfirmationStatus({ action: null, bookingId: null });
@@ -104,28 +113,28 @@ const BookingCard: FC<{
 
   const statusStyles: { [key: string]: { badge: string; border: string } } = {
     pending: {
-      badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      border: 'border-t-4 border-yellow-400',
+      badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      border: "border-t-4 border-yellow-400",
     },
     confirmed: {
-      badge: 'bg-green-100 text-green-800 border-green-200',
-      border: 'border-t-4 border-green-400',
+      badge: "bg-green-100 text-green-800 border-green-200",
+      border: "border-t-4 border-green-400",
     },
     approved: {
-      badge: 'bg-green-100 text-green-800 border-green-200',
-      border: 'border-t-4 border-green-400',
+      badge: "bg-green-100 text-green-800 border-green-200",
+      border: "border-t-4 border-green-400",
     },
     declined: {
-      badge: 'bg-red-100 text-red-800 border-red-200',
-      border: 'border-t-4 border-red-400',
+      badge: "bg-red-100 text-red-800 border-red-200",
+      border: "border-t-4 border-red-400",
     },
     cancelled: {
-      badge: 'bg-blue-100 text-blue-800 border-blue-200',
-      border: 'border-t-4 border-blue-400',
+      badge: "bg-blue-100 text-blue-800 border-blue-200",
+      border: "border-t-4 border-blue-400",
     },
     default: {
-      badge: 'bg-gray-100 text-gray-800 border-gray-200',
-      border: 'border-t-4 border-gray-400',
+      badge: "bg-gray-100 text-gray-800 border-gray-200",
+      border: "border-t-4 border-gray-400",
     },
   };
 
@@ -147,7 +156,7 @@ const BookingCard: FC<{
       <div className="absolute top-4 left-4 z-10">
         <Checkbox
           checked={isSelected}
-          onCheckedChange={checked =>
+          onCheckedChange={(checked) =>
             onSelectionChange(booking.id, Boolean(checked))
           }
         />
@@ -180,37 +189,37 @@ const BookingCard: FC<{
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
                   <DropdownMenuItem
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       handleApprove();
                     }}
-                    disabled={booking.status.toUpperCase() !== 'PENDING'}
+                    disabled={booking.status.toUpperCase() !== "PENDING"}
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Approve Booking
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       handleDecline();
                     }}
-                    disabled={booking.status.toUpperCase() !== 'PENDING'}
+                    disabled={booking.status.toUpperCase() !== "PENDING"}
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     Decline Booking
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onClick={e => {
+                    onClick={(e) => {
                       e.stopPropagation();
                       setIsConfirmOpen(true);
                     }}
-                    disabled={booking.status.toUpperCase() !== 'APPROVED'}
+                    disabled={booking.status.toUpperCase() !== "APPROVED"}
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Mark as Complete
                   </DropdownMenuItem>
                   <DropdownMenuItem
-                    onSelect={e => {
+                    onSelect={(e) => {
                       e.stopPropagation();
                       handleMessage();
                     }}
@@ -228,9 +237,9 @@ const BookingCard: FC<{
               <AlertDialogHeader>
                 <AlertDialogTitle>Are you sure?</AlertDialogTitle>
                 <AlertDialogDescription>
-                  This action will mark the booking as complete. If the
-                  customer has also marked it as complete, the payment will be
-                  released. This cannot be undone.
+                  This action will mark the booking as complete. If the customer
+                  has also marked it as complete, the payment will be released.
+                  This cannot be undone.
                 </AlertDialogDescription>
               </AlertDialogHeader>
               <AlertDialogFooter>
@@ -272,19 +281,25 @@ const BookingCard: FC<{
           </AlertDialog>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-            <InfoBlock icon={<Calendar className="h-4 w-4" />} title="Booking Date">
+            <InfoBlock
+              icon={<Calendar className="h-4 w-4" />}
+              title="Booking Date"
+            >
               <p>{new Date(booking.createdAt).toLocaleDateString()}</p>
             </InfoBlock>
-            <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
+            <InfoBlock
+              icon={<Clock className="h-4 w-4" />}
+              title="Booking Time"
+            >
               <p>
                 {new Date(booking.startTime).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
-                })}{' '}
-                -{' '}
+                  hour: "2-digit",
+                  minute: "2-digit",
+                })}{" "}
+                -{" "}
                 {new Date(booking.endTime).toLocaleTimeString([], {
-                  hour: '2-digit',
-                  minute: '2-digit',
+                  hour: "2-digit",
+                  minute: "2-digit",
                 })}
               </p>
             </InfoBlock>
@@ -306,13 +321,13 @@ const BookingCard: FC<{
           )}
           {booking.payment && (
             <InfoBlock
-              icon={<DollarSign className="h-4 w-4" />}
+              icon={<PoundSterling className="h-4 w-4" />}
               title="Payment"
             >
               <p className="font-semibold">
-                {new Intl.NumberFormat('en-GB', {
-                  style: 'currency',
-                  currency: booking.payment.currency,
+                {new Intl.NumberFormat("en-GB", {
+                  style: "currency",
+                  currency: "GBP",
                 }).format(booking.payment.amount)}
               </p>
               <p className="text-xs text-gray-500">
