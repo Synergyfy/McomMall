@@ -260,8 +260,8 @@ export default function MarketplacePage() {
                     )}
                   </div>
                   <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">${(item.discountedPrice ?? item.price).toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 line-through">${item.price.toFixed(2)}</p>
+                  <p className="mt-1 text-lg font-bold">£{(item.discountedPrice ?? item.price).toFixed(2)}</p>
+                  <p className="text-xs text-gray-500 line-through">£{item.price.toFixed(2)}</p>
                   <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
                     <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
                   </div>
@@ -290,7 +290,7 @@ export default function MarketplacePage() {
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-medium group-hover:underline">{item.title}</p>
-                    <p className="text-lg font-semibold mt-2">${item.price.toFixed(2)}</p>
+                    <p className="text-lg font-semibold mt-2">£{item.price.toFixed(2)}</p>
                   </div>
                 </div>
               </Link>

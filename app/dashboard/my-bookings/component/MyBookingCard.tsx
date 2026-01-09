@@ -1,16 +1,22 @@
-'use client';
+"use client";
 
-import type { FC } from 'react';
-import { Calendar, Clock, MoreHorizontal, XCircle, Building } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import type { FC } from "react";
+import {
+  Calendar,
+  Clock,
+  MoreHorizontal,
+  XCircle,
+  Building,
+} from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from '@/components/ui/dropdown-menu';
+} from "@/components/ui/dropdown-menu";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -21,10 +27,13 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Booking } from '@/service/bookings/types';
-import { useCancelBooking, useMarkBookingComplete } from '@/service/bookings/hook';
-import { useState } from 'react';
+} from "@/components/ui/alert-dialog";
+import { Booking } from "@/service/bookings/types";
+import {
+  useCancelBooking,
+  useMarkBookingComplete,
+} from "@/service/bookings/hook";
+import { useState } from "react";
 
 const InfoBlock: FC<{
   icon: React.ReactNode;
@@ -40,7 +49,7 @@ const InfoBlock: FC<{
   </div>
 );
 
-import { DollarSign, Briefcase, CheckCircle } from 'lucide-react';
+import { PoundSterling, Briefcase, CheckCircle } from "lucide-react";
 
 const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const cancelBookingMutation = useCancelBooking();
@@ -58,28 +67,28 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
 
   const statusStyles: { [key: string]: { badge: string; border: string } } = {
     pending: {
-      badge: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-      border: 'border-t-4 border-yellow-400',
+      badge: "bg-yellow-100 text-yellow-800 border-yellow-200",
+      border: "border-t-4 border-yellow-400",
     },
     confirmed: {
-      badge: 'bg-green-100 text-green-800 border-green-200',
-      border: 'border-t-4 border-green-400',
+      badge: "bg-green-100 text-green-800 border-green-200",
+      border: "border-t-4 border-green-400",
     },
     approved: {
-      badge: 'bg-green-100 text-green-800 border-green-200',
-      border: 'border-t-4 border-green-400',
+      badge: "bg-green-100 text-green-800 border-green-200",
+      border: "border-t-4 border-green-400",
     },
     declined: {
-      badge: 'bg-red-100 text-red-800 border-red-200',
-      border: 'border-t-4 border-red-400',
+      badge: "bg-red-100 text-red-800 border-red-200",
+      border: "border-t-4 border-red-400",
     },
     cancelled: {
-      badge: 'bg-blue-100 text-blue-800 border-blue-200',
-      border: 'border-t-4 border-blue-400',
+      badge: "bg-blue-100 text-blue-800 border-blue-200",
+      border: "border-t-4 border-blue-400",
     },
     default: {
-      badge: 'bg-gray-100 text-gray-800 border-gray-200',
-      border: 'border-t-4 border-gray-400',
+      badge: "bg-gray-100 text-gray-800 border-gray-200",
+      border: "border-t-4 border-gray-400",
     },
   };
 
@@ -105,9 +114,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
             <h2 className="text-xl font-bold text-gray-800">
               Booking #{booking.id.slice(0, 8)}
             </h2>
-            <p className="text-sm text-gray-500">
-              for {booking.service.name}
-            </p>
+            <p className="text-sm text-gray-500">for {booking.service.name}</p>
           </div>
           <div className="flex items-center space-x-2">
             {getStatusBadge(booking.status)}
@@ -121,8 +128,8 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 <DropdownMenuItem
                   onClick={handleCancel}
                   disabled={
-                    booking.status !== 'pending' &&
-                    booking.status !== 'confirmed'
+                    booking.status !== "pending" &&
+                    booking.status !== "confirmed"
                   }
                 >
                   <XCircle className="mr-2 h-4 w-4" />
@@ -130,7 +137,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 </DropdownMenuItem>
                 <DropdownMenuItem
                   onClick={() => setIsConfirmOpen(true)}
-                  disabled={booking.status.toUpperCase() !== 'APPROVED'}
+                  disabled={booking.status.toUpperCase() !== "APPROVED"}
                 >
                   <CheckCircle className="mr-2 h-4 w-4" />
                   Mark as Complete
@@ -159,19 +166,22 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
         </AlertDialog>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-          <InfoBlock icon={<Calendar className="h-4 w-4" />} title="Booking Date">
+          <InfoBlock
+            icon={<Calendar className="h-4 w-4" />}
+            title="Booking Date"
+          >
             <p>{new Date(booking.createdAt).toLocaleDateString()}</p>
           </InfoBlock>
           <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
             <p>
               {new Date(booking.startTime).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
-              })}{' '}
-              -{' '}
+                hour: "2-digit",
+                minute: "2-digit",
+              })}{" "}
+              -{" "}
               {new Date(booking.endTime).toLocaleTimeString([], {
-                hour: '2-digit',
-                minute: '2-digit',
+                hour: "2-digit",
+                minute: "2-digit",
               })}
             </p>
           </InfoBlock>
@@ -187,13 +197,13 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
         )}
         {booking.payment && (
           <InfoBlock
-            icon={<DollarSign className="h-4 w-4" />}
+            icon={<PoundSterling className="h-4 w-4" />}
             title="Payment"
           >
             <p className="font-semibold">
-              {new Intl.NumberFormat('en-GB', {
-                style: 'currency',
-                currency: booking.payment.currency,
+              {new Intl.NumberFormat("en-GB", {
+                style: "currency",
+                currency: "GBP",
               }).format(booking.payment.amount)}
             </p>
             <p className="text-xs text-gray-500">

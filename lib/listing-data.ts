@@ -144,7 +144,7 @@ export const listings: Listing[] = [
     category: 'Cars',
     categoryTag: 'Cars, For Rent',
     location: 'Suffolk County, New York',
-    priceDisplay: `Starts from ${CURRENCY}20.00 per hour`,
+    priceDisplay: `Starts from {CURRENCY}20.00 per hour`,
     rating: 4.3,
     reviewCount: 2,
     imageUrl:
