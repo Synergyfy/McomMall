@@ -9,6 +9,7 @@ import {
   PauseIcon,
   CheckCircle2,
   Loader,
+  TimerOff,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -70,7 +71,7 @@ const ActivityTimerPage: FC = () => {
     );
   }
 
-  if (error || !trialStatus) {
+  if (error) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
         <div className="text-center">
@@ -79,6 +80,22 @@ const ActivityTimerPage: FC = () => {
           </h2>
           <p className="text-gray-500 mt-2">
             We couldn&apos;t load the trial status. Please try again later.
+          </p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!trialStatus) {
+    return (
+      <div className="flex items-center justify-center min-h-[calc(100vh-8rem)]">
+        <div className="text-center">
+          <TimerOff className="w-16 h-16 mx-auto text-gray-400 mb-4" />
+          <h2 className="text-2xl font-semibold text-gray-700">
+            No Active Activity Timer
+          </h2>
+          <p className="text-gray-500 mt-2">
+            No active activity timer found for this business.
           </p>
         </div>
       </div>
