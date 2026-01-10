@@ -540,10 +540,10 @@ const MyProfilePage: NextPage = () => {
                 </div>
               </div>
               <div className="mt-6 space-y-6">
-                <InfoAlert
+                {/* <InfoAlert
                   message="For demo purposes you can type fake phone number"
                   type="warning"
-                />
+                /> */}
                 <InputField
                   label="Phone"
                   id="phoneNumber"
