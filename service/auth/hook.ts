@@ -53,7 +53,7 @@ export const useCreateUser = () => {
 export const useSendOtp = () => {
   const sendOtp = async (payload: SendOtpInterface) => {
     try {
-      const response = await api.post('email/send-otp', {
+      const response = await api.post('api/v1/email/send-otp', {
         ...payload,
       });
       return response.data;
@@ -74,7 +74,7 @@ export const useSendOtp = () => {
 export const useValidateOtp = () => {
   const validateOtp = async (payload: ValidateOtpInterface) => {
     try {
-      const response = await api.post('email/validate-otp', {
+      const response = await api.post('api/v1/email/validate-otp', {
         ...payload,
       });
       return response.data;
@@ -95,7 +95,7 @@ export const useValidateOtp = () => {
 export const useResetPassword = () => {
   const resetPassword = async (payload: ResetPasswordInterface) => {
     try {
-      const response = await api.post('email/reset-password', {
+      const response = await api.post('api/v1/auth/reset-password', {
         ...payload,
       });
       return response.data;

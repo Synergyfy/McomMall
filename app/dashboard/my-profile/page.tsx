@@ -17,9 +17,21 @@ import {
   useGetUserProfile,
   useUpdateUserProfile,
 } from '../../../service/user/hook';
+import {
+  useSendOtp,
+  useValidateOtp,
+  useResetPassword,
+} from '../../../service/auth/hook';
 import { User, Socials } from '../../../service/user/types';
 import { toast } from 'sonner';
 import { uploadFile } from '../../../lib/upload';
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+} from '@/components/ui/dialog';
 
 type SocialPlatform =
   | 'twitter'
@@ -37,7 +49,6 @@ const socialIcons: { [key in SocialPlatform]: React.ElementType } = {
 };
 
 type PasswordFields = {
-  current: string;
   new: string;
   confirm: string;
 };
@@ -223,6 +234,8 @@ const InfoAlert = ({
   );
 };
 
+// --- Main Page Component ---
+
 const MyProfilePage: NextPage = () => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const {
@@ -231,13 +244,20 @@ const MyProfilePage: NextPage = () => {
     isError,
   } = useGetUserProfile();
   const updateUserMutation = useUpdateUserProfile();
+  const sendOtpMutation = useSendOtp();
+  const validateOtpMutation = useValidateOtp();
+  const resetPasswordMutation = useResetPassword();
 
   const [profile, setProfile] = useState<Partial<User>>({});
   const [initialProfile, setInitialProfile] = useState<Partial<User>>({});
   const [socials, setSocials] = useState<Partial<Socials>>({});
   const [initialSocials, setInitialSocials] = useState<Partial<Socials>>({});
+
+  // Password Reset State
+  const [isResetModalOpen, setIsResetModalOpen] = useState(false);
+  const [resetStep, setResetStep] = useState<'EMAIL' | 'OTP' | 'PASSWORD'>('EMAIL');
+  const [otpCode, setOtpCode] = useState('');
   const [passwords, setPasswords] = useState<PasswordFields>({
-    current: '',
     new: '',
     confirm: '',
   });
@@ -276,14 +296,6 @@ const MyProfilePage: NextPage = () => {
     }
   };
 
-  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>): void => {
-    const { id, value } = e.target;
-    setPasswords(prev => ({ ...prev, [id]: value }));
-    if (passwordErrors[id as keyof PasswordErrors]) {
-      setPasswordErrors(prev => ({ ...prev, [id]: undefined }));
-    }
-  };
-
   const handleSocialChange = (platform: SocialPlatform, url: string): void => {
     setSocials(prev => ({ ...prev, [platform]: url }));
   };
@@ -317,31 +329,6 @@ const MyProfilePage: NextPage = () => {
       reader.readAsDataURL(file);
       setProfileErrors(prev => ({ ...prev, avatar: undefined }));
     }
-  };
-
-  const validatePasswords = (): boolean => {
-    const errors: PasswordErrors = {};
-    const { current, new: newPass, confirm } = passwords;
-
-    // Only validate if user starts filling any of the password fields
-    if (current || newPass || confirm) {
-      if (!current) {
-        errors.current = 'Current password is required to change password.';
-      }
-      if (!newPass) {
-        errors.new = 'New password is required.';
-      } else if (newPass.length < 12) {
-        errors.new = 'New password must be at least 12 characters long.';
-      }
-      if (!confirm) {
-        errors.confirm = 'Please confirm your new password.';
-      } else if (newPass && newPass !== confirm) {
-        errors.confirm = 'Passwords do not match.';
-      }
-    }
-
-    setPasswordErrors(errors);
-    return Object.keys(errors).length === 0;
   };
 
   const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
@@ -442,14 +429,105 @@ const MyProfilePage: NextPage = () => {
     );
   };
 
-  const handlePasswordSubmit = (e: FormEvent): void => {
-    e.preventDefault();
-    if (validatePasswords()) {
-      // Implement password change logic here
-      toast.success('Password changed successfully!');
-      setPasswords({ current: '', new: '', confirm: '' });
+  // --- Password Reset Handlers ---
+
+  const openResetModal = () => {
+    setResetStep('EMAIL');
+    setOtpCode('');
+    setPasswords({ new: '', confirm: '' });
+    setPasswordErrors({});
+    setIsResetModalOpen(true);
+  };
+
+  const handleSendOtp = () => {
+    if (!profile.email) {
+      toast.error("Email is missing from profile.");
+      return;
+    }
+    sendOtpMutation.mutate(
+      { email: profile.email, type: 'PASSWORD_RESET' },
+      {
+        onSuccess: () => {
+          toast.success('OTP sent to your email.');
+          setResetStep('OTP');
+        },
+        onError: (error) => {
+          toast.error(`Failed to send OTP: ${error.message}`);
+        },
+      }
+    );
+  };
+
+  const handleValidateOtp = () => {
+    if (!profile.email) return;
+    if (!otpCode) {
+      toast.error('Please enter the OTP code.');
+      return;
+    }
+    validateOtpMutation.mutate(
+      { email: profile.email, otp: otpCode, type: 'PASSWORD_RESET' },
+      {
+        onSuccess: () => {
+          toast.success('OTP validated successfully.');
+          setResetStep('PASSWORD');
+        },
+        onError: (error) => {
+          toast.error(`Failed to validate OTP: ${error.message}`);
+        },
+      }
+    );
+  };
+
+  const handlePasswordChange = (e: ChangeEvent<HTMLInputElement>): void => {
+    const { id, value } = e.target;
+    setPasswords(prev => ({ ...prev, [id]: value }));
+    if (passwordErrors[id as keyof PasswordErrors]) {
+      setPasswordErrors(prev => ({ ...prev, [id]: undefined }));
     }
   };
+
+  const handleResetSubmit = () => {
+    const { new: newPass, confirm } = passwords;
+    const errors: PasswordErrors = {};
+
+    if (!newPass) {
+      errors.new = 'New password is required.';
+    } else if (newPass.length < 12) {
+      errors.new = 'New password must be at least 12 characters long.';
+    }
+    if (!confirm) {
+      errors.confirm = 'Please confirm your new password.';
+    } else if (newPass && newPass !== confirm) {
+      errors.confirm = 'Passwords do not match.';
+    }
+
+    if (Object.keys(errors).length > 0) {
+      setPasswordErrors(errors);
+      return;
+    }
+
+    if (!profile.email) return;
+
+    resetPasswordMutation.mutate(
+      {
+        email: profile.email,
+        password: newPass,
+        confirmPassword: confirm,
+        otp: otpCode
+      },
+      {
+        onSuccess: () => {
+          toast.success('Password reset successfully!');
+          setIsResetModalOpen(false);
+          // Optional: Logout user? Usually password reset keeps them logged in or requires re-login.
+        },
+        onError: (error) => {
+          toast.error(`Failed to reset password: ${error.message}`);
+        },
+      }
+    );
+  };
+
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error fetching profile.</div>;
@@ -587,53 +665,126 @@ const MyProfilePage: NextPage = () => {
             </div>
           </form>
 
-          <form
-            onSubmit={handlePasswordSubmit}
-            className="lg:col-span-1"
-            noValidate
-          >
+          {/* New Reset Password Section */}
+          <div className="lg:col-span-1">
             <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
               <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
-                Change Password
+                Security
               </h2>
               <div className="space-y-6">
-                <InfoAlert
-                  message="Your password should be at least 12 random characters long to be safe"
-                  type="info"
-                />
-                <PasswordField
-                  label="Current Password"
-                  id="current"
-                  value={passwords.current}
-                  onChange={handlePasswordChange}
-                  error={passwordErrors.current}
-                />
-                <PasswordField
-                  label="New Password"
-                  id="new"
-                  value={passwords.new}
-                  onChange={handlePasswordChange}
-                  error={passwordErrors.new}
-                />
-                <PasswordField
-                  label="Confirm New Password"
-                  id="confirm"
-                  value={passwords.confirm}
-                  onChange={handlePasswordChange}
-                  error={passwordErrors.confirm}
-                />
-              </div>
-              <div className="mt-8 flex justify-end">
+                <p className="text-sm text-gray-600 dark:text-gray-300">
+                  Manage your password and security settings.
+                </p>
                 <button
-                  type="submit"
-                  className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                  type="button"
+                  onClick={openResetModal}
+                  className="w-full rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
                 >
-                  Save Changes
+                  Reset Password
                 </button>
               </div>
             </div>
-          </form>
+          </div>
         </main>
+
+        <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
+          <DialogContent className="sm:max-w-md">
+            <DialogHeader>
+              <DialogTitle>Reset Password</DialogTitle>
+              <DialogDescription>
+                Follow the steps to reset your password.
+              </DialogDescription>
+            </DialogHeader>
+            <div className="space-y-4 py-4">
+              {resetStep === 'EMAIL' && (
+                <div className="space-y-4">
+                  <InputField
+                    label="Confirm Email Address"
+                    id="reset-email"
+                    value={profile.email || ''}
+                    onChange={() => {}}
+                    disabled={true}
+                    placeholder="Your email address"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    We will send a verification code to this email.
+                  </p>
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleSendOtp}
+                      disabled={sendOtpMutation.isPending}
+                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {sendOtpMutation.isPending ? 'Sending...' : 'Send Code'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {resetStep === 'OTP' && (
+                <div className="space-y-4">
+                   <div>
+                    <label htmlFor="otp" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                      Verification Code
+                    </label>
+                    <input
+                      type="text"
+                      id="otp"
+                      value={otpCode}
+                      onChange={(e) => setOtpCode(e.target.value)}
+                      placeholder="Enter the code sent to your email"
+                      className="block w-full rounded-md border-gray-300 bg-gray-50 p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                    />
+                  </div>
+                  <div className="flex justify-end gap-2">
+                    <button
+                        onClick={() => setResetStep('EMAIL')}
+                        className="rounded-md px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                      >
+                        Back
+                    </button>
+                    <button
+                      onClick={handleValidateOtp}
+                      disabled={validateOtpMutation.isPending}
+                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {validateOtpMutation.isPending ? 'Validating...' : 'Verify Code'}
+                    </button>
+                  </div>
+                </div>
+              )}
+
+              {resetStep === 'PASSWORD' && (
+                <div className="space-y-4">
+                  <PasswordField
+                    label="New Password"
+                    id="new"
+                    value={passwords.new}
+                    onChange={handlePasswordChange}
+                    error={passwordErrors.new}
+                  />
+                  <PasswordField
+                    label="Confirm New Password"
+                    id="confirm"
+                    value={passwords.confirm}
+                    onChange={handlePasswordChange}
+                    error={passwordErrors.confirm}
+                  />
+                  <div className="flex justify-end">
+                    <button
+                      onClick={handleResetSubmit}
+                      disabled={resetPasswordMutation.isPending}
+                      className="rounded-md bg-red-600 px-4 py-2 text-sm font-semibold text-white hover:bg-red-700 disabled:opacity-50"
+                    >
+                      {resetPasswordMutation.isPending ? 'Resetting...' : 'Reset Password'}
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+          </DialogContent>
+        </Dialog>
+
       </div>
     </div>
   );
