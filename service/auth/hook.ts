@@ -64,6 +64,20 @@ export const useValidateOtp = () => {
   const validateOtp = async (payload: ValidateOtpInterface) => {
     const response = await api.post('email/validate-otp', payload);
     return response.data;
+    try {
+      const response = await api.post('email/validate-otp', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to validate OTP');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to validate OTP'
+      );
+    }
   };
 
   return useMutation({ mutationFn: validateOtp });
@@ -72,8 +86,22 @@ export const useValidateOtp = () => {
 
 export const useResetPassword = () => {
   const resetPassword = async (payload: ResetPasswordInterface) => {
-    const response = await api.post('auth/reset-password', payload);
-    return response.data;
+    try {
+      const response = await api.post('auth/reset-password', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to reset password');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to reset password'
+      );
+    }
   };
 
   return useMutation({ mutationFn: resetPassword });
@@ -82,6 +110,7 @@ export const useResetPassword = () => {
 
 export const useAuth = () => {
   const { accessToken, userId, userName, userRole } = useSelector(
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (state: any) => state.auth
   );
 

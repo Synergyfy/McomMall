@@ -257,6 +257,7 @@ const MyProfilePage: NextPage = () => {
   const [isResetModalOpen, setIsResetModalOpen] = useState(false);
   const [resetStep, setResetStep] = useState<'EMAIL' | 'OTP' | 'PASSWORD'>('EMAIL');
   const [otpCode, setOtpCode] = useState('');
+  const [otpError, setOtpError] = useState<string | null>(null);
   const [passwords, setPasswords] = useState<PasswordFields>({
     new: '',
     confirm: '',
@@ -434,6 +435,7 @@ const MyProfilePage: NextPage = () => {
   const openResetModal = () => {
     setResetStep('EMAIL');
     setOtpCode('');
+    setOtpError(null);
     setPasswords({ new: '', confirm: '' });
     setPasswordErrors({});
     setIsResetModalOpen(true);
@@ -452,7 +454,7 @@ const MyProfilePage: NextPage = () => {
           setResetStep('OTP');
         },
         onError: (error) => {
-          toast.error(`Failed to send OTP: ${error.message}`);
+          toast.error(error.message || "Failed to send OTP");
         },
       }
     );
@@ -460,8 +462,9 @@ const MyProfilePage: NextPage = () => {
 
   const handleValidateOtp = () => {
     if (!profile.email) return;
+    setOtpError(null);
     if (!otpCode) {
-      toast.error('Please enter the OTP code.');
+      setOtpError('Please enter the OTP code.');
       return;
     }
     validateOtpMutation.mutate(
@@ -472,7 +475,8 @@ const MyProfilePage: NextPage = () => {
           setResetStep('PASSWORD');
         },
         onError: (error) => {
-          toast.error(`Failed to validate OTP: ${error.message}`);
+          setOtpError(error.message || "Failed to validate OTP");
+          toast.error(error.message || "Failed to validate OTP");
         },
       }
     );
@@ -522,7 +526,7 @@ const MyProfilePage: NextPage = () => {
           // Optional: Logout user? Usually password reset keeps them logged in or requires re-login.
         },
         onError: (error) => {
-          toast.error(`Failed to reset password: ${error.message}`);
+          toast.error(error.message || "Failed to reset password");
         },
       }
     );
@@ -731,10 +735,20 @@ const MyProfilePage: NextPage = () => {
                       type="text"
                       id="otp"
                       value={otpCode}
-                      onChange={(e) => setOtpCode(e.target.value)}
+                      onChange={(e) => {
+                        setOtpCode(e.target.value);
+                        if (otpError) setOtpError(null);
+                      }}
                       placeholder="Enter the code sent to your email"
-                      className="block w-full rounded-md border-gray-300 bg-gray-50 p-2.5 text-gray-900 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 dark:border-gray-600 dark:bg-gray-700 dark:text-white sm:text-sm"
+                      className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
+                        otpError
+                          ? 'border-red-500 ring-1 ring-red-500'
+                          : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                      } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white`}
                     />
+                    {otpError && (
+                      <p className="mt-1 text-xs text-red-600 dark:text-red-400">{otpError}</p>
+                    )}
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
