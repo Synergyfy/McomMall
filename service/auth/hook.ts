@@ -52,68 +52,33 @@ export const useCreateUser = () => {
 
 export const useSendOtp = () => {
   const sendOtp = async (payload: SendOtpInterface) => {
-    try {
-      const response = await api.post('api/v1/email/send-otp', {
-        ...payload,
-      });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message || err.message || 'Failed to send OTP'
-      );
-    }
+    const response = await api.post('email/send-otp', payload);
+    return response.data;
   };
 
-  const mutation = useMutation({
-    mutationFn: sendOtp,
-  });
-  return mutation;
+  return useMutation({ mutationFn: sendOtp });
 };
+
 
 export const useValidateOtp = () => {
   const validateOtp = async (payload: ValidateOtpInterface) => {
-    try {
-      const response = await api.post('api/v1/email/validate-otp', {
-        ...payload,
-      });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message || err.message || 'Failed to validate OTP'
-      );
-    }
+    const response = await api.post('email/validate-otp', payload);
+    return response.data;
   };
 
-  const mutation = useMutation({
-    mutationFn: validateOtp,
-  });
-  return mutation;
+  return useMutation({ mutationFn: validateOtp });
 };
+
 
 export const useResetPassword = () => {
   const resetPassword = async (payload: ResetPasswordInterface) => {
-    try {
-      const response = await api.post('api/v1/auth/reset-password', {
-        ...payload,
-      });
-      return response.data;
-    } catch (error: unknown) {
-      const err = error as ErrorResponse;
-      throw new Error(
-        err.response?.data?.message ||
-          err.message ||
-          'Failed to reset password'
-      );
-    }
+    const response = await api.post('auth/reset-password', payload);
+    return response.data;
   };
 
-  const mutation = useMutation({
-    mutationFn: resetPassword,
-  });
-  return mutation;
+  return useMutation({ mutationFn: resetPassword });
 };
+
 
 export const useAuth = () => {
   const { accessToken, userId, userName, userRole } = useSelector(
