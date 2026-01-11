@@ -52,18 +52,30 @@ export const useCreateUser = () => {
 
 export const useSendOtp = () => {
   const sendOtp = async (payload: SendOtpInterface) => {
-    const response = await api.post('email/send-otp', payload);
-    return response.data;
+    try {
+      const response = await api.post('email/send-otp', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to send OTP');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to send OTP'
+      );
+    }
   };
 
-  return useMutation({ mutationFn: sendOtp });
+  const mutation = useMutation({
+    mutationFn: sendOtp,
+  });
+  return mutation;
 };
-
 
 export const useValidateOtp = () => {
   const validateOtp = async (payload: ValidateOtpInterface) => {
-    const response = await api.post('email/validate-otp', payload);
-    return response.data;
     try {
       const response = await api.post('email/validate-otp', {
         ...payload,
@@ -80,9 +92,11 @@ export const useValidateOtp = () => {
     }
   };
 
-  return useMutation({ mutationFn: validateOtp });
+  const mutation = useMutation({
+    mutationFn: validateOtp,
+  });
+  return mutation;
 };
-
 
 export const useResetPassword = () => {
   const resetPassword = async (payload: ResetPasswordInterface) => {
@@ -104,13 +118,14 @@ export const useResetPassword = () => {
     }
   };
 
-  return useMutation({ mutationFn: resetPassword });
+  const mutation = useMutation({
+    mutationFn: resetPassword,
+  });
+  return mutation;
 };
-
 
 export const useAuth = () => {
   const { accessToken, userId, userName, userRole } = useSelector(
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     (state: any) => state.auth
   );
 

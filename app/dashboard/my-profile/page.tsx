@@ -467,6 +467,13 @@ const MyProfilePage: NextPage = () => {
       setOtpError('Please enter the OTP code.');
       return;
     }
+
+    // Client-side length validation
+    if (otpCode.length !== 6) {
+      setOtpError('Code must be 6 digits');
+      return;
+    }
+
     validateOtpMutation.mutate(
       { email: profile.email, otp: otpCode, type: 'PASSWORD_RESET' },
       {
@@ -475,8 +482,15 @@ const MyProfilePage: NextPage = () => {
           setResetStep('PASSWORD');
         },
         onError: (error) => {
-          setOtpError(error.message || "Failed to validate OTP");
-          toast.error(error.message || "Failed to validate OTP");
+          // Map backend errors to user-friendly messages
+          const message = error.message || "Failed to validate OTP";
+          if (message.includes("Invalid OTP") || message.includes("Request failed with status code 404")) {
+            setOtpError("Code not correct");
+            toast.error("Code not correct");
+          } else {
+            setOtpError(message);
+            toast.error(message);
+          }
         },
       }
     );
