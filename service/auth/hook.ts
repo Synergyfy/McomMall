@@ -56,6 +56,9 @@ export const useSendOtp = () => {
       const response = await api.post('email/send-otp', {
         ...payload,
       });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to send OTP');
+      }
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -77,6 +80,9 @@ export const useValidateOtp = () => {
       const response = await api.post('email/validate-otp', {
         ...payload,
       });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to validate OTP');
+      }
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -95,9 +101,12 @@ export const useValidateOtp = () => {
 export const useResetPassword = () => {
   const resetPassword = async (payload: ResetPasswordInterface) => {
     try {
-      const response = await api.post('email/reset-password', {
+      const response = await api.post('auth/reset-password', {
         ...payload,
       });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to reset password');
+      }
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
