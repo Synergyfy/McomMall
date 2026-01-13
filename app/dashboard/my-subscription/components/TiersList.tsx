@@ -1,10 +1,16 @@
+'use client';
+
 import { useState } from 'react';
 import { useGetTiers } from '@/service/tiers/hook';
 import TierCard from './TierCard';
 import { Button } from '@/components/ui/button';
 import { Tier } from '@/service/tiers/types';
 
-export default function TiersList() {
+interface TiersListProps {
+  onSelectTier: (tier: Tier, billingCycle: 'monthly' | 'annual') => void;
+}
+
+export default function TiersList({ onSelectTier }: TiersListProps) {
   const { data: tiers, isLoading, isError } = useGetTiers();
   const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
 
@@ -19,11 +25,6 @@ export default function TiersList() {
       </div>
     );
   }
-
-  const handleSelectTier = (tier: Tier) => {
-    // Placeholder for selection logic
-    console.log('Selected tier:', tier, billingCycle);
-  };
 
   return (
     <div className="w-full flex flex-col items-center">
@@ -50,7 +51,7 @@ export default function TiersList() {
             key={tier.id}
             tier={tier}
             billingCycle={billingCycle}
-            onSelect={handleSelectTier}
+            onSelect={(t) => onSelectTier(t, billingCycle)}
           />
         ))}
       </div>
