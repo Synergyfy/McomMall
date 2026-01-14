@@ -2,22 +2,47 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import PricingNav from '@/app/pricing/components/PricingNav';
-import PayAsYouGoContent from '@/app/pricing/components/PayAsYouGoContent';
-import CoBrandedContent from '@/app/pricing/components/CoBrandedContent';
 import { useGetSubscriptionStatus } from '@/service/payments/hook';
 import CurrentPlanCard from './CurrentPlanCard';
+import TiersList from './TiersList';
+import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
+import { Tier } from '@/service/tiers/types';
 
 export default function MySubscriptionPageClient() {
-  const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
+  const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
+  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'annual' } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
-  const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
+
+  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'annual') => {
+    setSelectedTier({ tier, cycle });
+  };
+
+  if (selectedTier) {
+    const price = selectedTier.cycle === 'monthly' ? selectedTier.tier.monthlyPrice : selectedTier.tier.annualPrice;
+
+    // Ensure price is formatted as a string for the checkout component
+    // If it's a number, convert to string. If string, keep it.
+    // The PricingCheckoutClient expects a string like "£10.00" or just "10.00" (it strips non-numeric chars).
+    // Let's format it nicely if it's not already.
+    const priceString = typeof price === 'number'
+      ? `£${price.toFixed(2)}`
+      : price.toString();
+
+    return (
+      <PricingCheckoutClient
+        planName={`${selectedTier.tier.name} (${selectedTier.cycle})`}
+        planPrice={priceString}
+        isTrial={false}
+        isPayg={false} // Treat dynamic tiers as Co-Branded/Subscription
+        listingId={listingId}
+      />
+    );
+  }
 
   return (
     <div className="h-full md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
-      <header className="text-center">
+      <header className="text-center mb-8">
         <h1 className="text-5xl font-semibold">
           My Subscription
         </h1>
@@ -29,64 +54,16 @@ export default function MySubscriptionPageClient() {
       {isLoading && <p>Loading...</p>}
 
       {subscriptionStatus && (
-        <CurrentPlanCard subscription={subscriptionStatus} />
+        <div className="mb-10 w-full max-w-4xl">
+           <CurrentPlanCard subscription={subscriptionStatus} />
+        </div>
       )}
 
-      <section className="w-5/6 mt-10 flex flex-col  items-center bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 ">
-        {/* Desktop Sidebar */}
-        <aside className="mt-20 space-y-4">
-          <h3 className="text-xl md:text-2xl font-medium text-center">
+      <section className="w-full flex flex-col items-center">
+        <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
             Select your plan
-          </h3>
-          <div className="hidden rounded-full border h-fit md:block min-w-fit border-r px-10 bg-white/80 backdrop-blur-sm py-5 ">
-            <PricingNav
-              orientation="vertical"
-              activeView={activeView}
-              setActiveView={setActiveView}
-            />
-          </div>
-        </aside>
-        <main className="flex-1 p-4 md:p-8 overflow-auto">
-          <AnimatePresence mode="wait">
-            {activeView === 'payg' ? (
-              <motion.div
-                key="payg"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-              >
-                <PayAsYouGoContent
-                  listingId={listingId}
-                  onPayNow={() => {}}
-                  onStartTrial={() => {}}
-                />
-              </motion.div>
-            ) : (
-              <motion.div
-                key="cobranded"
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: -20 }}
-                transition={{ duration: 0.5, ease: 'easeOut' }}
-              >
-                <CoBrandedContent
-                  listingId={listingId}
-                  onPayNow={() => {}}
-                  onStartTrial={() => {}}
-                />
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </main>
-        {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t p-4 bg-white/80 backdrop-blur-sm z-10">
-          <PricingNav
-            orientation="horizontal"
-            activeView={activeView}
-            setActiveView={setActiveView}
-          />
-        </nav>
+        </h3>
+        <TiersList onSelectTier={handleSelectTier} />
       </section>
     </div>
   );
