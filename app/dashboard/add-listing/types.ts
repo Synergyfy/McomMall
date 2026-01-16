@@ -62,6 +62,7 @@ export interface ProductSellerData {
 export interface ServiceProviderData {
   primaryCategory: string;
   tradeCategory: string;
+  subCategories?: string[];
   serviceLocation: {
     atBusinessLocation: boolean;
     customerTravels: boolean;
