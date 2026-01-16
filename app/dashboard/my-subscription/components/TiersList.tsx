@@ -7,12 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Tier } from '@/service/tiers/types';
 
 interface TiersListProps {
-  onSelectTier: (tier: Tier, billingCycle: 'monthly' | 'annual') => void;
+  onSelectTier: (tier: Tier, billingCycle: 'monthly' | 'quarterly' | 'annual') => void;
 }
 
 export default function TiersList({ onSelectTier }: TiersListProps) {
   const { data: tiers, isLoading, isError } = useGetTiers();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'annual'>('monthly');
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'annual'>('monthly');
 
   if (isLoading) {
     return <div className="text-center py-10">Loading plans...</div>;
@@ -35,6 +35,13 @@ export default function TiersList({ onSelectTier }: TiersListProps) {
           className={billingCycle === 'monthly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
         >
           Monthly
+        </Button>
+        <Button
+          variant={billingCycle === 'quarterly' ? 'default' : 'outline'}
+          onClick={() => setBillingCycle('quarterly')}
+          className={billingCycle === 'quarterly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+        >
+          Quarterly
         </Button>
         <Button
           variant={billingCycle === 'annual' ? 'default' : 'outline'}

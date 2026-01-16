@@ -12,7 +12,7 @@ import { Check, ChevronDown, ChevronUp } from 'lucide-react';
 import { PricingTier } from '../types/index';
 
 interface PricingCardProps {
-  tier: PricingTier & { accent: 'teal' | 'purple' | 'yellow' };
+  tier: PricingTier;
   isPayg?: boolean;
   listingId: string | null;
   onPayNow: (tier: PricingTier) => void;
@@ -35,6 +35,9 @@ export default function PricingCard({
   const handleStartTrial = () => {
     onStartTrial(tier);
   };
+
+  const accent = tier.accent || 'teal';
+  const customColor = tier.colorCode;
 
   const accentClasses = {
     teal: '',
@@ -68,6 +71,13 @@ export default function PricingCard({
       'border-orange-600 text-orange-600 hover:bg-orange-600 hover:text-white',
   };
 
+  // Styles overrides if customColor is present
+  const cardStyle = customColor ? { borderColor: customColor } : {};
+  const priceStyle = customColor ? { color: customColor } : {};
+  const checkStyle = customColor ? { color: customColor } : {};
+  const buttonStyle = customColor ? { backgroundColor: customColor } : {};
+  const outlineButtonStyle = customColor ? { borderColor: customColor, color: customColor } : {};
+
   return (
     <motion.div
       whileHover={{ scale: 1.02, boxShadow: '0px 10px 20px rgba(0,0,0,0.1)' }}
@@ -76,8 +86,9 @@ export default function PricingCard({
     >
       <Card
         className={`flex flex-col h-full bg-white ${
-          accentClasses[tier.accent]
+          !customColor ? accentClasses[accent] : ''
         } border-2 shadow-md`}
+        style={cardStyle}
       >
         <CardHeader>
           <CardTitle className="text-lg sm:text-xl font-bold text-blue-900">
@@ -85,8 +96,9 @@ export default function PricingCard({
           </CardTitle>
           <h3
             className={`text-2xl sm:text-3xl font-extrabold ${
-              priceColor[tier.accent]
+              !customColor ? priceColor[accent] : ''
             }`}
+            style={priceStyle}
           >
             {tier.price}
           </h3>
@@ -97,16 +109,18 @@ export default function PricingCard({
               <Button
                 onClick={handlePayNow}
                 className={`w-full sm:w-1/2 text-white cursor-pointer ${
-                  buttonColor[tier.accent]
+                  !customColor ? buttonColor[accent] : ''
                 } `}
+                style={buttonStyle}
               >
                 Pay Now
               </Button>
               <Button
                 onClick={handleStartTrial}
                 className={`w-full sm:w-1/2 border bg-white cursor-pointer ${
-                  outlineButtonColor[tier.accent]
+                  !customColor ? outlineButtonColor[accent] : ''
                 }`}
+                style={outlineButtonStyle}
               >
                 Start Trial
               </Button>
@@ -118,15 +132,16 @@ export default function PricingCard({
             </p>
           )}
           <ul className="space-y-2">
-            {tier.primaryFeatures.map(feature => (
+            {tier.primaryFeatures.map((feature, idx) => (
               <li
-                key={feature}
+                key={idx}
                 className="flex items-start text-sm text-gray-700"
               >
                 <Check
                   className={`mr-2 h-4 w-4 ${
-                    checkColor[tier.accent]
+                    !customColor ? checkColor[accent] : ''
                   } flex-shrink-0 mt-1`}
+                  style={checkStyle}
                 />
                 {feature}
               </li>
@@ -142,15 +157,16 @@ export default function PricingCard({
                 className="overflow-hidden"
               >
                 <ul className="space-y-2 pt-4 border-t border-gray-200/80">
-                  {tier.secondaryFeatures?.map(feature => (
+                  {tier.secondaryFeatures?.map((feature, idx) => (
                     <li
-                      key={feature}
+                      key={idx}
                       className="flex items-start text-sm text-gray-700"
                     >
                       <Check
                         className={`mr-2 h-4 w-4 ${
-                          checkColor[tier.accent]
+                          !customColor ? checkColor[accent] : ''
                         } flex-shrink-0 mt-1`}
+                        style={checkStyle}
                       />
                       {feature}
                     </li>

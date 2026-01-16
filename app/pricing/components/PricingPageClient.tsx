@@ -9,11 +9,17 @@ import CoBrandedContent from './CoBrandedContent';
 import MobilePricingPage from './MobilePricingPage';
 import PricingCheckoutClient from './PricingCheckoutClient';
 import { PricingTier } from '../types';
+import { useGetTiers } from '@/service/tiers/hook';
 
 export default function PricingPageClient() {
   const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
   const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
   const [isTrial, setIsTrial] = useState(false);
+
+  // Lifted state for Co-Branded tiers
+  const { data: tiers, isLoading } = useGetTiers();
+  const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'annual'>('annual');
+
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
@@ -93,6 +99,10 @@ export default function PricingPageClient() {
                     listingId={listingId}
                     onPayNow={handlePayNow}
                     onStartTrial={handleStartTrial}
+                    tiers={tiers}
+                    billingCycle={billingCycle}
+                    setBillingCycle={setBillingCycle}
+                    isLoading={isLoading}
                   />
                 </motion.div>
               )}
@@ -101,7 +111,13 @@ export default function PricingPageClient() {
 
           {/* Mobile Content */}
           <div className="block md:hidden">
-            <MobilePricingPage activeView={activeView} listingId={listingId} />
+            <MobilePricingPage
+              activeView={activeView}
+              listingId={listingId}
+              tiers={tiers}
+              billingCycle={billingCycle}
+              setBillingCycle={setBillingCycle}
+            />
           </div>
         </main>
         {/* Mobile Bottom Nav */}

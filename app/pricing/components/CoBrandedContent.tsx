@@ -5,10 +5,7 @@ import ComparisonTable from './ComparisonTable';
 import { PricingTier, TableFeature, FeatureGroup } from '../types/index';
 import { ShieldCheck, LayoutDashboard, Rocket, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
-import { CardFooter } from '@/components/ui/card';
-import { coBrandedTiers } from '../data/pricingData';
-
-const coBrandedPlans = ['Standard', 'Pro', 'Pro Plus'];
+import { Tier } from '@/service/tiers/types';
 
 const coBrandedFeatures: TableFeature[] = [
   {
@@ -180,13 +177,52 @@ interface CoBrandedContentProps {
   listingId: string | null;
   onPayNow: (tier: PricingTier) => void;
   onStartTrial: (tier: PricingTier) => void;
+  tiers: Tier[] | undefined;
+  billingCycle: 'monthly' | 'quarterly' | 'annual';
+  setBillingCycle: (cycle: 'monthly' | 'quarterly' | 'annual') => void;
+  isLoading?: boolean;
 }
 
 export default function CoBrandedContent({
   listingId,
   onPayNow,
   onStartTrial,
+  tiers,
+  billingCycle,
+  setBillingCycle,
+  isLoading,
 }: CoBrandedContentProps) {
+
+  // Derive plan names from tiers if available, or fallback to static list
+  const coBrandedPlans = tiers ? tiers.map(t => t.name) : ['Standard', 'Pro', 'Pro Plus'];
+
+  if (isLoading) {
+    return <div className="text-center py-20 text-xl font-medium text-gray-500">Loading plans...</div>;
+  }
+
+  const mapTierToPricingTier = (tier: Tier): PricingTier => {
+    let price = 0;
+    let cycleLabel = '';
+    switch (billingCycle) {
+      case 'monthly': price = tier.monthly_price; cycleLabel = '/mo'; break;
+      case 'quarterly': price = tier.quaterly_price; cycleLabel = '/qtr'; break;
+      case 'annual': price = tier.annual_price; cycleLabel = '/yr'; break;
+    }
+
+    const formattedPrice = new Intl.NumberFormat('en-GB', {
+       style: 'currency', currency: 'GBP'
+    }).format(Number(price));
+
+    return {
+      name: tier.name,
+      price: `${formattedPrice} ${cycleLabel}`,
+      primaryFeatures: tier.features,
+      colorCode: tier.color_code,
+    };
+  };
+
+  const pricingTiers = tiers ? tiers.map(mapTierToPricingTier) : [];
+
   return (
     <>
       <motion.div
@@ -201,6 +237,32 @@ export default function CoBrandedContent({
         <h1 className="text-3xl md:text-4xl font-bold mb-8 text-blue-900">
           Co-Branded Pricing
         </h1>
+
+        {/* Billing Cycle Toggle */}
+        <div className="flex space-x-4 mb-10">
+            <Button
+              variant={billingCycle === 'monthly' ? 'default' : 'outline'}
+              onClick={() => setBillingCycle('monthly')}
+              className={billingCycle === 'monthly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+            >
+              Monthly
+            </Button>
+            <Button
+              variant={billingCycle === 'quarterly' ? 'default' : 'outline'}
+              onClick={() => setBillingCycle('quarterly')}
+              className={billingCycle === 'quarterly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+            >
+              Quarterly
+            </Button>
+            <Button
+              variant={billingCycle === 'annual' ? 'default' : 'outline'}
+              onClick={() => setBillingCycle('annual')}
+              className={billingCycle === 'annual' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+            >
+              Annual
+            </Button>
+        </div>
+
         <section className="w-full flex flex-col items-center justify-center mb-12">
           <div className="w-full p-6 sm:p-8 bg-white rounded-lg shadow-lg">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
@@ -324,7 +386,7 @@ export default function CoBrandedContent({
         </section>
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {coBrandedTiers.map((tier, index) => (
+          {pricingTiers.map((tier, index) => (
             <motion.div
               key={tier.name}
               variants={{
@@ -334,9 +396,7 @@ export default function CoBrandedContent({
               transition={{ delay: index * 0.1 }}
             >
               <PricingCard
-                tier={
-                  tier as PricingTier & { accent: 'teal' | 'purple' | 'yellow' }
-                }
+                tier={tier}
                 isPayg={false}
                 listingId={listingId}
                 onPayNow={onPayNow}

@@ -12,7 +12,7 @@ import { Tier } from '@/service/tiers/types';
 
 interface TierCardProps {
   tier: Tier;
-  billingCycle: 'monthly' | 'annual';
+  billingCycle: 'monthly' | 'quarterly' | 'annual';
   onSelect: (tier: Tier) => void;
 }
 
@@ -21,40 +21,33 @@ export default function TierCard({
   billingCycle,
   onSelect,
 }: TierCardProps) {
-  const price =
-    billingCycle === 'monthly' ? tier.monthlyPrice : tier.annualPrice;
+  let price = 0;
+  let cycleLabel = '';
+
+  switch (billingCycle) {
+    case 'monthly':
+      price = tier.monthly_price;
+      cycleLabel = '/mo';
+      break;
+    case 'quarterly':
+      price = tier.quaterly_price;
+      cycleLabel = '/qtr';
+      break;
+    case 'annual':
+      price = tier.annual_price;
+      cycleLabel = '/yr';
+      break;
+  }
+
   const formattedPrice = new Intl.NumberFormat('en-GB', {
     style: 'currency',
     currency: 'GBP',
   }).format(Number(price));
 
-  const generateFeatures = (tier: Tier) => {
-    const features: string[] = [];
-    const { quotas, featureFlags } = tier.configuration;
-
-    if (quotas.maxListings > 0) features.push(`Up to ${quotas.maxListings} Listings`);
-    if (quotas.maxProducts > 0) features.push(`Up to ${quotas.maxProducts} Products`);
-    if (quotas.maxServices > 0) features.push(`Up to ${quotas.maxServices} Services`);
-    if (quotas.maxImagesPerListing > 0) features.push(`${quotas.maxImagesPerListing} Images per Listing`);
-
-    if (quotas.maxCouponTemplates > 0) features.push(`Up to ${quotas.maxCouponTemplates} Coupon Templates`);
-    if (quotas.maxLoyaltyPrograms > 0) features.push(`Up to ${quotas.maxLoyaltyPrograms} Loyalty Programs`);
-    if (quotas.maxGiftCardTemplates > 0) features.push(`Up to ${quotas.maxGiftCardTemplates} Gift Card Templates`);
-    if (quotas.featuredListingAllowance > 0) features.push(`${quotas.featuredListingAllowance} Featured Listings`);
-
-    if (quotas.allowProductListing) features.push('Product Listings Enabled');
-    if (quotas.allowServiceListing) features.push('Service Listings Enabled');
-
-    if (featureFlags.priorityInSearch) features.push('Priority in Search Results');
-    if (featureFlags.advancedAnalytics) features.push('Advanced Analytics');
-    if (featureFlags.dedicatedSupport) features.push('Dedicated Support');
-    if (featureFlags.allowCustomBranding) features.push('Custom Branding');
-    if (featureFlags.allowGroupCreation) features.push('Group Creation');
-
-    return features;
-  };
-
-  const features = generateFeatures(tier);
+  // Use color_code or fallback to default
+  const themeColor = tier.color_code || '#EA580C'; // Default to orange-600
+  const seasonBg = tier.season?.bgColor;
+  const seasonText = tier.season?.textColor;
 
   return (
     <motion.div
@@ -62,29 +55,50 @@ export default function TierCard({
       transition={{ duration: 0.3 }}
       className="h-full"
     >
-      <Card className="flex flex-col h-full bg-white border-2 shadow-md">
+      <Card
+        className="flex flex-col h-full bg-white border-2 shadow-md relative overflow-hidden"
+        style={{ borderColor: themeColor }}
+      >
+        {tier.season && (
+          <div
+            className="absolute top-0 right-0 px-3 py-1 text-xs font-bold rounded-bl-lg"
+            style={{
+              backgroundColor: seasonBg || themeColor,
+              color: seasonText || '#fff'
+            }}
+          >
+            {tier.season.name}
+          </div>
+        )}
+
         <CardHeader>
-          <CardTitle className="text-lg sm:text-xl font-bold text-blue-900">
+          <CardTitle
+            className="text-lg sm:text-xl font-bold"
+            style={{ color: themeColor }}
+          >
             {tier.name}
           </CardTitle>
-          <h3 className="text-2xl sm:text-3xl font-extrabold text-blue-900">
+          <h3
+            className="text-2xl sm:text-3xl font-extrabold"
+            style={{ color: themeColor }}
+          >
             {formattedPrice}
             <span className="text-sm font-normal text-gray-500 ml-1">
-              /{billingCycle === 'monthly' ? 'mo' : 'yr'}
+              {cycleLabel}
             </span>
           </h3>
-          {tier.description && (
-            <p className="text-sm text-gray-500 mt-2">{tier.description}</p>
-          )}
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
           <ul className="space-y-2">
-            {features.map((feature, index) => (
+            {tier.features.map((feature, index) => (
               <li
                 key={index}
                 className="flex items-start text-sm text-gray-700"
               >
-                <Check className="mr-2 h-4 w-4 text-blue-900 flex-shrink-0 mt-1" />
+                <Check
+                  className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
+                  style={{ color: themeColor }}
+                />
                 {feature}
               </li>
             ))}
@@ -93,7 +107,8 @@ export default function TierCard({
         <CardFooter>
           <Button
             onClick={() => onSelect(tier)}
-            className="w-full text-white bg-orange-600 hover:bg-orange-700"
+            className="w-full text-white hover:opacity-90 transition-opacity"
+            style={{ backgroundColor: themeColor }}
           >
             Choose Plan
           </Button>
