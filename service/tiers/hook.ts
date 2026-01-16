@@ -6,7 +6,7 @@ export const useGetTiers = (type: string = 'all') => {
   const fetchTiers = async (): Promise<Tier[]> => {
     // The base URL already includes /api/v1 (or equivalent prefix handled by proxy),
     // so we should only pass the relative path.
-    const response = await api.get<Tier[]>('/tier', {
+    const response = await api.get<Tier[]>('/tiers', {
       params: { type },
     });
     return response.data;
