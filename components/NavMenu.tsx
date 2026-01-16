@@ -4,7 +4,7 @@ import React, { useState, useRef } from 'react';
 import Link from 'next/link';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { ChevronDown } from 'lucide-react';
-import { businessCategories } from '../lib/business-categories';
+import { useGetCategories, useGetSectors } from '@/service/taxonomy/hook';
 
 // --- Reusable ListItem Component ---
 export const ListItem = ({
@@ -33,125 +33,51 @@ export const ListItem = ({
   );
 };
 
-// --- Popular Categories Data ---
-const popularCategories = [
-  {
-    name: 'Hospitality',
-    subCategories: [
-      'Restaurants',
-      'Cafés / Coffee Shops',
-      'Takeaways / Delivery',
-      'Bakeries',
-      'Bars & Pubs',
-      'Breweries, Wineries & Distilleries',
-      'Catering Services',
-      'Dessert Shops',
-      'Accommodation & Travel',
-    ],
-  },
-  {
-    name: 'Shopping & Retail',
-    subCategories: [
-      'Clothing & Fashion',
-      'Beauty & Cosmetics',
-      'Home & Garden',
-      'Electronics & Appliances',
-      'Books, Stationery & Gifts',
-      'Health Food / Organic',
-      'Pet Supplies',
-      'Toys & Hobbies',
-    ],
-  },
-  {
-    name: 'Trades & Home Services',
-    subCategories: [
-      'Plumbing & Heating',
-      'Electrical Services',
-      'Builders & Construction',
-      'Carpentry & Joinery',
-      'Roofing & Guttering',
-      'Flooring & Tiling',
-      'Cleaning Services',
-      'Gardening & Landscaping',
-      'Pest Control',
-      'Locksmith & Security',
-      'Handyman Services',
-      'Decorators (Painters, Wallpapering)',
-    ],
-  },
-  {
-    name: 'Beauty & Wellness',
-    subCategories: [
-      'Hairdressers & Barbers',
-      'Nail Salons',
-      'Beauty Salons',
-      'Spas & Wellness Centres',
-      'Massage Therapists',
-      'Tattoo & Piercing',
-      'Skincare Clinics',
-      'Tanning (Spray, Beds)',
-    ],
-  },
-  {
-    name: 'Health & Medical',
-    subCategories: [
-      'General Practitioners (GP)',
-      'Dentists',
-      'Opticians',
-      'Physiotherapists',
-      'Massage Therapy',
-      'Counselling & Mental Health',
-      'Chiropractors',
-      'Diagnostic Services',
-      'Hospitals & Clinics',
-      'Weight Loss & Nutrition',
-    ],
-  },
-  {
-    name: 'Others',
-    subCategories: [
-      'Property & Real Estate',
-      'Fitness & Sports',
-      'Automotive & Transport',
-      'Pets & Animal Services',
-      'Manufacturing & Industrial',
-      'Non-Profit & Community',
-      'Education & Training',
-      'Arts, Entertainment & Events',
-      'Media, Marketing & Professional Services',
-    ],
-  },
-];
-
 // --- Business Category Menu Component ---
 const BusinessCategoryMenu = () => {
+  const { data: sectors = [] } = useGetSectors();
+  const { data: categories = [] } = useGetCategories();
+
+  const categoriesBySector = sectors.map(sector => ({
+    name: sector.name,
+    subCategories: categories
+      .filter(c => c.sectorId === sector.id)
+      .map(c => c.name),
+  }));
+
+  if (categoriesBySector.length === 0) {
+    return <div className="p-4">Loading categories...</div>;
+  }
+
   return (
-    <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 p-4 md:grid-cols-4 lg:grid-cols-6 lg:p-6">
-      {popularCategories.map(category => (
-        <div key={category.name} className="space-y-3">
-          <Link
-            href={`/listings?category=${encodeURIComponent(category.name)}`}
-          >
-            <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
-              {category.name}
-            </h3>
-          </Link>
-          <ul className="space-y-2">
-            {category.subCategories.map(subCategory => (
-              <li key={subCategory}>
-                <Link
-                  href={`/listings?category=${encodeURIComponent(
-                    category.name
-                  )}&subcategory=${encodeURIComponent(subCategory)}`}
-                  className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
-                >
-                  {subCategory}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+    <div className="container mx-auto">
+      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 p-4 md:grid-cols-4 lg:grid-cols-6 lg:p-6">
+        {categoriesBySector.map(category => (
+          <div key={category.name} className="space-y-3">
+            <Link
+              href={`/listings?category=${encodeURIComponent(category.name)}`}
+            >
+              <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
+                {category.name}
+              </h3>
+            </Link>
+            <ul className="space-y-2">
+              {category.subCategories.map(subCategory => (
+                <li key={subCategory}>
+                  <Link
+                    href={`/listings?category=${encodeURIComponent(
+                      category.name
+                    )}&subcategory=${encodeURIComponent(subCategory)}`}
+                    className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
+                  >
+                    {subCategory}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -268,11 +194,11 @@ export function NavMenu() {
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
-                className={`absolute top-full z-50 mt-2 rounded-lg bg-white text-gray-900 shadow-lg
+                className={`z-50 bg-white text-gray-900 shadow-lg
                   ${
                     item.title === 'Business Category'
-                      ? 'left-1/2 w-screen max-w-7xl -translate-x-1/2'
-                      : 'left-0'
+                      ? 'fixed left-0 top-16 w-full border-t border-gray-100'
+                      : 'absolute left-0 top-full mt-2 rounded-lg'
                   }`}
               >
                 {item.content}
