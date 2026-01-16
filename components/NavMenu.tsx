@@ -50,32 +50,34 @@ const BusinessCategoryMenu = () => {
   }
 
   return (
-    <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 p-4 md:grid-cols-4 lg:grid-cols-6 lg:p-6">
-      {categoriesBySector.map(category => (
-        <div key={category.name} className="space-y-3">
-          <Link
-            href={`/listings?category=${encodeURIComponent(category.name)}`}
-          >
-            <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
-              {category.name}
-            </h3>
-          </Link>
-          <ul className="space-y-2">
-            {category.subCategories.map(subCategory => (
-              <li key={subCategory}>
-                <Link
-                  href={`/listings?category=${encodeURIComponent(
-                    category.name
-                  )}&subcategory=${encodeURIComponent(subCategory)}`}
-                  className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
-                >
-                  {subCategory}
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      ))}
+    <div className="container mx-auto">
+      <div className="grid w-full grid-cols-2 gap-x-4 gap-y-6 p-4 md:grid-cols-4 lg:grid-cols-6 lg:p-6">
+        {categoriesBySector.map(category => (
+          <div key={category.name} className="space-y-3">
+            <Link
+              href={`/listings?category=${encodeURIComponent(category.name)}`}
+            >
+              <h3 className="font-bold text-gray-900 hover:text-red-500 transition-colors">
+                {category.name}
+              </h3>
+            </Link>
+            <ul className="space-y-2">
+              {category.subCategories.map(subCategory => (
+                <li key={subCategory}>
+                  <Link
+                    href={`/listings?category=${encodeURIComponent(
+                      category.name
+                    )}&subcategory=${encodeURIComponent(subCategory)}`}
+                    className="block text-sm text-gray-600 hover:text-gray-900 hover:underline"
+                  >
+                    {subCategory}
+                  </Link>
+                </li>
+              ))}
+            </ul>
+          </div>
+        ))}
+      </div>
     </div>
   );
 };
@@ -192,11 +194,11 @@ export function NavMenu() {
                 initial="hidden"
                 animate="visible"
                 exit="hidden"
-                className={`absolute top-full z-50 mt-2 rounded-lg bg-white text-gray-900 shadow-lg
+                className={`z-50 bg-white text-gray-900 shadow-lg
                   ${
                     item.title === 'Business Category'
-                      ? 'left-1/2 w-screen max-w-7xl -translate-x-1/2'
-                      : 'left-0'
+                      ? 'fixed left-0 top-16 w-full border-t border-gray-100'
+                      : 'absolute left-0 top-full mt-2 rounded-lg'
                   }`}
               >
                 {item.content}
