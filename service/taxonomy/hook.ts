@@ -19,7 +19,7 @@ export const useGetSectors = () => {
     queryKey: ['taxonomy', 'sectors'],
     queryFn: async () => {
       try {
-        const { data } = await api.get<Sector[]>('api/v1/taxonomy/sectors');
+        const { data } = await api.get<Sector[]>('taxonomy/sectors');
         return data;
       } catch (error: unknown) {
         const err = error as ErrorResponse;
@@ -36,7 +36,7 @@ export const useGetSectorById = (id: string) => {
     queryKey: ['taxonomy', 'sectors', id],
     queryFn: async () => {
       try {
-        const { data } = await api.get<Sector>(`api/v1/taxonomy/sectors/${id}`);
+        const { data } = await api.get<Sector>(`taxonomy/sectors/${id}`);
         return data;
       } catch (error: unknown) {
         const err = error as ErrorResponse;
@@ -55,7 +55,7 @@ export const useGetCategories = () => {
     queryKey: ['taxonomy', 'categories'],
     queryFn: async () => {
       try {
-        const { data } = await api.get<Category[]>('api/v1/taxonomy/categories');
+        const { data } = await api.get<Category[]>('taxonomy/categories');
         return data;
       } catch (error: unknown) {
         const err = error as ErrorResponse;
@@ -73,7 +73,7 @@ export const useGetCategoryById = (id: string) => {
     queryFn: async () => {
       try {
         const { data } = await api.get<Category>(
-          `api/v1/taxonomy/categories/${id}`
+          `taxonomy/categories/${id}`
         );
         return data;
       } catch (error: unknown) {
@@ -93,7 +93,7 @@ export const useGetCategoriesBySector = (sectorId: string) => {
     queryFn: async () => {
       try {
         const { data } = await api.get<Category[]>(
-          `api/v1/taxonomy/sectors/${sectorId}/categories`
+          `taxonomy/sectors/${sectorId}/categories`
         );
         return data;
       } catch (error: unknown) {
@@ -116,7 +116,7 @@ export const useGetSubCategoryById = (id: string) => {
     queryFn: async () => {
       try {
         const { data } = await api.get<SubCategory>(
-          `api/v1/taxonomy/subcategories/${id}`
+          `taxonomy/subcategories/${id}`
         );
         return data;
       } catch (error: unknown) {
@@ -138,7 +138,7 @@ export const useGetSubCategoriesByCategory = (categoryId: string) => {
     queryFn: async () => {
       try {
         const { data } = await api.get<SubCategory[]>(
-          `api/v1/taxonomy/categories/${categoryId}/subcategories`
+          `taxonomy/categories/${categoryId}/subcategories`
         );
         return data;
       } catch (error: unknown) {
