@@ -88,3 +88,20 @@ export interface Tier {
   configuration: TierConfiguration;
   season?: Season; // The example shows it, so it's likely present
 }
+
+// New API Interface matching the provided schema
+export interface ApiTier {
+  name: string;
+  description: string;
+  monthlyPrice: number;
+  annualPrice: number;
+  stripeMonthlyPriceId: string;
+  stripeAnnualPriceId: string;
+  paypalMonthlyPlanId: string;
+  paypalAnnualPlanId: string;
+  // Configuration structure might differ, but we'll try to use TierConfiguration or partial
+  // For now, using any to avoid strict type conflicts during mapping if the structure differs significantly
+  // detailed mapping will happen in the adapter.
+  configuration: any;
+  isActive: boolean;
+}
