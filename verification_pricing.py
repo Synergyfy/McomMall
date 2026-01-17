@@ -2,11 +2,12 @@ from playwright.sync_api import sync_playwright
 
 def run(playwright):
     browser = playwright.chromium.launch(headless=True)
-    # Block service workers to ensure mocks work reliably
     context = browser.new_context(service_workers="block")
     page = context.new_page()
 
-    # Mock the API response
+    # Route request to log urls
+    page.route("**/*", lambda route: route.continue_())
+
     page.route("**/api/v1/tiers", lambda route: route.fulfill(
         status=200,
         content_type="application/json",
@@ -50,16 +51,25 @@ def run(playwright):
 ]'''
     ))
 
-    # Navigate to pricing page
     try:
-        page.goto("http://localhost:3000/pricing", timeout=60000)
+        response = page.goto("http://localhost:3000/pricing", timeout=60000)
+        print(f"Page loaded with status: {response.status}")
 
-        # Wait for content to load. Look for "Basic" tier name.
-        page.wait_for_selector("text=Basic", timeout=10000)
+        # Take a screenshot immediately to see what's rendering
+        page.screenshot(path="debug_pricing_initial.png", full_page=True)
 
-        # Take screenshot
+        # Wait for the "Basic" text, but dump content if it fails
+        try:
+             page.wait_for_selector("text=Basic", timeout=10000)
+             print("Found 'Basic' selector")
+        except Exception as e:
+             print(f"Selector not found: {e}")
+             print("Page content dump:")
+             # print(page.content()) # Commented out to avoid cluttering logs too much unless needed
+
         page.screenshot(path="verification_pricing.png", full_page=True)
-        print("Screenshot taken successfully")
+        print("Final screenshot taken")
+
     except Exception as e:
         print(f"Error: {e}")
         page.screenshot(path="verification_error.png")

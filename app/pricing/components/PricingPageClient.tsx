@@ -2,14 +2,10 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import PricingNav from './PricingNav';
-import PayAsYouGoContent from './PayAsYouGoContent';
-import CoBrandedContent from './CoBrandedContent';
-import MobilePricingPage from './MobilePricingPage';
 import PricingCheckoutClient from './PricingCheckoutClient';
 import { useGetTiers } from '@/service/tiers/hook';
 import { Tier } from '@/service/tiers/types';
+import TiersList from '@/app/dashboard/my-subscription/components/TiersList';
 
 type PlanItem = Tier | {
   name: string;
@@ -18,61 +14,38 @@ type PlanItem = Tier | {
 };
 
 export default function PricingPageClient() {
-  const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
   const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
   const [isTrial, setIsTrial] = useState(false);
 
-  // Lifted state for Co-Branded tiers
-  const { data: tiers, isLoading } = useGetTiers();
-  const [billingCycle, setBillingCycle] = useState<'monthly' | 'quarterly' | 'annual'>('annual');
+  // We reuse TiersList from subscription page which handles fetching internally if needed,
+  // BUT TiersList inside dashboard/my-subscription fetches tiers itself.
+  // Wait, TiersList imports useGetTiers.
+  // The user wants it to look like /my-subscription.
+  // We can reuse TiersList component directly if it fits.
+  // Let's check TiersList signature.
+  // It takes `onSelectTier`.
+  // It handles the cycle toggle internally.
 
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handlePayNow = (tier: PlanItem) => {
-    const name = tier.name;
-    let price = '';
+  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
+      let price = 0;
+      switch(cycle) {
+        case 'monthly': price = tier.monthly_price; break;
+        case 'quarterly': price = tier.quaterly_price; break;
+        case 'annual': price = tier.annual_price; break;
+      }
 
-    if ('price' in tier && typeof tier.price === 'string') {
-        price = tier.price;
-    } else if ('monthly_price' in tier) {
-        // Assume Tier object
-        let val = 0;
-        switch(billingCycle) {
-            case 'monthly': val = tier.monthly_price; break;
-            case 'quarterly': val = tier.quaterly_price; break;
-            case 'annual': val = tier.annual_price; break;
-            default: val = tier.monthly_price;
-        }
-        price = new Intl.NumberFormat('en-GB', {
+      const priceString = new Intl.NumberFormat('en-GB', {
            style: 'currency', currency: 'GBP'
-        }).format(Number(val));
-    }
+      }).format(Number(price));
 
-    setSelectedTier({ name, price });
-    setIsTrial(false);
-  };
-
-  const handleStartTrial = (tier: PlanItem) => {
-    const name = tier.name;
-    let price = '';
-
-    if ('price' in tier && typeof tier.price === 'string') {
-        price = tier.price;
-    } else if ('monthly_price' in tier) {
-         let val = 0;
-        switch(billingCycle) {
-            case 'monthly': val = tier.monthly_price; break;
-            case 'quarterly': val = tier.quaterly_price; break;
-            case 'annual': val = tier.annual_price; break;
-            default: val = tier.monthly_price;
-        }
-        price = new Intl.NumberFormat('en-GB', {
-           style: 'currency', currency: 'GBP'
-        }).format(Number(val));
-    }
-    setSelectedTier({ name, price });
-    setIsTrial(true);
+      setSelectedTier({
+          name: `${tier.name} (${cycle})`,
+          price: priceString
+      });
+      setIsTrial(false);
   };
 
   if (selectedTier) {
@@ -81,15 +54,15 @@ export default function PricingPageClient() {
         planName={selectedTier.name}
         planPrice={selectedTier.price}
         isTrial={isTrial}
-        isPayg={activeView === 'payg'}
+        isPayg={false} // Defaulting to subscription model since we are unifying UI
         listingId={listingId}
       />
     );
   }
 
   return (
-    <div className="h-full p-4 md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
-      <header className="text-center">
+    <div className="h-full md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
+      <header className="text-center mb-8">
         <h1 className="text-3xl md:text-5xl font-semibold">
           McomMall Packages and Pricing
         </h1>
@@ -97,82 +70,13 @@ export default function PricingPageClient() {
           Select the package that serves your need.
         </p>
       </header>
-      <section className="w-full md:w-5/6 mt-10 flex flex-col items-center bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 rounded-lg shadow-lg">
-        {/* Desktop Sidebar */}
-        <aside className="mt-10 md:mt-20 space-y-4">
-          <h3 className="text-xl md:text-2xl font-medium text-center">
-            Select your plan
-          </h3>
-          <div className="hidden rounded-full border h-fit md:block min-w-fit border-r px-10 bg-white/80 backdrop-blur-sm py-5 ">
-            <PricingNav
-              orientation="vertical"
-              activeView={activeView}
-              setActiveView={setActiveView}
-            />
-          </div>
-        </aside>
-        <main className="flex-1 w-full p-4 md:p-8 overflow-auto">
-          {/* Desktop Content */}
-          <div className="hidden md:block">
-            <AnimatePresence mode="wait">
-              {activeView === 'payg' ? (
-                <motion.div
-                  key="payg"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                  <PayAsYouGoContent
-                    listingId={listingId}
-                    onPayNow={handlePayNow}
-                    onStartTrial={handleStartTrial}
-                    tiers={tiers}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="cobranded"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                  <CoBrandedContent
-                    listingId={listingId}
-                    onPayNow={handlePayNow}
-                    onStartTrial={handleStartTrial}
-                    tiers={tiers}
-                    billingCycle={billingCycle}
-                    setBillingCycle={setBillingCycle}
-                    isLoading={isLoading}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
-          {/* Mobile Content */}
-          <div className="block md:hidden">
-            <MobilePricingPage
-              activeView={activeView}
-              listingId={listingId}
-              tiers={tiers}
-              billingCycle={billingCycle}
-              setBillingCycle={setBillingCycle}
-              onPayNow={handlePayNow}
-              onStartTrial={handleStartTrial}
-            />
-          </div>
-        </main>
-        {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t p-4 bg-white/80 backdrop-blur-sm z-10">
-          <PricingNav
-            orientation="horizontal"
-            activeView={activeView}
-            setActiveView={setActiveView}
-          />
-        </nav>
+      <section className="w-full flex flex-col items-center">
+        <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
+            Select your plan
+        </h3>
+        {/* We can reuse the TiersList component from my-subscription to get the exact same look */}
+        <TiersList onSelectTier={handleSelectTier} />
       </section>
     </div>
   );
