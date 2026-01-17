@@ -49,6 +49,22 @@ export default function TierCard({
   const seasonBg = tier.season?.bgColor;
   const seasonText = tier.season?.textColor;
 
+  // Extract quotas for display
+  const { quotas } = tier.configuration;
+
+  // Define quota items to display
+  const quotaItems = [
+    { label: `${quotas.maxListings} Listings`, value: quotas.maxListings > 0 },
+    { label: `${quotas.maxProducts} Products`, value: quotas.maxProducts > 0 },
+    { label: `${quotas.maxServices} Services`, value: quotas.maxServices > 0 },
+    { label: `${quotas.maxCouponTemplates} Coupon Templates`, value: quotas.maxCouponTemplates > 0 },
+    { label: `${quotas.maxGiftCardTemplates} Gift Card Templates`, value: quotas.maxGiftCardTemplates > 0 },
+    { label: `${quotas.maxLoyaltyPrograms} Loyalty Programs`, value: quotas.maxLoyaltyPrograms > 0 },
+    { label: `${quotas.maxImagesPerListing} Images Per Listing`, value: quotas.maxImagesPerListing > 0 },
+    { label: 'Product Listing Allowed', value: quotas.allowProductListing },
+    { label: 'Service Listing Allowed', value: quotas.allowServiceListing },
+  ].filter(item => item.value); // Only show positive quotas/allowed features
+
   return (
     <motion.div
       whileHover={{ scale: 1.02, boxShadow: '0px 10px 20px rgba(0,0,0,0.1)' }}
@@ -89,20 +105,41 @@ export default function TierCard({
           </h3>
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
-          <ul className="space-y-2">
-            {tier.features.map((feature, index) => (
-              <li
-                key={index}
-                className="flex items-start text-sm text-gray-700"
-              >
-                <Check
-                  className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
-                  style={{ color: themeColor }}
-                />
-                {feature}
-              </li>
-            ))}
-          </ul>
+           {/* Quotas Section */}
+           {quotaItems.length > 0 && (
+            <ul className="space-y-2 mb-4">
+              {quotaItems.map((item, index) => (
+                <li key={`quota-${index}`} className="flex items-start text-sm text-gray-700 font-medium">
+                  <Check
+                    className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
+                    style={{ color: themeColor }}
+                  />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          {/* Existing Features Section */}
+          {tier.features.length > 0 && (
+            <>
+               <hr className="border-gray-100 my-2"/>
+               <ul className="space-y-2">
+                {tier.features.map((feature, index) => (
+                  <li
+                    key={index}
+                    className="flex items-start text-sm text-gray-700"
+                  >
+                    <Check
+                      className="mr-2 h-4 w-4 flex-shrink-0 mt-1"
+                      style={{ color: themeColor }}
+                    />
+                    {feature}
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
         </CardContent>
         <CardFooter>
           <Button

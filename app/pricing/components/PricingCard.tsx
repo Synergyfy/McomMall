@@ -78,6 +78,20 @@ export default function PricingCard({
   const buttonStyle = customColor ? { backgroundColor: customColor } : {};
   const outlineButtonStyle = customColor ? { borderColor: customColor, color: customColor } : {};
 
+  // Parse quotas if available
+  const quotaItems = tier.quotas ? [
+    { label: `${tier.quotas.maxListings} Listings`, value: tier.quotas.maxListings > 0 },
+    { label: `${tier.quotas.maxProducts} Products`, value: tier.quotas.maxProducts > 0 },
+    { label: `${tier.quotas.maxServices} Services`, value: tier.quotas.maxServices > 0 },
+    { label: `${tier.quotas.maxCouponTemplates} Coupon Templates`, value: tier.quotas.maxCouponTemplates > 0 },
+    { label: `${tier.quotas.maxGiftCardTemplates} Gift Card Templates`, value: tier.quotas.maxGiftCardTemplates > 0 },
+    { label: `${tier.quotas.maxLoyaltyPrograms} Loyalty Programs`, value: tier.quotas.maxLoyaltyPrograms > 0 },
+    { label: `${tier.quotas.maxImagesPerListing} Images Per Listing`, value: tier.quotas.maxImagesPerListing > 0 },
+    { label: 'Product Listing Allowed', value: tier.quotas.allowProductListing },
+    { label: 'Service Listing Allowed', value: tier.quotas.allowServiceListing },
+  ].filter(item => item.value) : [];
+
+
   return (
     <motion.div
       whileHover={{ scale: 1.02, boxShadow: '0px 10px 20px rgba(0,0,0,0.1)' }}
@@ -104,6 +118,28 @@ export default function PricingCard({
           </h3>
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
+          {/* Quotas Section */}
+           {quotaItems.length > 0 && (
+            <ul className="space-y-2 mb-4">
+              {quotaItems.map((item, index) => (
+                <li key={`quota-${index}`} className="flex items-start text-sm text-gray-700 font-medium">
+                  <Check
+                     className={`mr-2 h-4 w-4 ${
+                      !customColor ? checkColor[accent] : ''
+                    } flex-shrink-0 mt-1`}
+                    style={checkStyle}
+                  />
+                  {item.label}
+                </li>
+              ))}
+            </ul>
+          )}
+
+           {/* Divider if we have quotas and other features */}
+           {quotaItems.length > 0 && tier.primaryFeatures.length > 0 && (
+               <hr className="border-gray-100 my-2"/>
+           )}
+
           {isPayg && (
             <CardFooter className="flex flex-col sm:flex-row gap-2 p-0">
               <Button
