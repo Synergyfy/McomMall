@@ -14,7 +14,7 @@ const customerAllowedPaths = [
   '/dashboard/my-subscription',
 ];
 
-export function middleware(request: NextRequest) {
+export default function proxy(request: NextRequest) {
   const accessToken = request.cookies.get('access')?.value;
   const refreshToken = request.cookies.get('refresh')?.value;
   const userRole = request.cookies.get('userRole')?.value;

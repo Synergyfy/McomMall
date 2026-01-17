@@ -51,7 +51,7 @@ const AddListingPage = () => {
 
   const listingOptions = useMemo(() => {
     if (!userListings) return [];
-    return userListings.map((listing: UserListing) => ({
+    return userListings.data.map((listing: UserListing) => ({
       value: listing.id,
       label: listing.businessName,
     }));

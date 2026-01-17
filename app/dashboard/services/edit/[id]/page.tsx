@@ -249,7 +249,7 @@ const EditServicePage = () => {
   };
 
   const businesses =
-    listings?.filter(
+    listings?.data?.filter(
       (listing: UserListing) =>
         listing.listingType.includes('service')
     ) || [];

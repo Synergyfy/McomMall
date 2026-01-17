@@ -40,7 +40,7 @@ import {
   DialogDescription,
 } from '@/components/ui/dialog';
 import { useGetUserListings } from '@/service/listings/hook';
-import { InHouseBusiness } from '@/service/listings/types';
+import { InHouseBusiness, UserListing } from '@/service/listings/types';
 import {
   Command,
   CommandEmpty,
@@ -356,7 +356,7 @@ function EditCouponPage() {
                           {isLoadingListings ? (
                             <CommandItem>Loading...</CommandItem>
                           ) : (
-                            listings?.map((listing: InHouseBusiness) => (
+                            listings?.data?.map((listing: UserListing) => (
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {

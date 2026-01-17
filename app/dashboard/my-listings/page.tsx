@@ -286,6 +286,7 @@ const Pagination: React.FC<PaginationProps> = ({
 // --- Main Page Component ---
 
 export default function MyListingsPage() {
+  const [mounted, setMounted] = React.useState(false);
   const [searchTerm, setSearchTerm] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [isVerificationModalOpen, setIsVerificationModalOpen] = useState(false);
@@ -296,12 +297,17 @@ export default function MyListingsPage() {
   const [modalPlaceId, setModalPlaceId] = useState('');
   const itemsPerPage = 5;
 
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   const {
-    data: listingsData,
+    data: paginatedData,
     isLoading,
     isError,
     error,
-  } = useGetUserListings();
+  } = useGetUserListings(currentPage, itemsPerPage);
+  
   const { mutate: claimBusiness } = useClaimBusiness();
   const { mutate: deleteListing } = useDeleteListing();
 
@@ -333,24 +339,22 @@ export default function MyListingsPage() {
     }
   };
 
+  // Note: Since we are using server-side pagination, search is now mostly for 
+  // highlighting or small filtering within the current page. 
+  // For a true search, we should implement a search endpoint on the backend.
   const filteredListings = useMemo(() => {
-    if (!listingsData) return [];
-    if (!searchTerm) return listingsData;
-    return listingsData.filter(
+    const listings = paginatedData?.data || [];
+    if (!searchTerm) return listings;
+    return listings.filter(
       (listing: Listing) =>
         listing.businessName.toLowerCase().includes(searchTerm.toLowerCase()) ||
         listing.location.addressLine1
           .toLowerCase()
           .includes(searchTerm.toLowerCase())
     );
-  }, [searchTerm, listingsData]);
+  }, [searchTerm, paginatedData]);
 
-  const paginatedListings = useMemo(() => {
-    const startIndex = (currentPage - 1) * itemsPerPage;
-    return filteredListings.slice(startIndex, startIndex + itemsPerPage);
-  }, [currentPage, filteredListings]);
-
-  const totalPages = Math.ceil(filteredListings.length / itemsPerPage);
+  const totalPages = paginatedData?.meta.lastPage || 0;
 
   const handlePageChange = (page: number) => {
     if (page > 0 && page <= totalPages) {
@@ -367,6 +371,8 @@ export default function MyListingsPage() {
       },
     },
   };
+
+  if (!mounted) return null;
 
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
@@ -400,8 +406,8 @@ export default function MyListingsPage() {
               <div className="py-12 text-center text-red-500">
                 <p>Error fetching listings: {error?.message}</p>
               </div>
-            ) : paginatedListings.length > 0 ? (
-              paginatedListings.map((listing: Listing) => (
+            ) : filteredListings.length > 0 ? (
+              filteredListings.map((listing: Listing) => (
                 <ListingCard
                   key={listing.id}
                   listing={listing}

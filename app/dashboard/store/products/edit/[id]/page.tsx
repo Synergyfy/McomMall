@@ -1321,7 +1321,7 @@ export default function EditProductPage() {
                                   Loading businesses...
                                 </SelectItem>
                               ) : (
-                                userListings?.map((listing: Listing) => (
+                                userListings?.data?.map((listing: Listing) => (
                                   <SelectItem
                                     key={listing.id}
                                     value={listing.id}

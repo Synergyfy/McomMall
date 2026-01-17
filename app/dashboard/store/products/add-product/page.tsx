@@ -51,13 +51,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-    Command,
-    CommandEmpty,
-    CommandGroup,
-    CommandInput,
-    CommandItem,
-    CommandList,
-  } from '@/components/ui/command';
+  Command,
+  CommandEmpty,
+  CommandGroup,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Textarea } from '@/components/ui/textarea';
 import {
@@ -81,7 +81,7 @@ import Link from 'next/link';
 
 
 interface ProductFormValues {
-  title:string;
+  title: string;
   productType: 'physical' | 'downloadable' | 'virtual';
   category: string;
   subCategories: string[];
@@ -134,7 +134,7 @@ const customResolver = (data: ProductFormValues) => {
       message: 'Please select a category.',
     };
   }
-    if (!data.subCategories || data.subCategories.length === 0) {
+  if (!data.subCategories || data.subCategories.length === 0) {
     errors.subCategories = {
       type: 'required',
       message: 'Please select at least one sub-category.',
@@ -148,8 +148,8 @@ const customResolver = (data: ProductFormValues) => {
   }
   if (data.discountedPrice !== undefined && data.price < data.discountedPrice) {
     errors.price = {
-        type: 'validate',
-        message: 'Price must be more than the discounted price.',
+      type: 'validate',
+      message: 'Price must be more than the discounted price.',
     };
   }
   if (!data.shortDescription?.trim()) {
@@ -344,7 +344,7 @@ export default function AddProductPage() {
 
   async function onSubmit(data: ProductFormValues) {
     const mediaUrls = await Promise.all(
-        data.media.map(file => uploadFile(file))
+      data.media.map(file => uploadFile(file))
     );
 
 
@@ -423,709 +423,25 @@ export default function AddProductPage() {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
                 {/* Main Content Column */}
                 <div className="lg:col-span-2 space-y-8">
-                {/* Product Title */}
-                <Card>
-                  <CardContent className="p-6">
-                    <FormField
-                      control={form.control}
-                      name="title"
-                      render={({ field, fieldState: { error } }) => (
-                        <FormItem>
-                          <FormLabel
-                            className={cn(
-                              'text-xl font-semibold',
-                              error && 'text-red-500'
-                            )}
-                          >
-                            Title
-                          </FormLabel>
-                          <FormControl>
-                            <Input
-                              placeholder="Enter product title"
-                              {...field}
-                              className="text-base py-6"
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
- <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Variants</CardTitle>
-                    <CardDescription>
-                        Add variants like color, size, etc. to your product. This will allow you to specify different options for your product.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <VariantManager name="variants" />
-                  </CardContent>
-                </Card>
-                {/* Product Data Section */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Product Data</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <TooltipProvider>
-                    <FormField
-                      control={form.control}
-                      name="productType"
-                      render={({ field, fieldState: { error } }) => (
-                        <FormItem className="space-y-3">
-                          <FormLabel
-                            className={cn('text-lg', error && 'text-red-500')}
-                          >
-                            Product Type
-                          </FormLabel>
-                          <FormControl>
-                            <RadioGroup
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                              className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
-                            >
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="physical" />
-                                </FormControl>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormLabel className="font-normal text-base">
-                                      Physical
-                                    </FormLabel>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      A physical product that requires shipping.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="downloadable" />
-                                </FormControl>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormLabel className="font-normal text-base">
-                                      Downloadable
-                                    </FormLabel>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      A product that can be downloaded after
-                                      purchase.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </FormItem>
-                              <FormItem className="flex items-center space-x-3 space-y-0">
-                                <FormControl>
-                                  <RadioGroupItem value="virtual" />
-                                </FormControl>
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <FormLabel className="font-normal text-base">
-                                      Virtual
-                                    </FormLabel>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      A virtual product that does not require
-                                      shipping and is not downloadable.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              </FormItem>
-                            </RadioGroup>
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-
-                    {/* Pricing */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
-                        <FormField
-                            control={form.control}
-                            name="discountedPrice"
-                            render={({ field }) => (
-                            <FormItem>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <FormLabel className="text-base">
-                                            Discounted Price (£)
-                                            </FormLabel>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>The lowest price you are willing to sell this product.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                                <FormControl>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    {...field}
-                                    className="text-base py-6"
-                                />
-                                </FormControl>
-                                <FormMessage className="text-red-500 text-base font-medium" />
-                            </FormItem>
-                            )}
-                        />
-                        <FormField
-                            control={form.control}
-                            name="price"
-                            render={({ field, fieldState: { error } }) => (
-                            <FormItem>
-                                <FormLabel
-                                className={cn(
-                                    'text-base',
-                                    error && 'text-red-500'
-                                )}
-                                >
-                                Price (£)
-                                </FormLabel>
-                                <FormControl>
-                                <Input
-                                    type="number"
-                                    placeholder="0.00"
-                                    {...field}
-                                    className="text-base py-6"
-                                />
-                                </FormControl>
-                                <FormMessage className="text-red-500 text-base font-medium" />
-                            </FormItem>
-                            )}
-                        />
-                    </div>
-                    </TooltipProvider>
-                  </CardContent>
-                </Card>
-
-                {/* Short Description */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">
-                      Short Description
-                    </CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="shortDescription"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Write a short description for the product..."
-                              className="min-h-[150px] text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Description */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Description</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="description"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Provide a detailed description of the product..."
-                              className="min-h-[200px] text-base"
-                              {...field}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Conditional Sections based on Product Type */}
-                {productType === 'physical' && (
+                  {/* Product Title */}
                   <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-2xl">
-                        <Box className="w-6 h-6" /> Inventory & Shipping
-                      </CardTitle>
-                      <CardDescription className="text-base">
-                        Manage inventory and shipping details for this product.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
+                    <CardContent className="p-6">
                       <FormField
                         control={form.control}
-                        name="sku"
-                        render={({ field }) => (
-                          <FormItem>
-                            <TooltipProvider>
-                                <Tooltip>
-                                    <TooltipTrigger asChild>
-                                        <FormLabel className="text-base">
-                                        SKU (Stock Keeping Unit)
-                                        </FormLabel>
-                                    </TooltipTrigger>
-                                    <TooltipContent>
-                                        <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
-                                    </TooltipContent>
-                                </Tooltip>
-                            </TooltipProvider>
-                            <FormControl>
-                              <Input
-                                placeholder="e.g., TSHIRT-RED-L"
-                                {...field}
-                                className="text-base py-6"
-                              />
-                            </FormControl>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="enableStockManagement"
-                        render={({ field }) => (
-                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                            <FormControl>
-                              <Checkbox
-                                checked={field.value}
-                                onCheckedChange={field.onChange}
-                              />
-                            </FormControl>
-                            <FormLabel className="font-normal text-base">
-                              Enable product stock management
-                            </FormLabel>
-                          </FormItem>
-                        )}
-                      />
-                      {form.watch('enableStockManagement') && (
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                          <FormField
-                            control={form.control}
-                            name="stockQuantity"
-                            render={({ field }) => (
-                              <FormItem>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <FormLabel className="text-base">
-                                            Stock quantity
-                                            </FormLabel>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p>Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder="0"
-                                    {...field}
-                                    className="text-base py-6"
-                                  />
-                                </FormControl>
-                                <FormMessage className="text-red-500 text-base font-medium" />
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="lowStockThreshold"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-base">
-                                  Low stock threshold
-                                </FormLabel>
-                                <FormControl>
-                                  <Input
-                                    type="number"
-                                    placeholder="0"
-                                    {...field}
-                                    className="text-base py-6"
-                                  />
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                          <FormField
-                            control={form.control}
-                            name="allowBackorders"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel className="text-base">
-                                  Allow Backorders?
-                                </FormLabel>
-                                <Select
-                                  onValueChange={field.onChange}
-                                  defaultValue={field.value}
-                                >
-                                  <FormControl>
-                                    <SelectTrigger className="text-base py-6">
-                                      <SelectValue placeholder="Select an option" />
-                                    </SelectTrigger>
-                                  </FormControl>
-                                  <SelectContent>
-                                    <SelectItem
-                                      value="no"
-                                      className="text-base"
-                                    >
-                                      Do not allow
-                                    </SelectItem>
-                                    <SelectItem
-                                      value="notify"
-                                      className="text-base"
-                                    >
-                                      Allow, but notify customer
-                                    </SelectItem>
-                                    <SelectItem
-                                      value="yes"
-                                      className="text-base"
-                                    >
-                                      Allow
-                                    </SelectItem>
-                                  </SelectContent>
-                                </Select>
-                              </FormItem>
-                            )}
-                          />
-                          <div className="md:col-span-2">
-                            <FormField
-                              control={form.control}
-                              name="allowSingleOrder"
-                              render={({ field }) => (
-                                <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
-                                  <FormControl>
-                                    <Checkbox
-                                      checked={field.value}
-                                      onCheckedChange={field.onChange}
-                                    />
-                                  </FormControl>
-                                  <FormLabel className="font-normal text-base">
-                                    Allow only one quantity of this product to
-                                    be bought in a single order
-                                  </FormLabel>
-                                </FormItem>
-                              )}
-                            />
-                          </div>
-                        </div>
-                      )}
-                      <div className="space-y-4 pt-4 border-t">
-                        <FormLabel className="text-lg">Shipping</FormLabel>
-                        <FormField
-                          control={form.control}
-                          name="weight"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="font-normal text-base">
-                                Weight (kg)
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="0"
-                                  {...field}
-                                  className="text-base py-6"
-                                />
-                              </FormControl>
-                              <FormMessage className="text-red-500 text-base font-medium" />
-                            </FormItem>
-                          )}
-                        />
-                        <div>
-                          <FormField
-                            control={form.control}
-                            name="dimensions"
-                            render={() => (
-                              <FormItem>
-                                <FormLabel className="font-normal text-base">
-                                  Dimensions (cm)
-                                </FormLabel>
-                                <div className="grid grid-cols-3 gap-4 mt-2">
-                                  <FormField
-                                    control={form.control}
-                                    name="dimensions.length"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            placeholder="Length"
-                                            {...field}
-                                            className="text-base py-6"
-                                          />
-                                        </FormControl>
-                                        <FormMessage className="text-red-500 text-base font-medium" />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="dimensions.width"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            placeholder="Width"
-                                            {...field}
-                                            className="text-base py-6"
-                                          />
-                                        </FormControl>
-                                        <FormMessage className="text-red-500 text-base font-medium" />
-                                      </FormItem>
-                                    )}
-                                  />
-                                  <FormField
-                                    control={form.control}
-                                    name="dimensions.height"
-                                    render={({ field }) => (
-                                      <FormItem>
-                                        <FormControl>
-                                          <Input
-                                            type="number"
-                                            placeholder="Height"
-                                            {...field}
-                                            className="text-base py-6"
-                                          />
-                                        </FormControl>
-                                        <FormMessage className="text-red-500 text-base font-medium" />
-                                      </FormItem>
-                                    )}
-                                  />
-                                </div>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                        <div className="space-y-4 pt-4 border-t">
-                          <FormLabel className="text-lg">Delivery Details</FormLabel>
-                          <FormField
-                            control={form.control}
-                            name="shippingMethod"
-                            render={({ field }) => (
-                              <FormItem className="space-y-3">
-                                <FormControl>
-                                  <RadioGroup
-                                    onValueChange={field.onChange}
-                                    defaultValue={field.value}
-                                    className="flex flex-col space-y-2"
-                                  >
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="free" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Free Delivery
-                                      </FormLabel>
-                                    </FormItem>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="pickup" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Pickup
-                                      </FormLabel>
-                                    </FormItem>
-                                    <FormItem className="flex items-center space-x-3 space-y-0">
-                                      <FormControl>
-                                        <RadioGroupItem value="delivery" />
-                                      </FormControl>
-                                      <FormLabel className="font-normal text-base">
-                                        Delivery Options
-                                      </FormLabel>
-                                    </FormItem>
-                                  </RadioGroup>
-                                </FormControl>
-                              </FormItem>
-                            )}
-                          />
-                        </div>
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {productType === 'downloadable' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-2xl">
-                        <Download className="w-6 h-6" />
-                        Downloadable Options
-                      </CardTitle>
-                      <CardDescription className="text-base">
-                        Configure your downloadable product settings.
-                      </CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                      <div>
-                        <FormLabel
-                          className={cn(
-                            'text-lg',
-                            form.formState.errors.files && 'text-red-500'
-                          )}
-                        >
-                          Files
-                        </FormLabel>
-                        <div className="space-y-4 mt-2">
-                          {fields.map((field, index) => (
-                            <div
-                              key={field.id}
-                              className="flex items-center gap-4 p-4 border rounded-md"
-                            >
-                              <FormField
-                                control={form.control}
-                                name={`files.${index}.fileList`}
-                                render={({
-                                  field: { onChange, value, ...rest },
-                                }) => (
-                                  <div className="w-full">
-                                    <div className="flex items-center gap-4">
-                                      <Input
-                                        type="file"
-                                        multiple
-                                        {...rest}
-                                        onChange={event => {
-                                          onChange(event.target.files);
-                                        }}
-                                        className="w-full"
-                                      />
-                                      <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        onClick={() => remove(index)}
-                                        className="text-red-500 hover:text-red-600"
-                                      >
-                                        <Trash2 className="h-6 w-6" />
-                                      </Button>
-                                    </div>
-                                    {value instanceof FileList &&
-                                      value.length > 0 &&
-                                      Array.from(value).map((file: File) => (
-                                        <div
-                                          key={file.name}
-                                          className="text-sm text-gray-500 mt-2"
-                                        >
-                                          {file.name} (
-                                          {(file.size / 1024 / 1024).toFixed(2)}{' '}
-                                          MB)
-                                        </div>
-                                      ))}
-                                  </div>
-                                )}
-                              />
-                            </div>
-                          ))}
-                        </div>
-                        <Button
-                          type="button"
-                          variant="outline"
-                          size="lg"
-                          className="mt-4 text-base"
-                          onClick={() => append({ fileList: null })}
-                        >
-                          <Plus className="mr-2 h-5 w-5" /> Add More Files
-                        </Button>
-                        <FormMessage className="text-red-500 text-base font-medium mt-2">
-                          {form.formState.errors.files?.message}
-                        </FormMessage>
-                      </div>
-
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
-                        <FormField
-                          control={form.control}
-                          name="downloadLimit"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base">
-                                Download Limit
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="-1"
-                                  {...field}
-                                  className="text-base py-6"
-                                />
-                              </FormControl>
-                              <FormDescription className="text-sm">
-                                Leave blank or -1 for unlimited.
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={form.control}
-                          name="downloadExpiry"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel className="text-base">
-                                Download Expiry
-                              </FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="number"
-                                  placeholder="-1"
-                                  {...field}
-                                  className="text-base py-6"
-                                />
-                              </FormControl>
-                              <FormDescription className="text-sm">
-                                Enter number of days. Leave blank or -1 for
-                                never.
-                              </FormDescription>
-                            </FormItem>
-                          )}
-                        />
-                      </div>
-                    </CardContent>
-                  </Card>
-                )}
-
-                {productType === 'virtual' && (
-                  <Card>
-                    <CardHeader>
-                      <CardTitle className="flex items-center gap-2 text-2xl">
-                        <LinkIcon className="w-6 h-6" />
-                        Virtual Product
-                      </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                      <FormField
-                        control={form.control}
-                        name="productUrl"
+                        name="title"
                         render={({ field, fieldState: { error } }) => (
                           <FormItem>
                             <FormLabel
                               className={cn(
-                                'text-base',
+                                'text-xl font-semibold',
                                 error && 'text-red-500'
                               )}
                             >
-                              Product URL
+                              Title
                             </FormLabel>
                             <FormControl>
                               <Input
-                                placeholder="https://example.com/virtual-product"
+                                placeholder="Enter product title"
                                 {...field}
                                 className="text-base py-6"
                               />
@@ -1136,450 +452,1134 @@ export default function AddProductPage() {
                       />
                     </CardContent>
                   </Card>
-                )}
-
-                {/* Other Options */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="flex items-center gap-2 text-2xl">
-                      <Settings className="w-6 h-6" /> Other Options
-                    </CardTitle>
-                    <CardDescription className="text-base">
-                      Set your extra product options.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent className="space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <FormField
-                        control={form.control}
-                        name="productStatus"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">
-                              Product Status
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="text-base py-6">
-                                  <SelectValue placeholder="Select status" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="draft" className="text-base">
-                                  Draft
-                                </SelectItem>
-                                <SelectItem
-                                  value="published"
-                                  className="text-base"
-                                >
-                                  Published
-                                </SelectItem>
-                                <SelectItem
-                                  value="archived"
-                                  className="text-base"
-                                >
-                                  Archived
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                      <FormField
-                        control={form.control}
-                        name="visibility"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel className="text-base">
-                              Visibility
-                            </FormLabel>
-                            <Select
-                              onValueChange={field.onChange}
-                              defaultValue={field.value}
-                            >
-                              <FormControl>
-                                <SelectTrigger className="text-base py-6">
-                                  <SelectValue placeholder="Select visibility" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem
-                                  value="public"
-                                  className="text-base"
-                                >
-                                  Public
-                                </SelectItem>
-                                <SelectItem
-                                  value="private"
-                                  className="text-base"
-                                >
-                                  Private
-                                </SelectItem>
-                                <SelectItem
-                                  value="password-protected"
-                                  className="text-base"
-                                >
-                                  Password Protected
-                                </SelectItem>
-                              </SelectContent>
-                            </Select>
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    <FormField
-                      control={form.control}
-                      name="purchaseNote"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel className="text-base">
-                            Purchase Note
-                          </FormLabel>
-                          <FormControl>
-                            <Textarea
-                              placeholder="Customer will get this info in their order email."
-                              {...field}
-                              className="text-base"
-                            />
-                          </FormControl>
-                        </FormItem>
-                      )}
-                    />
-                    <FormField
-                      control={form.control}
-                      name="enableReviews"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-row items-center space-x-3 space-y-0">
-                          <FormControl>
-                            <Checkbox
-                              checked={field.value}
-                              onCheckedChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormLabel className="font-normal text-base">
-                            Enable product reviews
-                          </FormLabel>
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-              </div>
-
-              {/* Sidebar Column */}
-              <div className="space-y-8">
-                {/* Business Listing */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Listings/Business</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="businessId"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Select
-                            onValueChange={field.onChange}
-                            defaultValue={field.value}
-                            disabled={isLoadingListings}
-                          >
-                            <FormControl>
-                              <SelectTrigger className="text-base py-6">
-                                <SelectValue placeholder="Select from your Listing" />
-                              </SelectTrigger>
-                            </FormControl>
-                            <SelectContent>
-                              {isLoadingListings ? (
-                                <SelectItem value="loading" disabled>
-                                  Loading businesses...
-                                </SelectItem>
-                              ) : (
-                                userListings
-                                  ?.filter((listing: UserListing) =>
-                                    listing.listingType.includes('product')
-                                  )
-                                  .map((listing: UserListing) => (
-                                    <SelectItem
-                                      key={listing.id}
-                                      value={listing.id}
-                                    >
-                                      {listing.businessName}
-                                    </SelectItem>
-                                  ))
-                              )}
-                            </SelectContent>
-                          </Select>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Product Media */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Product Media</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="media"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormControl>
-                            <MultiMediaUpload
-                              onMediaChange={field.onChange}
-                            />
-                          </FormControl>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                 {/* Hotspot Editor Button */}
-                <Card>
+                  <Card>
                     <CardHeader>
-                        <CardTitle className="text-2xl">Interactive Hotspots</CardTitle>
-                        <CardDescription>
-                            Add clickable hotspots to your product image. You must save the product first.
-                        </CardDescription>
+                      <CardTitle className="text-2xl">Variants</CardTitle>
+                      <CardDescription>
+                        Add variants like color, size, etc. to your product. This will allow you to specify different options for your product.
+                      </CardDescription>
                     </CardHeader>
                     <CardContent>
-                        <Button asChild variant="outline" disabled={!newProductId}>
-                            <Link href={`/dashboard/hotspot-editor/edit/${newProductId}?type=product`}>
-                                Add/Edit Hotspots
-                            </Link>
-                        </Button>
+                      <VariantManager name="variants" />
                     </CardContent>
-                </Card>
-
-                {/* Category */}
-                <Card>
-                  <CardContent className="pt-6">
-                    <FormField
-                      control={form.control}
-                      name="category"
-                      render={({ field, fieldState: { error } }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel
-                            className={cn(
-                              'text-2xl font-semibold',
-                              error && 'text-red-500'
-                            )}
-                          >
-                            Category
-                          </FormLabel>
-                          <FormDescription>
-                            Select a category for your product.
-                          </FormDescription>
-                          <Popover>
-                            <PopoverTrigger asChild>
+                  </Card>
+                  {/* Product Data Section */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Product Data</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <TooltipProvider>
+                        <FormField
+                          control={form.control}
+                          name="productType"
+                          render={({ field, fieldState: { error } }) => (
+                            <FormItem className="space-y-3">
+                              <FormLabel
+                                className={cn('text-lg', error && 'text-red-500')}
+                              >
+                                Product Type
+                              </FormLabel>
                               <FormControl>
-                                <Button
-                                  variant="outline"
-                                  role="combobox"
+                                <RadioGroup
+                                  onValueChange={field.onChange}
+                                  defaultValue={field.value}
+                                  className="flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-6"
+                                >
+                                  <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="physical" />
+                                    </FormControl>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <FormLabel className="font-normal text-base">
+                                          Physical
+                                        </FormLabel>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          A physical product that requires shipping.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </FormItem>
+                                  <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="downloadable" />
+                                    </FormControl>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <FormLabel className="font-normal text-base">
+                                          Downloadable
+                                        </FormLabel>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          A product that can be downloaded after
+                                          purchase.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </FormItem>
+                                  <FormItem className="flex items-center space-x-3 space-y-0">
+                                    <FormControl>
+                                      <RadioGroupItem value="virtual" />
+                                    </FormControl>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <FormLabel className="font-normal text-base">
+                                          Virtual
+                                        </FormLabel>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>
+                                          A virtual product that does not require
+                                          shipping and is not downloadable.
+                                        </p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </FormItem>
+                                </RadioGroup>
+                              </FormControl>
+                              <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                          )}
+                        />
+
+                        {/* Pricing */}
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 border-t pt-6">
+                          <FormField
+                            control={form.control}
+                            name="discountedPrice"
+                            render={({ field }) => (
+                              <FormItem>
+                                <TooltipProvider>
+                                  <Tooltip>
+                                    <TooltipTrigger asChild>
+                                      <FormLabel className="text-base">
+                                        Discounted Price (£)
+                                      </FormLabel>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                      <p>The lowest price you are willing to sell this product.</p>
+                                    </TooltipContent>
+                                  </Tooltip>
+                                </TooltipProvider>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="price"
+                            render={({ field, fieldState: { error } }) => (
+                              <FormItem>
+                                <FormLabel
                                   className={cn(
-                                    'w-full justify-between text-base py-6',
-                                    !field.value && 'text-muted-foreground'
+                                    'text-base',
+                                    error && 'text-red-500'
                                   )}
                                 >
-                                  {field.value
-                                    ? businessCategories.find(
+                                  Price (£)
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="0.00"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </TooltipProvider>
+                    </CardContent>
+                  </Card>
+
+                  {/* Short Description */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">
+                        Short Description
+                      </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="shortDescription"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Write a short description for the product..."
+                                className="min-h-[150px] text-base"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Description */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Description</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="description"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Provide a detailed description of the product..."
+                                className="min-h-[200px] text-base"
+                                {...field}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Conditional Sections based on Product Type */}
+                  {productType === 'physical' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-2xl">
+                          <Box className="w-6 h-6" /> Inventory & Shipping
+                        </CardTitle>
+                        <CardDescription className="text-base">
+                          Manage inventory and shipping details for this product.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <FormField
+                          control={form.control}
+                          name="sku"
+                          render={({ field }) => (
+                            <FormItem>
+                              <TooltipProvider>
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <FormLabel className="text-base">
+                                      SKU (Stock Keeping Unit)
+                                    </FormLabel>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>A unique identifier for this product. It can be a barcode, a number, or a combination of letters and numbers.</p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              </TooltipProvider>
+                              <FormControl>
+                                <Input
+                                  placeholder="e.g., TSHIRT-RED-L"
+                                  {...field}
+                                  className="text-base py-6"
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="enableStockManagement"
+                          render={({ field }) => (
+                            <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                              <FormControl>
+                                <Checkbox
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                              <FormLabel className="font-normal text-base">
+                                Enable product stock management
+                              </FormLabel>
+                            </FormItem>
+                          )}
+                        />
+                        {form.watch('enableStockManagement') && (
+                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                            <FormField
+                              control={form.control}
+                              name="stockQuantity"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <TooltipProvider>
+                                    <Tooltip>
+                                      <TooltipTrigger asChild>
+                                        <FormLabel className="text-base">
+                                          Stock quantity
+                                        </FormLabel>
+                                      </TooltipTrigger>
+                                      <TooltipContent>
+                                        <p>Total number of this product in stock. This is automatically calculated based on the sum of quantities from all variants. You can also edit it here.</p>
+                                      </TooltipContent>
+                                    </Tooltip>
+                                  </TooltipProvider>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      {...field}
+                                      className="text-base py-6"
+                                    />
+                                  </FormControl>
+                                  <FormMessage className="text-red-500 text-base font-medium" />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="lowStockThreshold"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base">
+                                    Low stock threshold
+                                  </FormLabel>
+                                  <FormControl>
+                                    <Input
+                                      type="number"
+                                      placeholder="0"
+                                      {...field}
+                                      className="text-base py-6"
+                                    />
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="allowBackorders"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-base">
+                                    Allow Backorders?
+                                  </FormLabel>
+                                  <Select
+                                    onValueChange={field.onChange}
+                                    defaultValue={field.value}
+                                  >
+                                    <FormControl>
+                                      <SelectTrigger className="text-base py-6">
+                                        <SelectValue placeholder="Select an option" />
+                                      </SelectTrigger>
+                                    </FormControl>
+                                    <SelectContent>
+                                      <SelectItem
+                                        value="no"
+                                        className="text-base"
+                                      >
+                                        Do not allow
+                                      </SelectItem>
+                                      <SelectItem
+                                        value="notify"
+                                        className="text-base"
+                                      >
+                                        Allow, but notify customer
+                                      </SelectItem>
+                                      <SelectItem
+                                        value="yes"
+                                        className="text-base"
+                                      >
+                                        Allow
+                                      </SelectItem>
+                                    </SelectContent>
+                                  </Select>
+                                </FormItem>
+                              )}
+                            />
+                            <div className="md:col-span-2">
+                              <FormField
+                                control={form.control}
+                                name="allowSingleOrder"
+                                render={({ field }) => (
+                                  <FormItem className="flex flex-row items-center space-x-3 space-y-0 mt-4">
+                                    <FormControl>
+                                      <Checkbox
+                                        checked={field.value}
+                                        onCheckedChange={field.onChange}
+                                      />
+                                    </FormControl>
+                                    <FormLabel className="font-normal text-base">
+                                      Allow only one quantity of this product to
+                                      be bought in a single order
+                                    </FormLabel>
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                        )}
+                        <div className="space-y-4 pt-4 border-t">
+                          <FormLabel className="text-lg">Shipping</FormLabel>
+                          <FormField
+                            control={form.control}
+                            name="weight"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="font-normal text-base">
+                                  Weight (kg)
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="0"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormMessage className="text-red-500 text-base font-medium" />
+                              </FormItem>
+                            )}
+                          />
+                          <div>
+                            <FormField
+                              control={form.control}
+                              name="dimensions"
+                              render={() => (
+                                <FormItem>
+                                  <FormLabel className="font-normal text-base">
+                                    Dimensions (cm)
+                                  </FormLabel>
+                                  <div className="grid grid-cols-3 gap-4 mt-2">
+                                    <FormField
+                                      control={form.control}
+                                      name="dimensions.length"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              type="number"
+                                              placeholder="Length"
+                                              {...field}
+                                              className="text-base py-6"
+                                            />
+                                          </FormControl>
+                                          <FormMessage className="text-red-500 text-base font-medium" />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="dimensions.width"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              type="number"
+                                              placeholder="Width"
+                                              {...field}
+                                              className="text-base py-6"
+                                            />
+                                          </FormControl>
+                                          <FormMessage className="text-red-500 text-base font-medium" />
+                                        </FormItem>
+                                      )}
+                                    />
+                                    <FormField
+                                      control={form.control}
+                                      name="dimensions.height"
+                                      render={({ field }) => (
+                                        <FormItem>
+                                          <FormControl>
+                                            <Input
+                                              type="number"
+                                              placeholder="Height"
+                                              {...field}
+                                              className="text-base py-6"
+                                            />
+                                          </FormControl>
+                                          <FormMessage className="text-red-500 text-base font-medium" />
+                                        </FormItem>
+                                      )}
+                                    />
+                                  </div>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                          <div className="space-y-4 pt-4 border-t">
+                            <FormLabel className="text-lg">Delivery Details</FormLabel>
+                            <FormField
+                              control={form.control}
+                              name="shippingMethod"
+                              render={({ field }) => (
+                                <FormItem className="space-y-3">
+                                  <FormControl>
+                                    <RadioGroup
+                                      onValueChange={field.onChange}
+                                      defaultValue={field.value}
+                                      className="flex flex-col space-y-2"
+                                    >
+                                      <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="free" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-base">
+                                          Free Delivery
+                                        </FormLabel>
+                                      </FormItem>
+                                      <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="pickup" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-base">
+                                          Pickup
+                                        </FormLabel>
+                                      </FormItem>
+                                      <FormItem className="flex items-center space-x-3 space-y-0">
+                                        <FormControl>
+                                          <RadioGroupItem value="delivery" />
+                                        </FormControl>
+                                        <FormLabel className="font-normal text-base">
+                                          Delivery Options
+                                        </FormLabel>
+                                      </FormItem>
+                                    </RadioGroup>
+                                  </FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {productType === 'downloadable' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-2xl">
+                          <Download className="w-6 h-6" />
+                          Downloadable Options
+                        </CardTitle>
+                        <CardDescription className="text-base">
+                          Configure your downloadable product settings.
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent className="space-y-6">
+                        <div>
+                          <FormLabel
+                            className={cn(
+                              'text-lg',
+                              form.formState.errors.files && 'text-red-500'
+                            )}
+                          >
+                            Files
+                          </FormLabel>
+                          <div className="space-y-4 mt-2">
+                            {fields.map((field, index) => (
+                              <div
+                                key={field.id}
+                                className="flex items-center gap-4 p-4 border rounded-md"
+                              >
+                                <FormField
+                                  control={form.control}
+                                  name={`files.${index}.fileList`}
+                                  render={({
+                                    field: { onChange, value, ...rest },
+                                  }) => (
+                                    <div className="w-full">
+                                      <div className="flex items-center gap-4">
+                                        <Input
+                                          type="file"
+                                          multiple
+                                          {...rest}
+                                          onChange={event => {
+                                            onChange(event.target.files);
+                                          }}
+                                          className="w-full"
+                                        />
+                                        <Button
+                                          type="button"
+                                          variant="ghost"
+                                          size="icon"
+                                          onClick={() => remove(index)}
+                                          className="text-red-500 hover:text-red-600"
+                                        >
+                                          <Trash2 className="h-6 w-6" />
+                                        </Button>
+                                      </div>
+                                      {value instanceof FileList &&
+                                        value.length > 0 &&
+                                        Array.from(value).map((file: File) => (
+                                          <div
+                                            key={file.name}
+                                            className="text-sm text-gray-500 mt-2"
+                                          >
+                                            {file.name} (
+                                            {(file.size / 1024 / 1024).toFixed(2)}{' '}
+                                            MB)
+                                          </div>
+                                        ))}
+                                    </div>
+                                  )}
+                                />
+                              </div>
+                            ))}
+                          </div>
+                          <Button
+                            type="button"
+                            variant="outline"
+                            size="lg"
+                            className="mt-4 text-base"
+                            onClick={() => append({ fileList: null })}
+                          >
+                            <Plus className="mr-2 h-5 w-5" /> Add More Files
+                          </Button>
+                          <FormMessage className="text-red-500 text-base font-medium mt-2">
+                            {form.formState.errors.files?.message}
+                          </FormMessage>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t">
+                          <FormField
+                            control={form.control}
+                            name="downloadLimit"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base">
+                                  Download Limit
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="-1"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormDescription className="text-sm">
+                                  Leave blank or -1 for unlimited.
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="downloadExpiry"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel className="text-base">
+                                  Download Expiry
+                                </FormLabel>
+                                <FormControl>
+                                  <Input
+                                    type="number"
+                                    placeholder="-1"
+                                    {...field}
+                                    className="text-base py-6"
+                                  />
+                                </FormControl>
+                                <FormDescription className="text-sm">
+                                  Enter number of days. Leave blank or -1 for
+                                  never.
+                                </FormDescription>
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {productType === 'virtual' && (
+                    <Card>
+                      <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-2xl">
+                          <LinkIcon className="w-6 h-6" />
+                          Virtual Product
+                        </CardTitle>
+                      </CardHeader>
+                      <CardContent>
+                        <FormField
+                          control={form.control}
+                          name="productUrl"
+                          render={({ field, fieldState: { error } }) => (
+                            <FormItem>
+                              <FormLabel
+                                className={cn(
+                                  'text-base',
+                                  error && 'text-red-500'
+                                )}
+                              >
+                                Product URL
+                              </FormLabel>
+                              <FormControl>
+                                <Input
+                                  placeholder="https://example.com/virtual-product"
+                                  {...field}
+                                  className="text-base py-6"
+                                />
+                              </FormControl>
+                              <FormMessage className="text-red-500 text-base font-medium" />
+                            </FormItem>
+                          )}
+                        />
+                      </CardContent>
+                    </Card>
+                  )}
+
+                  {/* Other Options */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="flex items-center gap-2 text-2xl">
+                        <Settings className="w-6 h-6" /> Other Options
+                      </CardTitle>
+                      <CardDescription className="text-base">
+                        Set your extra product options.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="productStatus"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base">
+                                Product Status
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="text-base py-6">
+                                    <SelectValue placeholder="Select status" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="draft" className="text-base">
+                                    Draft
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="published"
+                                    className="text-base"
+                                  >
+                                    Published
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="archived"
+                                    className="text-base"
+                                  >
+                                    Archived
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="visibility"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel className="text-base">
+                                Visibility
+                              </FormLabel>
+                              <Select
+                                onValueChange={field.onChange}
+                                defaultValue={field.value}
+                              >
+                                <FormControl>
+                                  <SelectTrigger className="text-base py-6">
+                                    <SelectValue placeholder="Select visibility" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem
+                                    value="public"
+                                    className="text-base"
+                                  >
+                                    Public
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="private"
+                                    className="text-base"
+                                  >
+                                    Private
+                                  </SelectItem>
+                                  <SelectItem
+                                    value="password-protected"
+                                    className="text-base"
+                                  >
+                                    Password Protected
+                                  </SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      <FormField
+                        control={form.control}
+                        name="purchaseNote"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-base">
+                              Purchase Note
+                            </FormLabel>
+                            <FormControl>
+                              <Textarea
+                                placeholder="Customer will get this info in their order email."
+                                {...field}
+                                className="text-base"
+                              />
+                            </FormControl>
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={form.control}
+                        name="enableReviews"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-row items-center space-x-3 space-y-0">
+                            <FormControl>
+                              <Checkbox
+                                checked={field.value}
+                                onCheckedChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormLabel className="font-normal text-base">
+                              Enable product reviews
+                            </FormLabel>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
+
+                {/* Sidebar Column */}
+                <div className="space-y-8">
+                  {/* Business Listing */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Listings/Business</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="businessId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Select
+                              onValueChange={field.onChange}
+                              defaultValue={field.value}
+                              disabled={isLoadingListings}
+                            >
+                              <FormControl>
+                                <SelectTrigger className="text-base py-6">
+                                  <SelectValue placeholder="Select from your Listing" />
+                                </SelectTrigger>
+                              </FormControl>
+                              <SelectContent>
+                                {isLoadingListings ? (
+                                  <SelectItem value="loading" disabled>
+                                    Loading businesses...
+                                  </SelectItem>
+                                ) : (
+                                  userListings?.data
+                                    ?.filter((listing: UserListing) =>
+                                      listing.listingType.includes('product')
+                                    )
+                                    .map((listing: UserListing) => (
+                                      <SelectItem
+                                        key={listing.id}
+                                        value={listing.id}
+                                      >
+                                        {listing.businessName}
+                                      </SelectItem>
+                                    ))
+                                )}
+                              </SelectContent>
+                            </Select>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Product Media */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Product Media</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="media"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormControl>
+                              <MultiMediaUpload
+                                onMediaChange={field.onChange}
+                              />
+                            </FormControl>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Hotspot Editor Button */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Interactive Hotspots</CardTitle>
+                      <CardDescription>
+                        Add clickable hotspots to your product image. You must save the product first.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <Button asChild variant="outline" disabled={!newProductId}>
+                        <Link href={`/dashboard/hotspot-editor/edit/${newProductId}?type=product`}>
+                          Add/Edit Hotspots
+                        </Link>
+                      </Button>
+                    </CardContent>
+                  </Card>
+
+                  {/* Category */}
+                  <Card>
+                    <CardContent className="pt-6">
+                      <FormField
+                        control={form.control}
+                        name="category"
+                        render={({ field, fieldState: { error } }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel
+                              className={cn(
+                                'text-2xl font-semibold',
+                                error && 'text-red-500'
+                              )}
+                            >
+                              Category
+                            </FormLabel>
+                            <FormDescription>
+                              Select a category for your product.
+                            </FormDescription>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant="outline"
+                                    role="combobox"
+                                    className={cn(
+                                      'w-full justify-between text-base py-6',
+                                      !field.value && 'text-muted-foreground'
+                                    )}
+                                  >
+                                    {field.value
+                                      ? businessCategories.find(
                                         (cat) => cat.name === field.value
                                       )?.name
-                                    : 'Select a category'}
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                              <Command>
-                                <CommandInput placeholder="Search category..." />
-                                <CommandList>
-                                  <CommandEmpty>No category found.</CommandEmpty>
-                                  <CommandGroup>
-                                    {businessCategories.map((cat) => (
-                                      <CommandItem
-                                        value={cat.name}
-                                        key={cat.name}
-                                        onSelect={() => {
-                                          form.setValue('category', cat.name, { shouldValidate: true });
-                                          form.setValue('subCategories', [], { shouldValidate: true });
-                                        }}
-                                      >
-                                        {cat.name}
-                                      </CommandItem>
-                                    ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
-
-                {/* Sub Categories */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Sub Categories</CardTitle>
-                    <CardDescription>
-                      Select sub-categories for your product.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="subCategories"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <Button
-                                variant="outline"
-                                className="w-full justify-start text-base py-6"
-                                disabled={!form.watch('category')}
-                              >
-                                <Plus className="mr-2 h-4 w-4" />
-                                {field.value?.length > 0
-                                  ? 'Add more sub-categories'
-                                  : 'Select sub-categories'}
-                              </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                              <Command>
-                                <CommandInput placeholder="Search sub-categories..." />
-                                <CommandList>
-                                  <CommandEmpty>
-                                    No sub-categories found.
-                                  </CommandEmpty>
-                                  <CommandGroup>
-                                    {businessCategories
-                                      .find(c => c.name === form.watch('category'))
-                                      ?.subCategories.map(sc => (
+                                      : 'Select a category'}
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search category..." />
+                                  <CommandList>
+                                    <CommandEmpty>No category found.</CommandEmpty>
+                                    <CommandGroup>
+                                      {businessCategories.map((cat) => (
                                         <CommandItem
-                                          key={sc.name}
-                                          value={sc.name}
+                                          value={cat.name}
+                                          key={cat.name}
                                           onSelect={() => {
-                                            const currentValue = form.getValues('subCategories') || [];
-                                            if (!currentValue.includes(sc.name)) {
-                                              form.setValue('subCategories', [...currentValue, sc.name], { shouldValidate: true });
-                                            }
+                                            form.setValue('category', cat.name, { shouldValidate: true });
+                                            form.setValue('subCategories', [], { shouldValidate: true });
                                           }}
                                         >
-                                          {sc.name}
+                                          {cat.name}
                                         </CommandItem>
                                       ))}
-                                  </CommandGroup>
-                                </CommandList>
-                              </Command>
-                            </PopoverContent>
-                          </Popover>
-                          <div className="flex flex-wrap gap-2 mt-4">
-                            {field.value?.map(subCategory => (
-                              <Badge
-                                key={subCategory}
-                                variant="secondary"
-                                className="text-base"
-                              >
-                                {subCategory}
-                                <button
-                                  type="button"
-                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                  onClick={() => {
-                                    const currentValue = form.getValues('subCategories') || [];
-                                    form.setValue('subCategories', currentValue.filter(s => s !== subCategory), { shouldValidate: true });
-                                  }}
-                                >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                          <FormMessage className="text-red-500 text-base font-medium" />
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
 
-                {/* Tags */}
-                <Card>
-                  <CardHeader>
-                    <CardTitle className="text-2xl">Tags</CardTitle>
-                    <CardDescription>
-                      Add tags to your product. Press Enter to add a new tag.
-                    </CardDescription>
-                  </CardHeader>
-                  <CardContent>
-                    <FormField
-                      control={form.control}
-                      name="tags"
-                      render={({ field }) => (
-                        <FormItem>
-                          <Input
-                            placeholder="e.g., Summer, T-shirt"
-                            onKeyDown={(e) => {
-                              if (e.key === 'Enter' && e.currentTarget.value) {
-                                e.preventDefault();
-                                const newTag = e.currentTarget.value.trim();
-                                if (newTag && !field.value.includes(newTag)) {
-                                  form.setValue('tags', [...field.value, newTag], { shouldValidate: true });
+                  {/* Sub Categories */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Sub Categories</CardTitle>
+                      <CardDescription>
+                        Select sub-categories for your product.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="subCategories"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <Button
+                                  variant="outline"
+                                  className="w-full justify-start text-base py-6"
+                                  disabled={!form.watch('category')}
+                                >
+                                  <Plus className="mr-2 h-4 w-4" />
+                                  {field.value?.length > 0
+                                    ? 'Add more sub-categories'
+                                    : 'Select sub-categories'}
+                                </Button>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+                                <Command>
+                                  <CommandInput placeholder="Search sub-categories..." />
+                                  <CommandList>
+                                    <CommandEmpty>
+                                      No sub-categories found.
+                                    </CommandEmpty>
+                                    <CommandGroup>
+                                      {businessCategories
+                                        .find(c => c.name === form.watch('category'))
+                                        ?.subCategories.map(sc => (
+                                          <CommandItem
+                                            key={sc.name}
+                                            value={sc.name}
+                                            onSelect={() => {
+                                              const currentValue = form.getValues('subCategories') || [];
+                                              if (!currentValue.includes(sc.name)) {
+                                                form.setValue('subCategories', [...currentValue, sc.name], { shouldValidate: true });
+                                              }
+                                            }}
+                                          >
+                                            {sc.name}
+                                          </CommandItem>
+                                        ))}
+                                    </CommandGroup>
+                                  </CommandList>
+                                </Command>
+                              </PopoverContent>
+                            </Popover>
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {field.value?.map(subCategory => (
+                                <Badge
+                                  key={subCategory}
+                                  variant="secondary"
+                                  className="text-base"
+                                >
+                                  {subCategory}
+                                  <button
+                                    type="button"
+                                    className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    onClick={() => {
+                                      const currentValue = form.getValues('subCategories') || [];
+                                      form.setValue('subCategories', currentValue.filter(s => s !== subCategory), { shouldValidate: true });
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                            <FormMessage className="text-red-500 text-base font-medium" />
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+
+                  {/* Tags */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-2xl">Tags</CardTitle>
+                      <CardDescription>
+                        Add tags to your product. Press Enter to add a new tag.
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <FormField
+                        control={form.control}
+                        name="tags"
+                        render={({ field }) => (
+                          <FormItem>
+                            <Input
+                              placeholder="e.g., Summer, T-shirt"
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter' && e.currentTarget.value) {
+                                  e.preventDefault();
+                                  const newTag = e.currentTarget.value.trim();
+                                  if (newTag && !field.value.includes(newTag)) {
+                                    form.setValue('tags', [...field.value, newTag], { shouldValidate: true });
+                                  }
+                                  e.currentTarget.value = '';
                                 }
-                                e.currentTarget.value = '';
-                              }
-                            }}
-                          />
-                          <div className="flex flex-wrap gap-2 mt-4">
-                            {field.value?.map(tag => (
-                              <Badge
-                                key={tag}
-                                variant="secondary"
-                                className="text-base"
-                              >
-                                {tag}
-                                <button
-                                  type="button"
-                                  className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
-                                  onClick={() => {
-                                    form.setValue('tags', field.value.filter(t => t !== tag), { shouldValidate: true });
-                                  }}
+                              }}
+                            />
+                            <div className="flex flex-wrap gap-2 mt-4">
+                              {field.value?.map(tag => (
+                                <Badge
+                                  key={tag}
+                                  variant="secondary"
+                                  className="text-base"
                                 >
-                                  <X className="h-3 w-3" />
-                                </button>
-                              </Badge>
-                            ))}
-                          </div>
-                        </FormItem>
-                      )}
-                    />
-                  </CardContent>
-                </Card>
+                                  {tag}
+                                  <button
+                                    type="button"
+                                    className="ml-2 rounded-full outline-none ring-offset-background focus:ring-2 focus:ring-ring focus:ring-offset-2"
+                                    onClick={() => {
+                                      form.setValue('tags', field.value.filter(t => t !== tag), { shouldValidate: true });
+                                    }}
+                                  >
+                                    <X className="h-3 w-3" />
+                                  </button>
+                                </Badge>
+                              ))}
+                            </div>
+                          </FormItem>
+                        )}
+                      />
+                    </CardContent>
+                  </Card>
+                </div>
               </div>
-            </div>
 
-            {/* Submission Button */}
-            <div className="flex justify-end">
-              <Button
-                type="submit"
-                size="lg"
-                className="bg-red-500 hover:bg-red-600 text-white text-lg py-7 px-8 flex items-center"
-                disabled={isPending}
-              >
-                {isPending ? 'Saving...' : 'Save Product'}
-              </Button>
-            </div>
-          </form>
-        </Form>
+              {/* Submission Button */}
+              <div className="flex justify-end">
+                <Button
+                  type="submit"
+                  size="lg"
+                  className="bg-red-500 hover:bg-red-600 text-white text-lg py-7 px-8 flex items-center"
+                  disabled={isPending}
+                >
+                  {isPending ? 'Saving...' : 'Save Product'}
+                </Button>
+              </div>
+            </form>
+          </Form>
         </FormProvider>
       </div>
     </div>
