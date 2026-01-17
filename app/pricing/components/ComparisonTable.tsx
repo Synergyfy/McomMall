@@ -43,6 +43,13 @@ export default function ComparisonTable({
     );
   };
 
+  // Helper to safely get accent color parts
+  const getAccentColorParts = (index: number) => {
+    // Cycle through colors if index exceeds length
+    const color = accentHeaders[index % accentHeaders.length] || 'blue-900';
+    return color.split('-');
+  };
+
   return (
 <div className="overflow-x-auto scroll-smooth md:overflow-x-visible">
       <Table>
@@ -51,16 +58,17 @@ export default function ComparisonTable({
             <TableHead className="text-2xl md:text-3xl min-w-[150px] md:min-w-[300px] font-bold text-blue-900">
               Features
             </TableHead>
-            {plans.map((plan, index) => (
-              <TableHead
-                key={plan}
-                className={`text-center text-base md:text-lg min-w-[100px] md:min-w-[150px] font-bold text-${
-                  accentHeaders[index].split('-')[0]
-                }-700 bg-${accentHeaders[index].split('-')[0]}-50`}
-              >
-                {plan}
-              </TableHead>
-            ))}
+            {plans.map((plan, index) => {
+               const parts = getAccentColorParts(index);
+               return (
+                <TableHead
+                  key={plan + index}
+                  className={`text-center text-base md:text-lg min-w-[100px] md:min-w-[150px] font-bold text-${parts[0]}-700 bg-${parts[0]}-50`}
+                >
+                  {plan}
+                </TableHead>
+              );
+            })}
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -115,22 +123,32 @@ export default function ComparisonTable({
                           )}
                         </div>
                       </TableCell>
-                      {feature.availability.map((has, idx) => (
-                        <TableCell
-                          key={idx}
-                          className="text-center p-2 md:p-4 min-w-[100px] md:min-w-[150px]"
-                        >
-                          {has ? (
-                            <Check
-                              className={`mx-auto h-5 w-5 md:h-6 md:w-6 text-${
-                                accentHeaders[idx].split('-')[0]
-                              }-500`}
-                            />
-                          ) : (
-                            <X className="mx-auto h-6 w-6 text-red-500" />
-                          )}
-                        </TableCell>
-                      ))}
+                      {/*
+                          Note: feature.availability usually expects a fixed length (e.g. 3).
+                          If plans.length > availability.length, we might run out of booleans.
+                          We should handle that gracefully (default to false or cycle).
+                          However, typically in this app, features are static while plans might be dynamic.
+                          Ideally, feature availability should be dynamic too, but that's a larger refactor.
+                          For now, we map over plans to create cells.
+                      */}
+                      {plans.map((_, idx) => {
+                         const has = feature.availability[idx] || false;
+                         const parts = getAccentColorParts(idx);
+                         return (
+                          <TableCell
+                            key={idx}
+                            className="text-center p-2 md:p-4 min-w-[100px] md:min-w-[150px]"
+                          >
+                            {has ? (
+                              <Check
+                                className={`mx-auto h-5 w-5 md:h-6 md:w-6 text-${parts[0]}-500`}
+                              />
+                            ) : (
+                              <X className="mx-auto h-6 w-6 text-red-500" />
+                            )}
+                          </TableCell>
+                        );
+                      })}
                     </motion.tr>
                   ))}
                 </AnimatePresence>
