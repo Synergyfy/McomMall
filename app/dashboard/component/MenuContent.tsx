@@ -67,7 +67,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   );
 
   const customerMainMenu = mainMenuItems.filter(item =>
-    ['My Bookings', 'Messages', 'Wallet', 'My Wishlist'].includes(item.title)
+    ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub'].includes(item.title)
   );
 
   const customerProductMenu = productMenuItems.filter(item =>
@@ -93,9 +93,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
         const MenuItemContent = (
           <div className="flex items-center space-x-2">
             <item.icon
-              className={`w-5 h-5 ${
-                isActive ? 'text-orange-600' : 'text-orange-500'
-              }`}
+              className={`w-5 h-5 ${isActive ? 'text-orange-600' : 'text-orange-500'
+                }`}
             />
             <span>{item.title}</span>
           </div>
@@ -109,9 +108,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               className="rounded-2xl"
             >
               <div
-                className={`flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white ${
-                  isActive ? 'bg-white text-orange-600' : ''
-                }`}
+                className={`flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white ${isActive ? 'bg-white text-orange-600' : ''
+                  }`}
                 onClick={() => item.subMenu && toggleSubMenu(item.title)}
               >
                 {item.subMenu ? (
@@ -136,9 +134,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                 )}
                 {item.subMenu && (
                   <ChevronDown
-                    className={`w-5 h-5 transition-transform ${
-                      openSubMenus[item.title] ? 'rotate-180' : ''
-                    }`}
+                    className={`w-5 h-5 transition-transform ${openSubMenus[item.title] ? 'rotate-180' : ''
+                      }`}
                   />
                 )}
               </div>
@@ -158,9 +155,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                       <li key={j}>
                         <Link
                           href={subItem.href}
-                          className={`block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8 ${
-                            isSubMenuActive ? 'bg-white text-orange-600' : ''
-                          }`}
+                          className={`block py-1 text-gray-600 hover:text-orange-500 text-sm transition-colors pl-8 ${isSubMenuActive ? 'bg-white text-orange-600' : ''
+                            }`}
                           onClick={onLinkClick}
                         >
                           {subItem.title}
