@@ -1,11 +1,9 @@
 import { motion } from 'framer-motion';
-import PricingCard from './PricingCard';
+import TierCard from '@/components/TierCard';
 import ComparisonTable from './ComparisonTable';
 import TrialInfo from './TrialInfo';
 import { TableFeature, FeatureGroup } from '../types/index';
-import { paygTiers } from '../data/pricingData';
-
-const paygPlans = ['90 Days', '180 Days', '270 Days'];
+import { Tier } from '@/service/tiers/types';
 
 const paygFeatures: TableFeature[] = [
   {
@@ -170,19 +168,28 @@ const paygFeatureGroups: FeatureGroup[] = [
   { name: 'Premium Features', features: paygFeatures.slice(24) },
 ];
 
-import { PricingTier } from '../types';
+type PlanItem = Tier | {
+  name: string;
+  price: string;
+  primaryFeatures?: string[]
+};
 
 interface PayAsYouGoContentProps {
   listingId: string | null;
-  onPayNow: (tier: PricingTier) => void;
-  onStartTrial: (tier: PricingTier) => void;
+  onPayNow: (tier: PlanItem) => void;
+  onStartTrial: (tier: PlanItem) => void;
+  tiers: Tier[] | undefined;
 }
 
 export default function PayAsYouGoContent({
   listingId,
   onPayNow,
   onStartTrial,
+  tiers,
 }: PayAsYouGoContentProps) {
+
+  const paygPlans = tiers ? tiers.map(t => t.name) : ['90 Days', '180 Days', '270 Days'];
+
   return (
     <motion.div
       initial="initial"
@@ -202,9 +209,9 @@ export default function PayAsYouGoContent({
         </div>
       </section>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12 h-fit">
-        {paygTiers.map((tier, index) => (
+        {tiers?.map((tier, index) => (
           <motion.div
-            key={tier.name}
+            key={tier.id}
             variants={{
               initial: { opacity: 0, y: 20 },
               animate: { opacity: 1, y: 0 },
@@ -212,13 +219,9 @@ export default function PayAsYouGoContent({
             transition={{ delay: index * 0.1 }}
             className="h-full"
           >
-            <PricingCard
-              tier={
-                tier as PricingTier & { accent: 'teal' | 'purple' | 'yellow' }
-              }
-              isPayg={true}
-              listingId={listingId}
-              onPayNow={onPayNow}
+            <TierCard
+              tier={tier}
+              onSelect={onPayNow}
               onStartTrial={onStartTrial}
             />
           </motion.div>

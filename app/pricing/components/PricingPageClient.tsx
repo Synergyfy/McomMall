@@ -8,12 +8,18 @@ import PayAsYouGoContent from './PayAsYouGoContent';
 import CoBrandedContent from './CoBrandedContent';
 import MobilePricingPage from './MobilePricingPage';
 import PricingCheckoutClient from './PricingCheckoutClient';
-import { PricingTier } from '../types';
 import { useGetTiers } from '@/service/tiers/hook';
+import { Tier } from '@/service/tiers/types';
+
+type PlanItem = Tier | {
+  name: string;
+  price: string;
+  primaryFeatures?: string[]
+};
 
 export default function PricingPageClient() {
   const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
-  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
   const [isTrial, setIsTrial] = useState(false);
 
   // Lifted state for Co-Branded tiers
@@ -23,13 +29,49 @@ export default function PricingPageClient() {
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handlePayNow = (tier: PricingTier) => {
-    setSelectedTier(tier);
+  const handlePayNow = (tier: PlanItem) => {
+    const name = tier.name;
+    let price = '';
+
+    if ('price' in tier && typeof tier.price === 'string') {
+        price = tier.price;
+    } else if ('monthly_price' in tier) {
+        // Assume Tier object
+        let val = 0;
+        switch(billingCycle) {
+            case 'monthly': val = tier.monthly_price; break;
+            case 'quarterly': val = tier.quaterly_price; break;
+            case 'annual': val = tier.annual_price; break;
+            default: val = tier.monthly_price;
+        }
+        price = new Intl.NumberFormat('en-GB', {
+           style: 'currency', currency: 'GBP'
+        }).format(Number(val));
+    }
+
+    setSelectedTier({ name, price });
     setIsTrial(false);
   };
 
-  const handleStartTrial = (tier: PricingTier) => {
-    setSelectedTier(tier);
+  const handleStartTrial = (tier: PlanItem) => {
+    const name = tier.name;
+    let price = '';
+
+    if ('price' in tier && typeof tier.price === 'string') {
+        price = tier.price;
+    } else if ('monthly_price' in tier) {
+         let val = 0;
+        switch(billingCycle) {
+            case 'monthly': val = tier.monthly_price; break;
+            case 'quarterly': val = tier.quaterly_price; break;
+            case 'annual': val = tier.annual_price; break;
+            default: val = tier.monthly_price;
+        }
+        price = new Intl.NumberFormat('en-GB', {
+           style: 'currency', currency: 'GBP'
+        }).format(Number(val));
+    }
+    setSelectedTier({ name, price });
     setIsTrial(true);
   };
 
@@ -85,6 +127,7 @@ export default function PricingPageClient() {
                     listingId={listingId}
                     onPayNow={handlePayNow}
                     onStartTrial={handleStartTrial}
+                    tiers={tiers}
                   />
                 </motion.div>
               ) : (
@@ -117,6 +160,8 @@ export default function PricingPageClient() {
               tiers={tiers}
               billingCycle={billingCycle}
               setBillingCycle={setBillingCycle}
+              onPayNow={handlePayNow}
+              onStartTrial={handleStartTrial}
             />
           </div>
         </main>

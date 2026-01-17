@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useGetTiers } from '@/service/tiers/hook';
-import TierCard from './TierCard';
+import TierCard from '@/components/TierCard';
 import { Button } from '@/components/ui/button';
 import { Tier } from '@/service/tiers/types';
 

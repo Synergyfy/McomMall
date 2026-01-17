@@ -1,8 +1,7 @@
-import { useState } from 'react';
 import { motion } from 'framer-motion';
-import PricingCard from './PricingCard';
+import TierCard from '@/components/TierCard';
 import ComparisonTable from './ComparisonTable';
-import { PricingTier, TableFeature, FeatureGroup } from '../types/index';
+import { TableFeature, FeatureGroup } from '../types/index';
 import { ShieldCheck, LayoutDashboard, Rocket, Headset } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Tier } from '@/service/tiers/types';
@@ -173,10 +172,16 @@ const coBrandedFeatureGroups: FeatureGroup[] = [
   { name: 'Premium Features', features: coBrandedFeatures.slice(24) },
 ];
 
+export type PlanItem = Tier | {
+  name: string;
+  price: string;
+  primaryFeatures: string[]
+};
+
 interface CoBrandedContentProps {
   listingId: string | null;
-  onPayNow: (tier: PricingTier) => void;
-  onStartTrial: (tier: PricingTier) => void;
+  onPayNow: (tier: PlanItem) => void;
+  onStartTrial: (tier: PlanItem) => void;
   tiers: Tier[] | undefined;
   billingCycle: 'monthly' | 'quarterly' | 'annual';
   setBillingCycle: (cycle: 'monthly' | 'quarterly' | 'annual') => void;
@@ -193,80 +198,53 @@ export default function CoBrandedContent({
   isLoading,
 }: CoBrandedContentProps) {
 
-  // Derive plan names from tiers if available, or fallback to static list
   const coBrandedPlans = tiers ? tiers.map(t => t.name) : ['Standard', 'Pro', 'Pro Plus'];
 
   if (isLoading) {
     return <div className="text-center py-20 text-xl font-medium text-gray-500">Loading plans...</div>;
   }
 
-  const mapTierToPricingTier = (tier: Tier): PricingTier => {
-    let price = 0;
-    let cycleLabel = '';
-    switch (billingCycle) {
-      case 'monthly': price = tier.monthly_price; cycleLabel = '/mo'; break;
-      case 'quarterly': price = tier.quaterly_price; cycleLabel = '/qtr'; break;
-      case 'annual': price = tier.annual_price; cycleLabel = '/yr'; break;
-    }
-
-    const formattedPrice = new Intl.NumberFormat('en-GB', {
-       style: 'currency', currency: 'GBP'
-    }).format(Number(price));
-
-    return {
-      name: tier.name,
-      price: `${formattedPrice} ${cycleLabel}`,
-      primaryFeatures: tier.features,
-      colorCode: tier.color_code,
-    };
-  };
-
-  const pricingTiers = tiers ? tiers.map(mapTierToPricingTier) : [];
-
   return (
-    <>
-      <motion.div
-        initial="initial"
-        animate="animate"
-        variants={{
-          initial: { opacity: 0 },
-          animate: { opacity: 1, transition: { staggerChildren: 0.1 } },
-        }}
-        className="max-w-7xl mx-auto flex flex-col items-center"
-      >
-        <h1 className="text-3xl md:text-4xl font-bold mb-8 text-blue-900">
-          Co-Branded Pricing
-        </h1>
+    <motion.div
+      initial="initial"
+      animate="animate"
+      variants={{
+        initial: { opacity: 0 },
+        animate: { opacity: 1, transition: { staggerChildren: 0.1 } },
+      }}
+      className="max-w-7xl mx-auto flex flex-col items-center"
+    >
+      <h1 className="text-3xl md:text-4xl font-bold mb-8 text-blue-900">
+        Co-Branded Pricing
+      </h1>
 
-        {/* Billing Cycle Toggle */}
-        <div className="flex space-x-4 mb-10">
-            <Button
-              variant={billingCycle === 'monthly' ? 'default' : 'outline'}
-              onClick={() => setBillingCycle('monthly')}
-              className={billingCycle === 'monthly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
-            >
-              Monthly
-            </Button>
-            <Button
-              variant={billingCycle === 'quarterly' ? 'default' : 'outline'}
-              onClick={() => setBillingCycle('quarterly')}
-              className={billingCycle === 'quarterly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
-            >
-              Quarterly
-            </Button>
-            <Button
-              variant={billingCycle === 'annual' ? 'default' : 'outline'}
-              onClick={() => setBillingCycle('annual')}
-              className={billingCycle === 'annual' ? 'bg-orange-600 hover:bg-orange-700' : ''}
-            >
-              Annual
-            </Button>
-        </div>
+      <div className="flex space-x-4 mb-10">
+          <Button
+            variant={billingCycle === 'monthly' ? 'default' : 'outline'}
+            onClick={() => setBillingCycle('monthly')}
+            className={billingCycle === 'monthly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+          >
+            Monthly
+          </Button>
+          <Button
+            variant={billingCycle === 'quarterly' ? 'default' : 'outline'}
+            onClick={() => setBillingCycle('quarterly')}
+            className={billingCycle === 'quarterly' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+          >
+            Quarterly
+          </Button>
+          <Button
+            variant={billingCycle === 'annual' ? 'default' : 'outline'}
+            onClick={() => setBillingCycle('annual')}
+            className={billingCycle === 'annual' ? 'bg-orange-600 hover:bg-orange-700' : ''}
+          >
+            Annual
+          </Button>
+      </div>
 
-        <section className="w-full flex flex-col items-center justify-center mb-12">
-          <div className="w-full p-6 sm:p-8 bg-white rounded-lg shadow-lg">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
-              {/* Left Column: Intro + Video */}
+      <section className="w-full flex flex-col items-center justify-center mb-12">
+        <div className="w-full p-6 sm:p-8 bg-white rounded-lg shadow-lg">
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-10 items-start">
               <div className="flex flex-col items-center md:items-start">
                 <h2 className="text-2xl sm:text-3xl font-bold text-center md:text-left mb-2">
                   Your Co-Branded Launchpad
@@ -277,8 +255,6 @@ export default function CoBrandedContent({
                   tools, support, and marketing designed to boost your
                   visibility from day one.
                 </p>
-
-                {/* Video Demo */}
                 <div className="w-full aspect-video mb-6">
                   <iframe
                     className="w-full h-full rounded-lg shadow-md"
@@ -291,15 +267,12 @@ export default function CoBrandedContent({
                 </div>
               </div>
 
-              {/* Right Column: Features Grid */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                {/* Category 1 */}
+                 {/* Icons and Text (Keeping original structure) */}
                 <div className="flex items-start space-x-4">
                   <ShieldCheck className="h-6 w-6 text-orange-500 flex-shrink-0" />
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold">
-                      Verification
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-semibold">Verification</h3>
                     <p className="text-gray-700 text-sm sm:text-base mt-1">
                       Confirm your business ownership and get listed across the
                       full 247GBS directory network for instant credibility and
@@ -307,14 +280,10 @@ export default function CoBrandedContent({
                     </p>
                   </div>
                 </div>
-
-                {/* Category 2 */}
                 <div className="flex items-start space-x-4">
                   <LayoutDashboard className="h-6 w-6 text-orange-500 flex-shrink-0" />
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold">
-                      Dashboard
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-semibold">Dashboard</h3>
                     <p className="text-gray-700 text-sm sm:text-base mt-1">
                       Preview the MCOM Dashboard, explore wallet and loyalty
                       features, and try essential tools that give you a taste of
@@ -322,14 +291,10 @@ export default function CoBrandedContent({
                     </p>
                   </div>
                 </div>
-
-                {/* Category 3 */}
                 <div className="flex items-start space-x-4">
                   <Rocket className="h-6 w-6 text-orange-500 flex-shrink-0" />
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold">
-                      Marketing
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-semibold">Marketing</h3>
                     <p className="text-gray-700 text-sm sm:text-base mt-1">
                       Gain exposure with co-branded promotions, your own QR
                       code, and access to seasonal campaigns to attract new
@@ -337,14 +302,10 @@ export default function CoBrandedContent({
                     </p>
                   </div>
                 </div>
-
-                {/* Category 4 */}
                 <div className="flex items-start space-x-4">
                   <Headset className="h-6 w-6 text-orange-500 flex-shrink-0" />
                   <div>
-                    <h3 className="text-lg sm:text-xl font-semibold">
-                      Support
-                    </h3>
+                    <h3 className="text-lg sm:text-xl font-semibold">Support</h3>
                     <p className="text-gray-700 text-sm sm:text-base mt-1">
                       Get guided onboarding, expert help at every step, and
                       flexible payment options that make launching easier than
@@ -353,10 +314,9 @@ export default function CoBrandedContent({
                   </div>
                 </div>
               </div>
-            </div>
+           </div>
 
-            {/* Action Buttons */}
-            <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-8">
+           <div className="flex flex-col sm:flex-row gap-4 w-full justify-center mt-8">
               <Button
                 onClick={() =>
                   onPayNow({
@@ -382,35 +342,35 @@ export default function CoBrandedContent({
                 Start Trial
               </Button>
             </div>
-          </div>
-        </section>
-
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
-          {pricingTiers.map((tier, index) => (
-            <motion.div
-              key={tier.name}
-              variants={{
-                initial: { opacity: 0, y: 20 },
-                animate: { opacity: 1, y: 0 },
-              }}
-              transition={{ delay: index * 0.1 }}
-            >
-              <PricingCard
-                tier={tier}
-                isPayg={false}
-                listingId={listingId}
-                onPayNow={onPayNow}
-                onStartTrial={onStartTrial}
-              />
-            </motion.div>
-          ))}
         </div>
-        <ComparisonTable
-          plans={coBrandedPlans}
-          featureGroups={coBrandedFeatureGroups}
-          accentHeaders={['blue-900', 'orange-800', 'black-500']}
-        />
-      </motion.div>
-    </>
+      </section>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+        {tiers?.map((tier, index) => (
+          <motion.div
+            key={tier.id}
+            variants={{
+              initial: { opacity: 0, y: 20 },
+              animate: { opacity: 1, y: 0 },
+            }}
+            transition={{ delay: index * 0.1 }}
+            className="h-full"
+          >
+            <TierCard
+              tier={tier}
+              billingCycle={billingCycle}
+              onSelect={onPayNow}
+              onStartTrial={onStartTrial}
+            />
+          </motion.div>
+        ))}
+      </div>
+
+      <ComparisonTable
+        plans={coBrandedPlans}
+        featureGroups={coBrandedFeatureGroups}
+        accentHeaders={['blue-900', 'orange-800', 'black-500']}
+      />
+    </motion.div>
   );
 }

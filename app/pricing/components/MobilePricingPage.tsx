@@ -2,11 +2,15 @@
 
 import React from 'react';
 import { motion } from 'framer-motion';
-import { PricingTier } from '../types';
-import PricingCard from './PricingCard';
-import { paygTiers, coBrandedTiers as staticCoBrandedTiers } from '../data/pricingData';
+import TierCard from '@/components/TierCard';
 import { Tier } from '@/service/tiers/types';
 import { Button } from '@/components/ui/button';
+
+type PlanItem = Tier | {
+  name: string;
+  price: string;
+  primaryFeatures?: string[]
+};
 
 interface MobilePricingPageProps {
   activeView: 'payg' | 'cobranded';
@@ -14,43 +18,21 @@ interface MobilePricingPageProps {
   tiers?: Tier[];
   billingCycle?: 'monthly' | 'quarterly' | 'annual';
   setBillingCycle?: (cycle: 'monthly' | 'quarterly' | 'annual') => void;
+  onPayNow: (tier: PlanItem) => void;
+  onStartTrial: (tier: PlanItem) => void;
 }
 
 const MobilePricingPage: React.FC<MobilePricingPageProps> = ({
   activeView,
   listingId,
-  tiers: dynamicTiers,
+  tiers,
   billingCycle = 'annual',
   setBillingCycle,
+  onPayNow,
+  onStartTrial,
 }) => {
-  // If we have dynamic tiers and active view is cobranded, map them.
-  // Otherwise use static data.
-  let displayTiers: PricingTier[] = [];
 
-  if (activeView === 'cobranded' && dynamicTiers && dynamicTiers.length > 0) {
-    displayTiers = dynamicTiers.map((tier) => {
-        let price = 0;
-        let cycleLabel = '';
-        switch (billingCycle) {
-          case 'monthly': price = tier.monthly_price; cycleLabel = '/mo'; break;
-          case 'quarterly': price = tier.quaterly_price; cycleLabel = '/qtr'; break;
-          case 'annual': price = tier.annual_price; cycleLabel = '/yr'; break;
-        }
-
-        const formattedPrice = new Intl.NumberFormat('en-GB', {
-           style: 'currency', currency: 'GBP'
-        }).format(Number(price));
-
-        return {
-          name: tier.name,
-          price: `${formattedPrice} ${cycleLabel}`,
-          primaryFeatures: tier.features,
-          colorCode: tier.color_code,
-        };
-    });
-  } else {
-    displayTiers = activeView === 'payg' ? paygTiers : staticCoBrandedTiers;
-  }
+  const displayTiers = tiers || [];
 
   return (
     <div className="block md:hidden w-full">
@@ -86,21 +68,25 @@ const MobilePricingPage: React.FC<MobilePricingPageProps> = ({
       <div className="flex overflow-x-auto space-x-4 p-4 scrollbar-hide">
         {displayTiers.map((tier, index) => (
           <motion.div
-            key={tier.name}
+            key={tier.id}
             className="flex-shrink-0 w-4/5"
             initial={{ opacity: 0, x: 50 }}
             animate={{ opacity: 1, x: 0 }}
             transition={{ duration: 0.5, delay: index * 0.1 }}
           >
-            <PricingCard
+            <TierCard
               tier={tier}
-              isPayg={activeView === 'payg'}
-              listingId={listingId}
-              onPayNow={() => {}}
-              onStartTrial={() => {}}
+              billingCycle={billingCycle}
+              onSelect={onPayNow}
+              onStartTrial={onStartTrial}
             />
           </motion.div>
         ))}
+        {displayTiers.length === 0 && (
+           <div className="text-center w-full p-4 text-gray-500">
+              No plans available at the moment.
+           </div>
+        )}
       </div>
     </div>
   );
