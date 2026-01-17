@@ -76,6 +76,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
+import { useGetMyVouchers, useTransferMoney } from '@/service/money-engine/hook';
 
 // --- MOCK DATA ---
 
@@ -186,6 +187,35 @@ export default function CouponsVouchersPage() {
     const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
 
+    const isBusiness = userRole === UserRole.OWNER;
+    const isCustomer = userRole === UserRole.CUSTOMER;
+
+    // API Hooks
+    const { data: myVouchersResponse, isLoading: isLoadingVouchers } = useGetMyVouchers(isCustomer);
+    const transferMutation = useTransferMoney();
+
+    const myVouchers = useMemo(() => {
+        if (!myVouchersResponse) return [];
+        return myVouchersResponse.map(v => ({
+            id: v.id,
+            name: v.definition.name,
+            balance: v.totalBalance,
+            status: v.state === 'active' ? 'Active' : 'Inactive',
+            totalValue: v.totalBalance, // Simplified for now
+            transactions: [] // History tab needs separate implementation
+        }));
+    }, [myVouchersResponse]);
+
+    const customerStats = useMemo(() => {
+        const totalBalance = myVouchers.reduce((sum, v) => sum + v.balance, 0);
+        const vouchersOwned = myVouchers.length;
+        return {
+            totalBalance,
+            vouchersOwned,
+            rewardValueEarned: 25 // Keep mock for now as it's not in the DTO
+        };
+    }, [myVouchers]);
+
     // Form states
     const [topUpAmount, setTopUpAmount] = useState('');
     const [selectedVoucher, setSelectedVoucher] = useState('');
@@ -216,21 +246,28 @@ export default function CouponsVouchersPage() {
         setSelectedVoucher('');
     };
 
-    const handleTransfer = (e: React.FormEvent) => {
+    const handleTransfer = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedVoucher || !transferRecipient || !transferAmount) {
             toast.error('Please fill in all transfer details');
             return;
         }
-        toast.success(`Successfully transferred £${transferAmount} to ${transferRecipient}`);
-        setIsTransferModalOpen(false);
-        setTransferAmount('');
-        setTransferRecipient('');
-        setSelectedVoucher('');
-    };
 
-    const isBusiness = userRole === UserRole.OWNER;
-    const isCustomer = userRole === UserRole.CUSTOMER;
+        try {
+            await transferMutation.mutateAsync({
+                fromVoucherId: selectedVoucher,
+                toVoucherId: transferRecipient,
+                amount: Number(transferAmount)
+            });
+            toast.success(`Successfully transferred £${transferAmount} to ${transferRecipient}`);
+            setIsTransferModalOpen(false);
+            setTransferAmount('');
+            setTransferRecipient('');
+            setSelectedVoucher('');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Transfer failed');
+        }
+    };
 
     return (
         <TooltipProvider>
@@ -347,19 +384,19 @@ export default function CouponsVouchersPage() {
                         <>
                             <StatCard
                                 title="Total Wallet Balance"
-                                value={`£${MOCK_CUSTOMER_STATS.totalBalance}`}
+                                value={`£${customerStats.totalBalance}`}
                                 icon={Wallet}
                                 description="Total spending power"
                             />
                             <StatCard
                                 title="Reward Value"
-                                value={`£${MOCK_CUSTOMER_STATS.rewardValueEarned}`}
+                                value={`£${customerStats.rewardValueEarned}`}
                                 icon={Gift}
                                 description="Value given by businesses"
                             />
                             <StatCard
                                 title="Active Vouchers"
-                                value={MOCK_CUSTOMER_STATS.vouchersOwned}
+                                value={customerStats.vouchersOwned}
                                 icon={Zap}
                                 description="Ready to use"
                             />
@@ -481,7 +518,7 @@ export default function CouponsVouchersPage() {
                                                 </CardDescription>
                                             </div>
                                             <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 rounded-full px-4 py-1">
-                                                {isBusiness ? MOCK_VOUCHER_TYPES.length : MOCK_CUSTOMER_VOUCHERS.length} Items
+                                                {isBusiness ? MOCK_VOUCHER_TYPES.length : myVouchers.length} Items
                                             </Badge>
                                         </div>
                                     </CardHeader>
@@ -538,7 +575,7 @@ export default function CouponsVouchersPage() {
                                                         </TableRow>
                                                     ))
                                                 ) : (
-                                                    MOCK_CUSTOMER_VOUCHERS.map((cv) => (
+                                                    myVouchers.map((cv) => (
                                                         <TableRow key={cv.id} className="hover:bg-gray-50/50 transition-colors">
                                                             <TableCell className="py-4">
                                                                 <div className="flex flex-col">
@@ -562,6 +599,20 @@ export default function CouponsVouchersPage() {
                                                             </TableCell>
                                                         </TableRow>
                                                     ))
+                                                )}
+                                                {isCustomer && isLoadingVouchers && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
+                                                            Loading vouchers...
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {isCustomer && !isLoadingVouchers && myVouchers.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
+                                                            No vouchers found.
+                                                        </TableCell>
+                                                    </TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
@@ -615,7 +666,7 @@ export default function CouponsVouchersPage() {
                                                                         <SelectValue placeholder="Choose a voucher" />
                                                                     </SelectTrigger>
                                                                     <SelectContent position="popper" className="z-[1001]">
-                                                                        {MOCK_CUSTOMER_VOUCHERS.map(v => (
+                                                                        {myVouchers.map(v => (
                                                                             <SelectItem key={v.id} value={v.id}>{v.name} (Bal: £{v.balance})</SelectItem>
                                                                         ))}
                                                                     </SelectContent>
@@ -673,7 +724,7 @@ export default function CouponsVouchersPage() {
                                                                         <SelectValue placeholder="Choose a voucher" />
                                                                     </SelectTrigger>
                                                                     <SelectContent position="popper" className="z-[1001]">
-                                                                        {MOCK_CUSTOMER_VOUCHERS.map(v => (
+                                                                        {myVouchers.map(v => (
                                                                             <SelectItem key={v.id} value={v.id}>{v.name} (Bal: £{v.balance})</SelectItem>
                                                                         ))}
                                                                     </SelectContent>
@@ -767,7 +818,7 @@ export default function CouponsVouchersPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {isCustomer && MOCK_CUSTOMER_VOUCHERS[0].transactions.map((t) => (
+                                        {isCustomer && myVouchers.length > 0 && myVouchers[0].transactions?.map((t: any) => (
                                             <TableRow key={t.id}>
                                                 <TableCell>
                                                     <Badge
