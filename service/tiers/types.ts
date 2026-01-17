@@ -1,18 +1,35 @@
 export interface TierQuotas {
-  maxActiveCampaigns: number;
-  maxActiveRewards: number;
-  maxRewardsPerCampaign: number;
-  monthlyPointsAllowance: number;
-  monthlyStampsAllowance: number;
-  maxTeamMembers: number;
+  maxListings: number;
+  maxProducts: number;
+  maxServices: number;
+  maxCouponTemplates: number;
+  maxLoyaltyPrograms: number;
+  allowProductListing: boolean;
+  allowServiceListing: boolean;
+  maxImagesPerListing: number;
+  maxGiftCardTemplates: number;
+  featuredListingAllowance: number;
+  // Preserving old fields optionally to avoid breakages if used elsewhere
+  maxActiveCampaigns?: number;
+  maxActiveRewards?: number;
+  maxRewardsPerCampaign?: number;
+  monthlyPointsAllowance?: number;
+  monthlyStampsAllowance?: number;
+  maxTeamMembers?: number;
 }
 
 export interface TierFeatureFlags {
-  canCreateCampaignFromScratch: boolean;
-  canEditAdminTemplates: boolean;
-  hasAccessToAdvancedAnalytics: boolean;
-  hasAccessToCRM: boolean;
-  canUpdateReward: boolean;
+  dedicatedSupport: boolean;
+  priorityInSearch: boolean;
+  advancedAnalytics: boolean;
+  allowGroupCreation: boolean;
+  allowCustomBranding: boolean;
+  // Preserving old fields
+  canCreateCampaignFromScratch?: boolean;
+  canEditAdminTemplates?: boolean;
+  hasAccessToAdvancedAnalytics?: boolean;
+  hasAccessToCRM?: boolean;
+  canUpdateReward?: boolean;
 }
 
 export interface TierConfiguration {
@@ -89,19 +106,23 @@ export interface Tier {
   season?: Season; // The example shows it, so it's likely present
 }
 
-// New API Interface matching the provided schema
+// Updated API Interface matching the provided schema exactly
 export interface ApiTier {
+  id?: string;
+  createdAt?: string;
+  updatedAt?: string;
+  deletedAt?: string | null;
   name: string;
-  description: string;
-  monthlyPrice: number;
-  annualPrice: number;
-  stripeMonthlyPriceId: string;
-  stripeAnnualPriceId: string;
-  paypalMonthlyPlanId: string;
-  paypalAnnualPlanId: string;
-  // Configuration structure might differ, but we'll try to use TierConfiguration or partial
-  // For now, using any to avoid strict type conflicts during mapping if the structure differs significantly
-  // detailed mapping will happen in the adapter.
-  configuration: any;
+  description: string | null;
+  monthlyPrice: string | number; // API returns string "10.00"
+  annualPrice: string | number;
+  stripeMonthlyPriceId: string | null;
+  stripeAnnualPriceId: string | null;
+  paypalMonthlyPlanId: string | null;
+  paypalAnnualPlanId: string | null;
+  configuration: {
+      quotas: TierQuotas;
+      featureFlags: TierFeatureFlags;
+  };
   isActive: boolean;
 }
