@@ -48,7 +48,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'My Bookings', href: '/dashboard/my-bookings', icon: Calendar },
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
-  { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
+  // { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
   // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
 ];
 

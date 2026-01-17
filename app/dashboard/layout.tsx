@@ -95,9 +95,9 @@ export default function DashboardLayout({
             </div>
 
             {/* --- CENTER: DESKTOP NAV MENU --- */}
-            <div className="flex-grow flex justify-center">
+            {/* <div className="flex-grow flex justify-center">
               <NavMenu />
-            </div>
+            </div> */}
 
             {/* --- RIGHT SIDE: User Avatar & Mobile Nav Trigger --- */}
             <div className="flex items-center gap-4">
