@@ -7,7 +7,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import { businessCategories } from '@/lib/menu-items';
+import { useGetCategories, useGetSectors } from '@/service/taxonomy/hook';
 
 // Prop to handle closing the sheet on link click
 interface NavMenuContentProps {
@@ -15,6 +15,16 @@ interface NavMenuContentProps {
 }
 
 export function NavMenuContent({ onLinkClick }: NavMenuContentProps) {
+  const { data: sectors = [] } = useGetSectors();
+  const { data: categories = [] } = useGetCategories();
+
+  const dynamicCategories = sectors.map(sector => ({
+    title: sector.name,
+    items: categories
+      .filter(c => c.sectorId === sector.id)
+      .map(c => c.name),
+  }));
+
   return (
     <div className="flex flex-col space-y-2 text-lg font-medium">
       {/* Simple Links */}
@@ -47,7 +57,7 @@ export function NavMenuContent({ onLinkClick }: NavMenuContentProps) {
             Business Category
           </AccordionTrigger>
           <AccordionContent className="pl-4">
-            {businessCategories.map((category, i) => (
+            {dynamicCategories.map((category, i) => (
               <div key={i} className="mt-4 first:mt-2">
                 <h3 className="font-semibold text-gray-800 mb-2">
                   {category.title}
@@ -56,7 +66,9 @@ export function NavMenuContent({ onLinkClick }: NavMenuContentProps) {
                   {category.items.map((item, j) => (
                     <li key={j}>
                       <Link
-                        href="/" // Replace with actual link
+                        href={`/listings?category=${encodeURIComponent(
+                          category.title
+                        )}&subcategory=${encodeURIComponent(item)}`}
                         onClick={onLinkClick}
                         className="block text-base font-normal text-gray-600 hover:text-red-500 py-1"
                       >

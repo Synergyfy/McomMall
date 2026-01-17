@@ -13,11 +13,19 @@ import {
     CommandInput,
     CommandItem,
     CommandList,
+    CommandEmpty,
+    CommandGroup,
   } from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { z } from 'zod';
-import { businessCategories } from '@/lib/business-categories';
+import {
+  useGetSectors,
+  useGetCategoriesBySector,
+  useGetSubCategoriesByCategory,
+} from '@/service/taxonomy/hook';
+import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 
 interface StepProps {
   formData: ListingFormData;
@@ -47,13 +55,46 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
   const [open, setOpen] = useState(false);
   const serviceData = formData.serviceData || {};
 
+  // --- Level 1: Sectors ---
+  const { data: sectors = [] } = useGetSectors();
+
+  const selectedSector = useMemo(
+    () => sectors.find(s => s.name === serviceData.primaryCategory),
+    [sectors, serviceData.primaryCategory]
+  );
+
+  // --- Level 2: Categories (Trade) ---
+  const { data: categories = [], isFetching: isCategoriesLoading } =
+    useGetCategoriesBySector(selectedSector?.id || '');
+
+  const selectedCategory = useMemo(
+    () => categories.find(c => c.name === serviceData.tradeCategory),
+    [categories, serviceData.tradeCategory]
+  );
+
+  // --- Level 3: SubCategories ---
+  const { data: subCategoriesList = [], isFetching: isSubCategoriesLoading } =
+    useGetSubCategoriesByCategory(selectedCategory?.id || '');
+
   const handlePrimaryCategoryChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       serviceData: {
         ...prev.serviceData,
         primaryCategory: value,
-        tradeCategory: '', // Reset subcategory
+        tradeCategory: '', // Reset Level 2
+        subCategories: [], // Reset Level 3
+      },
+    }));
+  };
+
+  const handleTradeCategoryChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      serviceData: {
+        ...prev.serviceData,
+        tradeCategory: value,
+        subCategories: [], // Reset Level 3
       },
     }));
   };
@@ -63,19 +104,16 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
       ...prev,
       serviceData: {
         ...prev.serviceData,
-        tradeCategory: value,
+        subCategories: [value],
       },
     }));
   };
 
-  const availableSubCategories = useMemo(() => {
-    if (!serviceData.primaryCategory) return [];
-    const category = businessCategories.find(c => c.name === serviceData.primaryCategory);
-    return category ? category.subCategories : [];
-  }, [serviceData.primaryCategory]);
+  const currentSubCategory = serviceData.subCategories?.[0] || '';
 
   return (
     <div className="space-y-6">
+      {/* Level 1: Sector */}
       <div>
         <Label htmlFor="primaryCategory">
             Sector
@@ -94,8 +132,8 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
             <SelectValue placeholder="Select a sector" />
           </SelectTrigger>
           <SelectContent>
-            {businessCategories.map(cat => (
-              <SelectItem key={cat.name} value={cat.name}>
+            {sectors.map(cat => (
+              <SelectItem key={cat.id} value={cat.name}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -106,6 +144,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
         )}
       </div>
 
+      {/* Level 2: Trade/Industry (Category) */}
       <div>
         <Label htmlFor="tradeCategory">
             Trade/Industry Section
@@ -120,28 +159,41 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
             <PopoverTrigger asChild>
                 <Button
                     variant="outline"
-                    className="w-full justify-start text-left font-normal"
-                    disabled={!serviceData.primaryCategory}
+                    role="combobox"
+                    aria-expanded={open}
+                    className="w-full justify-between"
+                    disabled={!serviceData.primaryCategory || isCategoriesLoading}
                 >
-                    {serviceData.tradeCategory || "Select a trade or industry"}
+                    {serviceData.tradeCategory
+                        ? serviceData.tradeCategory
+                        : isCategoriesLoading ? "Loading..." : "Select a trade or industry"}
                 </Button>
             </PopoverTrigger>
             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
                 <Command>
                     <CommandInput placeholder="Search..." />
                     <CommandList>
-                        {availableSubCategories.map(sub => (
+                        <CommandEmpty>No category found.</CommandEmpty>
+                        <CommandGroup>
+                        {categories.map(sub => (
                             <CommandItem
-                                key={sub.name}
-                                onSelect={() => {
-                                    handleSubCategoryChange(sub.name);
+                                key={sub.id}
+                                value={sub.name}
+                                onSelect={(currentValue) => {
+                                    handleTradeCategoryChange(sub.name); // Store name
                                     setOpen(false);
                                 }}
-                                className="cursor-pointer"
                             >
+                                <Check
+                                    className={cn(
+                                        "mr-2 h-4 w-4",
+                                        serviceData.tradeCategory === sub.name ? "opacity-100" : "opacity-0"
+                                    )}
+                                />
                                 {sub.name}
                             </CommandItem>
                         ))}
+                        </CommandGroup>
                     </CommandList>
                 </Command>
             </PopoverContent>
@@ -150,6 +202,32 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
             <p className="text-sm text-red-500">{errors['serviceData.tradeCategory']}</p>
         )}
       </div>
+
+      {/* Level 3: Sub-Category */}
+      <div>
+        <Label htmlFor="subCategory3">Sub-Category</Label>
+        <Select
+          value={currentSubCategory}
+          onValueChange={handleSubCategoryChange}
+          disabled={!serviceData.tradeCategory || isSubCategoriesLoading}
+        >
+          <SelectTrigger id="subCategory3">
+            <SelectValue
+              placeholder={
+                isSubCategoriesLoading ? 'Loading...' : 'Select a sub-category'
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {subCategoriesList.map(sub => (
+              <SelectItem key={sub.id} value={sub.name}>
+                {sub.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
     </div>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useMemo } from 'react';
 import { ListingFormData } from '../../../types';
 import { Label } from '@/components/ui/label';
 import {
@@ -9,7 +9,11 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { z } from 'zod';
-import { businessCategories } from '@/lib/business-categories';
+import {
+  useGetSectors,
+  useGetCategoriesBySector,
+  useGetSubCategoriesByCategory,
+} from '@/service/taxonomy/hook';
 
 interface StepProps {
   formData: ListingFormData;
@@ -36,9 +40,30 @@ const ProductCategoryStep: React.FC<StepProps> = ({
   errors,
   schema,
 }) => {
-  const [selectedSubCategory, setSelectedSubCategory] = useState(formData.productData?.subCategory || '');
-
   const productData = formData.productData || {};
+
+  // --- Level 1: Sectors ---
+  const { data: sectors = [] } = useGetSectors();
+
+  // Find selected sector object to get ID for next level
+  const selectedSector = useMemo(
+    () => sectors.find(s => s.name === productData.primaryCategory),
+    [sectors, productData.primaryCategory]
+  );
+
+  // --- Level 2: Categories ---
+  const { data: categories = [], isFetching: isCategoriesLoading } =
+    useGetCategoriesBySector(selectedSector?.id || '');
+
+  // Find selected category object to get ID for next level
+  const selectedCategory = useMemo(
+    () => categories.find(c => c.name === productData.subCategory),
+    [categories, productData.subCategory]
+  );
+
+  // --- Level 3: SubCategories ---
+  const { data: subCategoriesList = [], isFetching: isSubCategoriesLoading } =
+    useGetSubCategoriesByCategory(selectedCategory?.id || '');
 
   const handlePrimaryCategoryChange = (value: string) => {
     setFormData(prev => ({
@@ -46,33 +71,39 @@ const ProductCategoryStep: React.FC<StepProps> = ({
       productData: {
         ...prev.productData,
         primaryCategory: value,
-        subCategory: '', // Reset subcategory
-        subCategories: [], // Reset items
+        subCategory: '', // Reset Level 2
+        subCategories: [], // Reset Level 3
       },
     }));
-    setSelectedSubCategory('');
   };
 
-  const handleSubCategoryChange = (value: string) => {
-    setSelectedSubCategory(value);
+  const handleCategoryChange = (value: string) => {
     setFormData(prev => ({
       ...prev,
       productData: {
         ...prev.productData,
         subCategory: value,
-        subCategories: [], // Reset items, as they are no longer used
+        subCategories: [], // Reset Level 3
       },
     }));
   };
 
-  const availableSubCategories = useMemo(() => {
-    if (!productData.primaryCategory) return [];
-    const category = businessCategories.find(c => c.name === productData.primaryCategory);
-    return category ? category.subCategories : [];
-  }, [productData.primaryCategory]);
+  const handleSubCategoryChange = (value: string) => {
+    setFormData(prev => ({
+      ...prev,
+      productData: {
+        ...prev.productData,
+        subCategories: [value], // Store as single item in array
+      },
+    }));
+  };
+
+  // Get current Level 3 value (first item in array)
+  const currentSubCategory = productData.subCategories?.[0] || '';
 
   return (
     <div className="space-y-6">
+      {/* Level 1: Sector */}
       <div>
         <Label htmlFor="primaryCategory">
           Sector
@@ -91,33 +122,63 @@ const ProductCategoryStep: React.FC<StepProps> = ({
             <SelectValue placeholder="Select a sector" />
           </SelectTrigger>
           <SelectContent>
-            {businessCategories.map(cat => (
-              <SelectItem key={cat.name} value={cat.name}>
-                {cat.name}
+            {sectors.map(sector => (
+              <SelectItem key={sector.id} value={sector.name}>
+                {sector.name}
               </SelectItem>
             ))}
           </SelectContent>
         </Select>
         {errors['productData.primaryCategory'] && (
-          <p className="text-sm text-red-500">{errors['productData.primaryCategory']}</p>
+          <p className="text-sm text-red-500">
+            {errors['productData.primaryCategory']}
+          </p>
         )}
       </div>
 
+      {/* Level 2: Category */}
       <div>
-        <Label htmlFor="subCategory">
-          Sub-Section
-        </Label>
+        <Label htmlFor="subCategory">Category</Label>
         <Select
-          value={selectedSubCategory}
-          onValueChange={handleSubCategoryChange}
-          disabled={!productData.primaryCategory}
+          value={productData.subCategory}
+          onValueChange={handleCategoryChange}
+          disabled={!productData.primaryCategory || isCategoriesLoading}
         >
           <SelectTrigger id="subCategory">
-            <SelectValue placeholder="Select a sub-section" />
+            <SelectValue
+              placeholder={
+                isCategoriesLoading ? 'Loading...' : 'Select a category'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {availableSubCategories.map(sub => (
-              <SelectItem key={sub.name} value={sub.name}>
+            {categories.map(cat => (
+              <SelectItem key={cat.id} value={cat.name}>
+                {cat.name}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      {/* Level 3: SubCategory */}
+      <div>
+        <Label htmlFor="subCategory3">Sub-Category</Label>
+        <Select
+          value={currentSubCategory}
+          onValueChange={handleSubCategoryChange}
+          disabled={!productData.subCategory || isSubCategoriesLoading}
+        >
+          <SelectTrigger id="subCategory3">
+            <SelectValue
+              placeholder={
+                isSubCategoriesLoading ? 'Loading...' : 'Select a sub-category'
+              }
+            />
+          </SelectTrigger>
+          <SelectContent>
+            {subCategoriesList.map(sub => (
+              <SelectItem key={sub.id} value={sub.name}>
                 {sub.name}
               </SelectItem>
             ))}
@@ -125,11 +186,11 @@ const ProductCategoryStep: React.FC<StepProps> = ({
         </Select>
       </div>
 
-        {!productData.primaryCategory && (
-          <p className="text-xs text-muted-foreground mt-1">
-            Please select a sector to see available sub-sections.
-          </p>
-        )}
+      {!productData.primaryCategory && (
+        <p className="text-xs text-muted-foreground mt-1">
+          Please select a sector to see available categories.
+        </p>
+      )}
     </div>
   );
 };
