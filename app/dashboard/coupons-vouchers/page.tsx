@@ -188,7 +188,7 @@ const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProp
 
 export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
-    const [activeTab, setActiveTab] = useState('overview');
+    // const [activeTab, setActiveTab] = useState('overview'); // Removed unused state
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [voucherId, setVoucherId] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
@@ -457,7 +457,7 @@ export default function CouponsVouchersPage() {
                                     <DialogHeader>
                                         <DialogTitle>Reward Customer</DialogTitle>
                                         <DialogDescription>
-                                            Add reward value to a customer's Coupon Voucher.
+                                            Add reward value to a customer&apos;s Coupon Voucher.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
