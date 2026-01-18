@@ -1,7 +1,6 @@
 import { useWallet } from '@/service/wallet/hook';
 import {
   PiggyBank,
-  PoundSterling,
   ShoppingCart,
   Wallet,
   Landmark,
@@ -31,7 +30,6 @@ export const WalletSummary = () => {
   }
 
   const {
-    balance,
     earningsBalance,
     spendableBalance,
     pendingBalance,

@@ -6,9 +6,7 @@ import {
   Plus,
   List,
   Wallet,
-  ShoppingCart,
   UserStar,
-  Bookmark,
   ShoppingBag,
   SquareDashedKanban,
   Settings,
@@ -21,7 +19,6 @@ import {
   History,
   Users,
   Timer,
-  QrCode,
   Scan,
   Gift,
   Coins,
@@ -194,8 +191,6 @@ export const accountMenuItems: MenuItem[] = [
   },
   { title: 'Logout', href: '/', icon: LogOut },
 ];
-
-import { BarChart } from 'lucide-react';
 
 export const pluginMenuItems: MenuItem[] = [
   {
