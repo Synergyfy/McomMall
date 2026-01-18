@@ -5,6 +5,7 @@ export interface PricingTier {
   primaryFeatures: string[];
   secondaryFeatures?: string[];
   accent?: 'teal' | 'purple' | 'yellow';
+  colorCode?: string; // Hex color from API
 }
 
 export interface TableFeature {

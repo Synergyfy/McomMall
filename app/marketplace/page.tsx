@@ -1,303 +1,333 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import Image from 'next/image';
 import Link from 'next/link';
 import {
-  Smartphone,
-  Laptop,
-  Home,
-  Shirt,
-  PlusCircle,
-  Heart,
-  ShoppingCart,
-  Percent,
-  ChevronLeft,
-  ChevronRight,
-  Phone,
-  Store,
-  Truck,
-  Star
+  LayoutGrid,
+  List as ListIcon,
+  Search,
+  ChevronDown
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { promotionalItems } from '@/lib/listing-data';
+import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
+import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
+import ProductCard from '@/components/marketplace/ProductCard';
+import Pagination from '@/components/marketplace/Pagination';
+import { Input } from '@/components/ui/input';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { Button } from '@/components/ui/button';
 
-// Mock Data
-const categories = [
-  { name: 'Appliances', icon: <Home /> },
-  { name: 'Phones & Tablets', icon: <Smartphone /> },
-  { name: 'Health & Beauty', icon: <Heart /> },
-  { name: 'Home & Office', icon: <Laptop /> },
-  { name: 'Electronics', icon: <ShoppingCart /> },
-  { name: 'Fashion', icon: <Shirt /> },
-  { name: 'Supermarket', icon: <ShoppingCart /> },
-  { name: 'Computing', icon: <Laptop /> },
-  { name: 'Baby Products', icon: <PlusCircle /> },
-  { name: 'Gaming', icon: <Percent /> },
-  { name: 'Musical Instruments', icon: <PlusCircle /> },
-  { name: 'Other categories', icon: <PlusCircle /> },
-];
+// --- Extended Mock Data for Pagination Demo ---
+const generateMoreItems = (baseItems: PromotionalItem[], count: number): PromotionalItem[] => {
+  const newItems = [];
+  for (let i = 0; i < count; i++) {
+    const base = baseItems[i % baseItems.length];
+    newItems.push({
+      ...base,
+      id: 1000 + i,
+      title: `${base.title} ${i + 1}`,
+      price: base.price + (Math.random() * 50 - 25),
+      items_left: Math.floor(Math.random() * 50),
+      // Randomize category slightly for filtering demo
+      category: i % 3 === 0 ? 'Fashion' : i % 3 === 1 ? 'Electronics' : base.category,
+    });
+  }
+  return [...baseItems, ...newItems];
+};
 
-const ITEMS_PER_VIEW = 8;
+const allProducts = generateMoreItems(promotionalItems, 40);
+
+const ITEMS_PER_PAGE = 12;
 
 const treasureHuntSlides = [
-  { imageSrc: 'images/landscap.jpg' },
-  { imageSrc: 'images/summer.jpg' },
-  { imageSrc: 'images/winter.jpg' },
+  { imageSrc: 'images/landscap.jpg', title: 'Summer Collection', sub: 'Up to 50% Off' },
+  { imageSrc: 'images/summer.jpg', title: 'New Arrivals', sub: 'Check them out' },
+  { imageSrc: 'images/winter.jpg', title: 'Winter Sale', sub: 'Warm up with cool deals' },
 ];
 
 export default function MarketplacePage() {
-  const [carouselIndex, setCarouselIndex] = useState(0);
   const [activeSlide, setActiveSlide] = useState(0);
-  const [selectedCategory, setSelectedCategory] = useState<string | null>(null);
+  const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [currentPage, setCurrentPage] = useState(1);
+  const [sortOption, setSortOption] = useState('featured');
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  // Filter State
+  const [filters, setFilters] = useState<MarketplaceFiltersState>({
+    categories: [],
+    priceRange: [0, 5000],
+    brands: [],
+    minRating: null,
+  });
+
+  // Derived Data (Categories & Brands for Sidebar)
+  const categoryStats = useMemo(() => {
+    const stats: Record<string, number> = {};
+    allProducts.forEach(p => {
+      stats[p.category] = (stats[p.category] || 0) + 1;
+    });
+    return Object.entries(stats).map(([name, count]) => ({ name, count }));
+  }, []);
+
+  // Mock Brands
+  const brandStats = [
+    { name: 'Samsung', count: 12 },
+    { name: 'Apple', count: 8 },
+    { name: 'Nike', count: 15 },
+    { name: 'Adidas', count: 10 },
+    { name: 'Sony', count: 5 },
+    { name: 'LG', count: 7 },
+  ];
 
   useEffect(() => {
     const timer = setInterval(() => {
       setActiveSlide((prev) => (prev + 1) % treasureHuntSlides.length);
-    }, 10000); // 10 seconds
+    }, 8000);
     return () => clearInterval(timer);
   }, []);
 
-  const handleNext = () => {
-    setCarouselIndex((prevIndex) => {
-      const nextIndex = prevIndex + 1;
-      return nextIndex > promotionalItems.length - ITEMS_PER_VIEW ? prevIndex : nextIndex;
+  // Filtering Logic
+  const filteredProducts = useMemo(() => {
+    return allProducts.filter((product) => {
+      // Search
+      if (searchQuery && !product.title.toLowerCase().includes(searchQuery.toLowerCase())) {
+        return false;
+      }
+      // Category
+      if (filters.categories.length > 0 && !filters.categories.includes(product.category)) {
+        return false;
+      }
+      // Price
+      if (product.discountedPrice) {
+        if (product.discountedPrice < filters.priceRange[0] || product.discountedPrice > filters.priceRange[1]) return false;
+      } else {
+        if (product.price < filters.priceRange[0] || product.price > filters.priceRange[1]) return false;
+      }
+      // Brands (Mock implementation since product has no brand field)
+      // In real app: if (filters.brands.length > 0 && !filters.brands.includes(product.brand)) return false;
+
+      // Rating (Mock)
+      // In real app: if (filters.minRating && product.rating < filters.minRating) return false;
+
+      return true;
     });
+  }, [searchQuery, filters]);
+
+  // Sorting Logic
+  const sortedProducts = useMemo(() => {
+    const sorted = [...filteredProducts];
+    if (sortOption === 'price-asc') {
+      sorted.sort((a, b) => (a.discountedPrice || a.price) - (b.discountedPrice || b.price));
+    } else if (sortOption === 'price-desc') {
+      sorted.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
+    }
+    // Add more sort options if needed
+    return sorted;
+  }, [filteredProducts, sortOption]);
+
+  // Pagination Logic
+  const totalPages = Math.ceil(sortedProducts.length / ITEMS_PER_PAGE);
+  const currentProducts = sortedProducts.slice(
+    (currentPage - 1) * ITEMS_PER_PAGE,
+    currentPage * ITEMS_PER_PAGE
+  );
+
+  const handleFilterChange = (newFilters: MarketplaceFiltersState) => {
+    setFilters(newFilters);
+    setCurrentPage(1); // Reset to first page on filter change
   };
-
-  const handlePrev = () => {
-    setCarouselIndex((prevIndex) => {
-      const nextIndex = prevIndex - 1;
-      return nextIndex < 0 ? 0 : nextIndex;
-    });
-  };
-
-  const filteredItems = selectedCategory
-    ? promotionalItems.filter((item) => item.category === selectedCategory)
-    : promotionalItems;
-
-  const [timeLeft, setTimeLeft] = useState({ hours: 1, minutes: 11, seconds: 1 });
-
-  useEffect(() => {
-    const countdown = setInterval(() => {
-      setTimeLeft(prev => {
-        if (prev.seconds > 0) return { ...prev, seconds: prev.seconds - 1 };
-        if (prev.minutes > 0) return { ...prev, minutes: prev.minutes - 1, seconds: 59 };
-        if (prev.hours > 0) return { ...prev, hours: prev.hours - 1, minutes: 59, seconds: 59 };
-        return prev;
-      });
-    }, 1000);
-    return () => clearInterval(countdown);
-  }, []);
-
-  // Use a separate, unfiltered list for the flash sales
-  const flashSaleItems = promotionalItems.slice(0, 6);
 
   return (
-    <div className="bg-gray-100 pt-28">
-      <div className="container mx-auto px-4 py-8">
-        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-          {/* 1. Category Sidebar */}
-          <div className="lg:col-span-3 bg-white p-4 rounded-lg shadow-sm">
-            <ul className="space-y-2 h-96 overflow-y-auto overflow-x-hidden">
-              <li
-                className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
-                  !selectedCategory ? 'bg-gray-100' : ''
-                }`}
-                onClick={() => setSelectedCategory(null)}
+    <div className="bg-gray-50 min-h-screen pt-28 pb-12">
+      <div className="container mx-auto px-4">
+        
+        {/* 1. Hero Section (Treasure Hunt & Promotions) */}
+        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Slider */}
+          <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={activeSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0"
               >
-                <span>All</span>
-              </li>
-              {categories.map((category, index) => (
-                <li
+                 {/* Placeholder for images if they don't exist, using colors/gradients */}
+                 <div className={`w-full h-full ${activeSlide === 0 ? 'bg-blue-100' : activeSlide === 1 ? 'bg-amber-100' : 'bg-rose-100'}`}>
+                    <Image
+                      src={treasureHuntSlides[activeSlide].imageSrc}
+                      alt={treasureHuntSlides[activeSlide].title}
+                      fill
+                      className="object-cover"
+                      // Fallback logic could be handled by a specific component or error handler
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
+                      <h2 className="text-4xl font-bold text-white mb-2">{treasureHuntSlides[activeSlide].title}</h2>
+                      <p className="text-xl text-gray-200">{treasureHuntSlides[activeSlide].sub}</p>
+                      <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100">Shop Now</Button>
+                    </div>
+                 </div>
+              </motion.div>
+            </AnimatePresence>
+            <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
+              {treasureHuntSlides.map((_, index) => (
+                <button
                   key={index}
-                  className={`flex items-center space-x-3 p-2 rounded-md hover:bg-gray-100 cursor-pointer text-sm font-medium transition-colors ${
-                    selectedCategory === category.name ? 'bg-gray-100' : ''
+                  onClick={() => setActiveSlide(index)}
+                  className={`h-2 w-2 rounded-full transition-all ${
+                    activeSlide === index ? 'bg-white w-6' : 'bg-white/50'
                   }`}
-                  onClick={() => setSelectedCategory(category.name)}
-                >
-                  {category.icon}
-                  <span>{category.name}</span>
-                </li>
+                />
               ))}
-            </ul>
+            </div>
           </div>
 
-          {/* 2. Main Content */}
-          <div className="lg:col-span-6">
-            {/* Treasure Hunt Section */}
-            <div className="rounded-lg shadow-lg h-96 relative overflow-hidden">
-              <AnimatePresence mode="wait">
-                <motion.div
-                  key={activeSlide}
-                  initial={{ opacity: 0, x: 50 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: -50 }}
-                  transition={{ duration: 0.5 }}
-                  className="w-full h-full relative"
-                >
-                  <Image
-                    src={treasureHuntSlides[activeSlide].imageSrc}
-                    alt={`Treasure hunt image ${activeSlide + 1}`}
-                    fill
-                    className="object-cover rounded-lg"
-                  />
-                </motion.div>
-              </AnimatePresence>
+          {/* Right Side Promo Cards */}
+          <div className="flex flex-col gap-6">
+            <div className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                <div className="relative z-10">
+                    <h3 className="text-2xl font-bold mb-1">Flash Sale</h3>
+                    <p className="text-orange-100 mb-4">Ends in 01:11:01</p>
+                    <Link href="/flash-sales" className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">View All Deals</Link>
+                </div>
+                {/* Decorative circle */}
+                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+            </div>
+             <div className="flex-1 bg-gray-900 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden">
+                <div className="relative z-10">
+                    <h3 className="text-xl font-bold mb-2">Sell on MCom</h3>
+                    <p className="text-gray-400 text-sm mb-4">Reach millions of customers today</p>
+                     <Button variant="outline" className="border-gray-700 text-white hover:bg-white hover:text-black">Start Selling</Button>
+                </div>
+            </div>
+          </div>
+        </div>
 
-              {/* Slide indicators */}
-              <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex space-x-2">
-                {treasureHuntSlides.map((_, index) => (
-                  <button
-                    key={index}
-                    onClick={() => setActiveSlide(index)}
-                    className={`h-2 w-2 rounded-full transition-colors ${
-                      activeSlide === index ? 'bg-white' : 'bg-gray-500'
-                    }`}
-                  />
+        {/* 2. Main Layout Split */}
+        <div className="flex flex-col lg:flex-row gap-8">
+          
+          {/* Left Sidebar */}
+          <aside className="hidden lg:block w-64 flex-shrink-0">
+             <div className="sticky top-28">
+                <MarketplaceSidebar
+                  categories={categoryStats}
+                  brands={brandStats}
+                  onFilterChange={handleFilterChange}
+                  initialFilters={filters}
+                />
+             </div>
+          </aside>
+
+          {/* Right Content */}
+          <main className="flex-1">
+            
+            {/* Top Toolbar */}
+            <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 sticky top-24 z-20">
+              <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
+                {/* Search Bar */}
+                <div className="relative w-full md:max-w-md">
+                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
+                   <Input 
+                      placeholder="Search products, brands, categories..." 
+                      className="pl-9 bg-gray-50 border-gray-200 focus-visible:ring-primary"
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                   />
+                </div>
+
+                <div className="flex items-center gap-3 w-full md:w-auto">
+                   {/* Sort Dropdown */}
+                   <Select value={sortOption} onValueChange={setSortOption}>
+                    <SelectTrigger className="w-[180px] bg-gray-50 border-gray-200">
+                      <SelectValue placeholder="Sort By" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="featured">Featured</SelectItem>
+                      <SelectItem value="price-asc">Price: Low to High</SelectItem>
+                      <SelectItem value="price-desc">Price: High to Low</SelectItem>
+                      <SelectItem value="newest">New Arrivals</SelectItem>
+                    </SelectContent>
+                  </Select>
+
+                  {/* View Toggles */}
+                  <div className="flex items-center bg-gray-100 p-1 rounded-lg">
+                    <button 
+                      onClick={() => setViewMode('grid')}
+                      className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      <LayoutGrid className="h-4 w-4" />
+                    </button>
+                    <button 
+                      onClick={() => setViewMode('list')}
+                      className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
+                    >
+                      <ListIcon className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </div>
+              
+              {/* Results Count */}
+              <div className="mt-4 flex items-center justify-between text-sm text-gray-500 border-t pt-4">
+                <p>Showing <span className="font-semibold text-gray-900">{currentProducts.length}</span> of <span className="font-semibold text-gray-900">{sortedProducts.length}</span> results</p>
+                {/* Mobile Filter Toggle could go here */}
+                 <Button variant="ghost" className="lg:hidden text-primary">
+                    Filters
+                 </Button>
+              </div>
+            </div>
+
+            {/* Product Grid/List */}
+            {currentProducts.length > 0 ? (
+              <div className={
+                viewMode === 'grid' 
+                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
+                  : "flex flex-col gap-4"
+              }>
+                {currentProducts.map((product) => (
+                  <ProductCard key={product.id} product={product} viewMode={viewMode} />
                 ))}
               </div>
-            </div>
-          </div>
-
-          {/* 3. Right Sidebar */}
-          <div className="lg:col-span-3 space-y-6">
-            <div className="bg-white p-4 rounded-lg shadow-sm">
-              <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                <div className="bg-gray-100 p-2 rounded-full">
-                  <Phone size={24} className="text-yellow-500" />
+            ) : (
+              <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                  <Search className="h-8 w-8 text-gray-400" />
                 </div>
-                <div>
-                  <p className="font-bold">CALL TO ORDER</p>
-                  <p className="text-sm text-gray-600">0700-600-0000</p>
-                </div>
+                <h3 className="text-lg font-bold text-gray-900 mb-1">No products found</h3>
+                <p className="text-gray-500">Try adjusting your search or filters.</p>
+                <Button 
+                  variant="link" 
+                  className="mt-2 text-primary"
+                  onClick={() => {
+                    setSearchQuery('');
+                    setFilters({ categories: [], priceRange: [0, 5000], brands: [], minRating: null });
+                  }}
+                >
+                  Clear all filters
+                </Button>
               </div>
-              <div className="flex items-center space-x-4 mb-4 pb-4 border-b cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                <div className="bg-gray-100 p-2 rounded-full">
-                  <Store size={24} className="text-yellow-500" />
-                </div>
-                <div>
-                  <p className="font-bold">Sell on Mcom</p>
-                </div>
-              </div>
-              <div className="flex items-center space-x-4 cursor-pointer hover:bg-gray-50 p-2 rounded-md">
-                <div className="bg-gray-100 p-2 rounded-full">
-                  <Truck size={24} className="text-yellow-500" />
-                </div>
-                <div>
-                  <p className="font-bold">Send Your Packages</p>
-                </div>
-              </div>
-            </div>
-            <div className="bg-black text-white p-6 rounded-lg shadow-lg text-center">
-              <h2 className="text-2xl font-bold flex items-center justify-center">MCom <Star className="ml-2" /></h2>
-              <h3 className="text-3xl font-extrabold">BLACK FRIDAY</h3>
-              <p className="text-sm text-gray-300">31 OCT - 01 DEC</p>
-            </div>
-          </div>
-        </div>
+            )}
 
-        {/* Promotional Carousel */}
-        <div className="mt-6 bg-white p-4 rounded-lg shadow-sm">
-          <div className="flex items-center justify-between">
-            <button
-              onClick={handlePrev}
-              disabled={carouselIndex <= 0}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronLeft size={24} />
-            </button>
-            <div className="flex-grow flex justify-center space-x-4 overflow-x-auto">
-              {promotionalItems.slice(carouselIndex, carouselIndex + ITEMS_PER_VIEW).map((item) => (
-                <Link key={item.id} href={`/products/${item.id}`}>
-                  <div className="text-center flex-shrink-0 group cursor-pointer">
-                    <div className="w-24 h-24 md:w-32 md:h-32 bg-gray-50 rounded-lg flex items-center justify-center mb-2 overflow-hidden transition-transform duration-300 group-hover:scale-105">
-                      <Image src={item.image} alt={item.title} width={128} height={128} className="object-cover" />
-                    </div>
-                    <p className="text-xs md:text-sm font-medium group-hover:underline">{item.title}</p>
-                  </div>
-                </Link>
-              ))}
+            {/* Pagination */}
+            <div className="mt-12">
+              <Pagination 
+                currentPage={currentPage} 
+                totalPages={totalPages} 
+                onPageChange={setCurrentPage} 
+              />
             </div>
-            <button
-              onClick={handleNext}
-              disabled={carouselIndex + ITEMS_PER_VIEW >= promotionalItems.length}
-              className="p-2 rounded-full bg-gray-100 hover:bg-gray-200 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              <ChevronRight size={24} />
-            </button>
-          </div>
-        </div>
-         {/* Flash Sales Section */}
-        <div className="bg-orange-600 text-white p-4 rounded-lg shadow-md mt-6">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center space-x-4">
-              <h2 className="text-2xl font-bold">Flash Sales</h2>
-              <div className="text-xl">
-                Time Left: {String(timeLeft.hours).padStart(2, '0')}:{String(timeLeft.minutes).padStart(2, '0')}:{String(timeLeft.seconds).padStart(2, '0')}
-              </div>
-            </div>
-            <Link href="/flash-sales">
-              <div className="text-white hover:underline cursor-pointer">See All &gt;</div>
-            </Link>
-          </div>
-          <div className="mt-4 flex space-x-4 overflow-x-auto">
-            {flashSaleItems.map((item) => (
-              <Link key={item.id} href={`/products/${item.id}`}>
-                <div className="bg-white text-black p-2 rounded-lg flex-shrink-0 w-48 text-center group cursor-pointer">
-                  <div className="relative">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={150}
-                      height={150}
-                      className="object-cover rounded-md mx-auto transition-transform duration-300 group-hover:scale-105"
-                    />
-                    {item.discountedPrice && (
-                      <div className="absolute top-1 right-1 bg-orange-500 text-white text-xs font-bold px-2 py-1 rounded-full">
-                        -{Math.round(((item.price - item.discountedPrice) / item.price) * 100)}%
-                      </div>
-                    )}
-                  </div>
-                  <p className="mt-2 text-sm font-medium group-hover:underline">{item.title}</p>
-                  <p className="mt-1 text-lg font-bold">£{(item.discountedPrice ?? item.price).toFixed(2)}</p>
-                  <p className="text-xs text-gray-500 line-through">£{item.price.toFixed(2)}</p>
-                  <div className="w-full bg-gray-200 rounded-full h-2.5 mt-2">
-                    <div className="bg-orange-500 h-2.5 rounded-full" style={{ width: `${(item.items_left / 100) * 100}%` }}></div>
-                  </div>
-                  <p className="text-xs mt-1 text-gray-600">{item.items_left} items left</p>
-                </div>
-              </Link>
-            ))}
-          </div>
-        </div>
 
-        {/* Filtered Products Grid */}
-        <div className="mt-6">
-          <h2 className="text-2xl font-bold mb-4">{selectedCategory || 'All Products'}</h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
-            {filteredItems.map((item) => (
-              <Link key={item.id} href={`/products/${item.id}`}>
-                <div className="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer">
-                  <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={200}
-                      height={200}
-                      className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <p className="text-sm font-medium group-hover:underline">{item.title}</p>
-                    <p className="text-lg font-semibold mt-2">£{item.price.toFixed(2)}</p>
-                  </div>
-                </div>
-              </Link>
-            ))}
-          </div>
+          </main>
         </div>
-
       </div>
     </div>
   );
