@@ -155,7 +155,15 @@ const MOCK_CUSTOMER_STATS = {
 
 // --- COMPONENTS ---
 
-const StatCard = ({ title, value, icon: Icon, description, trend }: any) => (
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    icon: React.ElementType;
+    description?: string;
+    trend?: 'up' | 'down';
+}
+
+const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProps) => (
     <Card className="overflow-hidden border-none shadow-md bg-white/50 backdrop-blur-sm hover:shadow-lg transition-all">
         <CardContent className="p-6">
             <div className="flex items-center justify-between space-x-4">
@@ -180,7 +188,7 @@ const StatCard = ({ title, value, icon: Icon, description, trend }: any) => (
 
 export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
-    const [activeTab, setActiveTab] = useState('overview');
+    // const [activeTab, setActiveTab] = useState('overview'); // Removed unused state
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [voucherId, setVoucherId] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
@@ -264,8 +272,9 @@ export default function CouponsVouchersPage() {
             setTransferAmount('');
             setTransferRecipient('');
             setSelectedVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Transfer failed');
+        } catch (error: unknown) {
+            const err = error as { response?: { data?: { message?: string } } };
+            toast.error(err?.response?.data?.message || 'Transfer failed');
         }
     };
 
@@ -328,7 +337,7 @@ export default function CouponsVouchersPage() {
                                             </li>
                                             <li className="flex items-start gap-2 text-sm text-gray-600">
                                                 <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
-                                                <span><strong>Customers:</strong> Get £100 of value for only £50 input. Keep spending as businesses add "cashback" to your voucher.</span>
+                                                <span><strong>Customers:</strong> Get £100 of value for only £50 input. Keep spending as businesses add &quot;cashback&quot; to your voucher.</span>
                                             </li>
                                         </ul>
                                     </div>
@@ -448,7 +457,7 @@ export default function CouponsVouchersPage() {
                                     <DialogHeader>
                                         <DialogTitle>Reward Customer</DialogTitle>
                                         <DialogDescription>
-                                            Add reward value to a customer's Coupon Voucher.
+                                            Add reward value to a customer&apos;s Coupon Voucher.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
@@ -640,7 +649,7 @@ export default function CouponsVouchersPage() {
                                     <CardContent className="space-y-4">
                                         <p className="text-sm leading-relaxed">
                                             {isBusiness
-                                                ? "Attach vouchers to your 'Expo Special' campaign to attract 3x more customers. Each reward you give builds customer loyalty without hitting your cash flow."
+                                                ? "Attach vouchers to your &apos;Expo Special&apos; campaign to attract 3x more customers. Each reward you give builds customer loyalty without hitting your cash flow."
                                                 : "Ask businesses for cashback whenever you shop! Your voucher balance can grow every time you spend at a participating partner."}
                                         </p>
                                         {!isBusiness && (
@@ -818,7 +827,7 @@ export default function CouponsVouchersPage() {
                                         </TableRow>
                                     </TableHeader>
                                     <TableBody>
-                                        {isCustomer && myVouchers.length > 0 && myVouchers[0].transactions?.map((t: any) => (
+                                        {isCustomer && myVouchers.length > 0 && myVouchers[0].transactions?.map((t: { id: string; type: string; shop: string; date: string; amount: number }) => (
                                             <TableRow key={t.id}>
                                                 <TableCell>
                                                     <Badge
