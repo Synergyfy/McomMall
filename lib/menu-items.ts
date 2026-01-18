@@ -24,6 +24,7 @@ import {
   QrCode,
   Scan,
   Gift,
+  Coins,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -184,6 +185,7 @@ export const accountMenuItems: MenuItem[] = [
     icon: CreditCard,
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
+  { title: 'Cashback', href: '/dashboard/cashback', icon: Coins },
   {
     title: 'Settings',
     href: '/dashboard/settings',
