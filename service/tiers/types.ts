@@ -115,10 +115,13 @@ export interface ApiTier {
   name: string;
   description: string | null;
   monthlyPrice: string | number; // API returns string "10.00"
+  quarterlyPrice: string | number;
   annualPrice: string | number;
   stripeMonthlyPriceId: string | null;
+  stripeQuarterlyPriceId: string | null;
   stripeAnnualPriceId: string | null;
   paypalMonthlyPlanId: string | null;
+  paypalQuarterlyPlanId: string | null;
   paypalAnnualPlanId: string | null;
   configuration: {
       quotas: TierQuotas;

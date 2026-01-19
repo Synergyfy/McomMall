@@ -6,9 +6,7 @@ import {
   Plus,
   List,
   Wallet,
-  ShoppingCart,
   UserStar,
-  Bookmark,
   ShoppingBag,
   SquareDashedKanban,
   Settings,
@@ -21,9 +19,9 @@ import {
   History,
   Users,
   Timer,
-  QrCode,
   Scan,
   Gift,
+  Coins,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -184,6 +182,7 @@ export const accountMenuItems: MenuItem[] = [
     icon: CreditCard,
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
+  { title: 'Cashback', href: '/dashboard/cashback', icon: Coins },
   {
     title: 'Settings',
     href: '/dashboard/settings',
@@ -192,8 +191,6 @@ export const accountMenuItems: MenuItem[] = [
   },
   { title: 'Logout', href: '/', icon: LogOut },
 ];
-
-import { BarChart } from 'lucide-react';
 
 export const pluginMenuItems: MenuItem[] = [
   {
