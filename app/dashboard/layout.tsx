@@ -61,37 +61,44 @@ export default function DashboardLayout({
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col">
           <header className="flex items-center justify-between w-full h-20 py-3 px-5 border-b bg-slate-800">
-            {/* --- LEFT SIDE: MOBILE MENU TRIGGER (for SideMenu) --- */}
-            <div className="md:hidden">
-              <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
-                <SheetTrigger asChild>
-                  <Button
-                    variant="outline"
-                    size="icon"
-                    className="w-fit border-0 shadow-none"
-                  >
-                    <div className="flex gap-2 items-center">
-                      <Menu className="h-5 w-5" />
-                      <p>Dashbaord Menu</p>
-                    </div>
-                  </Button>
-                </SheetTrigger>
-                <SheetContent side="left" className="p-0 w-[18rem]">
-                  <div className="p-5 border-b">
-                    <Link href="/" className="flex items-center space-x-2">
-                      <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">M</span>
+            {/* --- LEFT SIDE: MOBILE MENU TRIGGER & USER NAV --- */}
+            <div className="flex items-center gap-4">
+              <div className="md:hidden">
+                <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
+                  <SheetTrigger asChild>
+                    <Button
+                      variant="outline"
+                      size="icon"
+                      className="w-fit border-0 shadow-none"
+                    >
+                      <div className="flex gap-2 items-center">
+                        <Menu className="h-5 w-5" />
+                        <p>Dashbaord Menu</p>
                       </div>
-                      <span className="text-xl font-semibold">McomMall</span>
-                    </Link>
-                  </div>
-                  <div className="p-4 overflow-y-auto">
-                    <SideMenuContent
-                      onLinkClick={() => setIsSideMenuOpen(false)}
-                    />
-                  </div>
-                </SheetContent>
-              </Sheet>
+                    </Button>
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-[18rem]">
+                    <div className="p-5 border-b">
+                      <Link href="/" className="flex items-center space-x-2">
+                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                          <span className="text-white font-bold text-sm">M</span>
+                        </div>
+                        <span className="text-xl font-semibold">McomMall</span>
+                      </Link>
+                    </div>
+                    <div className="p-4 overflow-y-auto">
+                      <SideMenuContent
+                        onLinkClick={() => setIsSideMenuOpen(false)}
+                      />
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </div>
+
+              {/* User Nav (Desktop) - Moved to Left */}
+              <div className="hidden md:block">
+                <UserNav align="start" />
+              </div>
             </div>
 
             {/* --- CENTER: DESKTOP NAV MENU --- */}
@@ -99,11 +106,8 @@ export default function DashboardLayout({
               <NavMenu />
             </div> */}
 
-            {/* --- RIGHT SIDE: User Avatar & Mobile Nav Trigger --- */}
+            {/* --- RIGHT SIDE: Mobile Nav Trigger Only --- */}
             <div className="flex items-center gap-4">
-              <div className="hidden md:block">
-                <UserNav />
-              </div>
               <div className="md:hidden">
                 <Sheet open={isNavMenuOpen} onOpenChange={setIsNavMenuOpen}>
                   <SheetTrigger asChild>
