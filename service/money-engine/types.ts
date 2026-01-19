@@ -16,3 +16,9 @@ export interface TransferDto {
     toVoucherId: string;
     amount: number;
 }
+
+export interface CashbackDto {
+    userVoucherId: string;
+    amount: number;
+    shopId: string;
+}

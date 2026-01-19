@@ -1,6 +1,6 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMyVouchers, transferMoney } from './index';
-import { TransferDto } from './types';
+import { getMyVouchers, transferMoney, giveCashback } from './index';
+import { TransferDto, CashbackDto } from './types';
 
 export const useGetMyVouchers = (enabled = true) => {
     return useQuery({
@@ -17,5 +17,11 @@ export const useTransferMoney = () => {
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
         },
+    });
+};
+
+export const useGiveCashback = () => {
+    return useMutation({
+        mutationFn: (data: CashbackDto) => giveCashback(data),
     });
 };

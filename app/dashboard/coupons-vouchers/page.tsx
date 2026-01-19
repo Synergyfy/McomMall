@@ -76,7 +76,7 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useGetMyVouchers, useTransferMoney } from '@/service/money-engine/hook';
+import { useGetMyVouchers, useTransferMoney, useGiveCashback } from '@/service/money-engine/hook';
 
 // --- MOCK DATA ---
 
@@ -140,6 +140,17 @@ const MOCK_CUSTOMER_VOUCHERS = [
     },
 ];
 
+const MOCK_SHOPS = [
+    { id: 'shop-1', name: 'Gourmet Kitchen' },
+    { id: 'shop-2', name: 'Eco Entry' },
+    { id: 'shop-3', name: 'Premium Partners' },
+];
+
+const MOCK_USER_VOUCHERS = [
+    { id: 'uv-1', name: 'John Doe - Spring Voucher' },
+    { id: 'uv-2', name: 'Jane Smith - Summer Perk' },
+];
+
 const MOCK_BUSINESS_STATS = {
     activeVouchers: 12,
     cashbackDistributed: 450,
@@ -182,7 +193,8 @@ export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
     const [activeTab, setActiveTab] = useState('overview');
     const [cashbackAmount, setCashbackAmount] = useState('');
-    const [voucherId, setVoucherId] = useState('');
+    const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
+    const [selectedShopId, setSelectedShopId] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
     const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -193,6 +205,7 @@ export default function CouponsVouchersPage() {
     // API Hooks
     const { data: myVouchersResponse, isLoading: isLoadingVouchers } = useGetMyVouchers(isCustomer);
     const transferMutation = useTransferMoney();
+    const cashbackMutation = useGiveCashback();
 
     const myVouchers = useMemo(() => {
         if (!myVouchersResponse) return [];
@@ -222,16 +235,27 @@ export default function CouponsVouchersPage() {
     const [transferRecipient, setTransferRecipient] = useState('');
     const [transferAmount, setTransferAmount] = useState('');
 
-    const handleGiveCashback = (e: React.FormEvent) => {
+    const handleGiveCashback = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!voucherId || !cashbackAmount) {
+        if (!selectedUserVoucher || !cashbackAmount || !selectedShopId) {
             toast.error('Please fill in all fields');
             return;
         }
-        toast.success(`Successfully added £${cashbackAmount} cashback to voucher ${voucherId}`);
-        setIsCashbackModalOpen(false);
-        setCashbackAmount('');
-        setVoucherId('');
+
+        try {
+            await cashbackMutation.mutateAsync({
+                userVoucherId: selectedUserVoucher,
+                amount: Number(cashbackAmount),
+                shopId: selectedShopId
+            });
+            toast.success(`Successfully added £${cashbackAmount} cashback`);
+            setIsCashbackModalOpen(false);
+            setCashbackAmount('');
+            setSelectedUserVoucher('');
+            setSelectedShopId('');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to give cashback');
+        }
     };
 
     const handleTopUp = (e: React.FormEvent) => {
@@ -453,44 +477,62 @@ export default function CouponsVouchersPage() {
                                     </DialogHeader>
                                     <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
                                         <div className="space-y-2">
-                                            <Label htmlFor="voucherId" className="flex items-center gap-2">
-                                                Voucher ID / Code
+                                            <Label className="flex items-center gap-2">
+                                                Select User Voucher
                                                 <Tooltip>
                                                     <TooltipTrigger>
                                                         <Info className="w-3 h-3 text-gray-400" />
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>Ask the customer for their 6-digit voucher code</p>
+                                                        <p>Select the customer's voucher to reward</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </Label>
-                                            <Input
-                                                id="voucherId"
-                                                placeholder="e.g. CV-101"
-                                                value={voucherId}
-                                                onChange={(e) => setVoucherId(e.target.value)}
-                                                className="rounded-xl border-gray-200"
-                                            />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="amount">Cashback Amount (£)</Label>
-                                            <Select value={cashbackAmount} onValueChange={setCashbackAmount}>
+                                            <Select value={selectedUserVoucher} onValueChange={setSelectedUserVoucher}>
                                                 <SelectTrigger className="rounded-xl border-gray-200">
-                                                    <SelectValue placeholder="Select amount" />
+                                                    <SelectValue placeholder="Select customer voucher" />
                                                 </SelectTrigger>
                                                 <SelectContent position="popper" className="z-[1001]">
-                                                    <SelectItem value="2">£2.00 Reward</SelectItem>
-                                                    <SelectItem value="3">£3.00 Reward</SelectItem>
-                                                    <SelectItem value="5">£5.00 Reward</SelectItem>
+                                                    {MOCK_USER_VOUCHERS.map(v => (
+                                                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
+                                                    ))}
                                                 </SelectContent>
                                             </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label>Select Business / Shop</Label>
+                                            <Select value={selectedShopId} onValueChange={setSelectedShopId}>
+                                                <SelectTrigger className="rounded-xl border-gray-200">
+                                                    <SelectValue placeholder="Select participating shop" />
+                                                </SelectTrigger>
+                                                <SelectContent position="popper" className="z-[1001]">
+                                                    {MOCK_SHOPS.map(s => (
+                                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
+                                                    ))}
+                                                </SelectContent>
+                                            </Select>
+                                        </div>
+                                        <div className="space-y-2">
+                                            <Label htmlFor="amount">Reward Amount (£)</Label>
+                                            <Input
+                                                id="amount"
+                                                type="number"
+                                                placeholder="e.g. 5.00"
+                                                value={cashbackAmount}
+                                                onChange={(e) => setCashbackAmount(e.target.value)}
+                                                className="rounded-xl border-gray-200"
+                                            />
                                             <p className="text-xs text-gray-500 italic">
                                                 Businesses never pay real money. You are giving reward value.
                                             </p>
                                         </div>
                                         <DialogFooter className="pt-4">
-                                            <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl">
-                                                Apply Reward
+                                            <Button
+                                                type="submit"
+                                                className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
+                                                disabled={cashbackMutation.isPending}
+                                            >
+                                                {cashbackMutation.isPending ? 'Processing...' : 'Apply Reward'}
                                             </Button>
                                         </DialogFooter>
                                     </form>
