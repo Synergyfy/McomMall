@@ -95,16 +95,11 @@ export default function DashboardLayout({
                 </Sheet>
               </div>
 
-              {/* User Nav (Desktop) - Moved to Left */}
-              <div className="hidden md:block">
+              {/* User Nav (Visible on All Screens, Left Aligned) */}
+              <div>
                 <UserNav align="start" />
               </div>
             </div>
-
-            {/* --- CENTER: DESKTOP NAV MENU --- */}
-            {/* <div className="flex-grow flex justify-center">
-              <NavMenu />
-            </div> */}
 
             {/* --- RIGHT SIDE: Mobile Nav Trigger Only --- */}
             <div className="flex items-center gap-4">
