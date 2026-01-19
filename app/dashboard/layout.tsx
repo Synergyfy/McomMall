@@ -61,7 +61,7 @@ export default function DashboardLayout({
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col">
           <header className="flex items-center justify-between w-full h-20 py-3 px-5 border-b bg-slate-800">
-            {/* --- LEFT SIDE: MOBILE MENU TRIGGER & USER NAV --- */}
+            {/* --- LEFT SIDE: MOBILE MENU TRIGGER --- */}
             <div className="flex items-center gap-4">
               <div className="md:hidden">
                 <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
@@ -94,15 +94,13 @@ export default function DashboardLayout({
                   </SheetContent>
                 </Sheet>
               </div>
-
-              {/* User Nav (Visible on All Screens, Left Aligned) */}
-              <div>
-                <UserNav align="start" />
-              </div>
             </div>
 
-            {/* --- RIGHT SIDE: Mobile Nav Trigger Only --- */}
+            {/* --- RIGHT SIDE: User Nav & Mobile Nav Trigger --- */}
             <div className="flex items-center gap-4">
+              {/* User Nav (Visible on all screens, Right Aligned) */}
+              <UserNav align="end" />
+
               <div className="md:hidden">
                 <Sheet open={isNavMenuOpen} onOpenChange={setIsNavMenuOpen}>
                   <SheetTrigger asChild>
