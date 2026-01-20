@@ -23,7 +23,7 @@ interface PaymentModalProps {
 }
 
 // It is strongly recommended to move the key to environment variables
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
+const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
 
 const PaymentForm = ({ purchaseDetails, onSuccess, onClose }: { purchaseDetails: Omit<InitiatePurchaseDto, "paymentProvider">, onSuccess: () => void, onClose: () => void }) => {
   const stripe = useStripe();
