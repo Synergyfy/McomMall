@@ -2,29 +2,34 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { AnimatePresence, motion } from 'framer-motion';
-import PricingNav from './PricingNav';
-import PayAsYouGoContent from './PayAsYouGoContent';
-import CoBrandedContent from './CoBrandedContent';
-import MobilePricingPage from './MobilePricingPage';
 import PricingCheckoutClient from './PricingCheckoutClient';
-import { PricingTier } from '../types';
+import { Tier } from '@/service/tiers/types';
+import TiersList from '@/app/dashboard/my-subscription/components/TiersList';
 
 export default function PricingPageClient() {
-  const [activeView, setActiveView] = useState<'payg' | 'cobranded'>('payg');
-  const [selectedTier, setSelectedTier] = useState<PricingTier | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
   const [isTrial, setIsTrial] = useState(false);
+
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handlePayNow = (tier: PricingTier) => {
-    setSelectedTier(tier);
-    setIsTrial(false);
-  };
+  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
+      let price = 0;
+      switch(cycle) {
+        case 'monthly': price = tier.monthly_price; break;
+        case 'quarterly': price = tier.quaterly_price; break;
+        case 'annual': price = tier.annual_price; break;
+      }
 
-  const handleStartTrial = (tier: PricingTier) => {
-    setSelectedTier(tier);
-    setIsTrial(true);
+      const priceString = new Intl.NumberFormat('en-GB', {
+           style: 'currency', currency: 'GBP'
+      }).format(Number(price));
+
+      setSelectedTier({
+          name: `${tier.name} (${cycle})`,
+          price: priceString
+      });
+      setIsTrial(false);
   };
 
   if (selectedTier) {
@@ -33,7 +38,7 @@ export default function PricingPageClient() {
         planName={selectedTier.name}
         planPrice={selectedTier.price}
         isTrial={isTrial}
-        isPayg={activeView === 'payg'}
+        isPayg={false}
         listingId={listingId}
       />
     );
@@ -41,7 +46,7 @@ export default function PricingPageClient() {
 
   return (
     <div className="h-full p-4 md:py-10 md:px-20 flex flex-col items-center overflow-y-auto">
-      <header className="text-center">
+      <header className="text-center mb-8">
         <h1 className="text-3xl md:text-5xl font-semibold">
           McomMall Packages and Pricing
         </h1>
@@ -49,69 +54,39 @@ export default function PricingPageClient() {
           Select the package that serves your need.
         </p>
       </header>
-      <section className="w-full md:w-5/6 mt-10 flex flex-col items-center bg-gradient-to-br from-blue-50 via-purple-50 to-teal-50 rounded-lg shadow-lg">
-        {/* Desktop Sidebar */}
-        <aside className="mt-10 md:mt-20 space-y-4">
-          <h3 className="text-xl md:text-2xl font-medium text-center">
-            Select your plan
-          </h3>
-          <div className="hidden rounded-full border h-fit md:block min-w-fit border-r px-10 bg-white/80 backdrop-blur-sm py-5 ">
-            <PricingNav
-              orientation="vertical"
-              activeView={activeView}
-              setActiveView={setActiveView}
-            />
-          </div>
-        </aside>
-        <main className="flex-1 w-full p-4 md:p-8 overflow-auto">
-          {/* Desktop Content */}
-          <div className="hidden md:block">
-            <AnimatePresence mode="wait">
-              {activeView === 'payg' ? (
-                <motion.div
-                  key="payg"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                  <PayAsYouGoContent
-                    listingId={listingId}
-                    onPayNow={handlePayNow}
-                    onStartTrial={handleStartTrial}
-                  />
-                </motion.div>
-              ) : (
-                <motion.div
-                  key="cobranded"
-                  initial={{ opacity: 0, y: 20 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  exit={{ opacity: 0, y: -20 }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                >
-                  <CoBrandedContent
-                    listingId={listingId}
-                    onPayNow={handlePayNow}
-                    onStartTrial={handleStartTrial}
-                  />
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
 
-          {/* Mobile Content */}
-          <div className="block md:hidden">
-            <MobilePricingPage activeView={activeView} listingId={listingId} />
+      {/* Video Guide Section */}
+      <section className="w-full max-w-6xl mb-12 flex flex-col items-center">
+        <div className="w-full p-6 sm:p-8 bg-white rounded-lg shadow-lg">
+          <div className="flex flex-col md:flex-row gap-10 items-center md:items-start">
+            <div className="flex-1 flex flex-col items-center md:items-start">
+              <h2 className="text-2xl sm:text-3xl font-bold text-center md:text-left mb-2 text-blue-900">
+                Your Co-Branded Launchpad
+              </h2>
+              <p className="text-center md:text-left text-gray-600 mb-6 text-base sm:text-lg font-medium">
+                Unlock your brand’s growth. Choose from our plans and gain access to
+                tools, support, and marketing designed to boost your visibility from day one.
+              </p>
+            </div>
+            <div className="w-full md:w-1/2 aspect-video">
+              <iframe
+                className="w-full h-full rounded-lg shadow-md"
+                src="https://www.youtube.com/embed/dQw4w9WgXcQ"
+                title="Demo Video"
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+              ></iframe>
+            </div>
           </div>
-        </main>
-        {/* Mobile Bottom Nav */}
-        <nav className="md:hidden fixed bottom-0 left-0 right-0 border-t p-4 bg-white/80 backdrop-blur-sm z-10">
-          <PricingNav
-            orientation="horizontal"
-            activeView={activeView}
-            setActiveView={setActiveView}
-          />
-        </nav>
+        </div>
+      </section>
+
+      <section className="w-full flex flex-col items-center">
+        <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
+            Select your plan
+        </h3>
+        <TiersList onSelectTier={handleSelectTier} />
       </section>
     </div>
   );

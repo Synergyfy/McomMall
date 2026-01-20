@@ -1,7 +1,7 @@
 'use client';
 
 import { useSearchParams } from 'next/navigation';
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Loader } from 'lucide-react';
 import OrderSummaryCard from './OrderSummaryCard';
@@ -10,7 +10,7 @@ import CouponCodeInput from './CouponCodeInput';
 import GiftCardInput from './GiftCardInput';
 import VoucherInput from './VoucherInput';
 import { useGetProductById } from '@/service/store/products/hook';
-import { useCart } from '@/hooks/useCart';
+import { useCart, CartItem } from '@/hooks/useCart';
 import { loadStripe } from '@stripe/stripe-js';
 import { useCheckout } from '@/hooks/useCheckout';
 import { useSelector } from 'react-redux';
@@ -33,6 +33,7 @@ import {
   CreateCheckoutDto,
   ServiceBookingDetailsDto,
 } from '@/hooks/useCheckout';
+import { Product } from '@/service/listings/types';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -47,6 +48,7 @@ export default function CheckoutClient() {
     'payment_intent_client_secret'
   );
   const quantityFromUrl = searchParams.get('quantity');
+  const variantsFromUrl = searchParams.get('variants');
 
   const { data: product, isLoading: isProductLoading } = useGetProductById(
     productId || ''
@@ -55,6 +57,17 @@ export default function CheckoutClient() {
   const { bookings } = useSelector((state: RootState) => state.booking);
   const [quantity, setQuantity] = useState(quantityFromUrl ? parseInt(quantityFromUrl, 10) : 1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
+  const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (variantsFromUrl) {
+      try {
+        setSelectedVariants(JSON.parse(decodeURIComponent(variantsFromUrl)));
+      } catch (e) {
+        console.error('Failed to parse variants', e);
+      }
+    }
+  }, [variantsFromUrl]);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -108,21 +121,58 @@ export default function CheckoutClient() {
     0
   );
 
-  const basePrice =
-    (fromCart
+  const calculateItemPrice = useCallback((item: CartItem) => {
+    let price = (item.product.salePrice && item.product.salePrice < item.product.price)
+      ? item.product.salePrice
+      : item.product.price;
+    if (item.selectedVariants && item.product.variants) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (item.product.variants as any[]).forEach((v: any) => {
+            const selectedOption = item.selectedVariants?.[v.name];
+            if (selectedOption) {
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const option = v.options.find((o: any) => o.name === selectedOption);
+                if (option) {
+                    price += Number(option.priceModifier) || 0;
+                }
+            }
+        });
+    }
+    return price;
+  }, []);
+
+  const calculateProductPrice = useCallback((product: Product, variants: Record<string, string>) => {
+     let price = product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
+     if (product.variants) {
+        product.variants.forEach((v) => {
+            const selectedOptionName = variants[v.name];
+            if (selectedOptionName) {
+                const option = v.options.find((o) => o.name === selectedOptionName);
+                if (option) {
+                    price += Number(option.priceModifier) || 0;
+                }
+            }
+        });
+     }
+     return price;
+  }, []);
+
+  const basePrice = useMemo(() => {
+    return (fromCart
       ? cart?.items.reduce(
-          (acc, item) => acc + item.product.price * item.quantity,
+          (acc, item) => acc + calculateItemPrice(item) * item.quantity,
           0
         )
       : product
-      ? product.price * quantity
+      ? calculateProductPrice(product, selectedVariants) * quantity
       : 0) || 0;
+  }, [fromCart, cart, product, selectedVariants, quantity, calculateItemPrice, calculateProductPrice]);
 
   const subtotal = basePrice + servicesTotalPrice;
 
   const totalDiscount =
     couponDiscount + offerDiscount + giftCardDiscount + voucherDiscount;
-  const totalPrice = subtotal - totalDiscount;
+  const totalPrice = Math.max(0, subtotal - totalDiscount);
 
   const handleCheckVoucherBalance = async (code: string) => {
     setVoucherLoading(true);
@@ -239,6 +289,7 @@ export default function CheckoutClient() {
         checkoutData.directPurchase = {
           productId: product.id,
           quantity,
+          selectedVariants: Object.keys(selectedVariants).length > 0 ? selectedVariants : undefined,
         };
       }
 
@@ -259,6 +310,9 @@ export default function CheckoutClient() {
       bookings,
       cart,
       productId,
+      selectedVariants,
+      giftCardDiscount,
+      voucherDiscount
     ]
   );
 
@@ -400,6 +454,7 @@ export default function CheckoutClient() {
                   voucherDiscount={voucherDiscount}
                   offerDiscount={offerDiscount}
                   serviceBookings={serviceBookingsForOrder}
+                  selectedVariants={selectedVariants}
                 />
               </div>
             </div>

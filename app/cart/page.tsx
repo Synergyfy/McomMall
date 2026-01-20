@@ -1,11 +1,12 @@
 'use client';
 
-import { useCart } from '@/hooks/useCart';
+import { useCart, CartItem } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Plus, Minus } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
+import { useCallback } from 'react';
 
 export default function CartPage() {
   const {
@@ -15,6 +16,24 @@ export default function CartPage() {
     removeCartItem,
     clearCart,
   } = useCart();
+
+  const calculateItemPrice = useCallback((item: CartItem) => {
+    let price = (item.product.salePrice && item.product.salePrice < item.product.price)
+      ? item.product.salePrice
+      : item.product.price;
+    if (item.selectedVariants && item.product.variants) {
+        item.product.variants.forEach((v) => {
+            const selectedOption = item.selectedVariants?.[v.name];
+            if (selectedOption) {
+                const option = v.options.find((o) => o.name === selectedOption);
+                if (option) {
+                    price += Number(option.priceModifier) || 0;
+                }
+            }
+        });
+    }
+    return price;
+  }, []);
 
   if (loading) {
     return (
@@ -44,7 +63,7 @@ export default function CartPage() {
   };
 
   const total = cart.items.reduce(
-    (acc, item) => acc + item.product.price * item.quantity,
+    (acc, item) => acc + calculateItemPrice(item) * item.quantity,
     0
   );
 
@@ -64,12 +83,13 @@ export default function CartPage() {
                     <Image
                       src={
                         item.product.imageUrl ||
+                        (item.product.fileUrls && item.product.fileUrls[0]) ||
                         'https://via.placeholder.com/100'
                       }
                       alt={item.product.title}
                       width={100}
                       height={100}
-                      className="rounded-md"
+                      className="rounded-md object-cover"
                     />
                   </Link>
                   <div>
@@ -78,8 +98,17 @@ export default function CartPage() {
                         {item.product.title}
                       </h2>
                     </Link>
-                    <p className="text-gray-500">
-                      £{item.product.price.toFixed(2)}
+                    {item.selectedVariants && (
+                        <div className="text-sm text-gray-500 mt-1">
+                            {Object.entries(item.selectedVariants).map(([key, value]) => (
+                                <span key={key} className="mr-3 inline-block bg-gray-100 px-2 py-0.5 rounded">
+                                    <span className="font-medium">{key}:</span> {value as string}
+                                </span>
+                            ))}
+                        </div>
+                    )}
+                    <p className="text-gray-500 mt-1 font-medium">
+                      £{calculateItemPrice(item).toFixed(2)}
                     </p>
                   </div>
                 </div>

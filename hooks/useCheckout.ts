@@ -11,6 +11,7 @@ export interface PaymentDto {
 export interface DirectPurchaseDto {
   productId: string;
   quantity: number;
+  selectedVariants?: Record<string, string>;
 }
 
 export interface GiftCardPurchaseDto {
