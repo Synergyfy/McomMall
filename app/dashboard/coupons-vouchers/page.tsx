@@ -76,7 +76,12 @@ import {
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useGetMyVouchers, useTransferMoney, useGiveCashback } from '@/service/money-engine/hook';
+import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions } from '@/service/money-engine/hook';
+import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
+import { useGetUserProfile } from '@/service/user/hook';
+
+import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
+import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 
 // --- MOCK DATA ---
 
@@ -203,9 +208,21 @@ export default function CouponsVouchersPage() {
     const isCustomer = userRole === UserRole.CUSTOMER;
 
     // API Hooks
+    const { data: userProfile } = useGetUserProfile();
     const { data: myVouchersResponse, isLoading: isLoadingVouchers } = useGetMyVouchers(isCustomer);
+    const { data: businessStats } = useGetBusinessStats(isBusiness);
+    const { data: definitionsResponse, isLoading: isLoadingDefinitions } = useGetOwnerRewardDefinitions(isBusiness);
+    const { data: customerStats } = useGetCustomerStats(isCustomer);
+    // Always fetch public definitions to ensure dropdown populates
+    const { data: publicDefinitionsResponse, isLoading: isLoadingPublicDefinitions, error: definitionsError } = useGetPublicRewardDefinitions(true);
+
+
+
     const transferMutation = useTransferMoney();
     const cashbackMutation = useGiveCashback();
+    const purchaseMutation = usePurchaseVoucher();
+    const createStripeIntentMutation = useCreateStripeIntent();
+    const createPaypalOrderMutation = useCreatePaypalOrder();
 
     const myVouchers = useMemo(() => {
         if (!myVouchersResponse) return [];
@@ -219,26 +236,48 @@ export default function CouponsVouchersPage() {
         }));
     }, [myVouchersResponse]);
 
-    const customerStats = useMemo(() => {
-        const totalBalance = myVouchers.reduce((sum, v) => sum + v.balance, 0);
-        const vouchersOwned = myVouchers.length;
-        return {
-            totalBalance,
-            vouchersOwned,
-            rewardValueEarned: 25 // Keep mock for now as it's not in the DTO
-        };
-    }, [myVouchers]);
+    const voucherTypes = useMemo(() => {
+        if (!definitionsResponse?.data) return [];
+        return definitionsResponse.data.map(d => ({
+            id: d.id,
+            name: d.name,
+            totalValue: 100, // Default display value
+            split: d.splitRatio ? `${d.splitRatio.real * 100}/${d.splitRatio.reward * 100}` : '50/50',
+            cashbackLimit: 5,
+            seasonalLabel: d.seasonalLabels?.[0] || 'General',
+            status: d.isActive ? 'Active' : 'Inactive',
+            usageScope: d.scopeType === 'any_shop' ? 'Any Shop' : (d.scopeType || 'Any Shop'),
+            utilization: d.utilization || 0,
+        }));
+    }, [definitionsResponse]);
+
+
+    const availableVouchersForPurchase = useMemo(() => {
+        if (!publicDefinitionsResponse?.data) return [];
+        return publicDefinitionsResponse.data.map(d => ({
+            id: d.id,
+            name: d.name,
+            description: d.description,
+            // Assuming simplified mock values for now until backend provides exact purchase metadata if needed
+            totalValue: 'Variable',
+        }));
+    }, [publicDefinitionsResponse]);
+
 
     // Form states
     const [topUpAmount, setTopUpAmount] = useState('');
     const [selectedVoucher, setSelectedVoucher] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'PAYPAL'>('STRIPE');
     const [transferRecipient, setTransferRecipient] = useState('');
     const [transferAmount, setTransferAmount] = useState('');
+    const [purchaseStep, setPurchaseStep] = useState<'select' | 'payment'>('select');
+    const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+    const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
     const handleGiveCashback = async (e: React.FormEvent) => {
         e.preventDefault();
-        if (!selectedUserVoucher || !cashbackAmount || !selectedShopId) {
-            toast.error('Please fill in all fields');
+        if (!selectedUserVoucher || !cashbackAmount || !userProfile?.id) {
+            toast.error('Please Select a voucher and amount');
             return;
         }
 
@@ -246,28 +285,60 @@ export default function CouponsVouchersPage() {
             await cashbackMutation.mutateAsync({
                 userVoucherId: selectedUserVoucher,
                 amount: Number(cashbackAmount),
-                shopId: selectedShopId
+                shopId: userProfile?.id || ''
             });
-            toast.success(`Successfully added £${cashbackAmount} cashback`);
+
+            toast.success(`Successfully injected £${cashbackAmount} cashback`);
             setIsCashbackModalOpen(false);
             setCashbackAmount('');
             setSelectedUserVoucher('');
-            setSelectedShopId('');
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to give cashback');
+            toast.error(error?.response?.data?.message || 'Failed to inject cashback');
         }
     };
 
-    const handleTopUp = (e: React.FormEvent) => {
+    const handlePurchaseVoucher = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedVoucher || !topUpAmount) {
-            toast.error('Please select a voucher and amount');
+            toast.error('Please select a voucher and enter an amount');
             return;
         }
-        toast.success(`Successfully topped up £${topUpAmount} to voucher ${selectedVoucher}`);
-        setIsTopUpModalOpen(false);
-        setTopUpAmount('');
-        setSelectedVoucher('');
+
+        try {
+            if (paymentMethod === 'STRIPE') {
+                const intent = await createStripeIntentMutation.mutateAsync({ amount: Number(topUpAmount) });
+                setStripeClientSecret(intent.clientSecret);
+                setPurchaseStep('payment');
+            } else {
+                const order = await createPaypalOrderMutation.mutateAsync({ amount: Number(topUpAmount) });
+                setPaypalOrderId(order.orderId);
+                setPurchaseStep('payment');
+            }
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to initiate payment');
+        }
+    };
+
+    const handlePaymentSuccess = async (transactionId: string) => {
+        try {
+            await purchaseMutation.mutateAsync({
+                rewardDefinitionId: selectedVoucher,
+                paymentAmount: Number(topUpAmount),
+                transactionId: transactionId,
+                paymentGateway: paymentMethod
+            });
+
+            toast.success(`Successfully purchased voucher for £${topUpAmount}`);
+            setIsTopUpModalOpen(false);
+            // Reset state
+            setTopUpAmount('');
+            setSelectedVoucher('');
+            setPurchaseStep('select');
+            setStripeClientSecret(null);
+            setPaypalOrderId(null);
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to finalize purchase. Please contact support.');
+        }
     };
 
     const handleTransfer = async (e: React.FormEvent) => {
@@ -374,61 +445,72 @@ export default function CouponsVouchersPage() {
                 </header>
 
                 {/* Stats Section */}
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                <div className={`grid gap-6 ${isCustomer ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
                     {isBusiness ? (
                         <>
                             <StatCard
-                                title="Active Vouchers"
-                                value={MOCK_BUSINESS_STATS.activeVouchers}
-                                icon={Zap}
-                                description="Currently in circulation"
+                                title="Total Revenue"
+                                value={`£${businessStats?.totalSpentInShop?.toFixed(2) ?? '0.00'}`}
+                                icon={TrendingUp}
+                                description="Total revenue from vouchers"
+                                trend="up"
                             />
                             <StatCard
                                 title="Cashback Given"
-                                value={`£${MOCK_BUSINESS_STATS.cashbackDistributed}`}
+                                value={businessStats?.cashbackGivenCount ?? 0}
                                 icon={Wallet}
-                                description="+12% from last month"
-                                trend="up"
+                                description="Total rewards distributed"
                             />
                             <StatCard
                                 title="Customers Served"
-                                value={MOCK_BUSINESS_STATS.customersServed}
+                                value={businessStats?.customersCount ?? 0}
                                 icon={Users}
-                                description="Unique voucher users"
+                                description="Unique voucher customers"
                             />
                             <StatCard
-                                title="Growth Engine"
-                                value={`${MOCK_BUSINESS_STATS.salesIncrease}%`}
-                                icon={TrendingUp}
-                                description="Estimated sales increase"
-                                trend="up"
+                                title="Avg. Customer Spend"
+                                value={`£${businessStats?.customersCount ? (businessStats.totalSpentInShop / businessStats.customersCount).toFixed(2) : '0.00'}`}
+                                icon={Zap}
+                                description="Average revenue per customer"
                             />
                         </>
                     ) : (
                         <>
                             <StatCard
-                                title="Total Wallet Balance"
-                                value={`£${customerStats.totalBalance}`}
-                                icon={Wallet}
-                                description="Total spending power"
-                            />
-                            <StatCard
-                                title="Reward Value"
-                                value={`£${customerStats.rewardValueEarned}`}
-                                icon={Gift}
-                                description="Value given by businesses"
-                            />
-                            <StatCard
                                 title="Active Vouchers"
-                                value={customerStats.vouchersOwned}
+                                value={customerStats?.activeVouchersCount ?? 0}
                                 icon={Zap}
                                 description="Ready to use"
                             />
                             <StatCard
-                                title="Network Status"
-                                value="Global"
+                                title="Total Balance"
+                                value={`£${customerStats?.totalCurrentBalance?.toFixed(2) ?? '0.00'}`}
+                                icon={Wallet}
+                                description="Total spending power"
+                            />
+                            <StatCard
+                                title="Real Balance"
+                                value={`£${customerStats?.currentRealBalance?.toFixed(2) ?? '0.00'}`}
                                 icon={TrendingUp}
-                                description="Usable at all partners"
+                                description="Your contributed funds"
+                            />
+                            <StatCard
+                                title="Reward Balance"
+                                value={`£${customerStats?.currentRewardBalance?.toFixed(2) ?? '0.00'}`}
+                                icon={Gift}
+                                description="Bonus from businesses"
+                            />
+                            <StatCard
+                                title="Rewards Received"
+                                value={`£${customerStats?.totalBusinessRewardsReceived?.toFixed(2) ?? '0.00'}`}
+                                icon={Users}
+                                description="Total cashback earned"
+                            />
+                            <StatCard
+                                title="Total Spent"
+                                value={`£${customerStats?.totalSpent?.toFixed(2) ?? '0.00'}`}
+                                icon={ArrowUpRight}
+                                description="Lifetime spending"
                             />
                         </>
                     )}
@@ -465,49 +547,36 @@ export default function CouponsVouchersPage() {
                                 <DialogTrigger asChild>
                                     <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg flex items-center gap-2">
                                         <PlusCircle className="w-4 h-4" />
-                                        Give Cashback
+                                        Inject Cashback
                                     </Button>
                                 </DialogTrigger>
                                 <DialogContent className="sm:max-w-[425px]">
                                     <DialogHeader>
-                                        <DialogTitle>Reward Customer</DialogTitle>
+                                        <DialogTitle>Inject Cashback</DialogTitle>
                                         <DialogDescription>
-                                            Add reward value to a customer's Coupon Voucher.
+                                            Inject reward value to a customer's Coupon Voucher.
                                         </DialogDescription>
                                     </DialogHeader>
                                     <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
                                         <div className="space-y-2">
                                             <Label className="flex items-center gap-2">
-                                                Select User Voucher
+                                                Select My Coupon-Voucher
                                                 <Tooltip>
                                                     <TooltipTrigger>
                                                         <Info className="w-3 h-3 text-gray-400" />
                                                     </TooltipTrigger>
                                                     <TooltipContent>
-                                                        <p>Select the customer's voucher to reward</p>
+                                                        <p>Select the voucher type to inject rewards into</p>
                                                     </TooltipContent>
                                                 </Tooltip>
                                             </Label>
                                             <Select value={selectedUserVoucher} onValueChange={setSelectedUserVoucher}>
                                                 <SelectTrigger className="rounded-xl border-gray-200">
-                                                    <SelectValue placeholder="Select customer voucher" />
+                                                    <SelectValue placeholder="Select coupon-voucher" />
                                                 </SelectTrigger>
                                                 <SelectContent position="popper" className="z-[1001]">
-                                                    {MOCK_USER_VOUCHERS.map(v => (
+                                                    {voucherTypes.map(v => (
                                                         <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Select Business / Shop</Label>
-                                            <Select value={selectedShopId} onValueChange={setSelectedShopId}>
-                                                <SelectTrigger className="rounded-xl border-gray-200">
-                                                    <SelectValue placeholder="Select participating shop" />
-                                                </SelectTrigger>
-                                                <SelectContent position="popper" className="z-[1001]">
-                                                    {MOCK_SHOPS.map(s => (
-                                                        <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>
                                                     ))}
                                                 </SelectContent>
                                             </Select>
@@ -532,7 +601,7 @@ export default function CouponsVouchersPage() {
                                                 className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
                                                 disabled={cashbackMutation.isPending}
                                             >
-                                                {cashbackMutation.isPending ? 'Processing...' : 'Apply Reward'}
+                                                {cashbackMutation.isPending ? 'Processing...' : 'Inject Cashback'}
                                             </Button>
                                         </DialogFooter>
                                     </form>
@@ -560,7 +629,7 @@ export default function CouponsVouchersPage() {
                                                 </CardDescription>
                                             </div>
                                             <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 rounded-full px-4 py-1">
-                                                {isBusiness ? MOCK_VOUCHER_TYPES.length : myVouchers.length} Items
+                                                {isBusiness ? (definitionsResponse?.count ?? 0) : myVouchers.length} Items
                                             </Badge>
                                         </div>
                                     </CardHeader>
@@ -578,7 +647,7 @@ export default function CouponsVouchersPage() {
                                             </TableHeader>
                                             <TableBody>
                                                 {isBusiness ? (
-                                                    MOCK_VOUCHER_TYPES.map((vt) => (
+                                                    voucherTypes.map((vt) => (
                                                         <TableRow key={vt.id} className="hover:bg-gray-50/50 transition-colors">
                                                             <TableCell className="py-4">
                                                                 <div className="flex flex-col">
@@ -606,7 +675,7 @@ export default function CouponsVouchersPage() {
                                                             <TableCell className="py-4 text-gray-600">{vt.usageScope}</TableCell>
                                                             <TableCell className="py-4 text-right">
                                                                 <Badge
-                                                                    className={`rounded-full px-3 py-0.5 border-none ${vt.status === 'Active'
+                                                                    className={`rounded-full px-3 py-0.5 border-none font-medium ${vt.status === 'Active'
                                                                         ? 'bg-green-100 text-green-700'
                                                                         : 'bg-gray-100 text-gray-500'
                                                                         }`}
@@ -641,6 +710,20 @@ export default function CouponsVouchersPage() {
                                                             </TableCell>
                                                         </TableRow>
                                                     ))
+                                                )}
+                                                {isBusiness && isLoadingDefinitions && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
+                                                            Loading definitions...
+                                                        </TableCell>
+                                                    </TableRow>
+                                                )}
+                                                {isBusiness && !isLoadingDefinitions && voucherTypes.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
+                                                            No voucher definitions found for your shop.
+                                                        </TableCell>
+                                                    </TableRow>
                                                 )}
                                                 {isCustomer && isLoadingVouchers && (
                                                     <TableRow>
@@ -687,51 +770,172 @@ export default function CouponsVouchersPage() {
                                         </p>
                                         {!isBusiness && (
                                             <div className="flex gap-2">
-                                                <Dialog open={isTopUpModalOpen} onOpenChange={setIsTopUpModalOpen}>
+                                                <Dialog open={isTopUpModalOpen} onOpenChange={(open) => {
+                                                    setIsTopUpModalOpen(open);
+                                                    if (!open) {
+                                                        setPurchaseStep('select');
+                                                        setStripeClientSecret(null);
+                                                        setPaypalOrderId(null);
+                                                    }
+                                                }}>
                                                     <DialogTrigger asChild>
                                                         <Button className="flex-1 bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-semibold border-none">
-                                                            Top Up
+                                                            Purchase Voucher
                                                         </Button>
                                                     </DialogTrigger>
                                                     <DialogContent className="sm:max-w-[425px]">
                                                         <DialogHeader>
-                                                            <DialogTitle>Top Up Voucher</DialogTitle>
+                                                            <DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle>
                                                             <DialogDescription>
-                                                                Add funds to your Coupon Voucher and get matched rewards.
+                                                                {purchaseStep === 'select'
+                                                                    ? 'Buy "Spending Power" and get matched rewards.'
+                                                                    : `Secure payment via ${paymentMethod === 'STRIPE' ? 'Card' : 'PayPal'}`
+                                                                }
                                                             </DialogDescription>
                                                         </DialogHeader>
-                                                        <form onSubmit={handleTopUp} className="space-y-4 py-4">
-                                                            <div className="space-y-2">
-                                                                <Label>Select Voucher</Label>
-                                                                <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
-                                                                    <SelectTrigger className="rounded-xl">
-                                                                        <SelectValue placeholder="Choose a voucher" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent position="popper" className="z-[1001]">
-                                                                        {myVouchers.map(v => (
-                                                                            <SelectItem key={v.id} value={v.id}>{v.name} (Bal: £{v.balance})</SelectItem>
-                                                                        ))}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Amount to Add (£)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder="e.g. 50"
-                                                                    value={topUpAmount}
-                                                                    onChange={(e) => setTopUpAmount(e.target.value)}
-                                                                    className="rounded-xl"
-                                                                />
-                                                                <p className="text-xs text-orange-600 font-medium">
-                                                                    Tip: A £50 top-up will give you £100 total spending power!
-                                                                </p>
-                                                            </div>
-                                                            <div className="pt-2">
-                                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl">
-                                                                    Confirm Payment
-                                                                </Button>
-                                                            </div>
+                                                        <form onSubmit={handlePurchaseVoucher} className="space-y-4 py-4">
+                                                            {purchaseStep === 'select' ? (
+                                                                <>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Select Voucher Type</Label>
+                                                                        <Select value={selectedVoucher || ''} onValueChange={setSelectedVoucher}>
+                                                                            <SelectTrigger className="rounded-xl">
+                                                                                <SelectValue placeholder="Choose a voucher package" />
+                                                                            </SelectTrigger>
+                                                                            <SelectContent
+                                                                                position="popper"
+                                                                                className="max-h-[200px] bg-white border border-gray-200 shadow-xl"
+                                                                                style={{ zIndex: 99999, pointerEvents: 'auto' }}
+                                                                            >
+                                                                                {isLoadingPublicDefinitions ? (
+                                                                                    <div className="p-4 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
+                                                                                        <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
+                                                                                        Loading vouchers...
+                                                                                    </div>
+                                                                                ) : definitionsError ? (
+                                                                                    <div className="p-4 text-xs text-red-500 text-center">
+                                                                                        Failed to load vouchers.
+                                                                                    </div>
+                                                                                ) : availableVouchersForPurchase.length > 0 ? (
+                                                                                    availableVouchersForPurchase.map(vt => (
+                                                                                        <SelectItem key={vt.id} value={vt.id} className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50">
+                                                                                            {vt.name}
+                                                                                        </SelectItem>
+                                                                                    ))
+                                                                                ) : (
+                                                                                    <div className="p-4 text-sm text-gray-500 text-center">
+                                                                                        No vouchers found.
+                                                                                    </div>
+                                                                                )}
+                                                                            </SelectContent>
+                                                                        </Select>
+                                                                        <p className="text-xs text-gray-500">
+                                                                            Select a voucher package to configure your purchase.
+                                                                        </p>
+                                                                    </div>
+                                                                    <div className="space-y-2">
+                                                                        <Label>Payment Amount (£)</Label>
+                                                                        <Input
+                                                                            type="number"
+                                                                            placeholder="e.g. 50"
+                                                                            value={topUpAmount}
+                                                                            onChange={(e) => setTopUpAmount(e.target.value)}
+                                                                            className="rounded-xl"
+                                                                        />
+                                                                        <p className="text-xs text-orange-600 font-medium">
+                                                                            Tip: A £{topUpAmount || '50'} payment gets you £{Number(topUpAmount || 50) * 2} in value!
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="space-y-2">
+                                                                        <Label>Payment Method</Label>
+                                                                        <div className="flex gap-4">
+                                                                            <div
+                                                                                onClick={() => setPaymentMethod('STRIPE')}
+                                                                                className={`flex-1 p-3 rounded-xl border cursor-pointer flex items-center justify-center gap-2 transition-all ${paymentMethod === 'STRIPE' ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium ring-2 ring-orange-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
+                                                                            >
+                                                                                <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
+                                                                                    {paymentMethod === 'STRIPE' && <div className="w-2 h-2 rounded-full bg-current" />}
+                                                                                </div>
+                                                                                Card (Stripe)
+                                                                            </div>
+                                                                            <div
+                                                                                onClick={() => setPaymentMethod('PAYPAL')}
+                                                                                className={`flex-1 p-3 rounded-xl border cursor-pointer flex items-center justify-center gap-2 transition-all ${paymentMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium ring-2 ring-blue-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
+                                                                            >
+                                                                                <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
+                                                                                    {paymentMethod === 'PAYPAL' && <div className="w-2 h-2 rounded-full bg-current" />}
+                                                                                </div>
+                                                                                PayPal
+                                                                            </div>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="pt-2">
+                                                                        <Button
+                                                                            type="submit"
+                                                                            className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
+                                                                            disabled={purchaseMutation.isPending || createStripeIntentMutation.isPending || createPaypalOrderMutation.isPending}
+                                                                        >
+                                                                            {createStripeIntentMutation.isPending || createPaypalOrderMutation.isPending
+                                                                                ? 'Initiating...'
+                                                                                : `Review & Pay £${topUpAmount || '0'}`
+                                                                            }
+                                                                        </Button>
+                                                                    </div>
+                                                                </>
+                                                            ) : (
+                                                                <div className="space-y-4 min-h-[300px]">
+                                                                    <Button
+                                                                        type="button"
+                                                                        variant="ghost"
+                                                                        size="sm"
+                                                                        onClick={() => {
+                                                                            setPurchaseStep('select');
+                                                                            setStripeClientSecret(null);
+                                                                            setPaypalOrderId(null);
+                                                                        }}
+                                                                        className="text-gray-500 hover:text-gray-700 p-0 h-auto flex items-center gap-1"
+                                                                    >
+                                                                        <span>←</span> Back to selection
+                                                                    </Button>
+
+                                                                    <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
+                                                                        <div className="text-sm text-orange-800 font-medium">Order Summary</div>
+                                                                        <div className="flex justify-between text-sm mt-1">
+                                                                            <span className="text-orange-600">Total Value:</span>
+                                                                            <span className="font-bold">£{Number(topUpAmount) * 2}</span>
+                                                                        </div>
+                                                                        <div className="flex justify-between text-sm mt-1 border-t border-orange-200 pt-1">
+                                                                            <span className="text-orange-600 font-medium">Payment Due:</span>
+                                                                            <span className="font-bold text-lg">£{topUpAmount}</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <div className="pt-2">
+                                                                        {paymentMethod === 'STRIPE' && stripeClientSecret && (
+                                                                            <StripeCheckoutForm
+                                                                                clientSecret={stripeClientSecret}
+                                                                                onPaymentSuccess={handlePaymentSuccess}
+                                                                            />
+                                                                        )}
+                                                                        {paymentMethod === 'PAYPAL' && paypalOrderId && (
+                                                                            <PayPalCheckoutButton
+                                                                                orderID={paypalOrderId}
+                                                                                onPaymentSuccess={handlePaymentSuccess}
+                                                                            />
+                                                                        )}
+                                                                        {purchaseMutation.isPending && (
+                                                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-50">
+                                                                                <div className="flex flex-col items-center gap-2">
+                                                                                    <div className="w-8 h-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
+                                                                                    <p className="text-sm font-medium text-orange-600">Finalizing your voucher...</p>
+                                                                                </div>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </form>
                                                     </DialogContent>
                                                 </Dialog>
@@ -765,10 +969,14 @@ export default function CouponsVouchersPage() {
                                                                     <SelectTrigger className="rounded-xl">
                                                                         <SelectValue placeholder="Choose a voucher" />
                                                                     </SelectTrigger>
-                                                                    <SelectContent position="popper" className="z-[1001]">
-                                                                        {myVouchers.map(v => (
-                                                                            <SelectItem key={v.id} value={v.id}>{v.name} (Bal: £{v.balance})</SelectItem>
-                                                                        ))}
+                                                                    <SelectContent position="popper" className="z-[99999]">
+                                                                        {availableVouchersForPurchase.length > 0 ? (
+                                                                            availableVouchersForPurchase.map(vt => (
+                                                                                <SelectItem key={vt.id} value={vt.id}>{vt.name}</SelectItem>
+                                                                            ))
+                                                                        ) : (
+                                                                            <div className="p-2 text-sm text-gray-500 text-center">No vouchers available</div>
+                                                                        )}
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
