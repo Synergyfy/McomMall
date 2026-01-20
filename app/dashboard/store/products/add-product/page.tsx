@@ -415,7 +415,7 @@ export default function AddProductPage() {
   }
 
   return (
-    <div className="bg-gray-50 p-4 sm:p-6 lg:p-8 text-base">
+    <div className="bg-gray-50 min-h-full p-4 sm:p-6 lg:p-8 text-base">
       <div className="max-w-7xl mx-auto">
         <SuccessDialog
           open={isSuccessDialogOpen}
@@ -1278,7 +1278,24 @@ export default function AddProductPage() {
                 </div>
 
                 {/* Sidebar Column */}
-                <div className="space-y-8">
+                <div className="space-y-8 sticky top-6 h-fit">
+                  {/* Publish / Save */}
+                  <Card>
+                    <CardHeader>
+                      <CardTitle className="text-xl">Publish</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <Button
+                        type="submit"
+                        size="lg"
+                        className="w-full bg-red-500 hover:bg-red-600 text-white text-lg py-6"
+                        disabled={isPending}
+                      >
+                        {isPending ? 'Saving...' : 'Save Product'}
+                      </Button>
+                    </CardContent>
+                  </Card>
+
                   {/* Business Listing */}
                   <Card>
                     <CardHeader>
@@ -1574,17 +1591,6 @@ export default function AddProductPage() {
                 </div>
               </div>
 
-              {/* Submission Button */}
-              <div className="flex justify-end">
-                <Button
-                  type="submit"
-                  size="lg"
-                  className="bg-red-500 hover:bg-red-600 text-white text-lg py-7 px-8 flex items-center"
-                  disabled={isPending}
-                >
-                  {isPending ? 'Saving...' : 'Save Product'}
-                </Button>
-              </div>
             </form>
           </Form>
         </FormProvider>
