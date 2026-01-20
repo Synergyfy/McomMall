@@ -24,7 +24,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { useGetMarketplacePublic, useGetMarketplaceSections } from '@/service/marketplace/hook';
+import { useGetMarketplacePublic } from '@/service/marketplace/hook';
 import { SidebarBanner } from '@/service/marketplace/types';
 
 // --- Extended Mock Data for Pagination Demo ---
@@ -58,11 +58,11 @@ export default function MarketplacePage() {
   
   // Data Fetching
   const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
-  const { data: sectionsData } = useGetMarketplaceSections();
 
   const heroSlides = publicData?.heroSlides || [];
   const sidebarBanners = publicData?.sidebarBanners || [];
   const apiCategories = publicData?.categories || [];
+  const sections = publicData?.sections || {};
 
   // Filter State
   const [filters, setFilters] = useState<MarketplaceFiltersState>({
@@ -73,7 +73,6 @@ export default function MarketplacePage() {
   });
 
   // Derived Data (Categories & Brands for Sidebar)
-  // We prefer API categories, but fallback to stats if API is empty (or merge them)
   const sidebarCategories = useMemo(() => {
     if (apiCategories.length > 0) {
       return apiCategories.map(c => ({ name: c.name, count: undefined }));
@@ -104,13 +103,6 @@ export default function MarketplacePage() {
     return () => clearInterval(timer);
   }, [heroSlides.length]);
 
-  // Debug or utilize sections data
-  useEffect(() => {
-    if (sectionsData) {
-      console.log('Marketplace Sections Config:', sectionsData);
-    }
-  }, [sectionsData]);
-
   // Filtering Logic
   const filteredProducts = useMemo(() => {
     return allProducts.filter((product) => {
@@ -128,12 +120,6 @@ export default function MarketplacePage() {
       } else {
         if (product.price < filters.priceRange[0] || product.price > filters.priceRange[1]) return false;
       }
-      // Brands (Mock implementation since product has no brand field)
-      // In real app: if (filters.brands.length > 0 && !filters.brands.includes(product.brand)) return false;
-
-      // Rating (Mock)
-      // In real app: if (filters.minRating && product.rating < filters.minRating) return false;
-
       return true;
     });
   }, [searchQuery, filters]);
@@ -146,7 +132,6 @@ export default function MarketplacePage() {
     } else if (sortOption === 'price-desc') {
       sorted.sort((a, b) => (b.discountedPrice || b.price) - (a.discountedPrice || a.price));
     }
-    // Add more sort options if needed
     return sorted;
   }, [filteredProducts, sortOption]);
 
@@ -163,8 +148,11 @@ export default function MarketplacePage() {
   };
 
   const renderBanner = (banner: SidebarBanner, index: number) => {
-    // Style based on type or fallback to defaults
-    if (banner.type === 'flash_sale') {
+    // Check type or generic style
+    const isFlash = banner.type === 'flash_sale';
+    const isPromo = banner.type === 'sell_promo';
+
+    if (isFlash) {
       return (
         <div key={banner.id || index} className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
             <div className="relative z-10">
@@ -174,14 +162,21 @@ export default function MarketplacePage() {
                   {banner.buttonText || 'View All Deals'}
                 </Link>
             </div>
+            {/* Optional background image for flash sale banners if provided */}
+            {banner.imageUrl && (
+                 <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-20 -z-0" />
+            )}
             <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
         </div>
       );
     }
 
-    if (banner.type === 'sell_promo') {
+    if (isPromo) {
       return (
         <div key={banner.id || index} className="flex-1 bg-gray-900 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden">
+             {banner.imageUrl && (
+                 <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-30 -z-0" />
+            )}
             <div className="relative z-10">
                 <h3 className="text-xl font-bold mb-2">{banner.title}</h3>
                 <p className="text-gray-400 text-sm mb-4">{banner.subTitle || banner.description}</p>
@@ -196,6 +191,9 @@ export default function MarketplacePage() {
     // Generic fallback
     return (
       <div key={banner.id || index} className="flex-1 bg-white rounded-2xl p-6 shadow-lg relative overflow-hidden border border-gray-100">
+          {banner.imageUrl && (
+                 <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-10" />
+            )}
          <div className="relative z-10">
              <h3 className="text-xl font-bold mb-2 text-gray-900">{banner.title}</h3>
              <p className="text-gray-600 text-sm mb-4">{banner.subTitle || banner.description}</p>
@@ -206,6 +204,10 @@ export default function MarketplacePage() {
       </div>
     );
   };
+
+  // Render Flash Sale Section if active
+  // Note: sections can be empty/undefined initially, so we check carefully
+  const flashSaleConfig = sections?.['flash_sale'];
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
@@ -232,10 +234,10 @@ export default function MarketplacePage() {
                     className="absolute inset-0"
                 >
                     <div className="w-full h-full relative">
-                        {heroSlides[activeSlide].imageSrc && (
+                        {heroSlides[activeSlide].imageUrl && (
                              <Image
-                                src={heroSlides[activeSlide].imageSrc}
-                                alt={heroSlides[activeSlide].title}
+                                src={heroSlides[activeSlide].imageUrl}
+                                alt={heroSlides[activeSlide].title || "Hero slide"}
                                 fill
                                 className="object-cover"
                             />
@@ -275,9 +277,26 @@ export default function MarketplacePage() {
 
           {/* Right Side Promo Cards */}
           <div className="flex flex-col gap-6">
+             {/* If Flash Sale Section is Active, show it prominently here or in the banners list */}
+             {flashSaleConfig?.isVisible && (
+                <div className="flex-1 bg-gradient-to-br from-red-600 to-orange-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+                    <div className="relative z-10">
+                        <h3 className="text-2xl font-bold mb-1">{flashSaleConfig.title || 'Flash Sale'}</h3>
+                        {flashSaleConfig.config.endTime && (
+                             <p className="text-red-100 mb-4 font-mono">
+                                Ends: {new Date(flashSaleConfig.config.endTime).toLocaleDateString()}
+                             </p>
+                        )}
+                         <Link href="/flash-sales" className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-red-100">
+                           Shop Deals
+                         </Link>
+                    </div>
+                </div>
+             )}
+
              {sidebarBanners.map((banner, idx) => renderBanner(banner, idx))}
-             {sidebarBanners.length === 0 && (
-                 // Fallback if no banners returned
+
+             {sidebarBanners.length === 0 && !flashSaleConfig?.isVisible && (
                  <div className="flex-1 bg-gray-100 rounded-2xl p-6 flex items-center justify-center text-gray-400">
                      No promotions
                  </div>

@@ -1,38 +1,47 @@
-import { Category } from '../taxonomy/types';
 
 export interface HeroSlide {
   id: string;
-  imageSrc: string;
-  title: string;
+  imageUrl: string;
+  link?: string;
+  title?: string;
   subTitle?: string;
   buttonText?: string;
-  link?: string;
+  displayOrder: number;
 }
 
 export interface SidebarBanner {
   id: string;
-  title: string;
+  imageUrl?: string;
+  title?: string;
   subTitle?: string;
   description?: string;
   buttonText?: string;
   link: string;
-  backgroundImage?: string;
-  backgroundColor?: string;
-  type?: 'flash_sale' | 'sell_promo' | 'generic';
-  endTime?: string; // For flash sales
+  displayOrder: number;
+  type?: string;
+}
+
+export interface MarketplaceCategory {
+  id: string;
+  name: string;
+  iconName: string;
+  targetCategoryId: string;
 }
 
 export interface MarketplaceSectionConfig {
-  id: string;
   title: string;
-  type: string;
-  displayOrder: number;
-  config: Record<string, any>;
+  isVisible: boolean;
+  config: {
+    endTime?: string;
+    backgroundColor?: string;
+    [key: string]: any;
+  };
+  productIds?: string[];
 }
 
 export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];
-  categories: Category[];
+  categories: MarketplaceCategory[];
   sections: Record<string, MarketplaceSectionConfig>;
 }
