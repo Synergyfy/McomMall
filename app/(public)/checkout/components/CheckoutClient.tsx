@@ -122,7 +122,9 @@ export default function CheckoutClient() {
   );
 
   const calculateItemPrice = useCallback((item: CartItem) => {
-    let price = item.product.price;
+    let price = (item.product.salePrice && item.product.salePrice < item.product.price)
+      ? item.product.salePrice
+      : item.product.price;
     if (item.selectedVariants && item.product.variants) {
         (item.product.variants as any[]).forEach((v: any) => {
             const selectedOption = item.selectedVariants?.[v.name];

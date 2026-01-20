@@ -18,7 +18,9 @@ export default function CartPage() {
   } = useCart();
 
   const calculateItemPrice = useCallback((item: CartItem) => {
-    let price = item.product.price;
+    let price = (item.product.salePrice && item.product.salePrice < item.product.price)
+      ? item.product.salePrice
+      : item.product.price;
     if (item.selectedVariants && item.product.variants) {
         // We cast variants to any[] because CartItem.product is any, avoiding TS errors for now
         // Ideally we should type CartItem properly
