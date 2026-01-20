@@ -32,12 +32,15 @@ const generateMoreItems = (baseItems: PromotionalItem[], count: number): Promoti
   const newItems = [];
   for (let i = 0; i < count; i++) {
     const base = baseItems[i % baseItems.length];
+    // Use deterministic math instead of Math.random() to prevent hydration mismatches
+    const pseudoRandom = ((i * 9301 + 49297) % 233280) / 233280;
+
     newItems.push({
       ...base,
       id: 1000 + i,
       title: `${base.title} ${i + 1}`,
-      price: base.price + (Math.random() * 50 - 25),
-      items_left: Math.floor(Math.random() * 50),
+      price: base.price + (pseudoRandom * 50 - 25),
+      items_left: Math.floor(pseudoRandom * 50),
       // Randomize category slightly for filtering demo
       category: i % 3 === 0 ? 'Fashion' : i % 3 === 1 ? 'Electronics' : base.category,
     });
@@ -186,6 +189,40 @@ export default function MarketplacePage() {
             </div>
         </div>
       );
+    }
+
+    // Specific Sidebar Banner type
+    if (banner.type === 'sidebar_banner') {
+        return (
+            <div key={banner.id || index} className="flex-1 rounded-2xl shadow-lg relative overflow-hidden aspect-[4/3] group">
+                <Link href={banner.link} className="block w-full h-full relative">
+                    {banner.imageUrl ? (
+                        <Image
+                            src={banner.imageUrl}
+                            alt={banner.title || "Banner"}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                        />
+                    ) : (
+                        <div className="w-full h-full bg-gray-200 flex items-center justify-center">
+                            <span className="text-gray-400">No Image</span>
+                        </div>
+                    )}
+                    {/* Optional overlay for text if provided, otherwise the image stands alone */}
+                    {(banner.title || banner.buttonText) && (
+                        <div className="absolute inset-0 bg-black/20 group-hover:bg-black/30 transition-colors flex flex-col justify-end p-6">
+                            {banner.title && <h3 className="text-white text-xl font-bold mb-1">{banner.title}</h3>}
+                            {banner.subTitle && <p className="text-white/90 text-sm mb-3">{banner.subTitle}</p>}
+                            {banner.buttonText && (
+                                <span className="inline-block bg-white text-black px-4 py-2 rounded-full text-sm font-semibold w-fit">
+                                    {banner.buttonText}
+                                </span>
+                            )}
+                        </div>
+                    )}
+                </Link>
+            </div>
+        );
     }
 
     // Generic fallback
