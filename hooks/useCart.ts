@@ -9,7 +9,7 @@ import { setCart, setLoading } from '@/service/store/cartSlice';
 export interface AddItemToCartDto {
   productId: string;
   quantity: number;
-  variants?: Record<string, string>;
+  selectedVariants?: Record<string, string>;
 }
 
 export interface UpdateCartItemDto {
@@ -22,6 +22,7 @@ export interface CartItem {
   id: string;
   product: any; // You might want to replace 'any' with a proper Product interface
   quantity: number;
+  selectedVariants?: Record<string, string>;
   cart: any;
   created_at: Date;
   updated_at: Date;
@@ -74,7 +75,7 @@ export const useCart = () => {
       const { data } = await api.post<Cart>('/cart/add', {
         productId: item.productId,
         quantity: item.quantity,
-        variants: item.variants,
+        selectedVariants: item.selectedVariants,
       });
       dispatch(setCart(data));
       localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(data));

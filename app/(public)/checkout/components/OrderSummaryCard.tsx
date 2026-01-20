@@ -9,6 +9,7 @@ import { Minus, Plus, Ticket, Gift, Tag, Percent, Calendar } from 'lucide-react'
 import { CURRENCY } from '@/lib/utils';
 import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 import { format } from 'date-fns';
+import { useCallback } from 'react';
 
 interface OrderSummaryCardProps {
   product?: Product;
@@ -23,6 +24,7 @@ interface OrderSummaryCardProps {
   voucherDiscount: number;
   offerDiscount: number;
   serviceBookings?: ServiceBookingDetailsDto[] | null;
+  selectedVariants?: Record<string, string>;
 }
 
 export default function OrderSummaryCard({
@@ -38,6 +40,7 @@ export default function OrderSummaryCard({
   voucherDiscount,
   offerDiscount,
   serviceBookings,
+  selectedVariants,
 }: OrderSummaryCardProps) {
   const handleQuantityChange = (amount: number) => {
     setQuantity((prev) => Math.max(1, prev + amount));
@@ -54,6 +57,22 @@ export default function OrderSummaryCard({
       },
     }),
   };
+
+  const calculatePrice = useCallback((itemProduct: any, variants?: Record<string, string>) => {
+    let price = itemProduct.salePrice && itemProduct.salePrice < itemProduct.price ? itemProduct.salePrice : itemProduct.price;
+    if (variants && itemProduct.variants) {
+         (itemProduct.variants as any[]).forEach((v: any) => {
+            const selectedOptionName = variants[v.name];
+            if (selectedOptionName) {
+                const option = v.options.find((o: any) => o.name === selectedOptionName);
+                if (option) {
+                    price += Number(option.priceModifier) || 0;
+                }
+            }
+        });
+    }
+    return price;
+  }, []);
 
   const renderDiscountLine = (
     label: string,
@@ -93,7 +112,9 @@ export default function OrderSummaryCard({
       {/* Product/Cart Items */}
       {fromCart ? (
         <div className="space-y-4">
-          {cart?.items.map((item, index) => (
+          {cart?.items.map((item, index) => {
+            const itemPrice = calculatePrice(item.product, item.selectedVariants);
+            return (
             <motion.div
               key={item.id}
               custom={index}
@@ -104,7 +125,7 @@ export default function OrderSummaryCard({
             >
               <div className="relative w-16 h-16">
                 <Image
-                  src={item.product.imageUrl || '/placeholder.svg'}
+                  src={item.product.imageUrl || (item.product.fileUrls && item.product.fileUrls[0]) || '/placeholder.svg'}
                   alt={item.product.title}
                   layout="fill"
                   className="object-cover rounded-lg shadow-sm"
@@ -114,17 +135,24 @@ export default function OrderSummaryCard({
                 <h3 className="font-semibold text-gray-800">
                   {item.product.title}
                 </h3>
+                {item.selectedVariants && (
+                   <div className="text-xs text-gray-500 mb-1">
+                       {Object.entries(item.selectedVariants).map(([key, val]) => (
+                           <span key={key} className="mr-2">{key}: {val as string}</span>
+                       ))}
+                   </div>
+                )}
                 <p className="text-sm text-gray-500">
                   {CURRENCY}
-                  {item.product.price.toFixed(2)} x {item.quantity}
+                  {itemPrice.toFixed(2)} x {item.quantity}
                 </p>
               </div>
               <p className="font-semibold text-gray-800">
                 {CURRENCY}
-                {(item.product.price * item.quantity).toFixed(2)}
+                {(itemPrice * item.quantity).toFixed(2)}
               </p>
             </motion.div>
-          ))}
+          )})}
         </div>
       ) : (
         product && (
@@ -132,7 +160,7 @@ export default function OrderSummaryCard({
             <div className="flex items-center space-x-4">
               <div className="relative w-24 h-24">
                 <Image
-                  src={product.imageUrl || '/placeholder.svg'}
+                  src={product.imageUrl || (product.fileUrls && product.fileUrls[0]) || '/placeholder.svg'}
                   alt={product.title}
                   layout="fill"
                   className="object-cover rounded-lg shadow-sm"
@@ -142,9 +170,16 @@ export default function OrderSummaryCard({
                 <h3 className="text-lg font-bold text-gray-800">
                   {product.title}
                 </h3>
+                {selectedVariants && Object.keys(selectedVariants).length > 0 && (
+                   <div className="text-sm text-gray-500 mb-1">
+                       {Object.entries(selectedVariants).map(([key, val]) => (
+                           <span key={key} className="mr-2">{key}: {val}</span>
+                       ))}
+                   </div>
+                )}
                 <p className="text-md text-gray-600">
                   {CURRENCY}
-                  {product.price.toFixed(2)}
+                  {calculatePrice(product, selectedVariants).toFixed(2)}
                 </p>
               </div>
             </div>
