@@ -7,7 +7,8 @@ import {
   LayoutGrid,
   List as ListIcon,
   Search,
-  ChevronDown
+  ChevronDown,
+  Loader2
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
@@ -23,6 +24,8 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
+import { useGetMarketplacePublic, useGetMarketplaceSections } from '@/service/marketplace/hook';
+import { SidebarBanner } from '@/service/marketplace/types';
 
 // --- Extended Mock Data for Pagination Demo ---
 const generateMoreItems = (baseItems: PromotionalItem[], count: number): PromotionalItem[] => {
@@ -46,12 +49,6 @@ const allProducts = generateMoreItems(promotionalItems, 40);
 
 const ITEMS_PER_PAGE = 12;
 
-const treasureHuntSlides = [
-  { imageSrc: 'images/landscap.jpg', title: 'Summer Collection', sub: 'Up to 50% Off' },
-  { imageSrc: 'images/summer.jpg', title: 'New Arrivals', sub: 'Check them out' },
-  { imageSrc: 'images/winter.jpg', title: 'Winter Sale', sub: 'Warm up with cool deals' },
-];
-
 export default function MarketplacePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -59,6 +56,14 @@ export default function MarketplacePage() {
   const [sortOption, setSortOption] = useState('featured');
   const [searchQuery, setSearchQuery] = useState('');
   
+  // Data Fetching
+  const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
+  const { data: sectionsData } = useGetMarketplaceSections();
+
+  const heroSlides = publicData?.heroSlides || [];
+  const sidebarBanners = publicData?.sidebarBanners || [];
+  const apiCategories = publicData?.categories || [];
+
   // Filter State
   const [filters, setFilters] = useState<MarketplaceFiltersState>({
     categories: [],
@@ -68,13 +73,18 @@ export default function MarketplacePage() {
   });
 
   // Derived Data (Categories & Brands for Sidebar)
-  const categoryStats = useMemo(() => {
+  // We prefer API categories, but fallback to stats if API is empty (or merge them)
+  const sidebarCategories = useMemo(() => {
+    if (apiCategories.length > 0) {
+      return apiCategories.map(c => ({ name: c.name, count: undefined }));
+    }
+    // Fallback to mock stats
     const stats: Record<string, number> = {};
     allProducts.forEach(p => {
       stats[p.category] = (stats[p.category] || 0) + 1;
     });
     return Object.entries(stats).map(([name, count]) => ({ name, count }));
-  }, []);
+  }, [apiCategories]);
 
   // Mock Brands
   const brandStats = [
@@ -87,11 +97,19 @@ export default function MarketplacePage() {
   ];
 
   useEffect(() => {
+    if (heroSlides.length === 0) return;
     const timer = setInterval(() => {
-      setActiveSlide((prev) => (prev + 1) % treasureHuntSlides.length);
+      setActiveSlide((prev) => (prev + 1) % heroSlides.length);
     }, 8000);
     return () => clearInterval(timer);
-  }, []);
+  }, [heroSlides.length]);
+
+  // Debug or utilize sections data
+  useEffect(() => {
+    if (sectionsData) {
+      console.log('Marketplace Sections Config:', sectionsData);
+    }
+  }, [sectionsData]);
 
   // Filtering Logic
   const filteredProducts = useMemo(() => {
@@ -144,73 +162,129 @@ export default function MarketplacePage() {
     setCurrentPage(1); // Reset to first page on filter change
   };
 
+  const renderBanner = (banner: SidebarBanner, index: number) => {
+    // Style based on type or fallback to defaults
+    if (banner.type === 'flash_sale') {
+      return (
+        <div key={banner.id || index} className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+            <div className="relative z-10">
+                <h3 className="text-2xl font-bold mb-1">{banner.title}</h3>
+                <p className="text-orange-100 mb-4">{banner.subTitle || banner.description}</p>
+                <Link href={banner.link} className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">
+                  {banner.buttonText || 'View All Deals'}
+                </Link>
+            </div>
+            <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
+        </div>
+      );
+    }
+
+    if (banner.type === 'sell_promo') {
+      return (
+        <div key={banner.id || index} className="flex-1 bg-gray-900 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden">
+            <div className="relative z-10">
+                <h3 className="text-xl font-bold mb-2">{banner.title}</h3>
+                <p className="text-gray-400 text-sm mb-4">{banner.subTitle || banner.description}</p>
+                 <Button variant="outline" className="border-gray-700 text-white hover:bg-white hover:text-black" asChild>
+                    <Link href={banner.link}>{banner.buttonText || 'Start Selling'}</Link>
+                 </Button>
+            </div>
+        </div>
+      );
+    }
+
+    // Generic fallback
+    return (
+      <div key={banner.id || index} className="flex-1 bg-white rounded-2xl p-6 shadow-lg relative overflow-hidden border border-gray-100">
+         <div className="relative z-10">
+             <h3 className="text-xl font-bold mb-2 text-gray-900">{banner.title}</h3>
+             <p className="text-gray-600 text-sm mb-4">{banner.subTitle || banner.description}</p>
+             <Button className="w-full" asChild>
+                <Link href={banner.link}>{banner.buttonText || 'Explore'}</Link>
+             </Button>
+         </div>
+      </div>
+    );
+  };
+
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
       <div className="container mx-auto px-4">
         
         {/* 1. Hero Section (Treasure Hunt & Promotions) */}
+        {isPublicDataLoading ? (
+             <div className="h-[400px] w-full flex items-center justify-center bg-white rounded-2xl shadow-sm">
+                <Loader2 className="h-8 w-8 animate-spin text-primary" />
+             </div>
+        ) : (
         <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Slider */}
-          <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group">
-            <AnimatePresence mode="wait">
-              <motion.div
-                key={activeSlide}
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                exit={{ opacity: 0 }}
-                transition={{ duration: 0.8 }}
-                className="absolute inset-0"
-              >
-                 {/* Placeholder for images if they don't exist, using colors/gradients */}
-                 <div className={`w-full h-full ${activeSlide === 0 ? 'bg-blue-100' : activeSlide === 1 ? 'bg-amber-100' : 'bg-rose-100'}`}>
-                    <Image
-                      src={treasureHuntSlides[activeSlide].imageSrc}
-                      alt={treasureHuntSlides[activeSlide].title}
-                      fill
-                      className="object-cover"
-                      // Fallback logic could be handled by a specific component or error handler
-                    />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
-                      <h2 className="text-4xl font-bold text-white mb-2">{treasureHuntSlides[activeSlide].title}</h2>
-                      <p className="text-xl text-gray-200">{treasureHuntSlides[activeSlide].sub}</p>
-                      <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100">Shop Now</Button>
+          <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group bg-gray-200">
+            {heroSlides.length > 0 ? (
+                <>
+                <AnimatePresence mode="wait">
+                <motion.div
+                    key={activeSlide}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    exit={{ opacity: 0 }}
+                    transition={{ duration: 0.8 }}
+                    className="absolute inset-0"
+                >
+                    <div className="w-full h-full relative">
+                        {heroSlides[activeSlide].imageSrc && (
+                             <Image
+                                src={heroSlides[activeSlide].imageSrc}
+                                alt={heroSlides[activeSlide].title}
+                                fill
+                                className="object-cover"
+                            />
+                        )}
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
+                            <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
+                            <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
+                            {heroSlides[activeSlide].link && (
+                                <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
+                                    <Link href={heroSlides[activeSlide].link!}>
+                                        {heroSlides[activeSlide].buttonText || 'Shop Now'}
+                                    </Link>
+                                </Button>
+                            )}
+                        </div>
                     </div>
-                 </div>
-              </motion.div>
-            </AnimatePresence>
-            <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
-              {treasureHuntSlides.map((_, index) => (
-                <button
-                  key={index}
-                  onClick={() => setActiveSlide(index)}
-                  className={`h-2 w-2 rounded-full transition-all ${
-                    activeSlide === index ? 'bg-white w-6' : 'bg-white/50'
-                  }`}
-                />
-              ))}
-            </div>
+                </motion.div>
+                </AnimatePresence>
+                <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
+                {heroSlides.map((_, index) => (
+                    <button
+                    key={index}
+                    onClick={() => setActiveSlide(index)}
+                    className={`h-2 w-2 rounded-full transition-all ${
+                        activeSlide === index ? 'bg-white w-6' : 'bg-white/50'
+                    }`}
+                    />
+                ))}
+                </div>
+                </>
+            ) : (
+                <div className="flex items-center justify-center h-full text-gray-400">
+                    No active slides
+                </div>
+            )}
           </div>
 
           {/* Right Side Promo Cards */}
           <div className="flex flex-col gap-6">
-            <div className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                <div className="relative z-10">
-                    <h3 className="text-2xl font-bold mb-1">Flash Sale</h3>
-                    <p className="text-orange-100 mb-4">Ends in 01:11:01</p>
-                    <Link href="/flash-sales" className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">View All Deals</Link>
-                </div>
-                {/* Decorative circle */}
-                <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl" />
-            </div>
-             <div className="flex-1 bg-gray-900 rounded-2xl p-6 text-white shadow-lg flex flex-col justify-center items-center text-center relative overflow-hidden">
-                <div className="relative z-10">
-                    <h3 className="text-xl font-bold mb-2">Sell on MCom</h3>
-                    <p className="text-gray-400 text-sm mb-4">Reach millions of customers today</p>
-                     <Button variant="outline" className="border-gray-700 text-white hover:bg-white hover:text-black">Start Selling</Button>
-                </div>
-            </div>
+             {sidebarBanners.map((banner, idx) => renderBanner(banner, idx))}
+             {sidebarBanners.length === 0 && (
+                 // Fallback if no banners returned
+                 <div className="flex-1 bg-gray-100 rounded-2xl p-6 flex items-center justify-center text-gray-400">
+                     No promotions
+                 </div>
+             )}
           </div>
         </div>
+        )}
 
         {/* 2. Main Layout Split */}
         <div className="flex flex-col lg:flex-row gap-8">
@@ -219,7 +293,7 @@ export default function MarketplacePage() {
           <aside className="hidden lg:block w-64 flex-shrink-0">
              <div className="sticky top-28">
                 <MarketplaceSidebar
-                  categories={categoryStats}
+                  categories={sidebarCategories}
                   brands={brandStats}
                   onFilterChange={handleFilterChange}
                   initialFilters={filters}
