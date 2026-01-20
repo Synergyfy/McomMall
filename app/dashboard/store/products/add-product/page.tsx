@@ -1278,7 +1278,7 @@ export default function AddProductPage() {
                 </div>
 
                 {/* Sidebar Column */}
-                <div className="space-y-8 sticky top-6 h-fit">
+                <div className="space-y-8 sticky top-6 h-fit max-h-[calc(100vh-3rem)] overflow-y-auto custom-scrollbar">
                   {/* Publish / Save */}
                   <Card>
                     <CardHeader>

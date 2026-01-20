@@ -52,7 +52,7 @@ export default function DashboardLayout({
               </div>
               <span className="text-3xl font-semibold">McomMall</span>
             </Link>
-            <div className="flex-grow h-calc[(100vh-5rem)] overflow-y-auto">
+            <div className="flex-grow min-h-0 overflow-y-auto">
               <SideMenu />
             </div>
           </div>

@@ -698,7 +698,7 @@ export default function AddServicePage() {
               </div>
 
               {/* --- RIGHT COLUMN (Sticky Sidebar) --- */}
-              <div className="space-y-8 sticky top-6 h-fit">
+              <div className="space-y-8 sticky top-6 h-fit max-h-[calc(100vh-3rem)] overflow-y-auto custom-scrollbar">
 
                 {/* Actions */}
                 <Card>
