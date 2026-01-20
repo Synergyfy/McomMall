@@ -4,6 +4,7 @@ import api from '@/service/api';
 import { useAuth } from '@/service/auth/hook';
 import { RootState, AppDispatch } from '@/service/store/store';
 import { setCart, setLoading } from '@/service/store/cartSlice';
+import { Product } from '@/service/listings/types';
 
 // DTOs
 export interface AddItemToCartDto {
@@ -20,7 +21,7 @@ export interface UpdateCartItemDto {
 // Cart interfaces
 export interface CartItem {
   id: string;
-  product: any; // You might want to replace 'any' with a proper Product interface
+  product: Product;
   quantity: number;
   selectedVariants?: Record<string, string>;
   cart: any;

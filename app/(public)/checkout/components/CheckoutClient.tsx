@@ -126,10 +126,10 @@ export default function CheckoutClient() {
       ? item.product.salePrice
       : item.product.price;
     if (item.selectedVariants && item.product.variants) {
-        (item.product.variants as any[]).forEach((v: any) => {
+        item.product.variants.forEach((v) => {
             const selectedOption = item.selectedVariants?.[v.name];
             if (selectedOption) {
-                const option = v.options.find((o: any) => o.name === selectedOption);
+                const option = v.options.find((o) => o.name === selectedOption);
                 if (option) {
                     price += Number(option.priceModifier) || 0;
                 }
