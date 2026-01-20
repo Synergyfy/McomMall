@@ -226,7 +226,7 @@ export default function AddServicePage() {
   const isQuoteModel = form.watch('isQuoteModel');
 
   return (
-    <div className="bg-gray-50 min-h-full p-4 sm:p-6 lg:p-8 font-sans">
+    <div className="font-sans">
        <SuccessAnimationDialog
         isOpen={showSuccessDialog}
         onClose={() => {
