@@ -161,7 +161,7 @@ export default function MarketplacePage() {
             <div className="relative z-10">
                 <h3 className="text-2xl font-bold mb-1">{banner.title}</h3>
                 <p className="text-orange-100 mb-4">{banner.subTitle || banner.description}</p>
-                <Link href={banner.link} className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">
+                <Link href={banner.link || '#'} className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">
                   {banner.buttonText || 'View All Deals'}
                 </Link>
             </div>
@@ -184,7 +184,7 @@ export default function MarketplacePage() {
                 <h3 className="text-xl font-bold mb-2">{banner.title}</h3>
                 <p className="text-gray-400 text-sm mb-4">{banner.subTitle || banner.description}</p>
                  <Button variant="outline" className="border-gray-700 text-white hover:bg-white hover:text-black" asChild>
-                    <Link href={banner.link}>{banner.buttonText || 'Start Selling'}</Link>
+                    <Link href={banner.link || '#'}>{banner.buttonText || 'Start Selling'}</Link>
                  </Button>
             </div>
         </div>
@@ -195,7 +195,7 @@ export default function MarketplacePage() {
     if (banner.type === 'sidebar_banner') {
         return (
             <div key={banner.id || index} className="flex-1 rounded-2xl shadow-lg relative overflow-hidden aspect-[4/3] group">
-                <Link href={banner.link} className="block w-full h-full relative">
+                <Link href={banner.link || '#'} className="block w-full h-full relative">
                     {banner.imageUrl ? (
                         <Image
                             src={banner.imageUrl}
@@ -235,7 +235,7 @@ export default function MarketplacePage() {
              <h3 className="text-xl font-bold mb-2 text-gray-900">{banner.title}</h3>
              <p className="text-gray-600 text-sm mb-4">{banner.subTitle || banner.description}</p>
              <Button className="w-full" asChild>
-                <Link href={banner.link}>{banner.buttonText || 'Explore'}</Link>
+                <Link href={banner.link || '#'}>{banner.buttonText || 'Explore'}</Link>
              </Button>
          </div>
       </div>
@@ -284,7 +284,7 @@ export default function MarketplacePage() {
                             <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
                             {heroSlides[activeSlide].link && (
                                 <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
-                                    <Link href={heroSlides[activeSlide].link!}>
+                                    <Link href={heroSlides[activeSlide].link || '#'}>
                                         {heroSlides[activeSlide].buttonText || 'Shop Now'}
                                     </Link>
                                 </Button>
