@@ -58,13 +58,13 @@ export default function OrderSummaryCard({
     }),
   };
 
-  const calculatePrice = useCallback((itemProduct: any, variants?: Record<string, string>) => {
+  const calculatePrice = useCallback((itemProduct: Product, variants?: Record<string, string>) => {
     let price = itemProduct.salePrice && itemProduct.salePrice < itemProduct.price ? itemProduct.salePrice : itemProduct.price;
     if (variants && itemProduct.variants) {
-         (itemProduct.variants as any[]).forEach((v: any) => {
+         itemProduct.variants.forEach((v) => {
             const selectedOptionName = variants[v.name];
             if (selectedOptionName) {
-                const option = v.options.find((o: any) => o.name === selectedOptionName);
+                const option = v.options.find((o) => o.name === selectedOptionName);
                 if (option) {
                     price += Number(option.priceModifier) || 0;
                 }

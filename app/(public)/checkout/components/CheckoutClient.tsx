@@ -126,10 +126,12 @@ export default function CheckoutClient() {
       ? item.product.salePrice
       : item.product.price;
     if (item.selectedVariants && item.product.variants) {
-        item.product.variants.forEach((v) => {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        (item.product.variants as any[]).forEach((v: any) => {
             const selectedOption = item.selectedVariants?.[v.name];
             if (selectedOption) {
-                const option = v.options.find((o) => o.name === selectedOption);
+                // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                const option = v.options.find((o: any) => o.name === selectedOption);
                 if (option) {
                     price += Number(option.priceModifier) || 0;
                 }
@@ -309,6 +311,8 @@ export default function CheckoutClient() {
       cart,
       productId,
       selectedVariants,
+      giftCardDiscount,
+      voucherDiscount
     ]
   );
 
