@@ -18,7 +18,11 @@ import {
 } from '@/components/ui/dropdown-menu';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 
-export default function UserNav() {
+interface UserNavProps {
+  align?: 'center' | 'end' | 'start';
+}
+
+export default function UserNav({ align = 'end' }: UserNavProps) {
   const { userName, userRole, packageInfo } = useSelector(
     (state: RootState) => state.auth
   );
@@ -63,7 +67,7 @@ export default function UserNav() {
           <ChevronDown className="hidden h-4 w-4 sm:block ml-auto" />
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className="w-56 bg-white">
+      <DropdownMenuContent align={align} className="w-56 bg-white">
         {userRole === 'owner' && (
           <>
             <DropdownMenuItem asChild>

@@ -66,9 +66,14 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
     ['Reviews', 'Bookmarks'].includes(item.title)
   );
 
-  const customerMainMenu = mainMenuItems.filter(item =>
-    ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub'].includes(item.title)
-  );
+  const cashbackItem = accountMenuItems.find(item => item.title === 'Cashback');
+
+  const customerMainMenu = [
+    ...mainMenuItems.filter(item =>
+      ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub'].includes(item.title)
+    ),
+    ...(cashbackItem ? [cashbackItem] : []),
+  ];
 
   const customerProductMenu = productMenuItems.filter(item =>
     ['Orders'].includes(item.title)
