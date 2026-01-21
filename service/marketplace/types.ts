@@ -38,11 +38,17 @@ export interface MarketplaceSectionConfig {
     [key: string]: any;
   };
   productIds?: string[];
+  // Snake case fallbacks
+  is_visible?: boolean;
+  product_ids?: string[];
 }
 
 export interface MarketplaceSections {
   flashSale?: MarketplaceSectionConfig;
   promoCarousel?: MarketplaceSectionConfig;
+  // Snake case fallbacks
+  flash_sale?: MarketplaceSectionConfig;
+  promo_carousel?: MarketplaceSectionConfig;
   [key: string]: MarketplaceSectionConfig | undefined;
 }
 

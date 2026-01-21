@@ -70,8 +70,20 @@ export default function MarketplacePage() {
   const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
   const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
-  // Use camelCase keys as per API response
-  const flashSaleConfig = sections?.flashSale;
+  // Helper to handle both camelCase (API docs) and snake_case (potential legacy API)
+  const getSection = (key: 'flashSale' | 'promoCarousel', snakeKey: 'flash_sale' | 'promo_carousel') => {
+      const config = sections?.[key] || sections?.[snakeKey];
+      if (!config) return null;
+      return {
+          ...config,
+          isVisible: config.isVisible ?? config.is_visible ?? false,
+          productIds: config.productIds || config.product_ids || [],
+          title: config.title || '',
+      };
+  };
+
+  const flashSaleConfig = getSection('flashSale', 'flash_sale');
+  const promoCarouselConfig = getSection('promoCarousel', 'promo_carousel');
 
   // Combine Flash Sale and Banners for the sidebar slider
   const sidebarSlides = useMemo(() => {
@@ -413,11 +425,11 @@ export default function MarketplacePage() {
         )}
 
         {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
-        {sections?.flashSale?.isVisible && sections.flashSale.productIds && (
-             <MarketplaceSection title={sections.flashSale.title} productIds={sections.flashSale.productIds} />
+        {flashSaleConfig?.isVisible && flashSaleConfig.productIds && (
+             <MarketplaceSection title={flashSaleConfig.title} productIds={flashSaleConfig.productIds} />
         )}
-         {sections?.promoCarousel?.isVisible && sections.promoCarousel.productIds && (
-             <MarketplaceSection title={sections.promoCarousel.title} productIds={sections.promoCarousel.productIds} />
+         {promoCarouselConfig?.isVisible && promoCarouselConfig.productIds && (
+             <MarketplaceSection title={promoCarouselConfig.title} productIds={promoCarouselConfig.productIds} />
         )}
 
         {/* 2. Main Layout Split */}
