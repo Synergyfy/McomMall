@@ -413,10 +413,10 @@ export default function MarketplacePage() {
         )}
 
         {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
-        {sections?.flashSale?.isVisible && sections.flashSale.productIds && sections.flashSale.productIds.length > 0 && (
+        {sections?.flashSale?.isVisible && sections.flashSale.productIds && (
              <MarketplaceSection title={sections.flashSale.title} productIds={sections.flashSale.productIds} />
         )}
-         {sections?.promoCarousel?.isVisible && sections.promoCarousel.productIds && sections.promoCarousel.productIds.length > 0 && (
+         {sections?.promoCarousel?.isVisible && sections.promoCarousel.productIds && (
              <MarketplaceSection title={sections.promoCarousel.title} productIds={sections.promoCarousel.productIds} />
         )}
 

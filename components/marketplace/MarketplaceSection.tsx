@@ -57,8 +57,6 @@ export default function MarketplaceSection({ title, productIds }: MarketplaceSec
     }
   };
 
-  if (productIds.length === 0) return null;
-
   return (
     <div className="mb-12">
       <div className="flex items-center justify-between mb-6">
