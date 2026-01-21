@@ -80,6 +80,27 @@ import { useGetUserProfile } from '@/service/user/hook';
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 
+// --- TYPES ---
+interface ApiError {
+    response?: {
+        data?: {
+            message?: string;
+        }
+    }
+}
+
+interface VoucherDisplayData {
+    id: string;
+    name: string;
+    balance: number;
+    status: string;
+    totalValue: number;
+    description?: string;
+    split?: string;
+    scope?: string;
+    transactions: unknown[];
+}
+
 // --- COMPONENTS ---
 
 interface StatCardProps {
@@ -123,9 +144,9 @@ export default function CouponsVouchersPage() {
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [isSpendModalOpen, setIsSpendModalOpen] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-    const [selectedVoucherForQR, setSelectedVoucherForQR] = useState<any>(null);
+    const [selectedVoucherForQR, setSelectedVoucherForQR] = useState<VoucherDisplayData | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<any>(null);
+    const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<VoucherDisplayData | null>(null);
 
     const [shopIdInput, setShopIdInput] = useState('');
     const [isCustomerSpendModalOpen, setIsCustomerSpendModalOpen] = useState(false);
@@ -140,11 +161,11 @@ export default function CouponsVouchersPage() {
 
     // API Hooks
     const { data: userProfile } = useGetUserProfile();
-    const { data: myVouchersResponse, isLoading: isLoadingVouchers } = useGetMyVouchers(isCustomer);
+    const { data: myVouchersResponse } = useGetMyVouchers(isCustomer);
     const { data: businessStats } = useGetBusinessStats(isBusiness);
-    const { data: definitionsResponse, isLoading: isLoadingDefinitions } = useGetOwnerRewardDefinitions(isBusiness);
+    const { data: definitionsResponse } = useGetOwnerRewardDefinitions(isBusiness);
     const { data: customerStats } = useGetCustomerStats(isCustomer);
-    const { data: publicDefinitionsResponse, isLoading: isLoadingPublicDefinitions, error: definitionsError } = useGetPublicRewardDefinitions(true);
+    const { data: publicDefinitionsResponse } = useGetPublicRewardDefinitions(true);
 
     const transferMutation = useTransferMoney();
     const cashbackMutation = useGiveCashback();
@@ -189,14 +210,14 @@ export default function CouponsVouchersPage() {
                 setScannerTarget(null);
             };
 
-            scanner.render(onScanSuccess, (err) => { });
+            scanner.render(onScanSuccess, () => { });
         } else {
             if (scannerRef.current) {
                 scannerRef.current.clear().catch(e => console.error(e));
                 scannerRef.current = null;
             }
         }
-        return () => { if (scannerRef.current) scannerRef.current.clear().catch(e => { }); };
+        return () => { if (scannerRef.current) scannerRef.current.clear().catch(() => { }); };
     }, [isScannerOpen, scannerTarget]);
 
     const myVouchers = useMemo(() => {
@@ -243,8 +264,9 @@ export default function CouponsVouchersPage() {
             setIsCashbackModalOpen(false);
             setCashbackAmount('');
             setSelectedUserVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to inject cashback');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to inject cashback');
         }
     };
 
@@ -260,8 +282,9 @@ export default function CouponsVouchersPage() {
             setIsSpendModalOpen(false);
             setSpendAmount('');
             setSpendVoucherId('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to charge voucher');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to charge voucher');
         }
     };
 
@@ -281,8 +304,9 @@ export default function CouponsVouchersPage() {
                 setPaypalOrderId(order.orderId);
                 setPurchaseStep('payment');
             }
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to initiate payment');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to initiate payment');
         }
     };
 
@@ -301,8 +325,9 @@ export default function CouponsVouchersPage() {
             setPurchaseStep('select');
             setStripeClientSecret(null);
             setPaypalOrderId(null);
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to finalize purchase');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to finalize purchase');
         }
     };
 
@@ -319,8 +344,9 @@ export default function CouponsVouchersPage() {
             setTransferAmount('');
             setTransferRecipient('');
             setSelectedVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Transfer failed');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Transfer failed');
         }
     };
 
@@ -341,8 +367,9 @@ export default function CouponsVouchersPage() {
             setSpendAmount('');
             setShopIdInput('');
             setSelectedVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Payment failed');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Payment failed');
         }
     };
 
