@@ -1,0 +1,107 @@
+'use client';
+
+import { useQueries } from '@tanstack/react-query';
+import { useRef } from 'react';
+import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
+import { getProductById } from '@/service/store/products/hook';
+import ProductCard from '@/components/marketplace/ProductCard';
+import { PromotionalItem } from '@/lib/listing-data';
+import { Button } from '@/components/ui/button';
+
+interface MarketplaceSectionProps {
+  title: string;
+  productIds: string[];
+}
+
+export default function MarketplaceSection({ title, productIds }: MarketplaceSectionProps) {
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+
+  // Fetch all products in parallel
+  const productQueries = useQueries({
+    queries: productIds.map((id) => ({
+      queryKey: ['product', id],
+      queryFn: () => getProductById(id),
+      staleTime: 1000 * 60 * 5, // 5 minutes
+    })),
+  });
+
+  const isLoading = productQueries.some((q) => q.isLoading);
+  const products = productQueries
+    .map((q) => q.data)
+    .filter((p) => !!p) // Filter out undefined/failed fetches
+    .map((p) => {
+        // Map API Product to UI PromotionalItem
+        // We use the first image if available, or a placeholder
+        const image = p!.imageUrl || (p!.media && p!.media.length > 0 ? p!.media[0] : null) || 'https://placehold.co/400x400?text=No+Image';
+
+        return {
+            id: p!.id,
+            title: p!.title,
+            image: image,
+            category: p!.category,
+            price: p!.price,
+            discountedPrice: p!.salePrice || undefined, // undefined if null/0? API typing says salePrice?: number
+            items_left: p!.stock || 10, // Mock if missing
+        } as PromotionalItem;
+    });
+
+  const scroll = (direction: 'left' | 'right') => {
+    if (scrollContainerRef.current) {
+      const { current } = scrollContainerRef;
+      const scrollAmount = 300;
+      if (direction === 'left') {
+        current.scrollBy({ left: -scrollAmount, behavior: 'smooth' });
+      } else {
+        current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
+      }
+    }
+  };
+
+  if (productIds.length === 0) return null;
+
+  return (
+    <div className="mb-12">
+      <div className="flex items-center justify-between mb-6">
+        <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+        <div className="flex gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full h-8 w-8 border-gray-200"
+            onClick={() => scroll('left')}
+          >
+            <ChevronLeft className="h-4 w-4" />
+          </Button>
+          <Button
+            variant="outline"
+            size="icon"
+            className="rounded-full h-8 w-8 border-gray-200"
+            onClick={() => scroll('right')}
+          >
+            <ChevronRight className="h-4 w-4" />
+          </Button>
+        </div>
+      </div>
+
+      {isLoading ? (
+        <div className="flex items-center justify-center h-64 bg-gray-50 rounded-xl border border-dashed border-gray-200">
+           <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        </div>
+      ) : products.length > 0 ? (
+        <div
+            ref={scrollContainerRef}
+            className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 scroll-smooth"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+        >
+          {products.map((product) => (
+            <div key={product.id} className="min-w-[280px] w-[280px] md:min-w-[300px] md:w-[300px]">
+              <ProductCard product={product} viewMode="grid" />
+            </div>
+          ))}
+        </div>
+      ) : (
+        <div className="text-gray-500 text-sm">No products found for this section.</div>
+      )}
+    </div>
+  );
+}

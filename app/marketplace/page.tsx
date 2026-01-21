@@ -16,6 +16,7 @@ import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
 import ProductCard from '@/components/marketplace/ProductCard';
 import Pagination from '@/components/marketplace/Pagination';
+import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -69,7 +70,8 @@ export default function MarketplacePage() {
   const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
   const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
-  const flashSaleConfig = sections?.['flash_sale'];
+  // Use camelCase keys as per API response
+  const flashSaleConfig = sections?.flashSale;
 
   // Combine Flash Sale and Banners for the sidebar slider
   const sidebarSlides = useMemo(() => {
@@ -304,7 +306,7 @@ export default function MarketplacePage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
         ) : (
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Slider */}
           <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group bg-gray-200">
             {heroSlides.length > 0 ? (
@@ -408,6 +410,14 @@ export default function MarketplacePage() {
              )}
           </div>
         </div>
+        )}
+
+        {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
+        {sections?.flashSale?.isVisible && sections.flashSale.productIds && sections.flashSale.productIds.length > 0 && (
+             <MarketplaceSection title={sections.flashSale.title} productIds={sections.flashSale.productIds} />
+        )}
+         {sections?.promoCarousel?.isVisible && sections.promoCarousel.productIds && sections.promoCarousel.productIds.length > 0 && (
+             <MarketplaceSection title={sections.promoCarousel.title} productIds={sections.promoCarousel.productIds} />
         )}
 
         {/* 2. Main Layout Split */}

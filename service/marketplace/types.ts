@@ -1,4 +1,3 @@
-
 export interface HeroSlide {
   id: string;
   imageUrl: string;
@@ -29,8 +28,10 @@ export interface MarketplaceCategory {
 }
 
 export interface MarketplaceSectionConfig {
+  id?: string;
   title: string;
   isVisible: boolean;
+  type: string;
   config: {
     endTime?: string;
     backgroundColor?: string;
@@ -39,9 +40,15 @@ export interface MarketplaceSectionConfig {
   productIds?: string[];
 }
 
+export interface MarketplaceSections {
+  flashSale?: MarketplaceSectionConfig;
+  promoCarousel?: MarketplaceSectionConfig;
+  [key: string]: MarketplaceSectionConfig | undefined;
+}
+
 export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];
   categories: MarketplaceCategory[];
-  sections: Record<string, MarketplaceSectionConfig>;
+  sections: MarketplaceSections;
 }
