@@ -7,7 +7,6 @@ import { UserRole } from '@/service/auth/types';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -31,17 +30,13 @@ import {
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import {
-    Tooltip,
-    TooltipContent,
     TooltipProvider,
-    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
     Badge,
@@ -60,8 +55,6 @@ import {
     Wallet,
     ArrowUpRight,
     ArrowDownLeft,
-    Info,
-    History,
     Send,
     PlusCircle,
     Zap,
@@ -71,11 +64,11 @@ import {
 } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
+import { UserVoucherResponseDto } from '@/service/money-engine/types';
 
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
@@ -136,7 +129,6 @@ const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProp
 
 export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
-    // const [activeTab, setActiveTab] = useState('overview'); // Removed unused state
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
@@ -222,7 +214,7 @@ export default function CouponsVouchersPage() {
 
     const myVouchers = useMemo(() => {
         if (!myVouchersResponse) return [];
-        return myVouchersResponse.map(v => ({
+        return myVouchersResponse.map((v: UserVoucherResponseDto) => ({
             id: v.id,
             name: v.definition.name,
             balance: v.totalBalance,
