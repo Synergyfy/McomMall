@@ -7,7 +7,6 @@ import {
   LayoutGrid,
   List as ListIcon,
   Search,
-  ChevronDown,
   Loader2,
   ChevronLeft,
   ChevronRight
@@ -65,10 +64,10 @@ export default function MarketplacePage() {
   // Data Fetching
   const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
 
-  const heroSlides = publicData?.heroSlides || [];
-  const sidebarBanners = publicData?.sidebarBanners || [];
-  const apiCategories = publicData?.categories || [];
-  const sections = publicData?.sections || {};
+  const heroSlides = useMemo(() => publicData?.heroSlides || [], [publicData]);
+  const sidebarBanners = useMemo(() => publicData?.sidebarBanners || [], [publicData]);
+  const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
+  const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
   const flashSaleConfig = sections?.['flash_sale'];
 
