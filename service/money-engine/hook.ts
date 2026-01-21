@@ -1,12 +1,23 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { getMyVouchers, transferMoney, giveCashback, purchaseVoucher, getBusinessStats, getOwnerRewardDefinitions, getCustomerStats, getPublicRewardDefinitions } from './index';
-import { TransferDto, CashbackDto, PurchaseVoucherDto } from './types';
+import { getMyVouchers, transferMoney, giveCashback, purchaseVoucher, getBusinessStats, getOwnerRewardDefinitions, getCustomerStats, getPublicRewardDefinitions, spendVoucher } from './index';
+import { TransferDto, CashbackDto, PurchaseVoucherDto, SpendDto } from './types';
 
 export const useGetMyVouchers = (enabled = true) => {
     return useQuery({
         queryKey: ['my-vouchers'],
         queryFn: getMyVouchers,
         enabled,
+    });
+};
+
+export const useSpendVoucher = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: (data: SpendDto) => spendVoucher(data),
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['my-vouchers'] });
+            queryClient.invalidateQueries({ queryKey: ['business-stats'] });
+        },
     });
 };
 

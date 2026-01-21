@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import { UserRole } from '@/service/auth/types';
@@ -47,14 +47,6 @@ import {
     Badge,
 } from '@/components/ui/badge';
 import {
-    Breadcrumb,
-    BreadcrumbItem,
-    BreadcrumbLink,
-    BreadcrumbList,
-    BreadcrumbPage,
-    BreadcrumbSeparator,
-} from '@/components/ui/breadcrumb';
-import {
     Select,
     SelectContent,
     SelectItem,
@@ -73,101 +65,20 @@ import {
     Send,
     PlusCircle,
     Zap,
+    QrCode,
+    ScanLine,
+    Maximize,
 } from 'lucide-react';
+import QRCode from "react-qr-code";
+import { Html5QrcodeScanner } from "html5-qrcode";
 import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
-import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions } from '@/service/money-engine/hook';
+import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
 
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
-
-// --- MOCK DATA ---
-
-const MOCK_VOUCHER_TYPES = [
-    {
-        id: 'vt-1',
-        name: '£100 Spring Expo Voucher',
-        totalValue: 100,
-        split: '50/50',
-        cashbackLimit: 5,
-        seasonalLabel: 'Spring',
-        status: 'Active',
-        usageScope: 'Expo Only',
-        utilization: 65,
-    },
-    {
-        id: 'vt-2',
-        name: '£50 Summer Travel Perk',
-        totalValue: 50,
-        split: '70/30',
-        cashbackLimit: 3,
-        seasonalLabel: 'Summer',
-        status: 'Active',
-        usageScope: 'All Shops',
-        utilization: 42,
-    },
-    {
-        id: 'vt-3',
-        name: '£200 Platinum Reward',
-        totalValue: 200,
-        split: '80/20',
-        cashbackLimit: 10,
-        seasonalLabel: 'General',
-        status: 'Inactive',
-        usageScope: 'Premium Partners',
-        utilization: 0,
-    },
-];
-
-const MOCK_CUSTOMER_VOUCHERS = [
-    {
-        id: 'cv-101',
-        typeId: 'vt-1',
-        name: '£100 Spring Expo Voucher',
-        balance: 85,
-        totalValue: 100,
-        status: 'Active',
-        transactions: [
-            { id: 't1', date: '2024-03-15', shop: 'Gourmet Kitchen', amount: 5, type: 'cashback' },
-            { id: 't2', date: '2024-03-14', shop: 'Expo Entry', amount: -20, type: 'spend' },
-        ],
-    },
-    {
-        id: 'cv-102',
-        typeId: 'vt-2',
-        name: '£50 Summer Travel Perk',
-        balance: 50,
-        totalValue: 50,
-        status: 'Active',
-        transactions: [],
-    },
-];
-
-const MOCK_SHOPS = [
-    { id: 'shop-1', name: 'Gourmet Kitchen' },
-    { id: 'shop-2', name: 'Eco Entry' },
-    { id: 'shop-3', name: 'Premium Partners' },
-];
-
-const MOCK_USER_VOUCHERS = [
-    { id: 'uv-1', name: 'John Doe - Spring Voucher' },
-    { id: 'uv-2', name: 'Jane Smith - Summer Perk' },
-];
-
-const MOCK_BUSINESS_STATS = {
-    activeVouchers: 12,
-    cashbackDistributed: 450,
-    customersServed: 89,
-    salesIncrease: 24, // percentage
-};
-
-const MOCK_CUSTOMER_STATS = {
-    totalBalance: 135,
-    rewardValueEarned: 25,
-    vouchersOwned: 2,
-};
 
 // --- COMPONENTS ---
 
@@ -199,10 +110,22 @@ export default function CouponsVouchersPage() {
     const [activeTab, setActiveTab] = useState('overview');
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
-    const [selectedShopId, setSelectedShopId] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
     const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
+    const [isSpendModalOpen, setIsSpendModalOpen] = useState(false);
+    const [isQRModalOpen, setIsQRModalOpen] = useState(false);
+    const [selectedVoucherForQR, setSelectedVoucherForQR] = useState<any>(null);
+    const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+    const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<any>(null);
+
+    const [shopIdInput, setShopIdInput] = useState('');
+    const [isCustomerSpendModalOpen, setIsCustomerSpendModalOpen] = useState(false);
+
+    // Scanner State
+    const [isScannerOpen, setIsScannerOpen] = useState(false);
+    const [scannerTarget, setScannerTarget] = useState<'CASHBACK' | 'SPEND' | 'MERCHANT' | null>(null);
+    const scannerRef = useRef<Html5QrcodeScanner | null>(null);
 
     const isBusiness = userRole === UserRole.OWNER;
     const isCustomer = userRole === UserRole.CUSTOMER;
@@ -213,16 +136,60 @@ export default function CouponsVouchersPage() {
     const { data: businessStats } = useGetBusinessStats(isBusiness);
     const { data: definitionsResponse, isLoading: isLoadingDefinitions } = useGetOwnerRewardDefinitions(isBusiness);
     const { data: customerStats } = useGetCustomerStats(isCustomer);
-    // Always fetch public definitions to ensure dropdown populates
     const { data: publicDefinitionsResponse, isLoading: isLoadingPublicDefinitions, error: definitionsError } = useGetPublicRewardDefinitions(true);
-
-
 
     const transferMutation = useTransferMoney();
     const cashbackMutation = useGiveCashback();
     const purchaseMutation = usePurchaseVoucher();
     const createStripeIntentMutation = useCreateStripeIntent();
     const createPaypalOrderMutation = useCreatePaypalOrder();
+    const spendMutation = useSpendVoucher();
+
+    // Form states
+    const [topUpAmount, setTopUpAmount] = useState('50');
+    const [selectedVoucher, setSelectedVoucher] = useState('');
+    const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'PAYPAL'>('STRIPE');
+    const [transferRecipient, setTransferRecipient] = useState('');
+    const [transferAmount, setTransferAmount] = useState('');
+    const [spendVoucherId, setSpendVoucherId] = useState('');
+    const [spendAmount, setSpendAmount] = useState('');
+    const [purchaseStep, setPurchaseStep] = useState<'select' | 'payment'>('select');
+    const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
+    const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (isScannerOpen) {
+            const scanner = new Html5QrcodeScanner(
+                "reward-hub-scanner",
+                { fps: 10, qrbox: { width: 250, height: 250 } },
+                false
+            );
+            scannerRef.current = scanner;
+
+            const onScanSuccess = (decodedText: string) => {
+                if (scannerTarget === 'CASHBACK') {
+                    setSelectedUserVoucher(decodedText);
+                    toast.success('Voucher ID scanned successfully');
+                } else if (scannerTarget === 'SPEND') {
+                    setSpendVoucherId(decodedText);
+                    toast.success('Voucher ID scanned successfully');
+                } else if (scannerTarget === 'MERCHANT') {
+                    setShopIdInput(decodedText);
+                    toast.success('Shop ID scanned successfully');
+                }
+                setIsScannerOpen(false);
+                setScannerTarget(null);
+            };
+
+            scanner.render(onScanSuccess, (err) => { });
+        } else {
+            if (scannerRef.current) {
+                scannerRef.current.clear().catch(e => console.error(e));
+                scannerRef.current = null;
+            }
+        }
+        return () => { if (scannerRef.current) scannerRef.current.clear().catch(e => { }); };
+    }, [isScannerOpen, scannerTarget]);
 
     const myVouchers = useMemo(() => {
         if (!myVouchersResponse) return [];
@@ -231,8 +198,11 @@ export default function CouponsVouchersPage() {
             name: v.definition.name,
             balance: v.totalBalance,
             status: v.state === 'active' ? 'Active' : 'Inactive',
-            totalValue: v.totalBalance, // Simplified for now
-            transactions: [] // History tab needs separate implementation
+            totalValue: v.totalBalance,
+            description: v.definition.description,
+            split: v.definition.splitRatio ? `${v.definition.splitRatio.real * 100}/${v.definition.splitRatio.reward * 100}` : '50/50',
+            scope: v.definition.scopeType === 'any_shop' ? 'Any Shop' : (v.definition.scopeType || 'Any Shop'),
+            transactions: []
         }));
     }, [myVouchersResponse]);
 
@@ -241,53 +211,26 @@ export default function CouponsVouchersPage() {
         return definitionsResponse.data.map(d => ({
             id: d.id,
             name: d.name,
-            totalValue: 100, // Default display value
             split: d.splitRatio ? `${d.splitRatio.real * 100}/${d.splitRatio.reward * 100}` : '50/50',
-            cashbackLimit: 5,
             seasonalLabel: d.seasonalLabels?.[0] || 'General',
             status: d.isActive ? 'Active' : 'Inactive',
             usageScope: d.scopeType === 'any_shop' ? 'Any Shop' : (d.scopeType || 'Any Shop'),
-            utilization: d.utilization || 0,
         }));
     }, [definitionsResponse]);
 
-
     const availableVouchersForPurchase = useMemo(() => {
         if (!publicDefinitionsResponse?.data) return [];
-        return publicDefinitionsResponse.data.map(d => ({
-            id: d.id,
-            name: d.name,
-            description: d.description,
-            // Assuming simplified mock values for now until backend provides exact purchase metadata if needed
-            totalValue: 'Variable',
-        }));
+        return publicDefinitionsResponse.data;
     }, [publicDefinitionsResponse]);
-
-
-    // Form states
-    const [topUpAmount, setTopUpAmount] = useState('');
-    const [selectedVoucher, setSelectedVoucher] = useState('');
-    const [paymentMethod, setPaymentMethod] = useState<'STRIPE' | 'PAYPAL'>('STRIPE');
-    const [transferRecipient, setTransferRecipient] = useState('');
-    const [transferAmount, setTransferAmount] = useState('');
-    const [purchaseStep, setPurchaseStep] = useState<'select' | 'payment'>('select');
-    const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
-    const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
 
     const handleGiveCashback = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedUserVoucher || !cashbackAmount || !userProfile?.id) {
-            toast.error('Please Select a voucher and amount');
+            toast.error('Please enter customer voucher ID and amount');
             return;
         }
-
         try {
-            await cashbackMutation.mutateAsync({
-                userVoucherId: selectedUserVoucher,
-                amount: Number(cashbackAmount),
-                shopId: userProfile?.id || ''
-            });
-
+            await cashbackMutation.mutateAsync({ userVoucherId: selectedUserVoucher, amount: Number(cashbackAmount), shopId: userProfile?.id || '' });
             toast.success(`Successfully injected £${cashbackAmount} cashback`);
             setIsCashbackModalOpen(false);
             setCashbackAmount('');
@@ -297,13 +240,29 @@ export default function CouponsVouchersPage() {
         }
     };
 
+    const handleSpendVoucher = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!spendVoucherId || !spendAmount || !userProfile?.id) {
+            toast.error('Please enter voucher ID and amount');
+            return;
+        }
+        try {
+            await spendMutation.mutateAsync({ userVoucherId: spendVoucherId, amount: Number(spendAmount), shopId: userProfile?.id || '' });
+            toast.success(`Successfully charged £${spendAmount} from voucher`);
+            setIsSpendModalOpen(false);
+            setSpendAmount('');
+            setSpendVoucherId('');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Failed to charge voucher');
+        }
+    };
+
     const handlePurchaseVoucher = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!selectedVoucher || !topUpAmount) {
             toast.error('Please select a voucher and enter an amount');
             return;
         }
-
         try {
             if (paymentMethod === 'STRIPE') {
                 const intent = await createStripeIntentMutation.mutateAsync({ amount: Number(topUpAmount) });
@@ -327,17 +286,15 @@ export default function CouponsVouchersPage() {
                 transactionId: transactionId,
                 paymentGateway: paymentMethod
             });
-
             toast.success(`Successfully purchased voucher for £${topUpAmount}`);
             setIsTopUpModalOpen(false);
-            // Reset state
-            setTopUpAmount('');
+            setTopUpAmount('50');
             setSelectedVoucher('');
             setPurchaseStep('select');
             setStripeClientSecret(null);
             setPaypalOrderId(null);
         } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to finalize purchase. Please contact support.');
+            toast.error(error?.response?.data?.message || 'Failed to finalize purchase');
         }
     };
 
@@ -347,14 +304,9 @@ export default function CouponsVouchersPage() {
             toast.error('Please fill in all transfer details');
             return;
         }
-
         try {
-            await transferMutation.mutateAsync({
-                fromVoucherId: selectedVoucher,
-                toVoucherId: transferRecipient,
-                amount: Number(transferAmount)
-            });
-            toast.success(`Successfully transferred £${transferAmount} to ${transferRecipient}`);
+            await transferMutation.mutateAsync({ fromVoucherId: selectedVoucher, toVoucherId: transferRecipient, amount: Number(transferAmount) });
+            toast.success(`Successfully transferred £${transferAmount}`);
             setIsTransferModalOpen(false);
             setTransferAmount('');
             setTransferRecipient('');
@@ -364,380 +316,168 @@ export default function CouponsVouchersPage() {
         }
     };
 
+    const handleCustomerSpend = async (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!selectedVoucher || !spendAmount || !shopIdInput) {
+            toast.error('Please fill in all details');
+            return;
+        }
+        try {
+            await spendMutation.mutateAsync({
+                userVoucherId: selectedVoucher,
+                amount: Number(spendAmount),
+                shopId: shopIdInput
+            });
+            toast.success(`Successfully paid £${spendAmount}`);
+            setIsCustomerSpendModalOpen(false);
+            setSpendAmount('');
+            setShopIdInput('');
+            setSelectedVoucher('');
+        } catch (error: any) {
+            toast.error(error?.response?.data?.message || 'Payment failed');
+        }
+    };
+
     return (
         <TooltipProvider>
             <div className="min-h-screen bg-transparent space-y-8 pb-10">
-                {/* Header */}
                 <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                             <Gift className="w-8 h-8 text-orange-600" />
                             Reward Hub
                         </h1>
-                        <p className="text-gray-500 mt-1">
-                            Manage your spending power and reward network.
-                        </p>
-                    </div>
-                    <div className="flex items-center gap-3">
-                        <Dialog>
-                            <DialogTrigger asChild>
-                                <Button variant="outline" className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50 gap-2">
-                                    <Info className="w-4 h-4" />
-                                    How it works
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent className="sm:max-w-[600px] rounded-2xl">
-                                <DialogHeader>
-                                    <DialogTitle className="text-2xl font-bold text-orange-600">The Reward Network Guide</DialogTitle>
-                                    <DialogDescription>
-                                        Understanding Coupon‑Vouchers and Voucher‑Coupons.
-                                    </DialogDescription>
-                                </DialogHeader>
-                                <div className="space-y-6 pt-4">
-                                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-                                            <h4 className="font-bold text-orange-800 mb-2 flex items-center gap-2">
-                                                <PlusCircle className="w-4 h-4" />
-                                                Coupon Vouchers
-                                            </h4>
-                                            <p className="text-xs text-orange-700 leading-relaxed">
-                                                These <strong>create value</strong>. When you top up or receive a gift, the network matches it to give you more spending power.
-                                            </p>
-                                        </div>
-                                        <div className="p-4 bg-blue-50 rounded-xl border border-blue-100">
-                                            <h4 className="font-bold text-blue-800 mb-2 flex items-center gap-2">
-                                                <Zap className="w-4 h-4" />
-                                                Voucher Coupons
-                                            </h4>
-                                            <p className="text-xs text-blue-700 leading-relaxed">
-                                                These <strong>control spending</strong>. They ensure rewards stay within our partner network, benefiting businesses and users alike.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="space-y-3">
-                                        <h4 className="font-semibold text-gray-900">Why Use This?</h4>
-                                        <ul className="space-y-2">
-                                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
-                                                <span><strong>Businesses:</strong> Reward customers without losing real cash. Increase sales by up to 24%.</span>
-                                            </li>
-                                            <li className="flex items-start gap-2 text-sm text-gray-600">
-                                                <div className="w-1.5 h-1.5 rounded-full bg-orange-500 mt-1.5 shrink-0" />
-                                                <span><strong>Customers:</strong> Get £100 of value for only £50 input. Keep spending as businesses add "cashback" to your voucher.</span>
-                                            </li>
-                                        </ul>
-                                    </div>
-                                </div>
-                            </DialogContent>
-                        </Dialog>
-                        <Breadcrumb className="hidden lg:block">
-                            <BreadcrumbList>
-                                <BreadcrumbItem>
-                                    <BreadcrumbLink href="/dashboard">Dashboard</BreadcrumbLink>
-                                </BreadcrumbItem>
-                                <BreadcrumbSeparator />
-                                <BreadcrumbItem>
-                                    <BreadcrumbPage>Coupons & Vouchers</BreadcrumbPage>
-                                </BreadcrumbItem>
-                            </BreadcrumbList>
-                        </Breadcrumb>
+                        <p className="text-gray-500 mt-1">Manage your spending power and reward network.</p>
                     </div>
                 </header>
 
-                {/* Stats Section */}
-                <div className={`grid gap-6 ${isCustomer ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6' : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'}`}>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                     {isBusiness ? (
                         <>
-                            <StatCard
-                                title="Total Revenue"
-                                value={`£${businessStats?.totalSpentInShop?.toFixed(2) ?? '0.00'}`}
-                                icon={TrendingUp}
-                                description="Total revenue from vouchers"
-                                trend="up"
-                            />
-                            <StatCard
-                                title="Cashback Given"
-                                value={businessStats?.cashbackGivenCount ?? 0}
-                                icon={Wallet}
-                                description="Total rewards distributed"
-                            />
-                            <StatCard
-                                title="Customers Served"
-                                value={businessStats?.customersCount ?? 0}
-                                icon={Users}
-                                description="Unique voucher customers"
-                            />
-                            <StatCard
-                                title="Avg. Customer Spend"
-                                value={`£${businessStats?.customersCount ? (businessStats.totalSpentInShop / businessStats.customersCount).toFixed(2) : '0.00'}`}
-                                icon={Zap}
-                                description="Average revenue per customer"
-                            />
+                            <StatCard title="Total Revenue" value={`£${businessStats?.totalSpentInShop?.toFixed(2) ?? '0.00'}`} icon={TrendingUp} description="Revenue from vouchers" trend="up" />
+                            <StatCard title="Cashback Given" value={businessStats?.cashbackGivenCount ?? 0} icon={Wallet} description="Distributed rewards" />
+                            <StatCard title="Customers" value={businessStats?.customersCount ?? 0} icon={Users} description="Unique customers" />
+                            <StatCard title="Avg. Spend" value={`£${businessStats?.customersCount ? (businessStats.totalSpentInShop / businessStats.customersCount).toFixed(2) : '0.00'}`} icon={Zap} description="Per customer" />
+                            <StatCard title="Active Network" value="12" icon={Send} description="Connected shops" />
+                            <StatCard title="Growth" value="+15%" icon={ArrowUpRight} description="Last 30 days" trend="up" />
                         </>
                     ) : (
                         <>
-                            <StatCard
-                                title="Active Vouchers"
-                                value={customerStats?.activeVouchersCount ?? 0}
-                                icon={Zap}
-                                description="Ready to use"
-                            />
-                            <StatCard
-                                title="Total Balance"
-                                value={`£${customerStats?.totalCurrentBalance?.toFixed(2) ?? '0.00'}`}
-                                icon={Wallet}
-                                description="Total spending power"
-                            />
-                            <StatCard
-                                title="Real Balance"
-                                value={`£${customerStats?.currentRealBalance?.toFixed(2) ?? '0.00'}`}
-                                icon={TrendingUp}
-                                description="Your contributed funds"
-                            />
-                            <StatCard
-                                title="Reward Balance"
-                                value={`£${customerStats?.currentRewardBalance?.toFixed(2) ?? '0.00'}`}
-                                icon={Gift}
-                                description="Bonus from businesses"
-                            />
-                            <StatCard
-                                title="Rewards Received"
-                                value={`£${customerStats?.totalBusinessRewardsReceived?.toFixed(2) ?? '0.00'}`}
-                                icon={Users}
-                                description="Total cashback earned"
-                            />
-                            <StatCard
-                                title="Total Spent"
-                                value={`£${customerStats?.totalSpent?.toFixed(2) ?? '0.00'}`}
-                                icon={ArrowUpRight}
-                                description="Lifetime spending"
-                            />
+                            <StatCard title="Active Vouchers" value={customerStats?.activeVouchersCount ?? 0} icon={Zap} description="Available now" />
+                            <StatCard title="Total Balance" value={`£${customerStats?.totalCurrentBalance?.toFixed(2) ?? '0.00'}`} icon={Wallet} description="Spending power" />
+                            <StatCard title="Total Spent" value={`£${customerStats?.totalSpent?.toFixed(2) ?? '0.00'}`} icon={ArrowUpRight} description="Lifetime spend" trend="up" />
+                            <StatCard title="Rewards Earned" value={`£${customerStats?.totalCurrentBalance ? (customerStats.totalCurrentBalance / 2).toFixed(2) : '0.00'}`} icon={Gift} description="Cashback value" />
+                            <StatCard title="Real Money" value={`£${customerStats?.currentRealBalance?.toFixed(2) ?? '0.00'}`} icon={TrendingUp} description="Your personal funds" />
+                            <StatCard title="Rewards from Business" value={`£${customerStats?.totalBusinessRewardsReceived?.toFixed(2) ?? '0.00'}`} icon={Send} description="Total rewards received" />
                         </>
                     )}
                 </div>
 
-                {/* Tabs Content */}
                 <Tabs defaultValue="overview" className="w-full space-y-6">
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <TabsList className="bg-white/50 backdrop-blur-md p-1 rounded-xl shadow-inner border border-white/20">
-                            <TabsTrigger
-                                value="overview"
-                                className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-                            >
-                                Overview
-                            </TabsTrigger>
-                            <TabsTrigger
-                                value="transactions"
-                                className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-                            >
-                                History
-                            </TabsTrigger>
-                            {isBusiness && (
-                                <TabsTrigger
-                                    value="settings"
-                                    className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white"
-                                >
-                                    Campaigns
-                                </TabsTrigger>
-                            )}
+                            <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">Overview</TabsTrigger>
+                            <TabsTrigger value="transactions" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">History</TabsTrigger>
                         </TabsList>
 
-                        {isBusiness && (
-                            <Dialog open={isCashbackModalOpen} onOpenChange={setIsCashbackModalOpen}>
-                                <DialogTrigger asChild>
-                                    <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg flex items-center gap-2">
-                                        <PlusCircle className="w-4 h-4" />
-                                        Inject Cashback
-                                    </Button>
-                                </DialogTrigger>
-                                <DialogContent className="sm:max-w-[425px]">
-                                    <DialogHeader>
-                                        <DialogTitle>Inject Cashback</DialogTitle>
-                                        <DialogDescription>
-                                            Inject reward value to a customer's Coupon Voucher.
-                                        </DialogDescription>
-                                    </DialogHeader>
-                                    <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
-                                        <div className="space-y-2">
-                                            <Label className="flex items-center gap-2">
-                                                Select My Coupon-Voucher
-                                                <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Info className="w-3 h-3 text-gray-400" />
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Select the voucher type to inject rewards into</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                            </Label>
-                                            <Select value={selectedUserVoucher} onValueChange={setSelectedUserVoucher}>
-                                                <SelectTrigger className="rounded-xl border-gray-200">
-                                                    <SelectValue placeholder="Select coupon-voucher" />
-                                                </SelectTrigger>
-                                                <SelectContent position="popper" className="z-[1001]">
-                                                    {voucherTypes.map(v => (
-                                                        <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>
-                                                    ))}
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label htmlFor="amount">Reward Amount (£)</Label>
-                                            <Input
-                                                id="amount"
-                                                type="number"
-                                                placeholder="e.g. 5.00"
-                                                value={cashbackAmount}
-                                                onChange={(e) => setCashbackAmount(e.target.value)}
-                                                className="rounded-xl border-gray-200"
-                                            />
-                                            <p className="text-xs text-gray-500 italic">
-                                                Businesses never pay real money. You are giving reward value.
-                                            </p>
-                                        </div>
-                                        <DialogFooter className="pt-4">
-                                            <Button
-                                                type="submit"
-                                                className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
-                                                disabled={cashbackMutation.isPending}
-                                            >
-                                                {cashbackMutation.isPending ? 'Processing...' : 'Inject Cashback'}
-                                            </Button>
-                                        </DialogFooter>
-                                    </form>
-                                </DialogContent>
-                            </Dialog>
-                        )}
+                        <div className="flex gap-2">
+                            {isBusiness && (
+                                <>
+                                    <Dialog open={isSpendModalOpen} onOpenChange={setIsSpendModalOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button variant="outline" className="border-orange-600 text-orange-600 hover:bg-orange-50 rounded-xl flex items-center gap-2"><ScanLine className="w-4 h-4" />Charge Client</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[425px]">
+                                            <DialogHeader><DialogTitle>Charge Client</DialogTitle></DialogHeader>
+                                            <form onSubmit={handleSpendVoucher} className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label>Voucher ID</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input placeholder="uv-123" value={spendVoucherId} onChange={(e) => setSpendVoucherId(e.target.value)} className="rounded-xl" />
+                                                        <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setScannerTarget('SPEND'); setIsScannerOpen(true); }}><QrCode className="w-4 h-4" /></Button>
+                                                    </div>
+                                                    <button type="button" onClick={() => { setScannerTarget('SPEND'); setIsScannerOpen(true); }} className="text-[11px] text-orange-600 font-bold hover:underline">Scan to capture ID</button>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Amount (£)</Label>
+                                                    <Input type="number" placeholder="0.00" value={spendAmount} onChange={(e) => setSpendAmount(e.target.value)} className="rounded-xl" />
+                                                </div>
+                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl" disabled={spendMutation.isPending}>{spendMutation.isPending ? 'Processing...' : 'Confirm Charge'}</Button>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                    <Dialog open={isCashbackModalOpen} onOpenChange={setIsCashbackModalOpen}>
+                                        <DialogTrigger asChild>
+                                            <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl flex items-center gap-2"><PlusCircle className="w-4 h-4" />Inject Cashback</Button>
+                                        </DialogTrigger>
+                                        <DialogContent className="sm:max-w-[425px]">
+                                            <DialogHeader><DialogTitle>Inject Cashback</DialogTitle></DialogHeader>
+                                            <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
+                                                <div className="space-y-2">
+                                                    <Label>Voucher ID</Label>
+                                                    <div className="flex gap-2">
+                                                        <Input placeholder="uv-123" value={selectedUserVoucher} onChange={(e) => setSelectedUserVoucher(e.target.value)} className="rounded-xl" />
+                                                        <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setScannerTarget('CASHBACK'); setIsScannerOpen(true); }}><QrCode className="w-4 h-4" /></Button>
+                                                    </div>
+                                                    <button type="button" onClick={() => { setScannerTarget('CASHBACK'); setIsScannerOpen(true); }} className="text-[11px] text-orange-600 font-bold hover:underline">Scan to capture ID</button>
+                                                </div>
+                                                <div className="space-y-2">
+                                                    <Label>Amount (£)</Label>
+                                                    <Input type="number" placeholder="0.00" value={cashbackAmount} onChange={(e) => setCashbackAmount(e.target.value)} className="rounded-xl" />
+                                                </div>
+                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl" disabled={cashbackMutation.isPending}>{cashbackMutation.isPending ? 'Processing...' : 'Inject Cashback'}</Button>
+                                            </form>
+                                        </DialogContent>
+                                    </Dialog>
+                                </>
+                            )}
+                        </div>
                     </div>
 
-                    {/* OVERVIEW TAB */}
                     <TabsContent value="overview">
                         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            {/* Main List */}
                             <div className="lg:col-span-2 space-y-6">
                                 <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
-                                    <CardHeader className="border-b border-gray-100 bg-gray-50/50">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <CardTitle className="text-xl">
-                                                    {isBusiness ? 'Available Vouchers' : 'My Active Vouchers'}
-                                                </CardTitle>
-                                                <CardDescription>
-                                                    {isBusiness
-                                                        ? 'The vouchers you are allowed to participate in.'
-                                                        : 'Manage and use your currently active vouchers.'}
-                                                </CardDescription>
-                                            </div>
-                                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200 rounded-full px-4 py-1">
-                                                {isBusiness ? (definitionsResponse?.count ?? 0) : myVouchers.length} Items
-                                            </Badge>
-                                        </div>
-                                    </CardHeader>
+                                    <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
                                             <TableHeader className="bg-gray-50/30">
                                                 <TableRow>
-                                                    <TableHead className="w-[250px] font-semibold text-gray-700">Name / Label</TableHead>
-                                                    <TableHead className="font-semibold text-gray-700">
-                                                        {isBusiness ? 'Split Ratio' : 'Balance'}
-                                                    </TableHead>
-                                                    <TableHead className="font-semibold text-gray-700">Scope</TableHead>
-                                                    <TableHead className="font-semibold text-gray-700 text-right">Status</TableHead>
+                                                    <TableHead className="w-[200px]">Name</TableHead>
+                                                    <TableHead>Voucher ID</TableHead>
+                                                    <TableHead>{isBusiness ? 'Split' : 'Balance'}</TableHead>
+                                                    <TableHead className="hidden md:table-cell">Scope</TableHead>
+                                                    <TableHead className="text-right">Status</TableHead>
+                                                    {!isBusiness && <TableHead className="text-right">Actions</TableHead>}
                                                 </TableRow>
                                             </TableHeader>
                                             <TableBody>
                                                 {isBusiness ? (
                                                     voucherTypes.map((vt) => (
-                                                        <TableRow key={vt.id} className="hover:bg-gray-50/50 transition-colors">
-                                                            <TableCell className="py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-gray-900">{vt.name}</span>
-                                                                    <span className="text-xs text-gray-500 flex items-center gap-1 mt-1">
-                                                                        <Badge variant="secondary" className="text-[10px] h-4 rounded-sm bg-orange-100/50 text-orange-800 border-none">
-                                                                            {vt.seasonalLabel}
-                                                                        </Badge>
-                                                                    </span>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-4">
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="font-medium text-blue-700">{vt.split}</span>
-                                                                    <Tooltip>
-                                                                        <TooltipTrigger>
-                                                                            <Info className="w-3.5 h-3.5 text-blue-400" />
-                                                                        </TooltipTrigger>
-                                                                        <TooltipContent>
-                                                                            <p>Customer pays part, rewarding network pays rest.</p>
-                                                                        </TooltipContent>
-                                                                    </Tooltip>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-4 text-gray-600">{vt.usageScope}</TableCell>
-                                                            <TableCell className="py-4 text-right">
-                                                                <Badge
-                                                                    className={`rounded-full px-3 py-0.5 border-none font-medium ${vt.status === 'Active'
-                                                                        ? 'bg-green-100 text-green-700'
-                                                                        : 'bg-gray-100 text-gray-500'
-                                                                        }`}
-                                                                >
-                                                                    {vt.status}
-                                                                </Badge>
-                                                            </TableCell>
+                                                        <TableRow key={vt.id}>
+                                                            <TableCell className="font-bold py-4">{vt.name}</TableCell>
+                                                            <TableCell className="text-xs text-gray-400 font-mono">{vt.id}</TableCell>
+                                                            <TableCell className="text-blue-700">{vt.split}</TableCell>
+                                                            <TableCell className="hidden md:table-cell text-gray-500">{vt.usageScope}</TableCell>
+                                                            <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{vt.status}</Badge></TableCell>
                                                         </TableRow>
                                                     ))
                                                 ) : (
                                                     myVouchers.map((cv) => (
-                                                        <TableRow key={cv.id} className="hover:bg-gray-50/50 transition-colors">
-                                                            <TableCell className="py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="font-bold text-gray-900">{cv.name}</span>
-                                                                    <span className="text-xs text-gray-500">{cv.id}</span>
+                                                        <TableRow key={cv.id}>
+                                                            <TableCell className="font-bold py-4">{cv.name}</TableCell>
+                                                            <TableCell className="text-xs text-gray-400 font-mono">{cv.id}</TableCell>
+                                                            <TableCell><span className="text-lg font-bold text-green-600">£{cv.balance}</span></TableCell>
+                                                            <TableCell className="hidden md:table-cell text-gray-500">{cv.scope}</TableCell>
+                                                            <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{cv.status}</Badge></TableCell>
+                                                            <TableCell className="text-right">
+                                                                <div className="flex justify-end gap-2">
+                                                                    <Button size="sm" variant="outline" className="rounded-xl gap-2" onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}><QrCode className="w-4 h-4" />Pay</Button>
+                                                                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}>Details</Button>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-4">
-                                                                <div className="flex flex-col">
-                                                                    <span className="text-xl font-bold text-green-600">£{cv.balance}</span>
-                                                                    <span className="text-xs text-gray-500">of £{cv.totalValue} total</span>
-                                                                </div>
-                                                            </TableCell>
-                                                            <TableCell className="py-4">
-                                                                <span className="text-sm text-gray-600 italic">Universal Use</span>
-                                                            </TableCell>
-                                                            <TableCell className="py-4 text-right">
-                                                                <Button size="sm" variant="outline" className="rounded-xl border-orange-200 text-orange-700 hover:bg-orange-50">
-                                                                    Details
-                                                                </Button>
                                                             </TableCell>
                                                         </TableRow>
                                                     ))
-                                                )}
-                                                {isBusiness && isLoadingDefinitions && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                                                            Loading definitions...
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                                {isBusiness && !isLoadingDefinitions && voucherTypes.length === 0 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                                                            No voucher definitions found for your shop.
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                                {isCustomer && isLoadingVouchers && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                                                            Loading vouchers...
-                                                        </TableCell>
-                                                    </TableRow>
-                                                )}
-                                                {isCustomer && !isLoadingVouchers && myVouchers.length === 0 && (
-                                                    <TableRow>
-                                                        <TableCell colSpan={4} className="h-24 text-center text-gray-400">
-                                                            No vouchers found.
-                                                        </TableCell>
-                                                    </TableRow>
                                                 )}
                                             </TableBody>
                                         </Table>
@@ -745,399 +485,138 @@ export default function CouponsVouchersPage() {
                                 </Card>
                             </div>
 
-                            {/* Sidebar Info / Actions */}
                             <div className="space-y-6">
-                                <Card className="border-none shadow-lg bg-orange-600 text-white rounded-2xl overflow-hidden overflow-visible relative">
-                                    <div className="absolute top-0 right-0 p-4">
-                                        <motion.div
-                                            animate={{ scale: [1, 1.1, 1] }}
-                                            transition={{ duration: 2, repeat: Infinity }}
-                                        >
-                                            <Zap className="w-6 h-6 text-orange-300 opacity-50" />
-                                        </motion.div>
-                                    </div>
-                                    <CardHeader>
-                                        <CardTitle className="text-white text-lg">Pro Tip</CardTitle>
-                                        <CardDescription className="text-orange-100">
-                                            How to maximize value.
-                                        </CardDescription>
-                                    </CardHeader>
+                                <Card className="border-none shadow-lg bg-orange-600 text-white rounded-2xl relative">
+                                    <div className="absolute top-0 right-0 p-4"><Zap className="w-6 h-6 text-orange-300 opacity-50" /></div>
+                                    <CardHeader><CardTitle>Rewards Sidebar</CardTitle></CardHeader>
                                     <CardContent className="space-y-4">
-                                        <p className="text-sm leading-relaxed">
-                                            {isBusiness
-                                                ? "Attach vouchers to your 'Expo Special' campaign to attract 3x more customers. Each reward you give builds customer loyalty without hitting your cash flow."
-                                                : "Ask businesses for cashback whenever you shop! Your voucher balance can grow every time you spend at a participating partner."}
-                                        </p>
+                                        <p className="text-sm">Manage your vouchers and sharing options here.</p>
                                         {!isBusiness && (
-                                            <div className="flex gap-2">
-                                                <Dialog open={isTopUpModalOpen} onOpenChange={(open) => {
-                                                    setIsTopUpModalOpen(open);
-                                                    if (!open) {
-                                                        setPurchaseStep('select');
-                                                        setStripeClientSecret(null);
-                                                        setPaypalOrderId(null);
-                                                    }
-                                                }}>
-                                                    <DialogTrigger asChild>
-                                                        <Button className="flex-1 bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-semibold border-none">
-                                                            Purchase Voucher
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-[425px]">
-                                                        <DialogHeader>
-                                                            <DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle>
-                                                            <DialogDescription>
-                                                                {purchaseStep === 'select'
-                                                                    ? 'Buy "Spending Power" and get matched rewards.'
-                                                                    : `Secure payment via ${paymentMethod === 'STRIPE' ? 'Card' : 'PayPal'}`
-                                                                }
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-                                                        <form onSubmit={handlePurchaseVoucher} className="space-y-4 py-4">
-                                                            {purchaseStep === 'select' ? (
-                                                                <>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Select Voucher Type</Label>
-                                                                        <Select value={selectedVoucher || ''} onValueChange={setSelectedVoucher}>
-                                                                            <SelectTrigger className="rounded-xl">
-                                                                                <SelectValue placeholder="Choose a voucher package" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent
-                                                                                position="popper"
-                                                                                className="max-h-[200px] bg-white border border-gray-200 shadow-xl"
-                                                                                style={{ zIndex: 99999, pointerEvents: 'auto' }}
-                                                                            >
-                                                                                {isLoadingPublicDefinitions ? (
-                                                                                    <div className="p-4 text-sm text-gray-500 text-center flex items-center justify-center gap-2">
-                                                                                        <div className="w-4 h-4 rounded-full border-2 border-orange-500 border-t-transparent animate-spin" />
-                                                                                        Loading vouchers...
-                                                                                    </div>
-                                                                                ) : definitionsError ? (
-                                                                                    <div className="p-4 text-xs text-red-500 text-center">
-                                                                                        Failed to load vouchers.
-                                                                                    </div>
-                                                                                ) : availableVouchersForPurchase.length > 0 ? (
-                                                                                    availableVouchersForPurchase.map(vt => (
-                                                                                        <SelectItem key={vt.id} value={vt.id} className="cursor-pointer hover:bg-orange-50 focus:bg-orange-50">
-                                                                                            {vt.name}
-                                                                                        </SelectItem>
-                                                                                    ))
-                                                                                ) : (
-                                                                                    <div className="p-4 text-sm text-gray-500 text-center">
-                                                                                        No vouchers found.
-                                                                                    </div>
-                                                                                )}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                        <p className="text-xs text-gray-500">
-                                                                            Select a voucher package to configure your purchase.
-                                                                        </p>
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Payment Amount (£)</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            placeholder="e.g. 50"
-                                                                            value={topUpAmount}
-                                                                            onChange={(e) => setTopUpAmount(e.target.value)}
-                                                                            className="rounded-xl"
-                                                                        />
-                                                                        <p className="text-xs text-orange-600 font-medium">
-                                                                            Tip: A £{topUpAmount || '50'} payment gets you £{Number(topUpAmount || 50) * 2} in value!
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <div className="space-y-2">
-                                                                        <Label>Payment Method</Label>
-                                                                        <div className="flex gap-4">
-                                                                            <div
-                                                                                onClick={() => setPaymentMethod('STRIPE')}
-                                                                                className={`flex-1 p-3 rounded-xl border cursor-pointer flex items-center justify-center gap-2 transition-all ${paymentMethod === 'STRIPE' ? 'border-orange-500 bg-orange-50 text-orange-700 font-medium ring-2 ring-orange-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                                                                            >
-                                                                                <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
-                                                                                    {paymentMethod === 'STRIPE' && <div className="w-2 h-2 rounded-full bg-current" />}
-                                                                                </div>
-                                                                                Card (Stripe)
-                                                                            </div>
-                                                                            <div
-                                                                                onClick={() => setPaymentMethod('PAYPAL')}
-                                                                                className={`flex-1 p-3 rounded-xl border cursor-pointer flex items-center justify-center gap-2 transition-all ${paymentMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-50 text-blue-700 font-medium ring-2 ring-blue-500/20' : 'border-gray-200 hover:bg-gray-50'}`}
-                                                                            >
-                                                                                <div className="w-4 h-4 rounded-full border border-current flex items-center justify-center">
-                                                                                    {paymentMethod === 'PAYPAL' && <div className="w-2 h-2 rounded-full bg-current" />}
-                                                                                </div>
-                                                                                PayPal
-                                                                            </div>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="pt-2">
-                                                                        <Button
-                                                                            type="submit"
-                                                                            className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl"
-                                                                            disabled={purchaseMutation.isPending || createStripeIntentMutation.isPending || createPaypalOrderMutation.isPending}
-                                                                        >
-                                                                            {createStripeIntentMutation.isPending || createPaypalOrderMutation.isPending
-                                                                                ? 'Initiating...'
-                                                                                : `Review & Pay £${topUpAmount || '0'}`
-                                                                            }
-                                                                        </Button>
-                                                                    </div>
-                                                                </>
-                                                            ) : (
-                                                                <div className="space-y-4 min-h-[300px]">
-                                                                    <Button
-                                                                        type="button"
-                                                                        variant="ghost"
-                                                                        size="sm"
-                                                                        onClick={() => {
-                                                                            setPurchaseStep('select');
-                                                                            setStripeClientSecret(null);
-                                                                            setPaypalOrderId(null);
-                                                                        }}
-                                                                        className="text-gray-500 hover:text-gray-700 p-0 h-auto flex items-center gap-1"
-                                                                    >
-                                                                        <span>←</span> Back to selection
-                                                                    </Button>
-
-                                                                    <div className="p-4 bg-orange-50 rounded-xl border border-orange-100">
-                                                                        <div className="text-sm text-orange-800 font-medium">Order Summary</div>
-                                                                        <div className="flex justify-between text-sm mt-1">
-                                                                            <span className="text-orange-600">Total Value:</span>
-                                                                            <span className="font-bold">£{Number(topUpAmount) * 2}</span>
-                                                                        </div>
-                                                                        <div className="flex justify-between text-sm mt-1 border-t border-orange-200 pt-1">
-                                                                            <span className="text-orange-600 font-medium">Payment Due:</span>
-                                                                            <span className="font-bold text-lg">£{topUpAmount}</span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <div className="pt-2">
-                                                                        {paymentMethod === 'STRIPE' && stripeClientSecret && (
-                                                                            <StripeCheckoutForm
-                                                                                clientSecret={stripeClientSecret}
-                                                                                onPaymentSuccess={handlePaymentSuccess}
-                                                                            />
-                                                                        )}
-                                                                        {paymentMethod === 'PAYPAL' && paypalOrderId && (
-                                                                            <PayPalCheckoutButton
-                                                                                orderID={paypalOrderId}
-                                                                                onPaymentSuccess={handlePaymentSuccess}
-                                                                            />
-                                                                        )}
-                                                                        {purchaseMutation.isPending && (
-                                                                            <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-50">
-                                                                                <div className="flex flex-col items-center gap-2">
-                                                                                    <div className="w-8 h-8 rounded-full border-4 border-orange-500 border-t-transparent animate-spin" />
-                                                                                    <p className="text-sm font-medium text-orange-600">Finalizing your voucher...</p>
-                                                                                </div>
-                                                                            </div>
-                                                                        )}
-                                                                    </div>
-                                                                </div>
-                                                            )}
-                                                        </form>
-                                                    </DialogContent>
-                                                </Dialog>
-
-                                                <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
-                                                    <DialogTrigger asChild>
-                                                        <Button className="flex-1 bg-orange-500/50 text-white hover:bg-orange-500/70 rounded-xl font-semibold border-none">
-                                                            Transfer
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="sm:max-w-[425px]">
-                                                        <DialogHeader>
-                                                            <DialogTitle>Transfer Funds</DialogTitle>
-                                                            <DialogDescription>
-                                                                Send voucher value to family or friends.
-                                                            </DialogDescription>
-                                                        </DialogHeader>
-                                                        <form onSubmit={handleTransfer} className="space-y-4 py-4">
-                                                            <div className="space-y-2">
-                                                                <Label>Recipient Email or ID</Label>
-                                                                <Input
-                                                                    placeholder="user@example.com"
-                                                                    value={transferRecipient}
-                                                                    onChange={(e) => setTransferRecipient(e.target.value)}
-                                                                    className="rounded-xl"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Select Source Voucher</Label>
-                                                                <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
-                                                                    <SelectTrigger className="rounded-xl">
-                                                                        <SelectValue placeholder="Choose a voucher" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent position="popper" className="z-[99999]">
-                                                                        {availableVouchersForPurchase.length > 0 ? (
-                                                                            availableVouchersForPurchase.map(vt => (
-                                                                                <SelectItem key={vt.id} value={vt.id}>{vt.name}</SelectItem>
-                                                                            ))
-                                                                        ) : (
-                                                                            <div className="p-2 text-sm text-gray-500 text-center">No vouchers available</div>
-                                                                        )}
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Transfer Amount (£)</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    placeholder="e.g. 20"
-                                                                    value={transferAmount}
-                                                                    onChange={(e) => setTransferAmount(e.target.value)}
-                                                                    className="rounded-xl"
-                                                                />
-                                                            </div>
-                                                            <div className="pt-2">
-                                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl">
-                                                                    Send Gift
-                                                                </Button>
-                                                            </div>
-                                                        </form>
-                                                    </DialogContent>
-                                                </Dialog>
+                                            <div className="flex flex-col gap-2">
+                                                <Button className="w-full bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold" onClick={() => setIsTopUpModalOpen(true)}>Purchase Voucher</Button>
+                                                <Button className="w-full bg-orange-500 text-white hover:bg-orange-400 rounded-xl font-bold flex items-center justify-center gap-2" onClick={() => setIsCustomerSpendModalOpen(true)}><ScanLine className="w-4 h-4" />Spend Voucher</Button>
+                                                <Button className="w-full border-2 border-white/30 hover:bg-white/10 text-white rounded-xl font-bold flex items-center justify-center gap-2" onClick={() => setIsTransferModalOpen(true)}><Send className="w-4 h-4" />Transfer Funds</Button>
                                             </div>
                                         )}
-                                    </CardContent>
-                                </Card>
-
-                                <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl">
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Network Health</CardTitle>
-                                    </CardHeader>
-                                    <CardContent className="space-y-6">
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <div className="flex items-center gap-1.5 text-gray-500">
-                                                    <span>Network Utilization</span>
-                                                    <Tooltip>
-                                                        <TooltipTrigger><Info className="w-3.5 h-3.5" /></TooltipTrigger>
-                                                        <TooltipContent><p>Percentage of vouchers currently being used in active transactions.</p></TooltipContent>
-                                                    </Tooltip>
-                                                </div>
-                                                <span className="font-bold text-gray-900">78%</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-orange-500 w-[78%] rounded-full shadow-inner" />
-                                            </div>
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="flex items-center justify-between text-sm">
-                                                <div className="flex items-center gap-1.5 text-gray-500">
-                                                    <span>Reward Flow Rate</span>
-                                                    <Tooltip>
-                                                        <TooltipTrigger><Info className="w-3.5 h-3.5" /></TooltipTrigger>
-                                                        <TooltipContent><p>How fast reward value is moving from businesses to customers.</p></TooltipContent>
-                                                    </Tooltip>
-                                                </div>
-                                                <span className="font-bold text-gray-900">Moderate</span>
-                                            </div>
-                                            <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
-                                                <div className="h-full bg-blue-500 w-[55%] rounded-full shadow-inner" />
-                                            </div>
-                                        </div>
-                                        <div className="pt-2">
-                                            <Button variant="ghost" className="w-full text-sm text-gray-500 flex items-center justify-center gap-2">
-                                                <History className="w-4 h-4" />
-                                                View Full Network Insights
-                                            </Button>
-                                        </div>
                                     </CardContent>
                                 </Card>
                             </div>
                         </div>
                     </TabsContent>
-
-                    {/* TRANSACTIONS TAB */}
-                    <TabsContent value="transactions">
-                        <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
-                            <CardHeader>
-                                <CardTitle>Transaction History</CardTitle>
-                                <CardDescription>All activity related to your coupons and vouchers.</CardDescription>
-                            </CardHeader>
-                            <CardContent className="p-0">
-                                <Table>
-                                    <TableHeader className="bg-gray-50/50">
-                                        <TableRow>
-                                            <TableHead>Type</TableHead>
-                                            <TableHead>Entity</TableHead>
-                                            <TableHead>Date</TableHead>
-                                            <TableHead className="text-right">Amount</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {isCustomer && myVouchers.length > 0 && myVouchers[0].transactions?.map((t: any) => (
-                                            <TableRow key={t.id}>
-                                                <TableCell>
-                                                    <Badge
-                                                        variant="secondary"
-                                                        className={`rounded-full px-3 py-0.5 border-none ${t.type === 'cashback'
-                                                            ? 'bg-green-100 text-green-700'
-                                                            : 'bg-blue-100 text-blue-700'
-                                                            }`}
-                                                    >
-                                                        {t.type === 'cashback' ? 'Reward' : 'Spend'}
-                                                    </Badge>
-                                                </TableCell>
-                                                <TableCell className="font-medium text-gray-900">{t.shop}</TableCell>
-                                                <TableCell className="text-gray-500 font-mono text-xs">{t.date}</TableCell>
-                                                <TableCell className={`text-right font-bold ${t.amount < 0 ? 'text-red-600' : 'text-green-600'}`}>
-                                                    {t.amount > 0 ? '+' : ''}£{Math.abs(t.amount)}
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {isBusiness && (
-                                            <TableRow>
-                                                <TableCell colSpan={4} className="h-24 text-center text-gray-500 italic">
-                                                    Loading business distribution logs...
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </CardContent>
-                        </Card>
-                    </TabsContent>
-
-                    {/* SETTINGS / CAMPAIGNS TAB (Business only shown in triggers) */}
-                    {isBusiness && (
-                        <TabsContent value="settings">
-                            <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl">
-                                <CardHeader>
-                                    <CardTitle>Active Participation</CardTitle>
-                                    <CardDescription>Toggle which voucher types are active in your store.</CardDescription>
-                                </CardHeader>
-                                <CardContent className="space-y-6">
-                                    {MOCK_VOUCHER_TYPES.map(vt => (
-                                        <div key={vt.id} className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-100">
-                                            <div className="flex flex-col">
-                                                <span className="font-bold text-gray-900">{vt.name}</span>
-                                                <span className="text-xs text-gray-500">Utilization: {vt.utilization}% among your customers</span>
-                                            </div>
-                                            <div className="flex items-center gap-4">
-                                                <Tooltip>
-                                                    <TooltipTrigger>
-                                                        <Badge className="bg-blue-100 text-blue-700 border-none">
-                                                            Limit: £{vt.cashbackLimit}/customer
-                                                        </Badge>
-                                                    </TooltipTrigger>
-                                                    <TooltipContent>
-                                                        <p>Max reward you can give to a single voucher</p>
-                                                    </TooltipContent>
-                                                </Tooltip>
-                                                <Button variant="outline" size="sm" className={`rounded-xl ${vt.status === 'Active' ? 'text-red-500 hover:text-red-700' : 'text-green-500 hover:text-green-700'}`}>
-                                                    {vt.status === 'Active' ? 'Deactivate' : 'Activate'}
-                                                </Button>
-                                            </div>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </TabsContent>
-                    )}
                 </Tabs>
+
+                {/* MODALS */}
+                <Dialog open={isTopUpModalOpen} onOpenChange={setIsTopUpModalOpen}>
+                    <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
+                        <DialogHeader><DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle></DialogHeader>
+                        {purchaseStep === 'select' ? (
+                            <form onSubmit={handlePurchaseVoucher} className="space-y-4 py-4">
+                                <div className="space-y-2">
+                                    <Label>Package</Label>
+                                    <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
+                                        <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choose a voucher type" /></SelectTrigger>
+                                        <SelectContent className="z-[1000]" position="popper">
+                                            {availableVouchersForPurchase.map(vt => (
+                                                <SelectItem key={vt.id} value={vt.id}>{vt.name}</SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Payment Amount (£)</Label>
+                                    <Input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} className="rounded-xl" />
+                                    <p className="text-[10px] text-orange-600 font-bold">Total Power: £{Number(topUpAmount) * 2}</p>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Method</Label>
+                                    <div className="flex gap-2">
+                                        <div onClick={() => setPaymentMethod('STRIPE')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'STRIPE' ? 'border-orange-500 bg-orange-50' : 'border-gray-100'}`}>Stripe (Card)</div>
+                                        <div onClick={() => setPaymentMethod('PAYPAL')} className={`flex-1 p-3 rounded-xl border cursor-pointer text-center text-xs font-bold ${paymentMethod === 'PAYPAL' ? 'border-blue-500 bg-blue-50' : 'border-gray-100'}`}>PayPal</div>
+                                    </div>
+                                </div>
+                                <Button type="submit" className="w-full bg-orange-600 rounded-xl">Pay £{topUpAmount}</Button>
+                            </form>
+                        ) : (
+                            <div className="space-y-4 py-4">
+                                <div className="p-4 bg-gray-50 rounded-xl flex justify-between"><span>Due:</span><span className="font-bold">£{topUpAmount}</span></div>
+                                {paymentMethod === 'STRIPE' && stripeClientSecret && <StripeCheckoutForm clientSecret={stripeClientSecret} onPaymentSuccess={handlePaymentSuccess} />}
+                                {paymentMethod === 'PAYPAL' && paypalOrderId && <PayPalCheckoutButton orderID={paypalOrderId} onPaymentSuccess={handlePaymentSuccess} />}
+                            </div>
+                        )}
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isTransferModalOpen} onOpenChange={setIsTransferModalOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader><DialogTitle>Transfer Funds</DialogTitle></DialogHeader>
+                        <form onSubmit={handleTransfer} className="space-y-4 py-4">
+                            <div className="space-y-2"><Label>Recipient Email/ID</Label><Input placeholder="user@id" value={transferRecipient} onChange={e => setTransferRecipient(e.target.value)} className="rounded-xl" /></div>
+                            <div className="space-y-2">
+                                <Label>Source Voucher</Label>
+                                <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
+                                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select source" /></SelectTrigger>
+                                    <SelectContent position="popper">
+                                        {myVouchers.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2"><Label>Amount (£)</Label><Input type="number" value={transferAmount} onChange={e => setTransferAmount(e.target.value)} className="rounded-xl" /></div>
+                            <Button type="submit" className="w-full bg-orange-600 rounded-xl">Send Gift</Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isCustomerSpendModalOpen} onOpenChange={setIsCustomerSpendModalOpen}>
+                    <DialogContent className="sm:max-w-[425px]">
+                        <DialogHeader><DialogTitle>Pay Merchant</DialogTitle></DialogHeader>
+                        <form onSubmit={handleCustomerSpend} className="space-y-4 py-4">
+                            <div className="space-y-2">
+                                <Label>Select Voucher</Label>
+                                <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
+                                    <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choose source" /></SelectTrigger>
+                                    <SelectContent position="popper" className="z-[1000]">
+                                        {myVouchers.map(v => <SelectItem key={v.id} value={v.id}>{v.name} (£{v.balance})</SelectItem>)}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Merchant ID</Label>
+                                <div className="flex gap-2">
+                                    <Input placeholder="shop-xyz" value={shopIdInput} onChange={(e) => setShopIdInput(e.target.value)} className="rounded-xl" />
+                                    <Button type="button" variant="outline" className="rounded-xl" onClick={() => { setScannerTarget('MERCHANT'); setIsScannerOpen(true); }}><QrCode className="w-4 h-4" /></Button>
+                                </div>
+                                <button type="button" onClick={() => { setScannerTarget('MERCHANT'); setIsScannerOpen(true); }} className="text-[11px] text-orange-600 font-bold hover:underline">Scan Shop QR</button>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Amount (£)</Label>
+                                <Input type="number" placeholder="0.00" value={spendAmount} onChange={(e) => setSpendAmount(e.target.value)} className="rounded-xl" />
+                            </div>
+                            <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl" disabled={spendMutation.isPending}>{spendMutation.isPending ? 'Processing...' : 'Confirm Payment'}</Button>
+                        </form>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isQRModalOpen} onOpenChange={setIsQRModalOpen}>
+                    <DialogContent className="sm:max-w-[400px] rounded-3xl p-0 overflow-hidden bg-white">
+                        <div className="bg-orange-600 p-8 text-center text-white"><QrCode className="w-10 h-10 mx-auto mb-2" /><h3 className="text-xl font-bold">{selectedVoucherForQR?.name}</h3><p className="text-xs opacity-70">Merchant Scan</p></div>
+                        <div className="p-8 text-center">{selectedVoucherForQR && <div className="bg-white p-4 shadow-xl inline-block rounded-xl border"><QRCode value={selectedVoucherForQR.id} size={200} /></div>}<div className="mt-4"><div className="text-2xl font-black">£{selectedVoucherForQR?.balance?.toFixed(2)}</div><div className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Balance</div></div></div>
+                        <div className="p-4 bg-gray-50"><Button className="w-full rounded-xl" onClick={() => setIsQRModalOpen(false)}>Done</Button></div>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
+                    <DialogContent className="sm:max-w-[450px] rounded-3xl p-0 overflow-hidden bg-white">
+                        <div className="bg-blue-800 p-8 text-white relative"><div className="absolute top-0 right-0 p-8 opacity-10"><Maximize className="w-24 h-24" /></div><Badge className="bg-blue-500/30 mb-2">Voucher Info</Badge><h3 className="text-2xl font-black">{selectedVoucherForDetails?.name}</h3><p className="text-sm opacity-80">{selectedVoucherForDetails?.description || "Matching reward voucher."}</p></div>
+                        <div className="p-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4"><div className="p-4 bg-gray-50 rounded-xl"><span>Balance</span><div className="text-xl font-bold text-blue-900">£{selectedVoucherForDetails?.balance?.toFixed(2)}</div></div><div className="p-4 bg-gray-50 rounded-xl"><span>Split Ratio</span><div className="text-xl font-bold text-blue-900">{selectedVoucherForDetails?.split}</div></div></div>
+                            <div className="space-y-2"><div className="p-4 bg-orange-50 rounded-xl flex gap-3 items-center"><Zap className="w-5 h-5 text-orange-600" /><div><div className="text-xs font-bold text-orange-800">Reward Power</div><div className="text-sm">Matched by {selectedVoucherForDetails?.split?.split('/')[1] || '50'}%</div></div></div><div className="p-4 bg-green-50 rounded-xl flex gap-3 items-center"><Gift className="w-5 h-5 text-green-600" /><div><div className="text-xs font-bold text-green-800">Cashback Eligible</div><div className="text-sm">Active on network.</div></div></div></div>
+                            <div className="pt-4 border-t flex justify-between items-center"><span className="text-xs text-gray-400 font-mono">ID: {selectedVoucherForDetails?.id}</span><Badge className="bg-green-100 text-green-700">{selectedVoucherForDetails?.status}</Badge></div>
+                        </div>
+                        <div className="p-6 bg-gray-50 flex gap-2"><Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsDetailsModalOpen(false)}>Close</Button><Button className="flex-1 bg-orange-600 rounded-xl gap-2" onClick={() => { setIsDetailsModalOpen(false); setSelectedVoucherForQR(selectedVoucherForDetails); setIsQRModalOpen(true); }}><QrCode className="w-4 h-4" />Pay Now</Button></div>
+                    </DialogContent>
+                </Dialog>
+
+                <Dialog open={isScannerOpen} onOpenChange={setIsScannerOpen}><DialogContent className="sm:max-w-[400px] rounded-3xl p-6 bg-white"><div className="text-center space-y-4"><div className="w-12 h-12 bg-orange-100 text-orange-600 mx-auto rounded-xl flex items-center justify-center"><QrCode /></div><DialogTitle>Scan Voucher QR</DialogTitle><DialogDescription>Capture voucher ID automatically.</DialogDescription><div className="aspect-square bg-gray-100 rounded-xl border-2 border-dashed relative overflow-hidden"><div id="reward-hub-scanner" className="w-full h-full" /></div><Button variant="outline" className="w-full" onClick={() => setIsScannerOpen(false)}>Cancel</Button></div></DialogContent></Dialog>
             </div>
         </TooltipProvider>
     );
