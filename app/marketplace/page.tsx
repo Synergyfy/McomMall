@@ -245,12 +245,16 @@ export default function MarketplacePage() {
     );
   };
 
-  // Render Flash Sale Section if active
-  // Note: sections can be empty/undefined initially, so we check carefully
-  const flashSaleConfig = sections?.['flash_sale'];
+  // Unified section handling: Convert to array if it's an object, or use as-is if array
+  const sectionsArray = Array.isArray(sections)
+    ? sections
+    : sections
+      ? Object.values(sections)
+      : [];
 
-  // Render Promo Carousel if active (check for various key formats)
-  const promoCarouselConfig = sections?.['promo_carousel'] || sections?.['promoCarousel'];
+  // Find specific sections by type
+  const flashSaleConfig = sectionsArray.find(s => s.type === 'flash_sale');
+  const promoCarouselConfigs = sectionsArray.filter(s => s.type === 'promo_carousel');
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
@@ -348,10 +352,10 @@ export default function MarketplacePage() {
         </div>
         )}
 
-        {/* 1.5 Promo Carousel Section */}
-        {promoCarouselConfig && (
-            <PromoCarousel section={promoCarouselConfig} products={allProducts} />
-        )}
+        {/* 1.5 Promo Carousel Section(s) */}
+        {promoCarouselConfigs.map((config, idx) => (
+            <PromoCarousel key={config.id || idx} section={config} products={allProducts} />
+        ))}
 
         {/* 2. Main Layout Split */}
         <div className="flex flex-col lg:flex-row gap-8">
