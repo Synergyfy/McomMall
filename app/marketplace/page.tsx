@@ -331,13 +331,13 @@ export default function MarketplacePage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
                             <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
                             <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
-                            {heroSlides[activeSlide].link && (
+                            {heroSlides[activeSlide].link ? (
                                 <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
                                     <Link href={heroSlides[activeSlide].link || '#'}>
                                         {heroSlides[activeSlide].buttonText || 'Shop Now'}
                                     </Link>
                                 </Button>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </motion.div>
