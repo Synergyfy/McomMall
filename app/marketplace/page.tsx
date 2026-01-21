@@ -14,6 +14,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
 import ProductCard from '@/components/marketplace/ProductCard';
+import PromoCarousel from '@/components/marketplace/PromoCarousel';
 import Pagination from '@/components/marketplace/Pagination';
 import { Input } from '@/components/ui/input';
 import {
@@ -246,6 +247,9 @@ export default function MarketplacePage() {
   // Note: sections can be empty/undefined initially, so we check carefully
   const flashSaleConfig = sections?.['flash_sale'];
 
+  // Render Promo Carousel if active (check for various key formats)
+  const promoCarouselConfig = sections?.['promo_carousel'] || sections?.['promoCarousel'];
+
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
       <div className="container mx-auto px-4">
@@ -340,6 +344,11 @@ export default function MarketplacePage() {
              )}
           </div>
         </div>
+        )}
+
+        {/* 1.5 Promo Carousel Section */}
+        {promoCarouselConfig && (
+            <PromoCarousel section={promoCarouselConfig} products={allProducts} />
         )}
 
         {/* 2. Main Layout Split */}
