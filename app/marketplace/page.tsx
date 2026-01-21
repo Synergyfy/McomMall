@@ -16,6 +16,7 @@ import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
 import ProductCard from '@/components/marketplace/ProductCard';
 import Pagination from '@/components/marketplace/Pagination';
+import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -69,7 +70,21 @@ export default function MarketplacePage() {
   const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
   const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
-  const flashSaleConfig = sections?.['flash_sale'];
+  // Helper to handle both camelCase (API docs) and snake_case (potential legacy API)
+  const getSection = (key: 'flashSale' | 'promoCarousel', snakeKey: 'flash_sale' | 'promo_carousel') => {
+      const config = sections?.[key] || sections?.[snakeKey];
+      if (!config) return null;
+      return {
+          ...config,
+          isVisible: config.isVisible ?? config.is_visible ?? false,
+          productIds: config.productIds || config.product_ids || [],
+          products: config.products || [],
+          title: config.title || '',
+      };
+  };
+
+  const flashSaleConfig = getSection('flashSale', 'flash_sale');
+  const promoCarouselConfig = getSection('promoCarousel', 'promo_carousel');
 
   // Combine Flash Sale and Banners for the sidebar slider
   const sidebarSlides = useMemo(() => {
@@ -304,7 +319,7 @@ export default function MarketplacePage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
         ) : (
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Slider */}
           <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group bg-gray-200">
             {heroSlides.length > 0 ? (
@@ -408,6 +423,22 @@ export default function MarketplacePage() {
              )}
           </div>
         </div>
+        )}
+
+        {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
+        {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
+             <MarketplaceSection
+                title={flashSaleConfig.title}
+                productIds={flashSaleConfig.productIds}
+                products={flashSaleConfig.products}
+             />
+        )}
+         {promoCarouselConfig?.isVisible && (promoCarouselConfig.products || promoCarouselConfig.productIds) && (
+             <MarketplaceSection
+                title={promoCarouselConfig.title}
+                productIds={promoCarouselConfig.productIds}
+                products={promoCarouselConfig.products}
+             />
         )}
 
         {/* 2. Main Layout Split */}

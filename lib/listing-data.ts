@@ -90,7 +90,7 @@ export interface Hotspot {
 
 // Type for Promotional Items
 export interface PromotionalItem {
-    id: number;
+    id: number | string;
     title: string;
     image: string;
     category: string;

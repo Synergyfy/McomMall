@@ -20,7 +20,11 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
 
   // Mock rating since it's not in the type yet, derived deterministically from ID
   // Using a simple hash of the ID ensures SSR and CSR match
-  const pseudoRandom = (product.id * 9301 + 49297) % 233280 / 233280;
+  const idNum = typeof product.id === 'number'
+    ? product.id
+    : product.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+
+  const pseudoRandom = (idNum * 9301 + 49297) % 233280 / 233280;
   const rating = 3.5 + (pseudoRandom * 1.5); // Rating between 3.5 and 5.0
   const reviewCount = Math.floor(pseudoRandom * 200) + 10;
 
