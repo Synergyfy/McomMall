@@ -29,6 +29,8 @@ export interface MarketplaceCategory {
 }
 
 export interface MarketplaceSectionConfig {
+  id?: string;
+  type?: string;
   title: string;
   isVisible: boolean;
   config: {
@@ -43,5 +45,5 @@ export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];
   categories: MarketplaceCategory[];
-  sections: Record<string, MarketplaceSectionConfig>;
+  sections: Record<string, MarketplaceSectionConfig> | MarketplaceSectionConfig[];
 }
