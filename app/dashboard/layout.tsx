@@ -39,7 +39,7 @@ export default function DashboardLayout({
       {trialStatus?.isActive && (
         <TrialCountdownTimer trialStatus={trialStatus} />
       )}
-      <section className="flex w-full h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">
+      <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className="hidden md:block w-[19rem] p-5">
           <div className="flex flex-col h-full">
