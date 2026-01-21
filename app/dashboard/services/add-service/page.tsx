@@ -203,14 +203,13 @@ export default function AddServicePage() {
         // Clean up undefined/optional number fields if they were empty strings in raw input (handled by coerce but good to be safe)
       };
 
-      // @ts-ignore - CreateServiceDto might have stricter types than form values but logic aligns
+      // CreateServiceDto might have stricter types than form values but logic aligns
       addService(serviceData, {
         onSuccess: (res) => {
-            // @ts-ignore
           setNewServiceId(res.id);
           setShowSuccessDialog(true);
         },
-        onError: (err: any) => {
+        onError: (err: Error) => {
           toast.error(err.message || 'Failed to create service');
         },
       });
