@@ -7,7 +7,6 @@ import { UserRole } from '@/service/auth/types';
 import {
     Card,
     CardContent,
-    CardDescription,
     CardHeader,
     CardTitle,
 } from '@/components/ui/card';
@@ -31,17 +30,13 @@ import {
 import {
     Dialog,
     DialogContent,
-    DialogDescription,
-    DialogFooter,
     DialogHeader,
     DialogTitle,
     DialogTrigger,
+    DialogDescription,
 } from '@/components/ui/dialog';
 import {
-    Tooltip,
-    TooltipContent,
     TooltipProvider,
-    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
     Badge,
@@ -60,8 +55,6 @@ import {
     Wallet,
     ArrowUpRight,
     ArrowDownLeft,
-    Info,
-    History,
     Send,
     PlusCircle,
     Zap,
@@ -71,14 +64,35 @@ import {
 } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
-import { motion, AnimatePresence } from 'framer-motion';
 import { toast } from 'sonner';
 import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
+import { UserVoucherResponseDto } from '@/service/money-engine/types';
 
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
+
+// --- TYPES ---
+interface ApiError {
+    response?: {
+        data?: {
+            message?: string;
+        }
+    }
+}
+
+interface VoucherDisplayData {
+    id: string;
+    name: string;
+    balance: number;
+    status: string;
+    totalValue: number;
+    description?: string;
+    split?: string;
+    scope?: string;
+    transactions: unknown[];
+}
 
 // --- COMPONENTS ---
 
@@ -115,7 +129,6 @@ const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProp
 
 export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
-    // const [activeTab, setActiveTab] = useState('overview'); // Removed unused state
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
@@ -123,9 +136,9 @@ export default function CouponsVouchersPage() {
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
     const [isSpendModalOpen, setIsSpendModalOpen] = useState(false);
     const [isQRModalOpen, setIsQRModalOpen] = useState(false);
-    const [selectedVoucherForQR, setSelectedVoucherForQR] = useState<any>(null);
+    const [selectedVoucherForQR, setSelectedVoucherForQR] = useState<VoucherDisplayData | null>(null);
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
-    const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<any>(null);
+    const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<VoucherDisplayData | null>(null);
 
     const [shopIdInput, setShopIdInput] = useState('');
     const [isCustomerSpendModalOpen, setIsCustomerSpendModalOpen] = useState(false);
@@ -140,11 +153,11 @@ export default function CouponsVouchersPage() {
 
     // API Hooks
     const { data: userProfile } = useGetUserProfile();
-    const { data: myVouchersResponse, isLoading: isLoadingVouchers } = useGetMyVouchers(isCustomer);
+    const { data: myVouchersResponse } = useGetMyVouchers(isCustomer);
     const { data: businessStats } = useGetBusinessStats(isBusiness);
-    const { data: definitionsResponse, isLoading: isLoadingDefinitions } = useGetOwnerRewardDefinitions(isBusiness);
+    const { data: definitionsResponse } = useGetOwnerRewardDefinitions(isBusiness);
     const { data: customerStats } = useGetCustomerStats(isCustomer);
-    const { data: publicDefinitionsResponse, isLoading: isLoadingPublicDefinitions, error: definitionsError } = useGetPublicRewardDefinitions(true);
+    const { data: publicDefinitionsResponse } = useGetPublicRewardDefinitions(true);
 
     const transferMutation = useTransferMoney();
     const cashbackMutation = useGiveCashback();
@@ -189,19 +202,19 @@ export default function CouponsVouchersPage() {
                 setScannerTarget(null);
             };
 
-            scanner.render(onScanSuccess, (err) => { });
+            scanner.render(onScanSuccess, () => { });
         } else {
             if (scannerRef.current) {
                 scannerRef.current.clear().catch(e => console.error(e));
                 scannerRef.current = null;
             }
         }
-        return () => { if (scannerRef.current) scannerRef.current.clear().catch(e => { }); };
+        return () => { if (scannerRef.current) scannerRef.current.clear().catch(() => { }); };
     }, [isScannerOpen, scannerTarget]);
 
     const myVouchers = useMemo(() => {
         if (!myVouchersResponse) return [];
-        return myVouchersResponse.map(v => ({
+        return myVouchersResponse.map((v: UserVoucherResponseDto) => ({
             id: v.id,
             name: v.definition.name,
             balance: v.totalBalance,
@@ -243,8 +256,9 @@ export default function CouponsVouchersPage() {
             setIsCashbackModalOpen(false);
             setCashbackAmount('');
             setSelectedUserVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to inject cashback');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to inject cashback');
         }
     };
 
@@ -260,8 +274,9 @@ export default function CouponsVouchersPage() {
             setIsSpendModalOpen(false);
             setSpendAmount('');
             setSpendVoucherId('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to charge voucher');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to charge voucher');
         }
     };
 
@@ -281,8 +296,9 @@ export default function CouponsVouchersPage() {
                 setPaypalOrderId(order.orderId);
                 setPurchaseStep('payment');
             }
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to initiate payment');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to initiate payment');
         }
     };
 
@@ -301,8 +317,9 @@ export default function CouponsVouchersPage() {
             setPurchaseStep('select');
             setStripeClientSecret(null);
             setPaypalOrderId(null);
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Failed to finalize purchase');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Failed to finalize purchase');
         }
     };
 
@@ -319,8 +336,9 @@ export default function CouponsVouchersPage() {
             setTransferAmount('');
             setTransferRecipient('');
             setSelectedVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Transfer failed');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Transfer failed');
         }
     };
 
@@ -341,8 +359,9 @@ export default function CouponsVouchersPage() {
             setSpendAmount('');
             setShopIdInput('');
             setSelectedVoucher('');
-        } catch (error: any) {
-            toast.error(error?.response?.data?.message || 'Payment failed');
+        } catch (error: unknown) {
+            const err = error as ApiError;
+            toast.error(err?.response?.data?.message || 'Payment failed');
         }
     };
 
