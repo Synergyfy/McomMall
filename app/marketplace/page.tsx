@@ -88,12 +88,17 @@ export default function MarketplacePage() {
         link: '/flash-sales',
         buttonText: 'Shop Deals',
         imageUrl: undefined
-      });
+      } as SidebarBanner);
     }
 
     // Add other banners
     if (sidebarBanners && sidebarBanners.length > 0) {
-      slides.push(...sidebarBanners);
+      // Ensure all banners have a valid link
+      const safeBanners = sidebarBanners.map(b => ({
+        ...b,
+        link: b.link || '#'
+      }));
+      slides.push(...safeBanners);
     }
 
     return slides;
