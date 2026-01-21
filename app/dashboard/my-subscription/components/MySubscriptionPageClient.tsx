@@ -10,24 +10,30 @@ import { Tier } from '@/service/tiers/types';
 
 export default function MySubscriptionPageClient() {
   const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
-  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'annual' } | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'annual') => {
+  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
     setSelectedTier({ tier, cycle });
   };
 
   if (selectedTier) {
-    const price = selectedTier.cycle === 'monthly' ? selectedTier.tier.monthlyPrice : selectedTier.tier.annualPrice;
+    let price: number = 0;
+    switch (selectedTier.cycle) {
+      case 'monthly':
+        price = selectedTier.tier.monthly_price;
+        break;
+      case 'quarterly':
+        price = selectedTier.tier.quaterly_price;
+        break;
+      case 'annual':
+        price = selectedTier.tier.annual_price;
+        break;
+    }
 
     // Ensure price is formatted as a string for the checkout component
-    // If it's a number, convert to string. If string, keep it.
-    // The PricingCheckoutClient expects a string like "£10.00" or just "10.00" (it strips non-numeric chars).
-    // Let's format it nicely if it's not already.
-    const priceString = typeof price === 'number'
-      ? `£${price.toFixed(2)}`
-      : price.toString();
+    const priceString = `£${price.toFixed(2)}`;
 
     return (
       <PricingCheckoutClient

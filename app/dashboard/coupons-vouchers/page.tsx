@@ -82,7 +82,15 @@ import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
 
 // --- COMPONENTS ---
 
-const StatCard = ({ title, value, icon: Icon, description, trend }: any) => (
+interface StatCardProps {
+    title: string;
+    value: string | number;
+    icon: React.ElementType;
+    description?: string;
+    trend?: 'up' | 'down';
+}
+
+const StatCard = ({ title, value, icon: Icon, description, trend }: StatCardProps) => (
     <Card className="overflow-hidden border-none shadow-md bg-white/50 backdrop-blur-sm hover:shadow-lg transition-all">
         <CardContent className="p-6">
             <div className="flex items-center justify-between space-x-4">
@@ -107,7 +115,7 @@ const StatCard = ({ title, value, icon: Icon, description, trend }: any) => (
 
 export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
-    const [activeTab, setActiveTab] = useState('overview');
+    // const [activeTab, setActiveTab] = useState('overview'); // Removed unused state
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);

@@ -18,7 +18,7 @@ import {
   setUserData,
   logout as logoutAction,
 } from '../store/authSlice';
-import { AppDispatch } from '../store/store';
+import { AppDispatch, RootState } from '../store/store';
 
 export interface ErrorResponse {
   response?: {
@@ -126,7 +126,7 @@ export const useResetPassword = () => {
 
 export const useAuth = () => {
   const { accessToken, userId, userName, userRole } = useSelector(
-    (state: any) => state.auth
+    (state: RootState) => state.auth
   );
 
   const user = useMemo(() => {

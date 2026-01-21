@@ -29,6 +29,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { Label } from '@/components/ui/label';
 
 interface VariantManagerProps {
   name: string;
@@ -44,19 +45,22 @@ export default function VariantManager({ name }: VariantManagerProps) {
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
   const [variantName, setVariantName] = useState('');
-  const [variantOptions, setVariantOptions] = useState<{ name: string; quantity: number }[]>([]);
+  const [variantType, setVariantType] = useState('select');
+  const [variantOptions, setVariantOptions] = useState<{ name: string; quantity: number; priceModifier: number }[]>([]);
   const [isCustomVariant, setIsCustomVariant] = useState(false);
 
   const showForm = (variant?: ProductVariant, index?: number) => {
     if (variant) {
       setEditingIndex(index as number);
       setVariantName(variant.name);
+      setVariantType(variant.type || 'select');
       setVariantOptions(variant.options || []);
       const isPredefined = ['Color', 'Size'].includes(variant.name);
       setIsCustomVariant(!isPredefined);
     } else {
       setEditingIndex(null);
       setVariantName('');
+      setVariantType('select');
       setVariantOptions([]);
       setIsCustomVariant(false);
     }
@@ -72,6 +76,7 @@ export default function VariantManager({ name }: VariantManagerProps) {
     if (variantName && variantOptions.length > 0) {
       const variantData: ProductVariant = {
         name: variantName,
+        type: variantType,
         options: variantOptions,
       };
       if (editingIndex !== null) {
@@ -85,13 +90,19 @@ export default function VariantManager({ name }: VariantManagerProps) {
 
   const handleAddOption = (optionName: string) => {
     if (optionName && !variantOptions.some(opt => opt.name.toLowerCase() === optionName.toLowerCase())) {
-      setVariantOptions([...variantOptions, { name: optionName, quantity: 0 }]);
+      setVariantOptions([...variantOptions, { name: optionName, quantity: 0, priceModifier: 0 }]);
     }
   };
 
   const handleUpdateQuantity = (index: number, quantity: number) => {
     const newOptions = [...variantOptions];
     newOptions[index] = { ...newOptions[index], quantity: quantity >= 0 ? quantity : 0 };
+    setVariantOptions(newOptions);
+  };
+
+  const handleUpdatePriceModifier = (index: number, price: number) => {
+    const newOptions = [...variantOptions];
+    newOptions[index] = { ...newOptions[index], priceModifier: price };
     setVariantOptions(newOptions);
   };
 
@@ -105,9 +116,9 @@ export default function VariantManager({ name }: VariantManagerProps) {
         {fields.map((field, index) => (
           <div key={field.id} className="flex items-center justify-between p-2 border rounded-md">
             <div>
-              <p className="font-semibold">{(field as unknown as ProductVariant).name}</p>
+              <p className="font-semibold">{(field as unknown as ProductVariant).name} <span className='text-xs font-normal text-gray-500'>({(field as unknown as ProductVariant).type})</span></p>
               <p className="text-sm text-gray-500">
-                {(field as unknown as ProductVariant).options.map((o) => `${o.name} (${o.quantity})`).join(', ')}
+                {(field as unknown as ProductVariant).options.map((o) => `${o.name} (Qty: ${o.quantity}, +£${o.priceModifier})`).join(', ')}
               </p>
             </div>
             <div className="flex gap-2">
@@ -119,42 +130,63 @@ export default function VariantManager({ name }: VariantManagerProps) {
       </div>
 
       {isFormVisible ? (
-        <div className="p-4 border rounded-md space-y-4">
+        <div className="p-4 border rounded-md space-y-4 bg-white shadow-sm">
           <h3 className="text-lg font-medium">{editingIndex !== null ? 'Edit Variant' : 'Add New Variant'}</h3>
-          <div className="space-y-2">
-            <p className="text-sm font-medium">Variant Name</p>
-            <Select
-              onValueChange={(value) => {
-                if (value === 'custom') {
-                  setIsCustomVariant(true);
-                  setVariantName('');
-                } else {
-                  setIsCustomVariant(false);
-                  setVariantName(value);
-                }
-              }}
-              value={isCustomVariant ? 'custom' : variantName}
-            >
-              <SelectTrigger>
-                <SelectValue placeholder="Choose or Enter Name" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="Color">Color</SelectItem>
-                <SelectItem value="Size">Size</SelectItem>
-                <SelectItem value="custom">Custom (e.g., Material)</SelectItem>
-              </SelectContent>
-            </Select>
-            {isCustomVariant && (
-              <Input
-                placeholder="Variant Name (e.g., Material)"
-                value={variantName}
-                onChange={(e) => setVariantName(e.target.value)}
-              />
-            )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label>Variant Name</Label>
+              <Select
+                onValueChange={(value) => {
+                  if (value === 'custom') {
+                    setIsCustomVariant(true);
+                    setVariantName('');
+                  } else {
+                    setIsCustomVariant(false);
+                    setVariantName(value);
+                  }
+                }}
+                value={isCustomVariant ? 'custom' : (['Color', 'Size'].includes(variantName) ? variantName : (variantName ? 'custom' : ''))}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Choose or Enter Name" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Color">Color</SelectItem>
+                  <SelectItem value="Size">Size</SelectItem>
+                  <SelectItem value="custom">Custom (e.g., Material)</SelectItem>
+                </SelectContent>
+              </Select>
+              {isCustomVariant && (
+                <Input
+                  placeholder="Variant Name (e.g., Material)"
+                  value={variantName}
+                  onChange={(e) => setVariantName(e.target.value)}
+                  className="mt-2"
+                />
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label>UI Type</Label>
+              <Select
+                onValueChange={setVariantType}
+                value={variantType}
+              >
+                <SelectTrigger>
+                  <SelectValue placeholder="Select UI Type" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="select">Dropdown (Select)</SelectItem>
+                  <SelectItem value="radio">Radio Buttons</SelectItem>
+                  <SelectItem value="color-picker">Color Picker</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
 
           <div className="pt-4 border-t">
-            <p className="text-sm font-medium">Variant Options</p>
+            <Label>Variant Options</Label>
             <p className="text-xs text-gray-500 mb-2">Select from the list or type your own option and press Enter.</p>
             <VariantOptionInput
               variantName={variantName}
@@ -164,28 +196,50 @@ export default function VariantManager({ name }: VariantManagerProps) {
           </div>
 
           <div className="space-y-2">
+            {variantOptions.length > 0 && (
+              <div className="grid grid-cols-12 gap-2 text-sm font-medium text-gray-500 px-2">
+                <div className="col-span-4">Name</div>
+                <div className="col-span-3">Quantity</div>
+                <div className="col-span-4">Price Modifier (£)</div>
+                <div className="col-span-1"></div>
+              </div>
+            )}
             {variantOptions.map((option, index) => (
-              <div key={index} className="flex items-center gap-2 p-2 border rounded-md">
-                <Badge variant="secondary" className="text-base">{option.name}</Badge>
-                <Input
-                  type="number"
-                  placeholder="Quantity"
-                  value={option.quantity}
-                  onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value))}
-                />
-                <button type="button" onClick={() => handleRemoveOption(index)}>
-                  <X className="h-4 w-4" />
-                </button>
+              <div key={index} className="grid grid-cols-12 gap-2 items-center p-2 border rounded-md">
+                <div className="col-span-4">
+                  <Badge variant="secondary" className="text-base truncate w-full justify-center">{option.name}</Badge>
+                </div>
+                <div className="col-span-3">
+                  <Input
+                    type="number"
+                    placeholder="Qty"
+                    value={option.quantity}
+                    onChange={(e) => handleUpdateQuantity(index, parseInt(e.target.value))}
+                  />
+                </div>
+                <div className="col-span-4">
+                   <Input
+                    type="number"
+                    placeholder="Price Mod"
+                    value={option.priceModifier}
+                    onChange={(e) => handleUpdatePriceModifier(index, parseFloat(e.target.value))}
+                  />
+                </div>
+                <div className="col-span-1 flex justify-end">
+                  <button type="button" onClick={() => handleRemoveOption(index)} className="text-red-500 hover:text-red-700">
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
               </div>
             ))}
           </div>
-          <div className="flex gap-2">
-            <Button type="button" onClick={handleSave} disabled={!variantName || variantOptions.length === 0}>Save</Button>
-            <Button type="button" variant="ghost" onClick={hideForm}>Cancel</Button>
+          <div className="flex gap-2 justify-end pt-4">
+             <Button type="button" variant="ghost" onClick={hideForm}>Cancel</Button>
+             <Button type="button" onClick={handleSave} disabled={!variantName || variantOptions.length === 0}>Save Variant</Button>
           </div>
         </div>
       ) : (
-        <Button type="button" variant="outline" onClick={() => showForm()}>
+        <Button type="button" variant="outline" onClick={() => showForm()} className="w-full sm:w-auto">
           <Plus className="mr-2 h-4 w-4" /> Add Variant
         </Button>
       )}
@@ -217,7 +271,7 @@ function VariantOptionInput({
           className="w-full justify-between"
           disabled={!variantName}
         >
-          Select or create option...
+          {inputValue || "Select or create option..."}
           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
         </Button>
       </PopoverTrigger>

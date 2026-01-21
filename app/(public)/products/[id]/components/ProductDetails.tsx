@@ -83,7 +83,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
       addItemToCart({
         productId: product.id,
         quantity,
-        variants: selectedVariants,
+        selectedVariants: selectedVariants,
       });
       toast.success('Added to cart');
     }

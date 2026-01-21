@@ -1,8 +1,10 @@
 export interface ProductVariant {
   name: string;
+  type: string;
   options: {
     name: string;
     quantity: number;
+    priceModifier: number;
   }[];
 }
 
