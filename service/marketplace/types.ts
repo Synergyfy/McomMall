@@ -27,6 +27,19 @@ export interface MarketplaceCategory {
   targetCategoryId: string;
 }
 
+// Minimal Product interface for the embedded product data
+export interface EmbeddedProduct {
+  id: string | number;
+  title: string;
+  price: number;
+  salePrice?: number;
+  imageUrl?: string;
+  media?: string[];
+  stock?: number;
+  category?: string;
+  [key: string]: any;
+}
+
 export interface MarketplaceSectionConfig {
   id?: string;
   title: string;
@@ -38,6 +51,7 @@ export interface MarketplaceSectionConfig {
     [key: string]: any;
   };
   productIds?: string[];
+  products?: EmbeddedProduct[];
   // Snake case fallbacks
   is_visible?: boolean;
   product_ids?: string[];

@@ -1,49 +1,75 @@
 'use client';
 
 import { useQueries } from '@tanstack/react-query';
-import { useRef } from 'react';
+import { useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getProductById } from '@/service/store/products/hook';
 import ProductCard from '@/components/marketplace/ProductCard';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Button } from '@/components/ui/button';
+import { EmbeddedProduct } from '@/service/marketplace/types';
 
 interface MarketplaceSectionProps {
   title: string;
-  productIds: string[];
+  productIds?: string[];
+  products?: EmbeddedProduct[];
 }
 
-export default function MarketplaceSection({ title, productIds }: MarketplaceSectionProps) {
+export default function MarketplaceSection({ title, productIds = [], products: initialProducts = [] }: MarketplaceSectionProps) {
   const scrollContainerRef = useRef<HTMLDivElement>(null);
 
-  // Fetch all products in parallel
+  // Use initialProducts if provided, otherwise fetch based on productIds
+  const hasDirectProducts = initialProducts && initialProducts.length > 0;
+
+  // Fetch all products in parallel ONLY if no direct products are provided
   const productQueries = useQueries({
-    queries: productIds.map((id) => ({
+    queries: (!hasDirectProducts && productIds.length > 0) ? productIds.map((id) => ({
       queryKey: ['product', id],
       queryFn: () => getProductById(id),
       staleTime: 1000 * 60 * 5, // 5 minutes
-    })),
+    })) : [],
   });
 
-  const isLoading = productQueries.some((q) => q.isLoading);
-  const products = productQueries
-    .map((q) => q.data)
-    .filter((p) => !!p) // Filter out undefined/failed fetches
-    .map((p) => {
-        // Map API Product to UI PromotionalItem
-        // We use the first image if available, or a placeholder
-        const image = p!.imageUrl || (p!.media && p!.media.length > 0 ? p!.media[0] : null) || 'https://placehold.co/400x400?text=No+Image';
+  const isLoading = !hasDirectProducts && productQueries.some((q) => q.isLoading);
 
-        return {
-            id: p!.id,
-            title: p!.title,
-            image: image,
-            category: p!.category,
-            price: p!.price,
-            discountedPrice: p!.salePrice || undefined, // undefined if null/0? API typing says salePrice?: number
-            items_left: p!.stock || 10, // Mock if missing
-        } as PromotionalItem;
-    });
+  const finalProducts = useMemo(() => {
+    // If we have direct products from the API response (new structure)
+    if (hasDirectProducts) {
+        return initialProducts.map(p => {
+             // Map EmbeddedProduct to UI PromotionalItem
+             // Use first fileUrl as image if available, fallback to imageUrl
+             const imageUrl = (p.fileUrls && p.fileUrls.length > 0) ? p.fileUrls[0] : (p.imageUrl || 'https://placehold.co/400x400?text=No+Image');
+
+             return {
+                id: p.id,
+                title: p.title,
+                image: imageUrl,
+                category: p.category || 'General',
+                price: p.price,
+                discountedPrice: p.salePrice || undefined,
+                items_left: p.stock || 0,
+            } as PromotionalItem;
+        });
+    }
+
+    // Fallback: Use fetched products (old structure with IDs)
+    return productQueries
+        .map((q) => q.data)
+        .filter((p) => !!p) // Filter out undefined/failed fetches
+        .map((p) => {
+            const image = p!.imageUrl || (p!.media && p!.media.length > 0 ? p!.media[0] : null) || 'https://placehold.co/400x400?text=No+Image';
+
+            return {
+                id: p!.id,
+                title: p!.title,
+                image: image,
+                category: p!.category,
+                price: p!.price,
+                discountedPrice: p!.salePrice || undefined,
+                items_left: p!.stock || 10,
+            } as PromotionalItem;
+        });
+  }, [hasDirectProducts, initialProducts, productQueries]);
 
   const scroll = (direction: 'left' | 'right') => {
     if (scrollContainerRef.current) {
@@ -85,13 +111,13 @@ export default function MarketplaceSection({ title, productIds }: MarketplaceSec
         <div className="flex items-center justify-center h-64 bg-gray-50 rounded-xl border border-dashed border-gray-200">
            <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
         </div>
-      ) : products.length > 0 ? (
+      ) : finalProducts.length > 0 ? (
         <div
             ref={scrollContainerRef}
             className="flex gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 scroll-smooth"
             style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
         >
-          {products.map((product) => (
+          {finalProducts.map((product) => (
             <div key={product.id} className="min-w-[280px] w-[280px] md:min-w-[300px] md:w-[300px]">
               <ProductCard product={product} viewMode="grid" />
             </div>

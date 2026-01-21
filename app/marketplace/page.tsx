@@ -78,6 +78,7 @@ export default function MarketplacePage() {
           ...config,
           isVisible: config.isVisible ?? config.is_visible ?? false,
           productIds: config.productIds || config.product_ids || [],
+          products: config.products || [],
           title: config.title || '',
       };
   };
@@ -425,11 +426,19 @@ export default function MarketplacePage() {
         )}
 
         {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
-        {flashSaleConfig?.isVisible && flashSaleConfig.productIds && (
-             <MarketplaceSection title={flashSaleConfig.title} productIds={flashSaleConfig.productIds} />
+        {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
+             <MarketplaceSection
+                title={flashSaleConfig.title}
+                productIds={flashSaleConfig.productIds}
+                products={flashSaleConfig.products}
+             />
         )}
-         {promoCarouselConfig?.isVisible && promoCarouselConfig.productIds && (
-             <MarketplaceSection title={promoCarouselConfig.title} productIds={promoCarouselConfig.productIds} />
+         {promoCarouselConfig?.isVisible && (promoCarouselConfig.products || promoCarouselConfig.productIds) && (
+             <MarketplaceSection
+                title={promoCarouselConfig.title}
+                productIds={promoCarouselConfig.productIds}
+                products={promoCarouselConfig.products}
+             />
         )}
 
         {/* 2. Main Layout Split */}
