@@ -95,6 +95,9 @@ interface VoucherDisplayData {
     split?: string;
     scope?: string;
     transactions: unknown[];
+    rewardRatio?: number;
+    realRatio?: number;
+    shops?: any[];
 }
 
 // --- COMPONENTS ---
@@ -695,11 +698,11 @@ export default function CouponsVouchersPage() {
                                     <div className="flex-1">
                                         <div className="text-xs font-bold text-blue-800">Usage Scope</div>
                                         <div className="text-sm font-medium">{selectedVoucherForDetails?.scope || 'Any Shop'}</div>
-                                        {selectedVoucherForDetails?.scope !== 'Any Shop' && selectedVoucherForDetails?.shops?.length > 0 && (
+                                        {selectedVoucherForDetails?.scope !== 'Any Shop' && (selectedVoucherForDetails?.shops?.length || 0) > 0 && (
                                             <div className="mt-2 space-y-1">
                                                 <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {selectedVoucherForDetails.shops.map((shop: any, idx: number) => (
+                                                    {selectedVoucherForDetails?.shops?.map((shop: any, idx: number) => (
                                                         <Badge key={idx} variant="secondary" className="bg-blue-100/50 text-blue-700 border-none text-[10px]">
                                                             {shop.name || shop.id || shop}
                                                         </Badge>
@@ -724,7 +727,7 @@ export default function CouponsVouchersPage() {
                                         variant="ghost"
                                         size="icon"
                                         className="h-6 w-6 text-gray-400 hover:text-orange-600"
-                                        onClick={() => handleCopy(selectedVoucherForDetails?.id)}
+                                        onClick={() => selectedVoucherForDetails?.id && handleCopy(selectedVoucherForDetails.id)}
                                     >
                                         {copiedId === selectedVoucherForDetails?.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
                                     </Button>
