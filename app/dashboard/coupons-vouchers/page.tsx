@@ -68,6 +68,9 @@ import {
     QrCode,
     ScanLine,
     Maximize,
+    Copy,
+    Check,
+    Globe,
 } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
@@ -164,6 +167,14 @@ export default function CouponsVouchersPage() {
     const [purchaseStep, setPurchaseStep] = useState<'select' | 'payment'>('select');
     const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
     const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
+    const [copiedId, setCopiedId] = useState<string | null>(null);
+
+    const handleCopy = (text: string) => {
+        navigator.clipboard.writeText(text);
+        setCopiedId(text);
+        toast.success('Copied to clipboard');
+        setTimeout(() => setCopiedId(null), 2000);
+    };
 
     useEffect(() => {
         if (isScannerOpen) {
@@ -209,7 +220,10 @@ export default function CouponsVouchersPage() {
             totalValue: v.totalBalance,
             description: v.definition.description,
             split: v.definition.splitRatio ? `${v.definition.splitRatio.real * 100}/${v.definition.splitRatio.reward * 100}` : '50/50',
+            rewardRatio: (v.definition.splitRatio?.reward || 0.5) * 100,
+            realRatio: (v.definition.splitRatio?.real || 0.5) * 100,
             scope: v.definition.scopeType === 'any_shop' ? 'Any Shop' : (v.definition.scopeType || 'Any Shop'),
+            shops: v.definition.validShops || [],
             transactions: []
         }));
     }, [myVouchersResponse]);
@@ -230,6 +244,21 @@ export default function CouponsVouchersPage() {
         if (!publicDefinitionsResponse?.data) return [];
         return publicDefinitionsResponse.data;
     }, [publicDefinitionsResponse]);
+
+    const selectedVoucherDefinition = useMemo(() => {
+        return availableVouchersForPurchase.find(v => v.id === selectedVoucher);
+    }, [availableVouchersForPurchase, selectedVoucher]);
+
+    const totalPower = useMemo(() => {
+        if (!selectedVoucherDefinition || !topUpAmount) return 0;
+        const realRatio = selectedVoucherDefinition.splitRatio?.real || 0.5;
+        return Number(topUpAmount) / realRatio;
+    }, [selectedVoucherDefinition, topUpAmount]);
+
+    const rewardRatioPercent = useMemo(() => {
+        if (!selectedVoucherDefinition) return 50;
+        return (selectedVoucherDefinition.splitRatio?.reward || 0.5) * 100;
+    }, [selectedVoucherDefinition]);
 
     const handleGiveCashback = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -374,7 +403,7 @@ export default function CouponsVouchersPage() {
                             <StatCard title="Active Vouchers" value={customerStats?.activeVouchersCount ?? 0} icon={Zap} description="Available now" />
                             <StatCard title="Total Balance" value={`£${customerStats?.totalCurrentBalance?.toFixed(2) ?? '0.00'}`} icon={Wallet} description="Spending power" />
                             <StatCard title="Total Spent" value={`£${customerStats?.totalSpent?.toFixed(2) ?? '0.00'}`} icon={ArrowUpRight} description="Lifetime spend" trend="up" />
-                            <StatCard title="Rewards Earned" value={`£${customerStats?.totalCurrentBalance ? (customerStats.totalCurrentBalance / 2).toFixed(2) : '0.00'}`} icon={Gift} description="Cashback value" />
+                            <StatCard title="Rewards Earned" value={`£${customerStats ? customerStats.currentRewardBalance.toFixed(2) : '0.00'}`} icon={Gift} description="Cashback value" />
                             <StatCard title="Real Money" value={`£${customerStats?.currentRealBalance?.toFixed(2) ?? '0.00'}`} icon={TrendingUp} description="Your personal funds" />
                             <StatCard title="Rewards from Business" value={`£${customerStats?.totalBusinessRewardsReceived?.toFixed(2) ?? '0.00'}`} icon={Send} description="Total rewards received" />
                         </>
@@ -416,10 +445,10 @@ export default function CouponsVouchersPage() {
                                     </Dialog>
                                     <Dialog open={isCashbackModalOpen} onOpenChange={setIsCashbackModalOpen}>
                                         <DialogTrigger asChild>
-                                            <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl flex items-center gap-2"><PlusCircle className="w-4 h-4" />Inject Cashback</Button>
+                                            <Button className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl flex items-center gap-2"><PlusCircle className="w-4 h-4" />Inject C-V</Button>
                                         </DialogTrigger>
                                         <DialogContent className="sm:max-w-[425px]">
-                                            <DialogHeader><DialogTitle>Inject Cashback</DialogTitle></DialogHeader>
+                                            <DialogHeader><DialogTitle>Inject C-V</DialogTitle></DialogHeader>
                                             <form onSubmit={handleGiveCashback} className="space-y-4 py-4">
                                                 <div className="space-y-2">
                                                     <Label>Voucher ID</Label>
@@ -433,7 +462,7 @@ export default function CouponsVouchersPage() {
                                                     <Label>Amount (£)</Label>
                                                     <Input type="number" placeholder="0.00" value={cashbackAmount} onChange={(e) => setCashbackAmount(e.target.value)} className="rounded-xl" />
                                                 </div>
-                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl" disabled={cashbackMutation.isPending}>{cashbackMutation.isPending ? 'Processing...' : 'Inject Cashback'}</Button>
+                                                <Button type="submit" className="w-full bg-orange-600 hover:bg-orange-700 text-white rounded-xl" disabled={cashbackMutation.isPending}>{cashbackMutation.isPending ? 'Processing...' : 'Inject C-V'}</Button>
                                             </form>
                                         </DialogContent>
                                     </Dialog>
@@ -474,7 +503,19 @@ export default function CouponsVouchersPage() {
                                                     myVouchers.map((cv) => (
                                                         <TableRow key={cv.id}>
                                                             <TableCell className="font-bold py-4">{cv.name}</TableCell>
-                                                            <TableCell className="text-xs text-gray-400 font-mono">{cv.id}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex items-center gap-2">
+                                                                    <span className="text-xs text-gray-400 font-mono">{cv.id}</span>
+                                                                    <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-6 w-6 text-gray-400 hover:text-orange-600"
+                                                                        onClick={() => handleCopy(cv.id)}
+                                                                    >
+                                                                        {copiedId === cv.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                                    </Button>
+                                                                </div>
+                                                            </TableCell>
                                                             <TableCell><span className="text-lg font-bold text-green-600">£{cv.balance}</span></TableCell>
                                                             <TableCell className="hidden md:table-cell text-gray-500">{cv.scope}</TableCell>
                                                             <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{cv.status}</Badge></TableCell>
@@ -533,7 +574,12 @@ export default function CouponsVouchersPage() {
                                 <div className="space-y-2">
                                     <Label>Payment Amount (£)</Label>
                                     <Input type="number" value={topUpAmount} onChange={(e) => setTopUpAmount(e.target.value)} className="rounded-xl" />
-                                    <p className="text-[10px] text-orange-600 font-bold">Total Power: £{Number(topUpAmount) * 2}</p>
+                                    {selectedVoucherDefinition && (
+                                        <div className="flex justify-between items-center mt-1">
+                                            <p className="text-[10px] text-orange-600 font-bold">Total Power: £{totalPower.toFixed(2)}</p>
+                                            <p className="text-[10px] text-gray-400 font-medium">Matching: {rewardRatioPercent}%</p>
+                                        </div>
+                                    )}
                                 </div>
                                 <div className="space-y-2">
                                     <Label>Method</Label>
@@ -617,8 +663,55 @@ export default function CouponsVouchersPage() {
                         <div className="bg-blue-800 p-8 text-white relative"><div className="absolute top-0 right-0 p-8 opacity-10"><Maximize className="w-24 h-24" /></div><Badge className="bg-blue-500/30 mb-2">Voucher Info</Badge><h3 className="text-2xl font-black">{selectedVoucherForDetails?.name}</h3><p className="text-sm opacity-80">{selectedVoucherForDetails?.description || "Matching reward voucher."}</p></div>
                         <div className="p-6 space-y-4">
                             <div className="grid grid-cols-2 gap-4"><div className="p-4 bg-gray-50 rounded-xl"><span>Balance</span><div className="text-xl font-bold text-blue-900">£{selectedVoucherForDetails?.balance?.toFixed(2)}</div></div><div className="p-4 bg-gray-50 rounded-xl"><span>Split Ratio</span><div className="text-xl font-bold text-blue-900">{selectedVoucherForDetails?.split}</div></div></div>
-                            <div className="space-y-2"><div className="p-4 bg-orange-50 rounded-xl flex gap-3 items-center"><Zap className="w-5 h-5 text-orange-600" /><div><div className="text-xs font-bold text-orange-800">Reward Power</div><div className="text-sm">Matched by {selectedVoucherForDetails?.split?.split('/')[1] || '50'}%</div></div></div><div className="p-4 bg-green-50 rounded-xl flex gap-3 items-center"><Gift className="w-5 h-5 text-green-600" /><div><div className="text-xs font-bold text-green-800">Cashback Eligible</div><div className="text-sm">Active on network.</div></div></div></div>
-                            <div className="pt-4 border-t flex justify-between items-center"><span className="text-xs text-gray-400 font-mono">ID: {selectedVoucherForDetails?.id}</span><Badge className="bg-green-100 text-green-700">{selectedVoucherForDetails?.status}</Badge></div>
+                            <div className="space-y-2">
+                                <div className="p-4 bg-orange-50 rounded-xl flex gap-3 items-center">
+                                    <Zap className="w-5 h-5 text-orange-600" />
+                                    <div>
+                                        <div className="text-xs font-bold text-orange-800">Reward Power</div>
+                                        <div className="text-sm">Matched by {selectedVoucherForDetails?.rewardRatio || '50'}%</div>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-blue-50 rounded-xl flex gap-3 items-start">
+                                    <Globe className="w-5 h-5 text-blue-600 mt-0.5" />
+                                    <div className="flex-1">
+                                        <div className="text-xs font-bold text-blue-800">Usage Scope</div>
+                                        <div className="text-sm font-medium">{selectedVoucherForDetails?.scope || 'Any Shop'}</div>
+                                        {selectedVoucherForDetails?.scope !== 'Any Shop' && selectedVoucherForDetails?.shops?.length > 0 && (
+                                            <div className="mt-2 space-y-1">
+                                                <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {selectedVoucherForDetails.shops.map((shop: any, idx: number) => (
+                                                        <Badge key={idx} variant="secondary" className="bg-blue-100/50 text-blue-700 border-none text-[10px]">
+                                                            {shop.name || shop.id || shop}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-green-50 rounded-xl flex gap-3 items-center">
+                                    <Gift className="w-5 h-5 text-green-600" />
+                                    <div>
+                                        <div className="text-xs font-bold text-green-800">Cashback Eligible</div>
+                                        <div className="text-sm">Active on network.</div>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="pt-4 border-t flex justify-between items-center">
+                                <div className="flex items-center gap-2">
+                                    <span className="text-xs text-gray-400 font-mono">ID: {selectedVoucherForDetails?.id}</span>
+                                    <Button
+                                        variant="ghost"
+                                        size="icon"
+                                        className="h-6 w-6 text-gray-400 hover:text-orange-600"
+                                        onClick={() => handleCopy(selectedVoucherForDetails?.id)}
+                                    >
+                                        {copiedId === selectedVoucherForDetails?.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                    </Button>
+                                </div>
+                                <Badge className="bg-green-100 text-green-700">{selectedVoucherForDetails?.status}</Badge>
+                            </div>
                         </div>
                         <div className="p-6 bg-gray-50 flex gap-2"><Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsDetailsModalOpen(false)}>Close</Button><Button className="flex-1 bg-orange-600 rounded-xl gap-2" onClick={() => { setIsDetailsModalOpen(false); setSelectedVoucherForQR(selectedVoucherForDetails); setIsQRModalOpen(true); }}><QrCode className="w-4 h-4" />Pay Now</Button></div>
                     </DialogContent>
