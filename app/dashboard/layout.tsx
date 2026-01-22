@@ -39,7 +39,7 @@ export default function DashboardLayout({
       {trialStatus?.isActive && (
         <TrialCountdownTimer trialStatus={trialStatus} />
       )}
-      <section className="flex w-screen h-dvh max-h-screen overflow-hidden bg-[#F6F6F6]">
+      <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className="hidden md:block w-[19rem] p-5">
           <div className="flex flex-col h-full">
@@ -52,7 +52,7 @@ export default function DashboardLayout({
               </div>
               <span className="text-3xl font-semibold">McomMall</span>
             </Link>
-            <div className="flex-grow h-calc[(100vh-5rem)] overflow-y-auto">
+            <div className="flex-grow min-h-0 overflow-y-auto">
               <SideMenu />
             </div>
           </div>
@@ -122,7 +122,7 @@ export default function DashboardLayout({
           </header>
 
           {/* Page Content */}
-          <div className="sm:p-5 p-2 overflow-y-auto flex-grow">
+          <div className="sm:p-5 p-2 overflow-y-auto flex-1 min-h-0">
             <ProtectedRoute>{children}</ProtectedRoute>
           </div>
         </main>

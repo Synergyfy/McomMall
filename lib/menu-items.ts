@@ -48,7 +48,7 @@ export const mainMenuItems: MenuItem[] = [
   { title: 'Messages', href: '/dashboard/messages', icon: MessageSquare },
   { title: 'My Wishlist', href: '/dashboard/wishlist', icon: Heart },
   {
-    title: 'Reward Hub',
+    title: 'Coupon-Voucher',
     href: '/dashboard/coupons-vouchers',
     icon: Gift,
   },

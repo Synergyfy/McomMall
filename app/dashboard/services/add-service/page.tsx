@@ -1,8 +1,28 @@
 'use client';
 
-import * as React from 'react';
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { useForm, useFieldArray, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
+import * as z from 'zod';
+import {
+  ChevronRight,
+  PlusCircle,
+  Trash2,
+  Info,
+  Save,
+  Store,
+  Image as ImageIcon,
+  DollarSign,
+  Settings,
+  ListPlus,
+  Users
+} from 'lucide-react';
+import { toast } from 'sonner';
+
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
   SelectContent,
@@ -10,19 +30,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Textarea } from '@/components/ui/textarea';
-import { useGetUserListings } from '@/service/listings/hook';
-import { ChevronRight, Info, PlusCircle, Trash2 } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
-import { useQueryClient } from '@tanstack/react-query';
-import { useRouter } from 'next/navigation';
-import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
-import { CreateServiceDto } from '@/service/services/types';
-import { useAddService } from '@/service/services/hook';
-import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
-import { uploadFile } from '@/lib/upload';
-import { UserListing } from '@/service/listings/types';
 import {
   Card,
   CardContent,
@@ -31,1005 +39,760 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from '@/components/ui/form';
+import {
   Tooltip,
   TooltipContent,
   TooltipProvider,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { Separator } from '@/components/ui/separator';
+
+import { useGetUserListings } from '@/service/listings/hook';
+import { useAddService } from '@/service/services/hook';
+import { UserListing } from '@/service/listings/types';
+import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
+import { uploadFile } from '@/lib/upload';
+import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import Link from 'next/link';
+import { cn } from '@/lib/utils';
 
-interface ServiceError {
-  name?: string;
-  businessId?: string;
-  pricingModel?: string;
-  fixedPrice?: string;
-  pricePerHour?: string;
-  pricePerUnit?: string;
-  unitName?: string;
-  minGuests?: string;
-  maxGuests?: string;
-  pricePerGuest?: string;
-  fixedGroupPrice?: string;
-  basePrice?: string;
-  baseGuests?: string;
-  additionalGuestPrice?: string;
-  bookingFee?: string;
-  media?: string;
-}
+// --- ZOD SCHEMA ---
 
-const TooltipLabel = ({
-  htmlFor,
-  label,
-  tooltip,
-}: {
-  htmlFor: string;
-  label: string;
-  tooltip: string;
-}) => (
-  <div className="flex items-center gap-2">
-    <Label htmlFor={htmlFor}>{label}</Label>
-    <TooltipProvider>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <Info className="h-4 w-4 text-gray-500 cursor-pointer" />
-        </TooltipTrigger>
-        <TooltipContent>
-          <p>{tooltip}</p>
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  </div>
-);
+const serviceSchema = z.object({
+  name: z.string().min(1, 'Service name is required').max(160, 'Max 160 characters'),
+  description: z.string().optional(),
+  businessId: z.string().min(1, 'Please select a business'),
+  isActive: z.boolean().default(true),
+  pricingModel: z.enum(['fixed', 'perHour', 'perUnit']),
+  fixedPrice: z.coerce.number().min(0, 'Price must be >= 0').optional(),
+  pricePerHour: z.coerce.number().min(0, 'Price must be >= 0').optional(),
+  pricePerUnit: z.coerce.number().min(0, 'Price must be >= 0').optional(),
+  unitName: z.string().optional(),
 
-const AddServicePage = () => {
+  // Guest Pricing
+  enableGuestPricing: z.boolean().default(false),
+  minGuests: z.coerce.number().min(1).optional(),
+  maxGuests: z.coerce.number().min(1).optional(),
+  guestPricingModel: z.enum(['perGuest', 'fixedGroup', 'baseWithAdditional']).optional(),
+  pricePerGuest: z.coerce.number().min(0).optional(),
+  fixedGroupPrice: z.coerce.number().min(0).optional(),
+  basePrice: z.coerce.number().min(0).optional(),
+  baseGuests: z.coerce.number().min(1).optional(),
+  additionalGuestPrice: z.coerce.number().min(0).optional(),
+
+  // Quote Model
+  isQuoteModel: z.boolean().default(false),
+  bookingFee: z.coerce.number().min(0).optional(),
+
+  // Arrays
+  bundledServices: z.array(z.object({
+    name: z.string().min(1, 'Name required'),
+    price: z.coerce.number().optional(),
+  })).optional(),
+
+  configurableAddons: z.array(z.object({
+    name: z.string().min(1, 'Name required'),
+    price: z.coerce.number().optional(),
+    pricingType: z.enum(['oneTime', 'perGuest', 'perUnit']),
+    unitName: z.string().optional(),
+  })).optional(),
+
+  media: z.array(z.any()).min(1, 'At least one image is required'),
+}).superRefine((data, ctx) => {
+  // Pricing Model Validation
+  if (data.pricingModel === 'fixed' && data.fixedPrice === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Fixed price is required', path: ['fixedPrice'] });
+  }
+  if (data.pricingModel === 'perHour' && data.pricePerHour === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per hour is required', path: ['pricePerHour'] });
+  }
+  if (data.pricingModel === 'perUnit') {
+    if (data.pricePerUnit === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per unit is required', path: ['pricePerUnit'] });
+    }
+    if (!data.unitName) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Unit name is required', path: ['unitName'] });
+    }
+  }
+
+  // Guest Pricing Validation
+  if (data.enableGuestPricing) {
+    if (!data.minGuests) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Min guests required', path: ['minGuests'] });
+    if (!data.maxGuests) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max guests required', path: ['maxGuests'] });
+
+    if (data.guestPricingModel === 'perGuest' && data.pricePerGuest === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per guest required', path: ['pricePerGuest'] });
+    }
+    if (data.guestPricingModel === 'fixedGroup' && data.fixedGroupPrice === undefined) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Fixed group price required', path: ['fixedGroupPrice'] });
+    }
+    if (data.guestPricingModel === 'baseWithAdditional') {
+      if (data.basePrice === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Base price required', path: ['basePrice'] });
+      if (data.baseGuests === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Base guests required', path: ['baseGuests'] });
+      if (data.additionalGuestPrice === undefined) ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Additional guest price required', path: ['additionalGuestPrice'] });
+    }
+  }
+
+  // Quote Model Validation
+  if (data.isQuoteModel && data.bookingFee === undefined) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Booking fee is required', path: ['bookingFee'] });
+  }
+
+  // Media Validation
+  if (data.media.length > 5) {
+     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max 5 files allowed', path: ['media'] });
+  }
+});
+
+type ServiceFormValues = z.infer<typeof serviceSchema>;
+
+export default function AddServicePage() {
   const router = useRouter();
-  const queryClient = useQueryClient();
-  const { data: listings, isLoading: isLoadingListings } =
-    useGetUserListings();
-  const [showSuccessDialog, setShowSuccessDialog] = React.useState(false);
-  const [newServiceId, setNewServiceId] = React.useState<string | null>(null);
+  const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [newServiceId, setNewServiceId] = useState<string | null>(null);
 
-  const [formData, setFormData] = React.useState<CreateServiceDto>({
-    name: '',
-    description: '',
-    images: [],
-    isActive: true,
-    businessId: '',
-    pricingModel: 'fixed',
-    fixedPrice: undefined,
-    pricePerHour: undefined,
-    pricePerUnit: undefined,
-    unitName: '',
-    enableGuestPricing: false,
-    guestPricingModel: 'perGuest',
-    minGuests: undefined,
-    maxGuests: undefined,
-    pricePerGuest: undefined,
-    fixedGroupPrice: undefined,
-    basePrice: undefined,
-    baseGuests: undefined,
-    additionalGuestPrice: undefined,
-    isQuoteModel: false,
-    bookingFee: undefined,
-    bundledServices: [],
-    configurableAddons: [],
-  });
-
-  const [errors, setErrors] = React.useState<ServiceError>({});
-
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
   const { mutate: addService, isPending: isAddingService } = useAddService();
 
-  const [media, setMedia] = React.useState<File[]>([]);
+  const businesses = listings?.data?.filter((l: UserListing) => l.listingType.includes('service')) || [];
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (validateForm()) {
+  const form = useForm<ServiceFormValues>({
+    resolver: zodResolver(serviceSchema),
+    defaultValues: {
+      name: '',
+      description: '',
+      isActive: true,
+      businessId: '',
+      pricingModel: 'fixed',
+      enableGuestPricing: false,
+      guestPricingModel: 'perGuest',
+      isQuoteModel: false,
+      bundledServices: [],
+      configurableAddons: [],
+      media: [],
+    },
+  });
+
+  const { fields: bundledFields, append: appendBundled, remove: removeBundled } = useFieldArray({
+    control: form.control,
+    name: 'bundledServices',
+  });
+
+  const { fields: addonFields, append: appendAddon, remove: removeAddon } = useFieldArray({
+    control: form.control,
+    name: 'configurableAddons',
+  });
+
+  const onSubmit = async (data: ServiceFormValues) => {
+    try {
       const mediaUrls = await Promise.all(
-        media.map(file => uploadFile(file))
+        data.media.map((file: File) => uploadFile(file))
       );
 
       const serviceData = {
-        ...formData,
+        ...data,
         images: mediaUrls.map(result => result.secure_url),
-      }
+        // Clean up undefined/optional number fields if they were empty strings in raw input (handled by coerce but good to be safe)
+      };
 
+      // CreateServiceDto might have stricter types than form values but logic aligns
       addService(serviceData, {
-        onSuccess: (data) => {
-          // Assuming the hook returns the created service with its ID
-          setNewServiceId(data.id);
-          queryClient.invalidateQueries({ queryKey: ['my-services'] });
+        onSuccess: (res) => {
+          setNewServiceId(res.id);
           setShowSuccessDialog(true);
         },
-        onError: (error) => {
-          console.error('Error creating service:', error);
-          // Handle error display to the user
+        onError: (err: Error) => {
+          toast.error(err.message || 'Failed to create service');
         },
       });
+    } catch (error) {
+      console.error(error);
+      toast.error('An error occurred during upload');
     }
   };
 
-  const validateForm = () => {
-    const newErrors: ServiceError = {};
-
-    if (!formData.name) newErrors.name = 'Service name is required.';
-    if (formData.name.length > 160)
-      newErrors.name = 'Service name must be 160 characters or less.';
-    if (!formData.businessId)
-      newErrors.businessId = 'Please select a business.';
-
-    // Pricing model validation
-    if (formData.pricingModel === 'fixed' && formData.fixedPrice == null) {
-      newErrors.fixedPrice = 'Fixed price is required.';
-    } else if (formData.fixedPrice != null && formData.fixedPrice < 0) {
-      newErrors.fixedPrice = 'Price must not be less than 0.';
-    }
-
-    if (formData.pricingModel === 'perHour' && formData.pricePerHour == null) {
-      newErrors.pricePerHour = 'Price per hour is required.';
-    } else if (formData.pricePerHour != null && formData.pricePerHour < 0) {
-      newErrors.pricePerHour = 'Price must not be less than 0.';
-    }
-
-    if (formData.pricingModel === 'perUnit') {
-      if (formData.pricePerUnit == null)
-        newErrors.pricePerUnit = 'Price per unit is required.';
-      else if (formData.pricePerUnit < 0)
-        newErrors.pricePerUnit = 'Price must not be less than 0.';
-      if (!formData.unitName) newErrors.unitName = 'Unit name is required.';
-    }
-
-    // Guest pricing validation
-    if (formData.enableGuestPricing) {
-      if (formData.minGuests == null) {
-        newErrors.minGuests = 'Min guests is required.';
-      } else if (formData.minGuests < 1) {
-        newErrors.minGuests = 'Min guests must not be less than 1.';
-      }
-
-      if (formData.maxGuests == null) {
-        newErrors.maxGuests = 'Max guests is required.';
-      } else if (formData.maxGuests < 1) {
-        newErrors.maxGuests = 'Max guests must not be less than 1.';
-      }
-
-      if (
-        formData.guestPricingModel === 'perGuest' &&
-        formData.pricePerGuest == null
-      ) {
-        newErrors.pricePerGuest = 'Price per guest is required.';
-      } else if (formData.pricePerGuest != null && formData.pricePerGuest < 0) {
-        newErrors.pricePerGuest = 'Price must not be less than 0.';
-      }
-
-      if (
-        formData.guestPricingModel === 'fixedGroup' &&
-        formData.fixedGroupPrice == null
-      ) {
-        newErrors.fixedGroupPrice = 'Fixed group price is required.';
-      } else if (
-        formData.fixedGroupPrice != null &&
-        formData.fixedGroupPrice < 0
-      ) {
-        newErrors.fixedGroupPrice = 'Price must not be less than 0.';
-      }
-
-      if (formData.guestPricingModel === 'baseWithAdditional') {
-        if (formData.basePrice == null)
-          newErrors.basePrice = 'Base price is required.';
-        else if (formData.basePrice < 0)
-          newErrors.basePrice = 'Price must not be less than 0.';
-
-        if (formData.baseGuests == null)
-          newErrors.baseGuests = 'Base guests number is required.';
-        else if (formData.baseGuests < 1)
-          newErrors.baseGuests = 'Base guests must not be less than 1.';
-
-        if (formData.additionalGuestPrice == null)
-          newErrors.additionalGuestPrice = 'Additional guest price is required.';
-        else if (formData.additionalGuestPrice < 0)
-          newErrors.additionalGuestPrice = 'Price must not be less than 0.';
-      }
-    }
-
-    // Quote model validation
-    if (formData.isQuoteModel && formData.bookingFee == null) {
-      newErrors.bookingFee = 'Booking fee is required.';
-    } else if (formData.bookingFee != null && formData.bookingFee < 0) {
-      newErrors.bookingFee = 'Booking fee must not be less than 0.';
-    }
-
-    if (media.length === 0) {
-      newErrors.media = 'At least one image is required.';
-    } else if (media.length > 5) {
-        newErrors.media = 'You can upload a maximum of 5 files.';
-    } else {
-        const hasImage = media.some(file => file.type.startsWith('image/'));
-        if (!hasImage) {
-            newErrors.media = 'At least one image is required.';
-        }
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
-  };
-
-  const handleInputChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    const { name, value } = e.target;
-    const isNumber = e.target.type === 'number';
-
-    setFormData(prev => ({
-      ...prev,
-      [name]: isNumber ? (value === '' ? undefined : Number(value)) : value,
-    }));
-  };
-
-  const handleSelectChange = (name: string, value: string) => {
-    setFormData(prev => ({ ...prev, [name]: value }));
-  };
-
-  const handleSwitchChange = (name: string, checked: boolean) => {
-    setFormData(prev => ({ ...prev, [name]: checked }));
-  };
-
-  const businesses =
-    listings?.data?.filter(
-      (listing: UserListing) =>
-        listing.listingType.includes('service')
-    ) || [];
+  const pricingModel = form.watch('pricingModel');
+  const enableGuestPricing = form.watch('enableGuestPricing');
+  const guestPricingModel = form.watch('guestPricingModel');
+  const isQuoteModel = form.watch('isQuoteModel');
 
   return (
-    <>
-      <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8 font-sans">
-        <div className="max-w-4xl mx-auto">
-          <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-800">
-                Add New Service
-              </h1>
-              <p className="text-sm text-gray-600 mt-2">
-                Please verify all service details before commencing.
-              </p>
-            </div>
-            <div className="flex items-center text-sm text-gray-500">
-              <span
-                onClick={() => router.push('/dashboard')}
-                className="cursor-pointer"
-              >
-                Home
-              </span>
-              <ChevronRight className="h-4 w-4 mx-1" />
-              <span
-                onClick={() => router.push('/dashboard/services')}
-                className="cursor-pointer"
-              >
-                Services
-              </span>
-              <ChevronRight className="h-4 w-4 mx-1" />
-              <span className="text-gray-700">Add Service</span>
-            </div>
-          </header>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            <Card>
-              <CardHeader>
-                <CardTitle>Basic Information</CardTitle>
-                <CardDescription>
-                  Provide the basic details for your new service.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                  <div>
-                    <TooltipLabel
-                      htmlFor="name"
-                      label="Service Name"
-                      tooltip="The name of the service."
-                    />
-                    <Input
-                      id="name"
-                      name="name"
-                      value={formData.name}
-                      onChange={handleInputChange}
-                    />
-                    {errors.name && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.name}
-                      </p>
-                    )}
-                  </div>
-                  <div>
-                    <TooltipLabel
-                      htmlFor="businessId"
-                      label="Business"
-                      tooltip="The business this service belongs to."
-                    />
-                    <Select
-                      name="businessId"
-                      onValueChange={value =>
-                        handleSelectChange('businessId', value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue placeholder="Select a business" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {isLoadingListings ? (
-                          <SelectItem value="loading" disabled>
-                            Loading businesses...
-                          </SelectItem>
-                        ) : (
-                          businesses.map((business: UserListing) => (
-                            <SelectItem key={business.id} value={business.id}>
-                              {business.businessName}
-                            </SelectItem>
-                          ))
-                        )}
-                      </SelectContent>
-                    </Select>
-                    {errors.businessId && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.businessId}
-                      </p>
-                    )}
-                  </div>
-                </div>
-                <div className="mt-6">
-                  <TooltipLabel
-                    htmlFor="description"
-                    label="Description (Optional)"
-                    tooltip="A detailed description of the service."
-                  />
-                  <Textarea
-                    id="description"
-                    name="description"
-                    value={formData.description}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Pricing</CardTitle>
-                <CardDescription>
-                  Configure the pricing model for this service.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-6">
-                  <div>
-                    <TooltipLabel
-                      htmlFor="pricingModel"
-                      label="Pricing Model"
-                      tooltip="Choose how to price this service."
-                    />
-                    <Select
-                      name="pricingModel"
-                      value={formData.pricingModel}
-                      onValueChange={value =>
-                        handleSelectChange('pricingModel', value)
-                      }
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="fixed">Fixed Price</SelectItem>
-                        <SelectItem value="perHour">Per Hour</SelectItem>
-                        <SelectItem value="perUnit">Per Unit</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {formData.pricingModel === 'fixed' && (
-                    <div>
-                      <TooltipLabel
-                        htmlFor="fixedPrice"
-                        label="Fixed Price"
-                        tooltip="The total price for the service."
-                      />
-                      <Input
-                        id="fixedPrice"
-                        name="fixedPrice"
-                        type="number"
-                        value={formData.fixedPrice}
-                        onChange={handleInputChange}
-                      />
-                      {errors.fixedPrice && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.fixedPrice}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {formData.pricingModel === 'perHour' && (
-                    <div>
-                      <TooltipLabel
-                        htmlFor="pricePerHour"
-                        label="Price Per Hour"
-                        tooltip="The cost for each hour of service."
-                      />
-                      <Input
-                        id="pricePerHour"
-                        name="pricePerHour"
-                        type="number"
-                        value={formData.pricePerHour}
-                        onChange={handleInputChange}
-                      />
-                      {errors.pricePerHour && (
-                        <p className="text-red-500 text-sm mt-1">
-                          {errors.pricePerHour}
-                        </p>
-                      )}
-                    </div>
-                  )}
-
-                  {formData.pricingModel === 'perUnit' && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <TooltipLabel
-                          htmlFor="pricePerUnit"
-                          label="Price Per Unit"
-                          tooltip="The cost for each unit of the service."
-                        />
-                        <Input
-                          id="pricePerUnit"
-                          name="pricePerUnit"
-                          type="number"
-                          value={formData.pricePerUnit}
-                          onChange={handleInputChange}
-                        />
-                        {errors.pricePerUnit && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.pricePerUnit}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <TooltipLabel
-                          htmlFor="unitName"
-                          label="Unit Name"
-                          tooltip="The name of the unit (e.g., 'item', 'session')."
-                        />
-                        <Input
-                          id="unitName"
-                          name="unitName"
-                          value={formData.unitName}
-                          onChange={handleInputChange}
-                        />
-                        {errors.unitName && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.unitName}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Guest Pricing</CardTitle>
-                <CardDescription>
-                  Enable and configure pricing based on the number of guests.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2 mb-6">
-                  <Switch
-                    id="enableGuestPricing"
-                    checked={formData.enableGuestPricing}
-                    onCheckedChange={checked =>
-                      handleSwitchChange('enableGuestPricing', checked)
-                    }
-                  />
-                  <TooltipLabel
-                    htmlFor="enableGuestPricing"
-                    label="Enable Guest Pricing"
-                    tooltip="Enable this to set prices based on the number of guests."
-                  />
-                </div>
-
-                {formData.enableGuestPricing && (
-                  <div className="p-4 border rounded-md space-y-6">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                      <div>
-                        <TooltipLabel
-                          htmlFor="minGuests"
-                          label="Min Guests"
-                          tooltip="The minimum number of guests required."
-                        />
-                        <Input
-                          id="minGuests"
-                          name="minGuests"
-                          type="number"
-                          value={formData.minGuests}
-                          onChange={handleInputChange}
-                        />
-                        {errors.minGuests && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.minGuests}
-                          </p>
-                        )}
-                      </div>
-                      <div>
-                        <TooltipLabel
-                          htmlFor="maxGuests"
-                          label="Max Guests"
-                          tooltip="The maximum number of guests allowed."
-                        />
-                        <Input
-                          id="maxGuests"
-                          name="maxGuests"
-                          type="number"
-                          value={formData.maxGuests}
-                          onChange={handleInputChange}
-                        />
-                        {errors.maxGuests && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.maxGuests}
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    <div>
-                      <TooltipLabel
-                        htmlFor="guestPricingModel"
-                        label="Guest Pricing Model"
-                        tooltip="Choose the model for guest-based pricing."
-                      />
-                      <Select
-                        name="guestPricingModel"
-                        value={formData.guestPricingModel}
-                        onValueChange={value =>
-                          handleSelectChange('guestPricingModel', value)
-                        }
-                      >
-                        <SelectTrigger>
-                          <SelectValue />
-                        </SelectTrigger>
-                        <SelectContent>
-                          <SelectItem value="perGuest">Per Guest</SelectItem>
-                          <SelectItem value="fixedGroup">
-                            Fixed Group
-                          </SelectItem>
-                          <SelectItem value="baseWithAdditional">
-                            Base with Additional
-                          </SelectItem>
-                        </SelectContent>
-                      </Select>
-                    </div>
-                    {formData.guestPricingModel === 'perGuest' && (
-                      <div>
-                        <TooltipLabel
-                          htmlFor="pricePerGuest"
-                          label="Price Per Guest"
-                          tooltip="The cost for each individual guest."
-                        />
-                        <Input
-                          id="pricePerGuest"
-                          name="pricePerGuest"
-                          type="number"
-                          value={formData.pricePerGuest}
-                          onChange={handleInputChange}
-                        />
-                        {errors.pricePerGuest && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.pricePerGuest}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {formData.guestPricingModel === 'fixedGroup' && (
-                      <div>
-                        <TooltipLabel
-                          htmlFor="fixedGroupPrice"
-                          label="Fixed Group Price"
-                          tooltip="A fixed price for a group of any size (within min/max)."
-                        />
-                        <Input
-                          id="fixedGroupPrice"
-                          name="fixedGroupPrice"
-                          type="number"
-                          value={formData.fixedGroupPrice}
-                          onChange={handleInputChange}
-                        />
-                        {errors.fixedGroupPrice && (
-                          <p className="text-red-500 text-sm mt-1">
-                            {errors.fixedGroupPrice}
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    {formData.guestPricingModel ===
-                      'baseWithAdditional' && (
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                        <div>
-                          <TooltipLabel
-                            htmlFor="basePrice"
-                            label="Base Price"
-                            tooltip="The starting price for a base number of guests."
-                          />
-                          <Input
-                            id="basePrice"
-                            name="basePrice"
-                            type="number"
-                            value={formData.basePrice}
-                            onChange={handleInputChange}
-                          />
-                          {errors.basePrice && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.basePrice}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <TooltipLabel
-                            htmlFor="baseGuests"
-                            label="Base Guests"
-                            tooltip="The number of guests included in the base price."
-                          />
-                          <Input
-                            id="baseGuests"
-                            name="baseGuests"
-                            type="number"
-                            value={formData.baseGuests}
-                            onChange={handleInputChange}
-                          />
-                          {errors.baseGuests && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.baseGuests}
-                            </p>
-                          )}
-                        </div>
-                        <div>
-                          <TooltipLabel
-                            htmlFor="additionalGuestPrice"
-                            label="Additional Guest Price"
-                            tooltip="The price for each guest beyond the base number."
-                          />
-                          <Input
-                            id="additionalGuestPrice"
-                            name="additionalGuestPrice"
-                            type="number"
-                            value={formData.additionalGuestPrice}
-                            onChange={handleInputChange}
-                          />
-                          {errors.additionalGuestPrice && (
-                            <p className="text-red-500 text-sm mt-1">
-                              {errors.additionalGuestPrice}
-                            </p>
-                          )}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Quote Model</CardTitle>
-                <CardDescription>
-                  Allow customers to request a quote instead of direct booking.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="flex items-center space-x-2 mb-6">
-                  <Switch
-                    id="isQuoteModel"
-                    checked={formData.isQuoteModel}
-                    onCheckedChange={checked =>
-                      handleSwitchChange('isQuoteModel', checked)
-                    }
-                  />
-                  <TooltipLabel
-                    htmlFor="isQuoteModel"
-                    label="Enable Quote Model"
-                    tooltip="If enabled, customers will request a quote rather than booking directly."
-                  />
-                </div>
-                {formData.isQuoteModel && (
-                  <div>
-                    <TooltipLabel
-                      htmlFor="bookingFee"
-                      label="Booking Fee"
-                      tooltip="A fee to be paid upfront when requesting a quote."
-                    />
-                    <Input
-                      id="bookingFee"
-                      name="bookingFee"
-                      type="number"
-                      value={formData.bookingFee}
-                      onChange={handleInputChange}
-                    />
-                    {errors.bookingFee && (
-                      <p className="text-red-500 text-sm mt-1">
-                        {errors.bookingFee}
-                      </p>
-                    )}
-                  </div>
-                )}
-              </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Service Media</CardTitle>
-                    <CardDescription>
-                        Upload images and videos for your service.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <MultiMediaUpload onMediaChange={setMedia} />
-                    {errors.media && (
-                        <p className="text-red-500 text-sm mt-1">
-                            {errors.media}
-                        </p>
-                    )}
-                </CardContent>
-            </Card>
-
-            <Card>
-                <CardHeader>
-                    <CardTitle>Interactive Hotspots</CardTitle>
-                    <CardDescription>
-                        Add clickable hotspots to your service image. You must save the service first.
-                    </CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <Button asChild variant="outline" disabled={!newServiceId}>
-                        <Link href={`/dashboard/hotspot-editor/edit/${newServiceId}?type=service`}>
-                            Add/Edit Hotspots
-                        </Link>
-                    </Button>
-                </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Bundled Services</CardTitle>
-                <CardDescription>
-                  Offer additional services that are included in the main
-                  service package.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {formData.bundledServices?.map((service, index) => (
-                    <div
-                      key={index}
-                      className="flex items-center gap-2"
-                    >
-                      <Input
-                        placeholder="Service Name"
-                        value={service.name}
-                        onChange={e => {
-                          const newServices = [
-                            ...(formData.bundledServices ?? []),
-                          ];
-                          newServices[index].name = e.target.value;
-                          setFormData(prev => ({
-                            ...prev,
-                            bundledServices: newServices,
-                          }));
-                        }}
-                      />
-                      <Input
-                        type="number"
-                        placeholder="Price"
-                        value={service.price}
-                        onChange={e => {
-                          const newServices = [
-                            ...(formData.bundledServices ?? []),
-                          ];
-                          newServices[index].price = Number(e.target.value);
-                          setFormData(prev => ({
-                            ...prev,
-                            bundledServices: newServices,
-                          }));
-                        }}
-                      />
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => {
-                          const newServices = formData.bundledServices?.filter(
-                            (_, i) => i !== index
-                          );
-                          setFormData(prev => ({
-                            ...prev,
-                            bundledServices: newServices,
-                          }));
-                        }}
-                      >
-                        <Trash2 className="h-4 w-4" />
-                      </Button>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        bundledServices: [
-                          ...(prev.bundledServices ?? []),
-                          { name: '', price: undefined },
-                        ],
-                      }));
-                    }}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Bundled
-                    Service
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader>
-                <CardTitle>Configurable Add-ons</CardTitle>
-                <CardDescription>
-                  Provide optional add-ons that customers can choose to purchase.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  {formData.configurableAddons?.map((addon, index) => (
-                    <div
-                      key={index}
-                      className="p-4 border rounded-md space-y-4"
-                    >
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Input
-                          placeholder="Add-on Name"
-                          value={addon.name}
-                          onChange={e => {
-                            const newAddons = [
-                              ...(formData.configurableAddons ?? []),
-                            ];
-                            newAddons[index].name = e.target.value;
-                            setFormData(prev => ({
-                              ...prev,
-                              configurableAddons: newAddons,
-                            }));
-                          }}
-                        />
-                        <Input
-                          type="number"
-                          placeholder="Price"
-                          value={addon.price}
-                          onChange={e => {
-                            const newAddons = [
-                              ...(formData.configurableAddons ?? []),
-                            ];
-                            newAddons[index].price = Number(e.target.value);
-                            setFormData(prev => ({
-                              ...prev,
-                              configurableAddons: newAddons,
-                            }));
-                          }}
-                        />
-                      </div>
-                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <Select
-                          value={addon.pricingType}
-                          onValueChange={value => {
-                            const newAddons = [
-                              ...(formData.configurableAddons ?? []),
-                            ];
-                            newAddons[index].pricingType = value as
-                              | 'perUnit'
-                              | 'perGuest'
-                              | 'oneTime';
-                            setFormData(prev => ({
-                              ...prev,
-                              configurableAddons: newAddons,
-                            }));
-                          }}
-                        >
-                          <SelectTrigger>
-                            <SelectValue placeholder="Pricing Type" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="oneTime">One-Time</SelectItem>
-                            <SelectItem value="perGuest">Per Guest</SelectItem>
-                            <SelectItem value="perUnit">Per Unit</SelectItem>
-                          </SelectContent>
-                        </Select>
-                        {addon.pricingType === 'perUnit' && (
-                          <Input
-                            placeholder="Unit Name"
-                            value={addon.unitName}
-                            onChange={e => {
-                              const newAddons = [
-                                ...(formData.configurableAddons ?? []),
-                              ];
-                              newAddons[index].unitName = e.target.value;
-                              setFormData(prev => ({
-                                ...prev,
-                                configurableAddons: newAddons,
-                              }));
-                            }}
-                          />
-                        )}
-                      </div>
-                      <div className="flex justify-end">
-                        <Button
-                          type="button"
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => {
-                            const newAddons =
-                              formData.configurableAddons?.filter(
-                                (_, i) => i !== index
-                              );
-                            setFormData(prev => ({
-                              ...prev,
-                              configurableAddons: newAddons,
-                            }));
-                          }}
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
-                      </div>
-                    </div>
-                  ))}
-                  <Button
-                    type="button"
-                    variant="outline"
-                    onClick={() => {
-                      setFormData(prev => ({
-                        ...prev,
-                        configurableAddons: [
-                          ...(prev.configurableAddons ?? []),
-                          {
-                            name: '',
-                            price: undefined,
-                            pricingType: 'oneTime',
-                            unitName: '',
-                          },
-                        ],
-                      }));
-                    }}
-                  >
-                    <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
-                  </Button>
-                </div>
-              </CardContent>
-            </Card>
-
-            <div className="flex justify-end">
-              <Button type="submit" disabled={isAddingService}>
-                {isAddingService ? (
-                  'Creating...'
-                ) : (
-                  <>
-                    <PlusCircle className="mr-2 h-4 w-4" /> Create Service
-                  </>
-                )}
-              </Button>
-            </div>
-          </form>
-        </div>
-      </div>
-      <SuccessAnimationDialog
+    <div className="font-sans">
+       <SuccessAnimationDialog
         isOpen={showSuccessDialog}
         onClose={() => {
           setShowSuccessDialog(false);
           router.push('/dashboard/services');
         }}
       />
-    </>
-  );
-};
 
-export default AddServicePage;
+      <div className="max-w-7xl mx-auto">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-800">Add New Service</h1>
+            <p className="text-sm text-gray-500 mt-1">
+              Create a new service offering for your business.
+            </p>
+          </div>
+          <div className="flex items-center text-sm text-gray-500">
+            <Link href="/dashboard" className="hover:text-primary transition-colors">Home</Link>
+            <ChevronRight className="h-4 w-4 mx-1" />
+            <Link href="/dashboard/services" className="hover:text-primary transition-colors">Services</Link>
+            <ChevronRight className="h-4 w-4 mx-1" />
+            <span className="text-gray-900 font-medium">Add Service</span>
+          </div>
+        </header>
+
+        <FormProvider {...form}>
+          <Form {...form}>
+            <form onSubmit={form.handleSubmit(onSubmit)} className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+
+              {/* --- LEFT COLUMN (Main Content) --- */}
+              <div className="lg:col-span-2 space-y-8">
+
+                {/* Basic Info */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <Settings className="w-5 h-5 text-primary" />
+                        Basic Information
+                    </CardTitle>
+                    <CardDescription>Service name and details.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="name"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Service Name</FormLabel>
+                          <FormControl>
+                            <Input placeholder="e.g. Full Body Massage" {...field} className="py-6 text-base" />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                    <FormField
+                      control={form.control}
+                      name="description"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Description</FormLabel>
+                          <FormControl>
+                            <Textarea placeholder="Describe your service..." className="min-h-[120px] text-base" {...field} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Pricing */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                        <DollarSign className="w-5 h-5 text-primary" />
+                        Pricing Strategy
+                    </CardTitle>
+                    <CardDescription>Configure how you charge for this service.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="pricingModel"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel>Pricing Model</FormLabel>
+                          <Select onValueChange={field.onChange} defaultValue={field.value}>
+                            <FormControl>
+                              <SelectTrigger className="py-6">
+                                <SelectValue placeholder="Select model" />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              <SelectItem value="fixed">Fixed Price</SelectItem>
+                              <SelectItem value="perHour">Per Hour</SelectItem>
+                              <SelectItem value="perUnit">Per Unit</SelectItem>
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+
+                    {pricingModel === 'fixed' && (
+                      <FormField
+                        control={form.control}
+                        name="fixedPrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Fixed Price</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="0.00" {...field} className="py-6" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {pricingModel === 'perHour' && (
+                      <FormField
+                        control={form.control}
+                        name="pricePerHour"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Price Per Hour</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="0.00" {...field} className="py-6" />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    )}
+
+                    {pricingModel === 'perUnit' && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <FormField
+                          control={form.control}
+                          name="pricePerUnit"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Price Per Unit</FormLabel>
+                              <FormControl>
+                                <Input type="number" placeholder="0.00" {...field} className="py-6" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name="unitName"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Unit Name</FormLabel>
+                              <FormControl>
+                                <Input placeholder="e.g. Session, Item" {...field} className="py-6" />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Guest Pricing */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                            <Users className="w-5 h-5 text-primary" />
+                            Guest Pricing
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        <FormField
+                            control={form.control}
+                            name="enableGuestPricing"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="text-base">Enable Guest Pricing</FormLabel>
+                                        <FormDescription>
+                                            Adjust price based on number of guests.
+                                        </FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+
+                        {enableGuestPricing && (
+                            <div className="space-y-6 p-4 bg-slate-50 rounded-lg border">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name="minGuests"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Min Guests</FormLabel>
+                                                <FormControl><Input type="number" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="maxGuests"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Max Guests</FormLabel>
+                                                <FormControl><Input type="number" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+
+                                <FormField
+                                    control={form.control}
+                                    name="guestPricingModel"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Guest Pricing Model</FormLabel>
+                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                                <SelectContent>
+                                                    <SelectItem value="perGuest">Per Guest</SelectItem>
+                                                    <SelectItem value="fixedGroup">Fixed Group</SelectItem>
+                                                    <SelectItem value="baseWithAdditional">Base + Additional</SelectItem>
+                                                </SelectContent>
+                                            </Select>
+                                        </FormItem>
+                                    )}
+                                />
+
+                                {guestPricingModel === 'perGuest' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="pricePerGuest"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Price Per Guest</FormLabel>
+                                                <FormControl><Input type="number" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {guestPricingModel === 'fixedGroup' && (
+                                    <FormField
+                                        control={form.control}
+                                        name="fixedGroupPrice"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Fixed Group Price</FormLabel>
+                                                <FormControl><Input type="number" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                )}
+
+                                {guestPricingModel === 'baseWithAdditional' && (
+                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="basePrice"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Base Price</FormLabel>
+                                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="baseGuests"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Base Guests</FormLabel>
+                                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="additionalGuestPrice"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Extra Guest Price</FormLabel>
+                                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Quote Model */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Quote Request</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        <FormField
+                            control={form.control}
+                            name="isQuoteModel"
+                            render={({ field }) => (
+                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                    <div className="space-y-0.5">
+                                        <FormLabel className="text-base">Enable Quote Mode</FormLabel>
+                                        <FormDescription>Customers request a quote instead of booking.</FormDescription>
+                                    </div>
+                                    <FormControl>
+                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                    </FormControl>
+                                </FormItem>
+                            )}
+                        />
+                         {isQuoteModel && (
+                            <FormField
+                                control={form.control}
+                                name="bookingFee"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Booking Fee</FormLabel>
+                                        <FormControl><Input type="number" {...field} /></FormControl>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                        )}
+                    </CardContent>
+                </Card>
+
+                {/* Bundled Services */}
+                <Card>
+                    <CardHeader>
+                         <CardTitle className="flex items-center gap-2">
+                             <ListPlus className="w-5 h-5 text-primary" />
+                             Bundled Services
+                         </CardTitle>
+                        <CardDescription>Included in this package.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {bundledFields.map((field, index) => (
+                            <div key={field.id} className="flex gap-4 items-start">
+                                <FormField
+                                    control={form.control}
+                                    name={`bundledServices.${index}.name`}
+                                    render={({ field }) => (
+                                        <FormItem className="flex-1">
+                                            <FormControl><Input placeholder="Service Name" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name={`bundledServices.${index}.price`}
+                                    render={({ field }) => (
+                                        <FormItem className="w-32">
+                                            <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                                <Button type="button" variant="ghost" size="icon" onClick={() => removeBundled(index)}>
+                                    <Trash2 className="w-4 h-4 text-destructive" />
+                                </Button>
+                            </div>
+                        ))}
+                        <Button type="button" variant="outline" onClick={() => appendBundled({ name: '', price: 0 })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Service
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                 {/* Configurable Addons */}
+                 <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2">
+                             <ListPlus className="w-5 h-5 text-primary" />
+                             Configurable Add-ons
+                         </CardTitle>
+                        <CardDescription>Optional extras for customers.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                        {addonFields.map((field, index) => (
+                            <div key={field.id} className="p-4 border rounded-lg space-y-4 bg-slate-50/50">
+                                <div className="flex justify-between items-start">
+                                    <h4 className="text-sm font-medium">Add-on #{index + 1}</h4>
+                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeAddon(index)}>
+                                        <Trash2 className="w-4 h-4 text-destructive" />
+                                    </Button>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                     <FormField
+                                        control={form.control}
+                                        name={`configurableAddons.${index}.name`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input placeholder="Add-on Name" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name={`configurableAddons.${index}.price`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <FormField
+                                        control={form.control}
+                                        name={`configurableAddons.${index}.pricingType`}
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                                    <FormControl><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
+                                                    <SelectContent>
+                                                        <SelectItem value="oneTime">One Time</SelectItem>
+                                                        <SelectItem value="perGuest">Per Guest</SelectItem>
+                                                        <SelectItem value="perUnit">Per Unit</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </FormItem>
+                                        )}
+                                    />
+                                    {form.watch(`configurableAddons.${index}.pricingType`) === 'perUnit' && (
+                                         <FormField
+                                            control={form.control}
+                                            name={`configurableAddons.${index}.unitName`}
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormControl><Input placeholder="Unit Name" {...field} /></FormControl>
+                                                </FormItem>
+                                            )}
+                                        />
+                                    )}
+                                </div>
+                            </div>
+                        ))}
+                        <Button type="button" variant="outline" onClick={() => appendAddon({ name: '', price: 0, pricingType: 'oneTime' })}>
+                            <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
+                        </Button>
+                    </CardContent>
+                </Card>
+
+              </div>
+
+              {/* --- RIGHT COLUMN (Sticky Sidebar) --- */}
+              <div className="space-y-8 sticky top-6 h-fit max-h-[calc(100vh-3rem)] overflow-y-auto custom-scrollbar">
+
+                {/* Actions */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Publish</CardTitle>
+                    </CardHeader>
+                    <CardContent className="space-y-4">
+                         <Button type="submit" className="w-full text-lg py-6" disabled={isAddingService}>
+                            {isAddingService ? (
+                                <span className="flex items-center gap-2">Saving...</span>
+                            ) : (
+                                <span className="flex items-center gap-2"><Save className="w-5 h-5" /> Save Service</span>
+                            )}
+                        </Button>
+                    </CardContent>
+                </Card>
+
+                {/* Business Selection */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                        <Store className="w-5 h-5 text-primary" />
+                        Business
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="businessId"
+                      render={({ field }) => (
+                        <FormItem>
+                          <Select onValueChange={field.onChange} defaultValue={field.value} disabled={isLoadingListings}>
+                            <FormControl>
+                              <SelectTrigger className="py-6">
+                                <SelectValue placeholder={isLoadingListings ? "Loading..." : "Select Business"} />
+                              </SelectTrigger>
+                            </FormControl>
+                            <SelectContent>
+                              {businesses.map((b: UserListing) => (
+                                <SelectItem key={b.id} value={b.id}>{b.businessName}</SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
+                </Card>
+
+                {/* Media */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="flex items-center gap-2 text-lg">
+                            <ImageIcon className="w-5 h-5 text-primary" />
+                            Media
+                        </CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                        <FormField
+                            control={form.control}
+                            name="media"
+                            render={({ field }) => (
+                                <FormItem>
+                                    <FormControl>
+                                        <MultiMediaUpload onMediaChange={field.onChange} />
+                                    </FormControl>
+                                    <FormMessage />
+                                </FormItem>
+                            )}
+                        />
+                    </CardContent>
+                </Card>
+
+                {/* Hotspots */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle className="text-lg">Hotspots</CardTitle>
+                        <CardDescription>Add interactive hotspots after saving.</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                         <Button asChild variant="outline" className="w-full" disabled={!newServiceId}>
+                            <Link href={`/dashboard/hotspot-editor/edit/${newServiceId}?type=service`}>
+                                Edit Hotspots
+                            </Link>
+                        </Button>
+                    </CardContent>
+                </Card>
+
+              </div>
+
+            </form>
+          </Form>
+        </FormProvider>
+      </div>
+    </div>
+  );
+}

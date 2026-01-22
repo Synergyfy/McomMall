@@ -25,7 +25,7 @@ export const useAddProduct = () => {
   });
 };
 
-const getProductById = async (id: string): Promise<Product> => {
+export const getProductById = async (id: string): Promise<Product> => {
   const { data } = await api.get(`/product/${id}`);
   return data;
 };

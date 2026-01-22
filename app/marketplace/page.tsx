@@ -7,14 +7,16 @@ import {
   LayoutGrid,
   List as ListIcon,
   Search,
-  ChevronDown,
-  Loader2
+  Loader2,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { promotionalItems, PromotionalItem } from '@/lib/listing-data';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
 import ProductCard from '@/components/marketplace/ProductCard';
 import Pagination from '@/components/marketplace/Pagination';
+import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import { Input } from '@/components/ui/input';
 import {
   Select,
@@ -54,6 +56,7 @@ const ITEMS_PER_PAGE = 12;
 
 export default function MarketplacePage() {
   const [activeSlide, setActiveSlide] = useState(0);
+  const [activeSidebarSlide, setActiveSidebarSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('featured');
@@ -62,10 +65,58 @@ export default function MarketplacePage() {
   // Data Fetching
   const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
 
-  const heroSlides = publicData?.heroSlides || [];
-  const sidebarBanners = publicData?.sidebarBanners || [];
-  const apiCategories = publicData?.categories || [];
-  const sections = publicData?.sections || {};
+  const heroSlides = useMemo(() => publicData?.heroSlides || [], [publicData]);
+  const sidebarBanners = useMemo(() => publicData?.sidebarBanners || [], [publicData]);
+  const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
+  const sections = useMemo(() => publicData?.sections || {}, [publicData]);
+
+  // Helper to handle both camelCase (API docs) and snake_case (potential legacy API)
+  const getSection = (key: 'flashSale' | 'promoCarousel', snakeKey: 'flash_sale' | 'promo_carousel') => {
+      const config = sections?.[key] || sections?.[snakeKey];
+      if (!config) return null;
+      return {
+          ...config,
+          isVisible: config.isVisible ?? config.is_visible ?? false,
+          productIds: config.productIds || config.product_ids || [],
+          products: config.products || [],
+          title: config.title || '',
+      };
+  };
+
+  const flashSaleConfig = getSection('flashSale', 'flash_sale');
+  const promoCarouselConfig = getSection('promoCarousel', 'promo_carousel');
+
+  // Combine Flash Sale and Banners for the sidebar slider
+  const sidebarSlides = useMemo(() => {
+    const slides: SidebarBanner[] = [];
+
+    // Add Flash Sale if visible
+    if (flashSaleConfig?.isVisible) {
+      slides.push({
+        id: 'flash-sale-main',
+        type: 'flash_sale',
+        title: flashSaleConfig.title || 'Flash Sale',
+        subTitle: flashSaleConfig.config?.endTime
+          ? `Ends: ${new Date(flashSaleConfig.config.endTime).toLocaleDateString()}`
+          : 'Limited time offer',
+        link: '/flash-sales',
+        buttonText: 'Shop Deals',
+        imageUrl: undefined
+      } as SidebarBanner);
+    }
+
+    // Add other banners
+    if (sidebarBanners && sidebarBanners.length > 0) {
+      // Ensure all banners have a valid link
+      const safeBanners = sidebarBanners.map(b => ({
+        ...b,
+        link: b.link || '#'
+      }));
+      slides.push(...safeBanners);
+    }
+
+    return slides;
+  }, [flashSaleConfig, sidebarBanners]);
 
   // Filter State
   const [filters, setFilters] = useState<MarketplaceFiltersState>({
@@ -105,6 +156,22 @@ export default function MarketplacePage() {
     }, 8000);
     return () => clearInterval(timer);
   }, [heroSlides.length]);
+
+  useEffect(() => {
+    if (sidebarSlides.length <= 1) return;
+    const timer = setInterval(() => {
+      setActiveSidebarSlide((prev) => (prev + 1) % sidebarSlides.length);
+    }, 5000);
+    return () => clearInterval(timer);
+  }, [sidebarSlides.length]);
+
+  const handlePrevSlide = () => {
+    setActiveSlide((prev) => (prev - 1 + heroSlides.length) % heroSlides.length);
+  };
+
+  const handleNextSlide = () => {
+    setActiveSlide((prev) => (prev + 1) % heroSlides.length);
+  };
 
   // Filtering Logic
   const filteredProducts = useMemo(() => {
@@ -157,11 +224,11 @@ export default function MarketplacePage() {
 
     if (isFlash) {
       return (
-        <div key={banner.id || index} className="flex-1 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
+        <div key={banner.id || index} className="w-full h-full bg-gradient-to-br from-red-600 to-orange-600 rounded-2xl p-6 text-white shadow-none relative overflow-hidden">
             <div className="relative z-10">
                 <h3 className="text-2xl font-bold mb-1">{banner.title}</h3>
-                <p className="text-orange-100 mb-4">{banner.subTitle || banner.description}</p>
-                <Link href={banner.link || '#'} className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-orange-100">
+                <p className="text-red-100 mb-4">{banner.subTitle || banner.description}</p>
+                <Link href={banner.link || '#'} className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-red-100">
                   {banner.buttonText || 'View All Deals'}
                 </Link>
             </div>
@@ -194,7 +261,7 @@ export default function MarketplacePage() {
     // Specific Sidebar Banner type
     if (banner.type === 'sidebar_banner') {
         return (
-            <div key={banner.id || index} className="flex-1 rounded-2xl shadow-lg relative overflow-hidden aspect-[4/3] group">
+            <div key={banner.id || index} className="w-full h-full rounded-2xl shadow-none relative overflow-hidden group">
                 <Link href={banner.link || '#'} className="block w-full h-full relative">
                     {banner.imageUrl ? (
                         <Image
@@ -227,7 +294,7 @@ export default function MarketplacePage() {
 
     // Generic fallback
     return (
-      <div key={banner.id || index} className="flex-1 bg-white rounded-2xl p-6 shadow-lg relative overflow-hidden border border-gray-100">
+      <div key={banner.id || index} className="w-full h-full bg-white rounded-2xl p-6 shadow-none relative overflow-hidden border border-gray-100">
           {banner.imageUrl && (
                  <Image src={banner.imageUrl} alt="" fill className="object-cover opacity-10" />
             )}
@@ -242,10 +309,6 @@ export default function MarketplacePage() {
     );
   };
 
-  // Render Flash Sale Section if active
-  // Note: sections can be empty/undefined initially, so we check carefully
-  const flashSaleConfig = sections?.['flash_sale'];
-
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
       <div className="container mx-auto px-4">
@@ -256,7 +319,7 @@ export default function MarketplacePage() {
                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
              </div>
         ) : (
-        <div className="mb-8 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Slider */}
           <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group bg-gray-200">
             {heroSlides.length > 0 ? (
@@ -282,17 +345,40 @@ export default function MarketplacePage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
                             <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
                             <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
-                            {heroSlides[activeSlide].link && (
+                            {heroSlides[activeSlide].link ? (
                                 <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
                                     <Link href={heroSlides[activeSlide].link || '#'}>
                                         {heroSlides[activeSlide].buttonText || 'Shop Now'}
                                     </Link>
                                 </Button>
-                            )}
+                            ) : null}
                         </div>
                     </div>
                 </motion.div>
                 </AnimatePresence>
+
+                {/* Navigation Arrows */}
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handlePrevSlide();
+                  }}
+                  className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                  aria-label="Previous slide"
+                >
+                  <ChevronLeft className="h-6 w-6" />
+                </button>
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    handleNextSlide();
+                  }}
+                  className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100"
+                  aria-label="Next slide"
+                >
+                  <ChevronRight className="h-6 w-6" />
+                </button>
+
                 <div className="absolute bottom-4 right-4 flex space-x-2 z-10">
                 {heroSlides.map((_, index) => (
                     <button
@@ -312,34 +398,47 @@ export default function MarketplacePage() {
             )}
           </div>
 
-          {/* Right Side Promo Cards */}
-          <div className="flex flex-col gap-6">
-             {/* If Flash Sale Section is Active, show it prominently here or in the banners list */}
-             {flashSaleConfig?.isVisible && (
-                <div className="flex-1 bg-gradient-to-br from-red-600 to-orange-600 rounded-2xl p-6 text-white shadow-lg relative overflow-hidden">
-                    <div className="relative z-10">
-                        <h3 className="text-2xl font-bold mb-1">{flashSaleConfig.title || 'Flash Sale'}</h3>
-                        {flashSaleConfig.config.endTime && (
-                             <p className="text-red-100 mb-4 font-mono">
-                                Ends: {new Date(flashSaleConfig.config.endTime).toLocaleDateString()}
-                             </p>
-                        )}
-                         <Link href="/flash-sales" className="text-sm font-semibold underline decoration-2 underline-offset-4 hover:text-red-100">
-                           Shop Deals
-                         </Link>
-                    </div>
-                </div>
-             )}
-
-             {sidebarBanners.map((banner, idx) => renderBanner(banner, idx))}
-
-             {sidebarBanners.length === 0 && !flashSaleConfig?.isVisible && (
-                 <div className="flex-1 bg-gray-100 rounded-2xl p-6 flex items-center justify-center text-gray-400">
+          {/* Right Side Promo Slider */}
+          <div className="relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl bg-gray-100 group/sidebar">
+             {sidebarSlides.length > 0 ? (
+                <>
+                  <AnimatePresence mode="wait">
+                    <motion.div
+                      key={activeSidebarSlide}
+                      initial={{ opacity: 0, x: 20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      exit={{ opacity: 0, x: -20 }}
+                      transition={{ duration: 0.5 }}
+                      className="absolute inset-0"
+                    >
+                      {/* Pass activeSidebarSlide as index */}
+                      {renderBanner(sidebarSlides[activeSidebarSlide], activeSidebarSlide)}
+                    </motion.div>
+                  </AnimatePresence>
+                </>
+             ) : (
+                 <div className="w-full h-full flex items-center justify-center text-gray-400">
                      No promotions
                  </div>
              )}
           </div>
         </div>
+        )}
+
+        {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
+        {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
+             <MarketplaceSection
+                title={flashSaleConfig.title}
+                productIds={flashSaleConfig.productIds}
+                products={flashSaleConfig.products}
+             />
+        )}
+         {promoCarouselConfig?.isVisible && (promoCarouselConfig.products || promoCarouselConfig.productIds) && (
+             <MarketplaceSection
+                title={promoCarouselConfig.title}
+                productIds={promoCarouselConfig.productIds}
+                products={promoCarouselConfig.products}
+             />
         )}
 
         {/* 2. Main Layout Split */}

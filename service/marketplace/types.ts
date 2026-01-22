@@ -1,4 +1,3 @@
-
 export interface HeroSlide {
   id: string;
   imageUrl: string;
@@ -28,20 +27,48 @@ export interface MarketplaceCategory {
   targetCategoryId: string;
 }
 
+// Minimal Product interface for the embedded product data
+export interface EmbeddedProduct {
+  id: string | number;
+  title: string;
+  price: number;
+  salePrice?: number;
+  imageUrl?: string;
+  media?: string[];
+  stock?: number;
+  category?: string;
+  [key: string]: any;
+}
+
 export interface MarketplaceSectionConfig {
+  id?: string;
   title: string;
   isVisible: boolean;
+  type: string;
   config: {
     endTime?: string;
     backgroundColor?: string;
     [key: string]: any;
   };
   productIds?: string[];
+  products?: EmbeddedProduct[];
+  // Snake case fallbacks
+  is_visible?: boolean;
+  product_ids?: string[];
+}
+
+export interface MarketplaceSections {
+  flashSale?: MarketplaceSectionConfig;
+  promoCarousel?: MarketplaceSectionConfig;
+  // Snake case fallbacks
+  flash_sale?: MarketplaceSectionConfig;
+  promo_carousel?: MarketplaceSectionConfig;
+  [key: string]: MarketplaceSectionConfig | undefined;
 }
 
 export interface MarketplacePublicData {
   heroSlides: HeroSlide[];
   sidebarBanners: SidebarBanner[];
   categories: MarketplaceCategory[];
-  sections: Record<string, MarketplaceSectionConfig>;
+  sections: MarketplaceSections;
 }
