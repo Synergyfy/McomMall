@@ -384,7 +384,7 @@ export default function CouponsVouchersPage() {
                             <Gift className="w-8 h-8 text-orange-600" />
                             Reward Hub
                         </h1>
-                        <p className="text-gray-500 mt-1">Manage your spending power and reward network.</p>
+                        <p className="text-gray-500 mt-1">Manage your spending power and reward network...</p>
                     </div>
                 </header>
 
