@@ -2,14 +2,14 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useGetSubscriptionStatus } from '@/service/payments/hook';
+import { useGetMyMembership } from '@/service/membership/hook';
 import CurrentPlanCard from './CurrentPlanCard';
 import TiersList from './TiersList';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
 import { Tier } from '@/service/tiers/types';
 
 export default function MySubscriptionPageClient() {
-  const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
+  const { data: subscriptionStatus, isLoading } = useGetMyMembership();
   const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');

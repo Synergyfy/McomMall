@@ -13,7 +13,7 @@ import { Group } from '@/service/grouping/types';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
 import { Users, Wallet, AlertTriangle, MapPin, CalendarDays, PlusCircle } from 'lucide-react';
-import { useGetMyMembership } from '@/service/membership/hooks';
+import { useGetMyMembership } from '@/service/membership/hook';
 import Link from 'next/link';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 
@@ -99,9 +99,9 @@ const GroupsClient = () => {
 
   const canAccessGroups =
     membership &&
-    membership.isActive &&
-    (membership.tier.toUpperCase() === 'EXTENDED' ||
-      membership.tier.toUpperCase() === 'PROFESSIONAL');
+    membership.status === 'active' &&
+    (membership.tier.name.toUpperCase() === 'EXTENDED' ||
+      membership.tier.name.toUpperCase() === 'PROFESSIONAL');
 
   return (
     <div className="container mx-auto p-4 md:p-8 space-y-8">

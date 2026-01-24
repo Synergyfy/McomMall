@@ -1,4 +1,4 @@
-import { SubscriptionStatusResponse } from '@/service/payments/types';
+import { Membership } from '@/service/membership/types';
 import {
   Card,
   CardContent,
@@ -9,16 +9,17 @@ import {
 import { formatEnumValue } from '@/lib/utils';
 import { Badge } from '@/components/ui/badge';
 import { CheckCircle, Clock, Info, XCircle } from 'lucide-react';
+import React from 'react';
 
 interface CurrentPlanCardProps {
-  subscription: SubscriptionStatusResponse;
+  subscription: Membership;
 }
 
-const statusIcons = {
-  TRIAL_ACTIVE: <CheckCircle className="text-green-500" />,
-  TRIAL_EXPIRED: <XCircle className="text-red-500" />,
-  PAID: <CheckCircle className="text-green-500" />,
-  INACTIVE: <Info className="text-gray-500" />,
+const statusIcons: Record<string, React.ReactNode> = {
+  active: <CheckCircle className="text-green-500" />,
+  cancelled: <XCircle className="text-red-500" />,
+  expired: <Info className="text-gray-500" />,
+  inactive: <Info className="text-gray-500" />,
 };
 
 export default function CurrentPlanCard({
@@ -42,7 +43,7 @@ export default function CurrentPlanCard({
     );
   }
 
-  const statusKey = subscription.status as keyof typeof statusIcons;
+  const statusKey = subscription.status.toLowerCase();
 
   return (
     <Card className="w-full max-w-lg mx-auto my-8 shadow-lg rounded-lg">
@@ -59,37 +60,33 @@ export default function CurrentPlanCard({
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Plan</Badge>
             <span className="font-semibold text-gray-700">
-              {formatEnumValue(subscription.planType)}
+              {subscription.tier.name}
             </span>
           </div>
           <div className="flex items-center space-x-2">
-            <Badge variant="outline">Package</Badge>
+            <Badge variant="outline">Cycle</Badge>
             <span className="font-semibold text-gray-700">
-              {subscription.paygOption
-                ? formatEnumValue(subscription.paygOption)
-                : 'N/A'}
+              {formatEnumValue(subscription.billingCycle)}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Status</Badge>
             <div className="flex items-center space-x-1">
-              {statusIcons[statusKey]}
+              {statusIcons[statusKey] || statusIcons.inactive}
               <span className="font-semibold text-gray-700">
                 {formatEnumValue(subscription.status)}
               </span>
             </div>
           </div>
-          {subscription.trialEndDate && (
-            <div className="flex items-center space-x-2">
-              <Badge variant="outline">Trial Ends</Badge>
-              <div className="flex items-center space-x-1">
-                <Clock className="text-gray-500" />
-                <span className="font-semibold text-gray-700">
-                  {new Date(subscription.trialEndDate).toLocaleDateString()}
-                </span>
-              </div>
+          <div className="flex items-center space-x-2">
+            <Badge variant="outline">Expires</Badge>
+            <div className="flex items-center space-x-1">
+              <Clock className="text-gray-500" />
+              <span className="font-semibold text-gray-700">
+                {new Date(subscription.endDate).toLocaleDateString()}
+              </span>
             </div>
-          )}
+          </div>
         </div>
       </CardContent>
     </Card>

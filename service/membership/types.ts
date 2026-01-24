@@ -1,19 +1,26 @@
-export type MembershipTier = 'BASIC' | 'EXTENDED' | 'PROFESSIONAL';
+import { Tier } from '../tiers/types';
+
+export interface Membership {
+  id: string;
+  userId: string;
+  tierId: string;
+  status: 'active' | 'inactive' | 'cancelled' | 'expired';
+  billingCycle: 'monthly' | 'quarterly' | 'annual';
+  startDate: string;
+  endDate: string;
+  nextBillingDate: string;
+  amount: number;
+  currency: string;
+  tier: Tier;
+  created_at: string;
+  updated_at: string;
+}
 
 export interface CreateMembershipDto {
-  tier: MembershipTier;
+  tier: string;
 }
 
 export interface VerifyPaymentDto {
   paymentIntentId: string;
-  tier: MembershipTier;
-}
-
-export interface Membership {
-  id: string;
-  tier: MembershipTier;
-  isActive: boolean;
-  expiresAt: string;
-  created_at: string;
-  updated_at: string;
+  tier: string;
 }
