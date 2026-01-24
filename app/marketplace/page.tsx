@@ -417,7 +417,7 @@ export default function MarketplacePage() {
           
           {/* Left Sidebar */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
-             <div className="sticky top-28 space-y-8">
+             <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
                 {/* Category / Type Selector */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4">Explore</h3>
@@ -524,9 +524,18 @@ export default function MarketplacePage() {
                      <SectionRow title="Gift Cards" type="gift-cards" items={publicData?.giftCards || []} />
                      <SectionRow title="Latest Coupons" type="coupons" items={publicData?.coupons || []} />
 
-                     {(!newProductsData?.data?.length && !publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length) && !isPublicDataLoading && (
+                     {(!newProductsData?.data?.length && !publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length && !publicData?.coupons?.length) && !isPublicDataLoading && (
                          <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                             <p className="text-gray-500">No featured items available right now.</p>
+                             <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                                <Search className="h-8 w-8 text-gray-400" />
+                             </div>
+                             <h3 className="text-lg font-bold text-gray-900 mb-1">No items found</h3>
+                             <p className="text-gray-500">
+                                {filters.categories.length > 0 ? "No items found in this category." : "No featured items available right now."}
+                             </p>
+                             <Button variant="link" className="mt-2 text-primary" onClick={() => handleFilterChange({ ...filters, categories: [] })}>
+                                Clear filters
+                             </Button>
                          </div>
                      )}
                 </div>
@@ -555,9 +564,14 @@ export default function MarketplacePage() {
                     <Search className="h-8 w-8 text-gray-400" />
                     </div>
                     <h3 className="text-lg font-bold text-gray-900 mb-1">No {listingType.replace('-', ' ')} found</h3>
-                    <p className="text-gray-500">Try adjusting your search or filters.</p>
-                    <Button variant="link" className="mt-2 text-primary" onClick={() => setSearchQuery('')}>
-                    Clear search
+                    <p className="text-gray-500">
+                         {filters.categories.length > 0 ? "No results in this category." : "Try adjusting your search or filters."}
+                    </p>
+                    <Button variant="link" className="mt-2 text-primary" onClick={() => {
+                        setSearchQuery('');
+                        handleFilterChange({ ...filters, categories: [] });
+                    }}>
+                    Clear all filters
                     </Button>
                 </div>
                 )}
