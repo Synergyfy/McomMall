@@ -84,6 +84,10 @@ interface ApiError {
         }
     }
 }
+interface Shop {
+    id?: string;
+    name?: string;
+}
 
 interface VoucherDisplayData {
     id: string;
