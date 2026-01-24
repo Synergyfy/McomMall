@@ -100,6 +100,9 @@ export interface User {
   voucher: boolean;
   promotion: boolean;
   coupon?: boolean;
+  profilePictureUrl?: string | null;
+  lastLogin?: string | null;
+  trial?: any;
 }
 
 interface Category {

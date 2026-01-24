@@ -118,10 +118,10 @@ export default function ProductPage() {
 
   return (
     // Reduced padding-top to remove extra space
-    <div className="min-h-screen bg-gray-50 pb-12 pt-2">
+    <div className="min-h-screen bg-gray-50 pb-12 pt-16">
 
       {/* Navigation / Breadcrumb */}
-      <div className="bg-white border-b shadow-sm mb-2">
+      <div className="bg-white border-b shadow-sm mb-6">
         <div className="container mx-auto px-4 h-14 flex items-center">
             <Link href="/marketplace" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
                 <ChevronLeft className="w-4 h-4 mr-1" />
