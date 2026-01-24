@@ -10,6 +10,8 @@ import {
   Twitter,
   Upload,
   Youtube,
+  User as UserIcon,
+  MapPin,
 } from 'lucide-react';
 import React, { useState, useRef, ChangeEvent, FormEvent, useEffect } from 'react';
 import Image from 'next/image';
@@ -32,6 +34,8 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import AddressList from './components/AddressList';
 
 type SocialPlatform =
   | 'twitter'
@@ -211,29 +215,6 @@ const SocialInputField = ({
   );
 };
 
-const InfoAlert = ({
-  message,
-  type,
-}: {
-  message: string;
-  type: 'info' | 'warning';
-}) => {
-  const baseClasses = 'flex items-start space-x-3 rounded-lg border p-4';
-  const typeClasses = {
-    info: 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-800 dark:bg-blue-900/20 dark:text-blue-300',
-    warning:
-      'border-yellow-200 bg-yellow-50 text-yellow-800 dark:border-yellow-800 dark:bg-yellow-900/20 dark:text-yellow-300',
-  };
-  const iconColor = type === 'info' ? 'text-blue-500' : 'text-yellow-500';
-
-  return (
-    <div className={`${baseClasses} ${typeClasses[type]}`}>
-      <AlertCircle className={`mt-0.5 h-5 w-5 flex-shrink-0 ${iconColor}`} />
-      <p className="text-sm">{message}</p>
-    </div>
-  );
-};
-
 // --- Main Page Component ---
 
 const MyProfilePage: NextPage = () => {
@@ -304,7 +285,6 @@ const MyProfilePage: NextPage = () => {
   const handleAvatarChange = (e: ChangeEvent<HTMLInputElement>): void => {
     const file = e.target.files?.[0];
     if (file) {
-      // Validate file type
       if (!file.type.startsWith('image/')) {
         setProfileErrors(prev => ({
           ...prev,
@@ -312,8 +292,6 @@ const MyProfilePage: NextPage = () => {
         }));
         return;
       }
-
-      // Validate file size (5MB limit)
       if (file.size > 5 * 1024 * 1024) {
         setProfileErrors(prev => ({
           ...prev,
@@ -334,7 +312,7 @@ const MyProfilePage: NextPage = () => {
 
   const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
     e.preventDefault();
-    setProfileErrors({}); // Clear previous errors
+    setProfileErrors({});
 
     const profileHasChanged =
       JSON.stringify(profile) !== JSON.stringify(initialProfile);
@@ -351,7 +329,6 @@ const MyProfilePage: NextPage = () => {
     const urlRegex =
       /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
-    // Validate only changed fields
     if (profile.name !== initialProfile.name) {
       if (profile.name && profile.name.trim().length < 2) {
         newErrors.name = 'Full name must be at least 2 characters long.';
@@ -430,8 +407,6 @@ const MyProfilePage: NextPage = () => {
     );
   };
 
-  // --- Password Reset Handlers ---
-
   const openResetModal = () => {
     setResetStep('EMAIL');
     setOtpCode('');
@@ -468,7 +443,6 @@ const MyProfilePage: NextPage = () => {
       return;
     }
 
-    // Client-side length validation
     if (otpCode.length !== 6) {
       setOtpError('Code must be 6 digits');
       return;
@@ -482,7 +456,6 @@ const MyProfilePage: NextPage = () => {
           setResetStep('PASSWORD');
         },
         onError: (error) => {
-          // Map backend errors to user-friendly messages
           const message = error.message || "Failed to validate OTP";
           if (message.includes("Invalid OTP") || message.includes("Request failed with status code 404")) {
             setOtpError("Code not correct");
@@ -537,7 +510,6 @@ const MyProfilePage: NextPage = () => {
         onSuccess: () => {
           toast.success('Password reset successfully!');
           setIsResetModalOpen(false);
-          // Optional: Logout user? Usually password reset keeps them logged in or requires re-login.
         },
         onError: (error) => {
           toast.error(error.message || "Failed to reset password");
@@ -545,7 +517,6 @@ const MyProfilePage: NextPage = () => {
       }
     );
   };
-
 
   if (isLoading) return <div>Loading...</div>;
   if (isError) return <div>Error fetching profile.</div>;
@@ -556,7 +527,7 @@ const MyProfilePage: NextPage = () => {
         <header className="mb-8">
           <div className="flex flex-col items-start justify-between gap-2 sm:flex-row sm:items-center">
             <h1 className="text-3xl font-bold text-gray-800 dark:text-gray-100">
-              My Profile
+              Account Settings
             </h1>
             <nav className="text-sm text-muted-foreground">
               <span>Home</span>
@@ -568,142 +539,156 @@ const MyProfilePage: NextPage = () => {
           </div>
         </header>
 
-        <main className="grid grid-cols-1 gap-8 lg:grid-cols-3">
-          <form
-            onSubmit={handleProfileSubmit}
-            className="space-y-6 lg:col-span-2"
-            noValidate
-          >
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
-                Profile Details
-              </h2>
-              <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
-                <div className="flex flex-col items-center md:col-span-1">
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleAvatarChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                  <div
-                    className="group relative mb-2 h-36 w-36 cursor-pointer rounded-md border-2 border-dashed border-gray-300 p-2 dark:border-gray-600"
-                    onClick={() => fileInputRef.current?.click()}
-                  >
-                    {avatarPreview ? (
-                      <Image
-                        src={avatarPreview}
-                        alt="User Avatar"
-                        width="130"
-                        height="130"
-                        className="h-full w-full rounded-md object-cover"
+        <Tabs defaultValue="profile" className="w-full">
+          <TabsList className="grid w-full grid-cols-2 lg:w-[400px] mb-8">
+            <TabsTrigger value="profile">
+              <UserIcon className="mr-2 h-4 w-4" />
+              My Profile
+            </TabsTrigger>
+            <TabsTrigger value="addresses">
+              <MapPin className="mr-2 h-4 w-4" />
+              Addresses
+            </TabsTrigger>
+          </TabsList>
+
+          <TabsContent value="profile">
+            <main className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+              <form
+                onSubmit={handleProfileSubmit}
+                className="space-y-6 lg:col-span-2"
+                noValidate
+              >
+                <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
+                    Profile Details
+                  </h2>
+                  <div className="grid grid-cols-1 gap-6 md:grid-cols-3">
+                    <div className="flex flex-col items-center md:col-span-1">
+                      <input
+                        type="file"
+                        ref={fileInputRef}
+                        onChange={handleAvatarChange}
+                        accept="image/*"
+                        className="hidden"
                       />
-                    ) : (
-                      <div className="flex h-full w-full flex-col items-center justify-center bg-gray-50 dark:bg-gray-700">
-                        <Upload className="h-8 w-8 text-gray-400" />
-                        <p className="text-xs text-gray-500">Upload</p>
+                      <div
+                        className="group relative mb-2 h-36 w-36 cursor-pointer rounded-md border-2 border-dashed border-gray-300 p-2 dark:border-gray-600"
+                        onClick={() => fileInputRef.current?.click()}
+                      >
+                        {avatarPreview ? (
+                          <Image
+                            src={avatarPreview}
+                            alt="User Avatar"
+                            width="130"
+                            height="130"
+                            className="h-full w-full rounded-md object-cover"
+                          />
+                        ) : (
+                          <div className="flex h-full w-full flex-col items-center justify-center bg-gray-50 dark:bg-gray-700">
+                            <Upload className="h-8 w-8 text-gray-400" />
+                            <p className="text-xs text-gray-500">Upload</p>
+                          </div>
+                        )}
+                        <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 transition-opacity group-hover:opacity-100">
+                          <p className="text-sm text-white">Change</p>
+                        </div>
                       </div>
-                    )}
-                    <div className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 opacity-0 transition-opacity group-hover:opacity-100">
-                      <p className="text-sm text-white">Change</p>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setAvatarPreview(null);
+                          setAvatarFile(null);
+                        }}
+                        className="text-sm text-red-600 hover:underline dark:text-red-500"
+                      >
+                        Remove file
+                      </button>
+                      {profileErrors.avatar && (
+                        <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                          {profileErrors.avatar}
+                        </p>
+                      )}
+                    </div>
+                    <div className="space-y-6 md:col-span-2">
+                      <InputField
+                        label="Full Name"
+                        id="name"
+                        value={profile.name || ''}
+                        onChange={handleProfileChange}
+                        error={profileErrors.name}
+                      />
                     </div>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAvatarPreview(null);
-                      setAvatarFile(null);
-                    }}
-                    className="text-sm text-red-600 hover:underline dark:text-red-500"
-                  >
-                    Remove file
-                  </button>
-                  {profileErrors.avatar && (
-                    <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                      {profileErrors.avatar}
-                    </p>
-                  )}
+                  <div className="mt-6 space-y-6">
+                    <InputField
+                      label="Phone"
+                      id="phoneNumber"
+                      value={profile.phoneNumber || ''}
+                      onChange={handleProfileChange}
+                        error={profileErrors.phoneNumber}
+                    />
+                    <InputField
+                      label="E-mail"
+                      id="email"
+                      value={profile.email || ''}
+                      onChange={handleProfileChange}
+                      disabled={true}
+                      error={profileErrors.email}
+                    />
+                    {(
+                      Object.keys(socialIcons) as SocialPlatform[]
+                    ).map(platform => (
+                      <SocialInputField
+                        key={platform}
+                        platform={platform}
+                        url={socials[platform as keyof typeof socials] || ''}
+                        onChange={handleSocialChange}
+                        error={profileErrors.socials?.[platform]}
+                      />
+                    ))}
+                  </div>
+                  <div className="mt-8 flex justify-end">
+                    <button
+                      type="submit"
+                      className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                      disabled={updateUserMutation.isPending || isUploading}
+                    >
+                      {isUploading
+                        ? 'Uploading...'
+                        : updateUserMutation.isPending
+                        ? 'Saving...'
+                        : 'Save Changes'}
+                    </button>
+                  </div>
                 </div>
-                <div className="space-y-6 md:col-span-2">
-                  <InputField
-                    label="Full Name"
-                    id="name"
-                    value={profile.name || ''}
-                    onChange={handleProfileChange}
-                    error={profileErrors.name}
-                  />
-                </div>
-              </div>
-              <div className="mt-6 space-y-6">
-                {/* <InfoAlert
-                  message="For demo purposes you can type fake phone number"
-                  type="warning"
-                /> */}
-                <InputField
-                  label="Phone"
-                  id="phoneNumber"
-                  value={profile.phoneNumber || ''}
-                  onChange={handleProfileChange}
-                    error={profileErrors.phoneNumber}
-                />
-                <InputField
-                  label="E-mail"
-                  id="email"
-                  value={profile.email || ''}
-                  onChange={handleProfileChange}
-                  disabled={true}
-                  error={profileErrors.email}
-                />
-                {(
-                  Object.keys(socialIcons) as SocialPlatform[]
-                ).map(platform => (
-                  <SocialInputField
-                    key={platform}
-                    platform={platform}
-                    url={socials[platform as keyof typeof socials] || ''}
-                    onChange={handleSocialChange}
-                    error={profileErrors.socials?.[platform]}
-                  />
-                ))}
-              </div>
-              <div className="mt-8 flex justify-end">
-                <button
-                  type="submit"
-                  className="rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                  disabled={updateUserMutation.isPending || isUploading}
-                >
-                  {isUploading
-                    ? 'Uploading...'
-                    : updateUserMutation.isPending
-                    ? 'Saving...'
-                    : 'Save Changes'}
-                </button>
-              </div>
-            </div>
-          </form>
+              </form>
 
-          {/* New Reset Password Section */}
-          <div className="lg:col-span-1">
-            <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
-              <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
-                Security
-              </h2>
-              <div className="space-y-6">
-                <p className="text-sm text-gray-600 dark:text-gray-300">
-                  Manage your password and security settings.
-                </p>
-                <button
-                  type="button"
-                  onClick={openResetModal}
-                  className="w-full rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
-                >
-                  Reset Password
-                </button>
+              <div className="lg:col-span-1">
+                <div className="rounded-lg border bg-white p-6 shadow-sm dark:border-gray-700 dark:bg-gray-800">
+                  <h2 className="mb-6 text-xl font-semibold text-gray-900 dark:text-white">
+                    Security
+                  </h2>
+                  <div className="space-y-6">
+                    <p className="text-sm text-gray-600 dark:text-gray-300">
+                      Manage your password and security settings.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={openResetModal}
+                      className="w-full rounded-lg bg-red-600 px-6 py-2.5 text-sm font-semibold text-white shadow-sm hover:bg-red-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-red-600"
+                    >
+                      Reset Password
+                    </button>
+                  </div>
+                </div>
               </div>
-            </div>
-          </div>
-        </main>
+            </main>
+          </TabsContent>
+
+          <TabsContent value="addresses">
+             <AddressList />
+          </TabsContent>
+        </Tabs>
 
         <Dialog open={isResetModalOpen} onOpenChange={setIsResetModalOpen}>
           <DialogContent className="sm:max-w-md">
