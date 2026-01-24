@@ -344,6 +344,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       });
       setDialogMessage('OTP sent successfully');
       setIsSuccessDialogOpen(true);
+      setTimeout(() => setIsSuccessDialogOpen(false), 3000);
       if (mode === 'forgot-password') {
         setStep('enter-otp');
       }
