@@ -14,7 +14,8 @@ import {
   Gift,
   Ticket,
   Briefcase,
-  ShoppingBag
+  ShoppingBag,
+  LayoutDashboard
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
@@ -30,7 +31,6 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Button } from '@/components/ui/button';
-import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetMarketplacePublic } from '@/service/marketplace/hook';
 import {
   useGetPublicProducts,
@@ -44,13 +44,13 @@ import { PromotionalItem } from '@/lib/listing-data';
 
 const ITEMS_PER_PAGE = 12;
 
-type ListingType = 'products' | 'services' | 'vouchers' | 'gift-cards' | 'coupons';
+type ListingType = 'all' | 'products' | 'services' | 'vouchers' | 'gift-cards' | 'coupons';
 
 export default function MarketplacePage() {
   const [activeSlide, setActiveSlide] = useState(0);
   const [activeSidebarSlide, setActiveSidebarSlide] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [listingType, setListingType] = useState<ListingType>('products');
+  const [listingType, setListingType] = useState<ListingType>('all');
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
@@ -64,12 +64,10 @@ export default function MarketplacePage() {
   const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
   // Data Fetching: Discovery
-  // We use a common params object. Note: Sort options are not fully supported by the API types yet (assuming newest first by default).
   const discoveryParams = {
     page: currentPage,
     limit: ITEMS_PER_PAGE,
     search: searchQuery,
-    // Add other filters here when ready
   };
 
   const { data: productsData, isLoading: productsLoading } = useGetPublicProducts(discoveryParams, { enabled: listingType === 'products' });
@@ -86,7 +84,7 @@ export default function MarketplacePage() {
       case 'vouchers': return vouchersData;
       case 'gift-cards': return giftCardsData;
       case 'coupons': return couponsData;
-      default: return productsData;
+      default: return null; // 'all' handled separately
     }
   }, [listingType, productsData, servicesData, vouchersData, giftCardsData, couponsData]);
 
@@ -97,24 +95,20 @@ export default function MarketplacePage() {
       case 'vouchers': return vouchersLoading;
       case 'gift-cards': return giftCardsLoading;
       case 'coupons': return couponsLoading;
+      case 'all': return isPublicDataLoading;
       default: return false;
     }
-  }, [listingType, productsLoading, servicesLoading, vouchersLoading, giftCardsLoading, couponsLoading]);
+  }, [listingType, productsLoading, servicesLoading, vouchersLoading, giftCardsLoading, couponsLoading, isPublicDataLoading]);
 
-  // Map API data to Display Items for ProductCard
-  const displayItems = useMemo(() => {
-    if (!currentData?.data) return [];
-
-    return currentData.data.map((item: any) => {
-      // Common shape mapping
+  // Helper to transform any item to PromotionalItem for ProductCard
+  const mapToDisplayItem = (item: any, type: string) => {
       let title = item.title || item.name || 'Untitled';
       let price = item.price || item.amount || item.fixedAmounts?.[0] || 0;
       let image = item.imageUrl || item.image || item.url || item.backgroundImage || '/placeholder.png';
       let id = item.id;
-      let category = item.category || listingType;
+      let category = item.category || type;
 
-      // Type specific adjustments
-      if (listingType === 'products') {
+      if (type === 'products') {
         price = item.salePrice || item.price || 0;
       }
 
@@ -124,19 +118,22 @@ export default function MarketplacePage() {
         price: Number(price),
         image,
         category: typeof category === 'string' ? category : 'General',
-        // Add fake promotional item fields to satisfy ProductCard for now
         items_left: 10,
         rating: 4.5,
         reviews: 10,
         discountedPrice: item.salePrice ? Number(item.salePrice) : undefined
       } as PromotionalItem;
-    });
+  };
+
+  // Display Items for Single Category View
+  const displayItems = useMemo(() => {
+    if (listingType === 'all' || !currentData?.data) return [];
+    return currentData.data.map(item => mapToDisplayItem(item, listingType));
   }, [currentData, listingType]);
 
   const pageMeta: PageMetaDto | undefined = currentData?.meta;
 
-
-  // Helper to handle both camelCase (API docs) and snake_case
+  // Sections Config Helper
   const getSection = (key: 'flashSale' | 'promoCarousel', snakeKey: 'flash_sale' | 'promo_carousel') => {
       const config = sections?.[key] || sections?.[snakeKey];
       if (!config) return null;
@@ -152,7 +149,6 @@ export default function MarketplacePage() {
   const flashSaleConfig = getSection('flashSale', 'flash_sale');
   const promoCarouselConfig = getSection('promoCarousel', 'promo_carousel');
 
-  // Combine Flash Sale and Banners for the sidebar slider
   const sidebarSlides = useMemo(() => {
     const slides: SidebarBanner[] = [];
     if (flashSaleConfig?.isVisible) {
@@ -179,7 +175,6 @@ export default function MarketplacePage() {
     return slides;
   }, [flashSaleConfig, sidebarBanners]);
 
-  // Filter State
   const [filters, setFilters] = useState<MarketplaceFiltersState>({
     categories: [],
     priceRange: [0, 5000],
@@ -187,7 +182,6 @@ export default function MarketplacePage() {
     minRating: null,
   });
 
-  // Derived Sidebar Categories
   const sidebarCategories = useMemo(() => {
     if (apiCategories.length > 0) {
       return apiCategories.map(c => ({ name: c.name, count: undefined }));
@@ -195,7 +189,6 @@ export default function MarketplacePage() {
     return [];
   }, [apiCategories]);
 
-  // Mock Brands (placeholder)
   const brandStats = [
     { name: 'Samsung', count: 12 },
     { name: 'Apple', count: 8 },
@@ -229,12 +222,10 @@ export default function MarketplacePage() {
   const handleFilterChange = (newFilters: MarketplaceFiltersState) => {
     setFilters(newFilters);
     setCurrentPage(1);
-    // TODO: Pass these filters to the discovery hooks when backend supports them fully
   };
 
   const renderBanner = (banner: SidebarBanner, index: number) => {
     const isFlash = banner.type === 'flash_sale';
-    const isPromo = banner.type === 'sell_promo';
 
     if (isFlash) {
       return (
@@ -254,7 +245,6 @@ export default function MarketplacePage() {
       );
     }
 
-    // ... (Other banner types similar to original)
     if (banner.type === 'sidebar_banner') {
         return (
             <div key={banner.id || index} className="w-full h-full rounded-2xl shadow-none relative overflow-hidden group">
@@ -291,6 +281,28 @@ export default function MarketplacePage() {
       </div>
     );
   };
+
+  // Reusable Component for "All" View Sections
+  const SectionRow = ({ title, type, items }: { title: string, type: ListingType, items: any[] }) => {
+    if (!items || items.length === 0) return null;
+    const displayItems = items.map(item => mapToDisplayItem(item, type));
+
+    return (
+      <div className="mb-10">
+        <div className="flex items-center justify-between mb-4">
+          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
+          <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" onClick={() => setListingType(type)}>
+            View All
+          </Button>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {displayItems.slice(0, 4).map((item) => (
+             <ProductCard key={item.id} product={item} viewMode="grid" />
+          ))}
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="bg-gray-50 min-h-screen pt-28 pb-12">
@@ -338,7 +350,6 @@ export default function MarketplacePage() {
                     </div>
                 </motion.div>
                 </AnimatePresence>
-                {/* Navigation Arrows */}
                 <button onClick={(e) => { e.stopPropagation(); handlePrevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100">
                   <ChevronLeft className="h-6 w-6" />
                 </button>
@@ -371,7 +382,7 @@ export default function MarketplacePage() {
         </div>
         )}
 
-        {/* 1.5. Dynamic Sections (Flash Sale / Promo) */}
+        {/* 1.5. Dynamic Sections (Flash Sale / Promo) - Always visible */}
         {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
              <MarketplaceSection
                 title={flashSaleConfig.title}
@@ -387,19 +398,19 @@ export default function MarketplacePage() {
              />
         )}
 
-        {/* 1.6 Additional Discovery Teasers (Optional: Can render small strips here if needed) */}
-
-
         {/* 2. Main Layout Split */}
         <div className="flex flex-col lg:flex-row gap-8 mt-12">
           
           {/* Left Sidebar */}
           <aside className="hidden lg:block w-64 flex-shrink-0">
              <div className="sticky top-28 space-y-8">
-                {/* Category / Type Selector in Sidebar */}
+                {/* Category / Type Selector */}
                 <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                     <h3 className="font-bold text-gray-900 mb-4">Explore</h3>
                     <div className="space-y-2">
+                         <button onClick={() => setListingType('all')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                            <LayoutDashboard className="w-4 h-4" /> All
+                        </button>
                         <button onClick={() => setListingType('products')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'products' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
                             <ShoppingBag className="w-4 h-4" /> Products
                         </button>
@@ -430,10 +441,10 @@ export default function MarketplacePage() {
           {/* Right Content */}
           <main className="flex-1">
             
-            {/* Top Toolbar */}
+            {/* Top Toolbar - Only show when NOT in 'all' mode */}
+            {listingType !== 'all' && (
             <div className="bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-6 sticky top-24 z-20">
               <div className="flex flex-col md:flex-row gap-4 justify-between items-center">
-                {/* Search Bar */}
                 <div className="relative w-full md:max-w-md">
                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
                    <Input 
@@ -445,13 +456,13 @@ export default function MarketplacePage() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
-                   {/* Mobile Type Selector (Visible only on small screens) */}
                    <div className="lg:hidden">
                        <Select value={listingType} onValueChange={(val) => setListingType(val as ListingType)}>
                             <SelectTrigger className="w-[140px]">
                                 <SelectValue placeholder="Type" />
                             </SelectTrigger>
                             <SelectContent>
+                                <SelectItem value="all">All</SelectItem>
                                 <SelectItem value="products">Products</SelectItem>
                                 <SelectItem value="services">Services</SelectItem>
                                 <SelectItem value="vouchers">Vouchers</SelectItem>
@@ -473,73 +484,80 @@ export default function MarketplacePage() {
                   </Select>
 
                   <div className="flex items-center bg-gray-100 p-1 rounded-lg">
-                    <button 
-                      onClick={() => setViewMode('grid')}
-                      className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
+                    <button onClick={() => setViewMode('grid')} className={`p-2 rounded-md transition-all ${viewMode === 'grid' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
                       <LayoutGrid className="h-4 w-4" />
                     </button>
-                    <button 
-                      onClick={() => setViewMode('list')}
-                      className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}
-                    >
+                    <button onClick={() => setViewMode('list')} className={`p-2 rounded-md transition-all ${viewMode === 'list' ? 'bg-white shadow-sm text-primary' : 'text-gray-500 hover:text-gray-700'}`}>
                       <ListIcon className="h-4 w-4" />
                     </button>
                   </div>
                 </div>
               </div>
-              
-              {/* Results Count */}
               <div className="mt-4 flex items-center justify-between text-sm text-gray-500 border-t pt-4">
                 <p>Showing <span className="font-semibold text-gray-900">{displayItems.length}</span> results for <span className="font-semibold text-primary capitalize">{listingType.replace('-', ' ')}</span></p>
               </div>
             </div>
-
-            {/* Content Grid */}
-            {isLoadingListings ? (
-                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-                    {[...Array(8)].map((_, i) => (
-                        <div key={i} className="h-80 bg-white rounded-xl shadow-sm animate-pulse" />
-                    ))}
-                 </div>
-            ) : displayItems.length > 0 ? (
-              <div className={
-                viewMode === 'grid' 
-                  ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6" 
-                  : "flex flex-col gap-4"
-              }>
-                {displayItems.map((item) => (
-                  <ProductCard key={item.id} product={item} viewMode={viewMode} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
-                <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                  <Search className="h-8 w-8 text-gray-400" />
-                </div>
-                <h3 className="text-lg font-bold text-gray-900 mb-1">No {listingType.replace('-', ' ')} found</h3>
-                <p className="text-gray-500">Try adjusting your search or filters.</p>
-                <Button 
-                  variant="link" 
-                  className="mt-2 text-primary"
-                  onClick={() => {
-                    setSearchQuery('');
-                  }}
-                >
-                  Clear search
-                </Button>
-              </div>
             )}
 
-            {/* Pagination */}
-            {pageMeta && (
-                <div className="mt-12">
-                <Pagination
-                    currentPage={pageMeta.currentPage}
-                    totalPages={pageMeta.totalPages}
-                    onPageChange={setCurrentPage}
-                />
+            {/* Content Logic */}
+            {listingType === 'all' ? (
+                // Dashboard View (Sections)
+                <div className="space-y-4">
+                     {/* We can put a welcome or search here if needed */}
+                     <SectionRow title="Featured Services" type="services" items={publicData?.services || []} />
+                     <SectionRow title="Newest Vouchers" type="vouchers" items={publicData?.vouchers || []} />
+                     <SectionRow title="Gift Cards" type="gift-cards" items={publicData?.giftCards || []} />
+                     <SectionRow title="Latest Coupons" type="coupons" items={publicData?.coupons || []} />
+
+                     {(!publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length) && !isPublicDataLoading && (
+                         <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                             <p className="text-gray-500">No featured items available right now.</p>
+                         </div>
+                     )}
                 </div>
+            ) : (
+                // Discovery View (Paginated Grid)
+                <>
+                {isLoadingListings ? (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+                        {[...Array(8)].map((_, i) => (
+                            <div key={i} className="h-80 bg-white rounded-xl shadow-sm animate-pulse" />
+                        ))}
+                    </div>
+                ) : displayItems.length > 0 ? (
+                <div className={
+                    viewMode === 'grid'
+                    ? "grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6"
+                    : "flex flex-col gap-4"
+                }>
+                    {displayItems.map((item) => (
+                    <ProductCard key={item.id} product={item} viewMode={viewMode} />
+                    ))}
+                </div>
+                ) : (
+                <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
+                    <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="h-8 w-8 text-gray-400" />
+                    </div>
+                    <h3 className="text-lg font-bold text-gray-900 mb-1">No {listingType.replace('-', ' ')} found</h3>
+                    <p className="text-gray-500">Try adjusting your search or filters.</p>
+                    <Button variant="link" className="mt-2 text-primary" onClick={() => setSearchQuery('')}>
+                    Clear search
+                    </Button>
+                </div>
+                )}
+
+                {/* Pagination */}
+                {pageMeta && (
+                    <div className="mt-12">
+                    <Pagination
+                        currentPage={pageMeta.currentPage}
+                        totalPages={pageMeta.totalPages}
+                        onPageChange={setCurrentPage}
+                    />
+                    </div>
+                )}
+                </>
             )}
 
           </main>
