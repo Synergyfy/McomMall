@@ -118,7 +118,7 @@ export default function ProductPage() {
 
   return (
     // Reduced padding-top to remove extra space
-    <div className="min-h-screen bg-gray-50 pb-12 pt-16">
+    <div className="min-h-screen bg-gray-50 pb-12 pt-3">
 
       {/* Navigation / Breadcrumb */}
       <div className="bg-white border-b shadow-sm mb-6">
