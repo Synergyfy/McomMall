@@ -31,8 +31,8 @@ export default function ServicePage() {
         {/* Service Image */}
         <div className="relative bg-white rounded-lg shadow-md p-6">
           <Image
-            src={service.images[0]}
-            alt={service.name}
+            src={service.images?.[0] || '/placeholder.png'}
+            alt={service.name || 'Service Image'}
             width={500}
             height={500}
             className="object-contain w-full h-full"
