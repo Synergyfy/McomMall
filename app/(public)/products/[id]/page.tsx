@@ -6,6 +6,7 @@ import { useGetProductById } from '@/service/store/products/hook';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
+import { Badge } from '@/components/ui/badge';
 import {
   Select,
   SelectContent,
@@ -116,10 +117,10 @@ export default function ProductPage() {
     : [product.imageUrl || 'https://via.placeholder.com/500'];
 
   return (
-    // Added pt-20 to clear the fixed global header (h-16 + spacing)
-    <div className="min-h-screen bg-gray-50 pb-12 pt-20">
+    // Reduced padding-top to remove extra space
+    <div className="min-h-screen bg-gray-50 pb-12 pt-16">
 
-      {/* Navigation / Breadcrumb - Static now to avoid sticky issues */}
+      {/* Navigation / Breadcrumb */}
       <div className="bg-white border-b shadow-sm mb-6">
         <div className="container mx-auto px-4 h-14 flex items-center">
             <Link href="/marketplace" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
@@ -146,6 +147,14 @@ export default function ProductPage() {
 
             {/* Description */}
             <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
+              <div className="flex flex-wrap gap-2 mb-4">
+                {product.tags && product.tags.map(tag => (
+                   <Badge key={tag} variant="secondary" className="bg-gray-100 text-gray-600 hover:bg-gray-200">
+                     {tag}
+                   </Badge>
+                ))}
+              </div>
+
               <h2 className="text-xl font-bold text-gray-900 mb-4">Description</h2>
               <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">
                 {product.description}
@@ -161,8 +170,8 @@ export default function ProductPage() {
 
           {/* Sidebar - Right Column (1/3) */}
           <div className="relative">
-             {/* Sticky Wrapper - positioned to stick below header */}
-            <div className="sticky top-24 space-y-6">
+             {/* Sticky Wrapper - adjusted top offset */}
+            <div className="sticky top-20 space-y-6">
 
                 {/* Main Action Card */}
                 <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
