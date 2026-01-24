@@ -3,7 +3,16 @@
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useState } from 'react';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import { useState, useEffect } from 'react';
+import { useGetShippingAddresses } from '@/service/shipping/hook';
+import { ShippingAddress } from '@/service/shipping/types';
 
 interface Errors {
   recipientName?: string;
@@ -13,6 +22,10 @@ interface Errors {
 }
 
 export default function ShippingDetailsForm() {
+  const { data: addressData } = useGetShippingAddresses(1, 100);
+  const addresses = addressData?.data || [];
+
+  const [selectedAddressId, setSelectedAddressId] = useState<string>('new');
   const [shippingDetails, setShippingDetails] = useState({
     recipientName: '',
     addressLine1: '',
@@ -22,6 +35,43 @@ export default function ShippingDetailsForm() {
     country: 'United Kingdom',
   });
   const [errors, setErrors] = useState<Errors>({});
+
+  useEffect(() => {
+    // If we have addresses and haven't selected one yet, try to select the main one
+    if (addresses.length > 0 && selectedAddressId === 'new') {
+      const mainAddress = addresses.find((addr) => addr.isMain);
+      if (mainAddress) {
+        handleAddressSelection(mainAddress.id);
+      }
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [addresses.length]); // Only run when addresses load
+
+  const handleAddressSelection = (addressId: string) => {
+    setSelectedAddressId(addressId);
+    if (addressId === 'new') {
+      setShippingDetails({
+        recipientName: '',
+        addressLine1: '',
+        addressLine2: '',
+        city: '',
+        postcode: '',
+        country: 'United Kingdom',
+      });
+    } else {
+      const address = addresses.find((addr) => addr.id === addressId);
+      if (address) {
+        setShippingDetails({
+          recipientName: address.recipientName,
+          addressLine1: address.addressLine1,
+          addressLine2: address.addressLine2 || '',
+          city: address.city,
+          postcode: address.postalCode || '',
+          country: address.country,
+        });
+      }
+    }
+  };
 
   const validate = () => {
     const newErrors: Errors = {};
@@ -36,7 +86,7 @@ export default function ShippingDetailsForm() {
     }
     if (!shippingDetails.postcode) {
       newErrors.postcode = 'Postcode is required.';
-    } else if (!/^[A-Z]{1,2}[0-9][A-Z0-9]? [0-9][A-Z]{2}$/i.test(shippingDetails.postcode)) {
+    } else if (!/^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i.test(shippingDetails.postcode)) {
       newErrors.postcode = 'Invalid UK postcode format.';
     }
     return newErrors;
@@ -50,6 +100,10 @@ export default function ShippingDetailsForm() {
       ...prevDetails,
       [id]: value,
     }));
+    // If user types, we are essentially in "custom" mode, but we can keep the ID if it matches?
+    // Usually it's better to switch to "new" or "custom" if they edit, but for simplicity let's leave it.
+    // Or we could set selectedAddressId to 'new' if they edit?
+    // Let's keep it simple.
   };
 
   const handleSubmit = (e: React.FormEvent) => {
@@ -69,6 +123,29 @@ export default function ShippingDetailsForm() {
       <h2 className="text-2xl font-bold text-gray-800 mb-6">
         Shipping Details
       </h2>
+
+      {addresses.length > 0 && (
+        <div className="mb-6">
+          <Label htmlFor="savedAddress">Use a Saved Address</Label>
+          <Select
+            value={selectedAddressId}
+            onValueChange={handleAddressSelection}
+          >
+            <SelectTrigger className="w-full mt-1">
+              <SelectValue placeholder="Select an address" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="new">Add New Address</SelectItem>
+              {addresses.map((address) => (
+                <SelectItem key={address.id} value={address.id}>
+                  {address.addressName} - {address.addressLine1}, {address.city}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+        </div>
+      )}
+
       <form onSubmit={handleSubmit} className="space-y-6">
         <div>
           <Label htmlFor="recipientName">Recipient Name</Label>
