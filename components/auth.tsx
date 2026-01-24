@@ -28,7 +28,9 @@ import { SuccessDialog } from './SuccessDialog';
 import { ErrorDialog } from './ErrorDialog';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
-type Step = 'enter-email' | 'enter-otp';
+import { useAddShippingAddress } from '@/service/shipping/hook';
+
+type Step = 'enter-email' | 'enter-otp' | 'address-details';
 
 const Auth = ({ redirect }: { redirect: string | null }) => {
   const router = useRouter();
@@ -47,6 +49,11 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     password: '',
     confirmPassword: '',
     otp: '',
+    // Address Fields
+    addressLine1: '',
+    city: '',
+    postcode: '',
+    country: 'United Kingdom',
   });
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
@@ -60,6 +67,9 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     role: '',
     terms: '',
     otp: '',
+    addressLine1: '',
+    city: '',
+    postcode: '',
   });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const { isPending, mutateAsync } = useCreateUser();
@@ -69,6 +79,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     useValidateOtp();
   const { isPending: resetPasswordPending, mutateAsync: resetPasswordAsync } =
     useResetPassword();
+  const { mutateAsync: addAddressAsync } = useAddShippingAddress();
 
   useEffect(() => {
     if (pathname === '/signin') {
@@ -95,6 +106,10 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       password: '',
       confirmPassword: '',
       otp: '',
+      addressLine1: '',
+      city: '',
+      postcode: '',
+      country: 'United Kingdom',
     });
     setErrors({
       fullName: '',
@@ -105,6 +120,9 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       role: '',
       terms: '',
       otp: '',
+      addressLine1: '',
+      city: '',
+      postcode: '',
     });
     setTermsAccepted(false);
   };
@@ -145,20 +163,12 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       : 'Please enter a valid phone number (e.g., +1 (123) 456-7890).';
   };
 
-  const validateForm = () => {
+  const validateForm = (stepOverride?: string) => {
     let isValid = true;
-    const newErrors = {
-      fullName: '',
-      email: '',
-      phoneNumber: '',
-      password: '',
-      confirmPassword: '',
-      role: '',
-      terms: '',
-      otp: '',
-    };
+    const newErrors = { ...errors }; // Keep existing errors
 
     if (mode === 'register') {
+      // Validate Step 1 Fields always
       if (!formData.fullName) {
         newErrors.fullName = 'Full name is required.';
         isValid = false;
@@ -167,22 +177,24 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (nameError) {
           newErrors.fullName = nameError;
           isValid = false;
+        } else {
+           newErrors.fullName = '';
         }
       }
-    }
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required.';
-      isValid = false;
-    } else {
-      const emailError = validateEmail(formData.email);
-      if (emailError) {
-        newErrors.email = emailError;
+      if (!formData.email) {
+        newErrors.email = 'Email is required.';
         isValid = false;
+      } else {
+        const emailError = validateEmail(formData.email);
+        if (emailError) {
+          newErrors.email = emailError;
+          isValid = false;
+        } else {
+          newErrors.email = '';
+        }
       }
-    }
 
-    if (mode === 'register') {
       if (!formData.phoneNumber) {
         newErrors.phoneNumber = 'Phone number is required.';
         isValid = false;
@@ -191,57 +203,127 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (phoneError) {
           newErrors.phoneNumber = phoneError;
           isValid = false;
+        } else {
+          newErrors.phoneNumber = '';
         }
       }
 
       if (!formData.password) {
         newErrors.password = 'Password is required.';
         isValid = false;
+      } else {
+        newErrors.password = '';
       }
 
       if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match.';
         isValid = false;
+      } else {
+        newErrors.confirmPassword = '';
       }
 
       if (!selectedRole) {
         newErrors.role = 'Please select a role (Customer or Business).';
         isValid = false;
+      } else {
+        newErrors.role = '';
       }
 
       if (!termsAccepted) {
         newErrors.terms = 'You must accept the Terms and Conditions.';
         isValid = false;
+      } else {
+        newErrors.terms = '';
       }
+
+      // If we are validating just to go to next step
+      if (stepOverride === 'to-address-step') {
+         setErrors(newErrors);
+         return isValid;
+      }
+
+      // Address is optional, but if they filled ANY field, we validate the rest
+      const hasAddressInput = formData.addressLine1 || formData.city || formData.postcode;
+      if (hasAddressInput) {
+        if (!formData.addressLine1) {
+            newErrors.addressLine1 = 'Address Line 1 is required.';
+            isValid = false;
+        } else {
+            newErrors.addressLine1 = '';
+        }
+        if (!formData.city) {
+            newErrors.city = 'City is required.';
+            isValid = false;
+        } else {
+            newErrors.city = '';
+        }
+        if (!formData.postcode) {
+            newErrors.postcode = 'Postcode is required.';
+            isValid = false;
+        } else {
+            newErrors.postcode = '';
+        }
+      }
+
     } else if (mode === 'login') {
+      if (!formData.email) {
+          newErrors.email = 'Email is required.';
+          isValid = false;
+      } else {
+          newErrors.email = '';
+      }
       if (!formData.password) {
         newErrors.password = 'Password is required.';
         isValid = false;
+      } else {
+        newErrors.password = '';
       }
     } else if (mode === 'forgot-password') {
       if (step === 'enter-otp') {
         if (!formData.otp) {
           newErrors.otp = 'OTP is required.';
           isValid = false;
+        } else {
+            newErrors.otp = '';
         }
         if (!formData.password) {
           newErrors.password = 'Password is required.';
           isValid = false;
+        } else {
+            newErrors.password = '';
         }
         if (formData.password !== formData.confirmPassword) {
           newErrors.confirmPassword = 'Passwords do not match.';
           isValid = false;
+        } else {
+            newErrors.confirmPassword = '';
+        }
+      } else {
+        if (!formData.email) {
+            newErrors.email = 'Email is required.';
+            isValid = false;
+        } else {
+            newErrors.email = '';
         }
       }
     } else if (mode === 'verify-email') {
       if (!formData.otp) {
         newErrors.otp = 'OTP is required.';
         isValid = false;
+      } else {
+        newErrors.otp = '';
       }
     }
 
     setErrors(newErrors);
     return isValid;
+  };
+
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm('to-address-step')) {
+        setStep('address-details');
+    }
   };
 
   const handleSendOtp = async () => {
@@ -288,6 +370,28 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
           toast.success('Login successful', {
             description: `Welcome, ${response.name}!`,
           });
+
+          // If user provided address details during registration, save them now
+          if (formData.addressLine1 && formData.city && formData.postcode) {
+             try {
+                await addAddressAsync({
+                    addressName: 'Home',
+                    recipientName: formData.fullName,
+                    phoneNumber: formData.phoneNumber,
+                    addressLine1: formData.addressLine1,
+                    city: formData.city,
+                    state: formData.city, // Using city as state for simplicity if not provided
+                    country: formData.country,
+                    postalCode: formData.postcode,
+                    isMain: true
+                });
+             } catch (addressErr) {
+                 console.error("Failed to save address after signup", addressErr);
+                 // We don't block login success if address fails, but maybe warn?
+                 // toast.warning("Account created, but failed to save address.");
+             }
+          }
+
           if (redirect) {
             router.push(redirect);
           } else {
@@ -581,68 +685,124 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               )
             )}
           {mode === 'register' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="password" className="text-lg">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Your password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.password ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-orange-500 text-sm">{errors.password}</p>
-                )}
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="password2" className="text-lg">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password2"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.confirmPassword ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showConfirmPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-orange text-sm">
-                    {errors.confirmPassword}
-                  </p>
-                )}
-                </div>
-              </div>
+              step === 'enter-email' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-3">
+                    <Label htmlFor="password" className="text-lg">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Your password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.password ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-orange-500 text-sm">{errors.password}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="password2" className="text-lg">
+                      Confirm Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password2"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Confirm password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.confirmPassword ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showConfirmPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-red-orange text-sm">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
+                    </div>
+                  </div>
+              ) : (
+                 // Address Step
+                 <div className="grid gap-4">
+                     <div className="grid gap-3">
+                        <Label htmlFor="addressLine1" className="text-lg">Address Line 1</Label>
+                        <Input
+                            id="addressLine1"
+                            name="addressLine1"
+                            value={formData.addressLine1}
+                            onChange={handleInputChange}
+                            placeholder="Street address"
+                            className={`sm:h-[3rem] ${errors.addressLine1 ? 'border-orange-500' : ''}`}
+                        />
+                         {errors.addressLine1 && <p className="text-orange-500 text-sm">{errors.addressLine1}</p>}
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="city" className="text-lg">City</Label>
+                            <Input
+                                id="city"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleInputChange}
+                                placeholder="City"
+                                className={`sm:h-[3rem] ${errors.city ? 'border-orange-500' : ''}`}
+                            />
+                             {errors.city && <p className="text-orange-500 text-sm">{errors.city}</p>}
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="postcode" className="text-lg">Postcode</Label>
+                            <Input
+                                id="postcode"
+                                name="postcode"
+                                value={formData.postcode}
+                                onChange={handleInputChange}
+                                placeholder="Postcode"
+                                className={`sm:h-[3rem] ${errors.postcode ? 'border-orange-500' : ''}`}
+                            />
+                             {errors.postcode && <p className="text-orange-500 text-sm">{errors.postcode}</p>}
+                        </div>
+                     </div>
+                     <div className="grid gap-3">
+                        <Label htmlFor="country" className="text-lg">Country</Label>
+                        <Input
+                            id="country"
+                            name="country"
+                            value={formData.country}
+                            onChange={handleInputChange}
+                            placeholder="Country"
+                            className="sm:h-[3rem] bg-gray-100"
+                            readOnly
+                        />
+                     </div>
+                 </div>
+              )
           ) : (
             mode === 'login' && (
               <div className="grid gap-3">
@@ -804,13 +964,33 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               </Button>
             )}
             {mode === 'register' && (
-              <Button
-                type="submit"
-                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                disabled={isPending}
-              >
-                {isPending ? 'Submitting...' : 'Sign Up'}
-              </Button>
+                step === 'enter-email' ? (
+                     <Button
+                        type="button"
+                        onClick={handleNextStep}
+                        className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                    >
+                        Next: Address Details
+                    </Button>
+                ) : (
+                    <div className="flex gap-4">
+                         <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setStep('enter-email')}
+                            className="flex-1 justify-center"
+                        >
+                            Back
+                        </Button>
+                        <Button
+                            type="submit"
+                            className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
+                            disabled={isPending}
+                        >
+                            {isPending ? 'Submitting...' : 'Sign Up'}
+                        </Button>
+                    </div>
+                )
             )}
 
             {/* add google */}
