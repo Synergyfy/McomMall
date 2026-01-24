@@ -55,7 +55,7 @@ type MarketItem = {
   salePrice?: number | string;
   amount?: number | string;
   fixedAmounts?: number[];
-  imageUrl?: string;
+  imageUrl?: string | null;
   image?: string;
   url?: string;
   backgroundImage?: string;

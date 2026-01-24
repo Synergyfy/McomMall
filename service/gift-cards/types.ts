@@ -20,7 +20,7 @@ export interface GiftCardTemplate {
   id: string;
   name: string;
   description?: string;
-  imageUrl?: string;
+  imageUrl?: string | null;
   currency: string;
   minAmount?: number;
   maxAmount?: number;
@@ -28,6 +28,7 @@ export interface GiftCardTemplate {
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
+  media?: string[] | null;
 }
 
 export type PaymentProvider = "stripe" | "paypal";

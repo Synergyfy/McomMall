@@ -2,7 +2,8 @@ export interface GiftCardTemplate {
     id: string; // UUID
     name: string;
     description?: string;
-    backgroundImageUrl?: string;
+    backgroundImageUrl?: string | null;
+    imageUrl?: string | null; // Added to match previous usage
     backgroundColor?: string;
     textColor?: string;
     fixedAmounts?: number[];
@@ -15,6 +16,7 @@ export interface GiftCardTemplate {
     allowReloading?: boolean;
     bonusThreshold?: number;
     bonusAmount?: number;
+    media?: string[] | null;
 }
 
 export interface CreateGiftCardTemplateDto {
