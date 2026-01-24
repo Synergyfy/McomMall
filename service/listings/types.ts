@@ -354,6 +354,7 @@ export interface Product {
   points?: number;
   bonusThreshold?: number;
   bonusAmount?: number;
+  business?: InHouseBusiness;
 }
 
 export type CampaignType = string;
