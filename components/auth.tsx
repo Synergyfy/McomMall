@@ -260,6 +260,9 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (!formData.postcode) {
             newErrors.postcode = 'Postcode is required.';
             isValid = false;
+        } else if (formData.postcode.length < 3) {
+            newErrors.postcode = 'Postcode is too short.';
+            isValid = false;
         } else {
             newErrors.postcode = '';
         }
@@ -835,8 +838,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 </div>
             )
             )}
-            {((mode === 'forgot-password' && step === 'enter-otp') ||
-              mode === 'verify-email') && (
+            {(mode === 'forgot-password' && step === 'enter-otp') && (
               <div className="grid gap-3">
                 <Label htmlFor="otp" className="text-lg">
                   OTP
@@ -855,6 +857,48 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                   <p className="text-orange-500 text-sm">{errors.otp}</p>
                 )}
               </div>
+            )}
+
+            {mode === 'verify-email' && (
+                <div className="flex flex-col items-center space-y-6">
+                    <div className="text-center space-y-2">
+                        <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                            <span className="text-3xl">✉️</span>
+                        </div>
+                        <h3 className="font-semibold text-xl">Check your inbox</h3>
+                        <p className="text-gray-500">
+                            We sent a verification code to <br/>
+                            <span className="font-bold text-gray-900">{emailForVerification}</span>
+                        </p>
+                    </div>
+
+                    <div className="w-full max-w-xs">
+                        <Input
+                            id="otp"
+                            name="otp"
+                            value={formData.otp}
+                            onChange={handleInputChange}
+                            placeholder="Enter 6-digit code"
+                            className="text-center text-2xl tracking-widest h-14 border-2 focus:border-orange-500 rounded-xl"
+                            maxLength={6}
+                        />
+                         {errors.otp && (
+                            <p className="text-orange-500 text-sm text-center mt-2">{errors.otp}</p>
+                        )}
+                    </div>
+
+                    <div className="text-center text-sm">
+                        <p className="text-gray-500">Didn&apos;t receive the code?</p>
+                        <button
+                            type="button"
+                            onClick={handleSendOtp}
+                            disabled={sendOtpPending}
+                            className="font-semibold text-orange-600 hover:text-orange-700 mt-1"
+                        >
+                            {sendOtpPending ? 'Sending...' : 'Click to resend'}
+                        </button>
+                    </div>
+                </div>
             )}
             {mode === 'forgot-password' && step === 'enter-otp' && (
               <>
@@ -1019,22 +1063,22 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               </>
             )}
             {mode === 'verify-email' && (
-              <div className="flex gap-4">
+              <div className="space-y-3">
                 <Button
                   type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleSendOtp}
-                  disabled={sendOtpPending}
+                  className="w-full justify-center bg-orange-600 hover:bg-orange-700 h-12 text-lg font-medium shadow-md shadow-orange-100"
+                  onClick={handleValidateOtp}
+                  disabled={validateOtpPending || formData.otp.length < 6}
                 >
-                  {sendOtpPending ? 'Sending...' : 'Resend OTP'}
+                  {validateOtpPending ? 'Verifying...' : 'Verify Email'}
                 </Button>
                 <Button
-                  type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleValidateOtp}
-                  disabled={validateOtpPending}
+                    type="button"
+                    variant="ghost"
+                    className="w-full text-gray-500 hover:text-gray-700"
+                    onClick={() => handleToggleMode('register')}
                 >
-                  {validateOtpPending ? 'Verifying...' : 'Verify'}
+                    Change Email
                 </Button>
               </div>
             )}
