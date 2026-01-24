@@ -51,9 +51,9 @@ type MarketItem = {
   id?: string | number;
   title?: string;
   name?: string;
-  price?: number;
-  salePrice?: number;
-  amount?: number;
+  price?: number | string;
+  salePrice?: number | string;
+  amount?: number | string;
   fixedAmounts?: number[];
   imageUrl?: string;
   image?: string;
@@ -61,7 +61,6 @@ type MarketItem = {
   backgroundImage?: string;
   media?: string[];
   category?: string;
-  [key: string]: any;
 };
 
 interface MarketplaceClientProps {
@@ -183,7 +182,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
   // Display Items for Single Category View
   const displayItems = useMemo(() => {
     if (listingType === 'all' || !currentData?.data) return [];
-    return currentData.data.map((item: any) => mapToDisplayItem(item, listingType));
+    return currentData.data.map((item: MarketItem) => mapToDisplayItem(item, listingType));
   }, [currentData, listingType]);
 
   const pageMeta: PageMetaDto | undefined = currentData?.meta;
@@ -223,7 +222,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
     if (sidebarBanners && sidebarBanners.length > 0) {
       const safeBanners = sidebarBanners.map(b => ({
         ...b,
-        link: b.linkUrl || b.link || '#'
+        link: b.link || '#'
       }));
       slides.push(...safeBanners);
     }
@@ -388,9 +387,9 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
                             <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
                             <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
-                            {heroSlides[activeSlide].linkUrl || heroSlides[activeSlide].link ? (
+                            {heroSlides[activeSlide].link ? (
                                 <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
-                                    <Link href={heroSlides[activeSlide].linkUrl || heroSlides[activeSlide].link || '#'}>
+                                    <Link href={heroSlides[activeSlide].link || '#'}>
                                         {heroSlides[activeSlide].buttonText || 'Shop Now'}
                                     </Link>
                                 </Button>
