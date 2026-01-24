@@ -59,7 +59,7 @@ type MarketItem = {
   image?: string;
   url?: string;
   backgroundImage?: string;
-  media?: string[];
+  media?: string[] | null;
   category?: string;
 };
 
