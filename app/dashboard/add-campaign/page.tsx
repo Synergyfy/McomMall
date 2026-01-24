@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button";
 import { adPlacements, mockRegions } from "./data";
 import { isAfter, startOfToday } from "date-fns";
 import { useAddCampaign } from "@/service/campaigns/hook";
-import { businessCategories } from "@/lib/business-categories";
+import { useGetCategories } from "@/service/taxonomy/hook";
 import {
   AdPlacement,
   CampaignType,
@@ -42,12 +42,15 @@ const AddListingPage = () => {
     isError: isErrorListings,
   } = useGetUserListings();
 
+  const { data: categoriesData, isLoading: isLoadingCategories } = useGetCategories();
+
   const categories = useMemo(() => {
-    return businessCategories.map((category) => ({
+    if (!categoriesData) return [];
+    return categoriesData.map((category) => ({
       value: category.name,
       label: category.name,
     }));
-  }, []);
+  }, [categoriesData]);
 
   const listingOptions = useMemo(() => {
     if (!userListings) return [];

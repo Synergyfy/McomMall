@@ -9,8 +9,8 @@ import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
 import Image from 'next/image';
-import { businessCategories } from '@/lib/business-categories';
 import { useGetRecentListings } from '@/service/listings/hook';
+import { useGetCategories } from '@/service/taxonomy/hook';
 
 // Dynamically import components
 const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
@@ -121,6 +121,8 @@ export default function HomePage() {
     isLoading,
     isError,
   } = useGetRecentListings();
+
+  const { data: categories } = useGetCategories();
 
   const backgroundImages = [Autumn, Summer, Spring, Winter];
 
@@ -266,17 +268,21 @@ export default function HomePage() {
             >
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
                 <span className="font-semibold">Popular:</span>
-                {businessCategories.slice(0, 4).map(category => (
-                  <Link
-                    key={category.name}
-                    href={`/listings?category=${encodeURIComponent(
-                      category.name
-                    )}`}
-                    className="underline hover:text-orange-300"
-                  >
-                    {category.name}
-                  </Link>
-                ))}
+                {categories && categories.length > 0 ? (
+                  categories.slice(0, 4).map(category => (
+                    <Link
+                      key={category.id}
+                      href={`/listings?category=${encodeURIComponent(
+                        category.name
+                      )}`}
+                      className="underline hover:text-orange-300"
+                    >
+                      {category.name}
+                    </Link>
+                  ))
+                ) : (
+                  <span>Loading popular categories...</span>
+                )}
                 <Link
                   href="/listings?showFilters=true"
                   className="font-bold hover:text-orange-300"

@@ -51,24 +51,21 @@ function ListingsPageContent() {
   const handleAddNewListing = () => {
     if (!accessToken) {
       dispatch(setLoginModalOpen(true));
+    } else if (userRole === 'owner') {
+      router.push('/add-listing');
     } else {
-      if (userRole === 'owner') {
-        router.push('/add-listing');
-      } else {
-        toast.error('Only business owners can add new listings.');
-      }
+      toast.error('Only business owners can add new listings.');
     }
   };
 
   const searchParams = useSearchParams();
   const queryText = searchParams.get('queryText');
-  // Default to Lagos, Nigeria
+
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: 6.454075,
     lng: 3.394673,
   });
 
-  // Fetch user's location on mount
   useEffect(() => {
     if (navigator.geolocation) {
       navigator.geolocation.getCurrentPosition(
@@ -78,9 +75,7 @@ function ListingsPageContent() {
             lng: position.coords.longitude,
           });
         },
-        () => {
-          // Keep default Lagos coordinates if permission denied
-        }
+        () => {}
       );
     }
   }, []);
@@ -97,8 +92,8 @@ function ListingsPageContent() {
 
     if (category || subcategory || showFilters) {
       const newFilters: Partial<FilterState> = {};
-
       let combinedQuery = '';
+
       if (subcategory) {
         combinedQuery = subcategory;
         newFilters.subCategories = [subcategory];
@@ -109,7 +104,7 @@ function ListingsPageContent() {
 
       newFilters.searchTerm = combinedQuery;
 
-      setActiveFilters(prevFilters => ({
+      setActiveFilters(prev => ({
         ...initialFilters,
         ...newFilters,
       }));
@@ -117,43 +112,28 @@ function ListingsPageContent() {
     }
   }, [searchParams]);
 
-  const {
-    isLoading: isInHouseLoading,
-    isSuccess: isInHouseSuccess,
-    data: inHouseData,
-  } = useGetInHouseBusiness({
+  const { isLoading: isInHouseLoading, isSuccess: isInHouseSuccess, data: inHouseData } = useGetInHouseBusiness({
     queryText: activeFilters.searchTerm || queryText,
   });
 
-  const {
-    isLoading: isGoogleLoading,
-    isSuccess: isGoogleSuccess,
-    data: googleData,
-  } = useGetGoogleListings({
+  const { isLoading: isGoogleLoading, isSuccess: isGoogleSuccess, data: googleData } = useGetGoogleListings({
     queryText: activeFilters.searchTerm || queryText,
     lat: coords.lat,
     lng: coords.lng,
   });
 
-  const combinedListings = useMemo(() => {
-    const inHouseResults = inHouseData || [];
-    const googleResults = googleData || [];
-    return [...inHouseResults, ...googleResults];
-  }, [inHouseData, googleData]);
+  const combinedListings = useMemo(() => [...(inHouseData || []), ...(googleData || [])], [inHouseData, googleData]);
 
   const isLoading = isInHouseLoading || isGoogleLoading;
   const isSuccess = isInHouseSuccess || isGoogleSuccess;
 
   const [currentPage, setCurrentPage] = useState(1);
-
   const listingsPerPage = 4;
 
   const MapComponent = useMemo(
     () =>
       dynamic(() => import('@/components/MapComponent'), {
-        loading: () => (
-          <div className="bg-gray-200 w-full h-full animate-pulse" />
-        ),
+        loading: () => <div className="bg-gray-200 w-full h-full animate-pulse" />,
         ssr: false,
       }),
     []
@@ -162,9 +142,7 @@ function ListingsPageContent() {
   const listingsForMap = useMemo(
     () =>
       combinedListings.filter(l => {
-        if (isGoogleResult(l)) {
-          return l.geometry?.location?.lat && l.geometry?.location?.lng;
-        }
+        if (isGoogleResult(l)) return l.geometry?.location?.lat && l.geometry?.location?.lng;
         return l.location?.lat != null && l.location?.lng != null;
       }),
     [combinedListings]
@@ -173,9 +151,7 @@ function ListingsPageContent() {
   const mapCenter: [number, number] = useMemo(() => {
     if (listingsForMap.length > 0) {
       const first = listingsForMap[0];
-      if (isGoogleResult(first)) {
-        return [first.geometry.location.lat, first.geometry.location.lng];
-      }
+      if (isGoogleResult(first)) return [first.geometry.location.lat, first.geometry.location.lng];
       return [first.location.lat, first.location.lng];
     }
     return [coords.lat, coords.lng];
@@ -183,60 +159,47 @@ function ListingsPageContent() {
 
   const handleFilterChange = (newFilters: FilterState) => {
     let combinedQuery = newFilters.searchTerm;
-    newFilters.subCategories.forEach(subCategory => {
-      if (!combinedQuery.toLowerCase().includes(subCategory.toLowerCase())) {
-        combinedQuery = `${combinedQuery} ${subCategory}`;
-      }
+    newFilters.subCategories.forEach(sub => {
+      if (!combinedQuery.toLowerCase().includes(sub.toLowerCase())) combinedQuery += ` ${sub}`;
     });
 
     if (newFilters.subCategories.length === 0 && newFilters.category) {
-      if (
-        !combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase())
-      ) {
-        combinedQuery = `${combinedQuery} ${newFilters.category}`;
-      }
+      if (!combinedQuery.toLowerCase().includes(newFilters.category.toLowerCase()))
+        combinedQuery += ` ${newFilters.category}`;
     }
 
     const updatedFilters = { ...newFilters, searchTerm: combinedQuery.trim() };
     setActiveFilters(updatedFilters);
     setCurrentPage(1);
+
     const params = new URLSearchParams();
-    if (updatedFilters.searchTerm) {
-      params.set('queryText', updatedFilters.searchTerm);
-    }
-    if (newFilters.category) {
-      params.set('category', newFilters.category);
-    }
-    if (newFilters.subCategories.length > 0) {
-      params.set('subcategory', newFilters.subCategories.join(','));
-    }
+    if (updatedFilters.searchTerm) params.set('queryText', updatedFilters.searchTerm);
+    if (newFilters.category) params.set('category', newFilters.category);
+    if (newFilters.subCategories.length > 0) params.set('subcategory', newFilters.subCategories.join(','));
     window.history.pushState(null, '', `?${params.toString()}`);
   };
 
-  const totalPages = Math.ceil(
-    (combinedListings?.length || 0) / listingsPerPage
-  );
+  const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
 
-  if (isLoading) {
+  if (isLoading)
     return (
-      <div className="flex h-screen bg-white overflow-hidden">
-        <div className="flex-1 p-4 overflow-y-auto">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="flex h-screen bg-white overflow-x-hidden">
+        <div className="flex-1 min-w-0 p-4 overflow-y-auto">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {[...Array(4)].map((_, i) => (
               <ListingCardSkeleton key={i} />
             ))}
           </div>
         </div>
-        <div className="w-1/3 h-full flex-shrink-0 hidden lg:block">
+        <div className="w-1/3 max-w-[33%] h-full flex-shrink-0 hidden lg:block">
           <div className="bg-gray-200 w-full h-full animate-pulse" />
         </div>
       </div>
     );
-  }
 
   if (isSuccess)
     return (
-      <div className="flex h-screen bg-white overflow-hidden">
+      <div className="flex h-screen bg-white overflow-x-hidden">
         <AnimatePresence>
           {filtersVisible && (
             <motion.div
@@ -255,7 +218,7 @@ function ListingsPageContent() {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 flex flex-col">
+        <main className="flex-1 flex min-w-0 flex-col">
           <div className="flex-shrink-0 p-4 border-b bg-white z-10">
             <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
               <div className="flex items-center gap-2">
@@ -274,9 +237,7 @@ function ListingsPageContent() {
                     className={layout === 'grid' ? 'bg-gray-100' : ''}
                   >
                     <LayoutGrid
-                      className={`h-5 w-5 ${
-                        layout === 'grid' ? 'text-red-500' : 'text-gray-400'
-                      }`}
+                      className={`h-5 w-5 ${layout === 'grid' ? 'text-red-500' : 'text-gray-400'}`}
                     />
                   </Button>
                   <Button
@@ -286,9 +247,7 @@ function ListingsPageContent() {
                     className={layout === 'list' ? 'bg-gray-100' : ''}
                   >
                     <List
-                      className={`h-5 w-5 ${
-                        layout === 'list' ? 'text-red-500' : 'text-gray-400'
-                      }`}
+                      className={`h-5 w-5 ${layout === 'list' ? 'text-red-500' : 'text-gray-400'}`}
                     />
                   </Button>
                 </div>
@@ -306,13 +265,11 @@ function ListingsPageContent() {
             </div>
           </div>
 
-          <div className="flex-1 flex overflow-hidden">
-            <div className="flex-1 p-4 overflow-y-auto">
-              {combinedListings && combinedListings.length === 0 ? (
+          <div className="flex-1 flex overflow-hidden min-w-0">
+            <div className="flex-1 min-w-0 p-4 overflow-y-auto">
+              {combinedListings.length === 0 ? (
                 <div className="text-center">
-                  <h2 className="text-2xl font-semibold mb-4">
-                    No listings found
-                  </h2>
+                  <h2 className="text-2xl font-semibold mb-4">No listings found</h2>
                   <p className="text-gray-600 mb-6">
                     There are no listings that match your search criteria.
                   </p>
@@ -326,51 +283,40 @@ function ListingsPageContent() {
               ) : (
                 <>
                   <div
-                    className={`grid gap-6 ${
+                    className={`grid gap-6 w-full ${
                       layout === 'grid'
-                        ? `grid-cols-1 ${
-                            filtersVisible
-                              ? 'md:grid-cols-2'
-                              : 'md:grid-cols-2 lg:grid-cols-3'
-                          }`
+                        ? `grid-cols-1 ${filtersVisible ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`
                         : 'grid-cols-1'
                     }`}
                   >
-                    {combinedListings &&
-                      combinedListings.map(listing => (
-                        <ListingCard
-                          key={
-                            isGoogleResult(listing)
-                              ? listing.placeId
-                              : listing.id
-                          }
-                          listing={listing}
-                          layout={layout}
-                        />
-                      ))}
+                    {combinedListings.map(listing => (
+                      <ListingCard
+                        key={isGoogleResult(listing) ? listing.placeId : listing.id}
+                        listing={listing}
+                        layout={layout}
+                      />
+                    ))}
                   </div>
                   <div className="flex justify-center items-center mt-8 space-x-2">
-                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(
-                      page => (
-                        <Button
-                          key={page}
-                          onClick={() => setCurrentPage(page)}
-                          size="icon"
-                          className={
-                            currentPage === page
-                              ? 'bg-red-500 text-white hover:bg-red-600'
-                              : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
-                          }
-                        >
-                          {page}
-                        </Button>
-                      )
-                    )}
+                    {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
+                      <Button
+                        key={page}
+                        onClick={() => setCurrentPage(page)}
+                        size="icon"
+                        className={
+                          currentPage === page
+                            ? 'bg-red-500 text-white hover:bg-red-600'
+                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                        }
+                      >
+                        {page}
+                      </Button>
+                    ))}
                   </div>
                 </>
               )}
             </div>
-            <div className="w-1/3 h-screen sticky top-0 flex-shrink-0 hidden lg:block">
+            <div className="w-1/3 max-w-[33%] h-screen sticky top-0 flex-shrink-0 hidden lg:block">
               <MapComponent listings={listingsForMap} center={mapCenter} />
             </div>
           </div>
