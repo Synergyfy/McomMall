@@ -101,7 +101,7 @@ interface VoucherDisplayData {
     transactions: unknown[];
     rewardRatio?: number;
     realRatio?: number;
-    shops?: Shop[];
+    shops?: (string | { name?: string; id?: string | number })[];
 }
 
 // --- COMPONENTS ---
@@ -706,9 +706,9 @@ export default function CouponsVouchersPage() {
                                             <div className="mt-2 space-y-1">
                                                 <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
                                                 <div className="flex flex-wrap gap-1">
-                                                    {selectedVoucherForDetails?.shops?.map((shop: Shop, idx: number) => (
+                                                    {selectedVoucherForDetails?.shops?.map((shop, idx) => (
                                                         <Badge key={idx} variant="secondary" className="bg-blue-100/50 text-blue-700 border-none text-[10px]">
-                                                            {shop.name || shop.id || ''}
+                                                            {typeof shop === 'string' ? shop : (shop.name || shop.id)}
                                                         </Badge>
                                                     ))}
                                                 </div>

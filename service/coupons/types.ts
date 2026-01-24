@@ -24,6 +24,9 @@ export interface Coupon {
   updated_at: string;
 }
 
+// Alias for discovery endpoints
+export type CouponProduct = Coupon;
+
 export interface CreateCouponDto {
   couponCode: string;
   couponDescription?: string;
