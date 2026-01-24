@@ -7,7 +7,7 @@ export default function SafetyCard() {
       <div>
         <h4 className="font-semibold text-blue-900 text-sm">Safety First</h4>
         <p className="text-sm text-blue-700 mt-1 leading-relaxed">
-          Never pay outside the platform. Use Help2Home's integrated system for secure dealings.
+          Never pay outside the platform. Use our integrated system for secure dealings.
         </p>
       </div>
     </div>

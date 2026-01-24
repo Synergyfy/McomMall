@@ -15,25 +15,28 @@ export default function ProductGallery({ images, title }: ProductGalleryProps) {
 
   return (
     <div className="space-y-4">
-      <div className="relative bg-gray-50 rounded-lg overflow-hidden aspect-[4/3] w-full border border-gray-100">
+      {/* Main Image - Increased height for 'large' look */}
+      <div className="relative bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm w-full h-[300px] sm:h-[400px] lg:h-[500px]">
         <Image
           src={images[currentImageIndex]}
           alt={title}
           fill
-          className="object-contain"
+          className="object-contain p-2"
           priority
         />
       </div>
+
+      {/* Thumbnails */}
       {images.length > 1 && (
         <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
           {images.map((img, index) => (
             <button
               key={index}
               onClick={() => setCurrentImageIndex(index)}
-              className={`relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border transition-all ${
+              className={`relative w-20 h-20 flex-shrink-0 rounded-md overflow-hidden border-2 transition-all ${
                 currentImageIndex === index
-                  ? 'border-orange-600 ring-2 ring-orange-50'
-                  : 'border-transparent ring-1 ring-gray-200 hover:ring-gray-300'
+                  ? 'border-orange-600 opacity-100 ring-1 ring-orange-200'
+                  : 'border-transparent opacity-70 hover:opacity-100 hover:border-gray-200'
               }`}
             >
               <Image
