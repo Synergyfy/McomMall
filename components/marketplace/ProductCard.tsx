@@ -18,20 +18,18 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
     : 0;
 
-  // Mock rating since it's not in the type yet, derived deterministically from ID
-  // Using a simple hash of the ID ensures SSR and CSR match
+  // Mock rating
   const idNum = typeof product.id === 'number'
     ? product.id
-    : product.id.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+    : String(product.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
 
   const pseudoRandom = (idNum * 9301 + 49297) % 233280 / 233280;
-  const rating = 3.5 + (pseudoRandom * 1.5); // Rating between 3.5 and 5.0
+  const rating = 3.5 + (pseudoRandom * 1.5);
   const reviewCount = Math.floor(pseudoRandom * 200) + 10;
 
   if (viewMode === 'list') {
     return (
       <div className="group flex flex-col sm:flex-row bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden">
-        {/* Image Section */}
         <div className="relative w-full sm:w-64 h-64 sm:h-auto flex-shrink-0 bg-gray-50 overflow-hidden">
           <Image
             src={product.image}
@@ -45,20 +43,17 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             </Badge>
           )}
         </div>
-
-        {/* Content Section */}
         <div className="flex flex-col flex-grow p-6">
+          {/* List view content... (kept same) */}
           <div className="flex justify-between items-start mb-2">
             <span className="text-sm text-gray-500 font-medium">{product.category}</span>
             <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-full">
               <Heart className="h-5 w-5" />
             </Button>
           </div>
-
           <Link href={`/products/${product.id}`} className="group-hover:text-primary transition-colors">
             <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{product.title}</h3>
           </Link>
-
           <div className="flex items-center space-x-1 mb-4">
             {[...Array(5)].map((_, i) => (
               <Star
@@ -71,7 +66,6 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             ))}
             <span className="text-sm text-gray-500 ml-2">({reviewCount} reviews)</span>
           </div>
-
           <div className="flex items-baseline space-x-3 mb-6">
             <span className="text-2xl font-bold text-gray-900">
               £{(product.discountedPrice || product.price).toFixed(2)}
@@ -82,7 +76,6 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               </span>
             )}
           </div>
-
           <div className="mt-auto flex items-center gap-3">
              <Button className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-md hover:shadow-lg transition-all">
               <ShoppingCart className="w-4 h-4 mr-2" />
@@ -97,11 +90,11 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     );
   }
 
-  // Grid View
+  // Grid View - Enforced Sizing
   return (
-    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-full relative">
-      {/* Image Container */}
-      <div className="relative h-64 w-full bg-gray-50 overflow-hidden">
+    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-[400px] relative w-full">
+      {/* Image Container - Fixed Height */}
+      <div className="relative h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
         <Image
           src={product.image}
           alt={product.title}
@@ -128,7 +121,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           </Button>
         </div>
 
-        {/* Quick Add Overlay (Optional style) */}
+        {/* Quick Add Overlay */}
         <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
              <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90">
                 <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
@@ -136,11 +129,11 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         </div>
       </div>
 
-      {/* Product Details */}
+      {/* Product Details - Flex Grow to fill height */}
       <div className="p-4 flex flex-col flex-grow">
-        <div className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide">{product.category}</div>
-        <Link href={`/products/${product.id}`} className="block">
-            <h3 className="text-base font-bold text-gray-800 mb-2 line-clamp-2 hover:text-primary transition-colors h-10" title={product.title}>
+        <div className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
+        <Link href={`/products/${product.id}`} className="block mb-2">
+            <h3 className="text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
             {product.title}
             </h3>
         </Link>
@@ -159,7 +152,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           <span className="text-xs text-gray-400 ml-1.5">({reviewCount})</span>
         </div>
 
-        {/* Price */}
+        {/* Price - Pushed to bottom */}
         <div className="mt-auto flex items-center justify-between">
             <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">
@@ -171,7 +164,6 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
                 </span>
                 )}
             </div>
-            {/* Mobile-friendly Add button for when hover isn't possible? Or just rely on the overlay */}
         </div>
       </div>
     </div>

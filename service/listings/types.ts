@@ -100,6 +100,9 @@ export interface User {
   voucher: boolean;
   promotion: boolean;
   coupon?: boolean;
+  profilePictureUrl?: string | null;
+  lastLogin?: string | null;
+  trial?: any;
 }
 
 interface Category {
@@ -354,6 +357,7 @@ export interface Product {
   points?: number;
   bonusThreshold?: number;
   bonusAmount?: number;
+  business?: InHouseBusiness;
 }
 
 export type CampaignType = string;
