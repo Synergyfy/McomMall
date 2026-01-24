@@ -83,7 +83,9 @@ export default function MarketplacePage() {
     page: currentPage,
     limit: ITEMS_PER_PAGE,
     search: searchQuery,
-    category: selectedCategoryId, // Pass the resolved UUID
+    // Only pass category if we have a valid resolved UUID.
+    // If user selected a name but ID isn't found, we don't filter (fallback) to avoid empty grid on mismatch.
+    category: selectedCategoryId || undefined,
     minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
     maxPrice: filters.priceRange[1] < 5000 ? filters.priceRange[1] : undefined,
   };
@@ -298,6 +300,7 @@ export default function MarketplacePage() {
 
   // Reusable Component for "All" View Sections
   const SectionRow = ({ title, type, items }: { title: string, type: ListingType, items: any[] }) => {
+    // Only render if items exist
     if (!items || items.length === 0) return null;
     const displayItems = items.map(item => mapToDisplayItem(item, type));
 
