@@ -68,7 +68,7 @@ export default function FilterSidebar({
   };
 
   return (
-    <aside className="relative h-full w-full flex flex-col bg-gray-50 border-r">
+    <aside className="relative h-full w-full flex flex-col bg-gray-50 border-r overflow-hidden">
       {/* This button is only visible on mobile and closes the sidebar */}
       <Button
         variant="ghost"
@@ -79,9 +79,9 @@ export default function FilterSidebar({
         <X className="h-6 w-6" />
       </Button>
 
-      <div className="p-3">
-        <h2 className="text-2xl font-bold text-gray-800">Filters</h2>
-        <div className="flex-1 overflow-y-auto pr-4 -mr-4 space-y-7">
+      <div className="p-3 h-full flex flex-col">
+        <h2 className="text-2xl font-bold text-gray-800 mb-4">Filters</h2>
+        <div className="flex-1 overflow-y-auto pr-2 space-y-7 custom-scrollbar">
           <div>
             <Label
               htmlFor="search"

@@ -55,7 +55,7 @@ export default function CategoryFilterSidebar({
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setSelectedSubCategories([]);
-    onCategoryChange(category);
+    onCategoryChange(category); // Update parent state immediately
     onSubCategoryChange([]);
   };
 
@@ -64,7 +64,7 @@ export default function CategoryFilterSidebar({
       ? selectedSubCategories.filter(sc => sc !== subCategory)
       : [...selectedSubCategories, subCategory];
     setSelectedSubCategories(newSubCategories);
-    onSubCategoryChange(newSubCategories);
+    onSubCategoryChange(newSubCategories); // Update parent state immediately
   };
 
   return (
