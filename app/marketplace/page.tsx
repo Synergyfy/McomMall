@@ -54,6 +54,12 @@ export default function MarketplacePage() {
   const [currentPage, setCurrentPage] = useState(1);
   const [sortOption, setSortOption] = useState('newest');
   const [searchQuery, setSearchQuery] = useState('');
+  const [filters, setFilters] = useState<MarketplaceFiltersState>({
+    categories: [],
+    priceRange: [0, 5000],
+    brands: [],
+    minRating: null,
+  });
   
   // Data Fetching: Landing Page
   const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
@@ -63,12 +69,27 @@ export default function MarketplacePage() {
   const apiCategories = useMemo(() => publicData?.categories || [], [publicData]);
   const sections = useMemo(() => publicData?.sections || {}, [publicData]);
 
+  // Resolve Category ID from Selection
+  const selectedCategoryId = useMemo(() => {
+    if (filters.categories.length === 0) return undefined;
+    // Assuming single category selection for now or taking the first one
+    const selectedName = filters.categories[0];
+    const categoryObj = apiCategories.find(c => c.name === selectedName);
+    return categoryObj?.targetCategoryId;
+  }, [filters.categories, apiCategories]);
+
   // Data Fetching: Discovery
   const discoveryParams = {
     page: currentPage,
     limit: ITEMS_PER_PAGE,
     search: searchQuery,
+    category: selectedCategoryId, // Pass the resolved UUID
+    minPrice: filters.priceRange[0] > 0 ? filters.priceRange[0] : undefined,
+    maxPrice: filters.priceRange[1] < 5000 ? filters.priceRange[1] : undefined,
   };
+
+  // Fetch "New Products" specifically for the "All" view
+  const { data: newProductsData } = useGetPublicProducts({ ...discoveryParams, limit: 4, page: 1 }, { enabled: listingType === 'all' });
 
   const { data: productsData, isLoading: productsLoading } = useGetPublicProducts(discoveryParams, { enabled: listingType === 'products' });
   const { data: servicesData, isLoading: servicesLoading } = useGetPublicServices(discoveryParams, { enabled: listingType === 'services' });
@@ -104,7 +125,7 @@ export default function MarketplacePage() {
   const mapToDisplayItem = (item: any, type: string) => {
       let title = item.title || item.name || 'Untitled';
       let price = item.price || item.amount || item.fixedAmounts?.[0] || 0;
-      let image = item.imageUrl || item.image || item.url || item.backgroundImage || '/placeholder.png';
+      let image = item.imageUrl || item.image || item.url || item.backgroundImage || (item.media && item.media[0]) || '/placeholder.png';
       let id = item.id;
       let category = item.category || type;
 
@@ -168,19 +189,12 @@ export default function MarketplacePage() {
     if (sidebarBanners && sidebarBanners.length > 0) {
       const safeBanners = sidebarBanners.map(b => ({
         ...b,
-        link: b.link || '#'
+        link: b.linkUrl || b.link || '#'
       }));
       slides.push(...safeBanners);
     }
     return slides;
   }, [flashSaleConfig, sidebarBanners]);
-
-  const [filters, setFilters] = useState<MarketplaceFiltersState>({
-    categories: [],
-    priceRange: [0, 5000],
-    brands: [],
-    minRating: null,
-  });
 
   const sidebarCategories = useMemo(() => {
     if (apiCategories.length > 0) {
@@ -339,9 +353,9 @@ export default function MarketplacePage() {
                         <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
                             <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
                             <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
-                            {heroSlides[activeSlide].link ? (
+                            {heroSlides[activeSlide].linkUrl || heroSlides[activeSlide].link ? (
                                 <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
-                                    <Link href={heroSlides[activeSlide].link || '#'}>
+                                    <Link href={heroSlides[activeSlide].linkUrl || heroSlides[activeSlide].link || '#'}>
                                         {heroSlides[activeSlide].buttonText || 'Shop Now'}
                                     </Link>
                                 </Button>
@@ -504,12 +518,13 @@ export default function MarketplacePage() {
                 // Dashboard View (Sections)
                 <div className="space-y-4">
                      {/* We can put a welcome or search here if needed */}
+                     <SectionRow title="New Arrivals" type="products" items={newProductsData?.data || []} />
                      <SectionRow title="Featured Services" type="services" items={publicData?.services || []} />
                      <SectionRow title="Newest Vouchers" type="vouchers" items={publicData?.vouchers || []} />
                      <SectionRow title="Gift Cards" type="gift-cards" items={publicData?.giftCards || []} />
                      <SectionRow title="Latest Coupons" type="coupons" items={publicData?.coupons || []} />
 
-                     {(!publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length) && !isPublicDataLoading && (
+                     {(!newProductsData?.data?.length && !publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length) && !isPublicDataLoading && (
                          <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                              <p className="text-gray-500">No featured items available right now.</p>
                          </div>
