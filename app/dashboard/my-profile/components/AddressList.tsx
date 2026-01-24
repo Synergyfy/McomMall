@@ -1,15 +1,15 @@
-'use client';
+"use client";
 
-import { useState } from 'react';
+import { useState } from "react";
 import {
   useGetShippingAddresses,
   useDeleteShippingAddress,
   useSetMainShippingAddress,
-} from '@/service/shipping/hook';
-import { ShippingAddress } from '@/service/shipping/types';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+} from "@/service/shipping/hook";
+import { ShippingAddress } from "@/service/shipping/types";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
 import {
   AlertDialog,
   AlertDialogAction,
@@ -20,10 +20,10 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
   AlertDialogTrigger,
-} from '@/components/ui/alert-dialog';
-import { Plus, Pencil, Trash2, CheckCircle2 } from 'lucide-react';
-import AddressFormDialog from './AddressFormDialog';
-import { toast } from 'sonner';
+} from "@/components/ui/alert-dialog";
+import { Plus, Pencil, Trash2, CheckCircle2 } from "lucide-react";
+import AddressFormDialog from "./AddressFormDialog";
+import { toast } from "sonner";
 
 export default function AddressList() {
   const { data, isLoading, isError } = useGetShippingAddresses(1, 50); // Fetch up to 50 addresses
@@ -32,14 +32,14 @@ export default function AddressList() {
 
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [editingAddress, setEditingAddress] = useState<ShippingAddress | null>(
-    null
+    null,
   );
   const [addressToDelete, setAddressToDelete] = useState<string | null>(null);
 
   const handleDelete = (id: string) => {
     deleteMutation.mutate(id, {
       onSuccess: () => {
-        toast.success('Address deleted successfully');
+        toast.success("Address deleted successfully");
         setAddressToDelete(null);
       },
       onError: (error) => {
@@ -51,7 +51,7 @@ export default function AddressList() {
   const handleSetMain = (id: string) => {
     setMainMutation.mutate(id, {
       onSuccess: () => {
-        toast.success('Default address updated');
+        toast.success("Default address updated");
       },
       onError: (error) => {
         toast.error(`Failed to update default address: ${error.message}`);
@@ -88,7 +88,7 @@ export default function AddressList() {
       {addresses.length === 0 ? (
         <div className="text-center py-12 bg-white rounded-lg border border-dashed dark:bg-gray-800 dark:border-gray-700">
           <p className="text-gray-500 dark:text-gray-400">
-            You haven't saved any addresses yet.
+            You haven&apos;t saved any addresses yet.
           </p>
         </div>
       ) : (
@@ -102,7 +102,10 @@ export default function AddressList() {
                       {address.addressName}
                     </h3>
                     {address.isMain && (
-                      <Badge variant="secondary" className="bg-green-100 text-green-800 hover:bg-green-100">
+                      <Badge
+                        variant="secondary"
+                        className="bg-green-100 text-green-800 hover:bg-green-100"
+                      >
                         Default
                       </Badge>
                     )}
@@ -119,7 +122,9 @@ export default function AddressList() {
                     {address.city}, {address.state} {address.postalCode}
                   </p>
                   <p>{address.country}</p>
-                  <p className="mt-2 text-xs text-gray-500">{address.phoneNumber}</p>
+                  <p className="mt-2 text-xs text-gray-500">
+                    {address.phoneNumber}
+                  </p>
                 </div>
 
                 <div className="flex items-center gap-2 mt-4 pt-4 border-t">
@@ -146,7 +151,8 @@ export default function AddressList() {
                       <AlertDialogHeader>
                         <AlertDialogTitle>Delete Address</AlertDialogTitle>
                         <AlertDialogDescription>
-                          Are you sure you want to delete this address? This action cannot be undone.
+                          Are you sure you want to delete this address? This
+                          action cannot be undone.
                         </AlertDialogDescription>
                       </AlertDialogHeader>
                       <AlertDialogFooter>
@@ -160,21 +166,22 @@ export default function AddressList() {
                       </AlertDialogFooter>
                     </AlertDialogContent>
                   </AlertDialog>
-
                 </div>
-                 {!address.isMain && (
-                    <div className="mt-2">
-                         <Button
-                            variant="ghost"
-                            size="sm"
-                            className="w-full text-xs text-gray-500 hover:text-gray-900"
-                            onClick={() => handleSetMain(address.id)}
-                            disabled={setMainMutation.isPending}
-                          >
-                             {setMainMutation.isPending ? 'Setting...' : 'Set as Default'}
-                          </Button>
-                    </div>
-                  )}
+                {!address.isMain && (
+                  <div className="mt-2">
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="w-full text-xs text-gray-500 hover:text-gray-900"
+                      onClick={() => handleSetMain(address.id)}
+                      disabled={setMainMutation.isPending}
+                    >
+                      {setMainMutation.isPending
+                        ? "Setting..."
+                        : "Set as Default"}
+                    </Button>
+                  </div>
+                )}
               </CardContent>
             </Card>
           ))}
