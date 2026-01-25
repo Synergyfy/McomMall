@@ -47,7 +47,7 @@ const MembershipSuccessDialog = ({
           <p className="text-muted-foreground">
             Your membership is active and will expire on{' '}
             <span className="font-medium text-foreground">
-                {new Date(membership.endDate).toLocaleDateString()}.
+                {new Date(membership.expiresAt || membership.endDate || Date.now()).toLocaleDateString()}.
             </span>
           </p>
           <div className="mt-4 flex justify-center items-center text-green-600">

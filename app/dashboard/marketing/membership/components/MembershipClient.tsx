@@ -177,9 +177,9 @@ const MembershipClient = () => {
             </CardHeader>
             <CardContent>
               <p>
-                Your membership is {membership.status}{' '}
+                Your membership is {membership.isActive ? 'active' : (membership.status || 'inactive')}{' '}
                 and expires on{' '}
-                {new Date(membership.endDate).toLocaleDateString()}.
+                {new Date(membership.expiresAt || membership.endDate || Date.now()).toLocaleDateString()}.
               </p>
             </CardContent>
           </Card>
