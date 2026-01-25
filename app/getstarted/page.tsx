@@ -76,6 +76,7 @@ export default function GetStartedPage() {
 
       {/* Left Section (40%) - MOVED TO THE RIGHT */}
       <div
+        id="earn-with-us"
         className="relative flex min-h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
       >
         {/* === THIS IS THE CHANGE === */}
