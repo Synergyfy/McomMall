@@ -496,59 +496,35 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         } p-8 space-y-8 bg-white rounded-lg shadow-md`}
       >
         <div className="text-center">
-          {/* {mode !== 'forgot-password' && mode !== 'verify-email' && (
-            <div>
-              <div className="flex justify-center mb-4">
-                <Button
-                  variant="link"
-                  className={`mr-4 text-lg ${
-                    mode === 'login' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('login')}
-                >
-                  Log In
-                </Button>
-                <Button
-                  variant="link"
-                  className={`text-lg ${
-                    mode === 'register' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('register')}
-                >
-                  Register
-                </Button>
-              </div>
-              <hr className="w-full bg-gray-400 " />
-            </div>
-          )} */}
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">
-            {mode === 'login' && 'Login'}
-            {mode === 'register' &&
-              `Create ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'Customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'Business'
-                  : ''
-              } Account`}
-            {mode === 'forgot-password' && 'Reset Password'}
-            {mode === 'verify-email' && 'Verify Email'}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {mode === 'login' && 'Login to your account to continue.'}
-            {mode === 'register' &&
-              `Create a new ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'business'
-                  : ''
-              } account to get started.`}
-            {mode === 'forgot-password' &&
-              'Enter your email to reset your password.'}
-            {mode === 'verify-email' &&
-              'Enter the OTP sent to your email to verify your account.'}
-          </p>
+          {mode !== 'verify-email' && (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 mt-4">
+                {mode === 'login' && 'Login'}
+                {mode === 'register' &&
+                  `Create ${
+                    selectedRole === UserRole.CUSTOMER
+                      ? 'Customer'
+                      : selectedRole === UserRole.OWNER
+                      ? 'Business'
+                      : ''
+                  } Account`}
+                {mode === 'forgot-password' && 'Reset Password'}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {mode === 'login' && 'Login to your account to continue.'}
+                {mode === 'register' &&
+                  `Create a new ${
+                    selectedRole === UserRole.CUSTOMER
+                      ? 'customer'
+                      : selectedRole === UserRole.OWNER
+                      ? 'business'
+                      : ''
+                  } account to get started.`}
+                {mode === 'forgot-password' &&
+                  'Enter your email to reset your password.'}
+              </p>
+            </>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="grid gap-1">
@@ -668,7 +644,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 </div>
               </div>
             ) : (
-              step === 'enter-email' && (
+              step === 'enter-email' && mode !== 'verify-email' && (
                 <div className="grid gap-3">
                   <Label htmlFor="email" className="text-lg">
                     Email
@@ -862,18 +838,18 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
             )}
 
             {mode === 'verify-email' && (
-                <div className="flex flex-col items-center space-y-8 animate-in fade-in zoom-in duration-300">
+                <div className="flex flex-col items-center space-y-6 animate-in fade-in zoom-in duration-300 py-4">
                     <div className="text-center space-y-4">
-                        <div className="bg-purple-100 p-4 rounded-full inline-block mb-2">
-                            <ShieldCheck className="w-12 h-12 text-purple-600" />
+                        <div className="bg-orange-100 p-4 rounded-full inline-block mb-2">
+                            <ShieldCheck className="w-12 h-12 text-orange-600" />
                         </div>
                         <h1 className="text-3xl font-bold text-gray-900">Verify Email</h1>
-                        <p className="text-gray-500 text-lg">
+                        <p className="text-gray-500 text-lg max-w-[80%] mx-auto">
                             Enter the code sent to <span className="font-semibold text-gray-900">{emailForVerification}</span>
                         </p>
                     </div>
 
-                    <div className="w-full">
+                    <div className="w-full py-2">
                         <OTPInput
                             length={6}
                             value={formData.otp}
@@ -884,17 +860,17 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                         )}
                     </div>
 
-                    <div className="w-full space-y-4">
+                    <div className="w-full space-y-4 pt-2">
                         <Button
                             type="button"
-                            className="w-full h-14 text-lg font-semibold bg-[#0A0B5B] hover:bg-[#0A0B5B]/90 text-white rounded-xl shadow-lg transition-all"
+                            className="w-full h-12 text-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all"
                             onClick={handleValidateOtp}
                             disabled={validateOtpPending || formData.otp.length < 6}
                         >
-                            {validateOtpPending ? 'Verifying...' : 'Verify Code'}
+                            {validateOtpPending ? 'Verifying...' : 'Verify Email'}
                         </Button>
 
-                        <div className="flex justify-center">
+                        <div className="flex flex-col items-center gap-4 text-sm">
                             <button
                                 type="button"
                                 onClick={handleSendOtp}
@@ -903,6 +879,14 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                             >
                                 <RefreshCw className={`w-4 h-4 ${sendOtpPending ? 'animate-spin' : ''}`} />
                                 {sendOtpPending ? 'Sending...' : 'Resend new code'}
+                            </button>
+
+                            <button
+                                type="button"
+                                className="text-gray-500 hover:text-gray-700 font-medium"
+                                onClick={() => handleToggleMode('register')}
+                            >
+                                Change Email
                             </button>
                         </div>
                     </div>
@@ -1069,26 +1053,6 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                   </Button>
                 )}
               </>
-            )}
-            {mode === 'verify-email' && (
-              <div className="space-y-3">
-                <Button
-                  type="button"
-                  className="w-full justify-center bg-orange-600 hover:bg-orange-700 h-12 text-lg font-medium shadow-md shadow-orange-100"
-                  onClick={handleValidateOtp}
-                  disabled={validateOtpPending || formData.otp.length < 6}
-                >
-                  {validateOtpPending ? 'Verifying...' : 'Verify Email'}
-                </Button>
-                <Button
-                    type="button"
-                    variant="ghost"
-                    className="w-full text-gray-500 hover:text-gray-700"
-                    onClick={() => handleToggleMode('register')}
-                >
-                    Change Email
-                </Button>
-              </div>
             )}
           </div>
         </form>
