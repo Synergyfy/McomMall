@@ -17,6 +17,7 @@ interface CurrentPlanCardProps {
 
 const statusIcons: Record<string, React.ReactNode> = {
   active: <CheckCircle className="text-green-500" />,
+  paid: <CheckCircle className="text-green-500" />,
   cancelled: <XCircle className="text-red-500" />,
   expired: <Info className="text-gray-500" />,
   inactive: <Info className="text-gray-500" />,
@@ -43,7 +44,13 @@ export default function CurrentPlanCard({
     );
   }
 
-  const statusKey = subscription.status.toLowerCase();
+  // Determine display values based on new or old fields
+  const isActive = subscription.isActive ?? (subscription.status === 'active');
+  const statusRaw = subscription.status || (isActive ? 'active' : 'inactive');
+  const statusKey = statusRaw.toLowerCase();
+
+  const planType = subscription.planType || subscription.billingCycle;
+  const expiresAt = subscription.expiresAt || subscription.endDate;
 
   return (
     <Card className="w-full max-w-lg mx-auto my-8 shadow-lg rounded-lg">
@@ -52,7 +59,7 @@ export default function CurrentPlanCard({
           Current Subscription
         </CardTitle>
         <CardDescription>
-          Here are the details of your current plan.
+          Here are details of your current plan.
         </CardDescription>
       </CardHeader>
       <CardContent className="p-6">
@@ -60,13 +67,13 @@ export default function CurrentPlanCard({
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Plan</Badge>
             <span className="font-semibold text-gray-700">
-              {subscription.tier.name}
+              {subscription.tier?.name || 'Unknown Tier'}
             </span>
           </div>
           <div className="flex items-center space-x-2">
             <Badge variant="outline">Cycle</Badge>
             <span className="font-semibold text-gray-700">
-              {formatEnumValue(subscription.billingCycle)}
+              {planType ? formatEnumValue(planType) : 'N/A'}
             </span>
           </div>
           <div className="flex items-center space-x-2">
@@ -74,7 +81,7 @@ export default function CurrentPlanCard({
             <div className="flex items-center space-x-1">
               {statusIcons[statusKey] || statusIcons.inactive}
               <span className="font-semibold text-gray-700">
-                {formatEnumValue(subscription.status)}
+                {formatEnumValue(statusRaw)}
               </span>
             </div>
           </div>
@@ -83,7 +90,7 @@ export default function CurrentPlanCard({
             <div className="flex items-center space-x-1">
               <Clock className="text-gray-500" />
               <span className="font-semibold text-gray-700">
-                {new Date(subscription.endDate).toLocaleDateString()}
+                {expiresAt ? new Date(expiresAt).toLocaleDateString() : 'N/A'}
               </span>
             </div>
           </div>
