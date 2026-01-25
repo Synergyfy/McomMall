@@ -149,7 +149,7 @@ export default function Header() {
             <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-sm">M</span>
             </div>
-            <span className="text-xl font-semibold">McomMall</span>
+            <span className="text-xl font-semibold hidden md:block">McomMall</span>
           </Link>
 
           {/* Desktop Nav - Placed in the middle for better layout */}
