@@ -39,9 +39,9 @@ export default function Footer() {
   return (
     <footer className="bg-slate-900 text-slate-300">
       <Newsletter />
-      <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 py-16 px-4 md:px-8 lg:px-16">
+      <div className="max-w-7xl mx-auto grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-8 py-16 px-4 md:px-8 lg:px-16">
         {/* Column 1: McomMall Info */}
-        <div className="space-y-4">
+        <div className="space-y-4 col-span-2 md:col-span-1">
           <div className="flex items-center gap-2 text-white">
             <McomMallLogo />
             <span className="text-2xl font-bold">McomMall</span>
