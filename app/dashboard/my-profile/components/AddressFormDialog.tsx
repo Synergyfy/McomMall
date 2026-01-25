@@ -97,13 +97,10 @@ export default function AddressFormDialog({
     if (!formData.city) newErrors.city = 'City is required';
     if (!formData.state) newErrors.state = 'State/Province is required';
     if (!formData.country) newErrors.country = 'Country is required';
-    if (!formData.postalCode) newErrors.postalCode = 'Postal Code is required';
-
-    // Simple postcode validation for UK
-    if (formData.country === 'United Kingdom' && formData.postalCode) {
-        if (!/^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i.test(formData.postalCode)) {
-             newErrors.postalCode = 'Invalid UK postcode format.';
-        }
+    if (!formData.postalCode) {
+        newErrors.postalCode = 'Postal Code is required';
+    } else if (formData.postalCode.length < 3) {
+        newErrors.postalCode = 'Postal Code is too short.';
     }
 
     setErrors(newErrors);

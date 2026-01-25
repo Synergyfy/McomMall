@@ -26,7 +26,10 @@ interface User extends AbstractBaseEntity {
 // Interface for a Business
 interface Business extends AbstractBaseEntity {
   user: User;
-  listingType: ('product_seller' | 'service_provider')[];
+  userId: string;
+  createdAt: string;
+  updatedAt: string;
+  listingType: string[]; // Changed to string[] to match IBusiness
   businessName: string;
   legalName?: string | null;
   companyRegistrationNumber?: string | null;
@@ -41,7 +44,7 @@ interface Business extends AbstractBaseEntity {
   logoAltText?: string | null;
   bannerAltText?: string | null;
   media?: string[] | null;
-  status: 'DRAFT' | 'PUBLISHED' | 'UNPUBLISHED';
+  status: string; // Changed to string to match IBusiness
   googlePlaceId?: string | null;
   isGoogleVerified: boolean;
   isClaimed: boolean;
@@ -105,11 +108,10 @@ export interface Service extends AbstractBaseEntity {
   businessId: string;
   name: string;
   description?: string;
-  media?: string[] | null;
-  images: string[];
+  media: string[] | null;
   isActive: boolean;
   pricingModel: PricingModel;
-  fixedPrice: string;
+  fixedPrice: string | null;
   pricePerHour: string | null;
   pricePerUnit: string | null;
   unitName: string | null;
@@ -123,7 +125,7 @@ export interface Service extends AbstractBaseEntity {
   baseGuests: string | null;
   additionalGuestPrice: string | null;
   isQuoteModel: boolean;
-  bookingFee: string;
+  bookingFee: string | null;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
   deletedAt: string | null;

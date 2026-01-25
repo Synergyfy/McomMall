@@ -72,10 +72,10 @@ export interface Service {
   businessId: string;
   name: string;
   description?: string;
-  images: string[];
+  media: string[] | null;
   isActive: boolean;
   pricingModel: 'fixed' | 'perHour' | 'perUnit';
-  fixedPrice: string;
+  fixedPrice: string | null;
   pricePerHour: string | null;
   pricePerUnit: string | null;
   unitName: string | null;
@@ -89,11 +89,16 @@ export interface Service {
   baseGuests: string | null;
   additionalGuestPrice: string | null;
   isQuoteModel: boolean;
-  bookingFee: string;
+  bookingFee: string | null;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
   hotspots?: Hotspot[];
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
+  // Added based on API response
+  status?: string;
+  duration?: number;
+  isFeatured?: boolean;
+  business?: IBusiness;
 }

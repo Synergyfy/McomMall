@@ -76,7 +76,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
           </h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
             {servicesData.data.map((service) => {
-              const firstImageUrl = service.images?.find(isImageUrl);
+               const firstImageUrl = service.media?.find(isImageUrl);
               return (
                 <motion.div
                   key={service.id}

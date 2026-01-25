@@ -98,6 +98,7 @@ export interface PromotionalItem {
     discountedPrice?: number;
     items_left: number;
     hotspots?: Hotspot[];
+    link?: string;
 }
 
 

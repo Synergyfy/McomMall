@@ -15,7 +15,8 @@ import {
   useValidateOtp,
   useResetPassword,
 } from '@/service/auth/hook';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, RefreshCw } from 'lucide-react';
+import OTPInput from './ui/otp-input';
 import {
   Tooltip,
   TooltipContent,
@@ -28,7 +29,9 @@ import { SuccessDialog } from './SuccessDialog';
 import { ErrorDialog } from './ErrorDialog';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
-type Step = 'enter-email' | 'enter-otp';
+import { useAddShippingAddress } from '@/service/shipping/hook';
+
+type Step = 'enter-email' | 'enter-otp' | 'address-details';
 
 const Auth = ({ redirect }: { redirect: string | null }) => {
   const router = useRouter();
@@ -47,6 +50,11 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     password: '',
     confirmPassword: '',
     otp: '',
+    // Address Fields
+    addressLine1: '',
+    city: '',
+    postcode: '',
+    country: 'United Kingdom',
   });
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
   const [isErrorDialogOpen, setIsErrorDialogOpen] = useState(false);
@@ -60,6 +68,9 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     role: '',
     terms: '',
     otp: '',
+    addressLine1: '',
+    city: '',
+    postcode: '',
   });
   const [termsAccepted, setTermsAccepted] = useState(false);
   const { isPending, mutateAsync } = useCreateUser();
@@ -69,6 +80,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     useValidateOtp();
   const { isPending: resetPasswordPending, mutateAsync: resetPasswordAsync } =
     useResetPassword();
+  const { mutateAsync: addAddressAsync } = useAddShippingAddress();
 
   useEffect(() => {
     if (pathname === '/signin') {
@@ -95,6 +107,10 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       password: '',
       confirmPassword: '',
       otp: '',
+      addressLine1: '',
+      city: '',
+      postcode: '',
+      country: 'United Kingdom',
     });
     setErrors({
       fullName: '',
@@ -105,6 +121,9 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       role: '',
       terms: '',
       otp: '',
+      addressLine1: '',
+      city: '',
+      postcode: '',
     });
     setTermsAccepted(false);
   };
@@ -145,20 +164,12 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       : 'Please enter a valid phone number (e.g., +1 (123) 456-7890).';
   };
 
-  const validateForm = () => {
+  const validateForm = (stepOverride?: string) => {
     let isValid = true;
-    const newErrors = {
-      fullName: '',
-      email: '',
-      phoneNumber: '',
-      password: '',
-      confirmPassword: '',
-      role: '',
-      terms: '',
-      otp: '',
-    };
+    const newErrors = { ...errors }; // Keep existing errors
 
     if (mode === 'register') {
+      // Validate Step 1 Fields always
       if (!formData.fullName) {
         newErrors.fullName = 'Full name is required.';
         isValid = false;
@@ -167,22 +178,24 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (nameError) {
           newErrors.fullName = nameError;
           isValid = false;
+        } else {
+           newErrors.fullName = '';
         }
       }
-    }
 
-    if (!formData.email) {
-      newErrors.email = 'Email is required.';
-      isValid = false;
-    } else {
-      const emailError = validateEmail(formData.email);
-      if (emailError) {
-        newErrors.email = emailError;
+      if (!formData.email) {
+        newErrors.email = 'Email is required.';
         isValid = false;
+      } else {
+        const emailError = validateEmail(formData.email);
+        if (emailError) {
+          newErrors.email = emailError;
+          isValid = false;
+        } else {
+          newErrors.email = '';
+        }
       }
-    }
 
-    if (mode === 'register') {
       if (!formData.phoneNumber) {
         newErrors.phoneNumber = 'Phone number is required.';
         isValid = false;
@@ -191,57 +204,130 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (phoneError) {
           newErrors.phoneNumber = phoneError;
           isValid = false;
+        } else {
+          newErrors.phoneNumber = '';
         }
       }
 
       if (!formData.password) {
         newErrors.password = 'Password is required.';
         isValid = false;
+      } else {
+        newErrors.password = '';
       }
 
       if (formData.password !== formData.confirmPassword) {
         newErrors.confirmPassword = 'Passwords do not match.';
         isValid = false;
+      } else {
+        newErrors.confirmPassword = '';
       }
 
       if (!selectedRole) {
         newErrors.role = 'Please select a role (Customer or Business).';
         isValid = false;
+      } else {
+        newErrors.role = '';
       }
 
       if (!termsAccepted) {
         newErrors.terms = 'You must accept the Terms and Conditions.';
         isValid = false;
+      } else {
+        newErrors.terms = '';
       }
+
+      // If we are validating just to go to next step
+      if (stepOverride === 'to-address-step') {
+         setErrors(newErrors);
+         return isValid;
+      }
+
+      // Address is optional, but if they filled ANY field, we validate the rest
+      const hasAddressInput = formData.addressLine1 || formData.city || formData.postcode;
+      if (hasAddressInput) {
+        if (!formData.addressLine1) {
+            newErrors.addressLine1 = 'Address Line 1 is required.';
+            isValid = false;
+        } else {
+            newErrors.addressLine1 = '';
+        }
+        if (!formData.city) {
+            newErrors.city = 'City is required.';
+            isValid = false;
+        } else {
+            newErrors.city = '';
+        }
+        if (!formData.postcode) {
+            newErrors.postcode = 'Postcode is required.';
+            isValid = false;
+        } else if (formData.postcode.length < 3) {
+            newErrors.postcode = 'Postcode is too short.';
+            isValid = false;
+        } else {
+            newErrors.postcode = '';
+        }
+      }
+
     } else if (mode === 'login') {
+      if (!formData.email) {
+          newErrors.email = 'Email is required.';
+          isValid = false;
+      } else {
+          newErrors.email = '';
+      }
       if (!formData.password) {
         newErrors.password = 'Password is required.';
         isValid = false;
+      } else {
+        newErrors.password = '';
       }
     } else if (mode === 'forgot-password') {
       if (step === 'enter-otp') {
         if (!formData.otp) {
           newErrors.otp = 'OTP is required.';
           isValid = false;
+        } else {
+            newErrors.otp = '';
         }
         if (!formData.password) {
           newErrors.password = 'Password is required.';
           isValid = false;
+        } else {
+            newErrors.password = '';
         }
         if (formData.password !== formData.confirmPassword) {
           newErrors.confirmPassword = 'Passwords do not match.';
           isValid = false;
+        } else {
+            newErrors.confirmPassword = '';
+        }
+      } else {
+        if (!formData.email) {
+            newErrors.email = 'Email is required.';
+            isValid = false;
+        } else {
+            newErrors.email = '';
         }
       }
     } else if (mode === 'verify-email') {
       if (!formData.otp) {
         newErrors.otp = 'OTP is required.';
         isValid = false;
+      } else {
+        newErrors.otp = '';
       }
     }
 
     setErrors(newErrors);
     return isValid;
+  };
+
+  const handleNextStep = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (validateForm('to-address-step')) {
+        setStep('address-details');
+    }
   };
 
   const handleSendOtp = async () => {
@@ -259,6 +345,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
       });
       setDialogMessage('OTP sent successfully');
       setIsSuccessDialogOpen(true);
+      setTimeout(() => setIsSuccessDialogOpen(false), 3000);
       if (mode === 'forgot-password') {
         setStep('enter-otp');
       }
@@ -288,6 +375,28 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
           toast.success('Login successful', {
             description: `Welcome, ${response.name}!`,
           });
+
+          // If user provided address details during registration, save them now
+          if (formData.addressLine1 && formData.city && formData.postcode) {
+             try {
+                await addAddressAsync({
+                    addressName: 'Home',
+                    recipientName: formData.fullName,
+                    phoneNumber: formData.phoneNumber,
+                    addressLine1: formData.addressLine1,
+                    city: formData.city,
+                    state: formData.city, // Using city as state for simplicity if not provided
+                    country: formData.country,
+                    postalCode: formData.postcode,
+                    isMain: true
+                });
+             } catch (addressErr) {
+                 console.error("Failed to save address after signup", addressErr);
+                 // We don't block login success if address fails, but maybe warn?
+                 // toast.warning("Account created, but failed to save address.");
+             }
+          }
+
           if (redirect) {
             router.push(redirect);
           } else {
@@ -387,59 +496,35 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         } p-8 space-y-8 bg-white rounded-lg shadow-md`}
       >
         <div className="text-center">
-          {/* {mode !== 'forgot-password' && mode !== 'verify-email' && (
-            <div>
-              <div className="flex justify-center mb-4">
-                <Button
-                  variant="link"
-                  className={`mr-4 text-lg ${
-                    mode === 'login' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('login')}
-                >
-                  Log In
-                </Button>
-                <Button
-                  variant="link"
-                  className={`text-lg ${
-                    mode === 'register' ? 'text-orange-500' : 'text-gray-400'
-                  }`}
-                  onClick={() => handleToggleMode('register')}
-                >
-                  Register
-                </Button>
-              </div>
-              <hr className="w-full bg-gray-400 " />
-            </div>
-          )} */}
-          <h1 className="text-2xl font-bold text-gray-900 mt-4">
-            {mode === 'login' && 'Login'}
-            {mode === 'register' &&
-              `Create ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'Customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'Business'
-                  : ''
-              } Account`}
-            {mode === 'forgot-password' && 'Reset Password'}
-            {mode === 'verify-email' && 'Verify Email'}
-          </h1>
-          <p className="mt-2 text-sm text-gray-600">
-            {mode === 'login' && 'Login to your account to continue.'}
-            {mode === 'register' &&
-              `Create a new ${
-                selectedRole === UserRole.CUSTOMER
-                  ? 'customer'
-                  : selectedRole === UserRole.OWNER
-                  ? 'business'
-                  : ''
-              } account to get started.`}
-            {mode === 'forgot-password' &&
-              'Enter your email to reset your password.'}
-            {mode === 'verify-email' &&
-              'Enter the OTP sent to your email to verify your account.'}
-          </p>
+          {mode !== 'verify-email' && (
+            <>
+              <h1 className="text-2xl font-bold text-gray-900 mt-4">
+                {mode === 'login' && 'Login'}
+                {mode === 'register' &&
+                  `Create ${
+                    selectedRole === UserRole.CUSTOMER
+                      ? 'Customer'
+                      : selectedRole === UserRole.OWNER
+                      ? 'Business'
+                      : ''
+                  } Account`}
+                {mode === 'forgot-password' && 'Reset Password'}
+              </h1>
+              <p className="mt-2 text-sm text-gray-600">
+                {mode === 'login' && 'Login to your account to continue.'}
+                {mode === 'register' &&
+                  `Create a new ${
+                    selectedRole === UserRole.CUSTOMER
+                      ? 'customer'
+                      : selectedRole === UserRole.OWNER
+                      ? 'business'
+                      : ''
+                  } account to get started.`}
+                {mode === 'forgot-password' &&
+                  'Enter your email to reset your password.'}
+              </p>
+            </>
+          )}
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="grid gap-1">
@@ -559,7 +644,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 </div>
               </div>
             ) : (
-              step === 'enter-email' && (
+              step === 'enter-email' && mode !== 'verify-email' && (
                 <div className="grid gap-3">
                   <Label htmlFor="email" className="text-lg">
                     Email
@@ -581,68 +666,124 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               )
             )}
           {mode === 'register' ? (
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="grid gap-3">
-                <Label htmlFor="password" className="text-lg">
-                  Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password"
-                    name="password"
-                    type={showPassword ? 'text' : 'password'}
-                    value={formData.password}
-                    onChange={handleInputChange}
-                    placeholder="Your password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.password ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPassword(!showPassword)}
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.password && (
-                  <p className="text-orange-500 text-sm">{errors.password}</p>
-                )}
-              </div>
-              <div className="grid gap-3">
-                <Label htmlFor="password2" className="text-lg">
-                  Confirm Password
-                </Label>
-                <div className="relative">
-                  <Input
-                    id="password2"
-                    name="confirmPassword"
-                    type={showConfirmPassword ? 'text' : 'password'}
-                    value={formData.confirmPassword}
-                    onChange={handleInputChange}
-                    placeholder="Confirm password"
-                    className={`sm:h-[3rem] pr-10 ${
-                      errors.confirmPassword ? 'border-orange-500' : ''
-                    }`}
-                  />
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setShowConfirmPassword(!showConfirmPassword)
-                    }
-                    className="absolute inset-y-0 right-0 flex items-center pr-3"
-                  >
-                    {showConfirmPassword ? <EyeOff /> : <Eye />}
-                  </button>
-                </div>
-                {errors.confirmPassword && (
-                  <p className="text-red-orange text-sm">
-                    {errors.confirmPassword}
-                  </p>
-                )}
-                </div>
-              </div>
+              step === 'enter-email' ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid gap-3">
+                    <Label htmlFor="password" className="text-lg">
+                      Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password"
+                        name="password"
+                        type={showPassword ? 'text' : 'password'}
+                        value={formData.password}
+                        onChange={handleInputChange}
+                        placeholder="Your password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.password ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.password && (
+                      <p className="text-orange-500 text-sm">{errors.password}</p>
+                    )}
+                  </div>
+                  <div className="grid gap-3">
+                    <Label htmlFor="password2" className="text-lg">
+                      Confirm Password
+                    </Label>
+                    <div className="relative">
+                      <Input
+                        id="password2"
+                        name="confirmPassword"
+                        type={showConfirmPassword ? 'text' : 'password'}
+                        value={formData.confirmPassword}
+                        onChange={handleInputChange}
+                        placeholder="Confirm password"
+                        className={`sm:h-[3rem] pr-10 ${
+                          errors.confirmPassword ? 'border-orange-500' : ''
+                        }`}
+                      />
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setShowConfirmPassword(!showConfirmPassword)
+                        }
+                        className="absolute inset-y-0 right-0 flex items-center pr-3"
+                      >
+                        {showConfirmPassword ? <EyeOff /> : <Eye />}
+                      </button>
+                    </div>
+                    {errors.confirmPassword && (
+                      <p className="text-red-orange text-sm">
+                        {errors.confirmPassword}
+                      </p>
+                    )}
+                    </div>
+                  </div>
+              ) : (
+                 // Address Step
+                 <div className="grid gap-4">
+                     <div className="grid gap-3">
+                        <Label htmlFor="addressLine1" className="text-lg">Address Line 1</Label>
+                        <Input
+                            id="addressLine1"
+                            name="addressLine1"
+                            value={formData.addressLine1}
+                            onChange={handleInputChange}
+                            placeholder="Street address"
+                            className={`sm:h-[3rem] ${errors.addressLine1 ? 'border-orange-500' : ''}`}
+                        />
+                         {errors.addressLine1 && <p className="text-orange-500 text-sm">{errors.addressLine1}</p>}
+                     </div>
+                     <div className="grid grid-cols-2 gap-4">
+                        <div className="grid gap-3">
+                            <Label htmlFor="city" className="text-lg">City</Label>
+                            <Input
+                                id="city"
+                                name="city"
+                                value={formData.city}
+                                onChange={handleInputChange}
+                                placeholder="City"
+                                className={`sm:h-[3rem] ${errors.city ? 'border-orange-500' : ''}`}
+                            />
+                             {errors.city && <p className="text-orange-500 text-sm">{errors.city}</p>}
+                        </div>
+                        <div className="grid gap-3">
+                            <Label htmlFor="postcode" className="text-lg">Postcode</Label>
+                            <Input
+                                id="postcode"
+                                name="postcode"
+                                value={formData.postcode}
+                                onChange={handleInputChange}
+                                placeholder="Postcode"
+                                className={`sm:h-[3rem] ${errors.postcode ? 'border-orange-500' : ''}`}
+                            />
+                             {errors.postcode && <p className="text-orange-500 text-sm">{errors.postcode}</p>}
+                        </div>
+                     </div>
+                     <div className="grid gap-3">
+                        <Label htmlFor="country" className="text-lg">Country</Label>
+                        <Input
+                            id="country"
+                            name="country"
+                            value={formData.country}
+                            onChange={handleInputChange}
+                            placeholder="Country"
+                            className="sm:h-[3rem] bg-gray-100"
+                            readOnly
+                        />
+                     </div>
+                 </div>
+              )
           ) : (
             mode === 'login' && (
               <div className="grid gap-3">
@@ -675,8 +816,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                 </div>
             )
             )}
-            {((mode === 'forgot-password' && step === 'enter-otp') ||
-              mode === 'verify-email') && (
+            {(mode === 'forgot-password' && step === 'enter-otp') && (
               <div className="grid gap-3">
                 <Label htmlFor="otp" className="text-lg">
                   OTP
@@ -695,6 +835,62 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                   <p className="text-orange-500 text-sm">{errors.otp}</p>
                 )}
               </div>
+            )}
+
+            {mode === 'verify-email' && (
+                <div className="flex flex-col items-center space-y-6 animate-in fade-in zoom-in duration-300 py-4">
+                    <div className="text-center space-y-4">
+                        <div className="bg-orange-100 p-4 rounded-full inline-block mb-2">
+                            <ShieldCheck className="w-12 h-12 text-orange-600" />
+                        </div>
+                        <h1 className="text-3xl font-bold text-gray-900">Verify Email</h1>
+                        <p className="text-gray-500 text-lg max-w-[80%] mx-auto">
+                            Enter the code sent to <span className="font-semibold text-gray-900">{emailForVerification}</span>
+                        </p>
+                    </div>
+
+                    <div className="w-full py-2">
+                        <OTPInput
+                            length={6}
+                            value={formData.otp}
+                            onChange={(otp) => setFormData(prev => ({ ...prev, otp }))}
+                        />
+                         {errors.otp && (
+                            <p className="text-red-500 text-sm text-center mt-3 font-medium">{errors.otp}</p>
+                        )}
+                    </div>
+
+                    <div className="w-full space-y-4 pt-2">
+                        <Button
+                            type="button"
+                            className="w-full h-12 text-lg font-semibold bg-orange-500 hover:bg-orange-600 text-white rounded-lg shadow-md transition-all"
+                            onClick={handleValidateOtp}
+                            disabled={validateOtpPending || formData.otp.length < 6}
+                        >
+                            {validateOtpPending ? 'Verifying...' : 'Verify Email'}
+                        </Button>
+
+                        <div className="flex flex-col items-center gap-4 text-sm">
+                            <button
+                                type="button"
+                                onClick={handleSendOtp}
+                                disabled={sendOtpPending}
+                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${sendOtpPending ? 'animate-spin' : ''}`} />
+                                {sendOtpPending ? 'Sending...' : 'Resend new code'}
+                            </button>
+
+                            <button
+                                type="button"
+                                className="text-gray-500 hover:text-gray-700 font-medium"
+                                onClick={() => handleToggleMode('register')}
+                            >
+                                Change Email
+                            </button>
+                        </div>
+                    </div>
+                </div>
             )}
             {mode === 'forgot-password' && step === 'enter-otp' && (
               <>
@@ -804,13 +1000,33 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
               </Button>
             )}
             {mode === 'register' && (
-              <Button
-                type="submit"
-                className="justify-center w-full bg-orange-500 hover:bg-orange-600"
-                disabled={isPending}
-              >
-                {isPending ? 'Submitting...' : 'Sign Up'}
-              </Button>
+                step === 'enter-email' ? (
+                     <Button
+                        type="button"
+                        onClick={handleNextStep}
+                        className="justify-center w-full bg-orange-500 hover:bg-orange-600"
+                    >
+                        Next: Address Details
+                    </Button>
+                ) : (
+                    <div className="flex gap-4">
+                         <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setStep('enter-email')}
+                            className="flex-1 justify-center"
+                        >
+                            Back
+                        </Button>
+                        <Button
+                            type="submit"
+                            className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
+                            disabled={isPending}
+                        >
+                            {isPending ? 'Submitting...' : 'Sign Up'}
+                        </Button>
+                    </div>
+                )
             )}
 
             {/* add google */}
@@ -837,26 +1053,6 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                   </Button>
                 )}
               </>
-            )}
-            {mode === 'verify-email' && (
-              <div className="flex gap-4">
-                <Button
-                  type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleSendOtp}
-                  disabled={sendOtpPending}
-                >
-                  {sendOtpPending ? 'Sending...' : 'Resend OTP'}
-                </Button>
-                <Button
-                  type="button"
-                  className="flex-1 justify-center bg-orange-500 hover:bg-orange-600"
-                  onClick={handleValidateOtp}
-                  disabled={validateOtpPending}
-                >
-                  {validateOtpPending ? 'Verifying...' : 'Verify'}
-                </Button>
-              </div>
             )}
           </div>
         </form>

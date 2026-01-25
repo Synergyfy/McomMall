@@ -14,3 +14,18 @@ export const useApplyVoucher = () => {
     mutationFn: getVoucherByCode,
   });
 };
+
+import { useQuery } from '@tanstack/react-query';
+
+const getVoucherById = async (id: string): Promise<Voucher> => {
+  const { data } = await api.get<Voucher>(`/vouchers/${id}`);
+  return data;
+};
+
+export const useGetVoucherById = (id: string) => {
+  return useQuery({
+    queryKey: ['voucher', id],
+    queryFn: () => getVoucherById(id),
+    enabled: !!id,
+  });
+};

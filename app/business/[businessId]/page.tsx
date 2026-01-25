@@ -139,9 +139,9 @@ const BusinessStorefrontPage = () => {
               <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
                 {servicesData.data.map(service => (
                   <Card key={service.id} className="overflow-hidden shadow-md hover:shadow-lg transition-shadow duration-300 flex flex-col">
-                    {service.images?.[0] ? (
+                    {service.media?.[0] ? (
                       <img
-                        src={service.images[0]}
+                        src={service.media[0]}
                         alt={service.name}
                         className="w-full h-40 object-cover"
                       />
