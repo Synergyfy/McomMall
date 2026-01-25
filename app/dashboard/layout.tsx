@@ -90,7 +90,7 @@ export default function DashboardLayout({
                       <div className="mt-4 border-t pt-4">
                         <button
                           onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
-                          className="flex w-full items-center justify-between px-2 py-2 text-sm font-semibold text-gray-500 uppercase"
+                          className="flex w-full items-center justify-between px-2 py-3 text-sm font-semibold text-gray-500 uppercase bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                         >
                           <span>Quick Actions</span>
                           <ChevronDown
@@ -98,7 +98,7 @@ export default function DashboardLayout({
                           />
                         </button>
                         {isQuickActionsOpen && (
-                          <div className="mt-2 pl-2">
+                          <div className="mt-1 pl-1">
                             <NavMenuContent onLinkClick={() => setIsSideMenuOpen(false)} />
                           </div>
                         )}
