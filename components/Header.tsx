@@ -124,6 +124,15 @@ export default function Header() {
                   </div>
                 );
               })}
+              {!accessToken && (
+                <Link
+                  href="/getstarted"
+                  onClick={() => setMobileMenuOpen(false)}
+                  className="rounded-md px-4 py-2 text-lg font-semibold text-orange-600 transition-colors hover:bg-gray-100"
+                >
+                  Get Started
+                </Link>
+              )}
             </nav>
           </motion.div>
         )}

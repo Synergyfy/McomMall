@@ -175,7 +175,7 @@ export default function HomePage() {
     <div className="bg-[#fafafa] font-sans relative">
       <main>
         {/* --- Hero Section with Animated Background --- */}
-        <section className="relative h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
+        <section className="relative min-h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
           <AnimatePresence>
             <motion.div
               key={currentImageIndex}

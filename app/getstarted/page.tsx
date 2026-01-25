@@ -39,7 +39,7 @@ export default function GetStartedPage() {
     <main className="relative flex min-h-screen w-full flex-col text-white md:flex-row">
       {/* Right Section (60%) - MOVED TO THE LEFT */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 bg-white"
+        className="relative flex min-h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 bg-white"
       >
         <div className="absolute top-3 left-0 right-0 z-20 flex flex-col items-center pt-16 text-center">
           <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500">
@@ -76,7 +76,7 @@ export default function GetStartedPage() {
 
       {/* Left Section (40%) - MOVED TO THE RIGHT */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
+        className="relative flex min-h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
       >
         {/* === THIS IS THE CHANGE === */}
         {/* The <Image> component was here. It's been replaced with this <video> tag. */}

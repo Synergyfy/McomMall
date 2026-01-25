@@ -73,7 +73,7 @@ export default function DashboardLayout({
                     >
                       <div className="flex gap-2 items-center">
                         <Menu className="h-5 w-5" />
-                        <p>Dashbaord Menu</p>
+                        <p>Dashboard Menu</p>
                       </div>
                     </Button>
                   </SheetTrigger>
