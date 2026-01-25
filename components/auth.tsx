@@ -15,7 +15,8 @@ import {
   useValidateOtp,
   useResetPassword,
 } from '@/service/auth/hook';
-import { Eye, EyeOff } from 'lucide-react';
+import { Eye, EyeOff, ShieldCheck, RefreshCw } from 'lucide-react';
+import OTPInput from './ui/otp-input';
 import {
   Tooltip,
   TooltipContent,
@@ -861,43 +862,49 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
             )}
 
             {mode === 'verify-email' && (
-                <div className="flex flex-col items-center space-y-6">
-                    <div className="text-center space-y-2">
-                        <div className="bg-orange-100 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                            <span className="text-3xl">✉️</span>
+                <div className="flex flex-col items-center space-y-8 animate-in fade-in zoom-in duration-300">
+                    <div className="text-center space-y-4">
+                        <div className="bg-purple-100 p-4 rounded-full inline-block mb-2">
+                            <ShieldCheck className="w-12 h-12 text-purple-600" />
                         </div>
-                        <h3 className="font-semibold text-xl">Check your inbox</h3>
-                        <p className="text-gray-500">
-                            We sent a verification code to <br/>
-                            <span className="font-bold text-gray-900">{emailForVerification}</span>
+                        <h1 className="text-3xl font-bold text-gray-900">Verify Email</h1>
+                        <p className="text-gray-500 text-lg">
+                            Enter the code sent to <span className="font-semibold text-gray-900">{emailForVerification}</span>
                         </p>
                     </div>
 
-                    <div className="w-full max-w-xs">
-                        <Input
-                            id="otp"
-                            name="otp"
+                    <div className="w-full">
+                        <OTPInput
+                            length={6}
                             value={formData.otp}
-                            onChange={handleInputChange}
-                            placeholder="Enter 6-digit code"
-                            className="text-center text-2xl tracking-widest h-14 border-2 focus:border-orange-500 rounded-xl"
-                            maxLength={6}
+                            onChange={(otp) => setFormData(prev => ({ ...prev, otp }))}
                         />
                          {errors.otp && (
-                            <p className="text-orange-500 text-sm text-center mt-2">{errors.otp}</p>
+                            <p className="text-red-500 text-sm text-center mt-3 font-medium">{errors.otp}</p>
                         )}
                     </div>
 
-                    <div className="text-center text-sm">
-                        <p className="text-gray-500">Didn&apos;t receive the code?</p>
-                        <button
+                    <div className="w-full space-y-4">
+                        <Button
                             type="button"
-                            onClick={handleSendOtp}
-                            disabled={sendOtpPending}
-                            className="font-semibold text-orange-600 hover:text-orange-700 mt-1"
+                            className="w-full h-14 text-lg font-semibold bg-[#0A0B5B] hover:bg-[#0A0B5B]/90 text-white rounded-xl shadow-lg transition-all"
+                            onClick={handleValidateOtp}
+                            disabled={validateOtpPending || formData.otp.length < 6}
                         >
-                            {sendOtpPending ? 'Sending...' : 'Click to resend'}
-                        </button>
+                            {validateOtpPending ? 'Verifying...' : 'Verify Code'}
+                        </Button>
+
+                        <div className="flex justify-center">
+                            <button
+                                type="button"
+                                onClick={handleSendOtp}
+                                disabled={sendOtpPending}
+                                className="flex items-center gap-2 text-gray-600 hover:text-gray-900 font-medium transition-colors"
+                            >
+                                <RefreshCw className={`w-4 h-4 ${sendOtpPending ? 'animate-spin' : ''}`} />
+                                {sendOtpPending ? 'Sending...' : 'Resend new code'}
+                            </button>
+                        </div>
                     </div>
                 </div>
             )}
