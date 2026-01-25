@@ -68,8 +68,7 @@ export default function DashboardLayout({
                   <SheetTrigger asChild>
                     <Button
                       variant="outline"
-                      size="icon"
-                      className="w-fit border-0 shadow-none"
+                      className="w-fit border-0 shadow-none px-3"
                     >
                       <div className="flex gap-2 items-center">
                         <Menu className="h-5 w-5" />
@@ -77,8 +76,8 @@ export default function DashboardLayout({
                       </div>
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-[18rem]">
-                    <div className="p-5 border-b">
+                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
+                    <div className="p-5 border-b shrink-0">
                       <Link href="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                           <span className="text-white font-bold text-sm">M</span>
@@ -86,7 +85,7 @@ export default function DashboardLayout({
                         <span className="text-xl font-semibold">McomMall</span>
                       </Link>
                     </div>
-                    <div className="p-4 overflow-y-auto">
+                    <div className="p-4 overflow-y-auto flex-1">
                       <SideMenuContent
                         onLinkClick={() => setIsSideMenuOpen(false)}
                       />
