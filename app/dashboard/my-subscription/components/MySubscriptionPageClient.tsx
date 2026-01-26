@@ -2,20 +2,30 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useGetSubscriptionStatus } from '@/service/payments/hook';
+import { useGetMyMembership } from '@/service/membership/hook';
 import CurrentPlanCard from './CurrentPlanCard';
 import TiersList from './TiersList';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
 import { Tier } from '@/service/tiers/types';
+import { PlanType } from '@/service/payments/types';
 
 export default function MySubscriptionPageClient() {
-  const { data: subscriptionStatus, isLoading } = useGetSubscriptionStatus();
+  const { data: subscriptionStatus, isLoading } = useGetMyMembership();
   const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
   const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
     setSelectedTier({ tier, cycle });
+  };
+
+  const mapCycleToPlanType = (cycle: string): PlanType => {
+      switch(cycle) {
+        case 'monthly': return PlanType.MONTHLY;
+        case 'quarterly': return PlanType.QUARTERLY;
+        case 'annual': return PlanType.ANNUAL;
+        default: return PlanType.MONTHLY;
+      }
   };
 
   if (selectedTier) {
@@ -34,6 +44,7 @@ export default function MySubscriptionPageClient() {
 
     // Ensure price is formatted as a string for the checkout component
     const priceString = `£${price.toFixed(2)}`;
+    const planType = mapCycleToPlanType(selectedTier.cycle);
 
     return (
       <PricingCheckoutClient
@@ -42,6 +53,8 @@ export default function MySubscriptionPageClient() {
         isTrial={false}
         isPayg={false} // Treat dynamic tiers as Co-Branded/Subscription
         listingId={listingId}
+        tierId={selectedTier.tier.id}
+        planType={planType}
       />
     );
   }

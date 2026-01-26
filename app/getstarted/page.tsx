@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 // We no longer need Image from 'next/image' if it's not used in the other section
 // import Image from 'next/image'; 
 import Link from 'next/link';
@@ -23,11 +23,18 @@ type OptionKey = keyof typeof optionInfo;
 
 export default function GetStartedPage() {
   const [isOpen, setIsOpen] = useState(false);
+  const [activeTab, setActiveTab] = useState<'get-started' | 'earn-with-us'>('get-started');
   const [selectedStatus, setSelectedStatus] =
     useState<OptionKey>('CHOOSE YOUR STATUS');
   const [infoText, setInfoText] = useState(
     'Select a role to see more information.'
   );
+
+  useEffect(() => {
+    if (typeof window !== 'undefined' && window.location.hash === '#earn-with-us') {
+      setActiveTab('earn-with-us');
+    }
+  }, []);
 
   const handleSelect = (option: OptionKey) => {
     setSelectedStatus(option);
@@ -37,9 +44,31 @@ export default function GetStartedPage() {
 
   return (
     <main className="relative flex min-h-screen w-full flex-col text-white md:flex-row">
+      {/* Mobile Toggle */}
+      <div className="md:hidden fixed top-20 left-1/2 transform -translate-x-1/2 z-30 bg-white/90 rounded-full p-1 shadow-md flex">
+        <button
+          onClick={() => setActiveTab('get-started')}
+          className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+            activeTab === 'get-started' ? 'bg-orange-600 text-white' : 'text-gray-600'
+          }`}
+        >
+          Get Started
+        </button>
+        <button
+          onClick={() => setActiveTab('earn-with-us')}
+          className={`px-4 py-2 rounded-full text-sm font-semibold transition-colors ${
+            activeTab === 'earn-with-us' ? 'bg-orange-600 text-white' : 'text-gray-600'
+          }`}
+        >
+          Earn with Us
+        </button>
+      </div>
+
       {/* Right Section (60%) - MOVED TO THE LEFT */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 bg-white"
+        className={`relative min-h-screen w-full flex-col items-center justify-center p-8 text-center md:w-3/5 bg-white ${
+          activeTab === 'get-started' ? 'flex' : 'hidden md:flex'
+        }`}
       >
         <div className="absolute top-3 left-0 right-0 z-20 flex flex-col items-center pt-16 text-center">
           <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-full bg-orange-500">
@@ -76,7 +105,10 @@ export default function GetStartedPage() {
 
       {/* Left Section (40%) - MOVED TO THE RIGHT */}
       <div
-        className="relative flex h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5"
+        id="earn-with-us"
+        className={`relative min-h-screen w-full flex-col items-center justify-center p-8 text-center md:w-2/5 ${
+          activeTab === 'earn-with-us' ? 'flex' : 'hidden md:flex'
+        }`}
       >
         {/* === THIS IS THE CHANGE === */}
         {/* The <Image> component was here. It's been replaced with this <video> tag. */}

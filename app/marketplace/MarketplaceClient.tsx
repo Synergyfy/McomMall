@@ -55,11 +55,11 @@ type MarketItem = {
   salePrice?: number | string;
   amount?: number | string;
   fixedAmounts?: number[];
-  imageUrl?: string;
+  imageUrl?: string | null;
   image?: string;
   url?: string;
   backgroundImage?: string;
-  media?: string[];
+  media?: string[] | null;
   category?: string;
 };
 
@@ -166,6 +166,12 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
         price = item.salePrice || item.price || 0;
       }
 
+      let linkPrefix = 'products';
+      if (type === 'services') linkPrefix = 'services';
+      if (type === 'vouchers') linkPrefix = 'vouchers';
+      if (type === 'gift-cards') linkPrefix = 'gift-cards';
+      if (type === 'coupons') linkPrefix = 'coupons';
+
       return {
         id,
         title,
@@ -175,7 +181,8 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
         items_left: 10,
         rating: 4.5,
         reviews: 10,
-        discountedPrice: item.salePrice ? Number(item.salePrice) : undefined
+        discountedPrice: item.salePrice ? Number(item.salePrice) : undefined,
+        link: `/${linkPrefix}/${id}`
       } as PromotionalItem;
   };
 

@@ -65,7 +65,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
   };
 
   const firstImageUrl =
-    service.images?.find(isImageUrl) || 'https://via.placeholder.com/500x500.png?text=No+Image';
+    service.media?.find(isImageUrl) || 'https://via.placeholder.com/500x500.png?text=No+Image';
 
   return (
     <div className="bg-white">

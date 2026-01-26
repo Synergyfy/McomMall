@@ -2,8 +2,10 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import api from '../api';
 import {
+  CreatePaypalOrderRequest,
+  CreateStripeIntentRequest,
   PauseResumeTrialDto,
-  RecordPaymentDto,
+  RecordPaymentRequest,
   SubscriptionStatusResponse,
   TrialAction,
   TrialStatusResponse,
@@ -83,7 +85,7 @@ export const useGetTrialStatus = () => {
 };
 
 export const useCreateStripeIntent = () => {
-  const create = async (payload: { amount: number }) => {
+  const create = async (payload: CreateStripeIntentRequest) => {
     try {
       const response = await api.post('/payments/stripe/create-intent', payload);
       return response.data;
@@ -106,7 +108,7 @@ export const useCreateStripeIntent = () => {
 };
 
 export const useCreatePayPalOrder = () => {
-  const create = async (payload: { amount: number }) => {
+  const create = async (payload: CreatePaypalOrderRequest) => {
     try {
       const response = await api.post('/payments/paypal/create-order', payload);
       return response.data;
@@ -129,7 +131,7 @@ export const useCreatePayPalOrder = () => {
 };
 
 export const useRecordPayment = () => {
-  const create = async (payload: RecordPaymentDto) => {
+  const create = async (payload: RecordPaymentRequest) => {
     try {
       const amount = payload.amount.toFixed(2);
       const response = await api.post('/payments/record', {...payload, amount: parseFloat(amount) });

@@ -27,6 +27,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   const rating = 3.5 + (pseudoRandom * 1.5);
   const reviewCount = Math.floor(pseudoRandom * 200) + 10;
 
+  const productLink = product.link || `/products/${product.id}`;
+
   if (viewMode === 'list') {
     return (
       <div className="group flex flex-col sm:flex-row bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden">
@@ -51,7 +53,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               <Heart className="h-5 w-5" />
             </Button>
           </div>
-          <Link href={`/products/${product.id}`} className="group-hover:text-primary transition-colors">
+          <Link href={productLink} className="group-hover:text-primary transition-colors">
             <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{product.title}</h3>
           </Link>
           <div className="flex items-center space-x-1 mb-4">
@@ -132,7 +134,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
       {/* Product Details - Flex Grow to fill height */}
       <div className="p-4 flex flex-col flex-grow">
         <div className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
-        <Link href={`/products/${product.id}`} className="block mb-2">
+        <Link href={productLink} className="block mb-2">
             <h3 className="text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
             {product.title}
             </h3>

@@ -28,6 +28,7 @@ import { useGetProductById, useUpdateProduct } from '@/service/store/products/ho
 import { UpdateSuccessDialog } from '../../components/UpdateSuccessDialog';
 import { CreateProductDto } from '@/service/store/products/types';
 import VariantManager from '../../components/VariantManager';
+import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 
 import { Button } from '@/components/ui/button';
 import {
@@ -73,7 +74,6 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { cn } from '@/lib/utils';
-import { businessCategories } from '@/lib/business-categories';
 import Link from 'next/link';
 
 interface Listing {
@@ -361,6 +361,15 @@ export default function EditProductPage() {
   const { mutate: updateProduct, isPending } = useUpdateProduct();
 
   const productType = form.watch('productType');
+
+  // Dynamic Taxonomy Fetching
+  const { data: categories = [], isLoading: isLoadingCategories } = useGetCategories();
+  const selectedCategoryName = form.watch('category');
+
+  // Find selected category object to get ID for subcategories
+  const selectedCategory = categories.find(c => c.name === selectedCategoryName);
+
+  const { data: subCategories = [], isLoading: isLoadingSubCategories } = useGetSubCategoriesByCategory(selectedCategory?.id || '');
 
   async function onSubmit(data: ProductFormValues) {
     const productData: Partial<CreateProductDto> = {
@@ -1409,12 +1418,13 @@ export default function EditProductPage() {
                                     'w-full justify-between text-base py-6',
                                     !field.value && 'text-muted-foreground'
                                   )}
+                                  disabled={isLoadingCategories}
                                 >
                                   {field.value
-                                    ? businessCategories.find(
+                                    ? categories.find(
                                         (cat) => cat.name === field.value
                                       )?.name
-                                    : 'Select a category'}
+                                    : isLoadingCategories ? 'Loading...' : 'Select a category'}
                                 </Button>
                               </FormControl>
                             </PopoverTrigger>
@@ -1424,10 +1434,10 @@ export default function EditProductPage() {
                                 <CommandList>
                                   <CommandEmpty>No category found.</CommandEmpty>
                                   <CommandGroup>
-                                    {businessCategories.map((cat) => (
+                                    {categories.map((cat) => (
                                       <CommandItem
                                         value={cat.name}
-                                        key={cat.name}
+                                        key={cat.id}
                                         onSelect={() => {
                                           form.setValue('category', cat.name, { shouldValidate: true });
                                           form.setValue('subCategories', [], { shouldValidate: true });
@@ -1467,12 +1477,12 @@ export default function EditProductPage() {
                               <Button
                                 variant="outline"
                                 className="w-full justify-start text-base py-6"
-                                disabled={!form.watch('category')}
+                                disabled={!form.watch('category') || isLoadingSubCategories}
                               >
                                 <Plus className="mr-2 h-4 w-4" />
                                 {field.value?.length > 0
                                   ? 'Add more sub-categories'
-                                  : 'Select sub-categories'}
+                                  : isLoadingSubCategories ? 'Loading...' : 'Select sub-categories'}
                               </Button>
                             </PopoverTrigger>
                             <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
@@ -1483,11 +1493,9 @@ export default function EditProductPage() {
                                     No sub-categories found.
                                   </CommandEmpty>
                                   <CommandGroup>
-                                    {businessCategories
-                                      .find(c => c.name === form.watch('category'))
-                                      ?.subCategories.map(sc => (
+                                    {subCategories.map(sc => (
                                         <CommandItem
-                                          key={sc.name}
+                                          key={sc.id}
                                           value={sc.name}
                                           onSelect={() => {
                                             const currentValue = form.getValues('subCategories') || [];

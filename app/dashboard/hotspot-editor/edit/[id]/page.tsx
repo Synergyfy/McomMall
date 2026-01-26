@@ -51,7 +51,7 @@ const HotspotEditorContent = () => {
         currentItem = {
             id: serviceData.id,
             name: serviceData.name,
-            imageUrl: serviceData.images[0],
+            imageUrl: serviceData.media?.[0] || '',
             hotspots: serviceData.hotspots || [],
         }
     } else if (itemType === 'banner' && listingData) {
