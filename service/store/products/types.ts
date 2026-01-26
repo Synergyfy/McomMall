@@ -22,6 +22,10 @@ export interface ProductVariation {
   stock: number;
   available: boolean;
   image?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
 }
 
 export interface CreateProductDto {

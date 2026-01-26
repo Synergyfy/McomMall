@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, ChevronsUpDown, Plus, Table, Trash2, Edit2 } from 'lucide-react';
+import { X, ChevronsUpDown, Plus, Table, Trash2, Edit2, Settings } from 'lucide-react';
 import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
 import { predefinedVariantOptions } from '@/lib/variant-options';
@@ -29,6 +29,15 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+    DialogFooter
+} from "@/components/ui/dialog"
 import { Label } from '@/components/ui/label';
 import {
   Table as TableRoot,
@@ -76,6 +85,16 @@ export default function VariantManager({ attributesName = 'attributes', variatio
   const [attributeOptions, setAttributeOptions] = useState<string[]>([]);
   const [isCustomAttribute, setIsCustomAttribute] = useState(false);
 
+  // State for editing dimensions of a specific variation
+  const [editingVariationId, setEditingVariationId] = useState<string | null>(null);
+  const [editingVariationIndex, setEditingVariationIndex] = useState<number | null>(null);
+  const [tempDimensions, setTempDimensions] = useState({
+      weight: 0,
+      length: 0,
+      width: 0,
+      height: 0
+  });
+
   // Helper to generate cartesian product of arrays
   const cartesian = (args: any[][]): any[][] => {
     const r: any[][] = [];
@@ -93,8 +112,6 @@ export default function VariantManager({ attributesName = 'attributes', variatio
   };
 
   // Regenerate Matrix when Attributes Change
-  // We do this manually via a button or automatically.
-  // For now, let's provide a "Generate Variations" button to give user control.
   const generateVariations = () => {
     const attributes = watch(attributesName) as ProductAttribute[];
 
@@ -123,9 +140,13 @@ export default function VariantManager({ attributesName = 'attributes', variatio
         id: uuidv4(),
         combination: combinationMap,
         sku: `${skuSuffix}`,
-        price: 0, // Default price, user must edit
+        price: 0,
         stock: 0,
         available: true,
+        weight: 0,
+        length: 0,
+        width: 0,
+        height: 0
       };
     });
 
@@ -177,6 +198,30 @@ export default function VariantManager({ attributesName = 'attributes', variatio
   const handleRemoveOptionFromAttribute = (option: string) => {
     setAttributeOptions(attributeOptions.filter((o) => o !== option));
   };
+
+  const openDimensionEditor = (variation: ProductVariation, index: number) => {
+      setEditingVariationId(variation.id);
+      setEditingVariationIndex(index);
+      setTempDimensions({
+          weight: variation.weight || 0,
+          length: variation.length || 0,
+          width: variation.width || 0,
+          height: variation.height || 0
+      });
+  };
+
+  const saveDimensions = () => {
+      if (editingVariationIndex !== null && editingVariationId !== null) {
+          const currentVariation = variationFields[editingVariationIndex] as unknown as ProductVariation;
+          updateVariation(editingVariationIndex, {
+              ...currentVariation,
+              ...tempDimensions
+          });
+          setEditingVariationId(null);
+          setEditingVariationIndex(null);
+      }
+  };
+
 
   // Safe type casting for the fields
   const safeAttributeFields = attributeFields as unknown as ProductAttribute[];
@@ -313,6 +358,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                   <TableHead>Price (£)</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>SKU</TableHead>
+                  <TableHead className="w-[80px]">Dims</TableHead>
                   <TableHead className="w-[80px]">Active</TableHead>
                 </TableRow>
               </TableHeader>
@@ -359,6 +405,72 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                            updateVariation(index, { ...field, sku: e.target.value });
                         }}
                       />
+                    </TableCell>
+
+                    {/* Dimensions Popover Trigger */}
+                    <TableCell>
+                        <Dialog open={editingVariationId === field.id} onOpenChange={(open) => {
+                            if (!open) {
+                                setEditingVariationId(null);
+                                setEditingVariationIndex(null);
+                            }
+                        }}>
+                          <DialogTrigger asChild>
+                             <Button
+                                variant="outline"
+                                size="sm"
+                                className="h-8 w-8 p-0"
+                                onClick={() => openDimensionEditor(field, index)}
+                             >
+                                <Settings className="h-4 w-4 text-gray-500" />
+                             </Button>
+                          </DialogTrigger>
+                          <DialogContent>
+                             <DialogHeader>
+                                <DialogTitle>Dimensions for {Object.values(field.combination).join('/')}</DialogTitle>
+                                <DialogDescription>
+                                   Override the base product dimensions for this specific variation.
+                                </DialogDescription>
+                             </DialogHeader>
+                             <div className="grid grid-cols-2 gap-4 py-4">
+                                <div className="space-y-2">
+                                   <Label>Weight (kg)</Label>
+                                   <Input
+                                      type="number"
+                                      value={tempDimensions.weight}
+                                      onChange={(e) => setTempDimensions({...tempDimensions, weight: parseFloat(e.target.value) || 0})}
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <Label>Length (cm)</Label>
+                                   <Input
+                                      type="number"
+                                      value={tempDimensions.length}
+                                      onChange={(e) => setTempDimensions({...tempDimensions, length: parseFloat(e.target.value) || 0})}
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <Label>Width (cm)</Label>
+                                   <Input
+                                      type="number"
+                                      value={tempDimensions.width}
+                                      onChange={(e) => setTempDimensions({...tempDimensions, width: parseFloat(e.target.value) || 0})}
+                                   />
+                                </div>
+                                <div className="space-y-2">
+                                   <Label>Height (cm)</Label>
+                                   <Input
+                                      type="number"
+                                      value={tempDimensions.height}
+                                      onChange={(e) => setTempDimensions({...tempDimensions, height: parseFloat(e.target.value) || 0})}
+                                   />
+                                </div>
+                             </div>
+                             <DialogFooter>
+                                <Button onClick={saveDimensions}>Save Dimensions</Button>
+                             </DialogFooter>
+                          </DialogContent>
+                        </Dialog>
                     </TableCell>
 
                     {/* Toggle Available */}
