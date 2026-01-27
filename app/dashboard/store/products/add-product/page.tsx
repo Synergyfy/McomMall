@@ -468,7 +468,7 @@ export default function AddProductPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <VariantManager name="variants" />
+                      <VariantManager attributesName="attributes" variationsName="variations" />
                     </CardContent>
                   </Card>
                   {/* Product Data Section */}
