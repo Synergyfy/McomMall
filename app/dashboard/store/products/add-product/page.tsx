@@ -27,7 +27,7 @@ import { toast } from 'sonner';
 
 import { useAddProduct } from '@/service/store/products/hook';
 import { SuccessDialog } from '../components/SuccessDialog';
-import { CreateProductDto, ProductVariant } from '@/service/store/products/types';
+import { CreateProductDto, ProductVariant, ProductAttribute, ProductVariation } from '@/service/store/products/types';
 
 import VariantManager from '../components/VariantManager';
 import { Badge } from '@/components/ui/badge';
@@ -114,10 +114,13 @@ interface ProductFormValues {
   media: File[];
   businessId?: string;
   variants: ProductVariant[];
+  attributes: ProductAttribute[];
+  variations: ProductVariation[];
 }
 
 const customResolver = (data: ProductFormValues) => {
   const errors: FieldErrors<ProductFormValues> = {};
+  console.log('Validating form data:', data);
 
   if (!data.title?.trim()) {
     errors.title = { type: 'required', message: 'Product title is required.' };
@@ -271,6 +274,10 @@ const customResolver = (data: ProductFormValues) => {
     }
   }
 
+  if (Object.keys(errors).length > 0) {
+    console.log('Form validation errors:', errors);
+  }
+
   return {
     values: Object.keys(errors).length > 0 ? {} : data,
     errors: errors,
@@ -314,18 +321,27 @@ export default function AddProductPage() {
       media: [],
       businessId: '',
       variants: [],
+      attributes: [],
+      variations: [],
     },
   });
 
   const variants = form.watch('variants');
+  const variations = form.watch('variations');
   useEffect(() => {
     if (form.watch('enableStockManagement')) {
-      const totalStock = variants.reduce((total, variant) => {
-        return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
-      }, 0);
+      // Calculate from new variations if present, otherwise old variants
+      let totalStock = 0;
+      if (variations && variations.length > 0) {
+          totalStock = variations.reduce((total, v) => total + (v.stock || 0), 0);
+      } else {
+          totalStock = variants.reduce((total, variant) => {
+            return total + (variant.options ? variant.options.reduce((subTotal, option) => subTotal + (option.quantity || 0), 0) : 0);
+          }, 0);
+      }
       form.setValue('stockQuantity', totalStock, { shouldValidate: true });
     }
-  }, [variants, form]);
+  }, [variants, variations, form]);
 
 
   const { fields, append, remove } = useFieldArray({
@@ -350,6 +366,7 @@ export default function AddProductPage() {
   const { data: subCategories = [], isLoading: isLoadingSubCategories } = useGetSubCategoriesByCategory(selectedCategory?.id || '');
 
   async function onSubmit(data: ProductFormValues) {
+    console.log('OnSubmit triggered with data:', data);
     const mediaUrls = await Promise.all(
       data.media.map(file => uploadFile(file))
     );
@@ -388,13 +405,19 @@ export default function AddProductPage() {
       enableReviews: data.enableReviews,
       tags: data.tags,
       variants: data.variants,
+      attributes: data.attributes,
+      variations: data.variations?.map(({ id, ...rest }) => rest),
     };
+
+    console.log('Sending product data to API:', productData);
 
     addProduct(productData, {
       onSuccess: (data) => {
         setNewProductId(data.id);
         form.reset();
         setIsSuccessDialogOpen(true);
+        toast.success('Product created successfully!');
+        router.push('/dashboard/store/products');
       },
       onError: (error: Error) => {
         console.error('Failed to save product:', error);

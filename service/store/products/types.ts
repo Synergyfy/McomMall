@@ -11,11 +11,14 @@ export interface ProductVariant {
 export interface ProductAttribute {
   name: string;
   type?: string;
-  options: string[];
+  options: {
+    name: string;
+    priceModifier: number;
+  }[];
 }
 
 export interface ProductVariation {
-  id: string;
+  id?: string;
   sku?: string;
   combination: Record<string, string>;
   price: number;
