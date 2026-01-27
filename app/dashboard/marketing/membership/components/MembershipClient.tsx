@@ -15,7 +15,7 @@ import {
   CardTitle,
 } from '@/components/ui/card';
 import { CheckCircle, Star } from 'lucide-react';
-import { Membership, MembershipTier } from '@/service/membership/types';
+import { Membership } from '@/service/membership/types';
 import { toast } from 'sonner';
 import { loadStripe } from '@stripe/stripe-js';
 import { Elements } from '@stripe/react-stripe-js';
@@ -65,7 +65,7 @@ const tiers = [
 const MembershipClient = () => {
   const { data: membership, isLoading, error } = useGetMyMembership();
   const initiatePayment = useInitiateMembershipPayment();
-  const [selectedTier, setSelectedTier] = useState<MembershipTier | null>(null);
+  const [selectedTier, setSelectedTier] = useState<string | null>(null);
   const [clientSecret, setClientSecret] = useState<string | null>(null);
   const [
     successfulMembership,
@@ -73,7 +73,7 @@ const MembershipClient = () => {
   ] = useState<Membership | null>(null);
   const [isSuccessDialogOpen, setIsSuccessDialogOpen] = useState(false);
 
-  const handleUpgrade = (tier: MembershipTier) => {
+  const handleUpgrade = (tier: string) => {
     if (tier === 'BASIC') {
       toast.info('Basic plan is free and assigned by default.');
       return;
@@ -170,16 +170,16 @@ const MembershipClient = () => {
               <CardDescription>
                 You are currently on the{' '}
                 <span className="font-semibold text-primary">
-                  {membership.tier}
+                  {membership.tier.name}
                 </span>{' '}
                 plan.
               </CardDescription>
             </CardHeader>
             <CardContent>
               <p>
-                Your membership is {membership.isActive ? 'active' : 'inactive'}{' '}
+                Your membership is {membership.isActive ? 'active' : (membership.status || 'inactive')}{' '}
                 and expires on{' '}
-                {new Date(membership.expiresAt).toLocaleDateString()}.
+                {new Date(membership.expiresAt || membership.endDate || Date.now()).toLocaleDateString()}.
               </p>
             </CardContent>
           </Card>
@@ -210,16 +210,16 @@ const MembershipClient = () => {
               </CardContent>
               <CardFooter>
                 <Button
-                  onClick={() => handleUpgrade(tier.name as MembershipTier)}
+                  onClick={() => handleUpgrade(tier.name)}
                   disabled={
                     (initiatePayment.isPending && selectedTier === tier.name) ||
-                    membership?.tier === tier.name
+                    membership?.tier.name === tier.name
                   }
                   className="w-full"
                 >
                   {initiatePayment.isPending && selectedTier === tier.name
                     ? 'Loading...'
-                    : membership?.tier === tier.name
+                    : membership?.tier.name === tier.name
                     ? 'Current Plan'
                     : 'Upgrade'}
                 </Button>

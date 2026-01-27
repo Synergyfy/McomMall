@@ -20,6 +20,7 @@ import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import UserNav from './UserNav';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
+import { useLogout } from '@/service/auth/hook';
 
 const mobileMenuVariants: Variants = {
   closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
@@ -31,13 +32,14 @@ export default function Header() {
   const { cart } = useSelector((state: RootState) => state.cart);
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   const { wishlistCount } = useWishlist();
-  const { accessToken } = useSelector(
+  const { accessToken, userRole, userName } = useSelector(
     (state: RootState) => state.auth
   );
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [openMobileSubMenu, setOpenMobileSubMenu] = useState<string | null>(
     null
   );
+  const logout = useLogout();
 
   if (pathname.startsWith('/dashboard')) {
     return null;
@@ -124,6 +126,78 @@ export default function Header() {
                   </div>
                 );
               })}
+              {!accessToken ? (
+                <>
+                  <Link
+                    href="/getstarted"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-md px-4 py-2 text-lg font-semibold text-orange-600 transition-colors hover:bg-gray-100"
+                  >
+                    Get Started
+                  </Link>
+                  <Link
+                    href="/getstarted#earn-with-us"
+                    onClick={() => setMobileMenuOpen(false)}
+                    className="rounded-md px-4 py-2 text-lg font-semibold text-orange-600 transition-colors hover:bg-gray-100"
+                  >
+                    Earn with Us
+                  </Link>
+                </>
+              ) : (
+                <>
+                  <div className="border-t border-gray-200 my-2 pt-2">
+                    <p className="px-4 text-sm font-semibold text-gray-500 mb-2">My Account ({userName})</p>
+                    {userRole === 'owner' && (
+                      <>
+                        <Link
+                          href="/dashboard/bookings"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                        >
+                          Bookings
+                        </Link>
+                        <Link
+                          href="/dashboard/store/orders"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                        >
+                          Orders
+                        </Link>
+                        <Link
+                          href="/dashboard/messages"
+                          onClick={() => setMobileMenuOpen(false)}
+                          className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                        >
+                          Messages
+                        </Link>
+                      </>
+                    )}
+                    <Link
+                      href="/dashboard"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                    >
+                      Dashboard
+                    </Link>
+                    <Link
+                      href="/wishlist"
+                      onClick={() => setMobileMenuOpen(false)}
+                      className="block rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                    >
+                      My Wishlist
+                    </Link>
+                    <button
+                      onClick={() => {
+                        logout();
+                        setMobileMenuOpen(false);
+                      }}
+                      className="block w-full text-left rounded-md px-4 py-2 text-lg text-red-600 transition-colors hover:bg-gray-100"
+                    >
+                      Log out
+                    </button>
+                  </div>
+                </>
+              )}
             </nav>
           </motion.div>
         )}
@@ -140,7 +214,7 @@ export default function Header() {
             <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-sm">M</span>
             </div>
-            <span className="text-xl font-semibold">McomMall</span>
+            <span className="text-xl font-semibold hidden md:block">McomMall</span>
           </Link>
 
           {/* Desktop Nav - Placed in the middle for better layout */}
@@ -181,7 +255,9 @@ export default function Header() {
               </Button>
             </Link>
             {accessToken ? (
-              <UserNav />
+              <div className="hidden md:block">
+                <UserNav />
+              </div>
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/getstarted">

@@ -10,8 +10,6 @@ import { Button } from '@/components/ui/button';
 import { useVerifyMembershipPayment } from '@/service/membership/hooks';
 import {
   Membership,
-  MembershipTier,
-  VerifyPaymentDto,
 } from '@/service/membership/types';
 import { toast } from 'sonner';
 
@@ -24,7 +22,7 @@ interface ApiError extends Error {
 }
 
 interface MembershipCheckoutFormProps {
-  tier: MembershipTier;
+  tier: string;
   onSuccess: (membership: Membership) => void;
 }
 

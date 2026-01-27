@@ -8,6 +8,26 @@ export interface ProductVariant {
   }[];
 }
 
+export interface ProductAttribute {
+  name: string;
+  type?: string;
+  options: string[];
+}
+
+export interface ProductVariation {
+  id: string;
+  sku?: string;
+  combination: Record<string, string>;
+  price: number;
+  stock: number;
+  available: boolean;
+  image?: string;
+  weight?: number;
+  length?: number;
+  width?: number;
+  height?: number;
+}
+
 export interface CreateProductDto {
   bussinessId: string;
   title: string;
@@ -35,6 +55,8 @@ export interface CreateProductDto {
   enableReviews?: boolean;
   tags?: string[];
   variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
+  variations?: ProductVariation[];
 }
 
 import { Product } from '@/service/listings/types';

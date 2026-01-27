@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useCallback } from 'react';
 import { ListingFormData } from '../../../types';
 import MultiMediaUpload from './MultiMediaUpload';
 import Link from 'next/link';
@@ -14,21 +14,30 @@ interface StepProps {
 }
 
 const MediaStep: React.FC<StepProps> = ({ formData, setFormData, errors }) => {
-  const handleLogoChange = (file: File | null) => {
-    setFormData(prev => ({ ...prev, logo: { file, altText: 'logo' } }));
-  };
+  const handleLogoChange = useCallback(
+    (file: File | null) => {
+      setFormData(prev => ({ ...prev, logo: { file, altText: 'logo' } }));
+    },
+    [setFormData]
+  );
 
-  const handleBannerChange = (file: File | null) => {
-    setFormData(prev => ({ ...prev, banner: { file, altText: 'banner' } }));
-  };
+  const handleBannerChange = useCallback(
+    (file: File | null) => {
+      setFormData(prev => ({ ...prev, banner: { file, altText: 'banner' } }));
+    },
+    [setFormData]
+  );
 
-  const handleMediaChange = (files: File[]) => {
-    const mediaData = files.map(file => ({
-      file,
-      altText: '', // You might want a way to manage alt text for each file.
-    }));
-    setFormData(prev => ({ ...prev, media: mediaData }));
-  };
+  const handleMediaChange = useCallback(
+    (files: File[]) => {
+      const mediaData = files.map(file => ({
+        file,
+        altText: '', // You might want a way to manage alt text for each file.
+      }));
+      setFormData(prev => ({ ...prev, media: mediaData }));
+    },
+    [setFormData]
+  );
 
   return (
     <div className="space-y-8">

@@ -5,7 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { useCreateGroup } from '@/service/grouping/hooks';
-import { useGetMyMembership } from '@/service/membership/hooks';
+import { useGetMyMembership } from '@/service/membership/hook';
 import { toast } from 'sonner';
 import Link from 'next/link';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -115,7 +115,7 @@ const CreateGroupClient = () => {
     return <div>Loading membership status...</div>;
   }
 
-  if (membership?.tier?.toUpperCase() !== 'PROFESSIONAL') {
+  if (membership?.tier?.name?.toUpperCase() !== 'PROFESSIONAL') {
     return (
       <div className="container mx-auto p-4 md:p-8 text-center">
         <Card className="max-w-md mx-auto">

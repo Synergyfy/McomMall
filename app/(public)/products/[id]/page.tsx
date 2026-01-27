@@ -3,6 +3,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { useGetProductById } from '@/service/store/products/hook';
+import { ProductAttribute, ProductVariation, ProductVariant } from '@/service/store/products/types';
 import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
@@ -34,18 +35,59 @@ export default function ProductPage() {
 
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
 
+  // 1. Determine which system to use: Matrix (Variations) or Simple (Variants)
+  const isMatrixSystem = product?.attributes && product?.variations && product.variations.length > 0;
+
+  // 2. Find the exact matching variation based on current selection
+  const currentVariation = useMemo(() => {
+    if (!isMatrixSystem || !product?.variations) return null;
+
+    return product.variations.find(v => {
+      // Check if every key in the combination matches the selection
+      return Object.entries(v.combination).every(([key, value]) => selectedVariants[key] === value);
+    });
+  }, [isMatrixSystem, product, selectedVariants]);
+
+  // 3. Helper to check if a specific option is valid given the *other* current selections
+  const isOptionAvailableInMatrix = (attributeName: string, optionValue: string) => {
+     if (!isMatrixSystem || !product?.variations) return true;
+
+     // Simple Approach: Just check if this option exists in any variation that matches the OTHER currently selected keys.
+     return product.variations.some(v => {
+        // Does this variation have the option we are checking?
+        if (v.combination[attributeName] !== optionValue) return false;
+
+        // Does it also match the OTHER currently selected attributes?
+        return Object.entries(selectedVariants).every(([key, value]) => {
+           if (key === attributeName) return true; // Skip the one we are changing
+           return v.combination[key] === value;
+        });
+     });
+  };
+
   // Initialize selected variants with defaults
   useEffect(() => {
-    if (product?.variants) {
-      const defaults: Record<string, string> = {};
-      product.variants.forEach((v) => {
-        if (v.options && v.options.length > 0) {
-          defaults[v.name] = v.options[0].name;
-        }
-      });
-      setSelectedVariants(defaults);
+    if (product) {
+       // Matrix System Defaults
+       if (isMatrixSystem && Object.keys(selectedVariants).length === 0) {
+         const defaults: Record<string, string> = {};
+         product.attributes?.forEach(attr => {
+           if (attr.options.length > 0) defaults[attr.name] = attr.options[0];
+         });
+         setSelectedVariants(defaults);
+       }
+       // Legacy System Defaults
+       else if (!isMatrixSystem && product.variants && Object.keys(selectedVariants).length === 0) {
+         const defaults: Record<string, string> = {};
+         product.variants.forEach((v) => {
+           if (v.options && v.options.length > 0) {
+             defaults[v.name] = v.options[0].name;
+           }
+         });
+         setSelectedVariants(defaults);
+       }
     }
-  }, [product]);
+  }, [product, isMatrixSystem]);
 
   const handleVariantChange = (variantName: string, optionName: string) => {
     setSelectedVariants((prev) => ({
@@ -54,9 +96,24 @@ export default function ProductPage() {
     }));
   };
 
-  const { basePrice, totalPrice, priceBreakdown } = useMemo(() => {
-    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [] };
+  const { basePrice, totalPrice, priceBreakdown, isOutOfStock } = useMemo(() => {
+    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false };
 
+    // MATRIX SYSTEM PRICE/STOCK
+    if (isMatrixSystem) {
+        if (currentVariation) {
+            return {
+                basePrice: currentVariation.price,
+                totalPrice: currentVariation.price,
+                priceBreakdown: [], // Matrix prices are all-inclusive
+                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
+            };
+        } else {
+             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false };
+        }
+    }
+
+    // LEGACY SYSTEM PRICE/STOCK
     const base = product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
     let total = base;
     const breakdown: { label: string; amount: number }[] = [];
@@ -77,8 +134,8 @@ export default function ProductPage() {
         }
       });
     }
-    return { basePrice: base, totalPrice: total, priceBreakdown: breakdown };
-  }, [product, selectedVariants]);
+    return { basePrice: base, totalPrice: total, priceBreakdown: breakdown, isOutOfStock: false };
+  }, [product, selectedVariants, isMatrixSystem, currentVariation]);
 
   const handleAddToCart = () => {
     if (!product || !id) return;
@@ -184,19 +241,55 @@ export default function ProductPage() {
                         <span className="text-3xl font-bold text-orange-600">
                             £{totalPrice.toFixed(2)}
                         </span>
-                        {product.salePrice && product.salePrice < product.price && (
+                        {product.salePrice && product.salePrice < product.price && !isMatrixSystem && (
                             <span className="text-lg text-gray-400 line-through">
                                 £{product.price.toFixed(2)}
                             </span>
                         )}
+                        {isOutOfStock && <span className="ml-2 text-red-500 font-bold text-lg">Out of Stock</span>}
                     </div>
                     <p className="text-sm text-gray-500 mt-1">
                         {product.price > 0 ? '/ item' : ''}
                     </p>
                   </div>
 
-                  {/* Variants */}
-                  {product.variants && product.variants.length > 0 && (
+                  {/* Matrix Variants */}
+                  {isMatrixSystem && product.attributes && product.attributes.length > 0 && (
+                     <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
+                       {product.attributes.map((attr) => (
+                          <div key={attr.name} className="space-y-3">
+                             <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">
+                                {attr.name}
+                             </Label>
+                             <Select
+                                value={selectedVariants[attr.name] || ''}
+                                onValueChange={(val) => handleVariantChange(attr.name, val)}
+                             >
+                                <SelectTrigger className="w-full">
+                                   <SelectValue placeholder={`Select ${attr.name}`} />
+                                </SelectTrigger>
+                                <SelectContent>
+                                   {attr.options.map((option) => {
+                                      const available = isOptionAvailableInMatrix(attr.name, option);
+                                      return (
+                                        <SelectItem
+                                            key={option}
+                                            value={option}
+                                            disabled={!available}
+                                        >
+                                            {option} {!available && '(Unavailable)'}
+                                        </SelectItem>
+                                      );
+                                   })}
+                                </SelectContent>
+                             </Select>
+                          </div>
+                       ))}
+                     </div>
+                  )}
+
+                  {/* Legacy Variants */}
+                  {!isMatrixSystem && product.variants && product.variants.length > 0 && (
                     <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
                       {product.variants.map((variant) => (
                         <div key={variant.name} className="space-y-3">
@@ -275,17 +368,19 @@ export default function ProductPage() {
                   <div className="flex flex-col gap-3">
                     <Button
                         size="lg"
-                        className="w-full py-6 text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-200"
+                        className="w-full py-6 text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-200 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleAddToCart}
+                        disabled={isOutOfStock}
                     >
                         <ShoppingCart className="mr-2 h-5 w-5" />
-                        Add to Cart
+                        {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
                     </Button>
                     <Button
                         size="lg"
                         variant="outline"
-                        className="w-full py-6 text-lg border-2 border-orange-100 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
+                        className="w-full py-6 text-lg border-2 border-orange-100 text-orange-700 hover:bg-orange-50 hover:text-orange-800 disabled:opacity-50 disabled:cursor-not-allowed"
                         onClick={handleBuyNow}
+                        disabled={isOutOfStock}
                     >
                         <CreditCard className="mr-2 h-5 w-5" />
                         Buy Now

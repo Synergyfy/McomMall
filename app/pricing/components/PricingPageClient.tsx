@@ -5,9 +5,10 @@ import { useSearchParams } from 'next/navigation';
 import PricingCheckoutClient from './PricingCheckoutClient';
 import { Tier } from '@/service/tiers/types';
 import TiersList from '@/app/dashboard/my-subscription/components/TiersList';
+import { PlanType } from '@/service/payments/types';
 
 export default function PricingPageClient() {
-  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string } | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ name: string; price: string; tierId: string; planType: PlanType } | null>(null);
   const [isTrial, setIsTrial] = useState(false);
 
   const searchParams = useSearchParams();
@@ -15,10 +16,21 @@ export default function PricingPageClient() {
 
   const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
       let price = 0;
+      let planType: PlanType = PlanType.MONTHLY;
+
       switch(cycle) {
-        case 'monthly': price = tier.monthly_price; break;
-        case 'quarterly': price = tier.quaterly_price; break;
-        case 'annual': price = tier.annual_price; break;
+        case 'monthly':
+          price = tier.monthly_price;
+          planType = PlanType.MONTHLY;
+          break;
+        case 'quarterly':
+          price = tier.quaterly_price;
+          planType = PlanType.QUARTERLY;
+          break;
+        case 'annual':
+          price = tier.annual_price;
+          planType = PlanType.ANNUAL;
+          break;
       }
 
       const priceString = new Intl.NumberFormat('en-GB', {
@@ -27,7 +39,9 @@ export default function PricingPageClient() {
 
       setSelectedTier({
           name: `${tier.name} (${cycle})`,
-          price: priceString
+          price: priceString,
+          tierId: tier.id,
+          planType
       });
       setIsTrial(false);
   };
@@ -40,6 +54,8 @@ export default function PricingPageClient() {
         isTrial={isTrial}
         isPayg={false}
         listingId={listingId}
+        tierId={selectedTier.tierId}
+        planType={selectedTier.planType}
       />
     );
   }

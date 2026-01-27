@@ -317,7 +317,7 @@ export interface ServiceProviderProfile {
   certifications: Certification[];
 }
 
-import { ProductVariant } from '../store/products/types';
+import { ProductVariant, ProductAttribute, ProductVariation } from '../store/products/types';
 
 export interface Product {
   id: string;
@@ -354,6 +354,8 @@ export interface Product {
   createdAt?: string;
   updatedAt?: string;
   variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
+  variations?: ProductVariation[];
   points?: number;
   bonusThreshold?: number;
   bonusAmount?: number;
