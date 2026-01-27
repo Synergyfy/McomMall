@@ -493,7 +493,7 @@ export default function EditProductPage() {
                     <CardTitle className="text-2xl">Variants</CardTitle>
                   </CardHeader>
                   <CardContent>
-                    <VariantManager name="variants" />
+                      <VariantManager attributesName="attributes" variationsName="variations" />
                   </CardContent>
                 </Card>
 
