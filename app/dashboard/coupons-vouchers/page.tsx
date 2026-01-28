@@ -498,31 +498,50 @@ export default function CouponsVouchersPage() {
                             <div className="lg:col-span-2 space-y-6">
                                 <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
                                     <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
-                                    <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader className="bg-gray-50/30">
-                                                <TableRow>
-                                                    <TableHead className="w-[200px]">Name</TableHead>
-                                                    <TableHead>Voucher ID</TableHead>
-                                                    <TableHead>{isBusiness ? 'Split' : 'Balance'}</TableHead>
-                                                    <TableHead className="hidden md:table-cell">Scope</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
-                                                    {!isBusiness && <TableHead className="text-right">Actions</TableHead>}
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {isBusiness ? (
-                                                    voucherTypes.map((vt) => (
-                                                        <TableRow key={vt.id}>
-                                                            <TableCell className="font-bold py-4">{vt.name}</TableCell>
-                                                            <TableCell className="text-xs text-gray-400 font-mono">{vt.id}</TableCell>
-                                                            <TableCell className="text-blue-700">{vt.split}</TableCell>
-                                                            <TableCell className="hidden md:table-cell text-gray-500">{vt.usageScope}</TableCell>
-                                                            <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{vt.status}</Badge></TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    myVouchers.map((cv) => (
+                                    <CardContent className={isBusiness ? "p-4" : "p-0"}>
+                                        {isBusiness ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {voucherTypes.map((vt) => (
+                                                    <Card key={vt.id} className="border border-gray-100 shadow-sm hover:shadow-md transition-all group bg-white">
+                                                        <CardContent className="p-5 space-y-4">
+                                                            <div className="flex justify-between items-start">
+                                                                <div>
+                                                                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{vt.name}</h3>
+                                                                    <p className="text-xs text-gray-400 font-mono mt-1 bg-gray-100 px-2 py-0.5 rounded-md inline-block">{vt.id}</p>
+                                                                </div>
+                                                                <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} border-none`}>
+                                                                    {vt.status}
+                                                                </Badge>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                                                                    <p className="text-[10px] text-orange-400 uppercase font-bold tracking-wider mb-1">Split Ratio</p>
+                                                                    <p className="font-bold text-orange-700 text-lg">{vt.split}</p>
+                                                                </div>
+                                                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-right">
+                                                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Scope</p>
+                                                                    <p className="font-bold text-gray-700 text-sm truncate">{vt.usageScope}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <Table>
+                                                <TableHeader className="bg-gray-50/30">
+                                                    <TableRow>
+                                                        <TableHead className="w-[200px]">Name</TableHead>
+                                                        <TableHead>Voucher ID</TableHead>
+                                                        <TableHead>Balance</TableHead>
+                                                        <TableHead className="hidden md:table-cell">Scope</TableHead>
+                                                        <TableHead className="text-right">Status</TableHead>
+                                                        <TableHead className="text-right">Actions</TableHead>
+                                                    </TableRow>
+                                                </TableHeader>
+                                                <TableBody>
+                                                    {myVouchers.map((cv) => (
                                                         <TableRow key={cv.id}>
                                                             <TableCell className="font-bold py-4">{cv.name}</TableCell>
                                                             <TableCell>
@@ -548,10 +567,10 @@ export default function CouponsVouchersPage() {
                                                                 </div>
                                                             </TableCell>
                                                         </TableRow>
-                                                    ))
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </div>
