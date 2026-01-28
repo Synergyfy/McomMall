@@ -408,7 +408,7 @@ export default function CouponsVouchersPage() {
                     <div>
                         <h1 className="text-3xl font-bold text-gray-900 flex items-center gap-2">
                             <Gift className="w-8 h-8 text-orange-600" />
-                            Reward Hub
+                            Coupon-voucher
                         </h1>
                         <p className="text-gray-500 mt-1">Manage your spending power and reward network...</p>
                     </div>
@@ -502,60 +502,90 @@ export default function CouponsVouchersPage() {
                             <div className="lg:col-span-2 space-y-6">
                                 <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
                                     <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
-                                    <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader className="bg-gray-50/30">
-                                                <TableRow>
-                                                    <TableHead className="w-[200px]">Name</TableHead>
-                                                    <TableHead>Voucher ID</TableHead>
-                                                    <TableHead>{isBusiness ? 'Split' : 'Balance'}</TableHead>
-                                                    <TableHead className="hidden md:table-cell">Scope</TableHead>
-                                                    <TableHead className="text-right">Status</TableHead>
-                                                    {!isBusiness && <TableHead className="text-right">Actions</TableHead>}
-                                                </TableRow>
-                                            </TableHeader>
-                                            <TableBody>
-                                                {isBusiness ? (
-                                                    voucherTypes.map((vt) => (
-                                                        <TableRow key={vt.id}>
-                                                            <TableCell className="font-bold py-4">{vt.name}</TableCell>
-                                                            <TableCell className="text-xs text-gray-400 font-mono">{vt.id}</TableCell>
-                                                            <TableCell className="text-blue-700">{vt.split}</TableCell>
-                                                            <TableCell className="hidden md:table-cell text-gray-500">{vt.usageScope}</TableCell>
-                                                            <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{vt.status}</Badge></TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                ) : (
-                                                    myVouchers.map((cv) => (
-                                                        <TableRow key={cv.id}>
-                                                            <TableCell className="font-bold py-4">{cv.name}</TableCell>
-                                                            <TableCell>
-                                                                <div className="flex items-center gap-2">
-                                                                    <span className="text-xs text-gray-400 font-mono">{cv.id}</span>
-                                                                    <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-6 w-6 text-gray-400 hover:text-orange-600"
-                                                                        onClick={() => handleCopy(cv.id)}
-                                                                    >
-                                                                        {copiedId === cv.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                                                    </Button>
+                                    <CardContent className={isBusiness ? "p-4" : "p-4"}>
+                                        {isBusiness ? (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {voucherTypes.map((vt) => (
+                                                    <Card key={vt.id} className="border border-gray-100 shadow-sm hover:shadow-md transition-all group bg-white">
+                                                        <CardContent className="p-5 space-y-4">
+                                                            <div className="flex justify-between items-start">
+                                                                <div>
+                                                                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{vt.name}</h3>
+                                                                    <p className="text-xs text-gray-400 font-mono mt-1 bg-gray-100 px-2 py-0.5 rounded-md inline-block">{vt.id}</p>
                                                                 </div>
-                                                            </TableCell>
-                                                            <TableCell><span className="text-lg font-bold text-green-600">£{cv.balance}</span></TableCell>
-                                                            <TableCell className="hidden md:table-cell text-gray-500">{cv.scope}</TableCell>
-                                                            <TableCell className="text-right"><Badge className="bg-green-100 text-green-700 border-none">{cv.status}</Badge></TableCell>
-                                                            <TableCell className="text-right">
-                                                                <div className="flex justify-end gap-2">
-                                                                    <Button size="sm" variant="outline" className="rounded-xl gap-2" onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}><QrCode className="w-4 h-4" />Pay</Button>
-                                                                    <Button size="sm" variant="outline" className="rounded-xl" onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}>Details</Button>
+                                                                <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} border-none`}>
+                                                                    {vt.status}
+                                                                </Badge>
+                                                            </div>
+                                                            
+                                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
+                                                                    <p className="text-[10px] text-orange-400 uppercase font-bold tracking-wider mb-1">Split Ratio</p>
+                                                                    <p className="font-bold text-orange-700 text-lg">{vt.split}</p>
                                                                 </div>
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    ))
-                                                )}
-                                            </TableBody>
-                                        </Table>
+                                                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-right">
+                                                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Scope</p>
+                                                                    <p className="font-bold text-gray-700 text-sm truncate">{vt.usageScope}</p>
+                                                                </div>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        ) : (
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                {myVouchers.map((cv) => (
+                                                    <Card key={cv.id} className="border border-gray-100 shadow-sm hover:shadow-md transition-all group bg-white">
+                                                        <CardContent className="p-5 space-y-4">
+                                                            <div className="flex justify-between items-start">
+                                                                <div>
+                                                                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{cv.name}</h3>
+                                                                    <div className="flex items-center gap-2 mt-1">
+                                                                        <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md">{cv.id}</span>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-5 w-5 text-gray-400 hover:text-orange-600"
+                                                                            onClick={() => handleCopy(cv.id)}
+                                                                        >
+                                                                            {copiedId === cv.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                                                        </Button>
+                                                                    </div>
+                                                                </div>
+                                                                <Badge className="bg-green-100 text-green-700 border-none">{cv.status}</Badge>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-3 pt-2">
+                                                                <div className="bg-green-50 p-3 rounded-xl border border-green-100">
+                                                                    <p className="text-[10px] text-green-600 uppercase font-bold tracking-wider mb-1">Balance</p>
+                                                                    <p className="font-bold text-green-700 text-xl">£{cv.balance}</p>
+                                                                </div>
+                                                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-right">
+                                                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Scope</p>
+                                                                    <p className="font-bold text-gray-700 text-sm truncate">{cv.scope}</p>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <div className="flex gap-2 pt-2">
+                                                                <Button 
+                                                                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white rounded-xl gap-2" 
+                                                                    onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
+                                                                >
+                                                                    <QrCode className="w-4 h-4" /> Pay
+                                                                </Button>
+                                                                <Button 
+                                                                    variant="outline" 
+                                                                    className="flex-1 rounded-xl hover:bg-gray-50" 
+                                                                    onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
+                                                                >
+                                                                    Details
+                                                                </Button>
+                                                            </div>
+                                                        </CardContent>
+                                                    </Card>
+                                                ))}
+                                            </div>
+                                        )}
                                     </CardContent>
                                 </Card>
                             </div>

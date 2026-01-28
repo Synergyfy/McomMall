@@ -57,7 +57,7 @@ const WishlistPage = () => {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {!wishlist || wishlist.items.length === 0 ? (
+          {!wishlist || !wishlist.items || wishlist.items.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-12 text-center">
               <Heart className="w-16 h-16 text-gray-300 mb-4" />
               <h3 className="text-xl font-semibold">Your wishlist is empty</h3>
@@ -101,7 +101,7 @@ const WishlistPage = () => {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {wishlist.items.map(item => (
+                  {wishlist.items?.map(item => (
                     <TableRow key={item.id}>
                       <TableCell>
                         <div className="flex items-center gap-4">
