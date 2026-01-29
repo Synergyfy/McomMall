@@ -64,10 +64,12 @@ import {
     Copy,
     Check,
     Globe,
+    Download, // Added Download icon
 } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { toast } from 'sonner';
+import { toPng } from 'html-to-image'; // Added html-to-image import
 import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
@@ -190,6 +192,23 @@ export default function CouponsVouchersPage() {
         setCopiedId(text);
         toast.success('Copied to clipboard');
         setTimeout(() => setCopiedId(null), 2000);
+    };
+
+    const handleDownloadCard = async (voucherId: string, voucherName: string) => {
+        const element = document.getElementById(`voucher-card-${voucherId}`);
+        if (!element) return;
+
+        try {
+            const dataUrl = await toPng(element, { cacheBust: true, pixelRatio: 3 });
+            const link = document.createElement('a');
+            link.download = `${voucherName.replace(/\s+/g, '-').toLowerCase()}-${voucherId.slice(0, 6)}.png`;
+            link.href = dataUrl;
+            link.click();
+            toast.success('Voucher card downloaded');
+        } catch (err) {
+            console.error(err);
+            toast.error('Failed to download card');
+        }
     };
 
     useEffect(() => {
@@ -500,85 +519,193 @@ export default function CouponsVouchersPage() {
                                     <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
                                     <CardContent className={isBusiness ? "p-4" : "p-4"}>
                                         {isBusiness ? (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                                                 {voucherTypes.map((vt) => (
-                                                    <Card key={vt.id} className="border border-gray-100 shadow-sm hover:shadow-md transition-all group bg-white">
-                                                        <CardContent className="p-5 space-y-4">
-                                                            <div className="flex justify-between items-start">
+                                                    <div key={vt.id} className="flex flex-col gap-4 group">
+                                                        {/* Realistic Card - Business Definition */}
+                                                        <div
+                                                            id={`voucher-def-card-${vt.id}`}
+                                                            className="relative w-full aspect-[1.586/1] min-h-[220px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex flex-col justify-between border border-white/10"
+                                                        >
+                                                            {/* Background decoration */}
+                                                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
+                                                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
+
+                                                            {/* Header */}
+                                                            <div className="flex justify-between items-center relative z-10">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="bg-orange-600/20 p-1 rounded-md">
+                                                                        <Zap className="w-3.5 h-3.5 text-orange-400" />
+                                                                    </div>
+                                                                    <span className="font-bold text-[10px] tracking-widest uppercase opacity-80">Voucher Definition</span>
+                                                                </div>
+                                                                <div className="flex items-center gap-1.5">
+                                                                    <Badge className={`${vt.status === 'Active' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'} border backdrop-blur-sm text-[9px] px-2 py-0.5 rounded-full`}>
+                                                                        {vt.status}
+                                                                    </Badge>
+                                                                </div>
+                                                            </div>
+
+                                                            {/* Chip & Contactless */}
+                                                            <div className="flex items-center gap-3 mt-2 relative z-10">
+                                                                <div className="w-11 h-8 rounded-md bg-gradient-to-br from-gray-200 via-gray-400 to-gray-500 shadow-md border border-gray-400/50 relative overflow-hidden opacity-80">
+                                                                     <div className="absolute top-1/2 left-0 w-full h-[0.5px] bg-gray-700/30"></div>
+                                                                     <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-gray-700/30"></div>
+                                                                     <div className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 border border-gray-700/30 rounded-sm"></div>
+                                                                </div>
+                                                                <ScanLine className="w-5 h-5 text-white/30 rotate-90" />
+                                                            </div>
+
+                                                            {/* Balance & Info Row */}
+                                                            <div className="relative z-10 mt-1 flex justify-between items-end">
                                                                 <div>
-                                                                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{vt.name}</h3>
-                                                                    <p className="text-xs text-gray-400 font-mono mt-1 bg-gray-100 px-2 py-0.5 rounded-md inline-block">{vt.id}</p>
+                                                                    <p className="text-[9px] text-orange-300 font-bold tracking-widest uppercase mb-0.5 opacity-80">Split Ratio</p>
+                                                                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white shadow-black drop-shadow-md">{vt.split}</h3>
                                                                 </div>
-                                                                <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'} border-none`}>
-                                                                    {vt.status}
-                                                                </Badge>
-                                                            </div>
-                                                            
-                                                            <div className="grid grid-cols-2 gap-3 pt-2">
-                                                                <div className="bg-orange-50 p-3 rounded-xl border border-orange-100">
-                                                                    <p className="text-[10px] text-orange-400 uppercase font-bold tracking-wider mb-1">Split Ratio</p>
-                                                                    <p className="font-bold text-orange-700 text-lg">{vt.split}</p>
-                                                                </div>
-                                                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-right">
-                                                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Scope</p>
-                                                                    <p className="font-bold text-gray-700 text-sm truncate">{vt.usageScope}</p>
+                                                                <div className="text-right pb-1">
+                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5 font-bold">Label</p>
+                                                                     <div className="text-xs font-bold bg-white/5 text-orange-400 px-2 py-1 rounded-lg border border-white/10 backdrop-blur-md truncate max-w-[80px]">
+                                                                        {vt.seasonalLabel}
+                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                        </CardContent>
-                                                    </Card>
+
+                                                            {/* Footer Info */}
+                                                            <div className="flex justify-between items-end relative z-10 mt-auto pt-3 border-t border-white/10">
+                                                                <div className="flex-1 min-w-0 mr-4">
+                                                                    <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Definition Name</p>
+                                                                    <p className="font-bold tracking-wide truncate text-sm uppercase">{vt.name}</p>
+                                                                     <p className="text-[9px] font-mono text-gray-500 mt-0.5 flex items-center gap-1 group/id">
+                                                                        {vt.id} 
+                                                                        <Copy 
+                                                                            className="w-3 h-3 cursor-pointer hover:text-orange-400 transition-colors" 
+                                                                            onClick={() => handleCopy(vt.id)} 
+                                                                        />
+                                                                     </p>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Usage Range</p>
+                                                                    <p className="text-[10px] font-bold bg-orange-600/10 text-white px-2 py-1 rounded-lg backdrop-blur-md inline-block border border-white/10 shadow-sm">
+                                                                        {vt.usageScope}
+                                                                    </p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Actions Below Card */}
+                                                        <div className="grid grid-cols-1 gap-3 mt-1">
+                                                            <Button 
+                                                                variant="outline" 
+                                                                className="h-11 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-sm w-full"
+                                                                onClick={() => { /* Open edit or details modal in future */ }}
+                                                            >
+                                                                Manage Definition
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 ))}
                                             </div>
                                         ) : (
-                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
                                                 {myVouchers.map((cv) => (
-                                                    <Card key={cv.id} className="border border-gray-100 shadow-sm hover:shadow-md transition-all group bg-white">
-                                                        <CardContent className="p-5 space-y-4">
-                                                            <div className="flex justify-between items-start">
-                                                                <div>
-                                                                    <h3 className="font-bold text-lg text-gray-900 group-hover:text-orange-600 transition-colors">{cv.name}</h3>
-                                                                    <div className="flex items-center gap-2 mt-1">
-                                                                        <span className="text-xs text-gray-400 font-mono bg-gray-100 px-2 py-0.5 rounded-md">{cv.id}</span>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-5 w-5 text-gray-400 hover:text-orange-600"
-                                                                            onClick={() => handleCopy(cv.id)}
-                                                                        >
-                                                                            {copiedId === cv.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                                                        </Button>
+                                                    <div key={cv.id} className="flex flex-col gap-4 group">
+                                                        {/* Realistic Card - Compact & Fitted */}
+                                                        <div
+                                                            id={`voucher-card-${cv.id}`}
+                                                            className="relative w-full aspect-[1.586/1] min-h-[220px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex flex-col justify-between border border-white/10"
+                                                        >
+                                                            {/* Background decoration */}
+                                                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
+                                                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
+
+                                                            {/* Header */}
+                                                            <div className="flex justify-between items-center relative z-10">
+                                                                <div className="flex items-center gap-2">
+                                                                    <div className="bg-orange-600/20 p-1 rounded-md">
+                                                                        <Gift className="w-3.5 h-3.5 text-orange-400" />
                                                                     </div>
+                                                                    <span className="font-bold text-[10px] tracking-widest uppercase opacity-80">McomMall</span>
                                                                 </div>
-                                                                <Badge className="bg-green-100 text-green-700 border-none">{cv.status}</Badge>
+                                                                <div className="flex items-center gap-1.5">
+                                                                     {/* Download Button */}
+                                                                     <Button
+                                                                        variant="ghost"
+                                                                        size="icon"
+                                                                        className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all"
+                                                                        onClick={() => handleDownloadCard(cv.id, cv.name)}
+                                                                        title="Download Card"
+                                                                    >
+                                                                        <Download className="w-3.5 h-3.5" />
+                                                                    </Button>
+                                                                    <Badge className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/30 backdrop-blur-sm text-[9px] px-2 py-0.5 rounded-full">
+                                                                        {cv.status}
+                                                                    </Badge>
+                                                                </div>
                                                             </div>
 
-                                                            <div className="grid grid-cols-2 gap-3 pt-2">
-                                                                <div className="bg-green-50 p-3 rounded-xl border border-green-100">
-                                                                    <p className="text-[10px] text-green-600 uppercase font-bold tracking-wider mb-1">Balance</p>
-                                                                    <p className="font-bold text-green-700 text-xl">£{cv.balance}</p>
+                                                            {/* Chip & Contactless */}
+                                                            <div className="flex items-center gap-3 mt-2 relative z-10">
+                                                                <div className="w-11 h-8 rounded-md bg-gradient-to-br from-yellow-100 via-yellow-400 to-yellow-600 shadow-md border border-yellow-500/50 relative overflow-hidden">
+                                                                     <div className="absolute top-1/2 left-0 w-full h-[0.5px] bg-yellow-900/30"></div>
+                                                                     <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-yellow-900/30"></div>
+                                                                     <div className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 border border-yellow-900/30 rounded-sm"></div>
                                                                 </div>
-                                                                <div className="bg-gray-50 p-3 rounded-xl border border-gray-100 text-right">
-                                                                    <p className="text-[10px] text-gray-400 uppercase font-bold tracking-wider mb-1">Scope</p>
-                                                                    <p className="font-bold text-gray-700 text-sm truncate">{cv.scope}</p>
+                                                                <ScanLine className="w-5 h-5 text-white/30 rotate-90" />
+                                                            </div>
+
+                                                            {/* Balance & Info Row */}
+                                                            <div className="relative z-10 mt-1 flex justify-between items-end">
+                                                                <div>
+                                                                    <p className="text-[9px] text-orange-300 font-bold tracking-widest uppercase mb-0.5 opacity-80">Current Balance</p>
+                                                                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white shadow-black drop-shadow-md">£{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}</h3>
+                                                                </div>
+                                                                <div className="text-right pb-1">
+                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5 font-bold">Split</p>
+                                                                     <div className="text-xs font-bold bg-white/5 text-orange-400 px-2 py-1 rounded-lg border border-white/10 backdrop-blur-md">
+                                                                        {cv.split}
+                                                                     </div>
                                                                 </div>
                                                             </div>
-                                                            
-                                                            <div className="flex gap-2 pt-2">
-                                                                <Button 
-                                                                    className="flex-1 bg-orange-600 hover:bg-orange-700 text-white rounded-xl gap-2" 
-                                                                    onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
-                                                                >
-                                                                    <QrCode className="w-4 h-4" /> Pay
-                                                                </Button>
-                                                                <Button 
-                                                                    variant="outline" 
-                                                                    className="flex-1 rounded-xl hover:bg-gray-50" 
-                                                                    onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
-                                                                >
-                                                                    Details
-                                                                </Button>
+
+                                                            {/* Footer Info */}
+                                                            <div className="flex justify-between items-end relative z-10 mt-auto pt-3 border-t border-white/10">
+                                                                <div className="flex-1 min-w-0 mr-4">
+                                                                    <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Voucher Name</p>
+                                                                    <p className="font-bold tracking-wide truncate text-sm uppercase">{cv.name}</p>
+                                                                     <p className="text-[9px] font-mono text-gray-500 mt-0.5 flex items-center gap-1 group/id">
+                                                                        {cv.id} 
+                                                                        <Copy 
+                                                                            className="w-3 h-3 cursor-pointer hover:text-orange-400 transition-colors" 
+                                                                            onClick={() => handleCopy(cv.id)} 
+                                                                        />
+                                                                     </p>
+                                                                </div>
+                                                                <div className="text-right shrink-0">
+                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Usage Range</p>
+                                                                    <p className="text-[10px] font-bold bg-orange-600/10 text-white px-2 py-1 rounded-lg backdrop-blur-md inline-block border border-white/10 shadow-sm">
+                                                                        {cv.scope}
+                                                                    </p>
+                                                                </div>
                                                             </div>
-                                                        </CardContent>
-                                                    </Card>
+                                                        </div>
+
+                                                        {/* Actions Below Card */}
+                                                        <div className="grid grid-cols-2 gap-3 mt-1">
+                                                            <Button 
+                                                                className="h-11 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md hover:shadow-orange-600/30 transition-all font-bold text-sm"
+                                                                onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
+                                                            >
+                                                                <QrCode className="w-4 h-4 mr-2" /> Pay
+                                                            </Button>
+                                                            <Button 
+                                                                variant="outline" 
+                                                                className="h-11 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-sm"
+                                                                onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
+                                                            >
+                                                                Details
+                                                            </Button>
+                                                        </div>
+                                                    </div>
                                                 ))}
                                             </div>
                                         )}
