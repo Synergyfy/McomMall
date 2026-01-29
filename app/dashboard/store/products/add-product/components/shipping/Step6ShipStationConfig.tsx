@@ -1,4 +1,17 @@
+"use client";
+
 import React from 'react';
+import { 
+  ChevronRight, 
+  Info, 
+  Plus, 
+  Box, 
+  ArrowLeft, 
+  ArrowRight, 
+  Pencil, 
+  Trash2, 
+  Package
+} from 'lucide-react';
 
 interface Step6Props {
     onBack: () => void;
@@ -7,20 +20,20 @@ interface Step6Props {
 
 export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
     return (
-        <div className="flex flex-col gap-6">
+        <div className="flex flex-col gap-6 animate-in fade-in duration-500">
             {/* Breadcrumbs */}
-            <div className="flex flex-wrap gap-2 px-4 py-2">
+            <div className="flex flex-wrap items-center gap-2 px-4 py-2">
                 <span className="text-[#9c7349] text-sm font-medium leading-normal">Products</span>
-                <span className="text-[#9c7349] text-sm font-medium leading-normal">/</span>
+                <ChevronRight size={14} className="text-[#9c7349]" />
                 <span className="text-[#9c7349] text-sm font-medium leading-normal">Add New Product</span>
-                <span className="text-[#9c7349] text-sm font-medium leading-normal">/</span>
+                <ChevronRight size={14} className="text-[#9c7349]" />
                 <span className="text-[#1c140d] dark:text-white text-sm font-medium leading-normal">Shipping Config</span>
             </div>
 
             {/* Progress Bar */}
             <div className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex gap-6 justify-between items-end">
-                    <p className="text-[#1c140d] dark:text-white text-base font-medium leading-normal">Step 6 of 7</p>
+                    <p className="text-[#1c140d] dark:text-white text-base font-bold leading-normal">Step 6 of 7</p>
                     <span className="text-[#9c7349] text-xs font-semibold uppercase tracking-wider">85% Completed</span>
                 </div>
                 <div className="rounded-full bg-[#e8dbce] dark:bg-[#3a2d20] h-2 w-full overflow-hidden">
@@ -49,11 +62,15 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
                             <div className="flex flex-col gap-1 pr-4">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[#1c140d] dark:text-white font-semibold text-base">Auto-push orders</span>
-                                    <span className="material-symbols-outlined text-[#9c7349] text-[18px] cursor-help" title="Automatically sends paid orders to ShipStation">info</span>
+                                    <div className="group relative">
+                                        <Info size={16} className="text-[#9c7349] cursor-help" />
+                                        <div className="absolute bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-black text-white text-xs rounded shadow-lg z-20">
+                                            Automatically sends paid orders to ShipStation
+                                        </div>
+                                    </div>
                                 </div>
                                 <p className="text-[#9c7349] text-sm">Automatically send orders to ShipStation when status is marked as 'Paid'.</p>
                             </div>
-                            {/* Toggle Switch ON */}
                             <button aria-checked="true" className="group relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[#f48c25] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#f48c25] focus:ring-offset-2" role="switch">
                                 <span className="sr-only">Use setting</span>
                                 <span aria-hidden="true" className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5"></span>
@@ -64,11 +81,15 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
                             <div className="flex flex-col gap-1 pr-4">
                                 <div className="flex items-center gap-2">
                                     <span className="text-[#1c140d] dark:text-white font-semibold text-base">Sync tracking numbers</span>
-                                    <span className="material-symbols-outlined text-[#9c7349] text-[18px] cursor-help" title="Updates local order status when label is created">info</span>
+                                    <div className="group relative">
+                                        <Info size={16} className="text-[#9c7349] cursor-help" />
+                                        <div className="absolute bottom-full mb-2 hidden group-hover:block w-48 p-2 bg-black text-white text-xs rounded shadow-lg z-20">
+                                            Updates local order status when label is created
+                                        </div>
+                                    </div>
                                 </div>
                                 <p className="text-[#9c7349] text-sm">Update local order status to 'Shipped' when ShipStation generates a label.</p>
                             </div>
-                            {/* Toggle Switch ON */}
                             <button aria-checked="true" className="group relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent bg-[#f48c25] transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-[#f48c25] focus:ring-offset-2" role="switch">
                                 <span className="sr-only">Use setting</span>
                                 <span aria-hidden="true" className="pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out translate-x-5"></span>
@@ -85,7 +106,7 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
                             <p className="text-[#9c7349] text-sm mt-1">Manage standard box sizes for faster checkout calculations.</p>
                         </div>
                         <button className="flex items-center justify-center gap-2 px-4 py-2.5 bg-[#f48c25] hover:bg-[#f48c25]/90 text-white rounded-lg font-bold text-sm transition-all shadow-sm active:scale-95">
-                            <span className="material-symbols-outlined text-[20px]">add</span>
+                            <Plus size={18} />
                             Add New Preset
                         </button>
                     </div>
@@ -101,72 +122,34 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
                                     </tr>
                                 </thead>
                                 <tbody className="divide-y divide-[#e8dbce] dark:divide-[#3a2d20] text-sm">
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2016]/20 transition-colors group">
-                                        <td className="py-4 px-6 font-medium text-[#1c140d] dark:text-white">
-                                            <div className="flex items-center gap-3">
-                                                <div className="size-8 rounded bg-[#f48c25]/10 flex items-center justify-center text-[#f48c25]">
-                                                    <span className="material-symbols-outlined text-[18px]">inventory_2</span>
+                                    {[
+                                        { name: 'Small Standard Box', dim: '10 x 8 x 4 in', weight: '2.5 lbs', icon: <Package size={18} /> },
+                                        { name: 'Medium Parcel', dim: '14 x 10 x 6 in', weight: '5.0 lbs', icon: <Box size={18} /> },
+                                        { name: 'Long Tube', dim: '36 x 4 x 4 in', weight: '3.2 lbs', icon: <Package size={18} /> }
+                                    ].map((preset, idx) => (
+                                        <tr key={idx} className="hover:bg-gray-50 dark:hover:bg-[#2c2016]/20 transition-colors group">
+                                            <td className="py-4 px-6 font-medium text-[#1c140d] dark:text-white">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="size-8 rounded bg-[#f48c25]/10 flex items-center justify-center text-[#f48c25]">
+                                                        {preset.icon}
+                                                    </div>
+                                                    {preset.name}
                                                 </div>
-                                                Small Standard Box
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">10 x 8 x 4 in</td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">2.5 lbs</td>
-                                        <td className="py-4 px-6 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-1.5 text-[#9c7349] hover:text-[#f48c25] hover:bg-[#f48c25]/10 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                </button>
-                                                <button className="p-1.5 text-[#9c7349] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2016]/20 transition-colors group">
-                                        <td className="py-4 px-6 font-medium text-[#1c140d] dark:text-white">
-                                            <div className="flex items-center gap-3">
-                                                <div className="size-8 rounded bg-[#f48c25]/10 flex items-center justify-center text-[#f48c25]">
-                                                    <span className="material-symbols-outlined text-[18px]">inventory_2</span>
+                                            </td>
+                                            <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">{preset.dim}</td>
+                                            <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">{preset.weight}</td>
+                                            <td className="py-4 px-6 text-right">
+                                                <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                    <button className="p-1.5 text-[#9c7349] hover:text-[#f48c25] hover:bg-[#f48c25]/10 rounded transition-colors">
+                                                        <Pencil size={16} />
+                                                    </button>
+                                                    <button className="p-1.5 text-[#9c7349] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
+                                                        <Trash2 size={16} />
+                                                    </button>
                                                 </div>
-                                                Medium Parcel
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">14 x 10 x 6 in</td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">5.0 lbs</td>
-                                        <td className="py-4 px-6 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-1.5 text-[#9c7349] hover:text-[#f48c25] hover:bg-[#f48c25]/10 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                </button>
-                                                <button className="p-1.5 text-[#9c7349] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                    <tr className="hover:bg-gray-50 dark:hover:bg-[#2c2016]/20 transition-colors group">
-                                        <td className="py-4 px-6 font-medium text-[#1c140d] dark:text-white">
-                                            <div className="flex items-center gap-3">
-                                                <div className="size-8 rounded bg-[#f48c25]/10 flex items-center justify-center text-[#f48c25]">
-                                                    <span className="material-symbols-outlined text-[18px]">deployed_code</span>
-                                                </div>
-                                                Long Tube
-                                            </div>
-                                        </td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">36 x 4 x 4 in</td>
-                                        <td className="py-4 px-6 text-[#1c140d] dark:text-gray-300 font-mono">3.2 lbs</td>
-                                        <td className="py-4 px-6 text-right">
-                                            <div className="flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                <button className="p-1.5 text-[#9c7349] hover:text-[#f48c25] hover:bg-[#f48c25]/10 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">edit</span>
-                                                </button>
-                                                <button className="p-1.5 text-[#9c7349] hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded transition-colors">
-                                                    <span className="material-symbols-outlined text-[18px]">delete</span>
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
+                                            </td>
+                                        </tr>
+                                    ))}
                                 </tbody>
                             </table>
                         </div>
@@ -179,12 +162,12 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
                 {/* Footer Actions */}
                 <div className="mt-8 mb-12 flex justify-between border-t border-[#f4ede7] dark:border-[#3a2d20] pt-6 px-4">
                     <button onClick={onBack} className="flex items-center gap-2 rounded-lg px-6 py-3 text-sm font-bold text-[#1c140d] dark:text-white hover:bg-gray-100 dark:hover:bg-[#2c2016] transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                        <ArrowLeft size={18} />
                         Previous Step
                     </button>
                     <button onClick={onNext} className="flex items-center gap-2 rounded-lg bg-[#f48c25] px-8 py-3 text-sm font-bold text-white shadow-lg shadow-[#f48c25]/30 hover:bg-[#f48c25]/90 transition-all active:scale-95">
                         Save & Continue
-                        <span className="material-symbols-outlined text-[20px]">arrow_forward</span>
+                        <ArrowRight size={18} />
                     </button>
                 </div>
             </div>

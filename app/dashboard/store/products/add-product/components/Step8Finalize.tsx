@@ -1,4 +1,15 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
+import { 
+    Plus, 
+    X, 
+    Trash2, 
+    ImagePlus, 
+    Settings2, 
+    CheckCircle2, 
+    UploadCloud,
+    ArrowLeft
+} from 'lucide-react';
+import InfoIcon from '@/components/ui/lib/Tooltip';
 
 interface Step8Props {
     formData: any;
@@ -8,258 +19,369 @@ interface Step8Props {
     onSaveDraft: () => void;
 }
 
+interface AttributeValue {
+    name: string;
+    image?: string | null;
+}
+
+interface Attribute {
+    id: string;
+    name: string;
+    values: AttributeValue[];
+}
+
 export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft }: Step8Props) {
     const [showSuccess, setShowSuccess] = useState(false);
+    
+    const [attributes, setAttributes] = useState<Attribute[]>(formData.attributes || [
+        { id: '1', name: 'Color', values: [{ name: 'Red', image: null }, { name: 'Black', image: null }] },
+        { id: '2', name: 'Size', values: [{ name: 'SM', image: null }, { name: 'LG', image: null }] }
+    ]);
+
+    const [variations, setVariations] = useState<any[]>([]);
+
+    useEffect(() => {
+        const generateVariations = () => {
+            if (attributes.length === 0) return [];
+            
+            const validAttributes = attributes.filter(attr => attr.values.length > 0);
+            if (validAttributes.length === 0) return [];
+
+            let combos = validAttributes[0].values.map(v => ({
+                label: v.name,
+                image: v.image,
+                parts: [v.name]
+            }));
+
+            for (let i = 1; i < validAttributes.length; i++) {
+                const nextAttr = validAttributes[i];
+                const newCombos: any[] = [];
+                combos.forEach(combo => {
+                    nextAttr.values.forEach(val => {
+                        newCombos.push({
+                            label: `${combo.label} / ${val.name}`,
+                            image: combo.image || val.image,
+                            parts: [...combo.parts, val.name]
+                        });
+                    });
+                });
+                combos = newCombos;
+            }
+
+            return combos.map((c, index) => ({
+                id: index,
+                label: c.label,
+                sku: `PROD-${c.parts.join('-').toUpperCase()}`,
+                price: "0.00",
+                stock: "0",
+                image: c.image
+            }));
+        };
+
+        const newVariations = generateVariations();
+        setVariations(newVariations);
+        updateFormData({ ...formData, attributes, variations: newVariations });
+    }, [attributes]);
+
+    const handleAddAttribute = () => {
+        const newAttr = { id: Date.now().toString(), name: '', values: [] };
+        setAttributes([...attributes, newAttr]);
+    };
 
     const handlePublish = () => {
-        // In a real app, you would submit data first
         setShowSuccess(true);
         setTimeout(() => {
             onPublish();
         }, 2000);
     };
 
-    const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) => {
-        updateFormData({ [e.target.name || e.target.id]: e.target.value });
-    }
-
     return (
-        <div className="relative">
+        <div className="relative font-display">
             <div className="flex flex-col gap-8">
-                {/* Header & Stepper */}
-                <div className="flex flex-col gap-6">
-                    <div className="flex flex-col gap-6 md:flex-row md:items-end md:justify-between">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-black tracking-tight text-[#1c140d] dark:text-[#f0e6dd] mb-2">
-                                Finalize Product Settings
-                            </h1>
-                            <p className="text-[#9c7349] dark:text-[#bca080] text-base">
-                                Review details, manage variants, and set visibility.
-                            </p>
-                        </div>
-                        <div className="flex flex-col gap-2 w-full md:w-64">
-                            <div className="flex justify-between text-sm font-medium">
-                                <span className="text-[#f48c25]">Final Step</span>
-                                <span className="text-[#9c7349] dark:text-[#bca080]">100%</span>
-                            </div>
-                            <div className="h-2 w-full rounded-full bg-[#e8dbce] dark:bg-[#4a3b2f] overflow-hidden">
-                                <div className="h-full bg-[#f48c25] rounded-full" style={{ width: '100%' }}></div>
-                            </div>
-                        </div>
+                {/* Progress Header */}
+                <div className="w-full">
+                    <div className="flex items-center justify-between mb-4">
+                        <h2 className="text-sm font-bold text-[#9c7349] uppercase tracking-wider">Step 8 of 8</h2>
+                        <span className="text-sm font-medium text-[#1c140d] dark:text-white">Finalize & Variants</span>
+                    </div>
+                    <div className="w-full h-2 bg-gray-200 dark:bg-[#3d2e20] rounded-full overflow-hidden">
+                        <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500 ease-out" style={{ width: '100%' }}></div>
                     </div>
                 </div>
 
-                {/* Main Content Grid */}
+                <div className="flex flex-col gap-2">
+                    <h1 className="text-[#1c140d] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Product Variants</h1>
+                    <p className="text-[#9c7349] text-base font-normal leading-normal">Manage attributes, combinations, and specific pricing rules for this product.</p>
+                </div>
+
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-                    {/* Left Column: Variants & Details (8 Cols) */}
+                    {/* Left Column */}
                     <div className="lg:col-span-8 flex flex-col gap-8">
-                        {/* Variants Section */}
-                        <div className="rounded-xl bg-white dark:bg-[#2a221b] border border-[#e8dbce] dark:border-[#4a3b2f] p-6 shadow-sm">
-                            <div className="flex items-center justify-between mb-6">
-                                <h2 className="text-xl font-bold text-[#1c140d] dark:text-[#f0e6dd] flex items-center gap-2">
-                                    <span className="material-symbols-outlined text-[#f48c25]">style</span>
-                                    Product Variants & Attributes
-                                </h2>
-                                <button className="text-sm font-bold text-[#f48c25] hover:text-orange-600 transition-colors">
-                                    + Add Custom Attribute
+                        {/* Attributes Section */}
+                        <div className="bg-white dark:bg-[#1a120b] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-[#3d2e20] p-6 md:p-8">
+                            <div className="flex justify-between items-center mb-6">
+                                <div>
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Attributes</h3>
+                                    <p className="text-sm text-[#9c7349]">Define the options available for this product.</p>
+                                </div>
+                                <button 
+                                    onClick={handleAddAttribute}
+                                    className="text-[#f48c25] hover:text-orange-600 font-bold text-sm flex items-center gap-1 transition-colors"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Add Attribute
                                 </button>
                             </div>
-                            {/* Attributes Input */}
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-bold text-[#1c140d] dark:text-[#f0e6dd]">Attribute Name</label>
-                                    <input className="w-full rounded-lg bg-[#f8f7f5] dark:bg-[#221910] border border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-3 text-[#1c140d] dark:text-[#f0e6dd] focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] outline-none transition-colors" placeholder="e.g. Color" type="text" defaultValue="Color" />
-                                </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-bold text-[#1c140d] dark:text-[#f0e6dd]">Attribute Values</label>
-                                    <input className="w-full rounded-lg bg-[#f8f7f5] dark:bg-[#221910] border border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-3 text-[#1c140d] dark:text-[#f0e6dd] focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] outline-none transition-colors" placeholder="e.g. Red, Blue, Green" type="text" defaultValue="Red, Blue, Green" />
-                                    <p className="text-xs text-[#9c7349] dark:text-[#bca080]">Separate values with commas.</p>
-                                </div>
+
+                            <div className="flex flex-col gap-6">
+                                {attributes.map((attr) => (
+                                    <AttributeRow 
+                                        key={attr.id} 
+                                        attr={attr} 
+                                        setAttributes={setAttributes} 
+                                        attributes={attributes}
+                                    />
+                                ))}
                             </div>
-                            {/* Variants Table */}
-                            <div className="overflow-hidden rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f]">
-                                <div className="overflow-x-auto">
-                                    <table className="w-full min-w-[600px] text-left">
-                                        <thead className="bg-[#f8f7f5] dark:bg-[#221910] border-b border-[#e8dbce] dark:border-[#4a3b2f]">
-                                            <tr>
-                                                <th className="px-4 py-3 text-xs uppercase font-bold text-[#9c7349] dark:text-[#bca080]">Variant</th>
-                                                <th className="px-4 py-3 text-xs uppercase font-bold text-[#9c7349] dark:text-[#bca080]">SKU</th>
-                                                <th className="px-4 py-3 text-xs uppercase font-bold text-[#9c7349] dark:text-[#bca080]">Price</th>
-                                                <th className="px-4 py-3 text-xs uppercase font-bold text-[#9c7349] dark:text-[#bca080]">Stock</th>
-                                                <th className="px-4 py-3 text-xs uppercase font-bold text-[#9c7349] dark:text-[#bca080] text-right">Actions</th>
-                                            </tr>
-                                        </thead>
-                                        <tbody className="divide-y divide-[#e8dbce] dark:divide-[#4a3b2f]">
-                                            {/* Rows would be mapped here */}
-                                            {/* Row 1 */}
-                                            <tr className="group hover:bg-[#f8f7f5] dark:hover:bg-[#221910] transition-colors">
-                                                <td className="px-4 py-4 font-medium text-[#1c140d] dark:text-[#f0e6dd] flex items-center gap-2">
-                                                    <div className="h-3 w-3 rounded-full bg-red-500 border border-[#e8dbce] dark:border-[#4a3b2f] shadow-sm"></div>
-                                                    Color: Red
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <input className="w-full bg-transparent border-b border-transparent focus:border-[#f48c25] outline-none text-[#9c7349] dark:text-[#bca080] text-sm py-1" type="text" defaultValue="SKU-RD-001" />
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <div className="relative">
-                                                        <span className="absolute left-0 top-1 text-[#9c7349] dark:text-[#bca080] text-sm">£</span>
-                                                        <input className="w-24 pl-4 bg-transparent border-b border-transparent focus:border-[#f48c25] outline-none text-[#1c140d] dark:text-[#f0e6dd] text-sm py-1 font-medium" type="number" defaultValue="25.00" />
-                                                    </div>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <input className="w-16 bg-transparent border-b border-transparent focus:border-[#f48c25] outline-none text-[#9c7349] dark:text-[#bca080] text-sm py-1" type="number" defaultValue="45" />
-                                                </td>
-                                                <td className="px-4 py-4 text-right">
-                                                    <button className="text-[#9c7349] dark:text-[#bca080] hover:text-[#f48c25] p-1 rounded-md transition-colors">
-                                                        <span className="material-symbols-outlined text-lg">edit</span>
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        </tbody>
-                                    </table>
+                        </div>
+
+                        {/* Variations Table */}
+                        <div className="bg-white dark:bg-[#1a120b] rounded-xl shadow-sm border border-[#e5e7eb] dark:border-[#3d2e20] overflow-hidden">
+                            <div className="px-6 py-5 border-b border-[#e5e7eb] dark:border-[#3d2e20] flex flex-wrap justify-between items-center gap-4">
+                                <div>
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Variations</h3>
+                                    <p className="text-sm text-[#9c7349]">Adjust pricing surcharges and inventory per variant.</p>
                                 </div>
+                                <button className="text-xs font-bold text-[#f48c25] border border-[#f48c25]/20 bg-[#f48c25]/5 px-3 py-2 rounded-lg hover:bg-[#f48c25]/10 transition-colors">
+                                    Bulk Edit
+                                </button>
+                            </div>
+                            <div className="overflow-x-auto">
+                                <table className="w-full text-left border-collapse min-w-[600px]">
+                                    <thead>
+                                        <tr className="bg-[#f8f7f5] dark:bg-[#2a1f16] text-[#9c7349] text-xs uppercase tracking-wider">
+                                            <th className="px-6 py-3 font-semibold w-16">Image</th>
+                                            <th className="px-6 py-3 font-semibold">Variant</th>
+                                            <th className="px-6 py-3 font-semibold w-40">Price Surcharge</th>
+                                            <th className="px-6 py-3 font-semibold">SKU</th>
+                                            <th className="px-6 py-3 font-semibold w-32">Stock Qty</th>
+                                            <th className="px-6 py-3 font-semibold w-12"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-[#e5e7eb] dark:divide-[#3d2e20]">
+                                        {variations.map((v) => (
+                                            <VariantTableRow 
+                                                key={v.id}
+                                                {...v}
+                                            />
+                                        ))}
+                                        {variations.length === 0 && (
+                                            <tr>
+                                                <td colSpan={6} className="px-6 py-10 text-center text-[#9c7349] italic">
+                                                    Add attributes and values to generate variations.
+                                                </td>
+                                            </tr>
+                                        )}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
 
                         {/* Other Options */}
-                        <div className="rounded-xl bg-white dark:bg-[#2a221b] border border-[#e8dbce] dark:border-[#4a3b2f] p-6 shadow-sm">
-                            <h2 className="text-xl font-bold text-[#1c140d] dark:text-[#f0e6dd] flex items-center gap-2 mb-6">
-                                <span className="material-symbols-outlined text-[#f48c25]">tune</span>
+                        <div className="rounded-xl bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] p-6 shadow-sm">
+                            <h2 className="text-xl font-bold text-[#1c140d] dark:text-white flex items-center gap-2 mb-6">
+                                <Settings2 className="text-[#f48c25] w-6 h-6" />
                                 Other Options
                             </h2>
                             <div className="flex flex-col gap-6">
-                                {/* Enable Reviews Toggle */}
-                                <div className="flex items-center justify-between p-4 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#f8f7f5] dark:bg-[#221910]">
+                                <div className="flex items-center justify-between p-4 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-[#f8f7f5] dark:bg-[#2a1f16]">
                                     <div>
-                                        <p className="font-bold text-[#1c140d] dark:text-[#f0e6dd]">Enable Reviews</p>
-                                        <p className="text-sm text-[#9c7349] dark:text-[#bca080]">Allow customers to leave reviews for this product.</p>
+                                        <p className="font-bold text-[#1c140d] dark:text-white">Enable Reviews</p>
+                                        <p className="text-sm text-[#9c7349]">Allow customers to leave reviews for this product.</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" value="" className="sr-only peer" defaultChecked />
-                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-[#f48c25]"></div>
+                                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                                        <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#f48c25]"></div>
                                     </label>
                                 </div>
-                                {/* Purchase Note */}
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-sm font-bold text-[#1c140d] dark:text-[#f0e6dd]">Purchase Note</label>
-                                    <textarea className="w-full resize-none rounded-lg bg-[#f8f7f5] dark:bg-[#221910] border border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-3 text-[#1c140d] dark:text-[#f0e6dd] focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] outline-none transition-colors" placeholder="Thank you for your purchase! Here is a special note..." rows={4}></textarea>
-                                    <p className="text-xs text-[#9c7349] dark:text-[#bca080]">This note will be sent to the customer in their purchase confirmation email.</p>
-                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right Column: Publishing Sidebar (4 Cols) */}
+                    {/* Right Column */}
                     <div className="lg:col-span-4 flex flex-col gap-6">
-                        {/* Status Card */}
-                        <div className="rounded-xl bg-white dark:bg-[#2a221b] border border-[#e8dbce] dark:border-[#4a3b2f] p-6 shadow-sm">
-                            <h3 className="font-bold text-lg text-[#1c140d] dark:text-[#f0e6dd] mb-4">Product Status</h3>
+                        <div className="sticky top-6 rounded-xl bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] p-6 shadow-sm">
+                            <h3 className="font-bold text-lg text-[#1c140d] dark:text-white mb-4">Product Status</h3>
                             <div className="space-y-3">
-                                <label className="flex items-center p-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] cursor-pointer hover:bg-[#f8f7f5] dark:hover:bg-[#221910] transition-colors group has-[:checked]:border-[#f48c25] has-[:checked]:bg-[#f48c25]/5">
-                                    <input type="radio" name="status" className="w-5 h-5 text-[#f48c25] border-gray-300 focus:ring-[#f48c25] focus:ring-2 bg-transparent" defaultChecked />
-                                    <div className="ml-3">
-                                        <span className="block text-sm font-medium text-[#1c140d] dark:text-[#f0e6dd] group-has-[:checked]:text-[#f48c25]">Published</span>
-                                        <span className="block text-xs text-[#9c7349] dark:text-[#bca080]">Product will be visible immediately.</span>
-                                    </div>
-                                </label>
-                                <label className="flex items-center p-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] cursor-pointer hover:bg-[#f8f7f5] dark:hover:bg-[#221910] transition-colors group has-[:checked]:border-[#f48c25] has-[:checked]:bg-[#f48c25]/5">
-                                    <input type="radio" name="status" className="w-5 h-5 text-[#f48c25] border-gray-300 focus:ring-[#f48c25] focus:ring-2 bg-transparent" />
-                                    <div className="ml-3">
-                                        <span className="block text-sm font-medium text-[#1c140d] dark:text-[#f0e6dd] group-has-[:checked]:text-[#f48c25]">Draft</span>
-                                        <span className="block text-xs text-[#9c7349] dark:text-[#bca080]">Hidden from store, edit later.</span>
-                                    </div>
-                                </label>
+                                {['Published', 'Draft', 'Scheduled'].map((status) => (
+                                    <label key={status} className="flex items-center p-3 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] cursor-pointer hover:bg-[#f8f7f5] dark:hover:bg-[#2a1f16] transition-colors">
+                                        <input type="radio" name="status" className="w-4 h-4 text-[#f48c25] focus:ring-[#f48c25] border-gray-300" defaultChecked={status === 'Published'} />
+                                        <span className="ml-3 text-sm font-medium text-[#1c140d] dark:text-white">{status}</span>
+                                    </label>
+                                ))}
                             </div>
-                        </div>
-
-                        {/* Visibility Card */}
-                        <div className="rounded-xl bg-white dark:bg-[#2a221b] border border-[#e8dbce] dark:border-[#4a3b2f] p-6 shadow-sm">
-                            <h3 className="font-bold text-lg text-[#1c140d] dark:text-[#f0e6dd] mb-4">Visibility</h3>
-                            <div className="relative mb-4">
-                                <select className="w-full appearance-none rounded-lg bg-[#f8f7f5] dark:bg-[#221910] border border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-3 pr-10 text-[#1c140d] dark:text-[#f0e6dd] focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] outline-none transition-colors">
-                                    <option>Public</option>
-                                    <option>Private</option>
-                                    <option>Password Protected</option>
-                                </select>
-                                <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#9c7349] dark:text-[#bca080]">
-                                    <span className="material-symbols-outlined">expand_more</span>
-                                </div>
-                            </div>
-                            <p className="text-xs text-[#9c7349] dark:text-[#bca080] flex items-start gap-2">
-                                <span className="material-symbols-outlined text-sm">visibility</span>
-                                Visible to all site visitors and indexed by search engines.
-                            </p>
-                        </div>
-
-                        {/* Tags Card */}
-                        <div className="rounded-xl bg-white dark:bg-[#2a221b] border border-[#e8dbce] dark:border-[#4a3b2f] p-6 shadow-sm">
-                            <h3 className="font-bold text-lg text-[#1c140d] dark:text-[#f0e6dd] mb-4">Tags</h3>
-                            <div className="flex flex-col gap-3">
-                                <div className="flex flex-wrap gap-2">
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#f48c25]/10 px-3 py-1 text-xs font-bold text-[#f48c25]">
-                                        Fashion
-                                        <button className="hover:text-red-500"><span className="material-symbols-outlined text-[14px]">close</span></button>
-                                    </span>
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-[#f48c25]/10 px-3 py-1 text-xs font-bold text-[#f48c25]">
-                                        Summer
-                                        <button className="hover:text-red-500"><span className="material-symbols-outlined text-[14px]">close</span></button>
-                                    </span>
-                                </div>
-                                <input className="w-full rounded-lg bg-[#f8f7f5] dark:bg-[#221910] border border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-3 text-[#1c140d] dark:text-[#f0e6dd] focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] outline-none transition-colors text-sm" placeholder="Add a tag..." type="text" />
-                            </div>
-                        </div>
-
-                        {/* Helper Tip */}
-                        <div className="rounded-xl bg-blue-50 dark:bg-blue-900/20 border border-blue-100 dark:border-blue-800 p-4">
-                            <div className="flex gap-3">
-                                <span className="material-symbols-outlined text-blue-600 dark:text-blue-400">info</span>
-                                <div>
-                                    <p className="text-sm font-bold text-blue-900 dark:text-blue-100 mb-1">Before you publish</p>
-                                    <p className="text-xs text-blue-800 dark:text-blue-200 leading-relaxed">Ensure all images have alt text and stock levels are accurate to prevent overselling.</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Sticky Footer Action Bar */}
-                <div className="sticky bottom-0 left-0 right-0 z-50 bg-white dark:bg-[#2a221b] border-t border-[#e8dbce] dark:border-[#4a3b2f] px-4 py-4 md:px-10 lg:px-20 shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.05)] -mx-4 md:-mx-10 lg:-mx-20">
-                    <div className="mx-auto max-w-7xl flex items-center justify-between">
-                        <button onClick={onBack} className="px-6 py-3 rounded-lg text-[#1c140d] dark:text-[#f0e6dd] font-bold text-sm hover:bg-[#f8f7f5] dark:hover:bg-[#221910] transition-colors border border-transparent hover:border-[#e8dbce] dark:hover:border-[#4a3b2f] flex items-center gap-2">
-                            <span className="material-symbols-outlined">arrow_back</span>
-                            Back
-                        </button>
-                        <div className="flex gap-4">
-                            <button onClick={onSaveDraft} className="hidden md:block px-6 py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] text-[#1c140d] dark:text-[#f0e6dd] font-bold text-sm hover:bg-[#f8f7f5] dark:hover:bg-[#221910] transition-colors">
+                            <button onClick={handlePublish} className="w-full mt-6 bg-[#f48c25] hover:bg-orange-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
+                                {showSuccess ? <UploadCloud className="w-6 h-6 animate-bounce" /> : <CheckCircle2 className="w-5 h-5" />}
+                                {showSuccess ? 'Publishing...' : 'Publish Product'}
+                            </button>
+                            <button onClick={onSaveDraft} className="w-full mt-3 text-[#9c7349] font-bold py-2 text-sm hover:text-[#f48c25] transition-colors">
                                 Save as Draft
                             </button>
-                            <button onClick={handlePublish} className="px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold text-sm shadow-md hover:bg-orange-600 hover:shadow-lg transition-all flex items-center gap-2">
-                                <span className="material-symbols-outlined">rocket_launch</span>
-                                Publish Product
-                            </button>
                         </div>
                     </div>
+                </div>
+
+                <div className="flex items-center justify-between pt-6 border-t border-[#e5e7eb] dark:border-[#3d2e20] mt-auto">
+                    <button onClick={onBack} className="flex items-center gap-2 text-[#1c140d] dark:text-white font-bold text-sm px-6 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a1f16] transition-colors">
+                        <ArrowLeft className="w-4 h-4" />
+                        Back to Basic Info
+                    </button>
+                    <button onClick={handlePublish} className="bg-[#f48c25] hover:bg-orange-600 text-white font-bold text-sm px-10 py-3 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center gap-2 transition-transform active:scale-95">
+                        Complete Setup
+                        <CheckCircle2 className="w-5 h-5" />
+                    </button>
                 </div>
             </div>
+        </div>
+    );
+}
 
-            {/* Success Modal */}
-            {showSuccess && (
-                <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
-                    <div className="absolute inset-0 bg-[#1c140d]/60 backdrop-blur-[2px] transition-opacity"></div>
-                    <div className="relative w-full max-w-[480px] transform overflow-hidden rounded-2xl bg-white p-8 text-center shadow-2xl transition-all md:p-10 flex flex-col items-center">
-                        <div className="mb-6 flex size-20 items-center justify-center rounded-full bg-[#f48c25]/10 text-[#f48c25]">
-                            <span className="material-symbols-outlined text-[40px] font-bold">check</span>
-                        </div>
-                        <h2 className="mb-3 text-2xl font-black leading-tight text-[#1c140d] md:text-3xl tracking-[-0.02em]">Product Created Successfully!</h2>
-                        <p className="mb-8 text-[#9c7349] leading-relaxed">Your product has been added to your store and is now live.</p>
-                        <div className="flex w-full flex-col gap-3">
-                            <button className="w-full rounded-xl bg-[#f48c25] px-6 py-3.5 text-base font-bold text-white shadow-lg shadow-[#f48c25]/25 hover:bg-[#f48c25]/90 hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200" type="button">View Product</button>
-                            <button className="w-full rounded-xl bg-white px-6 py-3.5 text-base font-bold text-[#f48c25] ring-2 ring-inset ring-[#f48c25] hover:bg-[#f48c25]/5 transition-all duration-200" type="button">Add Another Product</button>
-                            <button className="w-full rounded-xl bg-transparent px-6 py-3.5 text-base font-bold text-[#9c7349] hover:text-[#1c140d] hover:bg-black/5 transition-all duration-200" type="button">Go to Dashboard</button>
-                        </div>
+function AttributeRow({ attr, setAttributes, attributes }: { attr: Attribute, setAttributes: any, attributes: Attribute[] }) {
+    const [inputValue, setInputValue] = useState('');
+
+    const handleAddValue = (e: React.KeyboardEvent) => {
+        if (e.key === 'Enter' && inputValue.trim()) {
+            const newValue = { name: inputValue.trim(), image: null };
+            const updated = attributes.map(a => 
+                a.id === attr.id ? { ...a, values: [...a.values, newValue] } : a
+            );
+            setAttributes(updated);
+            setInputValue('');
+        }
+    };
+
+    const handleRemoveValue = (valName: string) => {
+        const updated = attributes.map(a => 
+            a.id === attr.id ? { ...a, values: a.values.filter(v => v.name !== valName) } : a
+        );
+        setAttributes(updated);
+    };
+
+    const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
+        const file = e.target.files?.[0];
+        if (file) {
+            const reader = new FileReader();
+            reader.onloadend = () => {
+                const updated = attributes.map(a => {
+                    if (a.id === attr.id) {
+                        const newVals = [...a.values];
+                        newVals[index] = { ...newVals[index], image: reader.result as string };
+                        return { ...a, values: newVals };
+                    }
+                    return a;
+                });
+                setAttributes(updated);
+            };
+            reader.readAsDataURL(file);
+        }
+    };
+
+    return (
+        <div className="p-4 rounded-lg bg-[#f8f7f5] dark:bg-[#2a1f16] border border-[#e5e7eb] dark:border-[#3d2e20]">
+            <div className="flex flex-wrap md:flex-nowrap gap-4 items-start">
+                <div className="w-full md:w-1/4">
+                    <label className="block text-xs font-bold text-[#9c7349] uppercase mb-1">Name</label>
+                    <input 
+                        className="w-full bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] rounded-md px-3 py-2 text-sm text-[#1c140d] dark:text-white focus:ring-1 focus:ring-[#f48c25] font-bold" 
+                        type="text" 
+                        defaultValue={attr.name}
+                        onChange={(e) => {
+                            const updated = attributes.map(a => a.id === attr.id ? {...a, name: e.target.value} : a);
+                            setAttributes(updated);
+                        }}
+                    />
+                </div>
+                <div className="w-full md:w-3/4">
+                    <label className="block text-xs font-bold text-[#9c7349] uppercase mb-1">
+                        Values <span className="lowercase font-normal opacity-70">(Press Enter to add)</span>
+                    </label>
+                    <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] rounded-md min-h-[42px]">
+                        {attr.values.map((val, idx) => (
+                            <div key={idx} className="group relative inline-flex items-center gap-2 px-2 py-1 rounded bg-gray-100 dark:bg-[#3d2e20] text-sm font-medium text-[#1c140d] dark:text-white border border-[#e5e7eb] dark:border-transparent">
+                                <div className="relative h-5 w-5 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer">
+                                    {val.image ? (
+                                        <img src={val.image} className="h-full w-full object-cover" />
+                                    ) : (
+                                        <ImagePlus className="w-3 h-3 text-gray-400" />
+                                    )}
+                                    <input 
+                                        type="file" 
+                                        className="absolute inset-0 opacity-0 cursor-pointer" 
+                                        onChange={(e) => handleImageUpload(idx, e)}
+                                    />
+                                </div>
+                                {val.name}
+                                <button 
+                                    onClick={() => handleRemoveValue(val.name)}
+                                    className="hover:text-red-500 transition-colors"
+                                >
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                        ))}
+                        <input 
+                            className="bg-transparent border-none text-sm focus:ring-0 p-0 placeholder:text-gray-400 w-24" 
+                            placeholder="Add value..." 
+                            type="text"
+                            value={inputValue}
+                            onChange={(e) => setInputValue(e.target.value)}
+                            onKeyDown={handleAddValue}
+                        />
                     </div>
                 </div>
-            )}
+                <button 
+                    onClick={() => setAttributes(attributes.filter(a => a.id !== attr.id))}
+                    className="mt-6 text-gray-400 hover:text-red-500 transition-colors"
+                >
+                    <Trash2 className="w-6 h-6" />
+                </button>
+            </div>
         </div>
+    );
+}
+
+function VariantTableRow({ label, sku, price, stock, image }: any) {
+    return (
+        <tr className="group hover:bg-[#f8f7f5]/50 dark:hover:bg-[#2a1f16]/50 transition-colors">
+            <td className="px-6 py-4">
+                <div className="h-10 w-10 rounded bg-gray-100 dark:bg-gray-800 border border-dashed border-gray-300 dark:border-gray-600 flex items-center justify-center cursor-pointer hover:border-[#f48c25] text-gray-400 hover:text-[#f48c25] transition-all overflow-hidden">
+                    {image ? (
+                        <img src={image} className="w-full h-full object-cover" />
+                    ) : (
+                        <ImagePlus className="w-5 h-5" />
+                    )}
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                <p className="text-[#1c140d] dark:text-white font-bold text-sm">{label}</p>
+            </td>
+            <td className="px-6 py-4">
+                <div className="relative">
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">£</span>
+                    <input className="w-full pl-6 pr-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white focus:ring-1 focus:ring-[#f48c25]" type="text" defaultValue={price} />
+                </div>
+            </td>
+            <td className="px-6 py-4">
+                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white font-mono uppercase" type="text" defaultValue={sku} />
+            </td>
+            <td className="px-6 py-4">
+                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={stock} />
+            </td>
+            <td className="px-6 py-4 text-right">
+                <button className="text-gray-400 hover:text-red-500 transition-colors">
+                    <Trash2 className="w-5 h-5" />
+                </button>
+            </td>
+        </tr>
     );
 }

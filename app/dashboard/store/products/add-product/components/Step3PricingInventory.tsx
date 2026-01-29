@@ -1,4 +1,5 @@
 import React from 'react';
+import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown } from 'lucide-react';
 
 interface Step3Props {
     formData: any;
@@ -17,125 +18,71 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
     };
 
     return (
-        <div className="flex flex-col gap-6">
-            {/* Breadcrumbs & Header - typically managed by parent/layout but included for context alignment */}
-            <div className="flex flex-col gap-6 px-4">
-                <div className="flex flex-col gap-2">
-                    <h1 className="text-[#1c140d] dark:text-white text-3xl md:text-4xl font-black leading-tight tracking-[-0.033em]">Pricing & Inventory</h1>
-                    <p className="text-[#9c7349] dark:text-[#cba885] text-base">Define the pricing model, manage stock levels, and set shipping parameters for your new item.</p>
+        <div className="flex flex-col gap-6 pb-32 md:pb-10">
+            {/* Header Section */}
+            <div className="flex flex-col gap-4 px-2 md:px-0">
+                <div className="flex flex-col gap-1">
+                    <h1 className="text-[#1c140d] dark:text-white text-2xl md:text-4xl font-black leading-tight">Pricing & Inventory</h1>
+                    <p className="text-[#9c7349] dark:text-[#cba885] text-sm md:text-base">Define pricing, stock, and shipping parameters.</p>
                 </div>
-                <div className="flex flex-col gap-2">
-                    <div className="flex gap-6 justify-between items-end">
-                        <p className="text-[#1c140d] dark:text-white text-sm font-bold uppercase tracking-wider">Step 3 of 4</p>
-                        <p className="text-[#1c140d] dark:text-white text-sm font-bold">75%</p>
+                
+                {/* Responsive Progress Bar */}
+                <div className="flex flex-col gap-2 mt-2">
+                    <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-[#1c140d] dark:text-white">
+                        <span>Step 3 of 4</span>
+                        <span>75%</span>
                     </div>
-                    <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-2 overflow-hidden">
-                        <div className="h-full bg-[#f48c25] rounded-full" style={{ width: '75%' }}></div>
+                    <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-1.5 md:h-2 overflow-hidden">
+                        <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
                     </div>
                 </div>
             </div>
 
-            {/* Form Content */}
-            <form className="flex flex-col gap-8 px-4" onSubmit={(e) => { e.preventDefault(); onNext(); }}>
+            <form className="flex flex-col gap-8" onSubmit={(e) => { e.preventDefault(); onNext(); }}>
                 {/* Product Type Section */}
-                <section className="flex flex-col gap-4">
-                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Product Type</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        {/* Option 1: Physical */}
-                        <label className="cursor-pointer group relative">
-                            <input
-                                className="peer sr-only"
-                                name="product_type"
-                                type="radio"
-                                value="physical"
-                                checked={formData.product_type === 'physical'}
-                                onChange={() => handleRadioChange('product_type', 'physical')}
-                            />
-                            <div className="h-full flex flex-col gap-3 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-5 transition-all hover:border-[#f48c25]/50 peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
-                                <div className="size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25] transition-colors">
-                                    <span className="material-symbols-outlined">inventory_2</span>
-                                </div>
-                                <div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold mb-1">Physical Product</p>
-                                    <p className="text-[#9c7349] dark:text-[#cba885] text-sm">A tangible item that requires shipping & delivery.</p>
-                                </div>
-                                {formData.product_type === 'physical' && (
-                                    <div className="absolute top-5 right-5 text-[#f48c25] transition-opacity">
-                                        <span className="material-symbols-outlined fill-current">check_circle</span>
+                <section className="flex flex-col gap-4 px-2 md:px-0">
+                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold flex items-center gap-2">
+                        Product Type
+                    </h3>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                        {[
+                            { id: 'physical', label: 'Physical', desc: 'Tangible items', icon: <Package size={20}/> },
+                            { id: 'downloadable', label: 'Digital', desc: 'Files & Media', icon: <Download size={20}/> },
+                            { id: 'virtual', label: 'Service', desc: 'Memberships', icon: <Terminal size={20}/> }
+                        ].map((type) => (
+                            <label key={type.id} className="cursor-pointer relative group">
+                                <input
+                                    className="peer sr-only"
+                                    name="product_type"
+                                    type="radio"
+                                    value={type.id}
+                                    checked={formData.product_type === type.id}
+                                    onChange={() => handleRadioChange('product_type', type.id)}
+                                />
+                                <div className="h-full flex flex-row sm:flex-col items-center sm:items-start gap-4 sm:gap-3 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-4 transition-all peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
+                                    <div className="flex-shrink-0 size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25]">
+                                        {type.icon}
                                     </div>
-                                )}
-                            </div>
-                        </label>
-
-                        {/* Option 2: Downloadable */}
-                        <label className="cursor-pointer group relative">
-                            <input
-                                className="peer sr-only"
-                                name="product_type"
-                                type="radio"
-                                value="downloadable"
-                                checked={formData.product_type === 'downloadable'}
-                                onChange={() => handleRadioChange('product_type', 'downloadable')}
-                            />
-                            <div className="h-full flex flex-col gap-3 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-5 transition-all hover:border-[#f48c25]/50 peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
-                                <div className="size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25] transition-colors">
-                                    <span className="material-symbols-outlined">cloud_download</span>
-                                </div>
-                                <div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold mb-1">Downloadable</p>
-                                    <p className="text-[#9c7349] dark:text-[#cba885] text-sm">Digital files like ebooks, software, or media.</p>
-                                </div>
-                                {formData.product_type === 'downloadable' && (
-                                    <div className="absolute top-5 right-5 text-[#f48c25] transition-opacity">
-                                        <span className="material-symbols-outlined fill-current">check_circle</span>
+                                    <div className="flex flex-col">
+                                        <p className="text-[#1c140d] dark:text-white font-bold text-sm md:text-base">{type.label}</p>
+                                        <p className="text-[#9c7349] dark:text-[#cba885] text-xs">{type.desc}</p>
                                     </div>
-                                )}
-                            </div>
-                        </label>
-
-                        {/* Option 3: Virtual */}
-                        <label className="cursor-pointer group relative">
-                            <input
-                                className="peer sr-only"
-                                name="product_type"
-                                type="radio"
-                                value="virtual"
-                                checked={formData.product_type === 'virtual'}
-                                onChange={() => handleRadioChange('product_type', 'virtual')}
-                            />
-                            <div className="h-full flex flex-col gap-3 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-5 transition-all hover:border-[#f48c25]/50 peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
-                                <div className="size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25] transition-colors">
-                                    <span className="material-symbols-outlined">design_services</span>
                                 </div>
-                                <div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold mb-1">Virtual / Service</p>
-                                    <p className="text-[#9c7349] dark:text-[#cba885] text-sm">Services, memberships, or warranties.</p>
-                                </div>
-                                {formData.product_type === 'virtual' && (
-                                    <div className="absolute top-5 right-5 text-[#f48c25] transition-opacity">
-                                        <span className="material-symbols-outlined fill-current">check_circle</span>
-                                    </div>
-                                )}
-                            </div>
-                        </label>
+                            </label>
+                        ))}
                     </div>
                 </section>
 
-                <hr className="border-[#e8dbce] dark:border-[#4a3b2e]" />
-
                 {/* Pricing Section */}
-                <section className="flex flex-col gap-4">
+                <section className="flex flex-col gap-4 px-2 md:px-0">
                     <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Pricing</h3>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="regular_price">Regular Price</label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    {/* Changed from $ to £ */}
-                                    <span className="text-[#9c7349] font-bold">£</span>
-                                </div>
+                                <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#9c7349] font-bold">£</span>
                                 <input
-                                    className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 pl-8 pr-4 text-[#1c140d] dark:text-white placeholder-text-[#9c7349]/50 focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow"
+                                    className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 pl-10 pr-4 text-[#1c140d] dark:text-white focus:ring-2 focus:ring-[#f48c25]/20 focus:border-[#f48c25] outline-none transition-all"
                                     id="regular_price"
                                     placeholder="0.00"
                                     type="number"
@@ -145,14 +92,11 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                             </div>
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="sale_price">Discounted Price <span className="text-[#9c7349] font-normal text-xs ml-1">(Optional)</span></label>
+                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="sale_price">Sale Price</label>
                             <div className="relative">
-                                <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                                    {/* Changed from $ to £ */}
-                                    <span className="text-[#9c7349] font-bold">£</span>
-                                </div>
+                                <span className="absolute inset-y-0 left-0 pl-4 flex items-center text-[#9c7349] font-bold">£</span>
                                 <input
-                                    className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 pl-8 pr-4 text-[#1c140d] dark:text-white placeholder-text-[#9c7349]/50 focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow"
+                                    className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 pl-10 pr-4 text-[#1c140d] dark:text-white focus:ring-2 focus:ring-[#f48c25]/20 focus:border-[#f48c25] outline-none transition-all"
                                     id="sale_price"
                                     placeholder="0.00"
                                     type="number"
@@ -164,21 +108,15 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                     </div>
                 </section>
 
-                {/* Inventory Section */}
-                <section className="flex flex-col gap-4 rounded-xl bg-white dark:bg-[#2d241b] border border-[#e8dbce] dark:border-[#4a3b2e] p-6 shadow-sm">
-                    <div className="flex items-center gap-3 mb-2">
-                        <div className="p-2 rounded-lg bg-[#f48c25]/10 text-[#f48c25]">
-                            <span className="material-symbols-outlined">inventory</span>
-                        </div>
-                        <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Inventory Management</h3>
-                    </div>
+                {/* Inventory Card */}
+                <section className="mx-2 md:mx-0 flex flex-col gap-6 rounded-2xl bg-white dark:bg-[#2d241b] border border-[#e8dbce] dark:border-[#4a3b2e] p-5 md:p-6 shadow-sm">
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                         <div className="flex flex-col gap-2">
-                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="sku">SKU (Stock Keeping Unit)</label>
+                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="sku">SKU</label>
                             <input
-                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-2.5 px-4 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow uppercase placeholder-text-[#9c7349]/50"
+                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white uppercase outline-none focus:border-[#f48c25]"
                                 id="sku"
-                                placeholder="E.g. SUMMER-TEE-01"
+                                placeholder="E.g. TEE-001"
                                 type="text"
                                 value={formData.sku || ''}
                                 onChange={handleChange}
@@ -188,35 +126,34 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                             <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="stock_status">Stock Status</label>
                             <div className="relative">
                                 <select
-                                    className="w-full appearance-none rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-2.5 px-4 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow"
+                                    className="w-full appearance-none rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
                                     id="stock_status"
                                     value={formData.stock_status || 'instock'}
                                     onChange={handleChange}
                                 >
                                     <option value="instock">In Stock</option>
                                     <option value="outofstock">Out of Stock</option>
-                                    <option value="backorder">On Backorder</option>
                                 </select>
-                                <div className="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none text-[#9c7349]">
-                                    <span className="material-symbols-outlined">expand_more</span>
-                                </div>
+                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9c7349]" size={18} />
                             </div>
                         </div>
                     </div>
-                    <div className="flex items-center justify-between border-t border-dashed border-[#e8dbce] dark:border-[#4a3b2e] pt-4 mt-2">
-                        <div className="flex flex-col">
-                            <span className="text-[#1c140d] dark:text-white text-sm font-bold">Track stock quantity</span>
-                            <span className="text-[#9c7349] dark:text-[#cba885] text-xs">Automatically update stock when orders are placed</span>
+
+                    <div className="flex items-center justify-between py-4 border-t border-dashed border-[#e8dbce] dark:border-[#4a3b2e]">
+                        <div className="flex flex-col pr-4">
+                            <span className="text-[#1c140d] dark:text-white text-sm font-bold">Track Stock</span>
+                            <span className="text-[#9c7349] dark:text-[#cba885] text-xs">Manage inventory levels</span>
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer">
-                            <input type="checkbox" value="" className="sr-only peer" defaultChecked />
-                            <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full rtl:peer-checked:after:-translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#f48c25]"></div>
+                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input type="checkbox" className="sr-only peer" defaultChecked />
+                            <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
                         </label>
                     </div>
+
                     <div className="flex flex-col gap-2">
-                        <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity</label>
+                        <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity Available</label>
                         <input
-                            className="w-full md:w-1/2 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-2.5 px-4 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow"
+                            className="w-full sm:w-1/3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
                             id="quantity"
                             type="number"
                             value={formData.quantity || 100}
@@ -225,58 +162,50 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                     </div>
                 </section>
 
-                {/* Shipping Section (Conditional Visual) */}
+                {/* Conditional Shipping Section */}
                 {formData.product_type === 'physical' && (
-                    <section className="flex flex-col gap-4">
-                        <div className="flex items-center justify-between">
-                            <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping</h3>
-                            <span className="text-xs font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-1 rounded">PHYSICAL PRODUCT</span>
+                    <section className="flex flex-col gap-4 px-2 md:px-0">
+                        <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                            <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
+                            <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
                         </div>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                             <div className="flex flex-col gap-2">
-                                <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="weight">Weight (kg)</label>
-                                <div className="relative">
-                                    <input
-                                        className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 px-4 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none transition-shadow"
-                                        id="weight"
-                                        placeholder="0.0"
-                                        type="number"
-                                        value={formData.weight || ''}
-                                        onChange={handleChange}
-                                    />
-                                    <div className="absolute inset-y-0 right-0 pr-3 flex items-center pointer-events-none">
-                                        <span className="text-[#9c7349] text-sm font-medium">kg</span>
-                                    </div>
-                                </div>
+                                <label className="text-[#1c140d] dark:text-white text-sm font-bold">Weight (kg)</label>
+                                <input className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] py-3 px-4 bg-white dark:bg-[#2d241b] outline-none" placeholder="0.0" type="number" id="weight" value={formData.weight || ''} onChange={handleChange} />
                             </div>
                             <div className="flex flex-col gap-2">
-                                <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (cm)</label>
+                                <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
                                 <div className="grid grid-cols-3 gap-2">
-                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 px-3 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none text-center" placeholder="L" type="number" />
-                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 px-3 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none text-center" placeholder="W" type="number" />
-                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-2.5 px-3 text-[#1c140d] dark:text-white focus:border-[#f48c25] focus:ring-1 focus:ring-[#f48c25] focus:outline-none text-center" placeholder="H" type="number" />
+                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
+                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
+                                    <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
                                 </div>
                             </div>
                         </div>
                     </section>
                 )}
 
-                {/* Action Buttons */}
-                <div className="flex items-center justify-end gap-4 mt-8 pb-10">
-                    <button
-                        onClick={onBack}
-                        className="px-6 py-2.5 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#1c140d] dark:text-white font-bold text-sm hover:bg-gray-50 dark:hover:bg-[#221910] transition-colors"
-                        type="button"
-                    >
-                        Back
-                    </button>
-                    <button
-                        className="px-8 py-2.5 rounded-lg bg-[#f48c25] text-white font-bold text-sm shadow-md shadow-[#f48c25]/20 hover:bg-[#f48c25]/90 transition-all flex items-center gap-2"
-                        type="submit"
-                    >
-                        Continue
-                        <span className="material-symbols-outlined text-sm">arrow_forward</span>
-                    </button>
+                {/* Sticky Footer for Mobile */}
+                <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8">
+                    <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
+                        <button
+                            onClick={onBack}
+                            className="flex-1 md:flex-none px-6 py-3.5 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#1c140d] dark:text-white font-bold text-sm flex items-center justify-center gap-2"
+                            type="button"
+                        >
+                            <ArrowLeft size={18} />
+                            <span className="hidden sm:inline">Previous Step</span>
+                            <span className="sm:hidden">Back</span>
+                        </button>
+                        <button
+                            className="flex-2 md:flex-none px-8 py-3.5 rounded-xl bg-[#f48c25] text-white font-bold text-sm shadow-lg shadow-[#f48c25]/20 flex items-center justify-center gap-2"
+                            type="submit"
+                        >
+                            Continue
+                            <ArrowRight size={18} />
+                        </button>
+                    </div>
                 </div>
             </form>
         </div>
