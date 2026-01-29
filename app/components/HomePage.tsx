@@ -12,19 +12,19 @@ import Image from 'next/image';
 import { useGetRecentListings } from '@/service/listings/hook';
 import { useGetCategories } from '@/service/taxonomy/hook';
 
-// Dynamically import components
-const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
-const SeasonalMarketingSection = dynamic(() => import('../homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
-const McomMallBrandsSection = dynamic(() => import('../homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
-const BusinessCategoriesSection = dynamic(() => import('../homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
-const McomEgiftCard = dynamic(() => import('../homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
-const VirtualCardCarousel = dynamic(() => import('../homepage/components/VirtualCardCarousel'));
-const HowItWorks = dynamic(() => import('../homepage/components/HowItWorks'));
-const AuditSection = dynamic(() => import('../homepage/components/AuditSection').then(mod => mod.AuditSection));
-const VCardFeaturesSection = dynamic(() => import('../homepage/components/VCardFeatures'));
-const McomVouchersCoupons = dynamic(() => import('../homepage/components/McomVouchersCoupons'));
-const McomSolutions = dynamic(() => import('../homepage/components/McomSolutions'));
-const LoyaltyProgramSection = dynamic(() => import('../homepage/components/LoyaltyProgramSection'));
+// Dynamically import components using absolute path aliases
+const McomFeatureSection = dynamic(() => import('@/app/homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
+const SeasonalMarketingSection = dynamic(() => import('@/app/homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
+const McomMallBrandsSection = dynamic(() => import('@/app/homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
+const BusinessCategoriesSection = dynamic(() => import('@/app/homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
+const McomEgiftCard = dynamic(() => import('@/app/homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
+const VirtualCardCarousel = dynamic(() => import('@/app/homepage/components/VirtualCardCarousel'));
+const HowItWorks = dynamic(() => import('@/app/homepage/components/HowItWorks'));
+const AuditSection = dynamic(() => import('@/app/homepage/components/AuditSection').then(mod => mod.AuditSection));
+const VCardFeaturesSection = dynamic(() => import('@/app/homepage/components/VCardFeatures'));
+const McomVouchersCoupons = dynamic(() => import('@/app/homepage/components/McomVouchersCoupons'));
+const McomSolutions = dynamic(() => import('@/app/homepage/components/McomSolutions'));
+const LoyaltyProgramSection = dynamic(() => import('@/app/homepage/components/LoyaltyProgramSection'));
 const Footer = dynamic(() => import('@/components/Footer'));
 
 // --- Helper Components ---

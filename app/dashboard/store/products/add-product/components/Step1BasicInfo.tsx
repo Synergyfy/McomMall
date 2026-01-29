@@ -36,7 +36,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
       </div>
 
       {/* Main Form Card */}
-      <div className="bg-white dark:bg-[#291e15] rounded-xl shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f] overflow-hidden flex-1">
+      <div className="bg-white rounded-xl shadow-sm border border-[#e8dbce]  overflow-hidden flex-1">
         <div className="p-6 md:p-8 flex flex-col gap-8">
           {/* Section Title */}
           <div className="border-b border-[#e8dbce] dark:border-[#4a3b2f] pb-4">

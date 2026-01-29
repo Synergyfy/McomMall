@@ -1,4 +1,3 @@
-// components/Header.tsx
 'use client';
 
 import Link from 'next/link';
@@ -26,7 +25,6 @@ const mobileMenuVariants: Variants = {
   closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
   open: { x: '0%', transition: { duration: 0.3, ease: 'easeInOut' } },
 };
-
 export default function Header() {
   const pathname = usePathname();
   const { cart } = useSelector((state: RootState) => state.cart);
@@ -41,7 +39,7 @@ export default function Header() {
   );
   const logout = useLogout();
 
-  if (pathname.startsWith('/dashboard')) {
+  if (pathname?.startsWith('/dashboard')) {
     return null;
   }
 
