@@ -52,6 +52,11 @@ export const mainMenuItems: MenuItem[] = [
     href: '/dashboard/coupons-vouchers',
     icon: Gift,
   },
+  {
+    title: 'Terminal Cashback',
+    href: '/dashboard/terminal-cashback',
+    icon: Scan,
+  },
   // { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
   // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
 ];
