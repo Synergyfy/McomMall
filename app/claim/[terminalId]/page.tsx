@@ -1,16 +1,62 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { useParams, useRouter } from "next/navigation";
-import { Upload, Camera, Check, AlertCircle, Loader2, Wallet, Clock } from "lucide-react";
+import { Upload, Camera, Check, AlertCircle, Loader2, Wallet, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "sonner";
 import { uploadFile } from "@/lib/upload";
+import Cropper, { Area } from "react-easy-crop";
+import { useAuth } from "@/service/auth/hook";
+import { AuthModal } from "@/components/AuthModal";
+
+// Utility for cropping image
+async function getCroppedImg(imageSrc: string, pixelCrop: Area): Promise<File> {
+  const image = await new Promise<HTMLImageElement>((resolve, reject) => {
+    const img = new window.Image();
+    img.addEventListener("load", () => resolve(img));
+    img.addEventListener("error", (error) => reject(error));
+    img.src = imageSrc;
+  });
+
+  const canvas = document.createElement("canvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!ctx) throw new Error("No 2d context");
+
+  canvas.width = pixelCrop.width;
+  canvas.height = pixelCrop.height;
+
+  ctx.drawImage(
+    image,
+    pixelCrop.x,
+    pixelCrop.y,
+    pixelCrop.width,
+    pixelCrop.height,
+    0,
+    0,
+    pixelCrop.width,
+    pixelCrop.height
+  );
+
+  return new Promise((resolve, reject) => {
+    canvas.toBlob((blob) => {
+      if (!blob) {
+        reject(new Error("Canvas is empty"));
+        return;
+      }
+      const file = new File([blob], "cropped-receipt.jpg", { type: "image/jpeg" });
+      resolve(file);
+    }, "image/jpeg");
+  });
+}
 
 // Mock Data for the Terminal/Business
 const MOCK_BUSINESS = {
@@ -29,6 +75,7 @@ export default function ClaimPage() {
   const params = useParams();
   const router = useRouter();
   const terminalId = params.terminalId as string;
+  const { user } = useAuth();
 
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -36,6 +83,15 @@ export default function ClaimPage() {
   const [selectedRange, setSelectedRange] = useState<string>("");
   const [isUploading, setIsUploading] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [showAuthModal, setShowAuthModal] = useState(false);
+
+  // Cropping State
+  const [cropImage, setCropImage] = useState<string | null>(null);
+  const [crop, setCrop] = useState({ x: 0, y: 0 });
+  const [zoom, setZoom] = useState(1);
+  const [croppedAreaPixels, setCroppedAreaPixels] = useState<Area | null>(null);
+  const [showCropper, setShowCropper] = useState(false);
 
   // In a real app, fetch business details using terminalId
   const business = MOCK_BUSINESS; 
@@ -43,8 +99,28 @@ export default function ClaimPage() {
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const selectedFile = e.target.files[0];
-      setFile(selectedFile);
-      setPreviewUrl(URL.createObjectURL(selectedFile));
+      const imageUrl = URL.createObjectURL(selectedFile);
+      setCropImage(imageUrl);
+      setShowCropper(true);
+    }
+  };
+
+  const onCropComplete = useCallback((_area: Area, pixels: Area) => {
+    setCroppedAreaPixels(pixels);
+  }, []);
+
+  const handleCropConfirm = async () => {
+    if (cropImage && croppedAreaPixels) {
+      try {
+        const croppedFile = await getCroppedImg(cropImage, croppedAreaPixels);
+        setFile(croppedFile);
+        setPreviewUrl(URL.createObjectURL(croppedFile));
+        setShowCropper(false);
+        setCropImage(null);
+      } catch (e) {
+        console.error(e);
+        toast.error("Failed to crop image");
+      }
     }
   };
 
@@ -52,12 +128,23 @@ export default function ClaimPage() {
     setFile(null);
     setPreviewUrl(null);
     setSelectedRange("");
+    setTermsAccepted(false);
     setStep(1);
   };
 
   const handleSubmit = async () => {
     if (!file || !selectedRange) {
       toast.error("Please complete all fields");
+      return;
+    }
+
+    if (!termsAccepted) {
+      toast.error("Please accept the terms to continue");
+      return;
+    }
+
+    if (!user) {
+      setShowAuthModal(true);
       return;
     }
 
@@ -148,18 +235,28 @@ export default function ClaimPage() {
         <p className="text-gray-500 font-medium">Earn rewards on every visit</p>
       </div>
 
-      {/* 2. How it works section (Customer Onboarding) */}
-      <div className="w-full max-w-md grid grid-cols-3 gap-2 mb-8">
-        {[
-          { icon: Camera, label: "Snap" },
-          { icon: Check, label: "Select" },
-          { icon: Wallet, label: "Earn" }
-        ].map((item, idx) => (
-          <div key={idx} className="flex flex-col items-center p-3 bg-white rounded-xl shadow-sm border border-gray-100">
-            <item.icon className="w-5 h-5 text-orange-500 mb-1" />
-            <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{item.label}</span>
-          </div>
-        ))}
+      {/* 2. How it works section (Progress Tracker) */}
+      <div className="w-full max-w-md mb-10 relative">
+        <div className="absolute top-5 left-10 right-10 h-0.5 bg-gray-200" />
+        <div className="relative flex justify-between px-4">
+          {[
+            { icon: Camera, label: "Snap" },
+            { icon: Check, label: "Select" },
+            { icon: Wallet, label: "Earn" }
+          ].map((item, idx) => (
+            <div key={idx} className="flex flex-col items-center gap-2">
+              <div className="relative">
+                <div className="w-10 h-10 rounded-full bg-white border-2 border-orange-500 flex items-center justify-center z-10 shadow-sm relative">
+                  <item.icon className="w-5 h-5 text-orange-500" />
+                </div>
+                <div className="absolute -top-1.5 -right-1.5 w-5 h-5 bg-orange-600 text-white text-[10px] font-bold rounded-full flex items-center justify-center ring-2 ring-white shadow-sm z-20">
+                  {idx + 1}
+                </div>
+              </div>
+              <span className="text-[10px] uppercase tracking-wider font-bold text-gray-400">{item.label}</span>
+            </div>
+          ))}
+        </div>
       </div>
 
       <Card className="w-full max-w-md shadow-xl border-none ring-1 ring-gray-200">
@@ -245,13 +342,28 @@ export default function ClaimPage() {
             </RadioGroup>
           </div>
 
+          {/* Step 3: Terms & Agreement */}
+          <div className="pt-4 border-t border-gray-100">
+            <div className="flex items-start space-x-3 bg-gray-50 p-4 rounded-xl border border-gray-100">
+              <Checkbox 
+                id="terms" 
+                checked={termsAccepted} 
+                onCheckedChange={(checked) => setTermsAccepted(!!checked)}
+                className="mt-1 border-gray-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
+              />
+              <Label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer select-none">
+                I agree to MCOM's terms. I understand that fraudulent attempts will result in account suspension and only one receipt is allowed per claim.
+              </Label>
+            </div>
+          </div>
+
         </CardContent>
         
         <CardFooter className="pt-2 pb-8">
           <Button 
             className="w-full h-14 text-lg font-bold shadow-lg shadow-orange-200 bg-orange-500 hover:bg-orange-600 transition-all active:scale-[0.98] text-white" 
             onClick={handleSubmit} 
-            disabled={!file || !selectedRange || isSubmitting}
+            disabled={!file || !selectedRange || !termsAccepted || isSubmitting}
           >
             {isSubmitting ? (
               <>
@@ -265,10 +377,60 @@ export default function ClaimPage() {
         </CardFooter>
       </Card>
 
-      {/* 3. Help/Info Footer */}
-      <p className="mt-8 text-sm text-gray-400 max-w-xs text-center leading-relaxed">
-        By submitting, you agree to MCOM's terms. One receipt per claim. Fraudulent attempts will result in account suspension.
-      </p>
+      {/* Cropping Dialog */}
+      <Dialog open={showCropper} onOpenChange={setShowCropper}>
+        <DialogContent className="sm:max-w-lg p-0 overflow-hidden bg-black border-none">
+          <DialogHeader className="p-4 bg-white">
+            <DialogTitle>Crop Your Receipt</DialogTitle>
+          </DialogHeader>
+          <div className="relative h-[400px] w-full bg-gray-900">
+            {cropImage && (
+              <Cropper
+                image={cropImage}
+                crop={crop}
+                zoom={zoom}
+                aspect={4 / 5} // Adjust aspect ratio as needed for receipts
+                onCropChange={setCrop}
+                onCropComplete={onCropComplete}
+                onZoomChange={setZoom}
+              />
+            )}
+          </div>
+          <DialogFooter className="p-4 bg-white flex flex-row gap-2 sm:justify-between items-center">
+            <div className="flex-1">
+              <input
+                type="range"
+                min={1}
+                max={3}
+                step={0.1}
+                value={zoom}
+                onChange={(e) => setZoom(Number(e.target.value))}
+                className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500"
+              />
+            </div>
+            <div className="flex gap-2">
+              <Button variant="outline" onClick={() => {
+                setShowCropper(false);
+                setCropImage(null);
+              }}>
+                Cancel
+              </Button>
+              <Button className="bg-orange-500 hover:bg-orange-600 text-white" onClick={handleCropConfirm}>
+                Apply Crop
+              </Button>
+            </div>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <AuthModal 
+        isOpen={showAuthModal} 
+        onClose={() => setShowAuthModal(false)} 
+        onSuccess={() => {
+          setShowAuthModal(false);
+          handleSubmit(); // Retry submission after login
+        }}
+      />
     </div>
   );
 }
