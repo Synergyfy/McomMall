@@ -9,10 +9,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
-import { Check, X, Eye, Clock, ExternalLink } from "lucide-react";
+import { Check, X, Eye, Clock, ExternalLink, Copy, Download, QrCode } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import Link from "next/link";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { QRCode } from "react-qrcode-logo";
 
 // --- Types ---
 type ClaimStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
@@ -84,12 +88,7 @@ export default function TerminalCashbackPage() {
           </p>
         </div>
         {userRole === UserRole.OWNER && (
-           <Button variant="outline" asChild>
-             <Link href="/claim/BEANTHERE01" target="_blank">
-               <ExternalLink className="mr-2 h-4 w-4" />
-               View My Terminal Page
-             </Link>
-           </Button>
+           <TerminalShareButton terminalId="BEANTHERE01" />
         )}
       </div>
 
@@ -304,5 +303,86 @@ function ClaimCard({
         </div>
       </CardContent>
     </Card>
+  );
+}
+
+// --- Terminal Share Button ---
+function TerminalShareButton({ terminalId }: { terminalId: string }) {
+  const [url, setUrl] = useState("");
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      setUrl(`${window.location.origin}/claim/${terminalId}`);
+    }
+  }, [terminalId]);
+
+  const downloadQRCode = () => {
+    const canvas = document.getElementById("terminal-qr-code") as HTMLCanvasElement;
+    if (canvas) {
+      const pngUrl = canvas.toDataURL("image/png");
+      const downloadLink = document.createElement("a");
+      downloadLink.href = pngUrl;
+      downloadLink.download = `terminal-${terminalId}-qr.png`;
+      document.body.appendChild(downloadLink);
+      downloadLink.click();
+      document.body.removeChild(downloadLink);
+      toast.success("QR Code downloaded");
+    }
+  };
+
+  const copyLink = () => {
+    navigator.clipboard.writeText(url);
+    toast.success("Link copied to clipboard");
+  };
+
+  return (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Button variant="outline" className="gap-2">
+           <QrCode className="h-4 w-4" />
+           Share Terminal
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-80" align="end">
+         <Tabs defaultValue="qr" className="w-full">
+           <TabsList className="grid w-full grid-cols-2">
+             <TabsTrigger value="qr">QR Code</TabsTrigger>
+             <TabsTrigger value="link">Link</TabsTrigger>
+           </TabsList>
+           <TabsContent value="qr" className="flex flex-col items-center gap-4 py-4">
+              <div className="bg-white p-2 rounded-lg border">
+                <QRCode
+                   value={url}
+                   size={200}
+                   id="terminal-qr-code"
+                   logoImage="/favicon.ico"
+                   logoWidth={40}
+                   removeQrCodeBehindLogo
+                />
+              </div>
+              <Button onClick={downloadQRCode} className="w-full" variant="secondary">
+                <Download className="mr-2 h-4 w-4" /> Download QR
+              </Button>
+           </TabsContent>
+           <TabsContent value="link" className="space-y-4 py-4">
+              <div className="space-y-2">
+                <Label>Terminal Link</Label>
+                <div className="flex items-center gap-2">
+                  <Input value={url} readOnly className="h-9 text-xs" />
+                  <Button size="icon" variant="outline" onClick={copyLink} className="h-9 w-9 shrink-0">
+                     <Copy className="h-4 w-4" />
+                  </Button>
+                </div>
+              </div>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href={url || "#"} target="_blank">
+                  <ExternalLink className="mr-2 h-4 w-4" />
+                  Open in New Tab
+                </Link>
+              </Button>
+           </TabsContent>
+         </Tabs>
+      </PopoverContent>
+    </Popover>
   );
 }
