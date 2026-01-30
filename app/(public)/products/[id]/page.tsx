@@ -72,7 +72,7 @@ export default function ProductPage() {
        if (isMatrixSystem && Object.keys(selectedVariants).length === 0) {
          const defaults: Record<string, string> = {};
          product.attributes?.forEach(attr => {
-           if (attr.options.length > 0) defaults[attr.name] = attr.options[0];
+           if (attr.options.length > 0) defaults[attr.name] = attr.options[0].name;
          });
          setSelectedVariants(defaults);
        }
@@ -269,15 +269,15 @@ export default function ProductPage() {
                                    <SelectValue placeholder={`Select ${attr.name}`} />
                                 </SelectTrigger>
                                 <SelectContent>
-                                   {attr.options.map((option) => {
-                                      const available = isOptionAvailableInMatrix(attr.name, option);
+                                   {attr.options.map((option: { name: string, priceModifier: number }) => {
+                                      const available = isOptionAvailableInMatrix(attr.name, option.name);
                                       return (
                                         <SelectItem
-                                            key={option}
-                                            value={option}
+                                            key={option.name}
+                                            value={option.name}
                                             disabled={!available}
                                         >
-                                            {option} {!available && '(Unavailable)'}
+                                            {option.name} {!available && '(Unavailable)'}
                                         </SelectItem>
                                       );
                                    })}

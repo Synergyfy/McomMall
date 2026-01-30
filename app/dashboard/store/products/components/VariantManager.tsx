@@ -47,7 +47,7 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table';
-import { v4 as uuidv4 } from 'uuid';
+import { cn } from '@/lib/utils';
 
 interface VariantManagerProps {
   // We now use specific field names for the new structure, but fall back to 'attributes' and 'variations'
@@ -56,9 +56,9 @@ interface VariantManagerProps {
 }
 
 export default function VariantManager({ attributesName = 'attributes', variationsName = 'variations' }: VariantManagerProps) {
-  const { control, watch, setValue } = useFormContext();
+  const { control, watch, setValue, getValues } = useFormContext();
 
-  // Manage Attributes (e.g., Color: [Red, Blue])
+  // Manage Attributes (e.g., Color: [{name: 'Red', priceModifier: 0}, {name: 'Blue', priceModifier: 5}])
   const {
     fields: attributeFields,
     append: appendAttribute,
@@ -82,11 +82,10 @@ export default function VariantManager({ attributesName = 'attributes', variatio
   const [isAttributeFormVisible, setIsAttributeFormVisible] = useState(false);
   const [editingAttributeIndex, setEditingAttributeIndex] = useState<number | null>(null);
   const [attributeName, setAttributeName] = useState('');
-  const [attributeOptions, setAttributeOptions] = useState<string[]>([]);
+  const [attributeOptions, setAttributeOptions] = useState<{name: string, priceModifier: number}[]>([]);
   const [isCustomAttribute, setIsCustomAttribute] = useState(false);
 
   // State for editing dimensions of a specific variation
-  const [editingVariationId, setEditingVariationId] = useState<string | null>(null);
   const [editingVariationIndex, setEditingVariationIndex] = useState<number | null>(null);
   const [tempDimensions, setTempDimensions] = useState({
       weight: 0,
@@ -120,27 +119,30 @@ export default function VariantManager({ attributesName = 'attributes', variatio
       return;
     }
 
-    // Extract options arrays: [['Red', 'Blue'], ['S', 'M']]
+    // Extract options arrays: [[{name: 'Red', priceModifier: 0}, {name: 'Blue', priceModifier: 5}], [...]]
     const optionsArrays = attributes.map(a => a.options);
 
-    // Generate combinations: [['Red', 'S'], ['Red', 'M'], ...]
+    // Generate combinations: [[{name: 'Red', ...}, {name: 'S', ...}], ...]
     const combinations = cartesian(optionsArrays);
 
     const newVariations: ProductVariation[] = combinations.map(combo => {
       // Construct the combination object: { Color: 'Red', Size: 'S' }
       const combinationMap: Record<string, string> = {};
-      attributes.forEach((attr, index) => {
-        combinationMap[attr.name] = combo[index];
+      let variationPriceModifier = 0;
+
+      combo.forEach((opt, index) => {
+        const attr = attributes[index];
+        combinationMap[attr.name] = opt.name;
+        variationPriceModifier += (opt.priceModifier || 0);
       });
 
       // Generate a predictable SKU suffix
-      const skuSuffix = combo.join('-').toUpperCase().replace(/\s+/g, '');
+      const skuSuffix = combo.map(opt => opt.name).join('-').toUpperCase().replace(/\s+/g, '');
 
       return {
-        id: uuidv4(),
         combination: combinationMap,
         sku: `${skuSuffix}`,
-        price: 0,
+        price: variationPriceModifier,
         stock: 0,
         available: true,
         weight: 0,
@@ -189,18 +191,17 @@ export default function VariantManager({ attributesName = 'attributes', variatio
     }
   };
 
-  const handleAddOptionToAttribute = (optionName: string) => {
-    if (optionName && !attributeOptions.includes(optionName)) {
-      setAttributeOptions([...attributeOptions, optionName]);
+  const handleAddOptionToAttribute = (optionName: string, modifier: number) => {
+    if (optionName && !attributeOptions.some(o => o.name === optionName)) {
+      setAttributeOptions([...attributeOptions, { name: optionName, priceModifier: modifier }]);
     }
   };
 
-  const handleRemoveOptionFromAttribute = (option: string) => {
-    setAttributeOptions(attributeOptions.filter((o) => o !== option));
+  const handleRemoveOptionFromAttribute = (optionName: string) => {
+    setAttributeOptions(attributeOptions.filter((o) => o.name !== optionName));
   };
 
   const openDimensionEditor = (variation: ProductVariation, index: number) => {
-      setEditingVariationId(variation.id);
       setEditingVariationIndex(index);
       setTempDimensions({
           weight: variation.weight || 0,
@@ -211,13 +212,12 @@ export default function VariantManager({ attributesName = 'attributes', variatio
   };
 
   const saveDimensions = () => {
-      if (editingVariationIndex !== null && editingVariationId !== null) {
+      if (editingVariationIndex !== null) {
           const currentVariation = variationFields[editingVariationIndex] as unknown as ProductVariation;
           updateVariation(editingVariationIndex, {
               ...currentVariation,
               ...tempDimensions
           });
-          setEditingVariationId(null);
           setEditingVariationIndex(null);
       }
   };
@@ -249,7 +249,9 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                   <p className="font-semibold">{field.name}</p>
                   <div className="flex flex-wrap gap-2 mt-1">
                     {field.options.map((opt) => (
-                      <Badge key={opt} variant="secondary" className='text-xs'>{opt}</Badge>
+                      <Badge key={opt.name} variant="secondary" className='text-xs'>
+                        {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
+                      </Badge>
                     ))}
                   </div>
                 </div>
@@ -306,18 +308,18 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                 </div>
 
                 <div className="space-y-2">
-                   <Label>Options</Label>
+                   <Label>Options & Price Modifiers</Label>
                    <VariantOptionInput
                       variantName={attributeName || 'Color'} // Default to allow typing
                       onAddOption={handleAddOptionToAttribute}
-                      existingOptions={attributeOptions}
+                      existingOptions={attributeOptions.map(o => o.name)}
                     />
                      <div className="flex flex-wrap gap-2 mt-2 min-h-[40px] p-2 bg-gray-50 rounded-md">
                         {attributeOptions.length === 0 && <span className="text-sm text-gray-400 italic">No options added yet.</span>}
                         {attributeOptions.map((opt) => (
-                          <Badge key={opt} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
-                            {opt}
-                            <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveOptionFromAttribute(opt)} />
+                          <Badge key={opt.name} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1">
+                            {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
+                            <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveOptionFromAttribute(opt.name)} />
                           </Badge>
                         ))}
                     </div>
@@ -355,7 +357,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                   {Object.keys(safeVariationFields[0].combination).map((key) => (
                     <TableHead key={key} className="w-[100px]">{key}</TableHead>
                   ))}
-                  <TableHead>Price (£)</TableHead>
+                  <TableHead>Price (+/-)</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead className="w-[80px]">Dims</TableHead>
@@ -364,23 +366,34 @@ export default function VariantManager({ attributesName = 'attributes', variatio
               </TableHeader>
               <TableBody>
                 {safeVariationFields.map((field, index) => (
-                  <TableRow key={field.id}>
+                  <TableRow key={index}>
                     {/* Render Combination Values */}
                     {Object.values(field.combination).map((value, i) => (
                        <TableCell key={i} className="font-medium">{value}</TableCell>
                     ))}
 
-                    {/* Editable Price */}
+                    {/* Editable Price Modifier */}
                     <TableCell>
-                      <Input
-                        type="number"
-                        className="w-24 h-8"
-                        defaultValue={field.price}
-                        onChange={(e) => {
-                           const val = parseFloat(e.target.value);
-                           updateVariation(index, { ...field, price: isNaN(val) ? 0 : val });
-                        }}
-                      />
+                      <div className="flex items-center gap-1">
+                        <span className={cn(
+                          "text-xs font-bold w-4 text-center",
+                          field.price > 0 ? "text-green-600" : field.price < 0 ? "text-red-600" : "text-gray-400"
+                        )}>
+                          {field.price > 0 ? '+' : field.price < 0 ? '' : ''}
+                        </span>
+                        <Input
+                          type="number"
+                          className={cn(
+                            "w-20 h-8",
+                            field.price > 0 ? "border-green-200 bg-green-50" : field.price < 0 ? "border-red-200 bg-red-50" : ""
+                          )}
+                          value={field.price}
+                          onChange={(e) => {
+                             const val = parseFloat(e.target.value);
+                             updateVariation(index, { ...field, price: isNaN(val) ? 0 : val });
+                          }}
+                        />
+                      </div>
                     </TableCell>
 
                     {/* Editable Stock */}
@@ -388,7 +401,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                       <Input
                         type="number"
                         className="w-24 h-8"
-                        defaultValue={field.stock}
+                        value={field.stock}
                          onChange={(e) => {
                            const val = parseInt(e.target.value);
                            updateVariation(index, { ...field, stock: isNaN(val) ? 0 : val });
@@ -400,7 +413,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                     <TableCell>
                       <Input
                         className="w-32 h-8 text-xs"
-                        defaultValue={field.sku}
+                        value={field.sku}
                         onChange={(e) => {
                            updateVariation(index, { ...field, sku: e.target.value });
                         }}
@@ -409,9 +422,8 @@ export default function VariantManager({ attributesName = 'attributes', variatio
 
                     {/* Dimensions Popover Trigger */}
                     <TableCell>
-                        <Dialog open={editingVariationId === field.id} onOpenChange={(open) => {
+                        <Dialog open={editingVariationIndex === index} onOpenChange={(open) => {
                             if (!open) {
-                                setEditingVariationId(null);
                                 setEditingVariationIndex(null);
                             }
                         }}>
@@ -476,7 +488,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                     {/* Toggle Available */}
                     <TableCell>
                        <Select
-                          defaultValue={field.available ? 'true' : 'false'}
+                          value={field.available ? 'true' : 'false'}
                           onValueChange={(val) => {
                              updateVariation(index, { ...field, available: val === 'true' });
                           }}
@@ -497,7 +509,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
           </div>
         ) : (
            <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg bg-gray-50 text-gray-500">
-              <Table className="h-12 w-12 mb-2 opacity-50" />
+              <TableRoot className="h-12 w-12 mb-2 opacity-50" />
               <p>No variations generated yet.</p>
               <p className="text-sm">Add attributes above, then click "Generate Variations".</p>
            </div>
@@ -514,66 +526,89 @@ function VariantOptionInput({
   existingOptions,
 }: {
   variantName: string;
-  onAddOption: (optionName: string) => void;
+  onAddOption: (optionName: string, modifier: number) => void;
   existingOptions: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [priceModifier, setPriceModifier] = useState<number>(0);
 
   // Fallback to empty array if variantName key doesn't exist
   const options = predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
 
+  const handleAdd = () => {
+      if (inputValue) {
+          onAddOption(inputValue, priceModifier);
+          setInputValue('');
+          setPriceModifier(0);
+          setOpen(false);
+      }
+  };
+
   return (
-    <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger asChild>
-        <Button
-          variant="outline"
-          role="combobox"
-          aria-expanded={open}
-          className="w-full justify-between"
-        >
-          {inputValue || "Type or select option..."}
-          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
-        </Button>
-      </PopoverTrigger>
-      <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-        <Command>
-          <CommandInput
-            placeholder="Type new option..."
-            value={inputValue}
-            onValueChange={setInputValue}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter' && inputValue) {
-                e.preventDefault();
-                onAddOption(inputValue);
-                setInputValue('');
-                setOpen(false);
-              }
-            }}
-          />
-          <CommandList>
-            <CommandEmpty className="py-2 px-4 text-sm">
-               Press Enter to add "{inputValue}"
-            </CommandEmpty>
-            <CommandGroup heading="Suggestions">
-              {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
-                <CommandItem
-                  key={option}
-                  value={option}
-                  onSelect={(currentValue) => {
-                    // Start Case for better UX if needed, or keep raw
-                    onAddOption(option);
-                    setOpen(false);
-                    setInputValue('');
+    <div className="flex flex-col sm:flex-row gap-2">
+        <div className="flex-1 min-w-0">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button
+                variant="outline"
+                role="combobox"
+                aria-expanded={open}
+                className="w-full justify-between"
+              >
+                <span className="truncate">{inputValue || "Type or select option..."}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+              <Command>
+                <CommandInput
+                  placeholder="Type new option..."
+                  value={inputValue}
+                  onValueChange={setInputValue}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && inputValue) {
+                      e.preventDefault();
+                      handleAdd();
+                    }
                   }}
-                >
-                  {option}
-                </CommandItem>
-              ))}
-            </CommandGroup>
-          </CommandList>
-        </Command>
-      </PopoverContent>
-    </Popover>
+                />
+                <CommandList>
+                  <CommandEmpty className="py-2 px-4 text-sm">
+                     Press Enter to add "{inputValue}"
+                  </CommandEmpty>
+                  <CommandGroup heading="Suggestions">
+                    {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
+                      <CommandItem
+                        key={option}
+                        value={option}
+                        onSelect={(currentValue) => {
+                          setInputValue(option);
+                          setOpen(false);
+                        }}
+                      >
+                        {option}
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+            <span className="text-xs text-gray-500 whitespace-nowrap">Charge:</span>
+            <Input 
+                type="number" 
+                placeholder="0.00" 
+                value={priceModifier} 
+                onChange={(e) => setPriceModifier(parseFloat(e.target.value) || 0)}
+                className="w-20"
+            />
+            <Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button">
+                <Plus className="h-4 w-4" />
+            </Button>
+        </div>
+    </div>
   );
 }
