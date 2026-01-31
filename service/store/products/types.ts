@@ -23,6 +23,8 @@ export interface ProductVariation {
   combination: Record<string, string>;
   price: number;
   stock: number;
+  reservedStock?: number;
+  soldCount?: number;
   available: boolean;
   image?: string;
   weight?: number;

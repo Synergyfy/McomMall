@@ -125,6 +125,7 @@ export interface Service extends AbstractBaseEntity {
   baseGuests: string | null;
   additionalGuestPrice: string | null;
   isQuoteModel: boolean;
+  requireApproval?: boolean;
   bookingFee: string | null;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
