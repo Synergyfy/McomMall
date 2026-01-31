@@ -20,7 +20,7 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Plus, Trash2, Ruler } from 'lucide-react';
+import { Plus, Trash2, Ruler, ImageIcon, Upload, X } from 'lucide-react';
 import { SizeGuideConfig, SizeGuideMeasurement } from '@/service/store/products/types';
 
 interface SizeGuideBuilderProps {
@@ -36,6 +36,8 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
     const [enabled, setEnabled] = useState(value?.enabled || false);
     const [system, setSystem] = useState<SizeGuideConfig['system']>(value?.system || 'international');
     const [measurements, setMeasurements] = useState<SizeGuideMeasurement[]>(value?.measurements || []);
+    const [imageUrl, setImageUrl] = useState(value?.imageUrl || '');
+    const [conversionMap, setConversionMap] = useState<Record<string, string>>(value?.conversionMap || {});
     const [columns, setColumns] = useState<string[]>(DEFAULT_MEASUREMENT_FIELDS);
 
     // Sync with external value if needed, but avoiding infinite loops
@@ -44,11 +46,13 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
             setEnabled(value.enabled);
             setSystem(value.system);
             if (value.measurements && value.measurements.length > 0) {
-                 setMeasurements(value.measurements);
-                 // Detect columns from first row + defaults
-                 const keys = Object.keys(value.measurements[0]).filter(k => k !== 'size');
-                 if (keys.length > 0) setColumns(Array.from(new Set([...DEFAULT_MEASUREMENT_FIELDS, ...keys])));
+                setMeasurements(value.measurements);
+                // Detect columns from first row + defaults
+                const keys = Object.keys(value.measurements[0]).filter(k => k !== 'size');
+                if (keys.length > 0) setColumns(Array.from(new Set([...DEFAULT_MEASUREMENT_FIELDS, ...keys])));
             }
+            setImageUrl(value.imageUrl || '');
+            setConversionMap(value.conversionMap || {});
         }
     }, [value]);
 
@@ -72,8 +76,8 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
             enabled: isEnabled,
             system: sys,
             measurements: meas,
-            // conversionMap: {}, // Todo: Add logic for conversion map if needed
-            // imageUrl: '' // Todo: Add upload for body diagram
+            imageUrl: imageUrl,
+            conversionMap: conversionMap
         });
     };
 
@@ -139,7 +143,7 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
     return (
         <div className="space-y-6 border rounded-lg p-6 bg-white shadow-sm">
             <div className="flex items-center justify-between border-b pb-4">
-                 <div className="flex items-center gap-3">
+                <div className="flex items-center gap-3">
                     <div className="p-2 bg-orange-50 rounded-full border border-orange-100">
                         <Ruler className="w-5 h-5 text-orange-600" />
                     </div>
@@ -169,7 +173,55 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
                     </Select>
                 </div>
 
-                {/* Future: Add Body Diagram Upload Here */}
+                <div className="flex-1">
+                    <Label className="mb-2 block">Body Diagram / Guide Image</Label>
+                    <div className="flex items-center gap-4">
+                        {imageUrl ? (
+                            <div className="relative group w-20 h-20">
+                                <img
+                                    src={imageUrl}
+                                    alt="Size Guide Diagram"
+                                    className="w-full h-full object-cover rounded-md border"
+                                />
+                                <button
+                                    type="button"
+                                    onClick={() => { setImageUrl(''); updateConfig(enabled, system, measurements); }}
+                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-3 h-3" />
+                                </button>
+                            </div>
+                        ) : (
+                            <label className="w-20 h-20 border-2 border-dashed rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                                <ImageIcon className="w-6 h-6 text-gray-400" />
+                                <span className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Upload</span>
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            setImageUrl(url);
+                                            // Trigger config update with new image
+                                            onChange({
+                                                enabled,
+                                                system,
+                                                measurements,
+                                                imageUrl: url
+                                            });
+                                        }
+                                    }}
+                                />
+                            </label>
+                        )}
+                        <div className="text-xs text-gray-500">
+                            <p className="font-medium text-gray-700">Measurement Visual</p>
+                            <p>Upload a diagram showing where to measure.</p>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <div className="border rounded-md overflow-hidden">

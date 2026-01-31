@@ -67,9 +67,11 @@ export default function VisualVariantSelector({
 
                                 // Size Guide Data for Tooltip
                                 const sizeData = style === 'pill' && sizeGuide?.measurements.find(m => m.size === option.name);
+                                const conversion = style === 'pill' && sizeGuide?.conversionMap?.[option.name];
+
                                 const tooltipText = sizeData
                                     ? Object.entries(sizeData)
-                                        .filter(([k]) => k !== 'size' && k !== 'undefined')
+                                        .filter(([k, v]) => k !== 'size' && k !== 'undefined' && v)
                                         .map(([k, v]) => `${k.charAt(0).toUpperCase() + k.slice(1)}: ${v}`)
                                         .join(' | ')
                                     : null;
@@ -88,7 +90,7 @@ export default function VisualVariantSelector({
                                             style === 'color' && isSelected ? "border-orange-600 scale-110" : "border-gray-200",
 
                                             // Pill Style
-                                            style === 'pill' && "px-4 py-2 border rounded-md text-sm font-medium min-w-[3rem]",
+                                            style === 'pill' && "px-4 py-2 border rounded-md text-sm font-medium min-w-[3.5rem]",
                                             style === 'pill' && isSelected ? "bg-orange-50 border-orange-600 text-orange-700" : "bg-white border-gray-200 hover:border-gray-300 text-gray-700",
                                         )}
                                         title={option.name}
@@ -101,14 +103,21 @@ export default function VisualVariantSelector({
 
                                         {/* Pill Text */}
                                         {style === 'pill' && (
-                                            <span>
-                                                {option.name}
-                                                {option.priceModifier !== 0 && (
-                                                     <span className="text-[10px] ml-1 opacity-70">
-                                                        ({option.priceModifier > 0 ? '+' : ''}£{option.priceModifier})
-                                                     </span>
+                                            <div className="flex flex-col items-center">
+                                                <span className="flex items-center">
+                                                    {option.name}
+                                                    {option.priceModifier !== 0 && (
+                                                        <span className="text-[10px] ml-1 opacity-70">
+                                                            ({option.priceModifier > 0 ? '+' : ''}£{option.priceModifier})
+                                                        </span>
+                                                    )}
+                                                </span>
+                                                {conversion && (
+                                                    <span className="text-[9px] uppercase font-bold text-gray-400 mt-0.5">
+                                                        {conversion}
+                                                    </span>
                                                 )}
-                                            </span>
+                                            </div>
                                         )}
                                     </button>
                                 );

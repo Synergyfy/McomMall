@@ -56,9 +56,10 @@ export interface CreateServiceDto {
   additionalGuestPrice?: number;
   isQuoteModel?: boolean;
   bookingFee?: number;
+  requireApproval?: boolean;
   bundledServices?: { name: string; price?: number }[];
   configurableAddons?: {
-    name:string;
+    name: string;
     price?: number;
     pricingType: 'oneTime' | 'perGuest' | 'perUnit';
     unitName?: string;
@@ -105,6 +106,7 @@ export interface Service {
   baseGuests: string | null;
   additionalGuestPrice: string | null;
   isQuoteModel: boolean;
+  requireApproval?: boolean;
   bookingFee: string | null;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
