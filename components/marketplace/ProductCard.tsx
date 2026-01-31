@@ -18,6 +18,9 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
     : 0;
 
+  const isOutOfStock = product.items_left === 0;
+  const isLowStock = product.items_left > 0 && product.items_left < 5;
+
   // Mock rating
   const idNum = typeof product.id === 'number'
     ? product.id
@@ -39,11 +42,23 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
-          {discountPercentage > 0 && (
-            <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600 text-white border-0 rounded-md px-2 py-1 z-10">
-              -{discountPercentage}%
-            </Badge>
-          )}
+          <div className="absolute top-3 left-3 flex gap-2 z-10">
+            {discountPercentage > 0 && (
+              <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 rounded-md px-2 py-1">
+                -{discountPercentage}%
+              </Badge>
+            )}
+            {isOutOfStock && (
+              <Badge className="bg-gray-800 text-white border-0 rounded-md px-2 py-1">
+                Out of Stock
+              </Badge>
+            )}
+            {isLowStock && (
+              <Badge className="bg-orange-500 text-white border-0 rounded-md px-2 py-1">
+                Only {product.items_left} left
+              </Badge>
+            )}
+          </div>
         </div>
         <div className="flex flex-col flex-grow p-6">
           {/* List view content... (kept same) */}
@@ -79,7 +94,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             )}
           </div>
           <div className="mt-auto flex items-center gap-3">
-             <Button className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-md hover:shadow-lg transition-all">
+            <Button className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-md hover:shadow-lg transition-all">
               <ShoppingCart className="w-4 h-4 mr-2" />
               Add to Cart
             </Button>
@@ -94,21 +109,34 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
 
   // Grid View - Enforced Sizing
   return (
-    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-[400px] relative w-full">
+    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-[340px] md:h-[400px] relative w-full">
       {/* Image Container - Fixed Height */}
-      <div className="relative h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
+      <div className="relative h-[160px] md:h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
         <Image
           src={product.image}
           alt={product.title}
           fill
-          className="object-cover transition-transform duration-700 group-hover:scale-110"
+          className={cn(
+            "object-cover transition-transform duration-700 group-hover:scale-110",
+            isOutOfStock && "grayscale opacity-70"
+          )}
         />
-        
+
         {/* Badges */}
-        <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
+        <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 md:gap-2 z-10">
           {discountPercentage > 0 && (
-            <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm">
+            <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm text-[10px] md:text-xs px-1.5 py-0 md:px-2 md:py-0.5">
               -{discountPercentage}%
+            </Badge>
+          )}
+          {isOutOfStock && (
+            <Badge className="bg-gray-900 text-white border-0 shadow-sm text-[10px] md:text-xs px-1.5 py-0">
+              Out of Stock
+            </Badge>
+          )}
+          {!isOutOfStock && isLowStock && (
+            <Badge className="bg-orange-500 text-white border-0 shadow-sm animate-pulse text-[10px] md:text-xs px-1.5 py-0">
+              Only {product.items_left} left
             </Badge>
           )}
         </div>
@@ -124,48 +152,51 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         </div>
 
         {/* Quick Add Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
-             <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90">
-                <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
-             </Button>
-        </div>
+        {!isOutOfStock && (
+          <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
+            <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90 text-xs h-8 md:h-10 md:text-sm">
+              <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> Add to Cart
+            </Button>
+          </div>
+        )}
       </div>
 
       {/* Product Details - Flex Grow to fill height */}
-      <div className="p-4 flex flex-col flex-grow">
-        <div className="text-xs text-gray-500 mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
-        <Link href={productLink} className="block mb-2">
-            <h3 className="text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
+      <div className="p-2 md:p-4 flex flex-col flex-grow">
+        <div className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
+        <Link href={productLink} className="block mb-1 md:mb-2">
+          <h3 className="text-sm md:text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
             {product.title}
-            </h3>
+          </h3>
         </Link>
-        
+
         {/* Rating */}
-        <div className="flex items-center mb-3">
+        <div className="flex items-center mb-1 md:mb-3">
           {[...Array(5)].map((_, i) => (
             <Star
               key={i}
               className={cn(
-                "w-3.5 h-3.5",
+                "w-3 h-3 md:w-3.5 md:h-3.5",
                 i < Math.floor(rating) ? "text-yellow-400 fill-yellow-400" : "text-gray-200"
               )}
             />
           ))}
-          <span className="text-xs text-gray-400 ml-1.5">({reviewCount})</span>
+          <span className="text-[10px] md:text-xs text-gray-400 ml-1">({reviewCount})</span>
         </div>
 
         {/* Price - Pushed to bottom */}
         <div className="mt-auto flex items-center justify-between">
-            <div className="flex flex-col">
-                <span className="text-lg font-bold text-gray-900">
-                £{(product.discountedPrice || product.price).toFixed(2)}
-                </span>
-                {product.discountedPrice && (
-                <span className="text-xs text-gray-400 line-through">
-                    £{product.price.toFixed(2)}
-                </span>
-                )}
-            </div>
+          <div className="flex flex-col">
+            <span className="text-base md:text-lg font-bold text-gray-900">
+              £{(product.discountedPrice || product.price).toFixed(2)}
+              {product.pricingModel === 'perHour' && <span className="text-[10px] md:text-sm font-normal text-gray-500"> / hr</span>}
+            </span>
+            {product.discountedPrice && (
+              <span className="text-[10px] md:text-xs text-gray-400 line-through">
+                £{product.price.toFixed(2)}
+              </span>
+            )}
+          </div>
         </div>
       </div>
     </div>

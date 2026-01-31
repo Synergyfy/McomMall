@@ -36,6 +36,7 @@ import {
 } from '@/components/ui/dialog';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import AddressList from './components/AddressList';
+import MediaCropper from '../add-listing/components/steps/shared/MediaCropper';
 
 type SocialPlatform =
   | 'twitter'
@@ -119,11 +120,10 @@ const InputField = ({
       onChange={onChange}
       placeholder={placeholder}
       disabled={disabled}
-      className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
-        error
-          ? 'border-red-500 ring-1 ring-red-500'
-          : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-      } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
+      className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${error
+        ? 'border-red-500 ring-1 ring-red-500'
+        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+        } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
     />
     {error && (
       <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -157,11 +157,10 @@ const PasswordField = ({
           value={value}
           onChange={onChange}
           placeholder={placeholder}
-          className={`block w-full rounded-md p-2.5 pr-10 text-gray-900 shadow-sm sm:text-sm ${
-            error
-              ? 'border-red-500 ring-1 ring-red-500'
-              : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-          } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
+          className={`block w-full rounded-md p-2.5 pr-10 text-gray-900 shadow-sm sm:text-sm ${error
+            ? 'border-red-500 ring-1 ring-red-500'
+            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+            } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
         />
         <button
           type="button"
@@ -202,11 +201,10 @@ const SocialInputField = ({
         onChange={(e: ChangeEvent<HTMLInputElement>) =>
           onChange(platform, e.target.value)
         }
-        className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
-          error
-            ? 'border-red-500 ring-1 ring-red-500'
-            : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-        } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
+        className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${error
+          ? 'border-red-500 ring-1 ring-red-500'
+          : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+          } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white dark:placeholder-gray-400`}
       />
       {error && (
         <p className="mt-1 text-xs text-red-600 dark:text-red-400">{error}</p>
@@ -249,6 +247,7 @@ const MyProfilePage: NextPage = () => {
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState<boolean>(false);
+  const [isCropping, setIsCropping] = useState<boolean>(false);
 
   useEffect(() => {
     if (user) {
@@ -265,7 +264,7 @@ const MyProfilePage: NextPage = () => {
       setInitialSocials(initialSocialsData);
       setAvatarPreview(
         user.profilePictureUrl ||
-          'https://placehold.co/150x150/EFEFEF/333333?text=User'
+        'https://placehold.co/150x150/EFEFEF/333333?text=User'
       );
     }
   }, [user]);
@@ -304,10 +303,21 @@ const MyProfilePage: NextPage = () => {
       const reader = new FileReader();
       reader.onloadend = () => {
         setAvatarPreview(reader.result as string);
+        setIsCropping(true); // Open cropper after selection
       };
       reader.readAsDataURL(file);
       setProfileErrors(prev => ({ ...prev, avatar: undefined }));
     }
+  };
+
+  const handleCropSave = (croppedFile: File) => {
+    setAvatarFile(croppedFile);
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      setAvatarPreview(reader.result as string);
+    };
+    reader.readAsDataURL(croppedFile);
+    setIsCropping(false);
   };
 
   const handleProfileSubmit = async (e: FormEvent): Promise<void> => {
@@ -625,7 +635,7 @@ const MyProfilePage: NextPage = () => {
                       id="phoneNumber"
                       value={profile.phoneNumber || ''}
                       onChange={handleProfileChange}
-                        error={profileErrors.phoneNumber}
+                      error={profileErrors.phoneNumber}
                     />
                     <InputField
                       label="E-mail"
@@ -656,8 +666,8 @@ const MyProfilePage: NextPage = () => {
                       {isUploading
                         ? 'Uploading...'
                         : updateUserMutation.isPending
-                        ? 'Saving...'
-                        : 'Save Changes'}
+                          ? 'Saving...'
+                          : 'Save Changes'}
                     </button>
                   </div>
                 </div>
@@ -686,7 +696,7 @@ const MyProfilePage: NextPage = () => {
           </TabsContent>
 
           <TabsContent value="addresses">
-             <AddressList />
+            <AddressList />
           </TabsContent>
         </Tabs>
 
@@ -705,7 +715,7 @@ const MyProfilePage: NextPage = () => {
                     label="Confirm Email Address"
                     id="reset-email"
                     value={profile.email || ''}
-                    onChange={() => {}}
+                    onChange={() => { }}
                     disabled={true}
                     placeholder="Your email address"
                   />
@@ -726,7 +736,7 @@ const MyProfilePage: NextPage = () => {
 
               {resetStep === 'OTP' && (
                 <div className="space-y-4">
-                   <div>
+                  <div>
                     <label htmlFor="otp" className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
                       Verification Code
                     </label>
@@ -739,11 +749,10 @@ const MyProfilePage: NextPage = () => {
                         if (otpError) setOtpError(null);
                       }}
                       placeholder="Enter the code sent to your email"
-                      className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${
-                        otpError
-                          ? 'border-red-500 ring-1 ring-red-500'
-                          : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
-                      } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white`}
+                      className={`block w-full rounded-md p-2.5 text-gray-900 shadow-sm sm:text-sm ${otpError
+                        ? 'border-red-500 ring-1 ring-red-500'
+                        : 'border-gray-300 focus:border-indigo-500 focus:ring-indigo-500'
+                        } bg-gray-50 dark:border-gray-600 dark:bg-gray-700 dark:text-white`}
                     />
                     {otpError && (
                       <p className="mt-1 text-xs text-red-600 dark:text-red-400">{otpError}</p>
@@ -751,10 +760,10 @@ const MyProfilePage: NextPage = () => {
                   </div>
                   <div className="flex justify-end gap-2">
                     <button
-                        onClick={() => setResetStep('EMAIL')}
-                        className="rounded-md px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
-                      >
-                        Back
+                      onClick={() => setResetStep('EMAIL')}
+                      className="rounded-md px-4 py-2 text-sm text-gray-600 hover:text-gray-900"
+                    >
+                      Back
                     </button>
                     <button
                       onClick={handleValidateOtp}
@@ -797,6 +806,17 @@ const MyProfilePage: NextPage = () => {
             </div>
           </DialogContent>
         </Dialog>
+
+        {isCropping && avatarPreview && (
+          <MediaCropper
+            isOpen={isCropping}
+            onClose={() => setIsCropping(false)}
+            mediaUrl={avatarPreview}
+            mediaType="image"
+            onCropSave={handleCropSave}
+            aspect={1} // Square aspect for profile picture
+          />
+        )}
 
       </div>
     </div>

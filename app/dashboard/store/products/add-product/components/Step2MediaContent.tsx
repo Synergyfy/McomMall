@@ -1,17 +1,21 @@
 import React from 'react';
-import { 
-    Bold, 
-    Italic, 
-    List, 
-    ListOrdered, 
-    Link as LinkIcon, 
-    CloudUpload, 
-    Pencil, 
-    Trash2, 
-    ArrowLeft, 
+import {
+    Bold,
+    Italic,
+    List,
+    ListOrdered,
+    Link as LinkIcon,
+    CloudUpload,
+    Pencil,
+    Trash2,
+    ArrowLeft,
     ArrowRight,
-    Video 
+    Video,
+    Crop
 } from 'lucide-react';
+import MediaCropper from '@/app/dashboard/add-listing/components/steps/shared/MediaCropper';
+import { uploadFile } from '@/lib/upload';
+import { toast } from 'sonner';
 
 interface Step2Props {
     formData: any;
@@ -22,6 +26,8 @@ interface Step2Props {
 }
 
 export default function Step2MediaContent({ formData, updateFormData, onNext, onBack, onSaveDraft }: Step2Props) {
+    const [croppingIndex, setCroppingIndex] = React.useState<{ index: number, type: 'image' | 'video' } | null>(null);
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
     };
@@ -47,11 +53,11 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
 
             {/* Main Form Card */}
             <div className="bg-white dark:bg-[#2d241b] rounded-xl p-4 md:p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2e] flex flex-col gap-8">
-                
+
                 {/* Description Section */}
                 <div className="flex flex-col gap-6">
                     <h2 className="text-md md:text-lg font-bold text-[#1c140d] dark:text-[#ece0d6] border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">Description</h2>
-                    
+
                     <div className="flex flex-col gap-2">
                         <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold" htmlFor="shortDesc">Short Description</label>
                         <textarea
@@ -98,10 +104,30 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                     </div>
 
                     <div className="grid grid-cols-2 xs:grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-3">
-                        <div className="relative aspect-square rounded-lg overflow-hidden border border-[#e8dbce] dark:border-[#4a3b2e]">
-                            <img alt="Preview" className="w-full h-full object-cover" src="https://via.placeholder.com/150" />
-                            <button className="absolute top-1 right-1 p-1.5 bg-black/50 text-white rounded-full"><Trash2 size={14}/></button>
-                        </div>
+                        {formData.images?.map((img: string, index: number) => (
+                            <div key={index} className="relative aspect-square rounded-lg overflow-hidden border border-[#e8dbce] dark:border-[#4a3b2e]">
+                                <img alt="Preview" className="w-full h-full object-cover" src={img} />
+                                <div className="absolute top-1 right-1 flex gap-1">
+                                    <button
+                                        onClick={() => setCroppingIndex({ index, type: 'image' })}
+                                        className="p-1.5 bg-orange-600 text-white rounded-full hover:bg-orange-700"
+                                        type="button"
+                                    >
+                                        <Crop size={14} />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const newImages = formData.images.filter((_: any, i: number) => i !== index);
+                                            updateFormData({ images: newImages });
+                                        }}
+                                        className="p-1.5 bg-black/50 text-white rounded-full hover:bg-red-600"
+                                        type="button"
+                                    >
+                                        <Trash2 size={14} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
 
@@ -111,7 +137,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                         <h2 className="text-md md:text-lg font-bold">Product Videos</h2>
                         <span className="text-[10px] md:text-xs text-[#9c7349]">Max 3 • 30MB Limit</span>
                     </div>
-                    
+
                     <div className="relative group">
                         <input accept="video/*" className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer" type="file" />
                         <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl bg-[#f8f7f5]/50 dark:bg-[#221910]/50 group-hover:bg-[#f48c25]/5 transition-all">
@@ -124,12 +150,30 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
 
                     {/* Video Grid - Larger aspect ratio for mobile previews */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        <div className="relative aspect-video rounded-lg overflow-hidden border border-[#e8dbce] dark:border-[#4a3b2e] bg-black/10 flex items-center justify-center">
-                            <p className="text-[10px] text-gray-500">Video Preview</p>
-                            <button className="absolute top-2 right-2 p-2 bg-red-500 text-white rounded-full shadow-lg">
-                                <Trash2 size={16} />
-                            </button>
-                        </div>
+                        {formData.videos?.map((video: string, index: number) => (
+                            <div key={index} className="relative aspect-video rounded-lg overflow-hidden border border-[#e8dbce] dark:border-[#4a3b2e] bg-black/10 flex items-center justify-center">
+                                <video src={video} className="w-full h-full object-cover" />
+                                <div className="absolute top-2 right-2 flex gap-2">
+                                    <button
+                                        onClick={() => setCroppingIndex({ index, type: 'video' })}
+                                        className="p-2 bg-orange-600 text-white rounded-full shadow-lg hover:bg-orange-700"
+                                        type="button"
+                                    >
+                                        <Crop size={16} />
+                                    </button>
+                                    <button
+                                        onClick={() => {
+                                            const newVideos = formData.videos.filter((_: any, i: number) => i !== index);
+                                            updateFormData({ videos: newVideos });
+                                        }}
+                                        className="p-2 bg-red-500 text-white rounded-full shadow-lg"
+                                        type="button"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             </div>
@@ -141,7 +185,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                         <ArrowLeft size={18} />
                         Back
                     </button>
-                    
+
                     <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 order-1 sm:order-2">
                         <button onClick={onSaveDraft} className="w-full sm:w-auto px-6 py-3 text-[#9c7349] dark:text-[#cba885] font-medium text-sm md:text-base">
                             Save Draft
@@ -153,6 +197,29 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                     </div>
                 </div>
             </footer>
+
+            {croppingIndex !== null && (
+                <MediaCropper
+                    isOpen={croppingIndex !== null}
+                    onClose={() => setCroppingIndex(null)}
+                    mediaUrl={croppingIndex.type === 'image' ? (formData.images?.[croppingIndex.index] || '') : (formData.videos?.[croppingIndex.index] || '')}
+                    mediaType={croppingIndex.type}
+                    onCropSave={async (croppedFile) => {
+                        try {
+                            const { secure_url } = await uploadFile(croppedFile);
+                            const field = croppingIndex.type === 'image' ? 'images' : 'videos';
+                            const newList = [...(formData[field] || [])];
+                            newList[croppingIndex.index] = secure_url;
+                            updateFormData({ [field]: newList });
+                            toast.success('Cropped and uploaded successfully!');
+                        } catch (error) {
+                            console.error('Upload failed:', error);
+                            toast.error('Failed to upload cropped media.');
+                        }
+                        setCroppingIndex(null);
+                    }}
+                />
+            )}
         </div>
     );
 }
