@@ -75,7 +75,7 @@ export default function GetStartedPage() {
           >
 
             {/* Shopper Card */}
-            <Link href="/signup" className="group w-full block h-full">
+            <Link href="/customer" className="group w-full block h-full">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
@@ -100,13 +100,13 @@ export default function GetStartedPage() {
                 </div>
 
                 <div className="flex items-center text-orange-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Create Shopper Account <ArrowRight className="ml-2 w-5 h-5" />
+                  Explore Benefits <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </motion.div>
             </Link>
 
             {/* Merchant Card */}
-            <Link href="/signup" className="group w-full block h-full">
+            <Link href="/business" className="group w-full block h-full">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
@@ -131,7 +131,7 @@ export default function GetStartedPage() {
                 </div>
 
                 <div className="flex items-center text-red-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Become a Merchant <ArrowRight className="ml-2 w-5 h-5" />
+                  Explore Business Tools <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </motion.div>
             </Link>
