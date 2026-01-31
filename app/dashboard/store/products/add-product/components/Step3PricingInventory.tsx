@@ -1,5 +1,7 @@
-import React from 'react';
-import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown } from 'lucide-react';
+import React, { useState } from 'react';
+import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, Layers } from 'lucide-react';
+import VariantManager from '../../components/VariantManager';
+import SizeGuideBuilder from '../../components/SizeGuideBuilder';
 
 interface Step3Props {
     formData: any;
@@ -9,12 +11,25 @@ interface Step3Props {
 }
 
 export default function Step3PricingInventory({ formData, updateFormData, onNext, onBack }: Step3Props) {
+    // Local state for variant toggle if not in formData yet
+    const [hasVariants, setHasVariants] = useState(
+        (formData.attributes && formData.attributes.length > 0) || false
+    );
+
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
     };
 
     const handleRadioChange = (name: string, value: string) => {
         updateFormData({ [name]: value });
+    };
+
+    const toggleVariants = (enabled: boolean) => {
+        setHasVariants(enabled);
+        if (!enabled) {
+            // clear variants if disabled? or just hide?
+            // Better to keep data but ignore it.
+        }
     };
 
     return (
@@ -73,9 +88,70 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                     </div>
                 </section>
 
-                {/* Pricing Section */}
+                {/* Variant Toggle Section */}
+                 <section className="flex flex-col gap-4 px-2 md:px-0 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-3">
+                            <div className="p-2 bg-white dark:bg-gray-800 rounded-lg shadow-sm">
+                                <Layers className="w-6 h-6 text-orange-600" />
+                            </div>
+                            <div>
+                                <h3 className="text-[#1c140d] dark:text-white font-bold text-base">Product Options</h3>
+                                <p className="text-[#9c7349] dark:text-[#cba885] text-xs">Does this product have variants like Size or Color?</p>
+                            </div>
+                        </div>
+                         <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                            <input
+                                type="checkbox"
+                                className="sr-only peer"
+                                checked={hasVariants}
+                                onChange={(e) => toggleVariants(e.target.checked)}
+                            />
+                            <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
+                        </label>
+                    </div>
+                </section>
+
+                {hasVariants ? (
+                    <div className="space-y-6 animate-in fade-in slide-in-from-top-4 duration-300">
+                         {/* Variant Manager */}
+                         <section className="mx-2 md:mx-0 bg-white dark:bg-[#2d241b] border border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl p-6 shadow-sm">
+                            <VariantManager
+                                attributes={formData.attributes || []}
+                                variations={formData.variations || []}
+                                onAttributesChange={(attrs) => updateFormData({ attributes: attrs })}
+                                onVariationsChange={(vars) => updateFormData({ variations: vars })}
+                            />
+                         </section>
+
+                         {/* Size Guide (Conditional) */}
+                         {['clothing', 'shoes'].includes(formData.category?.toLowerCase()) && (
+                             <section className="mx-2 md:mx-0">
+                                <SizeGuideBuilder
+                                    value={formData.sizeGuide}
+                                    onChange={(val) => updateFormData({ sizeGuide: val })}
+                                    detectedSizes={formData.attributes?.find((a: any) => a.name === 'Size')?.options.map((o: any) => o.name) || []}
+                                />
+                             </section>
+                         )}
+
+                         {/* Base Price Fallback hint */}
+                         <p className="text-xs text-gray-500 italic px-2">
+                             * Base price and quantity set below will be used as default for variants unless overridden.
+                         </p>
+                    </div>
+                ) : (
+                    /* Standard Pricing Section (Hidden/Collapsed if Variants enabled, or just kept as Base?) */
+                    /* We keep it visible but maybe simplified? The spec says "If OFF: Show only Price, Quantity, SKU" */
+                    /* We will show the standard section if OFF, and maybe a "Base Settings" if ON */
+                    <></>
+                )}
+
+                {/* Pricing Section (Always show as Base Price) */}
                 <section className="flex flex-col gap-4 px-2 md:px-0">
-                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Pricing</h3>
+                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">
+                        {hasVariants ? 'Base Pricing' : 'Pricing'}
+                    </h3>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="regular_price">Regular Price</label>

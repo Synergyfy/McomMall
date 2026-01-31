@@ -1,13 +1,16 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Clock, Users, Briefcase } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer } from 'lucide-react';
 import { Service } from '@/service/services/types';
 import { toast } from 'sonner';
+import BookingCalendar from './BookingCalendar';
+import TimeSlotGenerator from './TimeSlotGenerator';
+import { format } from 'date-fns';
 
 interface ServiceBookingWidgetProps {
   service: Service;
@@ -20,6 +23,25 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   // State for quantity/guests depending on model
   const [quantity, setQuantity] = useState<number>(1); // For perUnit or perHour
   const [guests, setGuests] = useState<number>(service.minGuests || 1);
+
+  // Booking State
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
+
+  // Simulate Slot Locking
+  useEffect(() => {
+      if (selectedDate && selectedTime) {
+          // Lock for 15 minutes from now
+          const expiry = new Date();
+          expiry.setMinutes(expiry.getMinutes() + 15);
+          setLockExpiry(expiry);
+
+          toast.success(`Slot ${selectedTime} held for 15 minutes.`);
+      } else {
+          setLockExpiry(null);
+      }
+  }, [selectedDate, selectedTime]);
 
   // Base Price Calculation
   const basePrice = useMemo(() => {
@@ -64,9 +86,14 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   };
 
   const handleBookNow = () => {
+      if (service.availability && (!selectedDate || !selectedTime)) {
+          toast.error("Please select a date and time.");
+          return;
+      }
+
       // In a real app, this would add to cart with all booking details
       // For now, we mimic the ProductPage 'Add to Cart' / 'Buy Now' visual
-      toast.success("Booking initiated! (Feature in progress)");
+      toast.success(`Booking requested for ${selectedDate ? format(selectedDate, 'PPP') : ''} at ${selectedTime}`);
   };
 
   return (
@@ -92,6 +119,35 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
 
         {/* Configuration Inputs */}
         <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
+
+            {/* Booking Calendar System */}
+            {service.availability && (
+                <div className="space-y-4">
+                    <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">Select Date & Time</Label>
+                    <BookingCalendar
+                        availability={service.availability}
+                        selectedDate={selectedDate}
+                        onDateSelect={(d) => { setSelectedDate(d); setSelectedTime(undefined); }}
+                    />
+                    {selectedDate && (
+                        <div className="animate-in fade-in slide-in-from-top-2">
+                            <Label className="text-xs text-gray-500 mb-2 block">Available Slots</Label>
+                            <TimeSlotGenerator
+                                availability={service.availability}
+                                selectedDate={selectedDate}
+                                selectedSlot={selectedTime}
+                                onSlotSelect={setSelectedTime}
+                            />
+                        </div>
+                    )}
+                    {lockExpiry && (
+                        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-md">
+                            <Timer className="w-3 h-3" />
+                            Slot held. Complete booking in 15 mins.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Quantity / Hours Input */}
             {service.pricingModel === 'perHour' && (

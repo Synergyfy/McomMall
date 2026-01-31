@@ -18,6 +18,9 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
     : 0;
 
+  const isOutOfStock = product.items_left === 0;
+  const isLowStock = product.items_left > 0 && product.items_left < 5;
+
   // Mock rating
   const idNum = typeof product.id === 'number'
     ? product.id
@@ -39,11 +42,23 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             fill
             className="object-cover transition-transform duration-500 group-hover:scale-110"
           />
-          {discountPercentage > 0 && (
-            <Badge className="absolute top-3 left-3 bg-red-500 hover:bg-red-600 text-white border-0 rounded-md px-2 py-1 z-10">
-              -{discountPercentage}%
-            </Badge>
-          )}
+          <div className="absolute top-3 left-3 flex gap-2 z-10">
+            {discountPercentage > 0 && (
+                <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 rounded-md px-2 py-1">
+                -{discountPercentage}%
+                </Badge>
+            )}
+            {isOutOfStock && (
+                <Badge className="bg-gray-800 text-white border-0 rounded-md px-2 py-1">
+                    Out of Stock
+                </Badge>
+            )}
+            {isLowStock && (
+                <Badge className="bg-orange-500 text-white border-0 rounded-md px-2 py-1">
+                    Only {product.items_left} left
+                </Badge>
+            )}
+          </div>
         </div>
         <div className="flex flex-col flex-grow p-6">
           {/* List view content... (kept same) */}
@@ -101,7 +116,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           src={product.image}
           alt={product.title}
           fill
-          className="object-cover transition-transform duration-700 group-hover:scale-110"
+          className={cn(
+              "object-cover transition-transform duration-700 group-hover:scale-110",
+              isOutOfStock && "grayscale opacity-70"
+          )}
         />
         
         {/* Badges */}
@@ -109,6 +127,16 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           {discountPercentage > 0 && (
             <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm">
               -{discountPercentage}%
+            </Badge>
+          )}
+          {isOutOfStock && (
+            <Badge className="bg-gray-900 text-white border-0 shadow-sm">
+              Out of Stock
+            </Badge>
+          )}
+          {!isOutOfStock && isLowStock && (
+            <Badge className="bg-orange-500 text-white border-0 shadow-sm animate-pulse">
+              Only {product.items_left} left
             </Badge>
           )}
         </div>
@@ -124,11 +152,13 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         </div>
 
         {/* Quick Add Overlay */}
-        <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
-             <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90">
-                <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
-             </Button>
-        </div>
+        {!isOutOfStock && (
+            <div className="absolute bottom-0 left-0 right-0 p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
+                <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90">
+                    <ShoppingCart className="w-4 h-4 mr-2" /> Add to Cart
+                </Button>
+            </div>
+        )}
       </div>
 
       {/* Product Details - Flex Grow to fill height */}
@@ -159,6 +189,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
             <div className="flex flex-col">
                 <span className="text-lg font-bold text-gray-900">
                 £{(product.discountedPrice || product.price).toFixed(2)}
+                {product.pricingModel === 'perHour' && <span className="text-sm font-normal text-gray-500"> / hour</span>}
+                {product.pricingModel === 'perUnit' && <span className="text-sm font-normal text-gray-500"> / {product.unitName || 'unit'}</span>}
                 </span>
                 {product.discountedPrice && (
                 <span className="text-xs text-gray-400 line-through">

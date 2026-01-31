@@ -19,6 +19,21 @@ export interface IService extends Service {
   business: IBusiness;
 }
 
+export interface DaySchedule {
+  day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
+  enabled: boolean;
+  startTime: string; // "09:00"
+  endTime: string; // "17:00"
+}
+
+export interface AvailabilityProfile {
+  schedule: DaySchedule[];
+  slotDuration: number; // in minutes
+  bufferTime: number; // in minutes
+  maxBookingsPerSlot: number;
+  serviceRadiusKm?: number;
+}
+
 export interface CreateServiceDto {
   name: string;
   description?: string;
@@ -49,6 +64,7 @@ export interface CreateServiceDto {
     unitName?: string;
   }[];
   hotspots?: Hotspot[];
+  availability?: AvailabilityProfile;
 }
 
 export interface UpdateServiceDto extends CreateServiceDto {
@@ -101,4 +117,5 @@ export interface Service {
   duration?: number;
   isFeatured?: boolean;
   business?: IBusiness;
+  availability?: AvailabilityProfile;
 }

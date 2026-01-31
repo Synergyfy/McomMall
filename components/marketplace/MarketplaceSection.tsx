@@ -48,6 +48,8 @@ export default function MarketplaceSection({ title, productIds = [], products: i
                 price: p.price,
                 discountedPrice: p.salePrice || undefined,
                 items_left: p.stock || 0,
+                pricingModel: p.pricingModel,
+                unitName: p.unitName,
             } as PromotionalItem;
         });
     }
@@ -59,6 +61,9 @@ export default function MarketplaceSection({ title, productIds = [], products: i
         .map((p) => {
             const image = p!.imageUrl || (p!.media && p!.media.length > 0 ? p!.media[0] : null) || 'https://placehold.co/400x400?text=No+Image';
 
+            // Handle Service types if fetched via getProductById (assuming simplified common interface)
+            // or explicit Service fetch in future.
+
             return {
                 id: p!.id,
                 title: p!.title,
@@ -67,6 +72,8 @@ export default function MarketplaceSection({ title, productIds = [], products: i
                 price: p!.price,
                 discountedPrice: p!.salePrice || undefined,
                 items_left: p!.stock || 10,
+                pricingModel: (p as any).pricingModel,
+                unitName: (p as any).unitName,
             } as PromotionalItem;
         });
   }, [hasDirectProducts, initialProducts, productQueries]);
