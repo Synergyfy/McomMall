@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, Layers } from 'lucide-react';
 import VariantManager from '../../components/VariantManager';
 import SizeGuideBuilder from '../../components/SizeGuideBuilder';
+import { useForm, FormProvider } from 'react-hook-form';
 
 interface Step3Props {
     formData: any;
@@ -11,6 +12,14 @@ interface Step3Props {
 }
 
 export default function Step3PricingInventory({ formData, updateFormData, onNext, onBack }: Step3Props) {
+    // Initialize RHF for VariantManager compatibility
+    const methods = useForm({
+        defaultValues: {
+            attributes: formData.attributes || [],
+            variations: formData.variations || [],
+        }
+    });
+
     // Local state for variant toggle if not in formData yet
     const [hasVariants, setHasVariants] = useState(
         (formData.attributes && formData.attributes.length > 0) || false
@@ -27,12 +36,14 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
     const toggleVariants = (enabled: boolean) => {
         setHasVariants(enabled);
         if (!enabled) {
-            // clear variants if disabled? or just hide?
-            // Better to keep data but ignore it.
+            // Clear variants in parent
+            updateFormData({ attributes: [], variations: [] });
+            methods.reset({ attributes: [], variations: [] });
         }
     };
 
     return (
+        <FormProvider {...methods}>
         <div className="flex flex-col gap-6 pb-32 md:pb-10">
             {/* Header Section */}
             <div className="flex flex-col gap-4 px-2 md:px-0">
@@ -285,5 +296,6 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                 </div>
             </form>
         </div>
+        </FormProvider>
     );
 }
