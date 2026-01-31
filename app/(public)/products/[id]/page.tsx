@@ -162,6 +162,21 @@ export default function ProductPage() {
     router.push(`/checkout?productId=${id}&variants=${variantsJson}`);
   };
 
+  // Construct Images Array: Variant Image First!
+  const images = useMemo(() => {
+      if (!product) return [];
+      const baseImages = product.fileUrls && product.fileUrls.length > 0
+        ? product.fileUrls
+        : [product.imageUrl || 'https://via.placeholder.com/500'];
+
+      if (currentVariation?.image) {
+          // De-duplicate if the variant image is already in the list?
+          // For simplicity, just prepend.
+          return [currentVariation.image, ...baseImages];
+      }
+      return baseImages;
+  }, [product, currentVariation]);
+
   if (isLoading) {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-50 pt-16">
@@ -177,20 +192,6 @@ export default function ProductPage() {
       </div>
     );
   }
-
-  // Construct Images Array: Variant Image First!
-  const images = useMemo(() => {
-      const baseImages = product.fileUrls && product.fileUrls.length > 0
-        ? product.fileUrls
-        : [product.imageUrl || 'https://via.placeholder.com/500'];
-
-      if (currentVariation?.image) {
-          // De-duplicate if the variant image is already in the list?
-          // For simplicity, just prepend.
-          return [currentVariation.image, ...baseImages];
-      }
-      return baseImages;
-  }, [product, currentVariation]);
 
   return (
     // Reduced padding-top to remove extra space

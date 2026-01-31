@@ -40,6 +40,9 @@ export default function MarketplaceSection({ title, productIds = [], products: i
              // Use first fileUrl as image if available, fallback to imageUrl
              const imageUrl = (p.fileUrls && p.fileUrls.length > 0) ? p.fileUrls[0] : (p.imageUrl || 'https://placehold.co/400x400?text=No+Image');
 
+             // Fallback stock to 100 if undefined (to avoid Out of Stock badge for mock items)
+             const itemsLeft = (p.stock === undefined || p.stock === null) ? 100 : p.stock;
+
              return {
                 id: p.id,
                 title: p.title,
@@ -47,7 +50,7 @@ export default function MarketplaceSection({ title, productIds = [], products: i
                 category: p.category || 'General',
                 price: p.price,
                 discountedPrice: p.salePrice || undefined,
-                items_left: p.stock || 0,
+                items_left: itemsLeft,
                 pricingModel: p.pricingModel,
                 unitName: p.unitName,
             } as PromotionalItem;
@@ -61,8 +64,8 @@ export default function MarketplaceSection({ title, productIds = [], products: i
         .map((p) => {
             const image = p!.imageUrl || (p!.media && p!.media.length > 0 ? p!.media[0] : null) || 'https://placehold.co/400x400?text=No+Image';
 
-            // Handle Service types if fetched via getProductById (assuming simplified common interface)
-            // or explicit Service fetch in future.
+            // Fallback stock to 100 if undefined or stock management disabled
+            const itemsLeft = (p!.stock === undefined || p!.stock === null || p!.enableStockManagement === false) ? 100 : p!.stock;
 
             return {
                 id: p!.id,
@@ -71,7 +74,7 @@ export default function MarketplaceSection({ title, productIds = [], products: i
                 category: p!.category,
                 price: p!.price,
                 discountedPrice: p!.salePrice || undefined,
-                items_left: p!.stock || 10,
+                items_left: itemsLeft,
                 pricingModel: (p as any).pricingModel,
                 unitName: (p as any).unitName,
             } as PromotionalItem;

@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer } from 'lucide-react';
-import { Service } from '@/service/services/types';
+import { Service, AvailabilityProfile } from '@/service/services/types';
 import { toast } from 'sonner';
 import BookingCalendar from './BookingCalendar';
 import TimeSlotGenerator from './TimeSlotGenerator';
@@ -15,6 +15,19 @@ import { format } from 'date-fns';
 interface ServiceBookingWidgetProps {
   service: Service;
 }
+
+// Default profile for services that don't have one yet but need booking
+const DEFAULT_AVAILABILITY: AvailabilityProfile = {
+    schedule: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map(day => ({
+        day: day as any,
+        enabled: true,
+        startTime: '09:00',
+        endTime: '17:00'
+    })),
+    slotDuration: 60,
+    bufferTime: 0,
+    maxBookingsPerSlot: 1
+};
 
 export default function ServiceBookingWidget({ service }: ServiceBookingWidgetProps) {
   // State for addons selection
@@ -28,6 +41,11 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
   const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
   const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
+
+  // Determine if we should show booking calendar
+  // Show if explicit availability exists OR if pricing model implies time/booking
+  const showCalendar = !!service.availability || ['perHour', 'perUnit'].includes(service.pricingModel);
+  const availabilityProfile = service.availability || DEFAULT_AVAILABILITY;
 
   // Simulate Slot Locking
   useEffect(() => {
@@ -86,7 +104,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   };
 
   const handleBookNow = () => {
-      if (service.availability && (!selectedDate || !selectedTime)) {
+      if (showCalendar && (!selectedDate || !selectedTime)) {
           toast.error("Please select a date and time.");
           return;
       }
@@ -121,11 +139,11 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
 
             {/* Booking Calendar System */}
-            {service.availability && (
+            {showCalendar && (
                 <div className="space-y-4">
                     <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">Select Date & Time</Label>
                     <BookingCalendar
-                        availability={service.availability}
+                        availability={availabilityProfile}
                         selectedDate={selectedDate}
                         onDateSelect={(d) => { setSelectedDate(d); setSelectedTime(undefined); }}
                     />
@@ -133,7 +151,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                         <div className="animate-in fade-in slide-in-from-top-2">
                             <Label className="text-xs text-gray-500 mb-2 block">Available Slots</Label>
                             <TimeSlotGenerator
-                                availability={service.availability}
+                                availability={availabilityProfile}
                                 selectedDate={selectedDate}
                                 selectedSlot={selectedTime}
                                 onSlotSelect={setSelectedTime}
