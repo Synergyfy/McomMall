@@ -63,6 +63,7 @@ import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import AvailabilityEditor from './components/AvailabilityEditor';
 
 // --- ZOD SCHEMA ---
 
@@ -91,6 +92,20 @@ const serviceSchema = z.object({
   // Quote Model
   isQuoteModel: z.boolean().default(false),
   bookingFee: z.coerce.number().min(0).optional(),
+
+  // Availability
+  availability: z.object({
+    schedule: z.array(z.object({
+        day: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
+        enabled: z.boolean(),
+        startTime: z.string(),
+        endTime: z.string()
+    })),
+    slotDuration: z.number().min(5),
+    bufferTime: z.number().min(0),
+    maxBookingsPerSlot: z.number().min(1),
+    serviceRadiusKm: z.number().optional()
+  }).optional(),
 
   // Arrays
   bundledServices: z.array(z.object({
@@ -178,6 +193,7 @@ export default function AddServicePage() {
       bundledServices: [],
       configurableAddons: [],
       media: [],
+      availability: undefined, // Will use component defaults if undefined
     },
   });
 
@@ -536,6 +552,23 @@ export default function AddServicePage() {
                         )}
                     </CardContent>
                 </Card>
+
+                {/* Availability Editor */}
+                <FormField
+                    control={form.control}
+                    name="availability"
+                    render={({ field }) => (
+                        <FormItem>
+                            <FormControl>
+                                <AvailabilityEditor
+                                    value={field.value}
+                                    onChange={field.onChange}
+                                />
+                            </FormControl>
+                            <FormMessage />
+                        </FormItem>
+                    )}
+                />
 
                 {/* Quote Model */}
                 <Card>

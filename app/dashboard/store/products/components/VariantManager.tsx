@@ -1,7 +1,6 @@
-
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { useFieldArray, useFormContext } from 'react-hook-form';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -12,7 +11,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, ChevronsUpDown, Plus, Table, Trash2, Edit2, Settings } from 'lucide-react';
+import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload } from 'lucide-react';
 import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
 import { predefinedVariantOptions } from '@/lib/variant-options';
@@ -50,34 +49,85 @@ import {
 import { cn } from '@/lib/utils';
 
 interface VariantManagerProps {
-  // We now use specific field names for the new structure, but fall back to 'attributes' and 'variations'
+  // Legacy / Uncontrolled (RHF)
   attributesName?: string;
   variationsName?: string;
+
+  // Controlled (Manual State)
+  attributes?: ProductAttribute[];
+  variations?: ProductVariation[];
+  onAttributesChange?: (attrs: ProductAttribute[]) => void;
+  onVariationsChange?: (vars: ProductVariation[]) => void;
 }
 
-export default function VariantManager({ attributesName = 'attributes', variationsName = 'variations' }: VariantManagerProps) {
-  const { control, watch, setValue, getValues } = useFormContext();
+export default function VariantManager({
+    attributesName = 'attributes',
+    variationsName = 'variations',
+    attributes: propAttributes,
+    variations: propVariations,
+    onAttributesChange,
+    onVariationsChange
+}: VariantManagerProps) {
 
-  // Manage Attributes (e.g., Color: [{name: 'Red', priceModifier: 0}, {name: 'Blue', priceModifier: 5}])
-  const {
-    fields: attributeFields,
-    append: appendAttribute,
-    remove: removeAttribute,
-    update: updateAttribute
-  } = useFieldArray({
-    control,
-    name: attributesName,
-  });
+  const context = useFormContext();
+  const isControlled = !!(propAttributes && onAttributesChange);
 
-  // Manage Variations (The Matrix: Red-Small, Red-Large, etc.)
-  const {
-    fields: variationFields,
-    replace: replaceVariations,
-    update: updateVariation
-  } = useFieldArray({
-    control,
-    name: variationsName,
-  });
+  // --- Data Access Layer ---
+
+  // RHF Hooks (conditionally used, but rules of hooks say we must always call them)
+  // We'll call them but ignore if controlled.
+  const rhfAttributes = useFieldArray({ control: context?.control, name: attributesName });
+  const rhfVariations = useFieldArray({ control: context?.control, name: variationsName });
+
+  const attributes = isControlled ? propAttributes : (rhfAttributes.fields as unknown as ProductAttribute[]);
+  const variations = isControlled ? propVariations : (rhfVariations.fields as unknown as ProductVariation[]);
+
+  const appendAttribute = (data: ProductAttribute) => {
+      if (isControlled) {
+          onAttributesChange?.([...(propAttributes || []), data]);
+      } else {
+          rhfAttributes.append(data);
+      }
+  };
+
+  const updateAttribute = (index: number, data: ProductAttribute) => {
+      if (isControlled) {
+          const newAttrs = [...(propAttributes || [])];
+          newAttrs[index] = data;
+          onAttributesChange?.(newAttrs);
+      } else {
+          rhfAttributes.update(index, data);
+      }
+  };
+
+  const removeAttribute = (index: number) => {
+      if (isControlled) {
+          const newAttrs = (propAttributes || []).filter((_, i) => i !== index);
+          onAttributesChange?.(newAttrs);
+      } else {
+          rhfAttributes.remove(index);
+      }
+  };
+
+  const replaceVariations = (data: ProductVariation[]) => {
+      if (isControlled) {
+          onVariationsChange?.(data);
+      } else {
+          rhfVariations.replace(data);
+      }
+  };
+
+  const updateVariation = (index: number, data: ProductVariation) => {
+      if (isControlled) {
+          const newVars = [...(propVariations || [])];
+          newVars[index] = data;
+          onVariationsChange?.(newVars);
+      } else {
+          rhfVariations.update(index, data);
+      }
+  };
+
+  // --- UI State ---
 
   const [isAttributeFormVisible, setIsAttributeFormVisible] = useState(false);
   const [editingAttributeIndex, setEditingAttributeIndex] = useState<number | null>(null);
@@ -112,15 +162,27 @@ export default function VariantManager({ attributesName = 'attributes', variatio
 
   // Regenerate Matrix when Attributes Change
   const generateVariations = () => {
-    const attributes = watch(attributesName) as ProductAttribute[];
+    // If not controlled, we might need to watch() form values to get current state if fields array is stale?
+    // But fields array should be up to date.
+    // For RHF, fields array might be objects with id. We need to strip them or access properties carefully.
 
-    if (!attributes || attributes.length === 0) {
+    // In RHF, `attributes` comes from `useFieldArray`, which is an array of objects with `id`.
+    // But we cast it above.
+    // However, for generation, we need the *current* values, which `fields` might not reflect immediately if we just updated?
+    // Actually `fields` from useFieldArray is for rendering. For logic, `watch` is often safer in RHF.
+
+    let currentAttributes = attributes;
+    if (!isControlled && context) {
+        currentAttributes = context.watch(attributesName);
+    }
+
+    if (!currentAttributes || currentAttributes.length === 0) {
       replaceVariations([]);
       return;
     }
 
     // Extract options arrays: [[{name: 'Red', priceModifier: 0}, {name: 'Blue', priceModifier: 5}], [...]]
-    const optionsArrays = attributes.map(a => a.options);
+    const optionsArrays = currentAttributes.map(a => a.options);
 
     // Generate combinations: [[{name: 'Red', ...}, {name: 'S', ...}], ...]
     const combinations = cartesian(optionsArrays);
@@ -131,13 +193,13 @@ export default function VariantManager({ attributesName = 'attributes', variatio
       let variationPriceModifier = 0;
 
       combo.forEach((opt, index) => {
-        const attr = attributes[index];
+        const attr = currentAttributes[index];
         combinationMap[attr.name] = opt.name;
         variationPriceModifier += (opt.priceModifier || 0);
       });
 
       // Generate a predictable SKU suffix
-      const skuSuffix = combo.map(opt => opt.name).join('-').toUpperCase().replace(/\s+/g, '');
+      const skuSuffix = combo.map((opt: any) => opt.name).join('-').toUpperCase().replace(/\s+/g, '');
 
       return {
         combination: combinationMap,
@@ -213,7 +275,7 @@ export default function VariantManager({ attributesName = 'attributes', variatio
 
   const saveDimensions = () => {
       if (editingVariationIndex !== null) {
-          const currentVariation = variationFields[editingVariationIndex] as unknown as ProductVariation;
+          const currentVariation = variations[editingVariationIndex];
           updateVariation(editingVariationIndex, {
               ...currentVariation,
               ...tempDimensions
@@ -222,10 +284,6 @@ export default function VariantManager({ attributesName = 'attributes', variatio
       }
   };
 
-
-  // Safe type casting for the fields
-  const safeAttributeFields = attributeFields as unknown as ProductAttribute[];
-  const safeVariationFields = variationFields as unknown as ProductVariation[];
 
   return (
     <div className="space-y-8">
@@ -241,10 +299,10 @@ export default function VariantManager({ attributesName = 'attributes', variatio
           )}
         </div>
 
-        {safeAttributeFields.length > 0 && (
+        {attributes && attributes.length > 0 && (
           <div className="grid gap-4">
-            {safeAttributeFields.map((field, index) => (
-              <div key={field.name} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
+            {attributes.map((field, index) => (
+              <div key={index} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50">
                 <div>
                   <p className="font-semibold">{field.name}</p>
                   <div className="flex flex-wrap gap-2 mt-1">
@@ -343,20 +401,21 @@ export default function VariantManager({ attributesName = 'attributes', variatio
             <h3 className="text-lg font-medium">2. Configure Variations</h3>
             <p className="text-sm text-gray-500">Generate all possible combinations and set their prices/stock.</p>
           </div>
-          <Button type="button" onClick={generateVariations} disabled={safeAttributeFields.length === 0}>
+          <Button type="button" onClick={generateVariations} disabled={!attributes || attributes.length === 0}>
              Generate Variations
           </Button>
         </div>
 
-        {safeVariationFields.length > 0 ? (
+        {variations && variations.length > 0 ? (
           <div className="border rounded-md overflow-hidden">
             <TableRoot>
               <TableHeader>
                 <TableRow className="bg-gray-50 hover:bg-gray-50">
                   {/* Dynamic Headers based on Attributes */}
-                  {Object.keys(safeVariationFields[0].combination).map((key) => (
+                  {Object.keys(variations[0].combination).map((key) => (
                     <TableHead key={key} className="w-[100px]">{key}</TableHead>
                   ))}
+                  <TableHead className="w-[60px]">Image</TableHead>
                   <TableHead>Price (+/-)</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead>SKU</TableHead>
@@ -365,12 +424,55 @@ export default function VariantManager({ attributesName = 'attributes', variatio
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {safeVariationFields.map((field, index) => (
+                {variations.map((field, index) => (
                   <TableRow key={index}>
                     {/* Render Combination Values */}
                     {Object.values(field.combination).map((value, i) => (
                        <TableCell key={i} className="font-medium">{value}</TableCell>
                     ))}
+
+                    {/* Image Upload */}
+                    <TableCell>
+                         <div className="relative group w-10 h-10">
+                            {field.image ? (
+                                <img
+                                    src={field.image}
+                                    alt="Variant"
+                                    className="w-full h-full object-cover rounded-md border border-gray-200"
+                                />
+                            ) : (
+                                <div className="w-full h-full bg-gray-100 rounded-md flex items-center justify-center border border-dashed border-gray-300">
+                                    <ImageIcon className="w-4 h-4 text-gray-400" />
+                                </div>
+                            )}
+
+                            {/* Hidden Input Overlay */}
+                            <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-md transition-opacity">
+                                <Upload className="w-4 h-4 text-white" />
+                                <input
+                                    type="file"
+                                    className="hidden"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files?.[0];
+                                        if (file) {
+                                            const url = URL.createObjectURL(file);
+                                            updateVariation(index, { ...field, image: url });
+                                        }
+                                    }}
+                                />
+                            </label>
+                            {field.image && (
+                                <button
+                                    type="button"
+                                    onClick={() => updateVariation(index, { ...field, image: undefined })}
+                                    className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity"
+                                >
+                                    <X className="w-2 h-2" />
+                                </button>
+                            )}
+                         </div>
+                    </TableCell>
 
                     {/* Editable Price Modifier */}
                     <TableCell>

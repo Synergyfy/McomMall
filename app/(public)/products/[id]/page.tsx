@@ -8,15 +8,8 @@ import { Button } from '@/components/ui/button';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
 import { useCart } from '@/hooks/useCart';
-import { Loader, ShoppingCart, CreditCard, ChevronLeft } from 'lucide-react';
+import { Loader, ShoppingCart, CreditCard, ChevronLeft, AlertTriangle } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -24,6 +17,7 @@ import ProductGallery from './components/ProductGallery';
 import SellerCard from './components/SellerCard';
 import ProductFacts from './components/ProductFacts';
 import SafetyCard from './components/SafetyCard';
+import VisualVariantSelector from './components/VisualVariantSelector';
 
 export default function ProductPage() {
   const params = useParams();
@@ -65,29 +59,10 @@ export default function ProductPage() {
      });
   };
 
-  // Initialize selected variants with defaults
-  useEffect(() => {
-    if (product) {
-       // Matrix System Defaults
-       if (isMatrixSystem && Object.keys(selectedVariants).length === 0) {
-         const defaults: Record<string, string> = {};
-         product.attributes?.forEach(attr => {
-           if (attr.options.length > 0) defaults[attr.name] = attr.options[0].name;
-         });
-         setSelectedVariants(defaults);
-       }
-       // Legacy System Defaults
-       else if (!isMatrixSystem && product.variants && Object.keys(selectedVariants).length === 0) {
-         const defaults: Record<string, string> = {};
-         product.variants.forEach((v) => {
-           if (v.options && v.options.length > 0) {
-             defaults[v.name] = v.options[0].name;
-           }
-         });
-         setSelectedVariants(defaults);
-       }
-    }
-  }, [product, isMatrixSystem]);
+  // Default Initialization Removed for Mandatory Selection logic
+  // However, we might want to retain previous selections if valid?
+  // No, clean slate is better for "Mandatory" feel unless we want to default to first.
+  // The requirement says "Mandatory Variant Selection Logic... Disable until all selected".
 
   const handleVariantChange = (variantName: string, optionName: string) => {
     setSelectedVariants((prev) => ({
@@ -95,6 +70,16 @@ export default function ProductPage() {
       [variantName]: optionName,
     }));
   };
+
+  // Check if all required variants are selected
+  const allVariantsSelected = useMemo(() => {
+      if (!product) return false;
+      if (isMatrixSystem) {
+          return product.attributes?.every(attr => selectedVariants[attr.name]);
+      } else {
+          return product.variants?.every(v => selectedVariants[v.name]);
+      }
+  }, [product, isMatrixSystem, selectedVariants]);
 
   const { basePrice, totalPrice, priceBreakdown, isOutOfStock } = useMemo(() => {
     if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false };
@@ -139,19 +124,58 @@ export default function ProductPage() {
 
   const handleAddToCart = () => {
     if (!product || !id) return;
+
+    if (!allVariantsSelected) {
+        toast.error("Please select all options (Color, Size, etc.)");
+        return;
+    }
+
+    if (isOutOfStock) {
+        toast.error("This combination is out of stock.");
+        return;
+    }
+
     addItemToCart({
       productId: id,
       quantity: 1,
       selectedVariants,
+      // Pass snapshot details if needed by hook (hook logic might need update, but payload is usually partial)
+      // We assume hook handles basic ID/Variants.
     });
     toast.success('Added to cart');
   };
 
   const handleBuyNow = () => {
     if (!product || !id) return;
+
+    if (!allVariantsSelected) {
+        toast.error("Please select all options first.");
+        return;
+    }
+
+    if (isOutOfStock) {
+        toast.error("Out of stock.");
+        return;
+    }
+
     const variantsJson = encodeURIComponent(JSON.stringify(selectedVariants));
     router.push(`/checkout?productId=${id}&variants=${variantsJson}`);
   };
+
+  // Construct Images Array: Variant Image First!
+  const images = useMemo(() => {
+      if (!product) return [];
+      const baseImages = product.fileUrls && product.fileUrls.length > 0
+        ? product.fileUrls
+        : [product.imageUrl || 'https://via.placeholder.com/500'];
+
+      if (currentVariation?.image) {
+          // De-duplicate if the variant image is already in the list?
+          // For simplicity, just prepend.
+          return [currentVariation.image, ...baseImages];
+      }
+      return baseImages;
+  }, [product, currentVariation]);
 
   if (isLoading) {
     return (
@@ -168,10 +192,6 @@ export default function ProductPage() {
       </div>
     );
   }
-
-  const images = product.fileUrls && product.fileUrls.length > 0
-    ? product.fileUrls
-    : [product.imageUrl || 'https://via.placeholder.com/500'];
 
   return (
     // Reduced padding-top to remove extra space
@@ -251,99 +271,45 @@ export default function ProductPage() {
                     <p className="text-sm text-gray-500 mt-1">
                         {product.price > 0 ? '/ item' : ''}
                     </p>
+
+                    {/* Low Stock Indicator */}
+                    {isMatrixSystem && currentVariation && currentVariation.stock < 5 && currentVariation.stock > 0 && (
+                        <div className="mt-2 flex items-center text-orange-600 text-sm font-medium animate-pulse">
+                            <AlertTriangle className="w-4 h-4 mr-1" />
+                            Only {currentVariation.stock} left!
+                        </div>
+                    )}
                   </div>
 
-                  {/* Matrix Variants */}
+                  {/* Matrix Variants (Visual Selector) */}
                   {isMatrixSystem && product.attributes && product.attributes.length > 0 && (
                      <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
-                       {product.attributes.map((attr) => (
-                          <div key={attr.name} className="space-y-3">
-                             <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">
-                                {attr.name}
-                             </Label>
-                             <Select
-                                value={selectedVariants[attr.name] || ''}
-                                onValueChange={(val) => handleVariantChange(attr.name, val)}
-                             >
-                                <SelectTrigger className="w-full">
-                                   <SelectValue placeholder={`Select ${attr.name}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                   {attr.options.map((option: { name: string, priceModifier: number }) => {
-                                      const available = isOptionAvailableInMatrix(attr.name, option.name);
-                                      return (
-                                        <SelectItem
-                                            key={option.name}
-                                            value={option.name}
-                                            disabled={!available}
-                                        >
-                                            {option.name} {!available && '(Unavailable)'}
-                                        </SelectItem>
-                                      );
-                                   })}
-                                </SelectContent>
-                             </Select>
-                          </div>
-                       ))}
+                        <VisualVariantSelector
+                            attributes={product.attributes}
+                            selectedVariants={selectedVariants}
+                            onChange={handleVariantChange}
+                            isOptionAvailable={isOptionAvailableInMatrix}
+                            sizeGuide={product.sizeGuide}
+                        />
                      </div>
                   )}
 
-                  {/* Legacy Variants */}
+                  {/* Legacy Variants (Fallback to Visual Selector too if possible, mapping types) */}
                   {!isMatrixSystem && product.variants && product.variants.length > 0 && (
-                    <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
-                      {product.variants.map((variant) => (
-                        <div key={variant.name} className="space-y-3">
-                          <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">
-                            {variant.name}
-                          </Label>
-
-                          {variant.type === 'radio' ? (
-                            <RadioGroup
-                                value={selectedVariants[variant.name]}
-                                onValueChange={(val) => handleVariantChange(variant.name, val)}
-                                className="flex flex-wrap gap-2"
-                            >
-                                {variant.options.map((option) => (
-                                    <div key={option.name} className="flex items-center">
-                                        <RadioGroupItem value={option.name} id={`${variant.name}-${option.name}`} className="peer sr-only" />
-                                        <Label
-                                            htmlFor={`${variant.name}-${option.name}`}
-                                            className="px-3 py-2 bg-white border rounded-md cursor-pointer hover:bg-gray-50 peer-data-[state=checked]:border-orange-600 peer-data-[state=checked]:bg-orange-50 peer-data-[state=checked]:text-orange-700 transition-all"
-                                        >
-                                            {option.name}
-                                            {Number(option.priceModifier) !== 0 && (
-                                                <span className="text-xs text-gray-500 ml-1">
-                                                    ({Number(option.priceModifier) > 0 ? '+' : ''}£{Number(option.priceModifier)})
-                                                </span>
-                                            )}
-                                        </Label>
-                                    </div>
-                                ))}
-                            </RadioGroup>
-                          ) : (
-                            <Select
-                                value={selectedVariants[variant.name]}
-                                onValueChange={(val) => handleVariantChange(variant.name, val)}
-                            >
-                                <SelectTrigger className="w-full">
-                                    <SelectValue placeholder={`Select ${variant.name}`} />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    {variant.options.map((option) => (
-                                        <SelectItem key={option.name} value={option.name}>
-                                            {option.name}
-                                            {Number(option.priceModifier) !== 0 && (
-                                                <span className="text-gray-500 ml-1">
-                                                     ({Number(option.priceModifier) > 0 ? '+' : ''}£{Number(option.priceModifier)})
-                                                </span>
-                                            )}
-                                        </SelectItem>
-                                    ))}
-                                </SelectContent>
-                            </Select>
-                          )}
-                        </div>
-                      ))}
+                     <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
+                        {/* Adapt Legacy Variants to Visual Selector props on the fly */}
+                        <VisualVariantSelector
+                            attributes={product.variants.map(v => ({
+                                name: v.name,
+                                options: v.options.map(o => ({
+                                    name: o.name,
+                                    priceModifier: Number(o.priceModifier) || 0
+                                }))
+                            }))}
+                            selectedVariants={selectedVariants}
+                            onChange={handleVariantChange}
+                            isOptionAvailable={() => true} // Legacy doesn't have dependency logic usually
+                        />
                     </div>
                   )}
 

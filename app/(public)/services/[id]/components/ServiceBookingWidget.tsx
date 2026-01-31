@@ -1,17 +1,33 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Clock, Users, Briefcase } from 'lucide-react';
-import { Service } from '@/service/services/types';
+import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer } from 'lucide-react';
+import { Service, AvailabilityProfile } from '@/service/services/types';
 import { toast } from 'sonner';
+import BookingCalendar from './BookingCalendar';
+import TimeSlotGenerator from './TimeSlotGenerator';
+import { format } from 'date-fns';
 
 interface ServiceBookingWidgetProps {
   service: Service;
 }
+
+// Default profile for services that don't have one yet but need booking
+const DEFAULT_AVAILABILITY: AvailabilityProfile = {
+    schedule: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map(day => ({
+        day: day as any,
+        enabled: true,
+        startTime: '09:00',
+        endTime: '17:00'
+    })),
+    slotDuration: 60,
+    bufferTime: 0,
+    maxBookingsPerSlot: 1
+};
 
 export default function ServiceBookingWidget({ service }: ServiceBookingWidgetProps) {
   // State for addons selection
@@ -20,6 +36,30 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   // State for quantity/guests depending on model
   const [quantity, setQuantity] = useState<number>(1); // For perUnit or perHour
   const [guests, setGuests] = useState<number>(service.minGuests || 1);
+
+  // Booking State
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
+  const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
+  const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
+
+  // Determine if we should show booking calendar
+  // Show if explicit availability exists OR if pricing model implies time/booking
+  const showCalendar = !!service.availability || ['perHour', 'perUnit'].includes(service.pricingModel);
+  const availabilityProfile = service.availability || DEFAULT_AVAILABILITY;
+
+  // Simulate Slot Locking
+  useEffect(() => {
+      if (selectedDate && selectedTime) {
+          // Lock for 15 minutes from now
+          const expiry = new Date();
+          expiry.setMinutes(expiry.getMinutes() + 15);
+          setLockExpiry(expiry);
+
+          toast.success(`Slot ${selectedTime} held for 15 minutes.`);
+      } else {
+          setLockExpiry(null);
+      }
+  }, [selectedDate, selectedTime]);
 
   // Base Price Calculation
   const basePrice = useMemo(() => {
@@ -64,9 +104,14 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
   };
 
   const handleBookNow = () => {
+      if (showCalendar && (!selectedDate || !selectedTime)) {
+          toast.error("Please select a date and time.");
+          return;
+      }
+
       // In a real app, this would add to cart with all booking details
       // For now, we mimic the ProductPage 'Add to Cart' / 'Buy Now' visual
-      toast.success("Booking initiated! (Feature in progress)");
+      toast.success(`Booking requested for ${selectedDate ? format(selectedDate, 'PPP') : ''} at ${selectedTime}`);
   };
 
   return (
@@ -92,6 +137,35 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
 
         {/* Configuration Inputs */}
         <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
+
+            {/* Booking Calendar System */}
+            {showCalendar && (
+                <div className="space-y-4">
+                    <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">Select Date & Time</Label>
+                    <BookingCalendar
+                        availability={availabilityProfile}
+                        selectedDate={selectedDate}
+                        onDateSelect={(d) => { setSelectedDate(d); setSelectedTime(undefined); }}
+                    />
+                    {selectedDate && (
+                        <div className="animate-in fade-in slide-in-from-top-2">
+                            <Label className="text-xs text-gray-500 mb-2 block">Available Slots</Label>
+                            <TimeSlotGenerator
+                                availability={availabilityProfile}
+                                selectedDate={selectedDate}
+                                selectedSlot={selectedTime}
+                                onSlotSelect={setSelectedTime}
+                            />
+                        </div>
+                    )}
+                    {lockExpiry && (
+                        <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-md">
+                            <Timer className="w-3 h-3" />
+                            Slot held. Complete booking in 15 mins.
+                        </div>
+                    )}
+                </div>
+            )}
 
             {/* Quantity / Hours Input */}
             {service.pricingModel === 'perHour' && (
