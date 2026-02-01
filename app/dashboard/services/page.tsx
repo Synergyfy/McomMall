@@ -187,7 +187,7 @@ export default function ServicesDashboard() {
                     </TableRow>
                   ) : services.length > 0 ? (
                     services.map(service => {
-                      const firstImageUrl = service.images?.find(isImageUrl);
+                      const firstImageUrl = service.media?.find(isImageUrl);
                       return (
                       <TableRow
                         key={service.id}

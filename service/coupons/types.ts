@@ -22,7 +22,11 @@ export interface Coupon {
   businesses: CouponBusiness[];
   created_at: string;
   updated_at: string;
+  media?: string[] | null;
 }
+
+// Alias for discovery endpoints
+export type CouponProduct = Coupon;
 
 export interface CreateCouponDto {
   couponCode: string;

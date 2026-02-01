@@ -140,13 +140,13 @@ const ActivityTimerPage: FC = () => {
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white text-black p-4 sm:p-6 md:p-8">
-      <div className="max-w-4xl mx-auto">
+      <div className="max-w-6xl mx-auto">
         {/* Header */}
         <header className="text-center mb-8">
           <motion.h1
             initial={{ opacity: 0, y: -20 }}
             animate={{ opacity: 1, y: 0 }}
-            className="text-4xl font-extrabold tracking-tight sm:text-5xl"
+            className="text-3xl font-extrabold tracking-tight sm:text-4xl md:text-5xl"
           >
             Your Trial Dashboard
           </motion.h1>
@@ -154,7 +154,7 @@ const ActivityTimerPage: FC = () => {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="mt-4 text-lg text-black"
+            className="mt-4 text-base sm:text-lg text-black"
           >
             Complete the tasks below to make the most of your trial period.
           </motion.p>
@@ -167,14 +167,14 @@ const ActivityTimerPage: FC = () => {
           transition={{ delay: 0.3 }}
           className="mb-8"
         >
-          <div className="flex justify-center items-center gap-2 sm:gap-4 mb-4">
+          <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-4">
             {Object.entries(formattedTime).map(([unit, value]) => (
               <TimeCard key={unit} value={value} unit={unit} />
             ))}
           </div>
 
           {isTrialPausable && (
-            <div className="flex items-center justify-center space-x-4 mt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6">
               <Button
                 onClick={() =>
                   pauseOrPlay({
@@ -185,7 +185,7 @@ const ActivityTimerPage: FC = () => {
                   isPending || (!isPaused && (remainingPauses ?? 0) <= 0)
                 }
                 size="lg"
-                className="bg-orange-600 hover:bg-orange-700 text-white font-bold"
+                className="bg-orange-600 hover:bg-orange-700 text-white font-bold w-full sm:w-auto"
               >
                 {isPending ? (
                   <Loader className="w-5 h-5 animate-spin" />
@@ -209,46 +209,46 @@ const ActivityTimerPage: FC = () => {
 
         {/* New Task Display */}
         <div className="w-full mx-auto">
-          <h2 className="text-3xl font-bold text-black mb-8 ml-4">
+          <h2 className="text-2xl sm:text-3xl font-bold text-black mb-8 text-center sm:text-left sm:ml-4">
             Get started with Mcommall
           </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 p-4">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 p-0 sm:p-4">
             {taskKeys.map((taskKey, index) => {
               const task = taskDetails[taskKey];
               const isCompleted = tasks[taskKey];
               return (
                 <div
                   key={taskKey}
-                  className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-8"
+                  className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-4 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4"
                 >
-                  <div className="flex items-center">
-                    <div className="w-1/3 flex items-center justify-center text-orange-500">
-                      <span className="text-orange-500">
-                        <StyledNumber number={index + 1} />
-                      </span>
-                    </div>
-                    <div className="w-2/3 pl-6">
-                      <h3 className="text-xl font-bold text-gray-900 mb-2">
+                  <div className="w-full sm:w-1/3 flex items-center justify-center text-orange-500">
+                    <span className="text-orange-500 transform scale-75 sm:scale-100">
+                      <StyledNumber number={index + 1} />
+                    </span>
+                  </div>
+                  <div className="w-full sm:w-2/3 flex flex-col justify-between h-full">
+                    <div>
+                      <h3 className="text-lg sm:text-xl font-bold text-gray-900 mb-2 text-center sm:text-left">
                         {task.title}
                       </h3>
-                      <p className="text-black mb-4 text-sm">
+                      <p className="text-black mb-4 text-sm text-center sm:text-left">
                         {task.description}
                       </p>
-                      <div className="flex items-center justify-between">
-                        {isCompleted ? (
-                          <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white">
-                            <CheckCircle2 className="w-4 h-4 mr-2" />
-                            Done
-                          </button>
-                        ) : (
-                          <Link
-                            href={task.url}
-                            className="flex items-center text-orange-500 hover:text-orange-400 font-medium text-sm"
-                          >
-                            Finish this activity
-                          </Link>
-                        )}
-                      </div>
+                    </div>
+                    <div className="flex items-center justify-center sm:justify-start mt-auto">
+                      {isCompleted ? (
+                        <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white w-full sm:w-auto">
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Done
+                        </button>
+                      ) : (
+                        <Link
+                          href={task.url}
+                          className="flex items-center justify-center sm:justify-start text-orange-500 hover:text-orange-400 font-medium text-sm w-full sm:w-auto"
+                        >
+                          Finish this activity
+                        </Link>
+                      )}
                     </div>
                   </div>
                 </div>

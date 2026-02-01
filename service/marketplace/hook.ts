@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useQuery, UseQueryOptions } from '@tanstack/react-query';
 import api from '../api';
 import { MarketplacePublicData } from './types';
 
@@ -12,7 +12,7 @@ export interface ErrorResponse {
   message?: string;
 }
 
-export const useGetMarketplacePublic = () => {
+export const useGetMarketplacePublic = (options?: Partial<UseQueryOptions<MarketplacePublicData>>) => {
   return useQuery({
     queryKey: ['marketplace', 'public'],
     queryFn: async () => {
@@ -26,5 +26,6 @@ export const useGetMarketplacePublic = () => {
         );
       }
     },
+    ...options
   });
 };

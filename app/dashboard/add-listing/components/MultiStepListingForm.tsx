@@ -37,7 +37,6 @@ import {
   CalendarDays,
   Award,
   Camera,
-  Star,
 } from 'lucide-react';
 import {
   isNotEmpty,
@@ -55,7 +54,6 @@ import { ErrorDialog } from '@/components/ErrorDialog';
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
 import MediaStep from './steps/shared/MediaStep';
-import ReviewStep from './steps/shared/ReviewStep';
 import ProductCategoryStep from './steps/product/ProductCategoryStep';
 import ProductLocationStep from './steps/product/ProductLocationStep';
 import ProductHoursStep from './steps/product/ProductHoursStep';
@@ -344,12 +342,6 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Camera,
         component: MediaStep,
         validationRules: validationRules.media,
-      },
-      {
-        title: 'Review & Publish',
-        icon: Star,
-        component: ReviewStep,
-        validationRules: {},
       },
     ];
 

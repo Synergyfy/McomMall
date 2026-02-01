@@ -16,6 +16,21 @@ export interface GiftCardAsset {
   categories: AssetCategory[];
 }
 
+export interface GiftCardTemplate {
+  id: string;
+  name: string;
+  description?: string;
+  imageUrl?: string | null;
+  currency: string;
+  minAmount?: number;
+  maxAmount?: number;
+  fixedAmounts?: number[];
+  isActive: boolean;
+  createdAt: string;
+  updatedAt: string;
+  media?: string[] | null;
+}
+
 export type PaymentProvider = "stripe" | "paypal";
 
 export interface InitiatePurchaseDto {

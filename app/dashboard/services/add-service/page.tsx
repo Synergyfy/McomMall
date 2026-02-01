@@ -22,6 +22,7 @@ import { toast } from 'sonner';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import {
   Select,
@@ -63,6 +64,7 @@ import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import Link from 'next/link';
 import { cn } from '@/lib/utils';
+import AvailabilityEditor from './components/AvailabilityEditor';
 
 // --- ZOD SCHEMA ---
 
@@ -92,6 +94,20 @@ const serviceSchema = z.object({
   isQuoteModel: z.boolean().default(false),
   bookingFee: z.coerce.number().min(0).optional(),
 
+  // Availability
+  availability: z.object({
+    schedule: z.array(z.object({
+      day: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
+      enabled: z.boolean(),
+      startTime: z.string(),
+      endTime: z.string()
+    })),
+    slotDuration: z.number().min(5),
+    bufferTime: z.number().min(0),
+    maxBookingsPerSlot: z.number().min(1),
+    serviceRadiusKm: z.number().optional()
+  }).optional(),
+
   // Arrays
   bundledServices: z.array(z.object({
     name: z.string().min(1, 'Name required'),
@@ -104,6 +120,18 @@ const serviceSchema = z.object({
     pricingType: z.enum(['oneTime', 'perGuest', 'perUnit']),
     unitName: z.string().optional(),
   })).optional(),
+
+  // Tiered Packages
+  enableTieredPackages: z.boolean().default(false),
+  tiers: z.array(z.object({
+    name: z.string().min(1, 'Name required'),
+    description: z.string().optional(),
+    price: z.coerce.number().min(0),
+    features: z.array(z.string())
+  })).optional(),
+
+  // Booking Logic
+  requireApproval: z.boolean().default(false),
 
   media: z.array(z.any()).min(1, 'At least one image is required'),
 }).superRefine((data, ctx) => {
@@ -148,7 +176,7 @@ const serviceSchema = z.object({
 
   // Media Validation
   if (data.media.length > 5) {
-     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max 5 files allowed', path: ['media'] });
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max 5 files allowed', path: ['media'] });
   }
 });
 
@@ -178,6 +206,14 @@ export default function AddServicePage() {
       bundledServices: [],
       configurableAddons: [],
       media: [],
+      availability: undefined,
+      enableTieredPackages: false,
+      requireApproval: false,
+      tiers: [
+        { name: 'Basic', description: '', price: 0, features: [] },
+        { name: 'Standard', description: '', price: 0, features: [] },
+        { name: 'Premium', description: '', price: 0, features: [] }
+      ],
     },
   });
 
@@ -223,10 +259,11 @@ export default function AddServicePage() {
   const enableGuestPricing = form.watch('enableGuestPricing');
   const guestPricingModel = form.watch('guestPricingModel');
   const isQuoteModel = form.watch('isQuoteModel');
+  const enableTieredPackages = form.watch('enableTieredPackages');
 
   return (
     <div className="font-sans">
-       <SuccessAnimationDialog
+      <SuccessAnimationDialog
         isOpen={showSuccessDialog}
         onClose={() => {
           setShowSuccessDialog(false);
@@ -262,8 +299,8 @@ export default function AddServicePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <Settings className="w-5 h-5 text-primary" />
-                        Basic Information
+                      <Settings className="w-5 h-5 text-primary" />
+                      Basic Information
                     </CardTitle>
                     <CardDescription>Service name and details.</CardDescription>
                   </CardHeader>
@@ -301,8 +338,8 @@ export default function AddServicePage() {
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2">
-                        <DollarSign className="w-5 h-5 text-primary" />
-                        Pricing Strategy
+                      <DollarSign className="w-5 h-5 text-primary" />
+                      Pricing Strategy
                     </CardTitle>
                     <CardDescription>Configure how you charge for this service.</CardDescription>
                   </CardHeader>
@@ -397,301 +434,416 @@ export default function AddServicePage() {
 
                 {/* Guest Pricing */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                            <Users className="w-5 h-5 text-primary" />
-                            Guest Pricing
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <FormField
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <Users className="w-5 h-5 text-primary" />
+                      Guest Pricing
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="enableGuestPricing"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Enable Guest Pricing</FormLabel>
+                            <FormDescription>
+                              Adjust price based on number of guests.
+                            </FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {enableGuestPricing && (
+                      <div className="space-y-6 p-4 bg-slate-50 rounded-lg border">
+                        <div className="grid grid-cols-2 gap-4">
+                          <FormField
                             control={form.control}
-                            name="enableGuestPricing"
+                            name="minGuests"
                             render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5">
-                                        <FormLabel className="text-base">Enable Guest Pricing</FormLabel>
-                                        <FormDescription>
-                                            Adjust price based on number of guests.
-                                        </FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                    </FormControl>
-                                </FormItem>
+                              <FormItem>
+                                <FormLabel>Min Guests</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
                             )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name="maxGuests"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Max Guests</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+
+                        <FormField
+                          control={form.control}
+                          name="guestPricingModel"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Guest Pricing Model</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
+                                <SelectContent>
+                                  <SelectItem value="perGuest">Per Guest</SelectItem>
+                                  <SelectItem value="fixedGroup">Fixed Group</SelectItem>
+                                  <SelectItem value="baseWithAdditional">Base + Additional</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            </FormItem>
+                          )}
                         />
 
-                        {enableGuestPricing && (
-                            <div className="space-y-6 p-4 bg-slate-50 rounded-lg border">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="minGuests"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Min Guests</FormLabel>
-                                                <FormControl><Input type="number" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="maxGuests"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Guests</FormLabel>
-                                                <FormControl><Input type="number" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-
-                                <FormField
-                                    control={form.control}
-                                    name="guestPricingModel"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Guest Pricing Model</FormLabel>
-                                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                <FormControl><SelectTrigger><SelectValue /></SelectTrigger></FormControl>
-                                                <SelectContent>
-                                                    <SelectItem value="perGuest">Per Guest</SelectItem>
-                                                    <SelectItem value="fixedGroup">Fixed Group</SelectItem>
-                                                    <SelectItem value="baseWithAdditional">Base + Additional</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </FormItem>
-                                    )}
-                                />
-
-                                {guestPricingModel === 'perGuest' && (
-                                    <FormField
-                                        control={form.control}
-                                        name="pricePerGuest"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Price Per Guest</FormLabel>
-                                                <FormControl><Input type="number" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
-
-                                {guestPricingModel === 'fixedGroup' && (
-                                    <FormField
-                                        control={form.control}
-                                        name="fixedGroupPrice"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Fixed Group Price</FormLabel>
-                                                <FormControl><Input type="number" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                )}
-
-                                {guestPricingModel === 'baseWithAdditional' && (
-                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                        <FormField
-                                            control={form.control}
-                                            name="basePrice"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Base Price</FormLabel>
-                                                    <FormControl><Input type="number" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="baseGuests"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Base Guests</FormLabel>
-                                                    <FormControl><Input type="number" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                        <FormField
-                                            control={form.control}
-                                            name="additionalGuestPrice"
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormLabel>Extra Guest Price</FormLabel>
-                                                    <FormControl><Input type="number" {...field} /></FormControl>
-                                                    <FormMessage />
-                                                </FormItem>
-                                            )}
-                                        />
-                                    </div>
-                                )}
-                            </div>
+                        {guestPricingModel === 'perGuest' && (
+                          <FormField
+                            control={form.control}
+                            name="pricePerGuest"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Price Per Guest</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
                         )}
-                    </CardContent>
+
+                        {guestPricingModel === 'fixedGroup' && (
+                          <FormField
+                            control={form.control}
+                            name="fixedGroupPrice"
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Fixed Group Price</FormLabel>
+                                <FormControl><Input type="number" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        )}
+
+                        {guestPricingModel === 'baseWithAdditional' && (
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <FormField
+                              control={form.control}
+                              name="basePrice"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Base Price</FormLabel>
+                                  <FormControl><Input type="number" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="baseGuests"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Base Guests</FormLabel>
+                                  <FormControl><Input type="number" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                            <FormField
+                              control={form.control}
+                              name="additionalGuestPrice"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel>Extra Guest Price</FormLabel>
+                                  <FormControl><Input type="number" {...field} /></FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </CardContent>
                 </Card>
+
+                {/* Availability Editor */}
+                <FormField
+                  control={form.control}
+                  name="availability"
+                  render={({ field }) => (
+                    <FormItem>
+                      <FormControl>
+                        <AvailabilityEditor
+                          value={field.value}
+                          onChange={field.onChange}
+                        />
+                      </FormControl>
+                      <FormMessage />
+                    </FormItem>
+                  )}
+                />
 
                 {/* Quote Model */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Quote Request</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        <FormField
-                            control={form.control}
-                            name="isQuoteModel"
-                            render={({ field }) => (
-                                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                    <div className="space-y-0.5">
-                                        <FormLabel className="text-base">Enable Quote Mode</FormLabel>
-                                        <FormDescription>Customers request a quote instead of booking.</FormDescription>
-                                    </div>
-                                    <FormControl>
-                                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                    </FormControl>
-                                </FormItem>
-                            )}
-                        />
-                         {isQuoteModel && (
-                            <FormField
-                                control={form.control}
-                                name="bookingFee"
-                                render={({ field }) => (
-                                    <FormItem>
-                                        <FormLabel>Booking Fee</FormLabel>
-                                        <FormControl><Input type="number" {...field} /></FormControl>
-                                        <FormMessage />
-                                    </FormItem>
-                                )}
-                            />
+                  <CardHeader>
+                    <CardTitle className="text-lg">Quote Request</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <FormField
+                      control={form.control}
+                      name="isQuoteModel"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Enable Quote Mode</FormLabel>
+                            <FormDescription>Customers request a quote instead of booking.</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                    {isQuoteModel && (
+                      <FormField
+                        control={form.control}
+                        name="bookingFee"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>Booking Fee</FormLabel>
+                            <FormControl><Input type="number" {...field} /></FormControl>
+                            <FormMessage />
+                          </FormItem>
                         )}
-                    </CardContent>
+                      />
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Tiered Packages Builder */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ListPlus className="w-5 h-5 text-primary" />
+                      Tiered Service Packages
+                    </CardTitle>
+                    <CardDescription>Offer different levels of service (Basic, Standard, Premium).</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-6">
+                    <FormField
+                      control={form.control}
+                      name="enableTieredPackages"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-orange-50/30">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base text-orange-900">Enable Package Tiers</FormLabel>
+                            <FormDescription>Show customers a comparison of different service levels.</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+
+                    {enableTieredPackages && (
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {['Basic', 'Standard', 'Premium'].map((tierName, idx) => (
+                          <Card key={tierName} className="border-2 hover:border-primary/50 transition-colors">
+                            <CardHeader className="pb-3">
+                              <CardTitle className="text-lg">{tierName}</CardTitle>
+                            </CardHeader>
+                            <CardContent className="space-y-4">
+                              <FormField
+                                control={form.control}
+                                name={`tiers.${idx}.price`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Price</FormLabel>
+                                    <FormControl><Input type="number" {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={form.control}
+                                name={`tiers.${idx}.description`}
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Brief Pitch</FormLabel>
+                                    <FormControl><Input placeholder="Great for..." {...field} /></FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <div className="space-y-2">
+                                <Label className="text-xs">Included Features (CSV)</Label>
+                                <Input
+                                  placeholder="Feature A, Feature B..."
+                                  onChange={(e) => {
+                                    const features = e.target.value.split(',').map(f => f.trim()).filter(Boolean);
+                                    form.setValue(`tiers.${idx}.features`, features);
+                                  }}
+                                />
+                              </div>
+                            </CardContent>
+                          </Card>
+                        ))}
+                      </div>
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Booking Settings */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Booking Workflow</CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="requireApproval"
+                      render={({ field }) => (
+                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                          <div className="space-y-0.5">
+                            <FormLabel className="text-base">Manual Approval Required</FormLabel>
+                            <FormDescription>You must manually confirm bookings before they are finalized.</FormDescription>
+                          </div>
+                          <FormControl>
+                            <Switch checked={field.value} onCheckedChange={field.onChange} />
+                          </FormControl>
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
                 </Card>
 
                 {/* Bundled Services */}
                 <Card>
-                    <CardHeader>
-                         <CardTitle className="flex items-center gap-2">
-                             <ListPlus className="w-5 h-5 text-primary" />
-                             Bundled Services
-                         </CardTitle>
-                        <CardDescription>Included in this package.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {bundledFields.map((field, index) => (
-                            <div key={field.id} className="flex gap-4 items-start">
-                                <FormField
-                                    control={form.control}
-                                    name={`bundledServices.${index}.name`}
-                                    render={({ field }) => (
-                                        <FormItem className="flex-1">
-                                            <FormControl><Input placeholder="Service Name" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name={`bundledServices.${index}.price`}
-                                    render={({ field }) => (
-                                        <FormItem className="w-32">
-                                            <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <Button type="button" variant="ghost" size="icon" onClick={() => removeBundled(index)}>
-                                    <Trash2 className="w-4 h-4 text-destructive" />
-                                </Button>
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" onClick={() => appendBundled({ name: '', price: 0 })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Service
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ListPlus className="w-5 h-5 text-primary" />
+                      Bundled Services
+                    </CardTitle>
+                    <CardDescription>Included in this package.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {bundledFields.map((field, index) => (
+                      <div key={field.id} className="flex gap-4 items-start">
+                        <FormField
+                          control={form.control}
+                          name={`bundledServices.${index}.name`}
+                          render={({ field }) => (
+                            <FormItem className="flex-1">
+                              <FormControl><Input placeholder="Service Name" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <FormField
+                          control={form.control}
+                          name={`bundledServices.${index}.price`}
+                          render={({ field }) => (
+                            <FormItem className="w-32">
+                              <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        <Button type="button" variant="ghost" size="icon" onClick={() => removeBundled(index)}>
+                          <Trash2 className="w-4 h-4 text-destructive" />
                         </Button>
-                    </CardContent>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={() => appendBundled({ name: '', price: 0 })}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Service
+                    </Button>
+                  </CardContent>
                 </Card>
 
-                 {/* Configurable Addons */}
-                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2">
-                             <ListPlus className="w-5 h-5 text-primary" />
-                             Configurable Add-ons
-                         </CardTitle>
-                        <CardDescription>Optional extras for customers.</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                        {addonFields.map((field, index) => (
-                            <div key={field.id} className="p-4 border rounded-lg space-y-4 bg-slate-50/50">
-                                <div className="flex justify-between items-start">
-                                    <h4 className="text-sm font-medium">Add-on #{index + 1}</h4>
-                                    <Button type="button" variant="ghost" size="icon" onClick={() => removeAddon(index)}>
-                                        <Trash2 className="w-4 h-4 text-destructive" />
-                                    </Button>
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                     <FormField
-                                        control={form.control}
-                                        name={`configurableAddons.${index}.name`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input placeholder="Add-on Name" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name={`configurableAddons.${index}.price`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name={`configurableAddons.${index}.pricingType`}
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <Select onValueChange={field.onChange} defaultValue={field.value}>
-                                                    <FormControl><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
-                                                    <SelectContent>
-                                                        <SelectItem value="oneTime">One Time</SelectItem>
-                                                        <SelectItem value="perGuest">Per Guest</SelectItem>
-                                                        <SelectItem value="perUnit">Per Unit</SelectItem>
-                                                    </SelectContent>
-                                                </Select>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    {form.watch(`configurableAddons.${index}.pricingType`) === 'perUnit' && (
-                                         <FormField
-                                            control={form.control}
-                                            name={`configurableAddons.${index}.unitName`}
-                                            render={({ field }) => (
-                                                <FormItem>
-                                                    <FormControl><Input placeholder="Unit Name" {...field} /></FormControl>
-                                                </FormItem>
-                                            )}
-                                        />
-                                    )}
-                                </div>
-                            </div>
-                        ))}
-                        <Button type="button" variant="outline" onClick={() => appendAddon({ name: '', price: 0, pricingType: 'oneTime' })}>
-                            <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
-                        </Button>
-                    </CardContent>
+                {/* Configurable Addons */}
+                <Card>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2">
+                      <ListPlus className="w-5 h-5 text-primary" />
+                      Configurable Add-ons
+                    </CardTitle>
+                    <CardDescription>Optional extras for customers.</CardDescription>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    {addonFields.map((field, index) => (
+                      <div key={field.id} className="p-4 border rounded-lg space-y-4 bg-slate-50/50">
+                        <div className="flex justify-between items-start">
+                          <h4 className="text-sm font-medium">Add-on #{index + 1}</h4>
+                          <Button type="button" variant="ghost" size="icon" onClick={() => removeAddon(index)}>
+                            <Trash2 className="w-4 h-4 text-destructive" />
+                          </Button>
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`configurableAddons.${index}.name`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl><Input placeholder="Add-on Name" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                          <FormField
+                            control={form.control}
+                            name={`configurableAddons.${index}.price`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <FormControl><Input type="number" placeholder="Price" {...field} /></FormControl>
+                                <FormMessage />
+                              </FormItem>
+                            )}
+                          />
+                        </div>
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                          <FormField
+                            control={form.control}
+                            name={`configurableAddons.${index}.pricingType`}
+                            render={({ field }) => (
+                              <FormItem>
+                                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                  <FormControl><SelectTrigger><SelectValue placeholder="Type" /></SelectTrigger></FormControl>
+                                  <SelectContent>
+                                    <SelectItem value="oneTime">One Time</SelectItem>
+                                    <SelectItem value="perGuest">Per Guest</SelectItem>
+                                    <SelectItem value="perUnit">Per Unit</SelectItem>
+                                  </SelectContent>
+                                </Select>
+                              </FormItem>
+                            )}
+                          />
+                          {form.watch(`configurableAddons.${index}.pricingType`) === 'perUnit' && (
+                            <FormField
+                              control={form.control}
+                              name={`configurableAddons.${index}.unitName`}
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormControl><Input placeholder="Unit Name" {...field} /></FormControl>
+                                </FormItem>
+                              )}
+                            />
+                          )}
+                        </div>
+                      </div>
+                    ))}
+                    <Button type="button" variant="outline" onClick={() => appendAddon({ name: '', price: 0, pricingType: 'oneTime' })}>
+                      <PlusCircle className="mr-2 h-4 w-4" /> Add Add-on
+                    </Button>
+                  </CardContent>
                 </Card>
 
               </div>
@@ -701,26 +853,26 @@ export default function AddServicePage() {
 
                 {/* Actions */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Publish</CardTitle>
-                    </CardHeader>
-                    <CardContent className="space-y-4">
-                         <Button type="submit" className="w-full text-lg py-6" disabled={isAddingService}>
-                            {isAddingService ? (
-                                <span className="flex items-center gap-2">Saving...</span>
-                            ) : (
-                                <span className="flex items-center gap-2"><Save className="w-5 h-5" /> Save Service</span>
-                            )}
-                        </Button>
-                    </CardContent>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Publish</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-4">
+                    <Button type="submit" className="w-full text-lg py-6" disabled={isAddingService}>
+                      {isAddingService ? (
+                        <span className="flex items-center gap-2">Saving...</span>
+                      ) : (
+                        <span className="flex items-center gap-2"><Save className="w-5 h-5" /> Save Service</span>
+                      )}
+                    </Button>
+                  </CardContent>
                 </Card>
 
                 {/* Business Selection */}
                 <Card>
                   <CardHeader>
                     <CardTitle className="flex items-center gap-2 text-lg">
-                        <Store className="w-5 h-5 text-primary" />
-                        Business
+                      <Store className="w-5 h-5 text-primary" />
+                      Business
                     </CardTitle>
                   </CardHeader>
                   <CardContent>
@@ -750,41 +902,41 @@ export default function AddServicePage() {
 
                 {/* Media */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="flex items-center gap-2 text-lg">
-                            <ImageIcon className="w-5 h-5 text-primary" />
-                            Media
-                        </CardTitle>
-                    </CardHeader>
-                    <CardContent>
-                        <FormField
-                            control={form.control}
-                            name="media"
-                            render={({ field }) => (
-                                <FormItem>
-                                    <FormControl>
-                                        <MultiMediaUpload onMediaChange={field.onChange} />
-                                    </FormControl>
-                                    <FormMessage />
-                                </FormItem>
-                            )}
-                        />
-                    </CardContent>
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-lg">
+                      <ImageIcon className="w-5 h-5 text-primary" />
+                      Media
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <FormField
+                      control={form.control}
+                      name="media"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormControl>
+                            <MultiMediaUpload onMediaChange={field.onChange} />
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </CardContent>
                 </Card>
 
                 {/* Hotspots */}
                 <Card>
-                    <CardHeader>
-                        <CardTitle className="text-lg">Hotspots</CardTitle>
-                        <CardDescription>Add interactive hotspots after saving.</CardDescription>
-                    </CardHeader>
-                    <CardContent>
-                         <Button asChild variant="outline" className="w-full" disabled={!newServiceId}>
-                            <Link href={`/dashboard/hotspot-editor/edit/${newServiceId}?type=service`}>
-                                Edit Hotspots
-                            </Link>
-                        </Button>
-                    </CardContent>
+                  <CardHeader>
+                    <CardTitle className="text-lg">Hotspots</CardTitle>
+                    <CardDescription>Add interactive hotspots after saving.</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <Button asChild variant="outline" className="w-full" disabled={!newServiceId}>
+                      <Link href={`/dashboard/hotspot-editor/edit/${newServiceId}?type=service`}>
+                        Edit Hotspots
+                      </Link>
+                    </Button>
+                  </CardContent>
                 </Card>
 
               </div>

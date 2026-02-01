@@ -100,6 +100,9 @@ export interface User {
   voucher: boolean;
   promotion: boolean;
   coupon?: boolean;
+  profilePictureUrl?: string | null;
+  lastLogin?: string | null;
+  trial?: any;
 }
 
 interface Category {
@@ -314,7 +317,7 @@ export interface ServiceProviderProfile {
   certifications: Certification[];
 }
 
-import { ProductVariant } from '../store/products/types';
+import { ProductVariant, ProductAttribute, ProductVariation, SizeGuideConfig } from '../store/products/types';
 
 export interface Product {
   id: string;
@@ -351,9 +354,13 @@ export interface Product {
   createdAt?: string;
   updatedAt?: string;
   variants?: ProductVariant[];
+  attributes?: ProductAttribute[];
+  variations?: ProductVariation[];
+  sizeGuide?: SizeGuideConfig;
   points?: number;
   bonusThreshold?: number;
   bonusAmount?: number;
+  business?: InHouseBusiness;
 }
 
 export type CampaignType = string;

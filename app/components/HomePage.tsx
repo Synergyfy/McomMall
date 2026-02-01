@@ -9,22 +9,22 @@ import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
 import Image from 'next/image';
-import { businessCategories } from '@/lib/business-categories';
 import { useGetRecentListings } from '@/service/listings/hook';
+import { useGetCategories } from '@/service/taxonomy/hook';
 
-// Dynamically import components
-const McomFeatureSection = dynamic(() => import('../homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
-const SeasonalMarketingSection = dynamic(() => import('../homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
-const McomMallBrandsSection = dynamic(() => import('../homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
-const BusinessCategoriesSection = dynamic(() => import('../homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
-const McomEgiftCard = dynamic(() => import('../homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
-const VirtualCardCarousel = dynamic(() => import('../homepage/components/VirtualCardCarousel'));
-const HowItWorks = dynamic(() => import('../homepage/components/HowItWorks'));
-const AuditSection = dynamic(() => import('../homepage/components/AuditSection').then(mod => mod.AuditSection));
-const VCardFeaturesSection = dynamic(() => import('../homepage/components/VCardFeatures'));
-const McomVouchersCoupons = dynamic(() => import('../homepage/components/McomVouchersCoupons'));
-const McomSolutions = dynamic(() => import('../homepage/components/McomSolutions'));
-const LoyaltyProgramSection = dynamic(() => import('../homepage/components/LoyaltyProgramSection'));
+// Dynamically import components using absolute path aliases
+const McomFeatureSection = dynamic(() => import('@/app/homepage/components/McomFeatureSection').then(mod => mod.McomFeatureSection));
+const SeasonalMarketingSection = dynamic(() => import('@/app/homepage/components/SeasonalMarketingSection').then(mod => mod.SeasonalMarketingSection));
+const McomMallBrandsSection = dynamic(() => import('@/app/homepage/components/McomMallBrandsSection').then(mod => mod.McomMallBrandsSection));
+const BusinessCategoriesSection = dynamic(() => import('@/app/homepage/components/BusinessCategoriesSection').then(mod => mod.BusinessCategoriesSection));
+const McomEgiftCard = dynamic(() => import('@/app/homepage/components/McomEgiftCard').then(mod => mod.McomEgiftCard));
+const VirtualCardCarousel = dynamic(() => import('@/app/homepage/components/VirtualCardCarousel'));
+const HowItWorks = dynamic(() => import('@/app/homepage/components/HowItWorks'));
+const AuditSection = dynamic(() => import('@/app/homepage/components/AuditSection').then(mod => mod.AuditSection));
+const VCardFeaturesSection = dynamic(() => import('@/app/homepage/components/VCardFeatures'));
+const McomVouchersCoupons = dynamic(() => import('@/app/homepage/components/McomVouchersCoupons'));
+const McomSolutions = dynamic(() => import('@/app/homepage/components/McomSolutions'));
+const LoyaltyProgramSection = dynamic(() => import('@/app/homepage/components/LoyaltyProgramSection'));
 const Footer = dynamic(() => import('@/components/Footer'));
 
 // --- Helper Components ---
@@ -122,6 +122,8 @@ export default function HomePage() {
     isError,
   } = useGetRecentListings();
 
+  const { data: categories } = useGetCategories();
+
   const backgroundImages = [Autumn, Summer, Spring, Winter];
 
   useEffect(() => {
@@ -173,7 +175,7 @@ export default function HomePage() {
     <div className="bg-[#fafafa] font-sans relative">
       <main>
         {/* --- Hero Section with Animated Background --- */}
-        <section className="relative h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
+        <section className="relative min-h-[80vh] md:h-[70vh] w-full text-white overflow-hidden">
           <AnimatePresence>
             <motion.div
               key={currentImageIndex}
@@ -266,17 +268,21 @@ export default function HomePage() {
             >
               <div className="flex flex-wrap items-center justify-center gap-x-3 gap-y-2 px-4">
                 <span className="font-semibold">Popular:</span>
-                {businessCategories.slice(0, 4).map(category => (
-                  <Link
-                    key={category.name}
-                    href={`/listings?category=${encodeURIComponent(
-                      category.name
-                    )}`}
-                    className="underline hover:text-orange-300"
-                  >
-                    {category.name}
-                  </Link>
-                ))}
+                {categories && categories.length > 0 ? (
+                  categories.slice(0, 4).map(category => (
+                    <Link
+                      key={category.id}
+                      href={`/listings?category=${encodeURIComponent(
+                        category.name
+                      )}`}
+                      className="underline hover:text-orange-300"
+                    >
+                      {category.name}
+                    </Link>
+                  ))
+                ) : (
+                  <span>Loading popular categories...</span>
+                )}
                 <Link
                   href="/listings?showFilters=true"
                   className="font-bold hover:text-orange-300"

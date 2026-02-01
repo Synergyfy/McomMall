@@ -15,6 +15,7 @@ export interface VoucherProduct {
   allowReloading?: boolean;
   backgroundImage?: string;
   textColor?: string;
+  media?: string[] | null;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -37,6 +38,7 @@ export interface Voucher {
   id: string;
   code: string;
   initialValue: string;
+  amount?: number; // Added to match page usage
   balance: string;
   status:
     | 'UNREDEEMED'
@@ -49,6 +51,7 @@ export interface Voucher {
   updatedAt: string;
   recipientEmail?: string;
   voucherProduct?: VoucherProduct;
+  media?: string[] | null;
 }
 
 export interface CreateVoucherProductDto {

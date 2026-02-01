@@ -1,6 +1,7 @@
+
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import Image from 'next/image';
 import {
   Select,
@@ -11,7 +12,7 @@ import {
 } from '@/components/ui/select';
 import { useGetProductById } from '@/service/store/products/hook';
 import { useGetServicesByProductId } from '@/service/partnerships/hooks';
-import { ProductVariant } from '@/service/store/products/types';
+import { ProductVariant, ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Button } from '@/components/ui/button';
 import { Star, Minus, Plus, Heart, CheckCircle, Truck, Shield } from 'lucide-react';
 import ServiceList from '@/components/ServiceList';
@@ -38,28 +39,76 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
   const router = useRouter();
   const dispatch = useDispatch();
   const { data: product, isLoading, isError } = useGetProductById(productId);
+  console.log('DEBUG: Product Data:', product);
   const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(productId);
   const { addItemToCart } = useCart();
   const { wishlist, addItemToWishlist, removeItemFromWishlist } = useWishlist();
+
   const [quantity, setQuantity] = useState(1);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [mainImage, setMainImage] = useState<string | null>(null);
+
+  // --- DERIVED STATE FOR VARIATIONS ---
+
+  // 1. Determine which system to use: Matrix (Variations) or Simple (Variants)
+  const isMatrixSystem = product?.attributes && product?.variations && product.variations.length > 0;
+  console.log('DEBUG: isMatrixSystem', isMatrixSystem, product?.attributes, product?.variations);
+
+  // 2. Find the exact matching variation based on current selection
+  const currentVariation = useMemo(() => {
+    if (!isMatrixSystem || !product?.variations) return null;
+
+    return product.variations.find(v => {
+      // Check if every key in the combination matches the selection
+      return Object.entries(v.combination).every(([key, value]) => selectedVariants[key] === value);
+    });
+  }, [isMatrixSystem, product, selectedVariants]);
+
+  // 3. Determine Price: specific variation price OR base product price
+  const displayPrice = currentVariation
+    ? currentVariation.price
+    : (product?.price || 0);
+
+  // 4. Determine Stock Status
+  const isOutOfStock = currentVariation
+    ? !currentVariation.available || currentVariation.stock <= 0
+    : false; // If no variation selected yet, assume available or handle otherwise
+
+  // 5. Initialize Defaults on Load
+  useEffect(() => {
+    if (product) {
+       // Set Main Image
+       const firstImage = product.imageUrl || (product.fileUrls?.find(isImageUrl)) || 'https://via.placeholder.com/500x500.png?text=No+Image';
+       if (!mainImage) setMainImage(firstImage);
+
+       // Initialize Selections for Matrix System (Select first available options)
+       if (isMatrixSystem && Object.keys(selectedVariants).length === 0) {
+         const defaults: Record<string, string> = {};
+         product.attributes?.forEach(attr => {
+           if (attr.options.length > 0) defaults[attr.name] = attr.options[0].name;
+         });
+         setSelectedVariants(defaults);
+       }
+       // Initialize Selections for Simple System
+       else if (!isMatrixSystem && product.variants && Object.keys(selectedVariants).length === 0) {
+         const defaults: Record<string, string> = {};
+         product.variants.forEach(v => {
+            if (v.options.length > 0) defaults[v.name] = v.options[0].name;
+         });
+         setSelectedVariants(defaults);
+       }
+    }
+  }, [product, isMatrixSystem]);
+
 
   const allImageUrls = [
     ...(product?.imageUrl ? [product.imageUrl] : []),
     ...(product?.fileUrls?.filter(isImageUrl) || []),
   ];
-  const [mainImage, setMainImage] = useState(allImageUrls[0] || 'https://via.placeholder.com/500x500.png?text=No+Image');
 
   const isWishlisted = wishlist?.items?.some(
     (item) => item.product.id === productId
   );
-
-  if (product && mainImage === 'https://via.placeholder.com/500x500.png?text=No+Image') {
-    const firstImage = allImageUrls[0];
-    if (firstImage) {
-      setMainImage(firstImage);
-    }
-  }
 
   const handleWishlistToggle = () => {
     if (isWishlisted) {
@@ -80,10 +129,17 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
   const handleAddToCart = () => {
     if (product) {
+      if (isOutOfStock) {
+        toast.error('Selected variation is out of stock.');
+        return;
+      }
+
       addItemToCart({
         productId: product.id,
         quantity,
         selectedVariants: selectedVariants,
+        // If specific variation ID exists (Matrix system), we could pass it here if Cart supports it
+        // For now, passing the selected attribute map is sufficient for most simplified carts
       });
       toast.success('Added to cart');
     }
@@ -91,8 +147,39 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
   const handleOrderNow = () => {
     if (product) {
+       if (isOutOfStock) {
+        toast.error('Selected variation is out of stock.');
+        return;
+      }
       router.push(`/checkout?productId=${product.id}&quantity=${quantity}`);
     }
+  };
+
+  // Helper to check if a specific option is valid given the *other* current selections
+  // (e.g., If "Red" is selected, is "XL" available in the matrix?)
+  const isOptionAvailableInMatrix = (attributeName: string, optionValue: string) => {
+     if (!isMatrixSystem || !product?.variations) return true;
+
+     // Create a hypothetical selection where we replace the current attribute with this new option
+     const hypotheticalSelection = { ...selectedVariants, [attributeName]: optionValue };
+
+     // Check if ANY variation exists that matches this hypothetical selection (partially or fully)
+     // NOTE: This logic can be complex. A simple version checks if there is AT LEAST ONE valid variation
+     // that contains this attribute value, respecting *already selected* attributes that are "higher up" or just all of them.
+     // For a true "Linked" experience, we usually treat attributes hierarchically or check intersection.
+
+     // Simple Approach: Just check if this option exists in any variation that matches the OTHER currently selected keys.
+     return product.variations.some(v => {
+        // Does this variation have the option we are checking?
+        if (v.combination[attributeName] !== optionValue) return false;
+
+        // Does it also match the OTHER currently selected attributes?
+        // (We can skip checking the attribute we are currently rendering)
+        return Object.entries(selectedVariants).every(([key, value]) => {
+           if (key === attributeName) return true; // Skip the one we are changing
+           return v.combination[key] === value;
+        });
+     });
   };
 
   if (isLoading) {
@@ -127,7 +214,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
           <div className="space-y-4 lg:col-span-2">
             <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
               <Image
-                src={mainImage}
+                src={mainImage || 'https://via.placeholder.com/500x500.png?text=No+Image'}
                 alt={product.title}
                 fill
                 className="object-cover transition-transform duration-500 hover:scale-105"
@@ -176,17 +263,57 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
 
             <div>
               <p className="text-5xl font-bold text-gray-900">
-                £{product.price.toFixed(2)}
+                £{displayPrice.toFixed(2)}
               </p>
+              {isOutOfStock && <span className="text-red-500 font-bold text-lg">Out of Stock</span>}
             </div>
 
             <p className="text-gray-700 text-lg leading-relaxed">
               {product.shortDescription || product.description.substring(0, 200) + '...'}
             </p>
 
-            {product.variants && product.variants.length > 0 && (
-              <div className="space-y-4">
-                {product.variants.map((variant: ProductVariant) => (
+            {/* RENDER VARIANTS (MATRIX OR SIMPLE) */}
+            <div className="space-y-4">
+
+              {/* MATRIX SYSTEM UI */}
+              {isMatrixSystem && product.attributes?.map((attr) => (
+                 <div key={attr.name}>
+                    <label className="text-lg font-semibold text-gray-800">
+                      {attr.name}
+                    </label>
+                    <Select
+                      value={selectedVariants[attr.name] || ''}
+                      onValueChange={(value) =>
+                        setSelectedVariants({
+                          ...selectedVariants,
+                          [attr.name]: value,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="mt-2 text-lg py-6">
+                        <SelectValue placeholder={`Select ${attr.name}`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {attr.options.map((option: { name: string, priceModifier: number }) => {
+                          const available = isOptionAvailableInMatrix(attr.name, option.name);
+                          return (
+                            <SelectItem
+                              key={option.name}
+                              value={option.name}
+                              className="text-lg"
+                              disabled={!available}
+                            >
+                              {option.name} {!available && '(Unavailable)'}
+                            </SelectItem>
+                          );
+                        })}
+                      </SelectContent>
+                    </Select>
+                 </div>
+              ))}
+
+              {/* SIMPLE SYSTEM UI (Fallback) */}
+              {!isMatrixSystem && product.variants && product.variants.map((variant: ProductVariant) => (
                   <div key={variant.name}>
                     <label className="text-lg font-semibold text-gray-800">
                       {variant.name}
@@ -211,9 +338,8 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                       </SelectContent>
                     </Select>
                   </div>
-                ))}
-              </div>
-            )}
+              ))}
+            </div>
 
             <div className="flex items-center space-x-6">
               <div className="flex items-center border border-gray-300 rounded-full">
@@ -222,6 +348,7 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   size="icon"
                   className="rounded-full"
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
+                  disabled={isOutOfStock}
                 >
                   <Minus className="h-5 w-5" />
                 </Button>
@@ -231,21 +358,24 @@ export default function ProductDetails({ productId }: ProductDetailsProps) {
                   size="icon"
                   className="rounded-full"
                   onClick={() => setQuantity(quantity + 1)}
+                  disabled={isOutOfStock}
                 >
                   <Plus className="h-5 w-5" />
                 </Button>
               </div>
               <Button
                 size="lg"
-                className="flex-1 text-lg py-7 bg-orange-600 hover:bg-orange-700 rounded-full shadow-lg"
+                className="flex-1 text-lg py-7 bg-orange-600 hover:bg-orange-700 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleAddToCart}
+                disabled={isOutOfStock}
               >
-                Add to Cart
+                {isOutOfStock ? 'Out of Stock' : 'Add to Cart'}
               </Button>
                <Button
                 size="lg"
-                className="flex-1 text-lg py-7 bg-green-600 hover:bg-green-700 rounded-full shadow-lg"
+                className="flex-1 text-lg py-7 bg-green-600 hover:bg-green-700 rounded-full shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
                 onClick={handleOrderNow}
+                disabled={isOutOfStock}
               >
                 Order Now
               </Button>

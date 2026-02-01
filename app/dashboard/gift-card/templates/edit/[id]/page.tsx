@@ -174,7 +174,7 @@ const EditGiftCardTemplatePage = () => {
         return;
       }
     } else {
-      submissionData.backgroundImageUrl = template?.backgroundImageUrl;
+      submissionData.backgroundImageUrl = template?.backgroundImageUrl || undefined;
     }
 
     updateTemplate({ id, templateData: submissionData }, {

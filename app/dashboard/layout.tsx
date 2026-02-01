@@ -8,7 +8,7 @@ import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Menu } from 'lucide-react';
+import { Menu, ChevronDown } from 'lucide-react';
 
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
@@ -23,15 +23,25 @@ import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import UserNav from '@/components/UserNav';
 import AuthRedirect from '@/components/AuthRedirect';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const [mounted, setMounted] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
-  const [isNavMenuOpen, setIsNavMenuOpen] = useState(false);
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const { data: trialStatus } = useGetTrialStatus();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null; // or a loading spinner
+  }
 
   return (
     <>
@@ -69,16 +79,13 @@ export default function DashboardLayout({
                     <Button
                       variant="outline"
                       size="icon"
-                      className="w-fit border-0 shadow-none"
+                      className="border-0 shadow-none"
                     >
-                      <div className="flex gap-2 items-center">
-                        <Menu className="h-5 w-5" />
-                        <p>Dashbaord Menu</p>
-                      </div>
+                      <Menu className="h-5 w-5" />
                     </Button>
                   </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-[18rem]">
-                    <div className="p-5 border-b">
+                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
+                    <div className="p-5 border-b shrink-0">
                       <Link href="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
                           <span className="text-white font-bold text-sm">M</span>
@@ -86,38 +93,36 @@ export default function DashboardLayout({
                         <span className="text-xl font-semibold">McomMall</span>
                       </Link>
                     </div>
-                    <div className="p-4 overflow-y-auto">
+                    <div className="p-4 overflow-y-auto flex-1">
                       <SideMenuContent
                         onLinkClick={() => setIsSideMenuOpen(false)}
                       />
+                      <div className="mt-4 border-t pt-4">
+                        <button
+                          onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
+                          className="flex w-full items-center justify-between px-2 py-3 text-sm font-semibold text-gray-500 uppercase bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                        >
+                          <span>Quick Actions</span>
+                          <ChevronDown
+                            className={`h-4 w-4 transition-transform ${isQuickActionsOpen ? 'rotate-180' : ''}`}
+                          />
+                        </button>
+                        {isQuickActionsOpen && (
+                          <div className="mt-1 pl-1">
+                            <NavMenuContent onLinkClick={() => setIsSideMenuOpen(false)} />
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </SheetContent>
                 </Sheet>
               </div>
             </div>
 
-            {/* --- RIGHT SIDE: User Nav & Mobile Nav Trigger --- */}
+            {/* --- RIGHT SIDE: User Nav --- */}
             <div className="flex items-center gap-4">
               {/* User Nav (Visible on all screens, Right Aligned) */}
               <UserNav align="end" />
-
-              <div className="md:hidden">
-                <Sheet open={isNavMenuOpen} onOpenChange={setIsNavMenuOpen}>
-                  <SheetTrigger asChild>
-                    <Button variant="outline" size="icon">
-                      <Menu className="h-5 w-5" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent
-                    side="right"
-                    className="p-4 w-[18rem] overflow-y-auto"
-                  >
-                    <NavMenuContent
-                      onLinkClick={() => setIsNavMenuOpen(false)}
-                    />
-                  </SheetContent>
-                </Sheet>
-              </div>
             </div>
           </header>
 

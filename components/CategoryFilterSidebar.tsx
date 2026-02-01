@@ -2,7 +2,6 @@
 'use client';
 
 import { useState, useEffect, useMemo } from 'react';
-import { businessCategories } from '@/lib/business-categories';
 import { Label } from '@/components/ui/label';
 import {
   Select,
@@ -12,6 +11,10 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  useGetCategories,
+  useGetSubCategoriesByCategory,
+} from '@/service/taxonomy/hook';
 
 interface CategoryFilterSidebarProps {
   initialCategory?: string;
@@ -30,6 +33,20 @@ export default function CategoryFilterSidebar({
   const [selectedSubCategories, setSelectedSubCategories] =
     useState<string[]>(initialSubCategories);
 
+  // Fetch categories
+  const { data: categories, isLoading: isCategoriesLoading } =
+    useGetCategories();
+
+  // Find the ID of the selected category (based on name)
+  const selectedCategoryId = useMemo(() => {
+    if (!categories || !selectedCategory) return undefined;
+    return categories.find(c => c.name === selectedCategory)?.id;
+  }, [categories, selectedCategory]);
+
+  // Fetch subcategories based on the found ID
+  const { data: subCategories, isLoading: isSubCategoriesLoading } =
+    useGetSubCategoriesByCategory(selectedCategoryId || '');
+
   useEffect(() => {
     setSelectedCategory(initialCategory);
     setSelectedSubCategories(initialSubCategories);
@@ -38,7 +55,7 @@ export default function CategoryFilterSidebar({
   const handleCategoryChange = (category: string) => {
     setSelectedCategory(category);
     setSelectedSubCategories([]);
-    onCategoryChange(category);
+    onCategoryChange(category); // Update parent state immediately
     onSubCategoryChange([]);
   };
 
@@ -47,28 +64,28 @@ export default function CategoryFilterSidebar({
       ? selectedSubCategories.filter(sc => sc !== subCategory)
       : [...selectedSubCategories, subCategory];
     setSelectedSubCategories(newSubCategories);
-    onSubCategoryChange(newSubCategories);
+    onSubCategoryChange(newSubCategories); // Update parent state immediately
   };
-
-  const currentSubCategories = useMemo(() => {
-    if (!selectedCategory) return [];
-    const category = businessCategories.find(
-      cat => cat.name === selectedCategory
-    );
-    return category ? category.subCategories : [];
-  }, [selectedCategory]);
 
   return (
     <div className="space-y-4">
       <div>
         <Label>Category</Label>
-        <Select value={selectedCategory} onValueChange={handleCategoryChange}>
+        <Select
+          value={selectedCategory}
+          onValueChange={handleCategoryChange}
+          disabled={isCategoriesLoading}
+        >
           <SelectTrigger>
-            <SelectValue placeholder="Select a category" />
+            <SelectValue
+              placeholder={
+                isCategoriesLoading ? 'Loading...' : 'Select a category'
+              }
+            />
           </SelectTrigger>
           <SelectContent>
-            {businessCategories.map(cat => (
-              <SelectItem key={cat.name} value={cat.name}>
+            {categories?.map(cat => (
+              <SelectItem key={cat.id} value={cat.name}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -79,20 +96,30 @@ export default function CategoryFilterSidebar({
       {selectedCategory && (
         <div>
           <Label>Sub-categories</Label>
-          <div className="space-y-2 mt-2">
-            {currentSubCategories.map(sub => (
-              <div key={sub.name} className="flex items-center space-x-2">
-                <Checkbox
-                  id={sub.name}
-                  checked={selectedSubCategories.includes(sub.name)}
-                  onCheckedChange={() => handleSubCategoryChange(sub.name)}
-                />
-                <Label htmlFor={sub.name} className="font-normal">
-                  {sub.name}
-                </Label>
-              </div>
-            ))}
-          </div>
+          {isSubCategoriesLoading ? (
+            <p className="text-sm text-gray-500 mt-2">Loading...</p>
+          ) : (
+            <div className="space-y-2 mt-2">
+              {subCategories && subCategories.length > 0 ? (
+                subCategories.map(sub => (
+                  <div key={sub.id} className="flex items-center space-x-2">
+                    <Checkbox
+                      id={sub.id}
+                      checked={selectedSubCategories.includes(sub.name)}
+                      onCheckedChange={() => handleSubCategoryChange(sub.name)}
+                    />
+                    <Label htmlFor={sub.id} className="font-normal">
+                      {sub.name}
+                    </Label>
+                  </div>
+                ))
+              ) : (
+                <p className="text-sm text-gray-500">
+                  No subcategories available.
+                </p>
+              )}
+            </div>
+          )}
         </div>
       )}
     </div>

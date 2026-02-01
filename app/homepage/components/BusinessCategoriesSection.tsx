@@ -28,7 +28,8 @@ import {
   HeartHandshake,
   LucideProps,
 } from 'lucide-react';
-import { businessCategories } from '@/lib/business-categories';
+import { useGetCategories, useGetSectors } from '@/service/taxonomy/hook';
+import { Sector } from '@/service/taxonomy/types';
 
 const iconMap: { [key: string]: React.ReactElement<LucideProps> } = {
   Hospitality: <UtensilsCrossed />,
@@ -65,11 +66,9 @@ const cardVariants: Variants = {
   },
 };
 
-interface SubCategory {
+interface DisplayCategory {
   name: string;
-  mainCategory: string;
   icon: React.ReactElement<LucideProps>;
-  items?: string[];
 }
 
 const MarqueeItem = ({
@@ -77,7 +76,7 @@ const MarqueeItem = ({
   onClick,
   onMouseEnter,
 }: {
-  item: SubCategory;
+  item: DisplayCategory;
   onClick: (name: string) => void;
   onMouseEnter: () => void;
 }) => (
@@ -104,7 +103,7 @@ const GridItem = ({
   item,
   onClick,
 }: {
-  item: SubCategory;
+  item: DisplayCategory;
   onClick: (name: string) => void;
 }) => (
   <motion.div
@@ -132,20 +131,35 @@ export function BusinessCategoriesSection() {
     null
   );
 
-  const allSubcategories = useMemo(() => {
-    const subcategories = businessCategories.flatMap(category =>
-      category.subCategories.map(sub => ({
-        ...sub,
-        mainCategory: category.name,
-        icon: iconMap[category.name] || <Users />,
-      }))
-    );
-    return shuffleArray(subcategories);
-  }, []);
+  const { data: sectors } = useGetSectors();
+  const { data: categories, isLoading } = useGetCategories();
+
+  const allDisplayCategories = useMemo(() => {
+    if (!categories || !sectors) return [];
+
+    // Create a map of Sector ID -> Sector Name
+    const sectorMap = new Map<string, string>();
+    sectors.forEach((sector: Sector) => {
+      sectorMap.set(sector.id, sector.name);
+    });
+
+    const displayCats = categories.map(category => {
+      const sectorName = sectorMap.get(category.sectorId) || 'Others';
+      // Try to find an icon for the sector, defaulting to 'Others' or Users icon
+      const icon = iconMap[sectorName] || iconMap['Others'] || <Users />;
+
+      return {
+        name: category.name,
+        icon: icon,
+      };
+    });
+
+    return shuffleArray(displayCats);
+  }, [categories, sectors]);
 
   const duplicatedCategories = useMemo(
-    () => [...allSubcategories, ...allSubcategories],
-    [allSubcategories]
+    () => [...allDisplayCategories, ...allDisplayCategories],
+    [allDisplayCategories]
   );
 
   const handleCategoryClick = (categoryName: string) => {
@@ -155,19 +169,25 @@ export function BusinessCategoriesSection() {
   };
 
   useEffect(() => {
-    const newControls = animate(x, [0, -208 * allSubcategories.length], {
+    if (allDisplayCategories.length === 0) return;
+
+    const newControls = animate(x, [0, -208 * allDisplayCategories.length], {
       repeat: Infinity,
       repeatType: 'loop',
-      duration: 350,
+      duration: Math.max(20, allDisplayCategories.length * 2) * 10, // Adjust speed based on length
       ease: 'linear',
-      repeatDelay: 5,
+      repeatDelay: 0,
     });
     setControls(newControls);
 
     return () => {
       newControls.stop();
     };
-  }, [x, allSubcategories]);
+  }, [x, allDisplayCategories]); // removed duplicatedCategories dep to avoid re-triggering
+
+  if (isLoading) {
+      return <div className="py-20 text-center">Loading categories...</div>;
+  }
 
   return (
     <div className="bg-white py-20 sm:py-24 overflow-hidden">
@@ -190,7 +210,7 @@ export function BusinessCategoriesSection() {
           >
             {duplicatedCategories.map((item, index) => (
               <MarqueeItem
-                key={index}
+                key={`${item.name}-${index}`}
                 item={item}
                 onClick={handleCategoryClick}
                 onMouseEnter={() => controls?.pause()}
@@ -202,7 +222,7 @@ export function BusinessCategoriesSection() {
 
       <div className="md:hidden px-6">
         <div className="grid grid-cols-2 gap-4">
-          {allSubcategories.slice(0, 6).map((item, index) => (
+          {allDisplayCategories.slice(0, 6).map((item, index) => (
             <GridItem key={index} item={item} onClick={handleCategoryClick} />
           ))}
         </div>
