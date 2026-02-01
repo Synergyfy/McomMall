@@ -5,6 +5,7 @@ export interface UserInterface {
   password: string;
   confirm_password: string;
   role: UserRole;
+  provisionCode?: string;
 }
 
 export enum UserRole {
