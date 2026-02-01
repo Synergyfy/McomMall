@@ -878,18 +878,9 @@ export default function CouponsVouchersPage() {
                                             <div className="mt-3 flex flex-wrap gap-1.5">
                                                 {selectedVoucherForDetails?.shops?.map((shop: any, idx: number) => (
                                                     <Badge key={idx} variant="secondary" className="bg-white text-blue-700 border border-blue-100 shadow-sm text-[9px] font-bold px-2 py-0.5">
-                                                        {shop.name || shop.id || shop}
+                                                        {typeof shop === 'string' ? shop : (shop.name || shop.id)}
                                                     </Badge>
                                                 ))}
-                                            <div className="mt-2 space-y-1">
-                                                <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
-                                                <div className="flex flex-wrap gap-1">
-                                                    {selectedVoucherForDetails?.shops?.map((shop, idx) => (
-                                                        <Badge key={idx} variant="secondary" className="bg-blue-100/50 text-blue-700 border-none text-[10px]">
-                                                            {typeof shop === 'string' ? shop : (shop.name || shop.id)}
-                                                        </Badge>
-                                                    ))}
-                                                </div>
                                             </div>
                                         )}
                                     </div>
