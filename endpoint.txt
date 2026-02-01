@@ -1,0 +1,27 @@
+GET A BUSINESS CAHSBACK STATS
+
+endpoint: GET /terminal-cashback/stats
+
+response: {
+  "pendingCount": 2,
+  "approvedCount": 15,
+  "totalEarned": 45.5
+}
+
+
+[the exting endpoint for listing claims]
+[the existing endpoint for getting claim details]
+
+APPROVE/REJECT A CLAIM
+
+ENDPOINT: PATCH /terminal-cashback/claims/{id}/status
+
+PARAMS: id
+
+request body : UpdateTerminalCashbackStatusDto{
+status*	string
+New status for the claim
+
+Enum:
+[ PENDING, APPROVED, REJECTED, AUTO_APPROVED ]
+}

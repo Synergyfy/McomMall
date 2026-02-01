@@ -516,225 +516,202 @@ export default function CouponsVouchersPage() {
                         </div>
                     </div>
 
-                    <TabsContent value="overview">
-                        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                            <div className="lg:col-span-2 space-y-6">
-                                <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
-                                    <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
-                                    <CardContent className={isBusiness ? "p-4" : "p-4"}>
-                                        {isBusiness ? (
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                                                {voucherTypes.map((vt) => (
-                                                    <div key={vt.id} className="flex flex-col gap-4 group">
-                                                        {/* Realistic Card - Business Definition */}
-                                                        <div
-                                                            id={`voucher-def-card-${vt.id}`}
-                                                            className="relative w-full aspect-[1.586/1] min-h-[220px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex flex-col justify-between border border-white/10"
-                                                        >
-                                                            {/* Background decoration */}
-                                                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
-                                                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
-
-                                                            {/* Header */}
-                                                            <div className="flex justify-between items-center relative z-10">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="bg-orange-600/20 p-1 rounded-md">
-                                                                        <Zap className="w-3.5 h-3.5 text-orange-400" />
-                                                                    </div>
-                                                                    <span className="font-bold text-[10px] tracking-widest uppercase opacity-80">Voucher Definition</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                    <Badge className={`${vt.status === 'Active' ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-gray-500/20 text-gray-400 border-gray-500/30'} border backdrop-blur-sm text-[9px] px-2 py-0.5 rounded-full`}>
-                                                                        {vt.status}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Chip & Contactless */}
-                                                            <div className="flex items-center gap-3 mt-2 relative z-10">
-                                                                <div className="w-11 h-8 rounded-md bg-gradient-to-br from-gray-200 via-gray-400 to-gray-500 shadow-md border border-gray-400/50 relative overflow-hidden opacity-80">
-                                                                     <div className="absolute top-1/2 left-0 w-full h-[0.5px] bg-gray-700/30"></div>
-                                                                     <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-gray-700/30"></div>
-                                                                     <div className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 border border-gray-700/30 rounded-sm"></div>
-                                                                </div>
-                                                                <ScanLine className="w-5 h-5 text-white/30 rotate-90" />
-                                                            </div>
-
-                                                            {/* Balance & Info Row */}
-                                                            <div className="relative z-10 mt-1 flex justify-between items-end">
-                                                                <div>
-                                                                    <p className="text-[9px] text-orange-300 font-bold tracking-widest uppercase mb-0.5 opacity-80">Split Ratio</p>
-                                                                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white shadow-black drop-shadow-md">{vt.split}</h3>
-                                                                </div>
-                                                                <div className="text-right pb-1">
-                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5 font-bold">Label</p>
-                                                                     <div className="text-xs font-bold bg-white/5 text-orange-400 px-2 py-1 rounded-lg border border-white/10 backdrop-blur-md truncate max-w-[80px]">
-                                                                        {vt.seasonalLabel}
-                                                                     </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Footer Info */}
-                                                            <div className="flex justify-between items-end relative z-10 mt-auto pt-3 border-t border-white/10">
-                                                                <div className="flex-1 min-w-0 mr-4">
-                                                                    <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Definition Name</p>
-                                                                    <p className="font-bold tracking-wide truncate text-sm uppercase">{vt.name}</p>
-                                                                     <p className="text-[9px] font-mono text-gray-500 mt-0.5 flex items-center gap-1 group/id">
-                                                                        {vt.id} 
-                                                                        <Copy 
-                                                                            className="w-3 h-3 cursor-pointer hover:text-orange-400 transition-colors" 
-                                                                            onClick={() => handleCopy(vt.id)} 
-                                                                        />
-                                                                     </p>
-                                                                </div>
-                                                                <div className="text-right shrink-0">
-                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Usage Range</p>
-                                                                    <p className="text-[10px] font-bold bg-orange-600/10 text-white px-2 py-1 rounded-lg backdrop-blur-md inline-block border border-white/10 shadow-sm">
-                                                                        {vt.usageScope}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Actions Below Card */}
-                                                        <div className="grid grid-cols-1 gap-3 mt-1">
-                                                            <Button 
-                                                                variant="outline" 
-                                                                className="h-11 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-sm w-full"
-                                                                onClick={() => { /* Open edit or details modal in future */ }}
-                                                            >
-                                                                Manage Definition
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        ) : (
-                                            <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-6">
-                                                {myVouchers.map((cv) => (
-                                                    <div key={cv.id} className="flex flex-col gap-4 group">
-                                                        {/* Realistic Card - Compact & Fitted */}
-                                                        <div
-                                                            id={`voucher-card-${cv.id}`}
-                                                            className="relative w-full aspect-[1.586/1] min-h-[220px] rounded-2xl overflow-hidden shadow-xl hover:shadow-2xl transition-all duration-300 transform hover:-translate-y-1 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 text-white p-5 flex flex-col justify-between border border-white/10"
-                                                        >
-                                                            {/* Background decoration */}
-                                                            <div className="absolute top-0 right-0 w-64 h-64 bg-white/5 rounded-full -translate-y-1/2 translate-x-1/2 blur-3xl pointer-events-none"></div>
-                                                            <div className="absolute bottom-0 left-0 w-48 h-48 bg-orange-500/10 rounded-full translate-y-1/2 -translate-x-1/2 blur-3xl pointer-events-none"></div>
-
-                                                            {/* Header */}
-                                                            <div className="flex justify-between items-center relative z-10">
-                                                                <div className="flex items-center gap-2">
-                                                                    <div className="bg-orange-600/20 p-1 rounded-md">
-                                                                        <Gift className="w-3.5 h-3.5 text-orange-400" />
-                                                                    </div>
-                                                                    <span className="font-bold text-[10px] tracking-widest uppercase opacity-80">McomMall</span>
-                                                                </div>
-                                                                <div className="flex items-center gap-1.5">
-                                                                     {/* Download Button */}
-                                                                     <Button
-                                                                        variant="ghost"
-                                                                        size="icon"
-                                                                        className="h-7 w-7 text-white/50 hover:text-white hover:bg-white/10 rounded-full transition-all"
-                                                                        onClick={() => handleDownloadCard(cv.id, cv.name)}
-                                                                        title="Download Card"
-                                                                    >
-                                                                        <Download className="w-3.5 h-3.5" />
-                                                                    </Button>
-                                                                    <Badge className="bg-orange-600/20 hover:bg-orange-600/30 text-orange-400 border border-orange-600/30 backdrop-blur-sm text-[9px] px-2 py-0.5 rounded-full">
-                                                                        {cv.status}
-                                                                    </Badge>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Chip & Contactless */}
-                                                            <div className="flex items-center gap-3 mt-2 relative z-10">
-                                                                <div className="w-11 h-8 rounded-md bg-gradient-to-br from-yellow-100 via-yellow-400 to-yellow-600 shadow-md border border-yellow-500/50 relative overflow-hidden">
-                                                                     <div className="absolute top-1/2 left-0 w-full h-[0.5px] bg-yellow-900/30"></div>
-                                                                     <div className="absolute top-0 left-1/2 h-full w-[0.5px] bg-yellow-900/30"></div>
-                                                                     <div className="absolute top-1/2 left-1/2 w-3.5 h-3.5 -translate-x-1/2 -translate-y-1/2 border border-yellow-900/30 rounded-sm"></div>
-                                                                </div>
-                                                                <ScanLine className="w-5 h-5 text-white/30 rotate-90" />
-                                                            </div>
-
-                                                            {/* Balance & Info Row */}
-                                                            <div className="relative z-10 mt-1 flex justify-between items-end">
-                                                                <div>
-                                                                    <p className="text-[9px] text-orange-300 font-bold tracking-widest uppercase mb-0.5 opacity-80">Current Balance</p>
-                                                                    <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-white shadow-black drop-shadow-md">£{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}</h3>
-                                                                </div>
-                                                                <div className="text-right pb-1">
-                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-wider mb-0.5 font-bold">Split</p>
-                                                                     <div className="text-xs font-bold bg-white/5 text-orange-400 px-2 py-1 rounded-lg border border-white/10 backdrop-blur-md">
-                                                                        {cv.split}
-                                                                     </div>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Footer Info */}
-                                                            <div className="flex justify-between items-end relative z-10 mt-auto pt-3 border-t border-white/10">
-                                                                <div className="flex-1 min-w-0 mr-4">
-                                                                    <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Voucher Name</p>
-                                                                    <p className="font-bold tracking-wide truncate text-sm uppercase">{cv.name}</p>
-                                                                     <p className="text-[9px] font-mono text-gray-500 mt-0.5 flex items-center gap-1 group/id">
-                                                                        {cv.id} 
-                                                                        <Copy 
-                                                                            className="w-3 h-3 cursor-pointer hover:text-orange-400 transition-colors" 
-                                                                            onClick={() => handleCopy(cv.id)} 
-                                                                        />
-                                                                     </p>
-                                                                </div>
-                                                                <div className="text-right shrink-0">
-                                                                     <p className="text-[9px] text-gray-400 uppercase tracking-widest mb-0.5 font-bold">Usage Range</p>
-                                                                    <p className="text-[10px] font-bold bg-orange-600/10 text-white px-2 py-1 rounded-lg backdrop-blur-md inline-block border border-white/10 shadow-sm">
-                                                                        {cv.scope}
-                                                                    </p>
-                                                                </div>
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Actions Below Card */}
-                                                        <div className="grid grid-cols-2 gap-3 mt-1">
-                                                            <Button 
-                                                                className="h-11 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md hover:shadow-orange-600/30 transition-all font-bold text-sm"
-                                                                onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
-                                                            >
-                                                                <QrCode className="w-4 h-4 mr-2" /> Pay
-                                                            </Button>
-                                                            <Button 
-                                                                variant="outline" 
-                                                                className="h-11 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-sm"
-                                                                onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
-                                                            >
-                                                                Details
-                                                            </Button>
-                                                        </div>
-                                                    </div>
-                                                ))}
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
+                    <TabsContent value="overview" className="space-y-6">
+                        {/* Quick Actions Bar - Only for customer */}
+                        {!isBusiness && (
+                            <div className="flex flex-wrap items-center gap-4 p-4 bg-white/60 backdrop-blur-md rounded-2xl border border-white/40 shadow-sm">
+                                <Button className="bg-white text-orange-600 border border-orange-100 hover:bg-orange-50 rounded-xl font-bold shadow-sm" onClick={() => setIsTopUpModalOpen(true)}>
+                                    <PlusCircle className="w-4 h-4 mr-2" /> Purchase Voucher
+                                </Button>
+                                <Button className="bg-orange-600 text-white hover:bg-orange-700 rounded-xl font-bold shadow-md shadow-orange-200" onClick={() => setIsCustomerSpendModalOpen(true)}>
+                                    <ScanLine className="w-4 h-4 mr-2" /> Spend Voucher
+                                </Button>
+                                <Button variant="outline" className="border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold" onClick={() => setIsTransferModalOpen(true)}>
+                                    <Send className="w-4 h-4 mr-2" /> Transfer Funds
+                                </Button>
                             </div>
+                        )}
 
-                            <div className="space-y-6">
-                                <Card className="border-none shadow-lg bg-orange-600 text-white rounded-2xl relative">
-                                    <div className="absolute top-0 right-0 p-4"><Zap className="w-6 h-6 text-orange-300 opacity-50" /></div>
-                                    <CardHeader><CardTitle>Rewards Sidebar</CardTitle></CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <p className="text-sm">Manage your vouchers and sharing options here.</p>
-                                        {!isBusiness && (
-                                            <div className="flex flex-col gap-2">
-                                                <Button className="w-full bg-white text-orange-600 hover:bg-orange-50 rounded-xl font-bold" onClick={() => setIsTopUpModalOpen(true)}>Purchase Voucher</Button>
-                                                <Button className="w-full bg-orange-500 text-white hover:bg-orange-400 rounded-xl font-bold flex items-center justify-center gap-2" onClick={() => setIsCustomerSpendModalOpen(true)}><ScanLine className="w-4 h-4" />Spend Voucher</Button>
-                                                <Button className="w-full border-2 border-white/30 hover:bg-white/10 text-white rounded-xl font-bold flex items-center justify-center gap-2" onClick={() => setIsTransferModalOpen(true)}><Send className="w-4 h-4" />Transfer Funds</Button>
-                                            </div>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            </div>
-                        </div>
-                    </TabsContent>
+                                                <div className="w-full">
+                                                    <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+                                                        <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
+                                                        <CardContent className="p-6">
+                                                                                                {isBusiness ? (
+                                                                                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                                                                                        {voucherTypes.map((vt) => (
+                                                                                                            <div key={vt.id} className="flex flex-col gap-4 group">
+                                                                                                                {/* Realistic Pale Card - Business Definition */}
+                                                                                                                <div
+                                                                                                                    id={`voucher-def-card-${vt.id}`}
+                                                                                                                    className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 p-8 flex flex-col justify-between border border-slate-200/50"
+                                                                                                                >
+                                                                                                                    {/* Background decoration */}
+                                                                                                                    <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none"></div>
+                                                                                                                    <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-slate-200/40 rounded-full blur-3xl pointer-events-none"></div>
+                                                            
+                                                                                                                    {/* Header */}
+                                                                                                                    <div className="flex justify-between items-center relative z-10">
+                                                                                                                        <div className="flex items-center gap-3">
+                                                                                                                            <div className="bg-slate-800 p-2 rounded-xl shadow-sm">
+                                                                                                                                <Zap className="w-4 h-4 text-white" />
+                                                                                                                            </div>
+                                                                                                                            <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">Definition</span>
+                                                                                                                        </div>
+                                                                                                                        <div className="flex items-center gap-2">
+                                                                                                                            <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-700 border-gray-200'} border backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold`}>
+                                                                                                                                {vt.status}
+                                                                                                                            </Badge>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                            
+                                                                                                                    {/* Info Row */}
+                                                                                                                    <div className="relative z-10 mt-8 flex justify-between items-end">
+                                                                                                                        <div>
+                                                                                                                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1">Split Ratio</p>
+                                                                                                                            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 drop-shadow-sm">{vt.split}</h3>
+                                                                                                                        </div>
+                                                                                                                        <div className="text-right">
+                                                                                                                             <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Label</p>
+                                                                                                                             <div className="text-xs font-black bg-white/90 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm backdrop-blur-md truncate max-w-[140px]">
+                                                                                                                                {vt.seasonalLabel}
+                                                                                                                             </div>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                            
+                                                                                                                    {/* Footer Info */}
+                                                                                                                    <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
+                                                                                                                        <div className="flex-1 min-w-0 mr-6">
+                                                                                                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Definition Name</p>
+                                                                                                                            <p className="font-extrabold tracking-tight truncate text-base uppercase text-slate-700">{vt.name}</p>
+                                                                                                                             <p className="text-[10px] font-mono text-slate-400 mt-1 flex items-center gap-2 group/id">
+                                                                                                                                {vt.id.slice(0, 20)}... 
+                                                                                                                                <Copy 
+                                                                                                                                    className="w-3.5 h-3.5 cursor-pointer hover:text-slate-600 transition-colors" 
+                                                                                                                                    onClick={(e) => { e.stopPropagation(); handleCopy(vt.id); }} 
+                                                                                                                                />
+                                                                                                                             </p>
+                                                                                                                        </div>
+                                                                                                                        <div className="text-right shrink-0">
+                                                                                                                             <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Scope</p>
+                                                                                                                            <p className="text-[10px] font-black bg-slate-800 text-white px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block shadow-sm">
+                                                                                                                                {vt.usageScope}
+                                                                                                                            </p>
+                                                                                                                        </div>
+                                                                                                                    </div>
+                                                                                                                </div>
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                ) : (                                                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                                                    {myVouchers.map((cv) => (
+                                                                        <div key={cv.id} className="flex flex-col gap-4 group">
+                                                                            {/* Realistic Pale Card - Gift Card Style */}
+                                                                            <div
+                                                                                id={`voucher-card-${cv.id}`}
+                                                                                className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-orange-50 via-white to-orange-100 text-slate-800 p-8 flex flex-col justify-between border border-orange-200/50"
+                                                                            >
+                                                                                {/* Background decoration - Abstract soft shapes */}
+                                                                                <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none"></div>
+                                                                                <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-orange-300/20 rounded-full blur-3xl pointer-events-none"></div>
+                                                                                <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-white/60 rounded-full blur-2xl pointer-events-none"></div>
+                                                                                
+                                                                                {/* Wave pattern overlay */}
+                                                                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+                        
+                                                                                {/* Header */}
+                                                                                <div className="flex justify-between items-center relative z-10">
+                                                                                    <div className="flex items-center gap-3">
+                                                                                        <div className="bg-orange-600 p-2 rounded-xl shadow-sm">
+                                                                                            <Gift className="w-4 h-4 text-white" />
+                                                                                        </div>
+                                                                                        <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">McomMall</span>
+                                                                                    </div>
+                                                                                    <div className="flex items-center gap-2">
+                                                                                         {/* Download Button */}
+                                                                                         <Button
+                                                                                            variant="ghost"
+                                                                                            size="icon"
+                                                                                            className="h-9 w-9 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all"
+                                                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCard(cv.id, cv.name); }}
+                                                                                            title="Download Card"
+                                                                                        >
+                                                                                            <Download className="w-5 h-5" />
+                                                                                        </Button>
+                                                                                        <Badge className="bg-white/80 text-orange-600 border border-orange-200 shadow-sm backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold">
+                                                                                            {cv.status}
+                                                                                        </Badge>
+                                                                                    </div>
+                                                                                </div>
+                        
+                                                                                {/* Chip Replacement: QR Code & Contactless */}
+                                                                                <div className="flex items-center gap-5 mt-4 relative z-10">
+                                                                                    <div className="bg-white p-1.5 rounded-xl border border-slate-100 shadow-sm">
+                                                                                        <QRCode value={cv.id} size={56} className="w-14 h-14" />
+                                                                                    </div>
+                                                                                    <ScanLine className="w-8 h-8 text-slate-300 rotate-90" />
+                                                                                </div>
+                        
+                                                                                {/* Balance Section */}
+                                                                                <div className="relative z-10 mt-4 flex justify-between items-end">
+                                                                                    <div>
+                                                                                        <p className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1.5">Current Balance</p>
+                                                                                        <h3 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
+                                                                                            £{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}
+                                                                                        </h3>
+                                                                                    </div>
+                                                                                    <div className="text-right">
+                                                                                         <p className="text-xs text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Split</p>
+                                                                                         <div className="text-sm font-black bg-white/90 text-orange-600 px-4 py-2 rounded-xl border border-orange-100 shadow-sm backdrop-blur-md">
+                                                                                            {cv.split}
+                                                                                         </div>
+                                                                                    </div>
+                                                                                </div>
+                        
+                                                                                {/* Footer Info */}
+                                                                                <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
+                                                                                    <div className="flex-1 min-w-0 mr-6">
+                                                                                        <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Voucher Name</p>
+                                                                                        <p className="font-extrabold tracking-tight truncate text-lg uppercase text-slate-700">{cv.name}</p>
+                                                                                         <p className="text-[11px] font-mono text-slate-400 mt-1.5 flex items-center gap-2 group/id">
+                                                                                            {cv.id.slice(0, 16)}... 
+                                                                                            <Copy 
+                                                                                                className="w-4 h-4 cursor-pointer hover:text-orange-600 transition-colors" 
+                                                                                                onClick={(e) => { e.stopPropagation(); handleCopy(cv.id); }} 
+                                                                                            />
+                                                                                         </p>
+                                                                                    </div>
+                                                                                    <div className="text-right shrink-0">
+                                                                                         <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Range</p>
+                                                                                        <p className="text-[11px] font-black bg-orange-600/10 text-orange-700 px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block border border-orange-200/50 shadow-sm">
+                                                                                            {cv.scope}
+                                                                                        </p>
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
+                        
+                                                                            {/* Actions Below Card */}
+                                                                            <div className="grid grid-cols-2 gap-3 mt-1">
+                                                                                <Button 
+                                                                                    className="h-12 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md hover:shadow-orange-600/30 transition-all font-bold text-base"
+                                                                                    onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
+                                                                                >
+                                                                                    <QrCode className="w-5 h-5 mr-2" /> Pay
+                                                                                </Button>
+                                                                                <Button 
+                                                                                    variant="outline" 
+                                                                                    className="h-12 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-base"
+                                                                                    onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
+                                                                                >
+                                                                                    Details
+                                                                                </Button>
+                                                                            </div>
+                                                                        </div>
+                                                                    ))}
+                                                                </div>
+                                                            )}
+                                                        </CardContent>
+                                                    </Card>
+                                                </div>                    </TabsContent>
                 </Tabs>
 
                 {/* MODALS */}
@@ -834,32 +811,76 @@ export default function CouponsVouchersPage() {
                 </Dialog>
 
                 <Dialog open={isQRModalOpen} onOpenChange={setIsQRModalOpen}>
-                    <DialogContent className="sm:max-w-[400px] rounded-3xl p-0 overflow-hidden bg-white">
-                        <div className="bg-orange-600 p-8 text-center text-white"><QrCode className="w-10 h-10 mx-auto mb-2" /><h3 className="text-xl font-bold">{selectedVoucherForQR?.name}</h3><p className="text-xs opacity-70">Merchant Scan</p></div>
-                        <div className="p-8 text-center">{selectedVoucherForQR && <div className="bg-white p-4 shadow-xl inline-block rounded-xl border"><QRCode value={selectedVoucherForQR.id} size={200} /></div>}<div className="mt-4"><div className="text-2xl font-black">£{selectedVoucherForQR?.balance?.toFixed(2)}</div><div className="text-[10px] text-gray-400 font-bold tracking-widest uppercase">Balance</div></div></div>
-                        <div className="p-4 bg-gray-50"><Button className="w-full rounded-xl" onClick={() => setIsQRModalOpen(false)}>Done</Button></div>
+                    <DialogContent className="sm:max-w-[400px] rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
+                        <div className="bg-gradient-to-br from-orange-100 via-orange-50 to-white p-10 text-center relative overflow-hidden">
+                            <div className="absolute -top-10 -right-10 w-32 h-32 bg-orange-200/30 rounded-full blur-2xl"></div>
+                            <QrCode className="w-12 h-12 mx-auto mb-4 text-orange-600 relative z-10" />
+                            <h3 className="text-2xl font-black text-slate-800 relative z-10">{selectedVoucherForQR?.name}</h3>
+                            <p className="text-[10px] font-bold tracking-[0.2em] uppercase text-orange-600/60 mt-1 relative z-10">Merchant Scan Required</p>
+                        </div>
+                        <div className="p-10 text-center -mt-6 relative z-20">
+                            {selectedVoucherForQR && (
+                                <div className="bg-white p-6 shadow-2xl inline-block rounded-[2rem] border border-orange-100">
+                                    <QRCode value={selectedVoucherForQR.id} size={200} />
+                                </div>
+                            )}
+                            <div className="mt-8">
+                                <div className="text-4xl font-black text-slate-900 tracking-tighter">£{selectedVoucherForQR?.balance?.toFixed(2)}</div>
+                                <div className="text-[11px] text-slate-400 font-black tracking-[0.3em] uppercase mt-1">Available Balance</div>
+                            </div>
+                        </div>
+                        <div className="p-6 bg-slate-50/50 border-t border-slate-100">
+                            <Button className="w-full h-14 rounded-2xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-lg shadow-lg" onClick={() => setIsQRModalOpen(false)}>Done</Button>
+                        </div>
                     </DialogContent>
                 </Dialog>
 
                 <Dialog open={isDetailsModalOpen} onOpenChange={setIsDetailsModalOpen}>
-                    <DialogContent className="sm:max-w-[450px] rounded-3xl p-0 overflow-hidden bg-white">
-                        <div className="bg-blue-800 p-8 text-white relative"><div className="absolute top-0 right-0 p-8 opacity-10"><Maximize className="w-24 h-24" /></div><Badge className="bg-blue-500/30 mb-2">Voucher Info</Badge><h3 className="text-2xl font-black">{selectedVoucherForDetails?.name}</h3><p className="text-sm opacity-80">{selectedVoucherForDetails?.description || "Matching reward voucher."}</p></div>
-                        <div className="p-6 space-y-4">
-                            <div className="grid grid-cols-2 gap-4"><div className="p-4 bg-gray-50 rounded-xl"><span>Balance</span><div className="text-xl font-bold text-blue-900">£{selectedVoucherForDetails?.balance?.toFixed(2)}</div></div><div className="p-4 bg-gray-50 rounded-xl"><span>Split Ratio</span><div className="text-xl font-bold text-blue-900">{selectedVoucherForDetails?.split}</div></div></div>
-                            <div className="space-y-2">
-                                <div className="p-4 bg-orange-50 rounded-xl flex gap-3 items-center">
-                                    <Zap className="w-5 h-5 text-orange-600" />
+                    <DialogContent className="sm:max-w-[480px] rounded-[2.5rem] p-0 overflow-hidden bg-white border-none shadow-2xl">
+                        <div className="bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900 p-10 text-white relative overflow-hidden">
+                            <div className="absolute top-0 right-0 p-10 opacity-10"><Maximize className="w-32 h-32" /></div>
+                            <div className="absolute -bottom-20 -left-20 w-64 h-64 bg-orange-600/20 rounded-full blur-3xl"></div>
+                            <Badge className="bg-white/10 hover:bg-white/20 text-white border-none mb-4 backdrop-blur-md px-3 py-1 rounded-full text-[10px] font-bold tracking-widest uppercase">Voucher Intelligence</Badge>
+                            <h3 className="text-3xl font-black tracking-tight relative z-10">{selectedVoucherForDetails?.name}</h3>
+                            <p className="text-slate-300 text-sm mt-2 max-w-[80%] relative z-10">{selectedVoucherForDetails?.description || "High-utility matching reward voucher for McomMall network."}</p>
+                        </div>
+                        <div className="p-8 space-y-6">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 shadow-sm group hover:border-orange-200 transition-colors">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Available</span>
+                                    <div className="text-2xl font-black text-slate-900 mt-1">£{selectedVoucherForDetails?.balance?.toFixed(2)}</div>
+                                </div>
+                                <div className="p-5 bg-slate-50 rounded-3xl border border-slate-100 shadow-sm group hover:border-orange-200 transition-colors">
+                                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-widest">Split Ratio</span>
+                                    <div className="text-2xl font-black text-slate-900 mt-1">{selectedVoucherForDetails?.split}</div>
+                                </div>
+                            </div>
+                            
+                            <div className="space-y-3">
+                                <div className="p-5 bg-orange-50/50 rounded-3xl flex gap-4 items-center border border-orange-100/50">
+                                    <div className="bg-orange-600 p-2.5 rounded-2xl shadow-orange-200 shadow-lg text-white">
+                                        <Zap className="w-5 h-5" />
+                                    </div>
                                     <div>
-                                        <div className="text-xs font-bold text-orange-800">Reward Power</div>
-                                        <div className="text-sm">Matched by {selectedVoucherForDetails?.rewardRatio || '50'}%</div>
+                                        <div className="text-[10px] font-black text-orange-800 uppercase tracking-widest">Reward Matching</div>
+                                        <div className="text-sm font-bold text-slate-700">Matching Power: {selectedVoucherForDetails?.rewardRatio || '50'}%</div>
                                     </div>
                                 </div>
-                                <div className="p-4 bg-blue-50 rounded-xl flex gap-3 items-start">
-                                    <Globe className="w-5 h-5 text-blue-600 mt-0.5" />
+                                
+                                <div className="p-5 bg-blue-50/50 rounded-3xl flex gap-4 items-start border border-blue-100/50">
+                                    <div className="bg-blue-600 p-2.5 rounded-2xl shadow-blue-200 shadow-lg text-white mt-0.5">
+                                        <Globe className="w-5 h-5" />
+                                    </div>
                                     <div className="flex-1">
-                                        <div className="text-xs font-bold text-blue-800">Usage Scope</div>
-                                        <div className="text-sm font-medium">{selectedVoucherForDetails?.scope || 'Any Shop'}</div>
+                                        <div className="text-[10px] font-black text-blue-800 uppercase tracking-widest">Network Scope</div>
+                                        <div className="text-sm font-bold text-slate-700">{selectedVoucherForDetails?.scope || 'Global Network'}</div>
                                         {selectedVoucherForDetails?.scope !== 'Any Shop' && (selectedVoucherForDetails?.shops?.length || 0) > 0 && (
+                                            <div className="mt-3 flex flex-wrap gap-1.5">
+                                                {selectedVoucherForDetails?.shops?.map((shop: any, idx: number) => (
+                                                    <Badge key={idx} variant="secondary" className="bg-white text-blue-700 border border-blue-100 shadow-sm text-[9px] font-bold px-2 py-0.5">
+                                                        {shop.name || shop.id || shop}
+                                                    </Badge>
+                                                ))}
                                             <div className="mt-2 space-y-1">
                                                 <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
                                                 <div className="flex flex-wrap gap-1">
@@ -873,30 +894,41 @@ export default function CouponsVouchersPage() {
                                         )}
                                     </div>
                                 </div>
-                                <div className="p-4 bg-green-50 rounded-xl flex gap-3 items-center">
-                                    <Gift className="w-5 h-5 text-green-600" />
+                                
+                                <div className="p-5 bg-green-50/50 rounded-3xl flex gap-4 items-center border border-green-100/50">
+                                    <div className="bg-green-600 p-2.5 rounded-2xl shadow-green-200 shadow-lg text-white">
+                                        <Gift className="w-5 h-5" />
+                                    </div>
                                     <div>
-                                        <div className="text-xs font-bold text-green-800">Cashback Eligible</div>
-                                        <div className="text-sm">Active on network.</div>
+                                        <div className="text-[10px] font-black text-green-800 uppercase tracking-widest">Reward Status</div>
+                                        <div className="text-sm font-bold text-slate-700">Fully Eligible for Network Cashback</div>
                                     </div>
                                 </div>
                             </div>
-                            <div className="pt-4 border-t flex justify-between items-center">
-                                <div className="flex items-center gap-2">
-                                    <span className="text-xs text-gray-400 font-mono">ID: {selectedVoucherForDetails?.id}</span>
-                                    <Button
-                                        variant="ghost"
-                                        size="icon"
-                                        className="h-6 w-6 text-gray-400 hover:text-orange-600"
-                                        onClick={() => selectedVoucherForDetails?.id && handleCopy(selectedVoucherForDetails.id)}
-                                    >
-                                        {copiedId === selectedVoucherForDetails?.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
-                                    </Button>
+
+                            <div className="pt-6 border-t border-slate-100 flex justify-between items-center">
+                                <div className="flex items-center gap-3">
+                                    <div className="bg-slate-100 px-3 py-1.5 rounded-full flex items-center gap-2 border border-slate-200">
+                                        <span className="text-[10px] text-slate-500 font-mono font-bold tracking-tighter">ID: {selectedVoucherForDetails?.id.slice(0, 16)}...</span>
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-5 w-5 text-slate-400 hover:text-orange-600 transition-colors"
+                                            onClick={() => selectedVoucherForDetails?.id && handleCopy(selectedVoucherForDetails.id)}
+                                        >
+                                            {copiedId === selectedVoucherForDetails?.id ? <Check className="w-3 h-3 text-green-500" /> : <Copy className="w-3 h-3" />}
+                                        </Button>
+                                    </div>
                                 </div>
-                                <Badge className="bg-green-100 text-green-700">{selectedVoucherForDetails?.status}</Badge>
+                                <Badge className="bg-green-100 text-green-700 border-green-200 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-widest">{selectedVoucherForDetails?.status}</Badge>
                             </div>
                         </div>
-                        <div className="p-6 bg-gray-50 flex gap-2"><Button variant="outline" className="flex-1 rounded-xl" onClick={() => setIsDetailsModalOpen(false)}>Close</Button><Button className="flex-1 bg-orange-600 rounded-xl gap-2" onClick={() => { setIsDetailsModalOpen(false); setSelectedVoucherForQR(selectedVoucherForDetails); setIsQRModalOpen(true); }}><QrCode className="w-4 h-4" />Pay Now</Button></div>
+                        <div className="p-8 bg-slate-50 flex gap-4">
+                            <Button variant="outline" className="flex-1 h-14 rounded-2xl border-slate-200 text-slate-600 font-bold hover:bg-white transition-all shadow-sm" onClick={() => setIsDetailsModalOpen(false)}>Close</Button>
+                            <Button className="flex-1 h-14 bg-orange-600 hover:bg-orange-700 text-white rounded-2xl font-bold shadow-lg shadow-orange-200 gap-2 transition-all" onClick={() => { setIsDetailsModalOpen(false); setSelectedVoucherForQR(selectedVoucherForDetails); setIsQRModalOpen(true); }}>
+                                <QrCode className="w-5 h-5" /> Pay Now
+                            </Button>
+                        </div>
                     </DialogContent>
                 </Dialog>
 
