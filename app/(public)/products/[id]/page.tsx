@@ -32,15 +32,31 @@ export default function ProductPage() {
   // 1. Determine which system to use: Matrix (Variations) or Simple (Variants)
   const isMatrixSystem = product?.attributes && product?.variations && product.variations.length > 0;
 
-  // 2. Find the exact matching variation based on current selection
+  // 2. Find matching variations based on current selection (Partial and Exact)
+  const matchingVariations = useMemo(() => {
+    if (!isMatrixSystem || !product?.variations) return [];
+
+    const selectedKeys = Object.keys(selectedVariants).filter(k => selectedVariants[k]);
+
+    return product.variations.filter(v => {
+      return selectedKeys.every(key => v.combination[key] === selectedVariants[key]);
+    });
+  }, [isMatrixSystem, product, selectedVariants]);
+
   const currentVariation = useMemo(() => {
     if (!isMatrixSystem || !product?.variations) return null;
-
+    // Exact match: all attributes must match
     return product.variations.find(v => {
-      // Check if every key in the combination matches the selection
       return Object.entries(v.combination).every(([key, value]) => selectedVariants[key] === value);
     });
   }, [isMatrixSystem, product, selectedVariants]);
+
+  // Find a variation to represent partial selection (e.g., for image)
+  const representativeVariation = useMemo(() => {
+    if (currentVariation) return currentVariation;
+    // Find first matching variation that has an image
+    return matchingVariations.find(v => v.image) || matchingVariations[0] || null;
+  }, [currentVariation, matchingVariations]);
 
   // 3. Helper to check if a specific option is valid given the *other* current selections
   const isOptionAvailableInMatrix = (attributeName: string, optionValue: string) => {
@@ -81,8 +97,8 @@ export default function ProductPage() {
       }
   }, [product, isMatrixSystem, selectedVariants]);
 
-  const { basePrice, totalPrice, priceBreakdown, isOutOfStock } = useMemo(() => {
-    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false };
+  const { basePrice, totalPrice, priceBreakdown, isOutOfStock, priceRange } = useMemo(() => {
+    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false, priceRange: null };
 
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
@@ -91,10 +107,22 @@ export default function ProductPage() {
                 basePrice: currentVariation.price,
                 totalPrice: currentVariation.price,
                 priceBreakdown: [], // Matrix prices are all-inclusive
-                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
+                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0,
+                priceRange: null
             };
         } else {
-             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false };
+             // Calculate price range from matching variations
+             const prices = matchingVariations.map(v => v.price);
+             const minPrice = prices.length > 0 ? Math.min(...prices) : product.price;
+             const maxPrice = prices.length > 0 ? Math.max(...prices) : product.price;
+
+             return {
+                basePrice: minPrice,
+                totalPrice: minPrice,
+                priceBreakdown: [],
+                isOutOfStock: false,
+                priceRange: minPrice !== maxPrice ? { min: minPrice, max: maxPrice } : null
+             };
         }
     }
 
@@ -169,13 +197,12 @@ export default function ProductPage() {
         ? product.fileUrls
         : [product.imageUrl || 'https://via.placeholder.com/500'];
 
-      if (currentVariation?.image) {
-          // De-duplicate if the variant image is already in the list?
-          // For simplicity, just prepend.
-          return [currentVariation.image, ...baseImages];
+      const variantImage = representativeVariation?.image;
+      if (variantImage) {
+          return [variantImage, ...baseImages];
       }
       return baseImages;
-  }, [product, currentVariation]);
+  }, [product, representativeVariation]);
 
   if (isLoading) {
     return (
@@ -259,7 +286,11 @@ export default function ProductPage() {
 
                     <div className="mt-4 flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-orange-600">
-                            £{totalPrice.toFixed(2)}
+                            {priceRange ? (
+                                `£${priceRange.min.toFixed(2)} - £${priceRange.max.toFixed(2)}`
+                            ) : (
+                                `£${totalPrice.toFixed(2)}`
+                            )}
                         </span>
                         {product.salePrice && product.salePrice < product.price && !isMatrixSystem && (
                             <span className="text-lg text-gray-400 line-through">
@@ -329,6 +360,13 @@ export default function ProductPage() {
                             <span>£{totalPrice.toFixed(2)}</span>
                         </div>
                     </div>
+                  )}
+
+                  {/* Selection Status */}
+                  {isMatrixSystem && !allVariantsSelected && Object.keys(selectedVariants).length > 0 && (
+                      <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 font-medium animate-in fade-in slide-in-from-top-1">
+                          Please select: {product.attributes?.filter(a => !selectedVariants[a.name]).map(a => a.name).join(', ')}
+                      </div>
                   )}
 
                   {/* Actions */}
