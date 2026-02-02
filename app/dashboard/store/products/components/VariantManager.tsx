@@ -312,25 +312,35 @@ export default function VariantManager({
   };
 
   const applyBulkPrice = () => {
-    const val = parseFloat(bulkPriceValue);
-    if (isNaN(val)) return;
+    let val = parseFloat(bulkPriceValue);
+    if (isNaN(val)) {
+        if (variations.length > 0) {
+            val = variations[0].price;
+        } else return;
+    }
 
-    selectedIndices.forEach(idx => {
+    const targets = selectedIndices.length > 0 ? selectedIndices : variations.map((_, i) => i);
+    targets.forEach(idx => {
       updateVariation(idx, { ...variations[idx], price: val });
     });
     setBulkPriceValue('');
-    toast.success(`Applied price to ${selectedIndices.length} variations`);
+    toast.success(`Applied price to ${targets.length} variations`);
   };
 
   const applyBulkStock = () => {
-    const val = parseInt(bulkStockValue);
-    if (isNaN(val)) return;
+    let val = parseInt(bulkStockValue);
+    if (isNaN(val)) {
+        if (variations.length > 0) {
+            val = variations[0].stock;
+        } else return;
+    }
 
-    selectedIndices.forEach(idx => {
+    const targets = selectedIndices.length > 0 ? selectedIndices : variations.map((_, i) => i);
+    targets.forEach(idx => {
       updateVariation(idx, { ...variations[idx], stock: val });
     });
     setBulkStockValue('');
-    toast.success(`Applied stock to ${selectedIndices.length} variations`);
+    toast.success(`Applied quantity to ${targets.length} variations`);
   };
 
   const bulkToggleAvailability = (available: boolean) => {
@@ -347,13 +357,48 @@ export default function VariantManager({
       {/* SECTION 1: ATTRIBUTE DEFINITIONS */}
       <div className="space-y-4">
         <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">1. Define Attributes</h3>
-          {!isAttributeFormVisible && attributes.length < 4 && (
+          <h3 className="text-lg font-medium">{attributes.length === 0 ? "Select Product Option Type" : "1. Define Attributes"}</h3>
+          {!isAttributeFormVisible && attributes.length < 4 && attributes.length > 0 && (
             <Button type="button" variant="outline" size="sm" onClick={() => showAttributeForm()}>
-              <Plus className="mr-2 h-4 w-4" /> Add Variant Type
+              <Plus className="mr-2 h-4 w-4" /> Add Another Variant Type
             </Button>
           )}
         </div>
+
+        {attributes.length === 0 && !isAttributeFormVisible && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4 p-8 border-2 border-dashed rounded-xl bg-gray-50 dark:bg-gray-800/20 text-center">
+                <div className="col-span-full mb-2">
+                    <p className="text-sm text-gray-500">How do customers choose this product? Select the first option type to begin.</p>
+                </div>
+                {['Color', 'Size', 'Storage', 'Model', 'Material', 'Voltage'].map((type) => (
+                    <Button
+                        key={type}
+                        variant="outline"
+                        className="h-16 text-lg font-bold border-2 hover:border-[#f48c25] hover:bg-[#f48c25]/5"
+                        onClick={() => {
+                            setAttributeName(type);
+                            setIsCustomAttribute(false);
+                            setAttributeOptions([]);
+                            setIsAttributeFormVisible(true);
+                        }}
+                    >
+                        {type}
+                    </Button>
+                ))}
+                <Button
+                    variant="ghost"
+                    className="h-16 text-gray-500 italic border-2 border-dashed"
+                    onClick={() => {
+                        setIsCustomAttribute(true);
+                        setAttributeName('');
+                        setAttributeOptions([]);
+                        setIsAttributeFormVisible(true);
+                    }}
+                >
+                    + Other / Custom
+                </Button>
+            </div>
+        )}
 
         {attributes && attributes.length > 0 && (
           <div className="grid gap-4">
@@ -430,6 +475,32 @@ export default function VariantManager({
 
               <div className="space-y-2">
                 <Label>Options & Price Modifiers</Label>
+                {attributeName === 'Size' && (
+                    <div className="flex gap-2 mb-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-[10px] h-7"
+                            onClick={() => {
+                                const standard = ['S', 'M', 'L', 'XL'];
+                                standard.forEach(s => handleAddOptionToAttribute(s, 0));
+                            }}
+                        >
+                            Standard (S-XL)
+                        </Button>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            className="text-[10px] h-7"
+                            onClick={() => {
+                                const uk = ['6', '8', '10', '12', '14'];
+                                uk.forEach(s => handleAddOptionToAttribute(s, 0));
+                            }}
+                        >
+                            UK (6-14)
+                        </Button>
+                    </div>
+                )}
                 <VariantOptionInput
                   variantName={attributeName || 'Color'} // Default to allow typing
                   onAddOption={handleAddOptionToAttribute}
@@ -523,11 +594,53 @@ export default function VariantManager({
                   </TableHead>
                   {/* Dynamic Headers based on Attributes */}
                   {Object.keys(variations[0].combination).map((key) => (
-                    <TableHead key={key} className="w-[100px]">{key}</TableHead>
+                    <TableHead key={key} className="w-[120px]">
+                        <div className="flex flex-col gap-1">
+                            <span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Attribute</span>
+                            <span className="text-gray-900 dark:text-white font-bold">{key}</span>
+                        </div>
+                    </TableHead>
                   ))}
+                  <TableHead className="w-[150px]">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="h-8 text-[#f48c25] hover:bg-[#f48c25]/10 font-bold"
+                        onClick={() => showAttributeForm()}
+                        disabled={attributes.length >= 4}
+                      >
+                          <Plus className="w-3 h-3 mr-1" /> Add Option
+                      </Button>
+                  </TableHead>
                   <TableHead className="w-[60px]">Image</TableHead>
-                  <TableHead>Price</TableHead>
-                  <TableHead>Quantity</TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1 group/header">
+                      <span>Price</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity"
+                        onClick={applyBulkPrice}
+                        title="Apply first row's price to all"
+                      >
+                        <Zap className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableHead>
+                  <TableHead>
+                    <div className="flex items-center gap-1 group/header">
+                      <span>Quantity</span>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity"
+                        onClick={applyBulkStock}
+                        title="Apply first row's quantity to all"
+                      >
+                        <Zap className="w-3 h-3" />
+                      </Button>
+                    </div>
+                  </TableHead>
                   <TableHead className="w-[60px]">Reserved</TableHead>
                   <TableHead className="w-[60px]">Sold</TableHead>
                   <TableHead>SKU</TableHead>
@@ -544,10 +657,30 @@ export default function VariantManager({
                         onCheckedChange={() => toggleSelect(index)}
                       />
                     </TableCell>
-                    {/* Render Combination Values */}
-                    {Object.values(field.combination).map((value, i) => (
-                      <TableCell key={i} className="font-medium">{value}</TableCell>
-                    ))}
+                    {/* Render Combination Values as Dropdowns */}
+                    {Object.entries(field.combination).map(([attrName, value], i) => {
+                        const attrOptions = attributes.find(a => a.name === attrName)?.options.map(o => o.name) || [];
+                        return (
+                            <TableCell key={i}>
+                                <Select
+                                    value={value}
+                                    onValueChange={(newVal) => {
+                                        const newCombination = { ...field.combination, [attrName]: newVal };
+                                        updateVariation(index, { ...field, combination: newCombination });
+                                    }}
+                                >
+                                    <SelectTrigger className="h-8 border-none bg-transparent hover:bg-gray-100 transition-colors p-0 font-medium">
+                                        <SelectValue />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {attrOptions.map(opt => (
+                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </TableCell>
+                        );
+                    })}
 
                     {/* Image Upload */}
                     <TableCell>

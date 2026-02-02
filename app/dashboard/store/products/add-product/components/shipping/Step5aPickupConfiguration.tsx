@@ -109,10 +109,26 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase text-[#9c7349]">Postcode / ZIP</label>
+                  <div className="flex gap-2">
+                    <input
+                        type="text"
+                        placeholder="E.g. SW1A 1AA"
+                        className="flex-1 p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                        onChange={(e) => {
+                            if (e.target.value.length >= 5) {
+                                toast.info("Fetching address for " + e.target.value);
+                            }
+                        }}
+                    />
+                    <Button variant="outline" className="h-full rounded-xl">Fetch</Button>
+                  </div>
+                </div>
+                <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold uppercase text-[#9c7349]">Location Nickname</label>
                   <input type="text" placeholder="e.g. West End Branch" className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none" />
                 </div>
-                <div className="flex flex-col gap-2">
+                <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase text-[#9c7349]">Street Address</label>
                   <input type="text" placeholder="123 Street Name" className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none" />
                 </div>
