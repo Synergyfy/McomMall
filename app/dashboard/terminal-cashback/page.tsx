@@ -25,6 +25,8 @@ import {
 } from "@/service/terminal-cashback/hook";
 import { useGetUserListings } from "@/service/listings/hook";
 import { TerminalClaim, ClaimStatus } from "@/service/terminal-cashback/types";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, HelpCircle, Store, Banknote, ShieldCheck } from "lucide-react";
 
 // --- Types ---
 interface Claim {
@@ -107,6 +109,116 @@ export default function TerminalCashbackPage() {
   );
 }
 
+// --- Terminal Onboarding Component ---
+function TerminalOnboarding() {
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 max-w-3xl mx-auto px-4">
+      <div className="space-y-4">
+        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+          <Banknote className="w-10 h-10 text-orange-600" />
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Unlock the Power of Terminal Cashback</h2>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          You don't have access to create a terminal cashback yet. Bridge the gap between offline sales and digital loyalty.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 w-full text-left">
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <Store className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">What is it?</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            Terminal Cashback allows you to reward your in-store customers, whether they pay by cash, card, or POS. No integration required.
+          </CardContent>
+        </Card>
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <ShieldCheck className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">Why use it?</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            Build loyalty, encourage repeat visits, and collect customer data even for walk-ins. Turn anonymous shoppers into loyal fans.
+          </CardContent>
+        </Card>
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <HelpCircle className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">How it works</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            1. Customer buys in-store.<br/>
+            2. Scans your QR code.<br/>
+            3. Uploads receipt.<br/>
+            4. You verify & reward.
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+         <p className="text-sm font-medium text-gray-500">
+           Ready to reward your offline customers?
+         </p>
+         <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white gap-2" onClick={() => setShowRequestDialog(true)}>
+           Request Terminal Access <ArrowRight className="w-4 h-4" />
+         </Button>
+      </div>
+
+      <RequestAccessDialog open={showRequestDialog} onOpenChange={setShowRequestDialog} />
+    </div>
+  );
+}
+
+// --- Request Access Dialog ---
+function RequestAccessDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast.success("Request sent! Support will contact you shortly.");
+    setIsSubmitting(false);
+    onOpenChange(false);
+    setMessage("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Request Terminal Cashback</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Tell us why you're interested</Label>
+            <Textarea 
+              placeholder="I would like to reward my walk-in customers..." 
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[100px]"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isSubmitting}>
+              {isSubmitting ? "Sending..." : "Submit Request"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // --- Business Dashboard Component ---
 function BusinessDashboard() {
   // Queries
@@ -131,6 +243,13 @@ function BusinessDashboard() {
 
   // Stats
   const stats = statsData || { pendingCount: 0, approvedCount: 0, totalEarned: 0 };
+  
+  // Check if user has no terminal cashback activity/setup
+  const hasNoActivity = stats.pendingCount === 0 && stats.approvedCount === 0 && stats.totalEarned === 0;
+
+  if (hasNoActivity) {
+    return <TerminalOnboarding />;
+  }
   
   // Pending Claims
   const pendingClaims = (pendingData?.data || []).map(mapTerminalClaimToUI);
