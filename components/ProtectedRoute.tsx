@@ -3,10 +3,20 @@
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 import Cookies from 'js-cookie';
+import { useState, useEffect } from 'react';
 
 const ProtectedRoute = ({ children }: { children: React.ReactNode }) => {
+  const [mounted, setMounted] = useState(false);
   const { accessToken } = useSelector((state: RootState) => state.auth);
   const refreshToken = Cookies.get('refresh');
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  if (!mounted) {
+    return null;
+  }
 
   if (!accessToken && refreshToken) {
     // If we have a refresh token but no access token, it means we're likely

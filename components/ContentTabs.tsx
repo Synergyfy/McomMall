@@ -226,7 +226,7 @@ function ServicePage({
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
         {servicesData.data.map(service => {
-          const firstImageUrl = service.images?.find(isImageUrl);
+           const firstImageUrl = service.media?.find(isImageUrl);
           return (
           <Link
             href={`/services/${service.id}`}

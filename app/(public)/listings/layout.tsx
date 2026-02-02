@@ -5,14 +5,13 @@ export const metadata: Metadata = {
   description: 'Discover and explore local businesses in your area',
 };
 
-export default function ListingsLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
+
+export default function ListingsLayout({ children }: { children: React.ReactNode }) {
   return (
-    <div className="min-w-screen min-h-screen bg-gray-50">
-      <div className="min-w-full container pt-16">{children}</div>
+    <div className="w-full min-h-screen bg-gray-50 overflow-x-hidden">
+      <div className="w-full max-w-[100%] px-4 md:px-8 pt-16 mx-auto">
+        {children}
+      </div>
     </div>
   );
 }

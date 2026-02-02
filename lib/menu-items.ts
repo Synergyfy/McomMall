@@ -63,7 +63,7 @@ export const mainMenuItems: MenuItem[] = [
 
 export const listingMenuItems: MenuItem[] = [
   { title: 'Add listing', href: '/dashboard/add-listing', icon: Plus },
-  { title: 'Ad Campaign', href: '/dashboard/ad-campaign', icon: Megaphone },
+  // { title: 'Ad Campaign', href: '/dashboard/ad-campaign', icon: Megaphone },
   {
     title: 'My listings',
     href: '/dashboard/my-listings',
@@ -205,7 +205,7 @@ export const pluginMenuItems: MenuItem[] = [
     subMenu: [
       // { title: 'Dashboard', href: '/dashboard/loyalty' },
       { title: 'Analytics', href: '/dashboard/loyalty/analytics' },
-      { title: 'Customer view', href: '/dashboard/loyalty/customer' },
+      // { title: 'Customer view', href: '/dashboard/loyalty/customer' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
       { title: 'Promotion', href: '/dashboard/loyalty/promotion' },
       { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },

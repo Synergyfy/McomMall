@@ -38,7 +38,7 @@ const MembershipSuccessDialog = ({
           <DialogDescription className="mt-2">
             You are now a{' '}
             <span className="font-semibold text-primary">
-              {membership.tier}
+                {membership.tier.name}
             </span>{' '}
             member.
           </DialogDescription>
@@ -47,7 +47,7 @@ const MembershipSuccessDialog = ({
           <p className="text-muted-foreground">
             Your membership is active and will expire on{' '}
             <span className="font-medium text-foreground">
-              {new Date(membership.expiresAt).toLocaleDateString()}.
+                {new Date(membership.expiresAt || membership.endDate || Date.now()).toLocaleDateString()}.
             </span>
           </p>
           <div className="mt-4 flex justify-center items-center text-green-600">

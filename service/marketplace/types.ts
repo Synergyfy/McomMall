@@ -1,3 +1,23 @@
+import { VoucherProduct } from '../vouchers/types';
+import { GiftCardTemplate } from '../gift-cards/types';
+import { CouponProduct } from '../coupons/types';
+import { Service } from '../services/types';
+
+export interface PageMetaDto {
+  totalItems: number;
+  itemCount: number;
+  itemsPerPage: number;
+  totalPages: number;
+  currentPage: number;
+  hasNextPage: boolean;
+  hasPreviousPage: boolean;
+}
+
+export interface PageDto<T> {
+  data: T[];
+  meta: PageMetaDto;
+}
+
 export interface HeroSlide {
   id: string;
   imageUrl: string;
@@ -71,4 +91,8 @@ export interface MarketplacePublicData {
   sidebarBanners: SidebarBanner[];
   categories: MarketplaceCategory[];
   sections: MarketplaceSections;
+  vouchers: VoucherProduct[];
+  giftCards: GiftCardTemplate[];
+  coupons: CouponProduct[];
+  services: Service[];
 }

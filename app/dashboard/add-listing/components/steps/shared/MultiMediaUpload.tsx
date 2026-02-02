@@ -1,8 +1,9 @@
 'use client';
 import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
-import { Plus, X, UploadCloud } from 'lucide-react';
+import { Plus, X, UploadCloud, Crop } from 'lucide-react';
 import Image from 'next/image';
 import { Input } from '@/components/ui/input';
+import MediaCropper from './MediaCropper';
 
 // Define the shape of a media file object
 interface MediaFile {
@@ -28,6 +29,9 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia);
   const [error, setError] = useState<string | null>(null);
 
+  // Cropping State
+  const [croppingIndex, setCroppingIndex] = useState<number | null>(null);
+
   const handleFiles = useCallback(
     (files: File[]) => {
       setMediaFiles(prevMediaFiles => {
@@ -45,8 +49,8 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
             const fileType = file.type.startsWith('image/')
               ? 'image'
               : file.type.startsWith('video/')
-              ? 'video'
-              : null;
+                ? 'video'
+                : null;
 
             if (!fileType) {
               return null;
@@ -88,6 +92,26 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       URL.revokeObjectURL(deletedFile.previewUrl);
     }
     setMediaFiles(newMediaFiles);
+  };
+
+  const handleCropSave = (croppedFile: File) => {
+    if (croppingIndex === null) return;
+
+    setMediaFiles(prev => {
+      const updated = [...prev];
+      const oldMedia = updated[croppingIndex];
+
+      // Revoke old URL
+      URL.revokeObjectURL(oldMedia.previewUrl);
+
+      updated[croppingIndex] = {
+        ...oldMedia,
+        file: croppedFile,
+        previewUrl: URL.createObjectURL(croppedFile),
+      };
+      return updated;
+    });
+    setCroppingIndex(null);
   };
 
   useEffect(() => {
@@ -134,23 +158,23 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
 
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {initialMediaFiles.map((url, index) => (
-            <div key={`initial-${index}`} className="relative aspect-square">
-                <Image
-                src={url}
-                alt={`initial preview ${index}`}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-lg"
-                />
-                <button
-                onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
-                className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-                aria-label="Delete file"
-                >
-                <X className="h-4 w-4" />
-                </button>
-            </div>
-            ))}
+          <div key={`initial-${index}`} className="relative aspect-square">
+            <Image
+              src={url}
+              alt={`initial preview ${index}`}
+              layout="fill"
+              objectFit="cover"
+              className="rounded-lg"
+            />
+            <button
+              onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
+              className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+              aria-label="Delete file"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </div>
+        ))}
         {mediaFiles.map((mediaFile, index) => (
           <div key={index} className="relative aspect-square">
             {mediaFile.type === 'image' ? (
@@ -168,13 +192,22 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
                 className="w-full h-full object-cover rounded-lg"
               />
             )}
-            <button
-              onClick={() => handleDelete(index)}
-              className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-              aria-label="Delete file"
-            >
-              <X className="h-4 w-4" />
-            </button>
+            <div className="absolute top-1 right-1 flex gap-1">
+              <button
+                onClick={() => setCroppingIndex(index)}
+                className="bg-orange-600 text-white rounded-full p-1.5 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                aria-label="Crop file"
+              >
+                <Crop className="h-4 w-4" />
+              </button>
+              <button
+                onClick={() => handleDelete(index)}
+                className="bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                aria-label="Delete file"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         ))}
         {mediaFiles.length < maxFiles && (
@@ -188,6 +221,16 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
           </button>
         )}
       </div>
+
+      {croppingIndex !== null && (
+        <MediaCropper
+          isOpen={croppingIndex !== null}
+          onClose={() => setCroppingIndex(null)}
+          mediaUrl={mediaFiles[croppingIndex].previewUrl}
+          mediaType={mediaFiles[croppingIndex].type}
+          onCropSave={handleCropSave}
+        />
+      )}
     </div>
   );
 };

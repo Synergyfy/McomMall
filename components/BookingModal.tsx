@@ -150,7 +150,7 @@ export function BookingModal({
         const addon = service.configurableAddons.find(a => a.id === addonId);
         return acc + (addon ? parseFloat(addon.price) : 0);
       }, 0) : 0;
-      const totalAmount = parseFloat(service.fixedPrice) + totalAddonPrice;
+       const totalAmount = parseFloat(service.fixedPrice || '0') + totalAddonPrice;
 
       verifyPayment.mutate({
         bookingId,

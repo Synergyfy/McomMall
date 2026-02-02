@@ -58,6 +58,7 @@ export default function CheckoutClient() {
   const [quantity, setQuantity] = useState(quantityFromUrl ? parseInt(quantityFromUrl, 10) : 1);
   const [isSuccessModalOpen, setSuccessModalOpen] = useState(false);
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string>>({});
+  const [validationError, setValidationError] = useState<string | null>(null);
 
   useEffect(() => {
     if (variantsFromUrl) {
@@ -68,6 +69,32 @@ export default function CheckoutClient() {
       }
     }
   }, [variantsFromUrl]);
+
+  // Validation Logic
+  useEffect(() => {
+      setValidationError(null);
+      if (product) {
+          // Check Variation Stock
+          if (product.variations && product.variations.length > 0) {
+              const currentVariation = product.variations.find(v =>
+                  Object.entries(v.combination).every(([key, val]) => selectedVariants[key] === val)
+              );
+
+              if (currentVariation) {
+                  if (currentVariation.stock < quantity) {
+                      setValidationError(`Only ${currentVariation.stock} left in stock for this option.`);
+                  }
+              } else if (Object.keys(selectedVariants).length > 0) {
+                  // Variation mismatch or incomplete?
+                  // We assume if passed from URL it was valid, but maybe not found if changed?
+              }
+          }
+          // Check General Stock
+          else if (product.enableStockManagement && (product.stock || 0) < quantity) {
+              setValidationError(`Only ${product.stock} left in stock.`);
+          }
+      }
+  }, [product, selectedVariants, quantity]);
 
   const [couponCode, setCouponCode] = useState('');
   const [couponDiscount, setCouponDiscount] = useState(0);
@@ -394,7 +421,12 @@ export default function CheckoutClient() {
                 <h2 className="text-2xl font-bold text-gray-800 mb-6">
                   Payment Information
                 </h2>
-                {isStripeLoading ? (
+                {validationError ? (
+                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium text-center">
+                        {validationError}
+                        <div className="mt-2 text-sm text-red-500">Please adjust your order to proceed.</div>
+                    </div>
+                ) : isStripeLoading ? (
                   <div className="flex justify-center items-center h-48">
                     <Loader className="animate-spin text-orange-600" size={32} />
                   </div>

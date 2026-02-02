@@ -86,6 +86,10 @@ interface ApiError {
         }
     }
 }
+interface Shop {
+    id?: string;
+    name?: string;
+}
 
 interface VoucherDisplayData {
     id: string;
@@ -99,7 +103,7 @@ interface VoucherDisplayData {
     transactions: unknown[];
     rewardRatio?: number;
     realRatio?: number;
-    shops?: any[];
+    shops?: (string | { name?: string; id?: string | number })[];
 }
 
 // --- COMPONENTS ---
@@ -877,6 +881,15 @@ export default function CouponsVouchersPage() {
                                                         {shop.name || shop.id || shop}
                                                     </Badge>
                                                 ))}
+                                            <div className="mt-2 space-y-1">
+                                                <div className="text-[10px] uppercase tracking-wider text-blue-400 font-bold">Valid at:</div>
+                                                <div className="flex flex-wrap gap-1">
+                                                    {selectedVoucherForDetails?.shops?.map((shop, idx) => (
+                                                        <Badge key={idx} variant="secondary" className="bg-blue-100/50 text-blue-700 border-none text-[10px]">
+                                                            {typeof shop === 'string' ? shop : (shop.name || shop.id)}
+                                                        </Badge>
+                                                    ))}
+                                                </div>
                                             </div>
                                         )}
                                     </div>

@@ -1,0 +1,18 @@
+they should have add video section
+
+--COLOR VARIANT for pricing, pair the size quantity,picture, and how many left
+s,m,l,xl,xxl
+
+SHOULD BE ABLE TO EDIT PRESET 
+
+add sizes option and the price to have option
+
+video should not be more than 30mb 
+
+---shipstation integration login,signup
+
+--max video:3
+
+--we are the one controlling ordes forshipstation:bussinesses under our account.
+
+--shipstation:affiliate option, reward
