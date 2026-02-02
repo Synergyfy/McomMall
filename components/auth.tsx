@@ -30,6 +30,7 @@ import { ErrorDialog } from './ErrorDialog';
 
 type Mode = 'login' | 'register' | 'forgot-password' | 'verify-email';
 import { useAddShippingAddress } from '@/service/shipping/hook';
+import Cookies from 'js-cookie';
 
 type Step = 'enter-email' | 'registration-form' | 'address-details' | 'enter-otp';
 
@@ -463,6 +464,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
     if (!validateForm()) return;
 
     if (mode === 'register' && selectedRole) {
+      const provisionCode = searchParams.get('provisionCode') || Cookies.get('provisionCode');
       const payload = {
         name: formData.fullName,
         email: formData.email,
@@ -470,6 +472,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         password: formData.password,
         confirm_password: formData.confirmPassword,
         role: selectedRole,
+        provisionCode: provisionCode || undefined,
       };
 
       try {

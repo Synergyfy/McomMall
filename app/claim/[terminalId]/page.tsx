@@ -2,9 +2,11 @@
 
 import { useState, useCallback } from "react";
 import Image from "next/image";
+import Link from "next/link";
 import { useParams, useRouter } from "next/navigation";
 import { Upload, Camera, Check, AlertCircle, Loader2, Wallet, Clock, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useCreateTerminalClaim } from "@/service/terminal-cashback/hook";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Label } from "@/components/ui/label";
@@ -76,6 +78,7 @@ export default function ClaimPage() {
   const router = useRouter();
   const terminalId = params.terminalId as string;
   const { user } = useAuth();
+  const { mutateAsync: createClaim } = useCreateTerminalClaim();
 
   const [step, setStep] = useState(1);
   const [file, setFile] = useState<File | null>(null);
@@ -151,22 +154,53 @@ export default function ClaimPage() {
     setIsSubmitting(true);
 
     try {
+      // 1. Get Geolocation (Optional but recommended)
+      let gps: { lat: number; lng: number } | undefined;
+      try {
+         const pos = await new Promise<GeolocationPosition>((resolve, reject) => {
+           navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 5000 });
+         });
+         gps = { lat: pos.coords.latitude, lng: pos.coords.longitude };
+      } catch (e) {
+         console.warn("GPS not available", e);
+      }
+
+      // 2. Upload File
       setIsUploading(true);
       let proofUrl = "";
       try {
          const uploadRes = await uploadFile(file);
          proofUrl = uploadRes.secure_url;
       } catch (err) {
-         console.error("Upload failed, using mock url for demo", err);
-         proofUrl = previewUrl || ""; 
+         console.error("Upload failed", err);
+         toast.error("Failed to upload receipt image.");
+         setIsSubmitting(false);
+         setIsUploading(false);
+         return; 
       }
       setIsUploading(false);
 
-      await new Promise(resolve => setTimeout(resolve, 1500));
+      // 3. Prepare Payload
+      const range = business.ranges.find(r => r.id === selectedRange);
+      if (!range) throw new Error("Invalid range selected");
+
+      // 4. Submit Claim
+      await createClaim({
+        businessId: terminalId,
+        amount: range.reward,
+        spendAmount: range.min, 
+        proofUrl: proofUrl,
+        meta: {
+          gps,
+          description: `Claim for ${business.name} - Range £${range.min}-£${range.max}`
+        }
+      });
+
       toast.success("Claim Submitted Successfully!");
       setStep(3); 
       
     } catch (error) {
+      console.error(error);
       toast.error("Something went wrong. Please try again.");
     } finally {
       setIsSubmitting(false);
@@ -352,7 +386,7 @@ export default function ClaimPage() {
                 className="mt-1 border-gray-300 data-[state=checked]:bg-orange-500 data-[state=checked]:border-orange-500"
               />
               <Label htmlFor="terms" className="text-xs text-gray-500 leading-relaxed cursor-pointer select-none">
-                I agree to MCOM's terms. I understand that fraudulent attempts will result in account suspension and only one receipt is allowed per claim.
+                I agree to MCOM's <Link href="/terms-and-conditions" className="underline text-orange-500 hover:text-orange-600" target="_blank">terms</Link>. I understand that fraudulent attempts will result in account suspension and only one receipt is allowed per claim.
               </Label>
             </div>
           </div>

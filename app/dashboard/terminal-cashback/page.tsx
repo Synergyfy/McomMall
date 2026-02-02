@@ -17,10 +17,18 @@ import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { QRCode } from "react-qrcode-logo";
+import { 
+  useGetTerminalClaims, 
+  useGetTerminalClaimDetails, 
+  useGetTerminalStats, 
+  useUpdateClaimStatus 
+} from "@/service/terminal-cashback/hook";
+import { useGetUserListings } from "@/service/listings/hook";
+import { TerminalClaim, ClaimStatus } from "@/service/terminal-cashback/types";
+import { Textarea } from "@/components/ui/textarea";
+import { ArrowRight, HelpCircle, Store, Banknote, ShieldCheck } from "lucide-react";
 
 // --- Types ---
-type ClaimStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
-
 interface Claim {
   id: string;
   customerName: string;
@@ -69,6 +77,10 @@ const MOCK_CLAIMS: Claim[] = [
 export default function TerminalCashbackPage() {
   const { userRole } = useSelector((state: RootState) => state.auth);
   const [isClient, setIsClient] = useState(false);
+  
+  // Get user business for the terminal ID
+  const { data: userListings, isLoading: isListingsLoading } = useGetUserListings(1, 1);
+  const terminalId = userListings?.data?.[0]?.id;
 
   useEffect(() => {
     setIsClient(true);
@@ -88,7 +100,7 @@ export default function TerminalCashbackPage() {
           </p>
         </div>
         {userRole === UserRole.OWNER && (
-           <TerminalShareButton terminalId="BEANTHERE01" />
+           <TerminalShareButton terminalId={terminalId} isLoading={isListingsLoading} />
         )}
       </div>
 
@@ -97,17 +109,167 @@ export default function TerminalCashbackPage() {
   );
 }
 
+// --- Terminal Onboarding Component ---
+function TerminalOnboarding() {
+  const [showRequestDialog, setShowRequestDialog] = useState(false);
+
+  return (
+    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 max-w-3xl mx-auto px-4">
+      <div className="space-y-4">
+        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+          <Banknote className="w-10 h-10 text-orange-600" />
+        </div>
+        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Unlock the Power of Terminal Cashback</h2>
+        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
+          You don't have access to create a terminal cashback yet. Bridge the gap between offline sales and digital loyalty.
+        </p>
+      </div>
+
+      <div className="grid md:grid-cols-3 gap-6 w-full text-left">
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <Store className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">What is it?</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            Terminal Cashback allows you to reward your in-store customers, whether they pay by cash, card, or POS. No integration required.
+          </CardContent>
+        </Card>
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <ShieldCheck className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">Why use it?</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            Build loyalty, encourage repeat visits, and collect customer data even for walk-ins. Turn anonymous shoppers into loyal fans.
+          </CardContent>
+        </Card>
+        <Card className="border-orange-100 bg-orange-50/50">
+          <CardHeader>
+            <HelpCircle className="w-8 h-8 text-orange-600 mb-2" />
+            <CardTitle className="text-lg">How it works</CardTitle>
+          </CardHeader>
+          <CardContent className="text-sm text-gray-600">
+            1. Customer buys in-store.<br/>
+            2. Scans your QR code.<br/>
+            3. Uploads receipt.<br/>
+            4. You verify & reward.
+          </CardContent>
+        </Card>
+      </div>
+
+      <div className="space-y-4">
+         <p className="text-sm font-medium text-gray-500">
+           Ready to reward your offline customers?
+         </p>
+         <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white gap-2" onClick={() => setShowRequestDialog(true)}>
+           Request Terminal Access <ArrowRight className="w-4 h-4" />
+         </Button>
+      </div>
+
+      <RequestAccessDialog open={showRequestDialog} onOpenChange={setShowRequestDialog} />
+    </div>
+  );
+}
+
+// --- Request Access Dialog ---
+function RequestAccessDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (open: boolean) => void }) {
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [message, setMessage] = useState("");
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    
+    // Simulate API call
+    await new Promise(resolve => setTimeout(resolve, 1500));
+    
+    toast.success("Request sent! Support will contact you shortly.");
+    setIsSubmitting(false);
+    onOpenChange(false);
+    setMessage("");
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogContent className="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Request Terminal Cashback</DialogTitle>
+        </DialogHeader>
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="space-y-2">
+            <Label>Tell us why you're interested</Label>
+            <Textarea 
+              placeholder="I would like to reward my walk-in customers..." 
+              value={message}
+              onChange={(e) => setMessage(e.target.value)}
+              className="min-h-[100px]"
+              required
+            />
+          </div>
+          <div className="flex justify-end gap-2">
+            <Button type="button" variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="bg-orange-600 hover:bg-orange-700" disabled={isSubmitting}>
+              {isSubmitting ? "Sending..." : "Submit Request"}
+            </Button>
+          </div>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 // --- Business Dashboard Component ---
 function BusinessDashboard() {
-  const [claims, setClaims] = useState<Claim[]>(MOCK_CLAIMS);
+  // Queries
+  const { data: statsData } = useGetTerminalStats();
+  const { data: pendingData, isLoading: isPendingLoading } = useGetTerminalClaims({ status: 'PENDING' });
+  const { data: historyData, isLoading: isHistoryLoading } = useGetTerminalClaims({ status: 'APPROVED' }); // Ideally we want APPROVED and REJECTED
+  // Note: The history tab ideally needs a filter or fetch all non-pending. 
+  // For now, let's just fetch everything if the API supported excluding pending, but let's stick to simple logic or maybe 2 queries for history?
+  // Let's assume history fetches all for now and we filter client side or the API supports status=APPROVED,REJECTED. 
+  // The provided endpoint documentation says "status string (query)". Let's just fetch pending separately and maybe "history" via another call or just rely on pending call if we want to separate them.
+  // To keep it simple and efficient, let's fetch 'PENDING' for the pending tab. 
+  // For history, let's fetch without status and filter client side OR if the API supports comma separated.
+  // Let's try fetching all and filtering client side for a small scale app, OR strictly follow the tabs.
+  // Actually, let's use the useGetTerminalClaims for pending, and another instance for history (non-pending).
+  // Since we can't easily say "status!=PENDING", let's just fetch all and filter in UI or fetch APPROVED and REJECTED separately? 
+  // Let's fetch ALL for the history tab for now (maybe limit to 20) and filter. Or just fetch 'APPROVED' as the primary history.
+  
+  // Re-reading endpoint: status is a string.
+  
+  const { mutate: updateStatus } = useUpdateClaimStatus();
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
 
-  const pendingClaims = claims.filter(c => c.status === 'PENDING');
-  const historyClaims = claims.filter(c => c.status !== 'PENDING');
+  // Stats
+  const stats = statsData || { pendingCount: 0, approvedCount: 0, totalEarned: 0 };
+  
+  // Check if user has no terminal cashback activity/setup
+  const hasNoActivity = stats.pendingCount === 0 && stats.approvedCount === 0 && stats.totalEarned === 0;
 
-  const handleAction = (id: string, action: 'APPROVED' | 'REJECTED') => {
-    setClaims(prev => prev.map(c => c.id === id ? { ...c, status: action } : c));
-    toast.success(`Claim ${action === 'APPROVED' ? 'Approved' : 'Rejected'}`);
+  if (hasNoActivity) {
+    return <TerminalOnboarding />;
+  }
+  
+  // Pending Claims
+  const pendingClaims = (pendingData?.data || []).map(mapTerminalClaimToUI);
+
+  // History Claims - For now let's just fetch APPROVED ones as "History" to be safe with the API, 
+  // or we could try to fetch all and filter. Let's try fetching "APPROVED" for now.
+  const { data: approvedData } = useGetTerminalClaims({ status: 'APPROVED' });
+  const { data: rejectedData } = useGetTerminalClaims({ status: 'REJECTED' });
+  
+  const historyClaims = [
+      ...(approvedData?.data || []), 
+      ...(rejectedData?.data || [])
+  ].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+   .map(mapTerminalClaimToUI);
+
+
+  const handleAction = (id: string, action: ClaimStatus) => {
+    updateStatus({ id, status: action }, {
+        onSuccess: () => toast.success(`Claim ${action === 'APPROVED' ? 'Approved' : 'Rejected'}`)
+    });
   };
 
   return (
@@ -119,7 +281,7 @@ function BusinessDashboard() {
             <Clock className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{pendingClaims.length}</div>
+            <div className="text-2xl font-bold">{stats.pendingCount}</div>
             <p className="text-xs text-muted-foreground">Requires attention</p>
           </CardContent>
         </Card>
@@ -130,7 +292,7 @@ function BusinessDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              {claims.filter(c => c.status === 'APPROVED').length}
+              {stats.approvedCount}
             </div>
             <p className="text-xs text-muted-foreground">Lifetime</p>
           </CardContent>
@@ -142,7 +304,7 @@ function BusinessDashboard() {
           </CardHeader>
           <CardContent>
             <div className="text-2xl font-bold">
-              £{claims.filter(c => c.status === 'APPROVED').reduce((acc, c) => acc + c.amount, 0).toFixed(2)}
+              £{stats.totalEarned.toFixed(2)}
             </div>
             <p className="text-xs text-muted-foreground">Cashback distributed</p>
           </CardContent>
@@ -158,7 +320,7 @@ function BusinessDashboard() {
         <TabsContent value="pending" className="mt-4">
           {pendingClaims.length === 0 ? (
             <Card className="p-8 text-center text-muted-foreground">
-              No pending claims. All caught up!
+              {isPendingLoading ? "Loading..." : "No pending claims. All caught up!"}
             </Card>
           ) : (
             <div className="grid gap-4">
@@ -177,16 +339,22 @@ function BusinessDashboard() {
         </TabsContent>
         
         <TabsContent value="history" className="mt-4">
-          <div className="grid gap-4">
-            {historyClaims.map(claim => (
-              <ClaimCard 
-                key={claim.id} 
-                claim={claim} 
-                isBusiness 
-                onViewProof={() => setSelectedProof(claim.proofUrl)}
-              />
-            ))}
-          </div>
+           {historyClaims.length === 0 ? (
+               <Card className="p-8 text-center text-muted-foreground">
+                   No history found.
+               </Card>
+           ) : (
+              <div className="grid gap-4">
+                {historyClaims.map(claim => (
+                  <ClaimCard 
+                    key={claim.id} 
+                    claim={claim} 
+                    isBusiness 
+                    onViewProof={() => setSelectedProof(claim.proofUrl)}
+                  />
+                ))}
+              </div>
+           )}
         </TabsContent>
       </Tabs>
 
@@ -214,16 +382,35 @@ function BusinessDashboard() {
 
 // --- Customer Dashboard Component ---
 function CustomerDashboard() {
-  // In real app, filter claims by current user ID
-  const myClaims = MOCK_CLAIMS; 
+  const { data, isLoading, error } = useGetTerminalClaims();
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+
+  if (isLoading) return <div>Loading claims...</div>;
+  if (error) return <div>Error loading claims.</div>;
+
+  const claims = data?.data || [];
 
   return (
     <div className="space-y-6">
       <div className="grid gap-4">
-        {myClaims.map(claim => (
-           <ClaimCard key={claim.id} claim={claim} isBusiness={false} />
-        ))}
+        {claims.length === 0 ? (
+          <p className="text-muted-foreground">No cashback claims found.</p>
+        ) : (
+          claims.map(claim => (
+             <ClaimCard 
+               key={claim.id} 
+               claim={mapTerminalClaimToUI(claim)} 
+               isBusiness={false} 
+               onViewDetails={() => setSelectedClaimId(claim.id)}
+             />
+          ))
+        )}
       </div>
+      
+      <ClaimDetailsDialog 
+        claimId={selectedClaimId} 
+        onClose={() => setSelectedClaimId(null)} 
+      />
     </div>
   );
 }
@@ -235,13 +422,15 @@ function ClaimCard({
   isBusiness, 
   onViewProof, 
   onApprove, 
-  onReject 
+  onReject,
+  onViewDetails
 }: { 
   claim: Claim; 
   isBusiness: boolean; 
   onViewProof?: () => void;
   onApprove?: () => void;
   onReject?: () => void;
+  onViewDetails?: () => void;
 }) {
   return (
     <Card>
@@ -283,7 +472,7 @@ function ClaimCard({
              <p className="text-xl font-bold text-green-600">+£{claim.amount.toFixed(2)}</p>
            </div>
            
-           {isBusiness && (
+           {isBusiness ? (
              <div className="flex flex-col gap-2">
                 <Button variant="outline" size="sm" onClick={onViewProof}>
                   <Eye className="w-4 h-4 mr-2" /> Proof
@@ -299,6 +488,10 @@ function ClaimCard({
                   </div>
                 )}
              </div>
+           ) : (
+              <Button variant="outline" size="sm" onClick={onViewDetails}>
+                Details
+              </Button>
            )}
         </div>
       </CardContent>
@@ -307,11 +500,11 @@ function ClaimCard({
 }
 
 // --- Terminal Share Button ---
-function TerminalShareButton({ terminalId }: { terminalId: string }) {
+function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; isLoading?: boolean }) {
   const [url, setUrl] = useState("");
 
   useEffect(() => {
-    if (typeof window !== "undefined") {
+    if (typeof window !== "undefined" && terminalId) {
       setUrl(`${window.location.origin}/claim/${terminalId}`);
     }
   }, [terminalId]);
@@ -334,6 +527,19 @@ function TerminalShareButton({ terminalId }: { terminalId: string }) {
     navigator.clipboard.writeText(url);
     toast.success("Link copied to clipboard");
   };
+
+  if (isLoading) {
+    return <Button variant="outline" disabled>Loading Terminal...</Button>;
+  }
+
+  if (!terminalId) {
+    return (
+        <Button variant="outline" disabled title="No active listing found">
+           <QrCode className="h-4 w-4 mr-2" />
+           No Active Terminal
+        </Button>
+    );
+  }
 
   return (
     <Popover>
@@ -386,3 +592,88 @@ function TerminalShareButton({ terminalId }: { terminalId: string }) {
     </Popover>
   );
 }
+function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onClose: () => void }) {
+  const { data: claim, isLoading } = useGetTerminalClaimDetails(claimId);
+
+  return (
+    <Dialog open={!!claimId} onOpenChange={(open) => !open && onClose()}>
+      <DialogContent className="max-w-md">
+        <DialogHeader>
+          <DialogTitle>Claim Details</DialogTitle>
+        </DialogHeader>
+        {isLoading ? (
+          <div className="flex justify-center p-4">Loading details...</div>
+        ) : claim ? (
+          <div className="space-y-4">
+            <div className="grid grid-cols-2 gap-2 text-sm">
+              <span className="text-muted-foreground">Status:</span>
+              <Badge className={
+                 claim.status === "APPROVED" ? "bg-green-600 w-fit" :
+                 claim.status === "REJECTED" ? "bg-red-600 w-fit" :
+                 "bg-yellow-600 w-fit"
+              }>
+                {claim.status}
+              </Badge>
+              
+              <span className="text-muted-foreground">Amount:</span>
+              <span className="font-semibold text-green-600">�{claim.amount.toFixed(2)}</span>
+
+              <span className="text-muted-foreground">Spend Amount:</span>
+              <span>�{claim.spendAmount.toFixed(2)}</span>
+
+              <span className="text-muted-foreground">Business:</span>
+              <span>{claim.businessName || claim.businessId}</span>
+
+              <span className="text-muted-foreground">Date:</span>
+              <span>{new Date(claim.submittedAt).toLocaleString()}</span>
+              
+              {claim.reviewedAt && (
+                <>
+                  <span className="text-muted-foreground">Reviewed:</span>
+                  <span>{new Date(claim.reviewedAt).toLocaleString()}</span>
+                </>
+              )}
+            </div>
+            
+            {claim.proofUrl && (
+              <div className="space-y-2">
+                <Label>Proof of Purchase</Label>
+                <div className="relative aspect-[3/4] w-full bg-gray-100 rounded-md overflow-hidden">
+                  <Image 
+                    src={claim.proofUrl} 
+                    alt="Proof" 
+                    fill 
+                    className="object-contain"
+                    unoptimized 
+                  />
+                </div>
+              </div>
+            )}
+            
+            {claim.meta?.gps && (
+               <div className="text-xs text-muted-foreground">
+                 Location: {claim.meta.gps.lat}, {claim.meta.gps.lng}
+               </div>
+            )}
+          </div>
+        ) : (
+          <div>Failed to load details.</div>
+        )}
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+function mapTerminalClaimToUI(apiClaim: TerminalClaim): Claim {
+  return {
+    id: apiClaim.id,
+    customerName: apiClaim.userId, 
+    amount: apiClaim.amount,
+    spendRange: `�${apiClaim.spendAmount.toFixed(2)}`,
+    status: apiClaim.status,
+    date: apiClaim.submittedAt,
+    proofUrl: apiClaim.proofUrl,
+    terminalName: apiClaim.businessName || apiClaim.businessId,
+  };
+}
+
