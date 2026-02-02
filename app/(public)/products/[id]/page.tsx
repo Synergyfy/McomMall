@@ -169,13 +169,25 @@ export default function ProductPage() {
         ? product.fileUrls
         : [product.imageUrl || 'https://via.placeholder.com/500'];
 
-      if (currentVariation?.image) {
-          // De-duplicate if the variant image is already in the list?
-          // For simplicity, just prepend.
-          return [currentVariation.image, ...baseImages];
+      // Find the best image to show based on current selection
+      // 1. If we have an exact match variation with an image, use it.
+      // 2. If we have a partial match variation with an image, use the first one we find.
+      let variantImage = currentVariation?.image;
+
+      if (!variantImage && isMatrixSystem && Object.keys(selectedVariants).length > 0) {
+        const partialMatch = product.variations?.find(v =>
+           v.image && Object.entries(selectedVariants).every(([key, value]) => v.combination[key] === value)
+        );
+        variantImage = partialMatch?.image;
+      }
+
+      if (variantImage) {
+          // Avoid duplicating if the variant image is already in baseImages
+          const uniqueBaseImages = baseImages.filter(img => img !== variantImage);
+          return [variantImage, ...uniqueBaseImages];
       }
       return baseImages;
-  }, [product, currentVariation]);
+  }, [product, currentVariation, selectedVariants, isMatrixSystem]);
 
   if (isLoading) {
     return (
