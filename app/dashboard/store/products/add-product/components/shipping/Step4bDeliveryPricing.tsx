@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation } from 'lucide-react';
 
 interface Props {
   formData: any;
