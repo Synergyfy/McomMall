@@ -29,12 +29,24 @@ export default function AddProductPage() {
     shortDesc: '',
     fullDesc: '',
     product_type: 'physical',
+    brand: '',
+    gender: '',
+    productStatus: 'publish',
+    hasVariants: false,
     regular_price: '',
     sale_price: '',
     sku: '',
     stock_status: 'instock',
     quantity: 100,
     weight: '',
+    attributes: [],
+    variations: [],
+    sizeGuide: {
+      enabled: false,
+      system: 'international',
+      measurements: [],
+      diagrams: { male: '', female: '', unisex: '' }
+    }
   });
 
   const updateFormData = (newData: any) => {

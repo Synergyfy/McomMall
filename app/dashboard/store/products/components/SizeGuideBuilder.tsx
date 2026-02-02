@@ -20,23 +20,32 @@ import {
     TableHeader,
     TableRow,
 } from '@/components/ui/table';
-import { Plus, Trash2, Ruler, ImageIcon, Upload, X } from 'lucide-react';
+import { cn } from '@/lib/utils';
+import { Plus, Trash2, Ruler, ImageIcon, Upload, X, Info, Search } from 'lucide-react';
 import { SizeGuideConfig, SizeGuideMeasurement } from '@/service/store/products/types';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from "@/components/ui/tooltip";
 
 interface SizeGuideBuilderProps {
     value?: SizeGuideConfig;
     onChange: (config: SizeGuideConfig) => void;
     detectedSizes?: string[]; // Optional: Sizes detected from Variant Matrix
+    gender?: 'male' | 'female' | 'unisex' | 'none' | string;
 }
 
-const DEFAULT_MEASUREMENT_FIELDS = ['Bust', 'Waist', 'Hip', 'Length'];
-const SHOE_MEASUREMENT_FIELDS = ['Foot Length', 'EU', 'UK', 'US'];
+const DEFAULT_MEASUREMENT_FIELDS = ['Bust', 'Waist', 'Hip', 'Length', 'UK', 'EU'];
+const SHOE_MEASUREMENT_FIELDS = ['Foot Length', 'Width', 'EU', 'UK', 'US'];
 
-export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }: SizeGuideBuilderProps) {
+export default function SizeGuideBuilder({ value, onChange, detectedSizes = [], gender }: SizeGuideBuilderProps) {
     const [enabled, setEnabled] = useState(value?.enabled || false);
     const [system, setSystem] = useState<SizeGuideConfig['system']>(value?.system || 'international');
     const [measurements, setMeasurements] = useState<SizeGuideMeasurement[]>(value?.measurements || []);
     const [imageUrl, setImageUrl] = useState(value?.imageUrl || '');
+    const [diagrams, setDiagrams] = useState(value?.diagrams || { male: '', female: '', unisex: '' });
     const [conversionMap, setConversionMap] = useState<Record<string, string>>(value?.conversionMap || {});
     const [columns, setColumns] = useState<string[]>(DEFAULT_MEASUREMENT_FIELDS);
 
@@ -52,6 +61,7 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
                 if (keys.length > 0) setColumns(Array.from(new Set([...DEFAULT_MEASUREMENT_FIELDS, ...keys])));
             }
             setImageUrl(value.imageUrl || '');
+            setDiagrams(value.diagrams || { male: '', female: '', unisex: '' });
             setConversionMap(value.conversionMap || {});
         }
     }, [value]);
@@ -71,12 +81,13 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
         }
     }, [enabled, detectedSizes]);
 
-    const updateConfig = (isEnabled: boolean, sys: SizeGuideConfig['system'], meas: SizeGuideMeasurement[]) => {
+    const updateConfig = (isEnabled: boolean, sys: SizeGuideConfig['system'], meas: SizeGuideMeasurement[], diag = diagrams) => {
         onChange({
             enabled: isEnabled,
             system: sys,
             measurements: meas,
             imageUrl: imageUrl,
+            diagrams: diag,
             conversionMap: conversionMap
         });
     };
@@ -89,9 +100,6 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
     const handleSystemChange = (val: SizeGuideConfig['system']) => {
         setSystem(val);
         updateConfig(enabled, val, measurements);
-
-        // Auto-switch columns for shoes?
-        // (Simplified logic for now)
     };
 
     const handleMeasurementChange = (index: number, field: string, val: string) => {
@@ -174,51 +182,58 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
                 </div>
 
                 <div className="flex-1">
-                    <Label className="mb-2 block">Body Diagram / Guide Image</Label>
+                    <Label className="mb-2 block">Body Diagrams (Male / Female / Unisex)</Label>
                     <div className="flex items-center gap-4">
-                        {imageUrl ? (
-                            <div className="relative group w-20 h-20">
-                                <img
-                                    src={imageUrl}
-                                    alt="Size Guide Diagram"
-                                    className="w-full h-full object-cover rounded-md border"
-                                />
-                                <button
-                                    type="button"
-                                    onClick={() => { setImageUrl(''); updateConfig(enabled, system, measurements); }}
-                                    className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
-                                >
-                                    <X className="w-3 h-3" />
-                                </button>
+                        {(['male', 'female', 'unisex'] as const).map((type) => (
+                            <div key={type} className="flex flex-col items-center gap-1">
+                                {diagrams[type] ? (
+                                    <div className={cn(
+                                        "relative group w-20 h-20",
+                                        gender === type && "ring-2 ring-[#f48c25] ring-offset-2 rounded-md"
+                                    )}>
+                                        <img
+                                            src={diagrams[type]}
+                                            alt={`${type} Diagram`}
+                                            className="w-full h-full object-cover rounded-md border"
+                                        />
+                                        <button
+                                            type="button"
+                                            onClick={() => {
+                                                const newDiag = { ...diagrams, [type]: '' };
+                                                setDiagrams(newDiag);
+                                                updateConfig(enabled, system, measurements, newDiag);
+                                            }}
+                                            className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-sm opacity-0 group-hover:opacity-100 transition-opacity"
+                                        >
+                                            <X className="w-3 h-3" />
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <label className="w-20 h-20 border-2 border-dashed rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
+                                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                                        <span className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Upload</span>
+                                        <input
+                                            type="file"
+                                            className="hidden"
+                                            accept="image/*"
+                                            onChange={(e) => {
+                                                const file = e.target.files?.[0];
+                                                if (file) {
+                                                    const url = URL.createObjectURL(file);
+                                                    const newDiag = { ...diagrams, [type]: url };
+                                                    setDiagrams(newDiag);
+                                                    updateConfig(enabled, system, measurements, newDiag);
+                                                }
+                                            }}
+                                        />
+                                    </label>
+                                )}
+                                <span className="text-[10px] font-bold text-[#9c7349] uppercase">{type}</span>
                             </div>
-                        ) : (
-                            <label className="w-20 h-20 border-2 border-dashed rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
-                                <ImageIcon className="w-6 h-6 text-gray-400" />
-                                <span className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Upload</span>
-                                <input
-                                    type="file"
-                                    className="hidden"
-                                    accept="image/*"
-                                    onChange={(e) => {
-                                        const file = e.target.files?.[0];
-                                        if (file) {
-                                            const url = URL.createObjectURL(file);
-                                            setImageUrl(url);
-                                            // Trigger config update with new image
-                                            onChange({
-                                                enabled,
-                                                system,
-                                                measurements,
-                                                imageUrl: url
-                                            });
-                                        }
-                                    }}
-                                />
-                            </label>
-                        )}
-                        <div className="text-xs text-gray-500">
-                            <p className="font-medium text-gray-700">Measurement Visual</p>
-                            <p>Upload a diagram showing where to measure.</p>
+                        ))}
+                        <div className="text-xs text-gray-500 ml-4">
+                            <p className="font-medium text-gray-700">Measurement Visuals</p>
+                            <p>Upload diagrams for different genders.</p>
                         </div>
                     </div>
                 </div>
@@ -273,6 +288,46 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [] }
                 <Button variant="outline" size="sm" onClick={addColumn}>
                     <Plus className="w-4 h-4 mr-2" /> Add Measurement Column
                 </Button>
+            </div>
+
+            {/* Buyer Preview Section */}
+            <div className="mt-8 pt-8 border-t">
+                <h4 className="font-bold text-[#1c140d] mb-4 flex items-center gap-2">
+                    <Search className="w-4 h-4 text-[#f48c25]" />
+                    Buyer View Preview
+                </h4>
+                <div className="p-4 rounded-xl border border-dashed border-[#e8dbce] bg-gray-50/50">
+                    <div className="flex flex-wrap gap-2 items-center">
+                        <span className="text-sm font-medium mr-2">Size:</span>
+                        {measurements.map((m, idx) => (
+                            <TooltipProvider key={idx}>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <button className="h-10 w-12 border rounded-md bg-white hover:border-[#f48c25] hover:text-[#f48c25] transition-all text-sm font-bold">
+                                            {m.size}
+                                        </button>
+                                    </TooltipTrigger>
+                                    <TooltipContent className="p-3">
+                                        <div className="text-xs space-y-1">
+                                            <p className="font-bold border-b pb-1 mb-1">Measurements ({m.size})</p>
+                                            {columns.map(col => (
+                                                <p key={col}>{col}: <span className="font-semibold">{m[col.toLowerCase()] || '-'} cm</span></p>
+                                            ))}
+                                        </div>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        ))}
+                    </div>
+                    <div className="mt-4 flex items-center gap-4">
+                         <button className="text-[#f48c25] text-sm font-bold underline flex items-center gap-1">
+                            <Ruler className="w-4 h-4" /> Size Guide
+                         </button>
+                         <div className="text-[10px] text-[#9c7349] italic bg-white px-2 py-1 rounded border">
+                            "Recommended for you: M" (based on your profile)
+                         </div>
+                    </div>
+                </div>
             </div>
         </div>
     );

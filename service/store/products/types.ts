@@ -25,6 +25,7 @@ export interface ProductVariation {
   stock: number;
   reservedStock?: number;
   soldCount?: number;
+  lowStockThreshold?: number;
   available: boolean;
   image?: string;
   weight?: number;
@@ -51,6 +52,11 @@ export interface SizeGuideConfig {
   measurements: SizeGuideMeasurement[];
   conversionMap?: Record<string, string>; // e.g., { "S": "US 4", "M": "US 6" }
   imageUrl?: string; // For Body Diagram
+  diagrams?: {
+    male?: string;
+    female?: string;
+    unisex?: string;
+  };
 }
 
 export interface CreateProductDto {
@@ -58,6 +64,8 @@ export interface CreateProductDto {
   title: string;
   category: string;
   subCategories?: string[];
+  brand?: string;
+  gender?: 'male' | 'female' | 'unisex' | 'none';
   shippingMethod?: 'free' | 'pickup' | 'delivery';
   productType: string;
   price: number;

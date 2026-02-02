@@ -343,9 +343,9 @@ export default function VariantManager({
       <div className="space-y-4">
         <div className="flex justify-between items-center">
           <h3 className="text-lg font-medium">1. Define Attributes</h3>
-          {!isAttributeFormVisible && (
+          {!isAttributeFormVisible && attributes.length < 4 && (
             <Button type="button" variant="outline" size="sm" onClick={() => showAttributeForm()}>
-              <Plus className="mr-2 h-4 w-4" /> Add Attribute
+              <Plus className="mr-2 h-4 w-4" /> Add Variant Type
             </Button>
           )}
         </div>
@@ -394,15 +394,22 @@ export default function VariantManager({
                       setAttributeName(value);
                     }
                   }}
-                  value={isCustomAttribute ? 'custom' : (['Color', 'Size', 'Material'].includes(attributeName) ? attributeName : (attributeName ? 'custom' : ''))}
+                  value={isCustomAttribute ? 'custom' : (['Color', 'Size', 'Material', 'Storage', 'Model', 'Voltage', 'RAM', 'Processor', 'Plug Type', 'Capacity'].includes(attributeName) ? attributeName : (attributeName ? 'custom' : ''))}
                 >
                   <SelectTrigger>
                     <SelectValue placeholder="Select Name (e.g. Color)" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="Color">Color</SelectItem>
                     <SelectItem value="Size">Size</SelectItem>
+                    <SelectItem value="Color">Color</SelectItem>
+                    <SelectItem value="Storage">Storage</SelectItem>
+                    <SelectItem value="Model">Model</SelectItem>
+                    <SelectItem value="RAM">RAM</SelectItem>
+                    <SelectItem value="Processor">Processor</SelectItem>
                     <SelectItem value="Material">Material</SelectItem>
+                    <SelectItem value="Voltage">Voltage</SelectItem>
+                    <SelectItem value="Plug Type">Plug Type</SelectItem>
+                    <SelectItem value="Capacity">Capacity</SelectItem>
                     <SelectItem value="custom">Custom...</SelectItem>
                   </SelectContent>
                 </Select>
@@ -465,7 +472,9 @@ export default function VariantManager({
           )}>
             <div className="flex items-center gap-2 text-sm font-medium text-orange-800">
               <Zap className="w-4 h-4" />
-              <span>{selectedIndices.length} items selected</span>
+              <span className="uppercase text-[10px] font-bold">Bulk Fill Tools</span>
+              <span className="opacity-60">|</span>
+              <span>{selectedIndices.length} selected</span>
             </div>
 
             <div className="h-6 w-[1px] bg-orange-200 mx-2 hidden sm:block" />
@@ -517,6 +526,8 @@ export default function VariantManager({
                   <TableHead className="w-[60px]">Image</TableHead>
                   <TableHead>Price (+/-)</TableHead>
                   <TableHead>Stock</TableHead>
+                  <TableHead className="w-[60px]">Res.</TableHead>
+                  <TableHead className="w-[60px]">Sold</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead className="w-[80px]">Dims</TableHead>
                   <TableHead className="w-[80px]">Active</TableHead>
@@ -614,6 +625,14 @@ export default function VariantManager({
                           updateVariation(index, { ...field, stock: isNaN(val) ? 0 : val });
                         }}
                       />
+                    </TableCell>
+
+                    {/* Reserved & Sold (Read Only) */}
+                    <TableCell className="text-center font-medium text-gray-500">
+                        {field.reservedStock || 0}
+                    </TableCell>
+                    <TableCell className="text-center font-medium text-green-600">
+                        {field.soldCount || 0}
                     </TableCell>
 
                     {/* Editable SKU */}

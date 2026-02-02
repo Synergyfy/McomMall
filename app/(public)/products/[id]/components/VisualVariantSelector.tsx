@@ -19,6 +19,7 @@ interface VisualVariantSelectorProps {
     onChange: (attributeName: string, optionName: string) => void;
     isOptionAvailable: (attributeName: string, optionName: string) => boolean;
     sizeGuide?: SizeGuideConfig;
+    productGender?: string;
 }
 
 export default function VisualVariantSelector({
@@ -26,7 +27,8 @@ export default function VisualVariantSelector({
     selectedVariants,
     onChange,
     isOptionAvailable,
-    sizeGuide
+    sizeGuide,
+    productGender
 }: VisualVariantSelectorProps) {
 
     // Helper to determine visual style
@@ -56,7 +58,7 @@ export default function VisualVariantSelector({
                             </Label>
                             {/* Show Size Guide Link only for Size attribute */}
                             {style === 'pill' && attr.name.toLowerCase().includes('size') && sizeGuide && (
-                                <SizeGuideModal config={sizeGuide} />
+                                <SizeGuideModal config={sizeGuide} productGender={productGender} />
                             )}
                         </div>
 

@@ -290,6 +290,7 @@ export default function ProductPage() {
                             onChange={handleVariantChange}
                             isOptionAvailable={isOptionAvailableInMatrix}
                             sizeGuide={product.sizeGuide}
+                            productGender={product.gender}
                         />
                      </div>
                   )}

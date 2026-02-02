@@ -6,7 +6,8 @@ import {
   List, 
   Link as LinkIcon, 
   X, 
-  ArrowRight 
+  ArrowRight,
+  Layers
 } from 'lucide-react';
 
 interface Step1Props {
@@ -87,6 +88,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                     <option value="shoes">Shoes</option>
                     <option value="accessories">Accessories</option>
                     <option value="electronics">Electronics</option>
+                    <option value="appliances">Appliances</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                     <ChevronDown className="w-5 h-5" />
@@ -109,6 +111,89 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                     <option value="shirts">Shirts</option>
                     <option value="pants">Pants</option>
                     <option value="outerwear">Outerwear</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
+                    <ChevronDown className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Row: Status & Variant Toggle */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="productStatus">
+                  Product Status
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                    id="productStatus"
+                    value={formData.productStatus || 'publish'}
+                    onChange={handleChange}
+                  >
+                    <option value="publish">Publish</option>
+                    <option value="draft">Draft</option>
+                  </select>
+                  <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
+                    <ChevronDown className="w-5 h-5" />
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex flex-col gap-2">
+                 <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200">
+                    Product Options
+                </label>
+                <div className="flex items-center justify-between p-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] h-12">
+                    <div className="flex items-center gap-2">
+                        <Layers className="w-4 h-4 text-[#f48c25]" />
+                        <span className="text-xs font-medium text-[#9c7349]">Has variants?</span>
+                    </div>
+                    <label className="relative inline-flex items-center cursor-pointer">
+                        <input
+                            type="checkbox"
+                            className="sr-only peer"
+                            checked={formData.hasVariants || false}
+                            onChange={(e) => updateFormData({ hasVariants: e.target.checked })}
+                        />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
+                    </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Row: Brand & Gender */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="brand">
+                  Brand
+                </label>
+                <input
+                  className="w-full rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] placeholder:text-[#9c7349]/60 transition-all border outline-none"
+                  id="brand"
+                  placeholder="e.g. Nike, Apple"
+                  type="text"
+                  value={formData.brand || ''}
+                  onChange={handleChange}
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="gender">
+                  Gender
+                </label>
+                <div className="relative">
+                  <select
+                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                    id="gender"
+                    value={formData.gender || ''}
+                    onChange={handleChange}
+                  >
+                    <option value="">None / Unisex</option>
+                    <option value="male">Male</option>
+                    <option value="female">Female</option>
+                    <option value="unisex">Unisex</option>
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                     <ChevronDown className="w-5 h-5" />

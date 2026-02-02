@@ -20,10 +20,7 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
         }
     });
 
-    // Local state for variant toggle if not in formData yet
-    const [hasVariants, setHasVariants] = useState(
-        (formData.attributes && formData.attributes.length > 0) || false
-    );
+    const hasVariants = formData.hasVariants || false;
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
@@ -34,7 +31,7 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
     };
 
     const toggleVariants = (enabled: boolean) => {
-        setHasVariants(enabled);
+        updateFormData({ hasVariants: enabled });
         if (!enabled) {
             // Clear variants in parent
             updateFormData({ attributes: [], variations: [] });
@@ -142,27 +139,24 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     value={formData.sizeGuide}
                                     onChange={(val) => updateFormData({ sizeGuide: val })}
                                     detectedSizes={formData.attributes?.find((a: any) => a.name === 'Size')?.options.map((o: any) => o.name) || []}
+                                    gender={formData.gender}
                                 />
                              </section>
                          )}
 
                          {/* Base Price Fallback hint */}
                          <p className="text-xs text-gray-500 italic px-2">
-                             * Base price and quantity set below will be used as default for variants unless overridden.
+                             * Set base price and default stock for all variations below.
                          </p>
                     </div>
-                ) : (
-                    /* Standard Pricing Section (Hidden/Collapsed if Variants enabled, or just kept as Base?) */
-                    /* We keep it visible but maybe simplified? The spec says "If OFF: Show only Price, Quantity, SKU" */
-                    /* We will show the standard section if OFF, and maybe a "Base Settings" if ON */
-                    <></>
-                )}
+                ) : null}
 
-                {/* Pricing Section (Always show as Base Price) */}
+                {/* Pricing & Inventory Section */}
                 <section className="flex flex-col gap-4 px-2 md:px-0">
                     <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">
-                        {hasVariants ? 'Base Pricing' : 'Pricing'}
+                        {hasVariants ? 'Base Pricing & Default Stock' : 'Pricing & Inventory'}
                     </h3>
+
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">
                             <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="regular_price">Regular Price</label>
@@ -193,15 +187,12 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                             </div>
                         </div>
                     </div>
-                </section>
 
-                {/* Inventory Card */}
-                <section className="mx-2 md:mx-0 flex flex-col gap-6 rounded-2xl bg-white dark:bg-[#2d241b] border border-[#e8dbce] dark:border-[#4a3b2e] p-5 md:p-6 shadow-sm">
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-2">
                         <div className="flex flex-col gap-2">
                             <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="sku">SKU</label>
                             <input
-                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white uppercase outline-none focus:border-[#f48c25]"
+                                className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white uppercase outline-none focus:border-[#f48c25]"
                                 id="sku"
                                 placeholder="E.g. TEE-001"
                                 type="text"
@@ -210,42 +201,31 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                             />
                         </div>
                         <div className="flex flex-col gap-2">
-                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="stock_status">Stock Status</label>
-                            <div className="relative">
-                                <select
-                                    className="w-full appearance-none rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
-                                    id="stock_status"
-                                    value={formData.stock_status || 'instock'}
-                                    onChange={handleChange}
-                                >
-                                    <option value="instock">In Stock</option>
-                                    <option value="outofstock">Out of Stock</option>
-                                </select>
-                                <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 text-[#9c7349]" size={18} />
-                            </div>
+                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity Available</label>
+                            <input
+                                className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
+                                id="quantity"
+                                type="number"
+                                value={formData.quantity || 100}
+                                onChange={handleChange}
+                            />
                         </div>
                     </div>
 
-                    <div className="flex items-center justify-between py-4 border-t border-dashed border-[#e8dbce] dark:border-[#4a3b2e]">
-                        <div className="flex flex-col pr-4">
-                            <span className="text-[#1c140d] dark:text-white text-sm font-bold">Track Stock</span>
-                            <span className="text-[#9c7349] dark:text-[#cba885] text-xs">Manage inventory levels</span>
+                    <div className="flex flex-col gap-2 mt-4 max-w-xs">
+                        <div className="flex items-center justify-between">
+                            <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="lowStockThreshold">Low Stock Alert Threshold</label>
+                            <Info size={14} className="text-[#9c7349]" />
                         </div>
-                        <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                            <input type="checkbox" className="sr-only peer" defaultChecked />
-                            <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
-                        </label>
-                    </div>
-
-                    <div className="flex flex-col gap-2">
-                        <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity Available</label>
                         <input
-                            className="w-full sm:w-1/3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#fcfaf8] dark:bg-[#221910] py-3 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
-                            id="quantity"
+                            className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
+                            id="lowStockThreshold"
                             type="number"
-                            value={formData.quantity || 100}
+                            placeholder="e.g. 5"
+                            value={formData.lowStockThreshold || ''}
                             onChange={handleChange}
                         />
+                        <p className="text-[10px] text-[#9c7349]">System will notify you when stock falls below this level.</p>
                     </div>
                 </section>
 
