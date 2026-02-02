@@ -3,6 +3,8 @@ import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, 
 import VariantManager from '../../components/VariantManager';
 import SizeGuideBuilder from '../../components/SizeGuideBuilder';
 import { useForm, FormProvider } from 'react-hook-form';
+import { cn } from '@/lib/utils';
+import { Badge } from '@/components/ui/badge';
 
 interface Step3Props {
     formData: any;
@@ -132,13 +134,13 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                             />
                          </section>
 
-                         {/* Size Guide (Conditional) */}
-                         {['clothing', 'shoes'].includes(formData.category?.toLowerCase()) && (
-                             <section className="mx-2 md:mx-0">
+                         {/* Size Guide (Conditional - Show only if "Size" variant exists) */}
+                         {formData.attributes?.some((a: any) => a.name.toLowerCase() === 'size') && (
+                             <section className="mx-2 md:mx-0 animate-in fade-in zoom-in-95 duration-500">
                                 <SizeGuideBuilder
                                     value={formData.sizeGuide}
                                     onChange={(val) => updateFormData({ sizeGuide: val })}
-                                    detectedSizes={formData.attributes?.find((a: any) => a.name === 'Size')?.options.map((o: any) => o.name) || []}
+                                    detectedSizes={formData.attributes?.find((a: any) => a.name.toLowerCase() === 'size')?.options.map((o: any) => o.name) || []}
                                     gender={formData.gender}
                                 />
                              </section>
@@ -152,10 +154,20 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                 ) : null}
 
                 {/* Pricing & Inventory Section */}
-                <section className="flex flex-col gap-4 px-2 md:px-0">
-                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">
-                        {hasVariants ? 'Base Pricing & Default Stock' : 'Pricing & Inventory'}
-                    </h3>
+                <section className={cn(
+                    "flex flex-col gap-4 px-2 md:px-0 transition-all duration-300",
+                    hasVariants && "opacity-50 pointer-events-none scale-95 origin-top"
+                )}>
+                    <div className="flex items-center justify-between">
+                        <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">
+                            {hasVariants ? 'Default Values (Used for new variants)' : 'Pricing & Inventory'}
+                        </h3>
+                        {hasVariants && (
+                            <Badge variant="outline" className="bg-orange-50 text-orange-700 border-orange-200">
+                                Variants Active
+                            </Badge>
+                        )}
+                    </div>
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div className="flex flex-col gap-2">

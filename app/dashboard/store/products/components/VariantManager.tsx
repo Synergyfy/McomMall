@@ -12,7 +12,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, CheckSquare, Square, Zap } from 'lucide-react';
+import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, CheckSquare, Square, Zap, Package } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
@@ -166,43 +166,45 @@ export default function VariantManager({
     return r;
   };
 
-  // Regenerate Matrix when Attributes Change
-  const generateVariations = () => {
-    // If not controlled, we might need to watch() form values to get current state if fields array is stale?
-    // But fields array should be up to date.
-    // For RHF, fields array might be objects with id. We need to strip them or access properties carefully.
-
-    // In RHF, `attributes` comes from `useFieldArray`, which is an array of objects with `id`.
-    // But we cast it above.
-    // However, for generation, we need the *current* values, which `fields` might not reflect immediately if we just updated?
-    // Actually `fields` from useFieldArray is for rendering. For logic, `watch` is often safer in RHF.
-
+  // Regenerate Matrix when Attributes Change (Auto-generation with Data Preservation)
+  React.useEffect(() => {
     let currentAttributes = attributes;
     if (!isControlled && context) {
       currentAttributes = context.watch(attributesName);
     }
 
     if (!currentAttributes || currentAttributes.length === 0) {
-      replaceVariations([]);
+      if (variations.length > 0) replaceVariations([]);
       return;
     }
 
-    // Extract options arrays: [[{name: 'Red', priceModifier: 0}, {name: 'Blue', priceModifier: 5}], [...]]
+    // Extract options arrays
     const optionsArrays = currentAttributes.map(a => a.options);
+    if (optionsArrays.some(opts => opts.length === 0)) return;
 
-    // Generate combinations: [[{name: 'Red', ...}, {name: 'S', ...}], ...]
+    // Generate combinations
     const combinations = cartesian(optionsArrays);
 
     const newVariations: ProductVariation[] = combinations.map(combo => {
-      // Construct the combination object: { Color: 'Red', Size: 'S' }
       const combinationMap: Record<string, string> = {};
       let variationPriceModifier = 0;
 
       combo.forEach((opt, index) => {
-        const attr = currentAttributes[index];
+        const attr = currentAttributes![index];
         combinationMap[attr.name] = opt.name;
         variationPriceModifier += (opt.priceModifier || 0);
       });
+
+      // KEY: Data Preservation Logic
+      // Try to find an existing variation that matches this combination exactly
+      const existing = variations.find(v =>
+        Object.entries(combinationMap).every(([key, val]) => v.combination[key] === val) &&
+        Object.keys(v.combination).length === Object.keys(combinationMap).length
+      );
+
+      if (existing) {
+        return existing;
+      }
 
       // Generate a predictable SKU suffix
       const skuSuffix = combo.map((opt: any) => opt.name).join('-').toUpperCase().replace(/\s+/g, '');
@@ -220,8 +222,11 @@ export default function VariantManager({
       };
     });
 
-    replaceVariations(newVariations);
-  };
+    // Only update if something actually changed to avoid infinite loops
+    if (JSON.stringify(newVariations.map(v => v.combination)) !== JSON.stringify(variations.map(v => v.combination))) {
+        replaceVariations(newVariations);
+    }
+  }, [attributes, isControlled, context, attributesName]);
 
   const showAttributeForm = (attribute?: ProductAttribute, index?: number) => {
     if (attribute) {
@@ -457,11 +462,8 @@ export default function VariantManager({
         <div className="flex justify-between items-end">
           <div>
             <h3 className="text-lg font-medium">2. Configure Variations</h3>
-            <p className="text-sm text-gray-500">Generate all possible combinations and set their prices/stock.</p>
+            <p className="text-sm text-gray-500">All possible combinations are auto-generated. Set unique prices and quantity here.</p>
           </div>
-          <Button type="button" onClick={generateVariations} disabled={!attributes || attributes.length === 0}>
-            Generate Variations
-          </Button>
         </div>
 
         {/* Bulk Actions Toolbar */}
@@ -524,9 +526,9 @@ export default function VariantManager({
                     <TableHead key={key} className="w-[100px]">{key}</TableHead>
                   ))}
                   <TableHead className="w-[60px]">Image</TableHead>
-                  <TableHead>Price (+/-)</TableHead>
-                  <TableHead>Stock</TableHead>
-                  <TableHead className="w-[60px]">Res.</TableHead>
+                  <TableHead>Price</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead className="w-[60px]">Reserved</TableHead>
                   <TableHead className="w-[60px]">Sold</TableHead>
                   <TableHead>SKU</TableHead>
                   <TableHead className="w-[80px]">Dims</TableHead>
@@ -735,9 +737,9 @@ export default function VariantManager({
           </div>
         ) : (
           <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg bg-gray-50 text-gray-500">
-            <TableRoot className="h-12 w-12 mb-2 opacity-50" />
+            <Package className="h-12 w-12 mb-2 opacity-50" />
             <p>No variations generated yet.</p>
-            <p className="text-sm">Add attributes above, then click "Generate Variations".</p>
+            <p className="text-sm">Add attributes and options above to see combinations.</p>
           </div>
         )}
       </div>
