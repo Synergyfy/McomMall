@@ -110,7 +110,9 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                             <th className="px-6 py-3 font-semibold">Variant</th>
                                             <th className="px-6 py-3 font-semibold w-40">Price Surcharge</th>
                                             <th className="px-6 py-3 font-semibold">SKU</th>
-                                            <th className="px-6 py-3 font-semibold w-32">Stock Qty</th>
+                                            <th className="px-6 py-3 font-semibold w-24">Available</th>
+                                            <th className="px-6 py-3 font-semibold w-20">Reserved</th>
+                                            <th className="px-6 py-3 font-semibold w-20">Sold</th>
                                             <th className="px-6 py-3 font-semibold w-12"></th>
                                         </tr>
                                     </thead>
@@ -194,7 +196,7 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
 }
 
 
-function VariantTableRow({ label, sku, price, stock, image }: any) {
+function VariantTableRow({ label, sku, price, quantity, reserved, sold, image }: any) {
     return (
         <tr className="group hover:bg-[#f8f7f5]/50 dark:hover:bg-[#2a1f16]/50 transition-colors">
             <td className="px-6 py-4">
@@ -219,7 +221,13 @@ function VariantTableRow({ label, sku, price, stock, image }: any) {
                 <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white font-mono uppercase" type="text" defaultValue={sku} />
             </td>
             <td className="px-6 py-4">
-                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={stock} />
+                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={quantity} />
+            </td>
+            <td className="px-6 py-4 text-sm text-[#9c7349]">
+                {reserved || 0}
+            </td>
+            <td className="px-6 py-4 text-sm text-[#9c7349]">
+                {sold || 0}
             </td>
             <td className="px-6 py-4 text-right">
                 <button className="text-gray-400 hover:text-red-500 transition-colors">

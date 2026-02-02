@@ -52,18 +52,18 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </div>
 
           <form className="flex flex-col gap-6 max-w-3xl">
-            {/* Product Title */}
+            {/* Product Name */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="productTitle">
-                Product Title <span className="text-red-500">*</span>
+              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="productName">
+                Product Name <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <input
                   className="w-full rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] placeholder:text-[#9c7349]/60 transition-all border outline-none"
-                  id="productTitle"
+                  id="productName"
                   placeholder="e.g. Men's Cotton Summer Jacket"
                   type="text"
-                  value={formData.productTitle || ''}
+                  value={formData.productName || ''}
                   onChange={handleChange}
                 />
               </div>
@@ -202,28 +202,6 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </div>
             </div>
 
-            {/* Description */}
-            <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="description">
-                Description
-              </label>
-              <div className="relative">
-                <textarea
-                  className="w-full rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white p-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] placeholder:text-[#9c7349]/60 resize-none transition-all border outline-none"
-                  id="description"
-                  placeholder="Describe your product features, materials, and care instructions..."
-                  rows={5}
-                  value={formData.description || ''}
-                  onChange={handleChange}
-                ></textarea>
-                <div className="absolute bottom-3 left-3 flex gap-2">
-                  <button className="p-1 text-[#9c7349] hover:text-[#f48c25] hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors" type="button"><Bold className="w-5 h-5" /></button>
-                  <button className="p-1 text-[#9c7349] hover:text-[#f48c25] hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors" type="button"><Italic className="w-5 h-5" /></button>
-                  <button className="p-1 text-[#9c7349] hover:text-[#f48c25] hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors" type="button"><List className="w-5 h-5" /></button>
-                  <button className="p-1 text-[#9c7349] hover:text-[#f48c25] hover:bg-black/5 dark:hover:bg-white/10 rounded transition-colors" type="button"><LinkIcon className="w-5 h-5" /></button>
-                </div>
-              </div>
-            </div>
 
             {/* Tags Input */}
             <div className="flex flex-col gap-2">
