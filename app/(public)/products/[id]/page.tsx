@@ -87,9 +87,30 @@ export default function ProductPage() {
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
         if (currentVariation) {
+            let finalPrice = currentVariation.price;
+
+            // Hierarchical Price Fallback: Priority Variation > Parent Option > Base
+            if ((!finalPrice || finalPrice <= 0) && product.attributes && product.attributes.length > 0) {
+                const firstAttr = product.attributes[0];
+                const selectedValue = selectedVariants[firstAttr.name];
+                const option = firstAttr.options.find(o => o.name === selectedValue);
+
+                if (option) {
+                  if (option.price && option.price > 0) {
+                    finalPrice = option.price;
+                  } else if (option.priceModifier && option.priceModifier !== 0) {
+                    finalPrice = product.price + option.priceModifier;
+                  } else {
+                    finalPrice = product.price;
+                  }
+                } else {
+                  finalPrice = product.price;
+                }
+            }
+
             return {
-                basePrice: currentVariation.price,
-                totalPrice: currentVariation.price,
+                basePrice: finalPrice,
+                totalPrice: finalPrice,
                 priceBreakdown: [], // Matrix prices are all-inclusive
                 isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
             };

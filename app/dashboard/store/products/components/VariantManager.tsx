@@ -16,7 +16,7 @@ import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, Ch
 import { Checkbox } from '@/components/ui/checkbox';
 import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
-import { predefinedVariantOptions } from '@/lib/variant-options';
+import { predefinedVariantOptions, sizeSystems, sizeMapping } from '@/lib/variant-options';
 import {
   Command,
   CommandEmpty,
@@ -70,6 +70,7 @@ function VariantTableRow({
     toggleSelect,
     openDimensionEditor,
     spans,
+    onAddSubVariant,
 }: any) {
     const [searchValue, setSearchValue] = useState("");
 
@@ -94,7 +95,7 @@ function VariantTableRow({
                 const displayOptions = Array.from(new Set([...allPredefined, ...currentAttrOptions]));
 
                 return (
-                    <TableCell key={i} rowSpan={rowSpan} className={cn(rowSpan > 1 && "align-top pt-4")}>
+                    <TableCell key={i} rowSpan={rowSpan} className={cn("relative group/cell", rowSpan > 1 && "align-top pt-4")}>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 p-0 font-medium hover:bg-gray-100 transition-colors w-full justify-start px-2 text-xs">
@@ -160,6 +161,17 @@ function VariantTableRow({
                                 </Command>
                             </PopoverContent>
                         </Popover>
+                        {rowSpan >= 1 && i < attributes.length - 1 && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            className="absolute bottom-1 right-1 h-5 w-5 opacity-0 group-hover/cell:opacity-100 transition-opacity bg-white/80 shadow-sm border border-orange-100 hover:bg-orange-50"
+                            onClick={() => onAddSubVariant(index, i)}
+                            title={`Add variation under ${value}`}
+                          >
+                            <Plus className="h-3 w-3 text-orange-600" />
+                          </Button>
+                        )}
                     </TableCell>
                 );
             })}
@@ -227,6 +239,21 @@ function VariantTableRow({
                         <SelectItem value="false">No</SelectItem>
                     </SelectContent>
                 </Select>
+            </TableCell>
+
+            <TableCell>
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-7 w-7 text-red-400 hover:text-red-600 hover:bg-red-50"
+                  onClick={() => {
+                    const newVars = [...variations];
+                    newVars.splice(index, 1);
+                    updateVariation(index, null); // This is a bit tricky with useFieldArray, might need to use remove
+                  }}
+                >
+                  <Trash2 className="h-3.5 w-3.5" />
+                </Button>
             </TableCell>
         </TableRow>
     );
@@ -304,7 +331,15 @@ export default function VariantManager({
     else rhfVariations.replace(data);
   };
 
-  const updateVariation = (index: number, data: ProductVariation) => {
+  const updateVariation = (index: number, data: ProductVariation | null) => {
+    if (data === null) {
+      if (isControlled) {
+        const newVars = (propVariations || []).filter((_, i) => i !== index);
+        onVariationsChange?.(newVars);
+      } else rhfVariations.remove(index);
+      return;
+    }
+
     if (isControlled) {
       const newVars = [...(propVariations || [])];
       newVars[index] = data;
@@ -323,6 +358,7 @@ export default function VariantManager({
   const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
   const [bulkPriceValue, setBulkPriceValue] = useState<string>('');
   const [bulkStockValue, setBulkStockValue] = useState<string>('');
+  const [sizeSystem, setSizeSystem] = useState<'Standard' | 'UK'>('Standard');
 
   const cartesian = (args: any[][]): any[][] => {
     if (args.length === 0) return [];
@@ -340,6 +376,7 @@ export default function VariantManager({
     return r;
   };
 
+  // Only auto-generate if variations are empty or if attributes changed in a way that makes existing variations invalid
   React.useEffect(() => {
     let currentAttributes = attributes;
     if (!isControlled && context) currentAttributes = context.watch(attributesName);
@@ -352,16 +389,27 @@ export default function VariantManager({
     const optionsArrays = currentAttributes.map(a => a.options);
     if (optionsArrays.some(opts => opts.length === 0)) return;
 
-    const combinations = cartesian(optionsArrays);
+    // If we already have variations, don't blindly replace them (respect "Seller selects only what exists")
+    // But if an attribute was removed or renamed, we might need to update them.
+    if (variations.length > 0) {
+       // Check if current variations are still valid for the current attributes
+       const valid = variations.every(v =>
+         currentAttributes!.every(a => v.combination[a.name] !== undefined)
+       );
+       if (valid && variations[0] && Object.keys(variations[0].combination).length === currentAttributes.length) return;
+    }
 
+    const combinations = cartesian(optionsArrays);
     const newVariations: ProductVariation[] = combinations.map(combo => {
       const combinationMap: Record<string, string> = {};
       let variationPriceModifier = 0;
+      let parentOverridePrice = 0;
 
       combo.forEach((opt, index) => {
         const attr = currentAttributes![index];
         combinationMap[attr.name] = opt.name;
         variationPriceModifier += (opt.priceModifier || 0);
+        if (index === 0 && opt.price) parentOverridePrice = opt.price;
       });
 
       const existing = variations.find(v =>
@@ -376,16 +424,14 @@ export default function VariantManager({
       return {
         combination: combinationMap,
         sku: `${skuSuffix}`,
-        price: variationPriceModifier,
+        price: parentOverridePrice || variationPriceModifier,
         stock: 0,
         available: true,
         weight: 0, length: 0, width: 0, height: 0
       };
     });
 
-    if (JSON.stringify(newVariations.map(v => v.combination)) !== JSON.stringify(variations.map(v => v.combination))) {
-        replaceVariations(newVariations);
-    }
+    replaceVariations(newVariations);
   }, [attributes, isControlled, context, attributesName]);
 
   const showAttributeForm = (attribute?: ProductAttribute, index?: number) => {
@@ -418,9 +464,20 @@ export default function VariantManager({
     }
   };
 
-  const handleAddOptionToAttribute = (optionName: string, modifier: number) => {
+  const handleAddOptionToAttribute = (optionName: string, modifier: number, price?: number) => {
     if (optionName && !attributeOptions.some(o => o.name === optionName)) {
-      setAttributeOptions([...attributeOptions, { name: optionName, priceModifier: modifier }]);
+      const newOptions = [...attributeOptions, { name: optionName, priceModifier: modifier, price }];
+
+      // Auto-mapping for Size
+      if (attributeName === 'Size') {
+        const mapped = sizeMapping[optionName];
+        if (mapped && !newOptions.some(o => o.name === mapped)) {
+          newOptions.push({ name: mapped, priceModifier: modifier });
+          toast.info(`Auto-mapped ${optionName} to UK ${mapped}`);
+        }
+      }
+
+      setAttributeOptions(newOptions);
     }
   };
 
@@ -509,13 +566,31 @@ export default function VariantManager({
                             <CommandEmpty>No attribute found. Add "Custom" instead.</CommandEmpty>
                             <CommandGroup heading="Common Attributes">
                                 {Object.keys(predefinedVariantOptions)
-                                    .filter(type => !attributes.some(a => a.name === type))
-                                    .map((type) => (
-                                    <CommandItem key={type} onSelect={() => { setAttributeName(type); setIsCustomAttribute(false); setAttributeOptions([]); setIsAttributeFormVisible(true); }} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">
-                                        <div className="size-2 rounded-full bg-orange-400" />
-                                        {type}
-                                    </CommandItem>
-                                ))}
+                                    .map((type) => {
+                                      const isUsed = attributes.some(a => a.name === type);
+                                      return (
+                                        <CommandItem
+                                          key={type}
+                                          onSelect={() => {
+                                            if (isUsed) return;
+                                            setAttributeName(type);
+                                            setIsCustomAttribute(false);
+                                            setAttributeOptions([]);
+                                            setIsAttributeFormVisible(true);
+                                          }}
+                                          className={cn(
+                                            "flex items-center justify-between gap-2 cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm",
+                                            isUsed && "opacity-30 grayscale cursor-not-allowed"
+                                          )}
+                                        >
+                                            <div className="flex items-center gap-2">
+                                              <div className="size-2 rounded-full bg-orange-400" />
+                                              {type}
+                                            </div>
+                                            {isUsed && <Badge variant="outline" className="text-[10px] py-0 h-4">Used</Badge>}
+                                        </CommandItem>
+                                      );
+                                    })}
                             </CommandGroup>
                             <CommandGroup heading="Others">
                                 <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }} className="italic text-gray-500 flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">
@@ -537,7 +612,8 @@ export default function VariantManager({
                   <div className="flex flex-wrap gap-2 mt-1">
                     {field.options.map((opt) => (
                       <Badge key={opt.name} variant="secondary" className='text-[10px]'>
-                        {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
+                      {opt.name}
+                      {opt.price ? ` (£${opt.price})` : (opt.priceModifier !== 0 ? ` (${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : '')}
                       </Badge>
                     ))}
                   </div>
@@ -571,9 +647,36 @@ export default function VariantManager({
               <div className="space-y-2">
                 <Label>Options & Price Modifiers</Label>
                 {attributeName === 'Size' && (
-                    <div className="flex gap-2 mb-2">
-                        <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => { const standard = ['S', 'M', 'L', 'XL']; standard.forEach(s => handleAddOptionToAttribute(s, 0)); }}>Standard (S-XL)</Button>
-                        <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => { const uk = ['6', '8', '10', '12', '14']; uk.forEach(s => handleAddOptionToAttribute(s, 0)); }}>UK (6-14)</Button>
+                    <div className="flex gap-4 mb-4 p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border border-blue-100 dark:border-blue-900/30">
+                        <div className="flex flex-col gap-1">
+                            <Label className="text-xs font-bold text-blue-700">Size System</Label>
+                            <div className="flex gap-2">
+                                <Button
+                                    variant={sizeSystem === 'Standard' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className="text-[10px] h-7"
+                                    onClick={() => setSizeSystem('Standard')}
+                                >Standard (S-XL)</Button>
+                                <Button
+                                    variant={sizeSystem === 'UK' ? 'default' : 'outline'}
+                                    size="sm"
+                                    className="text-[10px] h-7"
+                                    onClick={() => setSizeSystem('UK')}
+                                >UK (36-44)</Button>
+                            </div>
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <Label className="text-xs font-bold text-blue-700">Quick Add</Label>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                className="text-[10px] h-7 hover:bg-blue-100"
+                                onClick={() => {
+                                    const sizes = sizeSystems[sizeSystem as keyof typeof sizeSystems];
+                                    sizes.forEach(s => handleAddOptionToAttribute(s, 0));
+                                }}
+                            >Add All {sizeSystem} Sizes</Button>
+                        </div>
                     </div>
                 )}
                 <VariantOptionInput variantName={attributeName || 'Color'} onAddOption={handleAddOptionToAttribute} existingOptions={attributeOptions.map(o => o.name)} />
@@ -581,7 +684,8 @@ export default function VariantManager({
                   {attributeOptions.length === 0 && <span className="text-sm text-gray-400 italic">No options added yet.</span>}
                   {attributeOptions.map((opt) => (
                     <Badge key={opt.name} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 text-[10px]">
-                      {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
+                      {opt.name}
+                      {opt.price ? ` (£${opt.price})` : (opt.priceModifier !== 0 ? ` (${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : '')}
                       <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveOptionFromAttribute(opt.name)} />
                     </Badge>
                   ))}
@@ -643,10 +747,27 @@ export default function VariantManager({
                                 <CommandList>
                                     <CommandEmpty>No attribute found.</CommandEmpty>
                                     <CommandGroup heading="Common Attributes">
-                                        {Object.keys(predefinedVariantOptions).filter(type => !attributes.some(a => a.name === type)).map((type) => (
-                                                <CommandItem key={type} onSelect={() => { setAttributeName(type); setIsCustomAttribute(false); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>{type}</CommandItem>
-                                            ))
-                                        }
+                                        {Object.keys(predefinedVariantOptions).map((type) => {
+                                          const isUsed = attributes.some(a => a.name === type);
+                                          return (
+                                            <CommandItem
+                                              key={type}
+                                              onSelect={() => {
+                                                if (isUsed) return;
+                                                setAttributeName(type);
+                                                setIsCustomAttribute(false);
+                                                setAttributeOptions([]);
+                                                setIsAttributeFormVisible(true);
+                                              }}
+                                              className={cn(isUsed && "opacity-30 grayscale cursor-not-allowed")}
+                                            >
+                                              <div className="flex items-center justify-between w-full">
+                                                <span>{type}</span>
+                                                {isUsed && <Badge variant="outline" className="text-[10px] py-0 h-4">Used</Badge>}
+                                              </div>
+                                            </CommandItem>
+                                          );
+                                        })}
                                     </CommandGroup>
                                     <CommandGroup heading="Others">
                                         <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>Custom...</CommandItem>
@@ -664,11 +785,43 @@ export default function VariantManager({
                   <TableHead>SKU</TableHead>
                   <TableHead className="w-[80px]">Dims</TableHead>
                   <TableHead className="w-[80px]">Active</TableHead>
+                  <TableHead className="w-[40px]"></TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {(() => {
                   const allSpans = calculateRowSpans(variations, attributes);
+
+                  const handleAddSubVariant = (rowIndex: number, attrIndex: number) => {
+                    const baseVar = variations[rowIndex];
+                    const newCombo = { ...baseVar.combination };
+
+                    // Keep values up to attrIndex, but for everything after, we want a DIFFERENT option if possible
+                    // Or just a copy that the user will then change.
+                    const nextAttr = attributes[attrIndex + 1];
+                    if (!nextAttr) return;
+
+                    const newVar: ProductVariation = {
+                      ...baseVar,
+                      combination: newCombo,
+                      sku: `${baseVar.sku}-COPY`,
+                      stock: 0,
+                    };
+
+                    // Insert at the end of the current span
+                    const span = allSpans[rowIndex][attributes[attrIndex].name];
+                    const insertAt = rowIndex + span;
+
+                    if (isControlled) {
+                      const newVars = [...(propVariations || [])];
+                      newVars.splice(insertAt, 0, newVar);
+                      onVariationsChange?.(newVars);
+                    } else {
+                      rhfVariations.insert(insertAt, newVar);
+                    }
+                    toast.success(`Added new row under ${baseVar.combination[attributes[attrIndex].name]}`);
+                  };
+
                   return variations.map((field, index) => (
                     <VariantTableRow
                       key={index}
@@ -682,6 +835,7 @@ export default function VariantManager({
                       toggleSelect={toggleSelect}
                       openDimensionEditor={openDimensionEditor}
                       spans={allSpans[index]}
+                      onAddSubVariant={handleAddSubVariant}
                     />
                   ));
                 })()}
@@ -722,25 +876,27 @@ function VariantOptionInput({
   existingOptions,
 }: {
   variantName: string;
-  onAddOption: (optionName: string, modifier: number) => void;
+  onAddOption: (optionName: string, modifier: number, price?: number) => void;
   existingOptions: string[];
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
   const [priceModifier, setPriceModifier] = useState<number>(0);
+  const [fixedPrice, setFixedPrice] = useState<number>(0);
   const options = predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
 
   const handleAdd = () => {
     if (inputValue) {
-      onAddOption(inputValue, priceModifier);
+      onAddOption(inputValue, priceModifier, fixedPrice > 0 ? fixedPrice : undefined);
       setInputValue('');
       setPriceModifier(0);
+      setFixedPrice(0);
       setOpen(false);
     }
   };
 
   return (
-    <div className="flex flex-col sm:flex-row gap-2">
+    <div className="flex flex-col gap-3">
       <div className="flex-1 min-w-0">
         <Popover open={open} onOpenChange={setOpen}>
           <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between"><span className="truncate">{inputValue || "Type or select option..."}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
@@ -759,7 +915,19 @@ function VariantOptionInput({
           </PopoverContent>
         </Popover>
       </div>
-      <div className="flex items-center gap-1 shrink-0"><span className="text-xs text-gray-500 whitespace-nowrap">Charge:</span><Input type="number" placeholder="0.00" value={priceModifier} onChange={(e) => setPriceModifier(parseFloat(e.target.value) || 0)} className="w-20" /><Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button"><Plus className="h-4 w-4" /></Button></div>
+      <div className="flex flex-wrap items-center gap-3 shrink-0">
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-gray-500 whitespace-nowrap font-bold uppercase">Modifier:</span>
+            <Input type="number" placeholder="+/-" value={priceModifier} onChange={(e) => setPriceModifier(parseFloat(e.target.value) || 0)} className="w-16 h-8 text-xs" />
+          </div>
+          <div className="flex items-center gap-1">
+            <span className="text-[10px] text-blue-500 whitespace-nowrap font-bold uppercase">Fixed Price:</span>
+            <Input type="number" placeholder="Override" value={fixedPrice} onChange={(e) => setFixedPrice(parseFloat(e.target.value) || 0)} className="w-16 h-8 text-xs border-blue-200 focus:border-blue-400" />
+          </div>
+          <Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button" className="ml-auto">
+            <Plus className="h-4 w-4" />
+          </Button>
+      </div>
     </div>
   );
 }

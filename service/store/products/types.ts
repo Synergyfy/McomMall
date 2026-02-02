@@ -14,6 +14,7 @@ export interface ProductAttribute {
   options: {
     name: string;
     priceModifier: number;
+    price?: number; // Override price for all variations under this option (if it's a parent)
   }[];
 }
 
