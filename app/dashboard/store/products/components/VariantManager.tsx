@@ -69,6 +69,7 @@ function VariantTableRow({
     selectedIndices,
     toggleSelect,
     openDimensionEditor,
+    spans,
 }: any) {
     const [searchValue, setSearchValue] = useState("");
 
@@ -81,13 +82,19 @@ function VariantTableRow({
                 />
             </TableCell>
             {/* Render Combination Values as Dropdowns with Fading/Exhaustive List */}
-            {Object.entries(field.combination).map(([attrName, value], i) => {
+            {attributes.map((attr: any, i: number) => {
+                const attrName = attr.name;
+                const value = field.combination[attrName];
+                const rowSpan = spans?.[attrName];
+
+                if (rowSpan === 0) return null;
+
                 const allPredefined = predefinedVariantOptions[attrName as keyof typeof predefinedVariantOptions] || [];
                 const currentAttrOptions = attributes.find((a: any) => a.name === attrName)?.options.map((o: any) => o.name) || [];
                 const displayOptions = Array.from(new Set([...allPredefined, ...currentAttrOptions]));
 
                 return (
-                    <TableCell key={i}>
+                    <TableCell key={i} rowSpan={rowSpan} className={cn(rowSpan > 1 && "align-top pt-4")}>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 p-0 font-medium hover:bg-gray-100 transition-colors w-full justify-start px-2 text-xs">
@@ -223,6 +230,35 @@ function VariantTableRow({
             </TableCell>
         </TableRow>
     );
+}
+
+function calculateRowSpans(variations: ProductVariation[], attributes: ProductAttribute[]) {
+    if (variations.length === 0 || attributes.length === 0) return [];
+
+    const spans = variations.map(() => ({} as Record<string, number>));
+
+    attributes.forEach((attr, attrIdx) => {
+        let spanStart = 0;
+
+        variations.forEach((v, rowIdx) => {
+            const val = v.combination[attr.name];
+            const prevVal = rowIdx > 0 ? variations[rowIdx - 1].combination[attr.name] : null;
+
+            const parentMatch = attributes.slice(0, attrIdx).every(parentAttr =>
+                rowIdx > 0 && v.combination[parentAttr.name] === variations[rowIdx - 1].combination[parentAttr.name]
+            );
+
+            if (rowIdx > 0 && val === prevVal && (attrIdx === 0 || parentMatch)) {
+                spans[spanStart][attr.name]++;
+                spans[rowIdx][attr.name] = 0;
+            } else {
+                spans[rowIdx][attr.name] = 1;
+                spanStart = rowIdx;
+            }
+        });
+    });
+
+    return spans;
 }
 
 export default function VariantManager({
@@ -631,20 +667,24 @@ export default function VariantManager({
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {variations.map((field, index) => (
-                  <VariantTableRow
-                    key={index}
-                    index={index}
-                    field={field}
-                    attributes={attributes}
-                    variations={variations}
-                    updateVariation={updateVariation}
-                    updateAttribute={updateAttribute}
-                    selectedIndices={selectedIndices}
-                    toggleSelect={toggleSelect}
-                    openDimensionEditor={openDimensionEditor}
-                  />
-                ))}
+                {(() => {
+                  const allSpans = calculateRowSpans(variations, attributes);
+                  return variations.map((field, index) => (
+                    <VariantTableRow
+                      key={index}
+                      index={index}
+                      field={field}
+                      attributes={attributes}
+                      variations={variations}
+                      updateVariation={updateVariation}
+                      updateAttribute={updateAttribute}
+                      selectedIndices={selectedIndices}
+                      toggleSelect={toggleSelect}
+                      openDimensionEditor={openDimensionEditor}
+                      spans={allSpans[index]}
+                    />
+                  ));
+                })()}
               </TableBody>
             </TableRoot>
           </div>
