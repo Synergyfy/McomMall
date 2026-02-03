@@ -95,7 +95,7 @@ function VariantGroupRows({
   attributes: ProductAttribute[],
   updateVariation: (index: number, data: ProductVariation) => void,
   removeVariation: (index: number) => void,
-  addVariantToGroup: (groupValue: string, combo?: Record<string, string>, extras?: Partial<ProductVariation>) => void,
+  addVariantToGroup: (groupValue: string, combos: Record<string, string> | Record<string, string>[], extras?: Partial<ProductVariation>) => void,
   selectedIndices: number[],
   toggleSelect: (index: number) => void,
   openDimensionEditor: (v: ProductVariation, idx: number) => void
@@ -104,39 +104,79 @@ function VariantGroupRows({
   const firstAttrName = attributes[0]?.name;
   const childAttributes = attributes.slice(1);
 
+  const groupSelected = groupItems.every(i => selectedIndices.includes(i.originalIndex));
+
   if (groupItems.length === 0) return null;
 
   return (
     <>
-      {/* Group Header Row (Optional, but helps with expanding/collapsing or just showing group title) */}
-      <TableRow className="bg-orange-50/30 dark:bg-orange-900/10 hover:bg-orange-50/50">
-        <TableCell colSpan={attributes.length + 10} className="py-2 pl-4">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Button type="button" variant="ghost" size="icon" className="h-6 w-6 p-0 text-orange-700" onClick={() => setIsExpanded(!isExpanded)}>
-                {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
-              </Button>
-              <span className="text-xs font-bold text-orange-600 uppercase tracking-wider">{firstAttrName}:</span>
-              <span className="text-sm font-bold text-gray-900 dark:text-white">{groupValue}</span>
-              <Badge variant="secondary" className="ml-2 bg-white dark:bg-black/20 text-orange-700 border-orange-200 h-5 text-[10px]">
-                {groupItems.length} Variants
-              </Badge>
+      {/* Group Header Row - Aligned with columns */}
+      <TableRow className="bg-orange-50/40 dark:bg-orange-900/10 hover:bg-orange-100/40 border-y-2 border-orange-200/30">
+        <TableCell className="w-[40px] pl-4 py-3">
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="icon" className="h-5 w-5 p-0 text-orange-700 hover:bg-orange-200/50" onClick={() => setIsExpanded(!isExpanded)}>
+              {isExpanded ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}
+            </Button>
+            <Checkbox
+              checked={groupSelected}
+              onCheckedChange={(checked) => {
+                groupItems.forEach(item => {
+                  if (checked && !selectedIndices.includes(item.originalIndex)) toggleSelect(item.originalIndex);
+                  else if (!checked && selectedIndices.includes(item.originalIndex)) toggleSelect(item.originalIndex);
+                });
+              }}
+              className="data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600"
+            />
+          </div>
+        </TableCell>
+
+        {/* Primary Attribute Cell */}
+        <TableCell className="py-2 px-4 border-r border-orange-200/20">
+          <div className="flex flex-col">
+            <span className="text-[9px] font-bold text-orange-500 uppercase tracking-tighter opacity-70">
+              {firstAttrName}
+            </span>
+            <span className="text-sm font-extrabold text-orange-800 dark:text-orange-400">
+              {groupValue}
+            </span>
+          </div>
+        </TableCell>
+
+        {/* Other Attributes with Quick Pickers */}
+        {attributes.slice(1).map((attr) => (
+          <TableCell key={attr.name} className="py-2 px-4 border-r border-orange-200/20">
+            <div className="flex items-center justify-between gap-2">
+              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-tighter">
+                {attr.name}
+              </span>
+              <QuickAttributePicker
+                attributeName={attr.name}
+                onAdd={(values) => {
+                  const combos = values.map(val => ({ [attr.name]: val }));
+                  addVariantToGroup(groupValue, combos);
+                }}
+              />
             </div>
+          </TableCell>
+        ))}
+
+        {/* Action/Meta space */}
+        <TableCell colSpan={10} className="py-2 px-4">
+          <div className="flex items-center justify-between">
+            <Badge variant="secondary" className="bg-white dark:bg-black/40 text-orange-700 border-orange-200 h-6 text-[11px] font-bold shadow-sm">
+              {groupItems.length} Variations
+            </Badge>
+
             <AddVariantPopover
               groupValue={groupValue}
               attributes={attributes}
-              onAdd={(combo, extras) => addVariantToGroup(groupValue, combo, extras)}
+              onAdd={(combos) => addVariantToGroup(groupValue, combos)}
             />
           </div>
         </TableCell>
       </TableRow>
 
       {isExpanded && groupItems.map(({ originalIndex, variation }, idx) => {
-        // Get all the non-empty child attribute values for display
-        const childAttrValues = Object.entries(variation.combination)
-          .filter(([key, val]) => key !== firstAttrName && val)
-          .map(([key, val]) => ({ name: key, value: val }));
-
         return (
           <TableRow key={originalIndex} className={cn("hover:bg-orange-50/10", selectedIndices.includes(originalIndex) && "bg-orange-50/30")}>
             <TableCell className="pl-4 py-2 w-[40px]">
@@ -146,36 +186,45 @@ function VariantGroupRows({
               />
             </TableCell>
 
-            {/* Combined Identification Column - Parent (Mother) + Children */}
-            <TableCell className="py-3 px-4 min-w-[180px] border-r border-orange-100/30 align-top">
-              <div className="flex flex-col gap-2">
-                {/* Mother (Primary Attribute) */}
-                <div className="flex flex-col">
-                  <span className="text-orange-600 text-[9px] uppercase font-bold tracking-widest mb-0.5">{firstAttrName}</span>
-                  <span className="text-gray-900 dark:text-white font-extrabold text-base leading-tight">
-                    {groupValue}
-                  </span>
+            {/* Primary Attribute Column - With row-level + button */}
+            <TableCell className="py-3 px-4 border-r border-orange-100/30">
+              <div className="flex items-center justify-between group/row-picker">
+                <div className="flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 rounded-full bg-orange-400 opacity-60" />
+                  <span className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{groupValue}</span>
                 </div>
-
-                {/* Children (Added Attributes) */}
-                {childAttrValues.length > 0 && (
-                  <div className="flex flex-col gap-1.5 pt-2 border-t border-orange-50 dark:border-orange-900/10">
-                    {childAttrValues.map(({ name, value }) => (
-                      <div key={name} className="flex flex-col">
-                        <span className="text-[8px] uppercase font-bold text-gray-400 tracking-wider mb-0.5">{name}</span>
-                        <span className="text-xs font-semibold text-gray-700 dark:text-gray-300 ml-1">
-                          {value}
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
-
-                {childAttrValues.length === 0 && (
-                  <span className="text-[10px] text-gray-400 italic mt-1">Base Group</span>
-                )}
+                <AddVariantPopover
+                  groupValue={groupValue}
+                  attributes={attributes}
+                  baseCombination={variation.combination}
+                  onAdd={(combos) => addVariantToGroup(groupValue, combos)}
+                  triggerIcon={<Plus className="h-3 w-3" />}
+                  triggerClassName="h-5 w-5 rounded-full p-0 opacity-0 group-hover/row-picker:opacity-100 transition-opacity bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100"
+                />
               </div>
             </TableCell>
+
+            {/* Dynamic columns for each child attribute - With recursive + button */}
+            {attributes.slice(1).map((attr) => {
+              const value = variation.combination[attr.name] || '';
+              return (
+                <TableCell key={attr.name} className="py-3 px-4 border-r border-orange-100/30">
+                  <div className="flex items-center justify-between group/cell-picker">
+                    <span className="text-sm text-gray-700 dark:text-gray-300">
+                      {value || <span className="text-xs text-gray-400 italic">-</span>}
+                    </span>
+                    <AddVariantPopover
+                      groupValue={groupValue}
+                      attributes={attributes}
+                      baseCombination={variation.combination}
+                      onAdd={(combos) => addVariantToGroup(groupValue, combos)}
+                      triggerIcon={<Plus className="h-3 w-3" />}
+                      triggerClassName="h-5 w-5 rounded-full p-0 opacity-0 group-hover/cell-picker:opacity-100 transition-opacity bg-white text-orange-600 border-orange-100 hover:bg-orange-50 shadow-sm"
+                    />
+                  </div>
+                </TableCell>
+              );
+            })}
 
             {/* Image */}
             <TableCell className="py-2">
@@ -296,52 +345,87 @@ function VariantGroupRows({
   );
 }
 
-// Small inline select for changing attributes inside the table
 // Popover component to select attributes before adding a variant
-function AddVariantPopover({ groupValue, attributes, onAdd }: { groupValue: string, attributes: ProductAttribute[], onAdd: (combo: Record<string, string>, extras?: Partial<ProductVariation>) => void }) {
+function AddVariantPopover({
+  groupValue,
+  attributes,
+  onAdd,
+  baseCombination,
+  triggerIcon,
+  triggerClassName
+}: {
+  groupValue: string,
+  attributes: ProductAttribute[],
+  onAdd: (combos: Record<string, string>[]) => void,
+  baseCombination?: Record<string, string>,
+  triggerIcon?: React.ReactNode,
+  triggerClassName?: string
+}) {
   const [isOpen, setIsOpen] = useState(false);
-  const [selections, setSelections] = useState<Record<string, string>>({});
+
+  // selections now tracks multiple values: { Size: ["Small", "Medium"], Material: ["Cotton"] }
+  const [selections, setSelections] = useState<Record<string, string[]>>({});
+
   // Track which attributes the user has decided to "add" to this specific variation
   const [activeAttributes, setActiveAttributes] = useState<string[]>([]);
 
-  const [extras, setExtras] = useState({
-    price: 0,
-    salePrice: 0,
-    stock: 0,
-    sku: '',
-    warranty: '',
-    weight: 0,
-    notes: ''
-  });
-
-  const childAttributes = attributes.slice(1);
   const firstAttrName = attributes[0]?.name;
 
-  // Get ALL predefined attributes as available options (excluding the primary grouping attribute)
+  // Get ALL predefined attributes as available options
+  // Filter out the primary grouping attribute AND any attributes already in the baseCombination
   const allPredefinedAttributes = Object.entries(predefinedVariantOptions)
-    .filter(([name]) => name !== firstAttrName) // Exclude the primary attribute (e.g., Color if grouping by Color)
+    .filter(([name]) => {
+      const isFirst = name === firstAttrName;
+      const isAlreadyInBase = baseCombination && baseCombination[name] && baseCombination[name] !== '';
+      return !isFirst && !isAlreadyInBase;
+    })
     .map(([name, options]) => ({
       name,
       options: options.map(opt => ({ name: opt, priceModifier: 0 }))
     }));
 
-  // Filter out already selected attributes
-  const availableToAdd = allPredefinedAttributes.filter(a => !activeAttributes.includes(a.name));
-
   const handleConfirm = () => {
-    onAdd(selections, extras);
+    // Generate all combinations from the selections
+    const attributeNames = Object.keys(selections);
+    const attributeValues = attributeNames.map(name => selections[name]);
+
+    const cartesianProduct = (arr: string[][]): string[][] => {
+      return arr.reduce<string[][]>((a, b) => {
+        return a.flatMap(d => b.map(e => [...d, e]));
+      }, [[]]);
+    };
+
+    const combinations = cartesianProduct(attributeValues);
+    const combos = combinations.map(comboValues => {
+      const combo: Record<string, string> = baseCombination ? { ...baseCombination } : {};
+      attributeNames.forEach((name, index) => {
+        combo[name] = comboValues[index];
+      });
+      return combo;
+    });
+
+    onAdd(combos);
+
     setSelections({});
     setActiveAttributes([]);
-    setExtras({
-      price: 0,
-      salePrice: 0,
-      stock: 0,
-      sku: '',
-      warranty: '',
-      weight: 0,
-      notes: ''
-    });
     setIsOpen(false);
+  };
+
+  const toggleSelection = (attrName: string, value: string) => {
+    setSelections(prev => {
+      const current = prev[attrName] || [];
+      const updated = current.includes(value)
+        ? current.filter(v => v !== value)
+        : [...current, value];
+
+      if (updated.length === 0) {
+        const newSelections = { ...prev };
+        delete newSelections[attrName];
+        return newSelections;
+      }
+
+      return { ...prev, [attrName]: updated };
+    });
   };
 
   return (
@@ -351,11 +435,14 @@ function AddVariantPopover({ groupValue, attributes, onAdd }: { groupValue: stri
           type="button"
           variant="outline"
           size="sm"
-          className="h-8 bg-white dark:bg-black text-orange-700 border-orange-200 hover:bg-orange-100"
+          className={cn(
+            "h-8 bg-white dark:bg-black text-orange-700 border-orange-200 hover:bg-orange-100",
+            triggerClassName
+          )}
           onClick={(e) => { e.stopPropagation(); }}
         >
-          <Plus className="h-3.5 w-3.5 mr-1.5" />
-          Add Variant to {groupValue}
+          {triggerIcon || <Plus className="h-3.5 w-3.5 mr-1.5" />}
+          {!triggerIcon && `Add Variant to ${groupValue}`}
         </Button>
       </PopoverTrigger>
       <PopoverContent className="w-80 p-4 shadow-xl border-orange-100" align="end" onClick={(e) => e.stopPropagation()}>
@@ -439,17 +526,19 @@ function AddVariantPopover({ groupValue, attributes, onAdd }: { groupValue: stri
             </DropdownMenu>
           </div>
 
-          {/* Selected Attributes with Value Selection */}
+          {/* Selected Attributes with Multi-Value Selection */}
           {activeAttributes.length > 0 && (
             <div className="space-y-3 pt-2 border-t border-gray-100">
               <Label className="text-[10px] uppercase font-bold text-gray-400">Configure Selected Attributes:</Label>
               {activeAttributes.map(attrName => {
-                // Look up from allPredefinedAttributes so we always have options
                 const attr = allPredefinedAttributes.find(a => a.name === attrName);
                 if (!attr) return null;
+
+                const selectedValues = selections[attrName] || [];
+
                 return (
                   <div key={attrName} className="space-y-1.5 p-2 bg-orange-50/30 rounded-lg border border-orange-100/50 relative group/attr">
-                    <div className="flex justify-between items-center">
+                    <div className="flex justify-between items-center mb-1">
                       <Label className="text-[10px] uppercase font-bold text-orange-600">{attrName}</Label>
                       <Button
                         type="button"
@@ -466,65 +555,75 @@ function AddVariantPopover({ groupValue, attributes, onAdd }: { groupValue: stri
                         <X className="h-3 w-3" />
                       </Button>
                     </div>
-                    <Select
-                      value={selections[attrName] || ""}
-                      onValueChange={(val) => setSelections(prev => ({ ...prev, [attrName]: val }))}
-                    >
-                      <SelectTrigger className="h-8 text-xs bg-white">
-                        <SelectValue placeholder={`Select ${attrName}...`} />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {attr.options.map(opt => (
-                          <SelectItem key={opt.name} value={opt.name} className="text-xs">{opt.name}</SelectItem>
+
+                    {/* Multi-Select Dropdown using Popover/Combobox style */}
+                    <Popover>
+                      <PopoverTrigger asChild>
+                        <Button variant="outline" role="combobox" className="w-full justify-between h-8 text-xs bg-white border-orange-200/50">
+                          {selectedValues.length > 0
+                            ? `${selectedValues.length} selected`
+                            : `Select ${attrName}...`}
+                          <ChevronsUpDown className="ml-2 h-3 w-3 shrink-0 opacity-50" />
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent className="p-0 w-[200px]" align="start">
+                        <Command>
+                          <CommandInput placeholder={`Search ${attrName}...`} className="h-8 text-xs" />
+                          <CommandList>
+                            <CommandEmpty>No option found.</CommandEmpty>
+                            <CommandGroup className="max-h-[200px] overflow-auto">
+                              {attr.options.map((option) => (
+                                <CommandItem
+                                  key={option.name}
+                                  value={option.name}
+                                  onSelect={() => toggleSelection(attrName, option.name)}
+                                  className="text-xs"
+                                >
+                                  <div className={cn(
+                                    "mr-2 flex h-3 w-3 items-center justify-center rounded-sm border border-primary",
+                                    selectedValues.includes(option.name)
+                                      ? "bg-primary text-primary-foreground"
+                                      : "opacity-50 [&_svg]:invisible"
+                                  )}>
+                                    <CheckSquare className={cn("h-3 w-3")} />
+                                  </div>
+                                  {option.name}
+                                </CommandItem>
+                              ))}
+                            </CommandGroup>
+                          </CommandList>
+                        </Command>
+                      </PopoverContent>
+                    </Popover>
+
+                    {/* Selected tags display */}
+                    {selectedValues.length > 0 && (
+                      <div className="flex flex-wrap gap-1 mt-2">
+                        {selectedValues.map(val => (
+                          <Badge key={val} variant="secondary" className="text-[9px] px-1 h-4 bg-white border border-gray-200">
+                            {val}
+                            <X
+                              className="h-2 w-2 ml-1 cursor-pointer text-gray-400 hover:text-red-500"
+                              onClick={() => toggleSelection(attrName, val)}
+                            />
+                          </Badge>
                         ))}
-                      </SelectContent>
-                    </Select>
+                      </div>
+                    )}
                   </div>
                 );
               })}
             </div>
           )}
 
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-gray-100">
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">Price (₦)</Label>
-              <Input type="number" className="h-8 text-xs" value={extras.price} onChange={e => setExtras(p => ({ ...p, price: parseFloat(e.target.value) || 0 }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">Sale Price (₦)</Label>
-              <Input type="number" className="h-8 text-xs" value={extras.salePrice} onChange={e => setExtras(p => ({ ...p, salePrice: parseFloat(e.target.value) || 0 }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">Quantity</Label>
-              <Input type="number" className="h-8 text-xs" value={extras.stock} onChange={e => setExtras(p => ({ ...p, stock: parseInt(e.target.value) || 0 }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">Weight (kg)</Label>
-              <Input type="number" className="h-8 text-xs" value={extras.weight} onChange={e => setExtras(p => ({ ...p, weight: parseFloat(e.target.value) || 0 }))} />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">Warranty</Label>
-              <Input className="h-8 text-xs" value={extras.warranty} onChange={e => setExtras(p => ({ ...p, warranty: e.target.value }))} placeholder="e.g. 1 Year" />
-            </div>
-            <div className="space-y-1.5">
-              <Label className="text-[10px] uppercase font-bold text-gray-400">SKU</Label>
-              <Input className="h-8 text-xs uppercase" value={extras.sku} onChange={e => setExtras(p => ({ ...p, sku: e.target.value }))} />
-            </div>
-          </div>
-
-          <div className="space-y-1.5">
-            <Label className="text-[10px] uppercase font-bold text-gray-400">Notes</Label>
-            <Input className="h-8 text-xs" value={extras.notes} onChange={e => setExtras(p => ({ ...p, notes: e.target.value }))} />
-          </div>
-
           <Button
             type="button"
             className="w-full bg-orange-600 hover:bg-orange-700 text-white h-9 shadow-sm"
             onClick={handleConfirm}
-            disabled={activeAttributes.length > 0 && activeAttributes.some(a => !selections[a])}
+            disabled={activeAttributes.length === 0 || activeAttributes.some(a => !selections[a] || selections[a].length === 0)}
           >
             {activeAttributes.length > 0
-              ? `Add ${groupValue}${activeAttributes.map(a => selections[a] ? ` / ${selections[a]}` : '').join('')}`
+              ? `Add Variants`
               : `Add Base ${groupValue}`
             }
           </Button>
@@ -567,6 +666,71 @@ function VariantAttributeSelect({ attribute, value, onChange }: { attribute: Pro
       </PopoverContent>
     </Popover>
   )
+}
+
+
+function QuickAttributePicker({
+  attributeName,
+  onAdd
+}: {
+  attributeName: string,
+  onAdd: (values: string[]) => void
+}) {
+  const options = predefinedVariantOptions[attributeName] || [];
+  const [selected, setSelected] = useState<string[]>([]);
+  const [isOpen, setIsOpen] = useState(false);
+
+  if (options.length === 0) return null;
+
+  const handleApply = () => {
+    onAdd(selected);
+    setSelected([]);
+    setIsOpen(false);
+  };
+
+  return (
+    <Popover open={isOpen} onOpenChange={setIsOpen}>
+      <PopoverTrigger asChild>
+        <Button
+          type="button"
+          variant="outline"
+          size="icon"
+          className="h-5 w-5 rounded-full bg-orange-50 text-orange-600 border-orange-200 hover:bg-orange-100 shadow-sm transition-all"
+        >
+          <Plus className="h-3 w-3" />
+        </Button>
+      </PopoverTrigger>
+      <PopoverContent className="w-56 p-2" align="start">
+        <div className="space-y-2">
+          <p className="text-[10px] font-bold uppercase text-gray-500 px-2 pt-1">Quick Select {attributeName}</p>
+          <div className="max-h-[250px] overflow-y-auto space-y-1 pr-1 custom-scrollbar">
+            {options.map(opt => (
+              <div
+                key={opt}
+                className="flex items-center space-x-2 p-1.5 hover:bg-orange-50 rounded-md cursor-pointer transition-colors"
+                onClick={() => {
+                  setSelected(prev =>
+                    prev.includes(opt) ? prev.filter(o => o !== opt) : [...prev, opt]
+                  );
+                }}
+              >
+                <Checkbox checked={selected.includes(opt)} className="data-[state=checked]:bg-orange-600 data-[state=checked]:border-orange-600" />
+                <span className="text-xs font-medium text-gray-700">{opt}</span>
+              </div>
+            ))}
+          </div>
+          <Button
+            size="sm"
+            className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs"
+            onClick={handleApply}
+            disabled={selected.length === 0}
+          >
+            Add {selected.length} Variations
+          </Button>
+        </div>
+      </PopoverContent>
+    </Popover>
+  );
 }
 
 
@@ -770,38 +934,87 @@ export default function VariantManager({
 
   // --- Variation Handlers ---
 
-  const addVariantToGroup = (groupValue: string, childCombo: Record<string, string> = {}, extras: Partial<ProductVariation> = {}) => {
-    // Create a new variation
+  const addVariantToGroup = (groupValue: string, combos: Record<string, string> | Record<string, string>[], extras?: Partial<ProductVariation>) => {
+    const comboArray = Array.isArray(combos) ? combos : [combos];
     const firstAttr = attributes[0];
-    const newCombo: Record<string, string> = {
-      [firstAttr.name]: groupValue,
-      ...childCombo
-    };
 
-    // Ensure all attributes have a value (even if empty string)
-    attributes.forEach(a => {
-      if (newCombo[a.name] === undefined) newCombo[a.name] = '';
+    // 1. Sync attributes - ensure all selected attributes exist in the global list
+    const newAttributesAdded: string[] = [];
+    comboArray.forEach(combo => {
+      Object.keys(combo).forEach(attrName => {
+        const exists = attributes.some(a => a.name === attrName) || newAttributesAdded.includes(attrName);
+        if (!exists) {
+          appendAttribute({ name: attrName, options: [] });
+          newAttributesAdded.push(attrName);
+        }
+      });
     });
 
-    const newVar: ProductVariation = {
-      combination: newCombo,
-      sku: extras.sku || '',
-      price: extras.price || 0,
-      salePrice: extras.salePrice,
-      stock: extras.stock || 0,
-      weight: extras.weight,
-      warranty: extras.warranty,
-      notes: extras.notes,
-      available: true
-    };
+    // 2. Prepare new variations
+    const newVars: ProductVariation[] = comboArray.map(childCombo => {
+      const newCombo: Record<string, string> = {
+        [firstAttr.name]: groupValue,
+        ...childCombo
+      };
 
-    // Append to list
-    if (isControlled) {
-      onVariationsChange?.([...variations, newVar]);
-    } else {
-      rhfVariations.append(newVar);
+      // Ensure all attributes have a value
+      attributes.forEach(a => {
+        if (newCombo[a.name] === undefined) newCombo[a.name] = '';
+      });
+
+      return {
+        combination: newCombo,
+        sku: extras?.sku || '',
+        price: extras?.price || 0,
+        stock: extras?.stock || 0,
+        available: extras?.available !== undefined ? extras.available : true,
+        image: extras?.image || '',
+        weight: extras?.weight || 0,
+        notes: extras?.notes || '',
+        warranty: extras?.warranty || '1 Year',
+        ...extras
+      };
+    });
+
+    // 3. Update state once
+    let updatedVariations = [...variations];
+
+    // SMART DEDUPLICATION & PLACEHOLDER REMOVAL
+    if (comboArray.length > 0) {
+      // 1. Identify which existing variations should be "replaced" or "cleaned up"
+      updatedVariations = updatedVariations.filter(v => {
+        const isThisGroup = v.combination[firstAttr.name] === groupValue;
+        if (!isThisGroup) return true;
+
+        const otherAttrs = Object.keys(v.combination).filter(k => k !== firstAttr.name);
+
+        // A placeholder (no specific attributes filled) should always be removed if we add specific ones
+        const isEmptyPlaceholder = otherAttrs.length > 0 && otherAttrs.every(k => v.combination[k] === '');
+        if (isEmptyPlaceholder) return false;
+
+        // If we are adding common-base refinements, we might want to replace the base
+        // e.g. if we have "Red" (with empty Storage) and we add "Red + 64GB", remove the "Red" one.
+        const isSubsetOfAnyNewVar = newVars.some(nv => {
+          // Check if nv is a refinement of v
+          // nv must have ALL non-empty values that v has
+          return Object.keys(v.combination).every(key => {
+            const vVal = v.combination[key];
+            const nvVal = nv.combination[key];
+            if (!vVal || vVal === '') return true; // v didn't have this, so nv can have anything
+            return vVal === nvVal; // v had it, nv must match it
+          });
+        });
+
+        return !isSubsetOfAnyNewVar;
+      });
     }
-    toast.success(`Added new variant to ${groupValue}`);
+
+    if (isControlled) {
+      onVariationsChange?.([...updatedVariations, ...newVars]);
+    } else {
+      rhfVariations.replace([...updatedVariations, ...newVars]);
+    }
+    toast.success(`Added ${newVars.length} variants to ${groupValue}`);
   };
 
   const openDimensionEditor = (variation: ProductVariation, index: number) => {
@@ -1022,12 +1235,15 @@ export default function VariantManager({
               <TableHeader>
                 <TableRow className="bg-gray-50/50 dark:bg-gray-900/50 border-b border-orange-100">
                   <TableHead className="w-[40px] pl-4"><span className="sr-only">Select</span></TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500 px-4">Identification</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 px-4">{attributes[0]?.name || 'Primary'}</TableHead>
+                  {attributes.slice(1).map((attr) => (
+                    <TableHead key={attr.name} className="text-xs font-bold text-gray-500 px-4">{attr.name}</TableHead>
+                  ))}
                   <TableHead className="w-[50px] text-center">Img</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Warranty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">SKU</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500">Price (₦)</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500">Sale (₦)</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500">Price (£)</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500">Sale (£)</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Qty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Weight</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Notes</TableHead>
