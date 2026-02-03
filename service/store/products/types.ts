@@ -23,6 +23,7 @@ export interface ProductVariation {
   sku?: string;
   combination: Record<string, string>;
   price: number;
+  salePrice?: number;
   stock: number;
   reservedStock?: number;
   soldCount?: number;
@@ -33,6 +34,8 @@ export interface ProductVariation {
   length?: number;
   width?: number;
   height?: number;
+  warranty?: string;
+  notes?: string;
 }
 
 export interface SizeGuideMeasurement {
