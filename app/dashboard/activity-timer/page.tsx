@@ -106,7 +106,7 @@ const ActivityTimerPage: FC = () => {
 
   const taskKeys = Object.keys(tasks) as (keyof TrialTasks)[];
 
-  const taskDetails: Record<
+  const defaultTaskDetails: Record<
     keyof TrialTasks,
     { title: string; description: string; url: string }
   > = {
@@ -137,6 +137,11 @@ const ActivityTimerPage: FC = () => {
       url: "/dashboard/messages",
     },
   };
+
+  const taskDetails = {
+    ...defaultTaskDetails,
+    ...(trialStatus.taskDetails || {}),
+  } as Record<keyof TrialTasks, { title: string; description: string; url: string }>;
 
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white text-black p-4 sm:p-6 md:p-8">

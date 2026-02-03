@@ -47,12 +47,12 @@ export const useGetTrialStatus = () => {
       }
 
       // Derive UI-related fields from the core API response
-      const maxPauses = 2;
+      const maxPauses = data.maxPauses ?? 2;
       const pausesCount = data.pauses?.length || 0;
       const lastPause = pausesCount > 0 ? data.pauses[pausesCount - 1] : null;
 
       const isPaused = !!lastPause && lastPause.resumedAt === null;
-      const remainingPauses = maxPauses - pausesCount;
+      const remainingPauses = Math.max(0, maxPauses - pausesCount);
       const isTrialPausable = remainingPauses > 0;
 
       return {

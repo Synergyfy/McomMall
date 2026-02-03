@@ -116,6 +116,9 @@ export interface TrialStatusResponse {
   remainingTime: number;
   tasks: TrialTasks;
   pauses: TrialPause[];
+  // Dynamic configuration from admin
+  maxPauses?: number;
+  taskDetails?: Record<string, { title: string; description: string; url: string }>;
   // The following fields are derived in the hook for UI convenience
   isPaused?: boolean;
   isTrialPausable?: boolean;
