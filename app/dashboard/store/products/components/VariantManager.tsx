@@ -12,16 +12,11 @@ import {
     Package,
     Settings2,
     Layers,
-    Type,
-    MoreHorizontal,
     Scale,
     StickyNote,
-    Eye,
-    EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
 import {
     Command,
@@ -76,7 +71,7 @@ export default function VariantManager({
     const [tree, setTree] = useState<VariantNode[]>([]);
     const [topLevelAttribute, setTopLevelAttribute] = useState<string>("");
 
-    // Get all unique attribute names used in the tree
+    // Get all unique attribute names used in the tree for filtering
     const usedAttributes = useMemo(() => {
         const names = new Set<string>();
         const traverse = (nodes: VariantNode[]) => {
@@ -92,10 +87,8 @@ export default function VariantManager({
     // --- Initialization Logic (Rebuild tree from variations if tree is empty) ---
     useEffect(() => {
         if (tree.length === 0 && propVariations.length > 0) {
-            // Best-effort rebuild of the hierarchical tree from flat variations
             const rebuildTree = (vars: ProductVariation[]): VariantNode[] => {
                 if (vars.length === 0) return [];
-
                 const firstAttr = propAttributes[0]?.name;
                 if (!firstAttr) return [];
 
@@ -186,7 +179,6 @@ export default function VariantManager({
     }, [propVariations, propAttributes]);
 
     // --- Sync Logic ---
-
     const [isInitialSync, setIsInitialSync] = useState(true);
 
     useEffect(() => {
@@ -299,7 +291,6 @@ export default function VariantManager({
         const updateRecursive = (nodes: VariantNode[]): VariantNode[] => {
             return nodes.map(node => {
                 if (node.children.length === 0) {
-                    // It's a leaf, add children
                     const newChildren: VariantNode[] = values.map(val => ({
                         id: Math.random().toString(36).substr(2, 9),
                         attributeName: attrName,
@@ -373,7 +364,7 @@ export default function VariantManager({
 
     return (
         <div className="space-y-8 animate-in fade-in duration-500">
-            {/* 1. INITIAL STATE: CHOOSE TOP LEVEL */}
+            {/* INITIAL STATE */}
             {tree.length === 0 && (
                 <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl bg-gray-50 dark:bg-gray-800/20 text-center gap-6">
                     <div className="p-4 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600">
@@ -394,7 +385,7 @@ export default function VariantManager({
                 </div>
             )}
 
-            {/* 2. HIERARCHICAL BUILDER TABLE */}
+            {/* BUILDER TABLE */}
             {tree.length > 0 && (
                 <div className="space-y-6">
                     <div className="flex flex-wrap justify-between items-end gap-4 bg-white dark:bg-[#1a120b] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
@@ -469,12 +460,12 @@ export default function VariantManager({
                     </div>
 
                     <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-[#1a120b] shadow-xl">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[1300px]">
+                        <div className="overflow-x-auto pb-4">
+                            <table className="w-full text-left border-collapse min-w-[1400px]">
                                 <thead>
                                     <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-400 text-[10px] uppercase font-bold tracking-widest border-b border-gray-100 dark:border-gray-800">
                                         <th className="px-6 py-5 w-12 text-center">#</th>
-                                        <th className="px-6 py-5 min-w-[200px]">Hierarchical Configuration</th>
+                                        <th className="px-6 py-5 min-w-[280px]">Hierarchical Configuration</th>
                                         <th className="px-4 py-5 w-24 text-center">Status</th>
                                         <th className="px-4 py-5 w-24 text-center">Image</th>
                                         <th className="px-4 py-5 w-36">SKU Mapping</th>
@@ -550,7 +541,7 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk,
                     <span className="text-[10px] font-black font-mono text-gray-300">{index + 1}</span>
                 </td>
                 <td className="px-6 py-4">
-                    <div className="flex items-center gap-3" style={{ paddingLeft: `${level * 28}px` }}>
+                    <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 28}px` }}>
                         <div className={cn(
                             "p-2 rounded-xl border-2 flex flex-col min-w-[120px] transition-all group-hover:shadow-md",
                             level === 0
@@ -565,45 +556,83 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk,
                             </span>
                         </div>
 
+                        {/* PLUS BUTTON - Beside all options apart from the base (level 0) */}
+                        <Popover>
+                            <PopoverTrigger asChild>
+                                <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    className={cn(
+                                        "h-7 w-7 rounded-full bg-gray-100 text-gray-400 hover:bg-orange-500 hover:text-white transition-all shadow-sm flex-shrink-0",
+                                        level === 0 && "hidden"
+                                    )}
+                                >
+                                    <Plus size={14} />
+                                </Button>
+                            </PopoverTrigger>
+                            <PopoverContent className="p-0 w-64 rounded-2xl overflow-hidden shadow-2xl border-none" align="start">
+                                <Command className="border-none">
+                                    <CommandInput placeholder="Add sub-attribute..." className="h-11" />
+                                    <CommandList>
+                                        <CommandEmpty>No attribute found.</CommandEmpty>
+                                        <CommandGroup heading="Hierarchical Attributes">
+                                            {Object.keys(predefinedVariantOptions)
+                                                .map((type) => (
+                                                    <CommandItem
+                                                        key={type}
+                                                        onSelect={() => {
+                                                            const values = prompt(`Enter values for ${type} (comma separated):`);
+                                                            if (values) onAddSub(node.id, type, values.split(',').map(v => v.trim()));
+                                                        }}
+                                                        className="py-2.5 px-4 font-bold text-xs"
+                                                    >
+                                                        {type}
+                                                    </CommandItem>
+                                                ))
+                                            }
+                                            <CommandItem onSelect={() => {
+                                                const name = prompt("Enter attribute name:");
+                                                const values = prompt(`Enter values for ${name} (comma separated):`);
+                                                if (name && values) onAddSub(node.id, name, values.split(',').map(v => v.trim()));
+                                            }} className="py-2.5 px-4 font-bold text-xs text-orange-600">
+                                                Custom...
+                                            </CommandItem>
+                                        </CommandGroup>
+                                    </CommandList>
+                                </Command>
+                            </PopoverContent>
+                        </Popover>
+
                         {!isLeaf && (
-                            <div className="flex-1 h-[2px] bg-gradient-to-r from-gray-100 to-transparent mx-2 opacity-50" />
+                            <div className="flex-1 h-[2px] bg-gradient-to-r from-gray-100 to-transparent ml-2 opacity-50 min-w-[20px]" />
                         )}
 
-                        {isLeaf && (
+                        {/* If it's a leaf at level 0, it still needs a way to get a child */}
+                        {isLeaf && level === 0 && (
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-gray-100 text-gray-400 hover:bg-orange-500 hover:text-white transition-all shadow-sm">
-                                        <Plus size={18} />
+                                    <Button variant="ghost" size="icon" className="h-7 w-7 rounded-full bg-gray-100 text-gray-400 hover:bg-orange-500 hover:text-white transition-all shadow-sm">
+                                        <Plus size={14} />
                                     </Button>
                                 </PopoverTrigger>
                                 <PopoverContent className="p-0 w-64 rounded-2xl overflow-hidden shadow-2xl border-none" align="start">
                                     <Command className="border-none">
-                                        <CommandInput placeholder="Add sub-attribute..." className="h-11" />
+                                        <CommandInput placeholder="Add first sub-attribute..." className="h-11" />
                                         <CommandList>
                                             <CommandEmpty>No attribute found.</CommandEmpty>
-                                            <CommandGroup heading="Hierarchical Attributes">
-                                                {Object.keys(predefinedVariantOptions)
-                                                    .filter(type => !usedAttributes.includes(type))
-                                                    .map((type) => (
-                                                        <CommandItem
-                                                            key={type}
-                                                            onSelect={() => {
-                                                                const values = prompt(`Enter values for ${type} (comma separated):`);
-                                                                if (values) onAddSub(node.id, type, values.split(',').map(v => v.trim()));
-                                                            }}
-                                                            className="py-2.5 px-4 font-bold text-xs"
-                                                        >
-                                                            {type}
-                                                        </CommandItem>
-                                                    ))
-                                                }
-                                                <CommandItem onSelect={() => {
-                                                    const name = prompt("Enter attribute name:");
-                                                    const values = prompt(`Enter values for ${name} (comma separated):`);
-                                                    if (name && values) onAddSub(node.id, name, values.split(',').map(v => v.trim()));
-                                                }} className="py-2.5 px-4 font-bold text-xs text-orange-600">
-                                                    Custom...
-                                                </CommandItem>
+                                            <CommandGroup heading="Available Attributes">
+                                                {Object.keys(predefinedVariantOptions).map((type) => (
+                                                    <CommandItem
+                                                        key={type}
+                                                        onSelect={() => {
+                                                            const values = prompt(`Enter values for ${type} (comma separated):`);
+                                                            if (values) onAddSub(node.id, type, values.split(',').map(v => v.trim()));
+                                                        }}
+                                                        className="py-2.5 px-4 font-bold text-xs"
+                                                    >
+                                                        {type}
+                                                    </CommandItem>
+                                                ))}
                                             </CommandGroup>
                                         </CommandList>
                                     </Command>
@@ -727,8 +756,8 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk,
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Sale" type="number" id={`bulk-sale-${node.id}`} className="h-9 text-xs rounded-lg" />
-                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
+                                            <Input placeholder="Sale Price" type="number" id={`bulk-sale-${node.id}`} className="h-9 text-xs rounded-lg" />
+                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
                                                 const el = document.getElementById(`bulk-sale-${node.id}`) as HTMLInputElement;
                                                 if (el.value) applyBulk('salePrice', parseFloat(el.value), [node]);
                                             }}>Go</Button>
@@ -843,7 +872,6 @@ function AttributeSelector({ onSelect, placeholder, label, fixedAttribute, usedA
                         <CommandEmpty>No attribute found.</CommandEmpty>
                         <CommandGroup heading="Available Attributes">
                             {Object.keys(predefinedVariantOptions)
-                                .filter(type => !usedAttributes.includes(type))
                                 .map((type) => (
                                     <CommandItem
                                         key={type}
