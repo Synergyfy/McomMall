@@ -90,6 +90,7 @@ function VariantGroupRows({
   selectedIndices,
   toggleSelect,
   openDimensionEditor,
+  generateSuggestedSku,
   readOnlyPricing = false,
 }: {
   groupValue: string,
@@ -101,6 +102,7 @@ function VariantGroupRows({
   selectedIndices: number[],
   toggleSelect: (index: number) => void,
   openDimensionEditor: (v: ProductVariation, idx: number) => void,
+  generateSuggestedSku: (combination: Record<string, string>) => string,
   readOnlyPricing?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
@@ -262,6 +264,7 @@ function VariantGroupRows({
                 className="w-24 h-8 text-xs bg-white dark:bg-black/10 uppercase"
                 value={variation.sku}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, sku: e.target.value })}
+                placeholder={generateSuggestedSku(variation.combination)}
                 disabled={readOnlyPricing}
               />
             </TableCell>
@@ -769,11 +772,27 @@ export default function VariantManager({
   const context = useFormContext();
   const isControlled = !!(propAttributes && onAttributesChange);
 
+  // Watch product base SKU for auto-generation
+  const productBaseSku = context?.watch('sku') || '';
+
   const rhfAttributes = useFieldArray({ control: context?.control, name: attributesName });
   const rhfVariations = useFieldArray({ control: context?.control, name: variationsName });
 
   const attributes = (isControlled ? propAttributes : (rhfAttributes.fields as unknown as ProductAttribute[])) || [];
   const variations = (isControlled ? propVariations : (rhfVariations.fields as unknown as ProductVariation[])) || [];
+
+  // Centralized SKU generation logic
+  const generateSuggestedSku = (combination: Record<string, string>) => {
+    const suffix = attributes
+      .map(attr => combination[attr.name])
+      .filter(val => val && val.trim() !== '')
+      .join('-')
+      .toUpperCase();
+
+    if (!suffix) return '';
+    return productBaseSku ? `${productBaseSku}-${suffix}` : suffix;
+  };
+
 
   // Update methods
   const updateAttribute = (index: number, data: ProductAttribute) => {
@@ -853,7 +872,7 @@ export default function VariantManager({
 
           newVariations.push({
             combination: combo,
-            sku: `${opt.name.toUpperCase().slice(0, 3)}-001`,
+            sku: generateSuggestedSku(combo),
             price: opt.price || 0,
             stock: 0,
             available: true
@@ -872,7 +891,7 @@ export default function VariantManager({
             opts.forEach((o: any, i: number) => combo[attributes[i].name] = o.name);
             return {
               combination: combo,
-              sku: opts.map((o: any) => o.name).join('-').toUpperCase(),
+              sku: generateSuggestedSku(combo),
               price: 0,
               stock: 0,
               available: true
@@ -987,7 +1006,7 @@ export default function VariantManager({
 
       return {
         combination: newCombo,
-        sku: extras?.sku || '',
+        sku: extras?.sku || generateSuggestedSku(newCombo),
         price: extras?.price || 0,
         stock: extras?.stock || 0,
         available: extras?.available !== undefined ? extras.available : true,
@@ -1093,7 +1112,7 @@ export default function VariantManager({
 
     const newVar: ProductVariation = {
       combination: newCombo,
-      sku: `${groupValue.toUpperCase().slice(0, 3)}-001`,
+      sku: generateSuggestedSku(newCombo),
       price: 0,
       stock: 0,
       available: true
@@ -1299,6 +1318,7 @@ export default function VariantManager({
                     selectedIndices={selectedIndices}
                     toggleSelect={toggleSelect}
                     openDimensionEditor={openDimensionEditor}
+                    generateSuggestedSku={generateSuggestedSku}
                     readOnlyPricing={readOnlyPricing}
                   />
                 ))}

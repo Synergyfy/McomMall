@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { 
-    Plus, 
-    X, 
-    Trash2, 
-    ImagePlus, 
-    Settings2, 
-    CheckCircle2, 
+import {
+    Plus,
+    X,
+    Trash2,
+    ImagePlus,
+    Settings2,
+    CheckCircle2,
     UploadCloud,
     ArrowLeft
 } from 'lucide-react';
@@ -32,7 +32,8 @@ interface Attribute {
 
 export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft }: Step8Props) {
     const [showSuccess, setShowSuccess] = useState(false);
-    
+
+    // attributes: { name: string, options: { name: string, priceModifier: number }[] }[]
     const attributes = formData.attributes || [];
     const variations = formData.variations || [];
 
@@ -42,6 +43,18 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
             onPublish();
         }, 2000);
     };
+
+    // Helper to group variations by the first attribute's value
+    const firstAttributeName = attributes[0]?.name || '';
+    const groupedVariations: Record<string, any[]> = {};
+
+    if (firstAttributeName) {
+        variations.forEach((v: any) => {
+            const groupKey = v.combination[firstAttributeName] || 'Unassigned';
+            if (!groupedVariations[groupKey]) groupedVariations[groupKey] = [];
+            groupedVariations[groupKey].push(v);
+        });
+    }
 
     return (
         <div className="relative font-display">
@@ -75,18 +88,28 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                             </div>
 
                             <div className="flex flex-col gap-6">
-                                {attributes.map((attr: any, idx: number) => (
-                                    <div key={idx} className="p-4 rounded-lg bg-[#f8f7f5] dark:bg-[#2a1f16] border border-[#e5e7eb] dark:border-[#3d2e20]">
-                                        <p className="font-bold">{attr.name}</p>
-                                        <div className="flex flex-wrap gap-2 mt-2">
-                                            {attr.options?.map((opt: any, i: number) => (
-                                                <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-[#3d2e20] text-sm">
-                                                    {opt.name}
-                                                </span>
-                                            ))}
+                                {attributes.map((attr: any, idx: number) => {
+                                    // Extract unique values from variations if options are empty
+                                    let options = attr.options || [];
+                                    if (options.length === 0) {
+                                        const uniqueVals = Array.from(new Set(variations.map((v: any) => v.combination[attr.name]).filter(Boolean)));
+                                        options = uniqueVals.map(v => ({ name: v }));
+                                    }
+
+                                    return (
+                                        <div key={idx} className="p-4 rounded-lg bg-[#f8f7f5] dark:bg-[#2a1f16] border border-[#e5e7eb] dark:border-[#3d2e20]">
+                                            <p className="font-bold">{attr.name}</p>
+                                            <div className="flex flex-wrap gap-2 mt-2">
+                                                {options.map((opt: any, i: number) => (
+                                                    <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-[#3d2e20] text-sm">
+                                                        {opt.name}
+                                                    </span>
+                                                ))}
+                                                {options.length === 0 && <span className="text-xs text-gray-400 italic">No values selected</span>}
+                                            </div>
                                         </div>
-                                    </div>
-                                ))}
+                                    );
+                                })}
                                 {attributes.length === 0 && <p className="text-sm text-[#9c7349] italic">No attributes defined.</p>}
                             </div>
                         </div>
@@ -110,23 +133,56 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                             <th className="px-6 py-3 font-semibold">Variant</th>
                                             <th className="px-6 py-3 font-semibold w-40">Price Surcharge</th>
                                             <th className="px-6 py-3 font-semibold">SKU</th>
-                                            <th className="px-6 py-3 font-semibold w-24">Available</th>
+                                            <th className="px-6 py-3 font-semibold w-24">Stock</th>
                                             <th className="px-6 py-3 font-semibold w-20">Reserved</th>
                                             <th className="px-6 py-3 font-semibold w-20">Sold</th>
                                             <th className="px-6 py-3 font-semibold w-12"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#e5e7eb] dark:divide-[#3d2e20]">
-                                        {variations.map((v: any, idx: number) => (
-                                            <VariantTableRow 
-                                                key={idx}
-                                                label={Object.values(v.combination).join(' / ')}
-                                                {...v}
-                                            />
+                                        {Object.entries(groupedVariations).map(([groupValue, items]) => (
+                                            <React.Fragment key={groupValue}>
+                                                <tr className="bg-orange-50/30 dark:bg-orange-950/20">
+                                                    <td colSpan={8} className="px-6 py-3">
+                                                        <span className="text-sm font-black text-orange-600 uppercase tracking-tighter flex items-center gap-2">
+                                                            {firstAttributeName}: {groupValue}
+                                                            <span className="px-1.5 py-0.5 rounded bg-orange-100 text-orange-700 text-[10px] lowercase font-bold">{items.length} combinations</span>
+                                                        </span>
+                                                    </td>
+                                                </tr>
+                                                {items.map((v: any, idx: number) => {
+                                                    const otherCombos = Object.entries(v.combination)
+                                                        .filter(([k]) => k !== firstAttributeName)
+                                                        .map(([k, val]) => `${k}: ${val}`)
+                                                        .join(' / ');
+
+                                                    // Suggested SKU based on attribute order
+                                                    const skuSuffix = attributes
+                                                        .map((attr: any) => v.combination[attr.name])
+                                                        .filter(Boolean)
+                                                        .join('-')
+                                                        .toUpperCase();
+
+                                                    const suggestedSku = v.sku || (formData.sku ? `${formData.sku}-${skuSuffix}` : '');
+
+                                                    return (
+                                                        <VariantTableRow
+                                                            key={`${groupValue}-${idx}`}
+                                                            label={otherCombos || 'Base'}
+                                                            sku={suggestedSku}
+                                                            price={v.price}
+                                                            quantity={v.stock}
+                                                            reserved={v.reserved}
+                                                            sold={v.sold}
+                                                            image={v.image}
+                                                        />
+                                                    );
+                                                })}
+                                            </React.Fragment>
                                         ))}
                                         {variations.length === 0 && (
                                             <tr>
-                                                <td colSpan={6} className="px-6 py-10 text-center text-[#9c7349] italic">
+                                                <td colSpan={8} className="px-6 py-10 text-center text-[#9c7349] italic">
                                                     Add attributes and values to generate variations.
                                                 </td>
                                             </tr>
@@ -183,7 +239,7 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                 <div className="flex items-center justify-between pt-6 border-t border-[#e5e7eb] dark:border-[#3d2e20] mt-auto">
                     <button onClick={onBack} className="flex items-center gap-2 text-[#1c140d] dark:text-white font-bold text-sm px-6 py-3 rounded-lg hover:bg-gray-100 dark:hover:bg-[#2a1f16] transition-colors">
                         <ArrowLeft className="w-4 h-4" />
-                        Back to Basic Info
+                        Back to Inventory
                     </button>
                     <button onClick={handlePublish} className="bg-[#f48c25] hover:bg-orange-600 text-white font-bold text-sm px-10 py-3 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center gap-2 transition-transform active:scale-95">
                         Complete Setup
@@ -209,29 +265,29 @@ function VariantTableRow({ label, sku, price, quantity, reserved, sold, image }:
                 </div>
             </td>
             <td className="px-6 py-4">
-                <p className="text-[#1c140d] dark:text-white font-bold text-sm">{label}</p>
+                <p className="text-[#1c140d] dark:text-white font-bold text-xs">{label}</p>
             </td>
             <td className="px-6 py-4">
                 <div className="relative">
-                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-sm">£</span>
-                    <input className="w-full pl-6 pr-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white focus:ring-1 focus:ring-[#f48c25]" type="text" defaultValue={price} />
+                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500 text-xs">£</span>
+                    <input className="w-full pl-6 pr-2 py-1.5 text-xs rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white focus:ring-1 focus:ring-[#f48c25]" type="text" defaultValue={price} />
                 </div>
             </td>
             <td className="px-6 py-4">
-                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white font-mono uppercase" type="text" defaultValue={sku} />
+                <input className="w-full px-2 py-1.5 text-xs rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white font-mono uppercase" type="text" defaultValue={sku} />
             </td>
             <td className="px-6 py-4">
-                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={quantity} />
+                <input className="w-full px-2 py-1.5 text-xs rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={quantity} />
             </td>
-            <td className="px-6 py-4 text-sm text-[#9c7349]">
+            <td className="px-6 py-4 text-xs text-[#9c7349]">
                 {reserved || 0}
             </td>
-            <td className="px-6 py-4 text-sm text-[#9c7349]">
+            <td className="px-6 py-4 text-xs text-[#9c7349]">
                 {sold || 0}
             </td>
             <td className="px-6 py-4 text-right">
                 <button className="text-gray-400 hover:text-red-500 transition-colors">
-                    <Trash2 className="w-5 h-5" />
+                    <Trash2 className="w-4 h-4" />
                 </button>
             </td>
         </tr>

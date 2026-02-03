@@ -1,4 +1,5 @@
 import React from 'react';
+import { Truck, ArrowLeft } from 'lucide-react';
 
 interface Step5Props {
     onBack: () => void;
@@ -40,7 +41,7 @@ const CARRIERS = [
 
 export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
     return (
-        <div className="flex flex-col h-full overflow-hidden bg-background-light dark:bg-background-dark relative pb-10">
+        <div className="flex flex-col h-full overflow-hidden bg-gray-50 dark:bg-[#1c140d] relative pb-10">
             {/* Scrollable Content Area */}
             <div className="flex-1 overflow-y-auto p-4 lg:p-10 scrollbar-hide">
                 <div className="max-w-[960px] mx-auto flex flex-col gap-8 pb-10">
@@ -87,7 +88,7 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                         {/* Custom Carrier Card */}
                         <div className="flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-[#f4ede7] dark:bg-[#2a221a] shadow-none border border-transparent dark:border-[#3a2e26] hover:border-[#f48c25]/30 transition-all group opacity-80 hover:opacity-100">
                             <div className="shrink-0 w-16 h-16 bg-white dark:bg-[#3a2e26] rounded-lg p-2 flex items-center justify-center border border-white/50 dark:border-[#4a3e36]">
-                                <span className="material-symbols-outlined text-3xl text-[#9c7349] dark:text-[#a08b7d]">local_shipping</span>
+                                <Truck className="text-3xl text-[#9c7349] dark:text-[#a08b7d]" size={32} />
                             </div>
                             <div className="flex flex-col flex-1 gap-1">
                                 <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Custom Carrier</h3>
@@ -108,7 +109,7 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                             onClick={onBack}
                             className="flex items-center gap-2 text-[#9c7349] dark:text-[#a08b7d] hover:text-[#1c140d] dark:hover:text-white transition-colors text-sm font-bold px-4 py-2 rounded-lg hover:bg-[#f4ede7] dark:hover:bg-[#3a2e26]"
                         >
-                            <span className="material-symbols-outlined text-lg">arrow_back</span>
+                            <ArrowLeft size={18} />
                             Back to Inventory
                         </button>
                         <div className="flex flex-col sm:flex-row items-center gap-4">
