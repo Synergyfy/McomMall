@@ -9,7 +9,15 @@ interface Props {
 }
 
 export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) {
-  const [selected, setSelected] = useState<'shipping' | 'pickup'>('shipping');
+  const [selectedMethods, setSelectedMethods] = useState<('shipping' | 'pickup')[]>(['pickup']);
+
+  const toggleMethod = (method: 'shipping' | 'pickup') => {
+      setSelectedMethods(prev =>
+        prev.includes(method)
+            ? prev.filter(m => m !== method)
+            : [...prev, method]
+      );
+  };
 
   return (
     <div className="flex flex-col gap-6 md:gap-8 pb-32">
@@ -28,40 +36,17 @@ export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) 
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4">
-        {/* Delivery Option */}
+        {/* Pickup Option (First) */}
         <div 
-          onClick={() => setSelected('shipping')}
+          onClick={() => toggleMethod('pickup')}
           className={`relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 ${
-            selected === 'shipping' 
+            selectedMethods.includes('pickup')
             ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md' 
             : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50'
           }`}
         >
           <div className="flex flex-col items-center text-center gap-4">
-            <div className={`p-4 rounded-full ${selected === 'shipping' ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
-              <Truck size={32} />
-            </div>
-            <div>
-              <h3 className="text-lg font-bold text-[#1c140d] dark:text-white">Delivery / Shipping</h3>
-              <p className="text-sm text-[#9c7349] dark:text-[#cba885] mt-2 leading-relaxed">
-                Ship products to customers worldwide. Best for physical goods sent via carriers.
-              </p>
-            </div>
-            {selected === 'shipping' && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
-          </div>
-        </div>
-
-        {/* Pickup Option */}
-        <div 
-          onClick={() => setSelected('pickup')}
-          className={`relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 ${
-            selected === 'pickup' 
-            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md' 
-            : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50'
-          }`}
-        >
-          <div className="flex flex-col items-center text-center gap-4">
-            <div className={`p-4 rounded-full ${selected === 'pickup' ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
+            <div className={`p-4 rounded-full ${selectedMethods.includes('pickup') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
               <Store size={32} />
             </div>
             <div>
@@ -70,7 +55,30 @@ export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) 
                 Customers collect items directly from your shop. Great for local traffic.
               </p>
             </div>
-            {selected === 'pickup' && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
+            {selectedMethods.includes('pickup') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
+          </div>
+        </div>
+
+        {/* Delivery Option (Second) */}
+        <div 
+          onClick={() => toggleMethod('shipping')}
+          className={`relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 ${
+            selectedMethods.includes('shipping')
+            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md' 
+            : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50'
+          }`}
+        >
+          <div className="flex flex-col items-center text-center gap-4">
+            <div className={`p-4 rounded-full ${selectedMethods.includes('shipping') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
+              <Truck size={32} />
+            </div>
+            <div>
+              <h3 className="text-lg font-bold text-[#1c140d] dark:text-white">Delivery / Shipping</h3>
+              <p className="text-sm text-[#9c7349] dark:text-[#cba885] mt-2 leading-relaxed">
+                Ship products to customers worldwide. Best for physical goods sent via carriers.
+              </p>
+            </div>
+            {selectedMethods.includes('shipping') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
           </div>
         </div>
       </div>
@@ -85,8 +93,9 @@ export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) 
             <ArrowLeft size={18} /> Back
           </button>
           <button
-            onClick={() => onSelect(selected)}
-            className="flex-1 md:flex-none px-12 py-3.5 rounded-xl bg-[#f48c25] text-white font-bold text-sm shadow-lg shadow-[#f48c25]/20 flex items-center justify-center gap-2"
+            onClick={() => onSelect(selectedMethods as any)}
+            disabled={selectedMethods.length === 0}
+            className="flex-1 md:flex-none px-12 py-3.5 rounded-xl bg-[#f48c25] text-white font-bold text-sm shadow-lg shadow-[#f48c25]/20 flex items-center justify-center gap-2 disabled:opacity-50"
           >
             Next Step <ArrowRight size={18} />
           </button>

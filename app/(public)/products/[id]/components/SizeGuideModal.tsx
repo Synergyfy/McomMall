@@ -23,9 +23,10 @@ import { SizeGuideConfig } from '@/service/store/products/types';
 
 interface SizeGuideModalProps {
     config: SizeGuideConfig;
+    productGender?: string;
 }
 
-export default function SizeGuideModal({ config }: SizeGuideModalProps) {
+export default function SizeGuideModal({ config, productGender }: SizeGuideModalProps) {
     if (!config || !config.enabled || config.measurements.length === 0) return null;
 
     // Detect columns dynamically from the first measurement row
@@ -73,11 +74,34 @@ export default function SizeGuideModal({ config }: SizeGuideModalProps) {
                     </Table>
                 </div>
 
-                {/* Future: Add Body Diagram Image here if config.imageUrl exists */}
-                {config.imageUrl && (
-                    <div className="mt-6 border-t pt-4">
-                        <h4 className="font-medium mb-2">Measurement Guide</h4>
-                        <img src={config.imageUrl} alt="Measurement Guide" className="w-full h-auto rounded-lg" />
+                {/* Body Diagram Display */}
+                {(config.imageUrl || config.diagrams) && (
+                    <div className="mt-6 border-t pt-6">
+                        <h4 className="font-bold text-[#1c140d] mb-4">Measurement Guide</h4>
+                        <div className="flex justify-center bg-gray-50 rounded-xl p-4">
+                            {config.diagrams && productGender && config.diagrams[productGender as keyof typeof config.diagrams] ? (
+                                <img
+                                    src={config.diagrams[productGender as keyof typeof config.diagrams]}
+                                    alt="Measurement Guide"
+                                    className="max-h-[300px] w-auto rounded-lg shadow-sm"
+                                />
+                            ) : config.imageUrl ? (
+                                <img
+                                    src={config.imageUrl}
+                                    alt="Measurement Guide"
+                                    className="max-h-[300px] w-auto rounded-lg shadow-sm"
+                                />
+                            ) : config.diagrams?.unisex ? (
+                                <img
+                                    src={config.diagrams.unisex}
+                                    alt="Measurement Guide"
+                                    className="max-h-[300px] w-auto rounded-lg shadow-sm"
+                                />
+                            ) : null}
+                        </div>
+                        <p className="text-xs text-gray-500 mt-4 text-center italic">
+                            * Use this chart as a general guide. Measurements may vary by product.
+                        </p>
                     </div>
                 )}
             </DialogContent>

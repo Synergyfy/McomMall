@@ -14,6 +14,7 @@ export interface ProductAttribute {
   options: {
     name: string;
     priceModifier: number;
+    price?: number; // Override price for all variations under this option (if it's a parent)
   }[];
 }
 
@@ -22,15 +23,19 @@ export interface ProductVariation {
   sku?: string;
   combination: Record<string, string>;
   price: number;
+  salePrice?: number;
   stock: number;
   reservedStock?: number;
   soldCount?: number;
+  lowStockThreshold?: number;
   available: boolean;
   image?: string;
   weight?: number;
   length?: number;
   width?: number;
   height?: number;
+  warranty?: string;
+  notes?: string;
 }
 
 export interface SizeGuideMeasurement {
@@ -51,6 +56,11 @@ export interface SizeGuideConfig {
   measurements: SizeGuideMeasurement[];
   conversionMap?: Record<string, string>; // e.g., { "S": "US 4", "M": "US 6" }
   imageUrl?: string; // For Body Diagram
+  diagrams?: {
+    male?: string;
+    female?: string;
+    unisex?: string;
+  };
 }
 
 export interface CreateProductDto {
@@ -58,6 +68,8 @@ export interface CreateProductDto {
   title: string;
   category: string;
   subCategories?: string[];
+  brand?: string;
+  gender?: 'male' | 'female' | 'unisex' | 'none';
   shippingMethod?: 'free' | 'pickup' | 'delivery';
   productType: string;
   price: number;

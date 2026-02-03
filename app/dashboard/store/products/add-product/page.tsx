@@ -22,19 +22,30 @@ export default function AddProductPage() {
   const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
 
   const [formData, setFormData] = useState({
-    productTitle: '',
+    productName: '',
     category: '',
     subCategory: '',
-    description: '',
     shortDesc: '',
     fullDesc: '',
     product_type: 'physical',
+    brand: '',
+    gender: '',
+    productStatus: 'publish',
+    hasVariants: false,
     regular_price: '',
     sale_price: '',
     sku: '',
     stock_status: 'instock',
     quantity: 100,
     weight: '',
+    attributes: [],
+    variations: [],
+    sizeGuide: {
+      enabled: false,
+      system: 'international',
+      measurements: [],
+      diagrams: { male: '', female: '', unisex: '' }
+    }
   });
 
   const updateFormData = (newData: any) => {
@@ -171,7 +182,7 @@ export default function AddProductPage() {
         onClose={() => setIsPublished(false)} 
         type="success"
         title="Product Added Successfully!"
-        message={`${formData.productTitle} is now live and ready for customers.`}
+        message={`${formData.productName} is now live and ready for customers.`}
         primaryAction={{
           label: "View Product",
           onClick: () => console.log("Navigate to product")
