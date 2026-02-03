@@ -1,11 +1,11 @@
 import React from 'react';
-import { 
-  ChevronDown, 
-  Bold, 
-  Italic, 
-  List, 
-  Link as LinkIcon, 
-  X, 
+import {
+  ChevronDown,
+  Bold,
+  Italic,
+  List,
+  Link as LinkIcon,
+  X,
   ArrowRight,
   Layers
 } from 'lucide-react';
@@ -119,8 +119,8 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </div>
             </div>
 
-            {/* Row: Status & Variant Toggle */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Row: Status */}
+            <div className="grid grid-cols-1 gap-6">
               <div className="flex flex-col gap-2">
                 <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200" htmlFor="productStatus">
                   Product Status
@@ -138,27 +138,6 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                     <ChevronDown className="w-5 h-5" />
                   </div>
-                </div>
-              </div>
-
-              <div className="flex flex-col gap-2">
-                 <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200">
-                    Product Options
-                </label>
-                <div className="flex items-center justify-between p-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] h-12">
-                    <div className="flex items-center gap-2">
-                        <Layers className="w-4 h-4 text-[#f48c25]" />
-                        <span className="text-xs font-medium text-[#9c7349]">Has variants?</span>
-                    </div>
-                    <label className="relative inline-flex items-center cursor-pointer">
-                        <input
-                            type="checkbox"
-                            className="sr-only peer"
-                            checked={formData.hasVariants || false}
-                            onChange={(e) => updateFormData({ hasVariants: e.target.checked })}
-                        />
-                        <div className="w-9 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-4"></div>
-                    </label>
                 </div>
               </div>
             </div>

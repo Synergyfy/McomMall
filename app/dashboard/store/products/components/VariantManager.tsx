@@ -63,6 +63,7 @@ interface VariantManagerProps {
   variations?: ProductVariation[];
   onAttributesChange?: (attrs: ProductAttribute[]) => void;
   onVariationsChange?: (vars: ProductVariation[]) => void;
+  readOnlyPricing?: boolean;
 }
 
 // Helper to group variations by the first attribute's value
@@ -88,7 +89,8 @@ function VariantGroupRows({
   addVariantToGroup,
   selectedIndices,
   toggleSelect,
-  openDimensionEditor
+  openDimensionEditor,
+  readOnlyPricing = false,
 }: {
   groupValue: string,
   groupItems: { originalIndex: number, variation: ProductVariation }[],
@@ -98,7 +100,8 @@ function VariantGroupRows({
   addVariantToGroup: (groupValue: string, combos: Record<string, string> | Record<string, string>[], extras?: Partial<ProductVariation>) => void,
   selectedIndices: number[],
   toggleSelect: (index: number) => void,
-  openDimensionEditor: (v: ProductVariation, idx: number) => void
+  openDimensionEditor: (v: ProductVariation, idx: number) => void,
+  readOnlyPricing?: boolean;
 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const firstAttrName = attributes[0]?.name;
@@ -166,12 +169,6 @@ function VariantGroupRows({
             <Badge variant="secondary" className="bg-white dark:bg-black/40 text-orange-700 border-orange-200 h-6 text-[11px] font-bold shadow-sm">
               {groupItems.length} Variations
             </Badge>
-
-            <AddVariantPopover
-              groupValue={groupValue}
-              attributes={attributes}
-              onAdd={(combos) => addVariantToGroup(groupValue, combos)}
-            />
           </div>
         </TableCell>
       </TableRow>
@@ -265,6 +262,7 @@ function VariantGroupRows({
                 className="w-24 h-8 text-xs bg-white dark:bg-black/10 uppercase"
                 value={variation.sku}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, sku: e.target.value })}
+                disabled={readOnlyPricing}
               />
             </TableCell>
 
@@ -275,6 +273,7 @@ function VariantGroupRows({
                 className="w-20 h-8 text-xs bg-white dark:bg-black/10"
                 value={variation.price}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, price: parseFloat(e.target.value) || 0 })}
+                disabled={readOnlyPricing}
               />
             </TableCell>
 
@@ -285,6 +284,7 @@ function VariantGroupRows({
                 className="w-20 h-8 text-xs bg-white dark:bg-black/10 text-orange-600"
                 value={variation.salePrice || 0}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, salePrice: parseFloat(e.target.value) || 0 })}
+                disabled={readOnlyPricing}
               />
             </TableCell>
 
@@ -295,6 +295,7 @@ function VariantGroupRows({
                 className="w-16 h-8 text-xs bg-white dark:bg-black/10"
                 value={variation.stock}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, stock: parseInt(e.target.value) || 0 })}
+                disabled={readOnlyPricing}
               />
             </TableCell>
 
@@ -305,6 +306,7 @@ function VariantGroupRows({
                 className="w-16 h-8 text-xs bg-white dark:bg-black/10"
                 value={variation.weight || 0}
                 onChange={(e) => updateVariation(originalIndex, { ...variation, weight: parseFloat(e.target.value) || 0 })}
+                disabled={readOnlyPricing}
               />
             </TableCell>
 
@@ -320,13 +322,27 @@ function VariantGroupRows({
             {/* Settings */}
             <TableCell className="py-2">
               <div className="flex items-center gap-1">
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-blue-400 hover:text-blue-600" onClick={() => {
-                  const dup = { ...variation };
-                  addVariantToGroup(groupValue, variation.combination, { ...dup, sku: `${dup.sku}-COPY` });
-                }}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-blue-400 hover:text-blue-600"
+                  onClick={() => {
+                    const dup = { ...variation };
+                    addVariantToGroup(groupValue, variation.combination, { ...dup, sku: `${dup.sku}-COPY` });
+                  }}
+                  disabled={readOnlyPricing}
+                >
                   <Copy className="h-4 w-4" />
                 </Button>
-                <Button type="button" variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-gray-600" onClick={() => openDimensionEditor(variation, originalIndex)}>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 text-gray-400 hover:text-gray-600"
+                  onClick={() => openDimensionEditor(variation, originalIndex)}
+                  disabled={readOnlyPricing}
+                >
                   <Settings className="h-4 w-4" />
                 </Button>
               </div>
@@ -602,10 +618,16 @@ function AddVariantPopover({
                         {selectedValues.map(val => (
                           <Badge key={val} variant="secondary" className="text-[9px] px-1 h-4 bg-white border border-gray-200">
                             {val}
-                            <X
-                              className="h-2 w-2 ml-1 cursor-pointer text-gray-400 hover:text-red-500"
-                              onClick={() => toggleSelection(attrName, val)}
-                            />
+                            <button
+                              type="button"
+                              className="ml-1 text-gray-400 hover:text-red-500 transition-colors"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleSelection(attrName, val);
+                              }}
+                            >
+                              <X className="h-2 w-2" />
+                            </button>
                           </Badge>
                         ))}
                       </div>
@@ -740,7 +762,8 @@ export default function VariantManager({
   attributes: propAttributes,
   variations: propVariations,
   onAttributesChange,
-  onVariationsChange
+  onVariationsChange,
+  readOnlyPricing = false
 }: VariantManagerProps) {
 
   const context = useFormContext();
@@ -1010,9 +1033,9 @@ export default function VariantManager({
     }
 
     if (isControlled) {
-      onVariationsChange?.([...updatedVariations, ...newVars]);
+      onVariationsChange?.([...newVars, ...updatedVariations]);
     } else {
-      rhfVariations.replace([...updatedVariations, ...newVars]);
+      rhfVariations.replace([...newVars, ...updatedVariations]);
     }
     toast.success(`Added ${newVars.length} variants to ${groupValue}`);
   };
@@ -1077,9 +1100,12 @@ export default function VariantManager({
     };
 
     if (isControlled) {
-      onVariationsChange?.([...variations, newVar]);
+      onVariationsChange?.([newVar, ...variations]);
     } else {
-      rhfVariations.append(newVar);
+      rhfVariations.update(0, newVar); // Prepend in RHF is usually via insert or update at 0? 
+      // Actually append puts it at end. To put at top in RHF without replace, we use insert(0, data)
+      // Since replace is cleaner for our logic:
+      rhfVariations.replace([newVar, ...variations]);
     }
     toast.success(`Added new group: ${groupValue}`);
   };
@@ -1159,7 +1185,16 @@ export default function VariantManager({
                   {attributeOptions.map(opt => (
                     <Badge key={opt.name} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 text-[10px]">
                       {opt.name}
-                      <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveOptionFromAttribute(opt.name)} />
+                      <button
+                        type="button"
+                        className="text-gray-400 hover:text-red-500 transition-colors"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleRemoveOptionFromAttribute(opt.name);
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </button>
                     </Badge>
                   ))}
                 </div>
@@ -1264,6 +1299,7 @@ export default function VariantManager({
                     selectedIndices={selectedIndices}
                     toggleSelect={toggleSelect}
                     openDimensionEditor={openDimensionEditor}
+                    readOnlyPricing={readOnlyPricing}
                   />
                 ))}
               </TableBody>
