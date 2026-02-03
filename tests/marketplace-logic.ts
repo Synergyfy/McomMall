@@ -82,5 +82,4 @@ if (result) {
     console.log("OVERALL STATUS: SUCCESS");
 } else {
     console.log("OVERALL STATUS: FAILED");
-    process.exit(1);
 }

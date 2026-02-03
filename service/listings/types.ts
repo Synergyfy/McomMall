@@ -350,6 +350,7 @@ export interface Product {
   enableReviews?: boolean;
   tags?: string[];
   brand?: string;
+  gender?: string;
   views?: number;
   createdAt?: string;
   updatedAt?: string;

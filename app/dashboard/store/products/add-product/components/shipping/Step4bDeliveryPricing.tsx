@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight } from 'lucide-react';
+import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation } from 'lucide-react';
 
 interface Props {
   formData: any;
@@ -50,6 +50,39 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         <p className="text-[#9c7349] dark:text-[#c4a687] text-lg max-w-2xl mx-auto">
           Choose the shipping model that best fits your business strategy.
         </p>
+      </div>
+
+      {/* Radius Based Logic - NEW */}
+      <div className="mx-4 mb-8 bg-orange-50 dark:bg-orange-950/20 rounded-2xl p-6 border border-orange-200 dark:border-orange-900/30">
+          <div className="flex items-center gap-3 mb-4">
+              <div className="p-2 bg-orange-500 rounded-lg text-white">
+                  <Navigation size={20} />
+              </div>
+              <h4 className="font-bold dark:text-white">Radius-Based Free Delivery</h4>
+          </div>
+          <div className="flex flex-col sm:flex-row gap-4 items-end">
+              <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs font-bold text-[#9c7349] uppercase">Free Delivery Radius (Miles)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 5"
+                    className="w-full p-3 rounded-xl border border-orange-200 dark:bg-[#1c140d] dark:text-white focus:border-orange-500 outline-none"
+                    value={formData.freeRadius || ""}
+                    onChange={(e) => updateFormData({ freeRadius: e.target.value })}
+                  />
+              </div>
+              <div className="flex flex-col gap-2 flex-1">
+                  <label className="text-xs font-bold text-[#9c7349] uppercase">Charge Outside Radius (£)</label>
+                  <input
+                    type="number"
+                    placeholder="e.g. 10.00"
+                    className="w-full p-3 rounded-xl border border-orange-200 dark:bg-[#1c140d] dark:text-white focus:border-orange-500 outline-none"
+                    value={formData.outsideRadiusCharge || ""}
+                    onChange={(e) => updateFormData({ outsideRadiusCharge: e.target.value })}
+                  />
+              </div>
+          </div>
+          <p className="text-[10px] text-[#9c7349] mt-3 italic">* Customers within {formData.freeRadius || 0} miles of your pickup locations will see Free Delivery.</p>
       </div>
 
       {/* Segmented Toggle */}

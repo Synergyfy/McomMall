@@ -33,60 +33,8 @@ interface Attribute {
 export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft }: Step8Props) {
     const [showSuccess, setShowSuccess] = useState(false);
     
-    const [attributes, setAttributes] = useState<Attribute[]>(formData.attributes || [
-        { id: '1', name: 'Color', values: [{ name: 'Red', image: null }, { name: 'Black', image: null }] },
-        { id: '2', name: 'Size', values: [{ name: 'SM', image: null }, { name: 'LG', image: null }] }
-    ]);
-
-    const [variations, setVariations] = useState<any[]>([]);
-
-    useEffect(() => {
-        const generateVariations = () => {
-            if (attributes.length === 0) return [];
-            
-            const validAttributes = attributes.filter(attr => attr.values.length > 0);
-            if (validAttributes.length === 0) return [];
-
-            let combos = validAttributes[0].values.map(v => ({
-                label: v.name,
-                image: v.image,
-                parts: [v.name]
-            }));
-
-            for (let i = 1; i < validAttributes.length; i++) {
-                const nextAttr = validAttributes[i];
-                const newCombos: any[] = [];
-                combos.forEach(combo => {
-                    nextAttr.values.forEach(val => {
-                        newCombos.push({
-                            label: `${combo.label} / ${val.name}`,
-                            image: combo.image || val.image,
-                            parts: [...combo.parts, val.name]
-                        });
-                    });
-                });
-                combos = newCombos;
-            }
-
-            return combos.map((c, index) => ({
-                id: index,
-                label: c.label,
-                sku: `PROD-${c.parts.join('-').toUpperCase()}`,
-                price: "0.00",
-                stock: "0",
-                image: c.image
-            }));
-        };
-
-        const newVariations = generateVariations();
-        setVariations(newVariations);
-        updateFormData({ ...formData, attributes, variations: newVariations });
-    }, [attributes]);
-
-    const handleAddAttribute = () => {
-        const newAttr = { id: Date.now().toString(), name: '', values: [] };
-        setAttributes([...attributes, newAttr]);
-    };
+    const attributes = formData.attributes || [];
+    const variations = formData.variations || [];
 
     const handlePublish = () => {
         setShowSuccess(true);
@@ -124,24 +72,22 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                     <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Attributes</h3>
                                     <p className="text-sm text-[#9c7349]">Define the options available for this product.</p>
                                 </div>
-                                <button 
-                                    onClick={handleAddAttribute}
-                                    className="text-[#f48c25] hover:text-orange-600 font-bold text-sm flex items-center gap-1 transition-colors"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Add Attribute
-                                </button>
                             </div>
 
                             <div className="flex flex-col gap-6">
-                                {attributes.map((attr) => (
-                                    <AttributeRow 
-                                        key={attr.id} 
-                                        attr={attr} 
-                                        setAttributes={setAttributes} 
-                                        attributes={attributes}
-                                    />
+                                {attributes.map((attr: any, idx: number) => (
+                                    <div key={idx} className="p-4 rounded-lg bg-[#f8f7f5] dark:bg-[#2a1f16] border border-[#e5e7eb] dark:border-[#3d2e20]">
+                                        <p className="font-bold">{attr.name}</p>
+                                        <div className="flex flex-wrap gap-2 mt-2">
+                                            {attr.options?.map((opt: any, i: number) => (
+                                                <span key={i} className="px-2 py-1 rounded bg-gray-100 dark:bg-[#3d2e20] text-sm">
+                                                    {opt.name}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
                                 ))}
+                                {attributes.length === 0 && <p className="text-sm text-[#9c7349] italic">No attributes defined.</p>}
                             </div>
                         </div>
 
@@ -164,14 +110,17 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                             <th className="px-6 py-3 font-semibold">Variant</th>
                                             <th className="px-6 py-3 font-semibold w-40">Price Surcharge</th>
                                             <th className="px-6 py-3 font-semibold">SKU</th>
-                                            <th className="px-6 py-3 font-semibold w-32">Stock Qty</th>
+                                            <th className="px-6 py-3 font-semibold w-24">Available</th>
+                                            <th className="px-6 py-3 font-semibold w-20">Reserved</th>
+                                            <th className="px-6 py-3 font-semibold w-20">Sold</th>
                                             <th className="px-6 py-3 font-semibold w-12"></th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-[#e5e7eb] dark:divide-[#3d2e20]">
-                                        {variations.map((v) => (
+                                        {variations.map((v: any, idx: number) => (
                                             <VariantTableRow 
-                                                key={v.id}
+                                                key={idx}
+                                                label={Object.values(v.combination).join(' / ')}
                                                 {...v}
                                             />
                                         ))}
@@ -246,111 +195,8 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
     );
 }
 
-function AttributeRow({ attr, setAttributes, attributes }: { attr: Attribute, setAttributes: any, attributes: Attribute[] }) {
-    const [inputValue, setInputValue] = useState('');
 
-    const handleAddValue = (e: React.KeyboardEvent) => {
-        if (e.key === 'Enter' && inputValue.trim()) {
-            const newValue = { name: inputValue.trim(), image: null };
-            const updated = attributes.map(a => 
-                a.id === attr.id ? { ...a, values: [...a.values, newValue] } : a
-            );
-            setAttributes(updated);
-            setInputValue('');
-        }
-    };
-
-    const handleRemoveValue = (valName: string) => {
-        const updated = attributes.map(a => 
-            a.id === attr.id ? { ...a, values: a.values.filter(v => v.name !== valName) } : a
-        );
-        setAttributes(updated);
-    };
-
-    const handleImageUpload = (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
-        const file = e.target.files?.[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const updated = attributes.map(a => {
-                    if (a.id === attr.id) {
-                        const newVals = [...a.values];
-                        newVals[index] = { ...newVals[index], image: reader.result as string };
-                        return { ...a, values: newVals };
-                    }
-                    return a;
-                });
-                setAttributes(updated);
-            };
-            reader.readAsDataURL(file);
-        }
-    };
-
-    return (
-        <div className="p-4 rounded-lg bg-[#f8f7f5] dark:bg-[#2a1f16] border border-[#e5e7eb] dark:border-[#3d2e20]">
-            <div className="flex flex-wrap md:flex-nowrap gap-4 items-start">
-                <div className="w-full md:w-1/4">
-                    <label className="block text-xs font-bold text-[#9c7349] uppercase mb-1">Name</label>
-                    <input 
-                        className="w-full bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] rounded-md px-3 py-2 text-sm text-[#1c140d] dark:text-white focus:ring-1 focus:ring-[#f48c25] font-bold" 
-                        type="text" 
-                        defaultValue={attr.name}
-                        onChange={(e) => {
-                            const updated = attributes.map(a => a.id === attr.id ? {...a, name: e.target.value} : a);
-                            setAttributes(updated);
-                        }}
-                    />
-                </div>
-                <div className="w-full md:w-3/4">
-                    <label className="block text-xs font-bold text-[#9c7349] uppercase mb-1">
-                        Values <span className="lowercase font-normal opacity-70">(Press Enter to add)</span>
-                    </label>
-                    <div className="flex flex-wrap gap-2 p-2 bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] rounded-md min-h-[42px]">
-                        {attr.values.map((val, idx) => (
-                            <div key={idx} className="group relative inline-flex items-center gap-2 px-2 py-1 rounded bg-gray-100 dark:bg-[#3d2e20] text-sm font-medium text-[#1c140d] dark:text-white border border-[#e5e7eb] dark:border-transparent">
-                                <div className="relative h-5 w-5 rounded bg-gray-200 dark:bg-gray-700 flex items-center justify-center overflow-hidden cursor-pointer">
-                                    {val.image ? (
-                                        <img src={val.image} className="h-full w-full object-cover" />
-                                    ) : (
-                                        <ImagePlus className="w-3 h-3 text-gray-400" />
-                                    )}
-                                    <input 
-                                        type="file" 
-                                        className="absolute inset-0 opacity-0 cursor-pointer" 
-                                        onChange={(e) => handleImageUpload(idx, e)}
-                                    />
-                                </div>
-                                {val.name}
-                                <button 
-                                    onClick={() => handleRemoveValue(val.name)}
-                                    className="hover:text-red-500 transition-colors"
-                                >
-                                    <X className="w-4 h-4" />
-                                </button>
-                            </div>
-                        ))}
-                        <input 
-                            className="bg-transparent border-none text-sm focus:ring-0 p-0 placeholder:text-gray-400 w-24" 
-                            placeholder="Add value..." 
-                            type="text"
-                            value={inputValue}
-                            onChange={(e) => setInputValue(e.target.value)}
-                            onKeyDown={handleAddValue}
-                        />
-                    </div>
-                </div>
-                <button 
-                    onClick={() => setAttributes(attributes.filter(a => a.id !== attr.id))}
-                    className="mt-6 text-gray-400 hover:text-red-500 transition-colors"
-                >
-                    <Trash2 className="w-6 h-6" />
-                </button>
-            </div>
-        </div>
-    );
-}
-
-function VariantTableRow({ label, sku, price, stock, image }: any) {
+function VariantTableRow({ label, sku, price, quantity, reserved, sold, image }: any) {
     return (
         <tr className="group hover:bg-[#f8f7f5]/50 dark:hover:bg-[#2a1f16]/50 transition-colors">
             <td className="px-6 py-4">
@@ -375,7 +221,13 @@ function VariantTableRow({ label, sku, price, stock, image }: any) {
                 <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white font-mono uppercase" type="text" defaultValue={sku} />
             </td>
             <td className="px-6 py-4">
-                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={stock} />
+                <input className="w-full px-3 py-1.5 text-sm rounded border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-[#1c140d] dark:text-white" type="number" defaultValue={quantity} />
+            </td>
+            <td className="px-6 py-4 text-sm text-[#9c7349]">
+                {reserved || 0}
+            </td>
+            <td className="px-6 py-4 text-sm text-[#9c7349]">
+                {sold || 0}
             </td>
             <td className="px-6 py-4 text-right">
                 <button className="text-gray-400 hover:text-red-500 transition-colors">

@@ -87,9 +87,30 @@ export default function ProductPage() {
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
         if (currentVariation) {
+            let finalPrice = currentVariation.price;
+
+            // Hierarchical Price Fallback: Priority Variation > Parent Option > Base
+            if ((!finalPrice || finalPrice <= 0) && product.attributes && product.attributes.length > 0) {
+                const firstAttr = product.attributes[0];
+                const selectedValue = selectedVariants[firstAttr.name];
+                const option = firstAttr.options.find(o => o.name === selectedValue);
+
+                if (option) {
+                  if (option.price && option.price > 0) {
+                    finalPrice = option.price;
+                  } else if (option.priceModifier && option.priceModifier !== 0) {
+                    finalPrice = product.price + option.priceModifier;
+                  } else {
+                    finalPrice = product.price;
+                  }
+                } else {
+                  finalPrice = product.price;
+                }
+            }
+
             return {
-                basePrice: currentVariation.price,
-                totalPrice: currentVariation.price,
+                basePrice: finalPrice,
+                totalPrice: finalPrice,
                 priceBreakdown: [], // Matrix prices are all-inclusive
                 isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
             };
@@ -169,13 +190,25 @@ export default function ProductPage() {
         ? product.fileUrls
         : [product.imageUrl || 'https://via.placeholder.com/500'];
 
-      if (currentVariation?.image) {
-          // De-duplicate if the variant image is already in the list?
-          // For simplicity, just prepend.
-          return [currentVariation.image, ...baseImages];
+      // Find the best image to show based on current selection
+      // 1. If we have an exact match variation with an image, use it.
+      // 2. If we have a partial match variation with an image, use the first one we find.
+      let variantImage = currentVariation?.image;
+
+      if (!variantImage && isMatrixSystem && Object.keys(selectedVariants).length > 0) {
+        const partialMatch = product.variations?.find(v =>
+           v.image && Object.entries(selectedVariants).every(([key, value]) => v.combination[key] === value)
+        );
+        variantImage = partialMatch?.image;
+      }
+
+      if (variantImage) {
+          // Avoid duplicating if the variant image is already in baseImages
+          const uniqueBaseImages = baseImages.filter(img => img !== variantImage);
+          return [variantImage, ...uniqueBaseImages];
       }
       return baseImages;
-  }, [product, currentVariation]);
+  }, [product, currentVariation, selectedVariants, isMatrixSystem]);
 
   if (isLoading) {
     return (
@@ -290,6 +323,7 @@ export default function ProductPage() {
                             onChange={handleVariantChange}
                             isOptionAvailable={isOptionAvailableInMatrix}
                             sizeGuide={product.sizeGuide}
+                            productGender={product.gender}
                         />
                      </div>
                   )}
