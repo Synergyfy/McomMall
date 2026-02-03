@@ -74,9 +74,14 @@ function VariantTableRow({
 }: any) {
     const [searchValue, setSearchValue] = useState("");
 
+    const isParentStart = spans?.[attributes[0]?.name] > 0;
+
     return (
-        <TableRow className={cn(selectedIndices.includes(index) && "bg-orange-50/30")}>
-            <TableCell>
+        <TableRow className={cn(
+            selectedIndices.includes(index) && "bg-orange-50/30",
+            isParentStart && index > 0 && "border-t-2 border-gray-200"
+        )}>
+            <TableCell className={cn(isParentStart && "align-top pt-4")}>
                 <Checkbox
                     checked={selectedIndices.includes(index)}
                     onCheckedChange={() => toggleSelect(index)}
@@ -95,7 +100,10 @@ function VariantTableRow({
                 const displayOptions = Array.from(new Set([...allPredefined, ...currentAttrOptions]));
 
                 return (
-                    <TableCell key={i} rowSpan={rowSpan} className={cn("relative group/cell", rowSpan > 1 && "align-top pt-4")}>
+                    <TableCell key={i} rowSpan={rowSpan} className={cn(
+                        "relative group/cell border-r border-gray-100",
+                        rowSpan > 1 && "align-top pt-4 bg-gray-50/5"
+                    )}>
                         <Popover>
                             <PopoverTrigger asChild>
                                 <Button variant="ghost" size="sm" className="h-8 p-0 font-medium hover:bg-gray-100 transition-colors w-full justify-start px-2 text-xs">
@@ -163,20 +171,20 @@ function VariantTableRow({
                         </Popover>
                         {rowSpan >= 1 && i < attributes.length - 1 && (
                           <Button
-                            variant="ghost"
+                            variant="default"
                             size="icon"
-                            className="absolute bottom-1 right-1 h-5 w-5 opacity-0 group-hover/cell:opacity-100 transition-opacity bg-white/80 shadow-sm border border-orange-100 hover:bg-orange-50"
+                            className="absolute bottom-1 right-1 h-6 w-6 opacity-0 group-hover/cell:opacity-100 transition-opacity bg-orange-600 shadow-md hover:bg-orange-700 z-10"
                             onClick={() => onAddSubVariant(index, i)}
-                            title={`Add variation under ${value}`}
+                            title={`Add more options under ${value}`}
                           >
-                            <Plus className="h-3 w-3 text-orange-600" />
+                            <Plus className="h-3.5 w-3.5 text-white" />
                           </Button>
                         )}
                     </TableCell>
                 );
             })}
 
-            <TableCell>
+            <TableCell className={cn(!isParentStart && "border-l border-gray-100")}>
                 <div className="relative group w-10 h-10">
                     {field.image ? (
                         <img src={field.image} alt="Variant" className="w-full h-full object-cover rounded-md border border-gray-200" />
@@ -376,7 +384,8 @@ export default function VariantManager({
     return r;
   };
 
-  // Only auto-generate if variations are empty or if attributes changed in a way that makes existing variations invalid
+  // Only auto-generate if variations are empty.
+  // Subsequent attribute additions will just add keys to existing rows.
   React.useEffect(() => {
     let currentAttributes = attributes;
     if (!isControlled && context) currentAttributes = context.watch(attributesName);
@@ -389,14 +398,29 @@ export default function VariantManager({
     const optionsArrays = currentAttributes.map(a => a.options);
     if (optionsArrays.some(opts => opts.length === 0)) return;
 
-    // If we already have variations, don't blindly replace them (respect "Seller selects only what exists")
-    // But if an attribute was removed or renamed, we might need to update them.
+    // If we already have variations, don't regenerate from scratch.
+    // Instead, just ensure every variation has keys for all current attributes.
     if (variations.length > 0) {
-       // Check if current variations are still valid for the current attributes
-       const valid = variations.every(v =>
-         currentAttributes!.every(a => v.combination[a.name] !== undefined)
-       );
-       if (valid && variations[0] && Object.keys(variations[0].combination).length === currentAttributes.length) return;
+      const needsUpdate = variations.some(v =>
+        currentAttributes!.some(a => v.combination[a.name] === undefined) ||
+        Object.keys(v.combination).length !== currentAttributes!.length
+      );
+
+      if (needsUpdate) {
+        const updatedVariations = variations.map(v => {
+          const newCombo = { ...v.combination };
+          currentAttributes!.forEach(a => {
+            if (newCombo[a.name] === undefined) newCombo[a.name] = '';
+          });
+          // Remove keys that are no longer attributes
+          Object.keys(newCombo).forEach(key => {
+            if (!currentAttributes!.some(a => a.name === key)) delete newCombo[key];
+          });
+          return { ...v, combination: newCombo };
+        });
+        replaceVariations(updatedVariations);
+      }
+      return;
     }
 
     const combinations = cartesian(optionsArrays);
@@ -703,11 +727,52 @@ export default function VariantManager({
       <hr className="border-gray-200 dark:border-gray-800" />
 
       <div className="space-y-4">
-        <div className="flex justify-between items-end">
+        <div className="flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium">2. Configure Variations</h3>
-            <p className="text-sm text-gray-500">All possible combinations are auto-generated. Set unique prices and quantity here.</p>
+            <p className="text-sm text-gray-500">Manage individual combinations. Use "+" to add variants under a parent.</p>
           </div>
+          <Popover>
+            <PopoverTrigger asChild>
+              <Button variant="outline" size="sm" className="h-9 border-orange-200 text-orange-700 hover:bg-orange-50" disabled={attributes.length >= 4}>
+                <Plus className="w-4 h-4 mr-2" /> Add New Attribute
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-60" align="end">
+                <Command>
+                    <CommandInput placeholder="Search attributes..." />
+                    <CommandList>
+                        <CommandEmpty>No attribute found.</CommandEmpty>
+                        <CommandGroup heading="Common Attributes">
+                            {Object.keys(predefinedVariantOptions).map((type) => {
+                              const isUsed = attributes.some(a => a.name === type);
+                              return (
+                                <CommandItem
+                                  key={type}
+                                  onSelect={() => {
+                                    if (isUsed) return;
+                                    setAttributeName(type);
+                                    setIsCustomAttribute(false);
+                                    setAttributeOptions([]);
+                                    setIsAttributeFormVisible(true);
+                                  }}
+                                  className={cn(isUsed && "opacity-30 grayscale cursor-not-allowed")}
+                                >
+                                  <div className="flex items-center justify-between w-full">
+                                    <span>{type}</span>
+                                    {isUsed && <Badge variant="outline" className="text-[10px] py-0 h-4">Used</Badge>}
+                                  </div>
+                                </CommandItem>
+                              );
+                            })}
+                        </CommandGroup>
+                        <CommandGroup heading="Others">
+                            <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>Custom...</CommandItem>
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
+          </Popover>
         </div>
 
         {variations && variations.length > 0 && (
@@ -735,48 +800,9 @@ export default function VariantManager({
               <TableHeader>
                 <TableRow className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
                   <TableHead className="w-[40px]"><Checkbox checked={selectedIndices.length === variations.length && variations.length > 0} onCheckedChange={toggleSelectAll} /></TableHead>
-                  {Object.keys(variations[0].combination).map((key) => (
-                    <TableHead key={key} className="w-[120px]"><div className="flex flex-col gap-1"><span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Attribute</span><span className="text-gray-900 dark:text-white font-bold">{key}</span></div></TableHead>
+                  {attributes.map((attr) => (
+                    <TableHead key={attr.name} className="w-[120px]"><div className="flex flex-col gap-1"><span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Attribute</span><span className="text-gray-900 dark:text-white font-bold">{attr.name}</span></div></TableHead>
                   ))}
-                  <TableHead className="w-[150px]">
-                      <Popover>
-                        <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-8 text-[#f48c25] hover:bg-[#f48c25]/10 font-bold" disabled={attributes.length >= 4}><Plus className="w-3 h-3 mr-1" /> Add Option</Button></PopoverTrigger>
-                        <PopoverContent className="p-0 w-60" align="start">
-                            <Command>
-                                <CommandInput placeholder="Search attributes..." />
-                                <CommandList>
-                                    <CommandEmpty>No attribute found.</CommandEmpty>
-                                    <CommandGroup heading="Common Attributes">
-                                        {Object.keys(predefinedVariantOptions).map((type) => {
-                                          const isUsed = attributes.some(a => a.name === type);
-                                          return (
-                                            <CommandItem
-                                              key={type}
-                                              onSelect={() => {
-                                                if (isUsed) return;
-                                                setAttributeName(type);
-                                                setIsCustomAttribute(false);
-                                                setAttributeOptions([]);
-                                                setIsAttributeFormVisible(true);
-                                              }}
-                                              className={cn(isUsed && "opacity-30 grayscale cursor-not-allowed")}
-                                            >
-                                              <div className="flex items-center justify-between w-full">
-                                                <span>{type}</span>
-                                                {isUsed && <Badge variant="outline" className="text-[10px] py-0 h-4">Used</Badge>}
-                                              </div>
-                                            </CommandItem>
-                                          );
-                                        })}
-                                    </CommandGroup>
-                                    <CommandGroup heading="Others">
-                                        <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>Custom...</CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                      </Popover>
-                  </TableHead>
                   <TableHead className="w-[60px]">Image</TableHead>
                   <TableHead><div className="flex items-center gap-1 group/header"><span>Price</span><Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity" onClick={applyBulkPrice} title="Apply first row's price to all"><Zap className="w-3 h-3" /></Button></div></TableHead>
                   <TableHead><div className="flex items-center gap-1 group/header"><span>Quantity</span><Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity" onClick={applyBulkStock} title="Apply first row's quantity to all"><Zap className="w-3 h-3" /></Button></div></TableHead>
@@ -796,19 +822,24 @@ export default function VariantManager({
                     const baseVar = variations[rowIndex];
                     const newCombo = { ...baseVar.combination };
 
-                    // Keep values up to attrIndex, but for everything after, we want a DIFFERENT option if possible
-                    // Or just a copy that the user will then change.
-                    const nextAttr = attributes[attrIndex + 1];
-                    if (!nextAttr) return;
+                    // Keep values UP TO attrIndex. Clear everything AFTER attrIndex.
+                    attributes.forEach((attr, idx) => {
+                      if (idx > attrIndex) {
+                        newCombo[attr.name] = ''; // Reset child selections for the new row
+                      }
+                    });
 
                     const newVar: ProductVariation = {
                       ...baseVar,
                       combination: newCombo,
-                      sku: `${baseVar.sku}-COPY`,
+                      sku: '', // Reset SKU for new manual combination
+                      price: 0,
                       stock: 0,
+                      available: true,
+                      image: undefined
                     };
 
-                    // Insert at the end of the current span
+                    // Insert at the end of the current span of the attribute we clicked "+" on
                     const span = allSpans[rowIndex][attributes[attrIndex].name];
                     const insertAt = rowIndex + span;
 
