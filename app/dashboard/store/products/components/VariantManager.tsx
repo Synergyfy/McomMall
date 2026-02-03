@@ -15,11 +15,14 @@ import {
     Type,
     MoreHorizontal,
     Scale,
-    StickyNote
+    StickyNote,
+    Eye,
+    EyeOff
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Switch } from '@/components/ui/switch';
 import {
     Command,
     CommandEmpty,
@@ -73,6 +76,19 @@ export default function VariantManager({
     const [tree, setTree] = useState<VariantNode[]>([]);
     const [topLevelAttribute, setTopLevelAttribute] = useState<string>("");
 
+    // Get all unique attribute names used in the tree
+    const usedAttributes = useMemo(() => {
+        const names = new Set<string>();
+        const traverse = (nodes: VariantNode[]) => {
+            nodes.forEach(node => {
+                names.add(node.attributeName);
+                traverse(node.children);
+            });
+        };
+        traverse(tree);
+        return Array.from(names);
+    }, [tree]);
+
     // --- Initialization Logic (Rebuild tree from variations if tree is empty) ---
     useEffect(() => {
         if (tree.length === 0 && propVariations.length > 0) {
@@ -80,8 +96,6 @@ export default function VariantManager({
             const rebuildTree = (vars: ProductVariation[]): VariantNode[] => {
                 if (vars.length === 0) return [];
 
-                // 1. Group by the FIRST attribute found in combinations
-                // Note: This assumes a consistent root attribute for all variations
                 const firstAttr = propAttributes[0]?.name;
                 if (!firstAttr) return [];
 
@@ -95,14 +109,12 @@ export default function VariantManager({
                 });
 
                 return Object.entries(groups).map(([val, groupVars]) => {
-                    // Find remaining attributes for this group
                     const remainingVars = groupVars.map(v => {
                         const newComb = { ...v.combination };
                         delete newComb[firstAttr];
                         return { ...v, combination: newComb };
                     }).filter(v => Object.keys(v.combination).length > 0);
 
-                    // If no more attributes, this is a leaf
                     const isLeaf = remainingVars.length === 0;
                     const leafData = groupVars[0];
 
@@ -175,7 +187,6 @@ export default function VariantManager({
 
     // --- Sync Logic ---
 
-    // Sync tree to flat Variations and Attributes whenever tree changes
     const [isInitialSync, setIsInitialSync] = useState(true);
 
     useEffect(() => {
@@ -191,12 +202,12 @@ export default function VariantManager({
         }
 
         const flatVars: ProductVariation[] = [];
-        const usedAttributes = new Set<string>();
+        const usedAttrs = new Set<string>();
 
         const traverse = (nodes: VariantNode[], currentCombination: Record<string, string>) => {
             nodes.forEach(node => {
                 const combination = { ...currentCombination, [node.attributeName]: node.value };
-                usedAttributes.add(node.attributeName);
+                usedAttrs.add(node.attributeName);
 
                 if (node.children.length === 0) {
                     flatVars.push({
@@ -220,7 +231,7 @@ export default function VariantManager({
 
         traverse(tree, {});
 
-        const flatAttrs: ProductAttribute[] = Array.from(usedAttributes).map(name => ({
+        const flatAttrs: ProductAttribute[] = Array.from(usedAttrs).map(name => ({
             name,
             options: []
         }));
@@ -284,6 +295,34 @@ export default function VariantManager({
         setTree(prev => updateRecursive(prev));
     };
 
+    const addGlobalSubAttribute = (attrName: string, values: string[]) => {
+        const updateRecursive = (nodes: VariantNode[]): VariantNode[] => {
+            return nodes.map(node => {
+                if (node.children.length === 0) {
+                    // It's a leaf, add children
+                    const newChildren: VariantNode[] = values.map(val => ({
+                        id: Math.random().toString(36).substr(2, 9),
+                        attributeName: attrName,
+                        value: val,
+                        price: node.price,
+                        salePrice: node.salePrice,
+                        stock: node.stock,
+                        sku: node.sku ? `${node.sku}-${val.toUpperCase()}` : val.toUpperCase(),
+                        weight: node.weight,
+                        notes: node.notes,
+                        available: true,
+                        children: [],
+                        isExpanded: true
+                    }));
+                    return { ...node, children: newChildren, isExpanded: true };
+                }
+                return { ...node, children: updateRecursive(node.children) };
+            });
+        };
+        setTree(prev => updateRecursive(prev));
+        toast.success(`Added ${attrName} to all variations`);
+    };
+
     const updateNode = (id: string, data: Partial<VariantNode>) => {
         const updateRecursive = (nodes: VariantNode[]): VariantNode[] => {
             return nodes.map(node => {
@@ -303,8 +342,6 @@ export default function VariantManager({
         };
         setTree(prev => removeRecursive(prev));
     };
-
-    // --- Bulk Actions ---
 
     const applyBulk = (field: keyof VariantNode, value: any, startNodes?: VariantNode[]) => {
         const traverseAndApply = (nodes: VariantNode[]) => {
@@ -351,6 +388,7 @@ export default function VariantManager({
                         <AttributeSelector
                             onSelect={(name: string, values: string[]) => addTopLevelValues(name, values)}
                             placeholder="Search main attribute (Color, Size...)"
+                            usedAttributes={[]}
                         />
                     </div>
                 </div>
@@ -359,48 +397,67 @@ export default function VariantManager({
             {/* 2. HIERARCHICAL BUILDER TABLE */}
             {tree.length > 0 && (
                 <div className="space-y-6">
-                    <div className="flex justify-between items-end bg-white dark:bg-[#1a120b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
-                        <div>
-                            <h3 className="text-lg font-bold flex items-center gap-2">
-                                <Settings2 className="text-orange-500" size={20} />
-                                Product Variant Hierarchy
+                    <div className="flex flex-wrap justify-between items-end gap-4 bg-white dark:bg-[#1a120b] p-6 rounded-2xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                        <div className="space-y-1">
+                            <h3 className="text-xl font-black flex items-center gap-2 tracking-tight">
+                                <Settings2 className="text-orange-500" size={24} />
+                                VARIANT MATRIX BUILDER
                             </h3>
-                            <p className="text-sm text-gray-500 mt-1">Add sub-variants under each option to create your inventory matrix.</p>
+                            <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Configure attributes, inventory and pricing</p>
                         </div>
-                        <div className="flex gap-2">
+                        <div className="flex flex-wrap gap-3">
+                            <AttributeSelector
+                                label="Add Global Attribute"
+                                onSelect={addGlobalSubAttribute}
+                                placeholder="Choose attribute to apply to all..."
+                                usedAttributes={usedAttributes}
+                                variant="orange"
+                            />
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="outline" size="sm">
-                                        <Zap size={14} className="mr-1" /> Bulk Tools
+                                    <Button variant="outline" size="sm" className="h-10 rounded-xl px-4 font-bold border-2">
+                                        <Zap size={16} className="mr-2 text-orange-500" /> Bulk Tools
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="w-60 p-4 space-y-4">
-                                    <div className="space-y-2">
-                                        <label className="text-xs font-bold uppercase text-gray-500">Apply to All</label>
+                                <PopoverContent className="w-64 p-4 space-y-4 rounded-2xl shadow-2xl border-orange-100">
+                                    <div className="space-y-3">
+                                        <label className="text-[10px] font-black uppercase tracking-widest text-gray-400 block mb-2">Global Bulk Updates</label>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Price" type="number" id="bulk-price" className="h-8 text-xs" />
-                                            <Button size="sm" className="h-8" onClick={() => {
+                                            <div className="relative flex-1">
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">£</span>
+                                                <Input placeholder="Price" type="number" id="bulk-price" className="h-9 pl-5 text-xs rounded-lg" />
+                                            </div>
+                                            <Button size="sm" className="h-9 bg-orange-600 hover:bg-orange-700" onClick={() => {
                                                 const el = document.getElementById('bulk-price') as HTMLInputElement;
                                                 if (el.value) applyBulk('price', parseFloat(el.value));
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Sale Price" type="number" id="bulk-sale" className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <div className="relative flex-1">
+                                                <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">£</span>
+                                                <Input placeholder="Sale" type="number" id="bulk-sale" className="h-9 pl-5 text-xs rounded-lg" />
+                                            </div>
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById('bulk-sale') as HTMLInputElement;
                                                 if (el.value) applyBulk('salePrice', parseFloat(el.value));
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Qty" type="number" id="bulk-qty" className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <div className="relative flex-1">
+                                                <Package size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <Input placeholder="Qty" type="number" id="bulk-qty" className="h-9 pl-6 text-xs rounded-lg" />
+                                            </div>
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById('bulk-qty') as HTMLInputElement;
                                                 if (el.value) applyBulk('stock', parseInt(el.value));
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Weight" type="number" id="bulk-weight" className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <div className="relative flex-1">
+                                                <Scale size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                                                <Input placeholder="Weight" type="number" id="bulk-weight" className="h-9 pl-6 text-xs rounded-lg" />
+                                            </div>
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById('bulk-weight') as HTMLInputElement;
                                                 if (el.value) applyBulk('weight', parseFloat(el.value));
                                             }}>Go</Button>
@@ -411,24 +468,25 @@ export default function VariantManager({
                         </div>
                     </div>
 
-                    <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-[#1a120b]">
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-[#1a120b] shadow-xl">
                         <div className="overflow-x-auto">
-                            <table className="w-full text-left border-collapse min-w-[1200px]">
+                            <table className="w-full text-left border-collapse min-w-[1300px]">
                                 <thead>
-                                    <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-400 text-[10px] uppercase font-bold tracking-wider">
-                                        <th className="px-6 py-4 w-12 text-center">#</th>
-                                        <th className="px-6 py-4 min-w-[200px]">Variant Hierarchy</th>
-                                        <th className="px-4 py-4 w-28 text-center">Image</th>
-                                        <th className="px-4 py-4 w-32">SKU</th>
-                                        <th className="px-4 py-4 w-28">Price (£)</th>
-                                        <th className="px-4 py-4 w-28">Sale (£)</th>
-                                        <th className="px-4 py-4 w-24">Qty</th>
-                                        <th className="px-4 py-4 w-24">Weight (kg)</th>
-                                        <th className="px-4 py-4">Notes</th>
-                                        <th className="px-4 py-4 w-20"></th>
+                                    <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-400 text-[10px] uppercase font-bold tracking-widest border-b border-gray-100 dark:border-gray-800">
+                                        <th className="px-6 py-5 w-12 text-center">#</th>
+                                        <th className="px-6 py-5 min-w-[200px]">Hierarchical Configuration</th>
+                                        <th className="px-4 py-5 w-24 text-center">Status</th>
+                                        <th className="px-4 py-5 w-24 text-center">Image</th>
+                                        <th className="px-4 py-5 w-36">SKU Mapping</th>
+                                        <th className="px-4 py-5 w-28">Price (£)</th>
+                                        <th className="px-4 py-5 w-28 text-orange-600">Sale (£)</th>
+                                        <th className="px-4 py-5 w-24">Qty</th>
+                                        <th className="px-4 py-5 w-24">Weight</th>
+                                        <th className="px-4 py-5">Notes</th>
+                                        <th className="px-4 py-5 w-16"></th>
                                     </tr>
                                 </thead>
-                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                <tbody className="divide-y divide-gray-50 dark:divide-gray-800/50">
                                     {tree.map((node, index) => (
                                         <NodeRows
                                             key={node.id}
@@ -439,6 +497,7 @@ export default function VariantManager({
                                             onAddSub={addSubAttribute}
                                             index={index}
                                             applyBulk={applyBulk}
+                                            usedAttributes={usedAttributes}
                                         />
                                     ))}
                                 </tbody>
@@ -446,13 +505,16 @@ export default function VariantManager({
                         </div>
 
                         {/* Add another main value */}
-                        <div className="p-4 bg-gray-50 dark:bg-gray-800/20 border-t border-gray-100 dark:border-gray-800">
-                            <AttributeSelector
-                                label={`Add another ${topLevelAttribute}`}
-                                onSelect={(name: string, values: string[]) => addTopLevelValues(name, values)}
-                                fixedAttribute={topLevelAttribute}
-                                placeholder={`Add more ${topLevelAttribute}s...`}
-                            />
+                        <div className="p-5 bg-gray-50/50 dark:bg-gray-800/20 border-t border-gray-100 dark:border-gray-800">
+                            <div className="max-w-xs">
+                                <AttributeSelector
+                                    label={`Add another ${topLevelAttribute}`}
+                                    onSelect={(name: string, values: string[]) => addTopLevelValues(name, values)}
+                                    fixedAttribute={topLevelAttribute}
+                                    placeholder={`Type more ${topLevelAttribute}s...`}
+                                    usedAttributes={[]}
+                                />
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -471,54 +533,57 @@ interface NodeRowsProps {
     onAddSub: (parentId: string, attrName: string, values: string[]) => void;
     index: number;
     applyBulk: (field: keyof VariantNode, value: any, startNodes?: VariantNode[]) => void;
+    usedAttributes: string[];
 }
 
-function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk }: NodeRowsProps) {
+function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk, usedAttributes }: NodeRowsProps) {
     const isLeaf = node.children.length === 0;
 
     return (
         <>
             <tr className={cn(
-                "group transition-colors",
-                level === 0 ? "bg-white dark:bg-transparent" : "bg-gray-50/30 dark:bg-gray-900/10",
-                !node.available && "opacity-50"
+                "group transition-all duration-200",
+                level === 0 ? "bg-white dark:bg-transparent" : "bg-gray-50/20 dark:bg-gray-900/5",
+                !node.available && "bg-gray-50/50 opacity-60 grayscale-[0.5]"
             )}>
                 <td className="px-6 py-4 text-center">
-                    <span className="text-xs font-mono text-gray-400">{index + 1}</span>
+                    <span className="text-[10px] font-black font-mono text-gray-300">{index + 1}</span>
                 </td>
                 <td className="px-6 py-4">
-                    <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
+                    <div className="flex items-center gap-3" style={{ paddingLeft: `${level * 28}px` }}>
                         <div className={cn(
-                            "p-1.5 rounded-lg border flex flex-col min-w-[100px]",
-                            level === 0 ? "bg-orange-50 border-orange-200 text-orange-700" : "bg-blue-50 border-blue-200 text-blue-700"
+                            "p-2 rounded-xl border-2 flex flex-col min-w-[120px] transition-all group-hover:shadow-md",
+                            level === 0
+                                ? "bg-orange-50/50 border-orange-100 text-orange-700"
+                                : "bg-blue-50/50 border-blue-100 text-blue-700"
                         )}>
-                            <span className="text-[9px] font-black uppercase tracking-tighter block leading-none mb-1 opacity-60">
+                            <span className="text-[9px] font-black uppercase tracking-tighter block leading-none mb-1.5 opacity-50">
                                 {node.attributeName}
                             </span>
-                            <span className="text-sm font-bold block leading-none">
+                            <span className="text-sm font-black block leading-none tracking-tight">
                                 {node.value}
                             </span>
                         </div>
 
                         {!isLeaf && (
-                            <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent mx-2" />
+                            <div className="flex-1 h-[2px] bg-gradient-to-r from-gray-100 to-transparent mx-2 opacity-50" />
                         )}
 
                         {isLeaf && (
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-orange-500">
-                                        <Plus size={16} />
+                                    <Button variant="ghost" size="icon" className="h-9 w-9 rounded-full bg-gray-100 text-gray-400 hover:bg-orange-500 hover:text-white transition-all shadow-sm">
+                                        <Plus size={18} />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="p-0 w-60" align="start">
-                                    <Command>
-                                        <CommandInput placeholder="Add sub-attribute..." />
+                                <PopoverContent className="p-0 w-64 rounded-2xl overflow-hidden shadow-2xl border-none" align="start">
+                                    <Command className="border-none">
+                                        <CommandInput placeholder="Add sub-attribute..." className="h-11" />
                                         <CommandList>
                                             <CommandEmpty>No attribute found.</CommandEmpty>
-                                            <CommandGroup heading="Available Attributes">
+                                            <CommandGroup heading="Hierarchical Attributes">
                                                 {Object.keys(predefinedVariantOptions)
-                                                    .filter(type => type !== node.attributeName)
+                                                    .filter(type => !usedAttributes.includes(type))
                                                     .map((type) => (
                                                         <CommandItem
                                                             key={type}
@@ -526,6 +591,7 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                                                                 const values = prompt(`Enter values for ${type} (comma separated):`);
                                                                 if (values) onAddSub(node.id, type, values.split(',').map(v => v.trim()));
                                                             }}
+                                                            className="py-2.5 px-4 font-bold text-xs"
                                                         >
                                                             {type}
                                                         </CommandItem>
@@ -535,7 +601,7 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                                                     const name = prompt("Enter attribute name:");
                                                     const values = prompt(`Enter values for ${name} (comma separated):`);
                                                     if (name && values) onAddSub(node.id, name, values.split(',').map(v => v.trim()));
-                                                }}>
+                                                }} className="py-2.5 px-4 font-bold text-xs text-orange-600">
                                                     Custom...
                                                 </CommandItem>
                                             </CommandGroup>
@@ -547,13 +613,23 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                     </div>
                 </td>
 
+                <td className="px-4 py-4 text-center">
+                    <div className="flex justify-center items-center">
+                        <Switch
+                            checked={node.available}
+                            onCheckedChange={(val) => onUpdate(node.id, { available: val })}
+                            className="data-[state=checked]:bg-green-500"
+                        />
+                    </div>
+                </td>
+
                 <td className="px-4 py-4">
                     <div className="flex justify-center">
-                        <div className="size-10 rounded-lg bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-500 transition-colors overflow-hidden">
+                        <div className="size-11 rounded-xl bg-gray-50 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-500 hover:bg-orange-50/30 transition-all overflow-hidden group/img shadow-sm">
                             {node.image ? (
-                                <img src={node.image} className="w-full h-full object-cover" />
+                                <img src={node.image} className="w-full h-full object-cover transition-transform group-hover/img:scale-110" />
                             ) : (
-                                <ImagePlus size={16} className="text-gray-400" />
+                                <ImagePlus size={18} className="text-gray-300 group-hover/img:text-orange-400" />
                             )}
                         </div>
                     </div>
@@ -562,8 +638,8 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                 <td className="px-4 py-4">
                     <Input
                         type="text"
-                        className="h-9 text-[10px] font-mono uppercase"
-                        placeholder="SKU"
+                        className="h-9 text-[10px] font-black font-mono uppercase rounded-lg border-gray-100 bg-gray-50/50"
+                        placeholder="AUTO-GENERATED"
                         value={node.sku}
                         onChange={(e) => onUpdate(node.id, { sku: e.target.value })}
                     />
@@ -571,11 +647,11 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
 
                 <td className="px-4 py-4">
                     <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">£</span>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">£</span>
                         <Input
                             type="number"
-                            className="h-9 pl-5 text-sm font-medium"
-                            placeholder="0.0"
+                            className="h-9 pl-5 text-xs font-black rounded-lg border-gray-100"
+                            placeholder="0.00"
                             value={node.price}
                             onChange={(e) => onUpdate(node.id, { price: parseFloat(e.target.value) || 0 })}
                         />
@@ -584,11 +660,11 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
 
                 <td className="px-4 py-4">
                     <div className="relative">
-                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px]">£</span>
+                        <span className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 text-[10px] font-bold">£</span>
                         <Input
                             type="number"
-                            className="h-9 pl-5 text-sm font-medium text-green-600 dark:text-green-400"
-                            placeholder="0.0"
+                            className="h-9 pl-5 text-xs font-black rounded-lg border-orange-100 bg-orange-50/30 text-orange-600 dark:text-orange-400"
+                            placeholder="0.00"
                             value={node.salePrice}
                             onChange={(e) => onUpdate(node.id, { salePrice: parseFloat(e.target.value) || 0 })}
                         />
@@ -598,7 +674,7 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                 <td className="px-4 py-4">
                     <Input
                         type="number"
-                        className="h-9 text-sm font-medium"
+                        className="h-9 text-xs font-black rounded-lg border-gray-100"
                         placeholder="0"
                         value={node.stock}
                         onChange={(e) => onUpdate(node.id, { stock: parseInt(e.target.value) || 0 })}
@@ -607,11 +683,11 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
 
                 <td className="px-4 py-4">
                     <div className="relative">
-                        <Scale size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <Scale size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 opacity-50" />
                         <Input
                             type="number"
-                            className="h-9 pl-6 text-[10px]"
-                            placeholder="0.0"
+                            className="h-9 pl-7 text-[10px] font-bold rounded-lg border-gray-100"
+                            placeholder="KG"
                             value={node.weight}
                             onChange={(e) => onUpdate(node.id, { weight: parseFloat(e.target.value) || 0 })}
                         />
@@ -620,11 +696,11 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
 
                 <td className="px-4 py-4">
                     <div className="relative">
-                        <StickyNote size={12} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400" />
+                        <StickyNote size={14} className="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400 opacity-50" />
                         <Input
                             type="text"
-                            className="h-9 pl-6 text-[10px]"
-                            placeholder="Add notes..."
+                            className="h-9 pl-7 text-[10px] font-medium rounded-lg border-gray-100"
+                            placeholder="Notes..."
                             value={node.notes}
                             onChange={(e) => onUpdate(node.id, { notes: e.target.value })}
                         />
@@ -636,37 +712,37 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                         {!isLeaf && (
                             <Popover>
                                 <PopoverTrigger asChild>
-                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-400 hover:text-orange-600">
-                                        <Zap size={14} />
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-400 hover:text-orange-600 rounded-lg hover:bg-orange-50 transition-colors">
+                                        <Zap size={16} />
                                     </Button>
                                 </PopoverTrigger>
-                                <PopoverContent className="p-4 w-60 space-y-4">
-                                    <div className="space-y-2">
-                                        <p className="text-[10px] font-bold uppercase text-gray-500 mb-2">Apply to all under "{node.value}"</p>
+                                <PopoverContent className="p-4 w-60 space-y-4 rounded-2xl shadow-2xl border-orange-100">
+                                    <div className="space-y-3">
+                                        <p className="text-[10px] font-black uppercase tracking-widest text-gray-400 mb-2">Apply to all under "{node.value}"</p>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Price" type="number" id={`bulk-price-${node.id}`} className="h-8 text-xs" />
-                                            <Button size="sm" className="h-8" onClick={() => {
+                                            <Input placeholder="Price" type="number" id={`bulk-price-${node.id}`} className="h-9 text-xs rounded-lg" />
+                                            <Button size="sm" className="h-9 bg-orange-600 hover:bg-orange-700" onClick={() => {
                                                 const el = document.getElementById(`bulk-price-${node.id}`) as HTMLInputElement;
                                                 if (el.value) applyBulk('price', parseFloat(el.value), [node]);
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Sale Price" type="number" id={`bulk-sale-${node.id}`} className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <Input placeholder="Sale" type="number" id={`bulk-sale-${node.id}`} className="h-9 text-xs rounded-lg" />
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById(`bulk-sale-${node.id}`) as HTMLInputElement;
                                                 if (el.value) applyBulk('salePrice', parseFloat(el.value), [node]);
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Qty" type="number" id={`bulk-qty-${node.id}`} className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <Input placeholder="Qty" type="number" id={`bulk-qty-${node.id}`} className="h-9 text-xs rounded-lg" />
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById(`bulk-qty-${node.id}`) as HTMLInputElement;
                                                 if (el.value) applyBulk('stock', parseInt(el.value), [node]);
                                             }}>Go</Button>
                                         </div>
                                         <div className="flex gap-2">
-                                            <Input placeholder="Weight" type="number" id={`bulk-weight-${node.id}`} className="h-8 text-xs" />
-                                            <Button size="sm" variant="outline" className="h-8" onClick={() => {
+                                            <Input placeholder="Weight" type="number" id={`bulk-weight-${node.id}`} className="h-9 text-xs rounded-lg" />
+                                            <Button size="sm" variant="outline" className="h-9" onClick={() => {
                                                 const el = document.getElementById(`bulk-weight-${node.id}`) as HTMLInputElement;
                                                 if (el.value) applyBulk('weight', parseFloat(el.value), [node]);
                                             }}>Go</Button>
@@ -678,10 +754,10 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="h-8 w-8 text-gray-300 hover:text-red-500"
+                            className="h-8 w-8 text-gray-300 hover:text-red-500 rounded-lg hover:bg-red-50 transition-colors"
                             onClick={() => onRemove(node.id)}
                         >
-                            <Trash2 size={14} />
+                            <Trash2 size={16} />
                         </Button>
                     </div>
                 </td>
@@ -697,6 +773,7 @@ function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulk 
                     onAddSub={onAddSub}
                     index={idx}
                     applyBulk={applyBulk}
+                    usedAttributes={usedAttributes}
                 />
             ))}
         </>
@@ -708,9 +785,11 @@ interface AttributeSelectorProps {
     placeholder?: string;
     label?: string;
     fixedAttribute?: string;
+    usedAttributes: string[];
+    variant?: 'default' | 'orange';
 }
 
-function AttributeSelector({ onSelect, placeholder, label, fixedAttribute }: AttributeSelectorProps) {
+function AttributeSelector({ onSelect, placeholder, label, fixedAttribute, usedAttributes, variant = 'default' }: AttributeSelectorProps) {
     const [open, setOpen] = useState(false);
 
     const handleConfirm = (name: string, valuesStr: string) => {
@@ -727,12 +806,12 @@ function AttributeSelector({ onSelect, placeholder, label, fixedAttribute }: Att
                 <Input
                     id="fixed-attr-input"
                     placeholder={placeholder}
-                    className="max-w-xs h-9"
+                    className="max-w-xs h-10 rounded-xl"
                     onKeyDown={(e: React.KeyboardEvent) => {
                         if (e.key === 'Enter') handleConfirm(fixedAttribute, (e.target as HTMLInputElement).value);
                     }}
                 />
-                <Button size="sm" onClick={() => {
+                <Button size="sm" className="h-10 px-4 rounded-xl font-bold bg-[#1c140d] text-white" onClick={() => {
                     const el = document.getElementById('fixed-attr-input') as HTMLInputElement;
                     if (el) handleConfirm(fixedAttribute, el.value);
                 }}>Add</Button>
@@ -743,33 +822,45 @@ function AttributeSelector({ onSelect, placeholder, label, fixedAttribute }: Att
     return (
         <Popover open={open} onOpenChange={setOpen}>
             <PopoverTrigger asChild>
-                <Button variant="outline" className="w-full justify-between h-11 rounded-xl">
-                    {label || placeholder}
+                <Button
+                    variant={variant === 'orange' ? 'default' : 'outline'}
+                    className={cn(
+                        "w-full justify-between h-10 rounded-xl font-bold",
+                        variant === 'orange' && "bg-orange-600 hover:bg-orange-700 text-white border-none shadow-lg shadow-orange-200"
+                    )}
+                >
+                    <div className="flex items-center gap-2">
+                        {variant === 'orange' ? <Layers size={16} /> : <Plus size={16} />}
+                        {label || placeholder}
+                    </div>
                     <ChevronDown size={16} className="opacity-50" />
                 </Button>
             </PopoverTrigger>
-            <PopoverContent className="p-0 w-80" align="center">
+            <PopoverContent className="p-0 w-80 rounded-2xl overflow-hidden shadow-2xl border-none" align="center">
                 <Command>
-                    <CommandInput placeholder="Search attributes..." />
+                    <CommandInput placeholder="Search attributes..." className="h-11" />
                     <CommandList>
                         <CommandEmpty>No attribute found.</CommandEmpty>
-                        <CommandGroup heading="Common Attributes">
-                            {Object.keys(predefinedVariantOptions).map((type) => (
-                                <CommandItem
-                                    key={type}
-                                    onSelect={() => {
-                                        const values = prompt(`Enter values for ${type} (comma separated):`);
-                                        if (values) handleConfirm(type, values);
-                                    }}
-                                >
-                                    {type}
-                                </CommandItem>
-                            ))}
+                        <CommandGroup heading="Available Attributes">
+                            {Object.keys(predefinedVariantOptions)
+                                .filter(type => !usedAttributes.includes(type))
+                                .map((type) => (
+                                    <CommandItem
+                                        key={type}
+                                        onSelect={() => {
+                                            const values = prompt(`Enter values for ${type} (comma separated):`);
+                                            if (values) handleConfirm(type, values);
+                                        }}
+                                        className="py-3 px-4 font-bold text-xs"
+                                    >
+                                        {type}
+                                    </CommandItem>
+                                ))}
                             <CommandItem onSelect={() => {
                                 const name = prompt("Enter attribute name:");
                                 const values = prompt(`Enter values for ${name} (comma separated):`);
                                 if (name && values) handleConfirm(name, values);
-                            }}>
+                            }} className="py-3 px-4 font-bold text-xs text-orange-600">
                                 Custom...
                             </CommandItem>
                         </CommandGroup>
