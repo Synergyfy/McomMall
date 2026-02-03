@@ -1,725 +1,602 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useFieldArray, useFormContext } from 'react-hook-form';
+import React, { useState, useMemo, useEffect } from 'react';
 import { toast } from 'sonner';
+import {
+    Plus,
+    Trash2,
+    ChevronRight,
+    ChevronDown,
+    ImagePlus,
+    Zap,
+    Package,
+    Settings2,
+    Layers,
+    Type,
+    MoreHorizontal
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '@/components/ui/select';
-import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, CheckSquare, Square, Zap, Package } from 'lucide-react';
-import { Checkbox } from '@/components/ui/checkbox';
-import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
-import { predefinedVariantOptions } from '@/lib/variant-options';
 import {
-  Command,
-  CommandEmpty,
-  CommandGroup,
-  CommandInput,
-  CommandItem,
-  CommandList,
+    Command,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
 } from '@/components/ui/command';
 import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
+    Popover,
+    PopoverContent,
+    PopoverTrigger,
 } from '@/components/ui/popover';
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-  DialogFooter
-} from "@/components/ui/dialog"
-import { Label } from '@/components/ui/label';
-import {
-  Table as TableRoot,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from '@/components/ui/table';
 import { cn } from '@/lib/utils';
+import { predefinedVariantOptions } from '@/lib/variant-options';
+import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 
-interface VariantManagerProps {
-  attributesName?: string;
-  variationsName?: string;
-  attributes?: ProductAttribute[];
-  variations?: ProductVariation[];
-  onAttributesChange?: (attrs: ProductAttribute[]) => void;
-  onVariationsChange?: (vars: ProductVariation[]) => void;
+// --- Types for Hierarchical Structure ---
+
+interface VariantNode {
+    id: string;
+    attributeName: string;
+    value: string;
+    price: number;
+    stock: number;
+    sku: string;
+    image?: string;
+    available: boolean;
+    children: VariantNode[];
+    isExpanded?: boolean;
 }
 
-function VariantTableRow({
-    index,
-    field,
-    attributes,
-    variations,
-    updateVariation,
-    updateAttribute,
-    selectedIndices,
-    toggleSelect,
-    openDimensionEditor,
-}: any) {
-    const [searchValue, setSearchValue] = useState("");
-
-    return (
-        <TableRow className={cn(selectedIndices.includes(index) && "bg-orange-50/30")}>
-            <TableCell>
-                <Checkbox
-                    checked={selectedIndices.includes(index)}
-                    onCheckedChange={() => toggleSelect(index)}
-                />
-            </TableCell>
-            {/* Render Combination Values as Dropdowns with Fading/Exhaustive List */}
-            {Object.entries(field.combination).map(([attrName, value], i) => {
-                const allPredefined = predefinedVariantOptions[attrName as keyof typeof predefinedVariantOptions] || [];
-                const currentAttrOptions = attributes.find((a: any) => a.name === attrName)?.options.map((o: any) => o.name) || [];
-                const displayOptions = Array.from(new Set([...allPredefined, ...currentAttrOptions]));
-
-                return (
-                    <TableCell key={i}>
-                        <Popover>
-                            <PopoverTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 p-0 font-medium hover:bg-gray-100 transition-colors w-full justify-start px-2 text-xs">
-                                    {value as string}
-                                </Button>
-                            </PopoverTrigger>
-                            <PopoverContent className="p-0 w-48" align="start">
-                                <Command>
-                                    <CommandInput
-                                        placeholder={`Search ${attrName}...`}
-                                        value={searchValue}
-                                        onValueChange={setSearchValue}
-                                    />
-                                    <CommandList>
-                                        {searchValue && !displayOptions.includes(searchValue) && (
-                                            <div className="p-1 border-b">
-                                                <Button
-                                                    variant="ghost"
-                                                    className="w-full justify-start text-xs text-orange-600 hover:text-orange-700 hover:bg-orange-50 h-8"
-                                                    onClick={() => {
-                                                        const attrIndex = attributes.findIndex((a: any) => a.name === attrName);
-                                                        if (attrIndex !== -1) {
-                                                            const currentAttr = attributes[attrIndex];
-                                                            const newOptions = [...currentAttr.options, { name: searchValue, priceModifier: 0 }];
-                                                            updateAttribute(attrIndex, { ...currentAttr, options: newOptions });
-                                                            setSearchValue("");
-                                                            toast.success(`Added "${searchValue}" to ${attrName}`);
-                                                        }
-                                                    }}
-                                                >
-                                                    <Plus className="w-3 h-3 mr-2" />
-                                                    Add "{searchValue}"
-                                                </Button>
-                                            </div>
-                                        )}
-                                        <CommandGroup>
-                                            {displayOptions.map(opt => {
-                                                const isUsed = variations.some((v: any, vIdx: number) =>
-                                                    vIdx !== index &&
-                                                    v.combination[attrName] === opt &&
-                                                    Object.entries(v.combination).every(([k, val]) =>
-                                                        k === attrName || val === field.combination[k]
-                                                    )
-                                                );
-
-                                                return (
-                                                    <CommandItem
-                                                        key={opt}
-                                                        onSelect={() => {
-                                                            const newCombination = { ...field.combination, [attrName]: opt };
-                                                            updateVariation(index, { ...field, combination: newCombination });
-                                                        }}
-                                                        disabled={isUsed}
-                                                        className={cn("flex items-center justify-between text-xs", isUsed && "opacity-30 grayscale cursor-not-allowed")}
-                                                    >
-                                                        {opt}
-                                                        {value === opt && <CheckSquare className="w-3 h-3 text-orange-500" />}
-                                                    </CommandItem>
-                                                );
-                                            })}
-                                        </CommandGroup>
-                                    </CommandList>
-                                </Command>
-                            </PopoverContent>
-                        </Popover>
-                    </TableCell>
-                );
-            })}
-
-            <TableCell>
-                <div className="relative group w-10 h-10">
-                    {field.image ? (
-                        <img src={field.image} alt="Variant" className="w-full h-full object-cover rounded-md border border-gray-200" />
-                    ) : (
-                        <div className="w-full h-full bg-gray-100 rounded-md flex items-center justify-center border border-dashed border-gray-300">
-                            <ImageIcon className="w-4 h-4 text-gray-400" />
-                        </div>
-                    )}
-                    <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-md transition-opacity">
-                        <Upload className="w-4 h-4 text-white" />
-                        <input type="file" className="hidden" accept="image/*" onChange={(e) => {
-                            const file = e.target.files?.[0];
-                            if (file) {
-                                const url = URL.createObjectURL(file);
-                                updateVariation(index, { ...field, image: url });
-                            }
-                        }} />
-                    </label>
-                    {field.image && (
-                        <button type="button" onClick={() => updateVariation(index, { ...field, image: undefined })} className="absolute -top-1 -right-1 bg-red-500 text-white rounded-full p-0.5 opacity-0 group-hover:opacity-100 transition-opacity">
-                            <X className="w-2 h-2" />
-                        </button>
-                    )}
-                </div>
-            </TableCell>
-
-            <TableCell>
-                <div className="flex items-center gap-1">
-                    <span className={cn("text-[10px] font-bold w-3 text-center", field.price > 0 ? "text-green-600" : "text-gray-400")}>
-                        {field.price > 0 ? '+' : ''}
-                    </span>
-                    <Input type="number" className="w-16 h-7 text-xs" value={field.price} onChange={(e) => updateVariation(index, { ...field, price: parseFloat(e.target.value) || 0 })} />
-                </div>
-            </TableCell>
-
-            <TableCell>
-                <Input type="number" className="w-16 h-7 text-xs" value={field.stock} onChange={(e) => updateVariation(index, { ...field, stock: parseInt(e.target.value) || 0 })} />
-            </TableCell>
-
-            <TableCell className="text-center font-medium text-gray-500 text-[10px]">{field.reservedStock || 0}</TableCell>
-            <TableCell className="text-center font-medium text-green-600 text-[10px]">{field.soldCount || 0}</TableCell>
-
-            <TableCell>
-                <Input className="w-24 h-7 text-[10px]" value={field.sku} onChange={(e) => updateVariation(index, { ...field, sku: e.target.value })} />
-            </TableCell>
-
-            <TableCell>
-                <Button variant="outline" size="sm" className="h-7 w-7 p-0" onClick={() => openDimensionEditor(field, index)}>
-                    <Settings className="h-3.5 w-3.5 text-gray-500" />
-                </Button>
-            </TableCell>
-
-            <TableCell>
-                <Select value={field.available ? 'true' : 'false'} onValueChange={(val) => updateVariation(index, { ...field, available: val === 'true' })}>
-                    <SelectTrigger className="h-7 w-[60px] text-[10px]">
-                        <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                        <SelectItem value="true">Yes</SelectItem>
-                        <SelectItem value="false">No</SelectItem>
-                    </SelectContent>
-                </Select>
-            </TableCell>
-        </TableRow>
-    );
+interface VariantManagerProps {
+    attributes: ProductAttribute[];
+    variations: ProductVariation[];
+    onAttributesChange: (attrs: ProductAttribute[]) => void;
+    onVariationsChange: (vars: ProductVariation[]) => void;
 }
 
 export default function VariantManager({
-  attributesName = 'attributes',
-  variationsName = 'variations',
-  attributes: propAttributes,
-  variations: propVariations,
-  onAttributesChange,
-  onVariationsChange
+    attributes: propAttributes,
+    variations: propVariations,
+    onAttributesChange,
+    onVariationsChange
 }: VariantManagerProps) {
 
-  const context = useFormContext();
-  const isControlled = !!(propAttributes && onAttributesChange);
+    // Internal hierarchical state
+    const [tree, setTree] = useState<VariantNode[]>([]);
+    const [topLevelAttribute, setTopLevelAttribute] = useState<string>("");
 
-  const rhfAttributes = useFieldArray({ control: context?.control, name: attributesName });
-  const rhfVariations = useFieldArray({ control: context?.control, name: variationsName });
+    // --- Sync Logic ---
 
-  const attributes = (isControlled ? propAttributes : (rhfAttributes.fields as unknown as ProductAttribute[])) || [];
-  const variations = (isControlled ? propVariations : (rhfVariations.fields as unknown as ProductVariation[])) || [];
+    // Sync tree to flat Variations and Attributes whenever tree changes
+    useEffect(() => {
+        if (tree.length === 0) {
+            onVariationsChange([]);
+            onAttributesChange([]);
+            return;
+        }
 
-  const appendAttribute = (data: ProductAttribute) => {
-    if (isControlled) onAttributesChange?.([...(propAttributes || []), data]);
-    else rhfAttributes.append(data);
-  };
+        const flatVars: ProductVariation[] = [];
+        const usedAttributes = new Set<string>();
 
-  const updateAttribute = (index: number, data: ProductAttribute) => {
-    if (isControlled) {
-      const newAttrs = [...(propAttributes || [])];
-      newAttrs[index] = data;
-      onAttributesChange?.(newAttrs);
-    } else rhfAttributes.update(index, data);
-  };
+        const traverse = (nodes: VariantNode[], currentCombination: Record<string, string>) => {
+            nodes.forEach(node => {
+                const combination = { ...currentCombination, [node.attributeName]: node.value };
+                usedAttributes.add(node.attributeName);
 
-  const removeAttribute = (index: number) => {
-    if (isControlled) {
-      const newAttrs = (propAttributes || []).filter((_, i) => i !== index);
-      onAttributesChange?.(newAttrs);
-    } else rhfAttributes.remove(index);
-  };
+                if (node.children.length === 0) {
+                    flatVars.push({
+                        combination,
+                        price: node.price,
+                        stock: node.stock,
+                        sku: node.sku || Object.values(combination).join('-').toUpperCase(),
+                        image: node.image,
+                        available: node.available,
+                        reservedStock: 0,
+                        soldCount: 0
+                    });
+                } else {
+                    traverse(node.children, combination);
+                }
+            });
+        };
 
-  const replaceVariations = (data: ProductVariation[]) => {
-    if (isControlled) onVariationsChange?.(data);
-    else rhfVariations.replace(data);
-  };
+        traverse(tree, {});
 
-  const updateVariation = (index: number, data: ProductVariation) => {
-    if (isControlled) {
-      const newVars = [...(propVariations || [])];
-      newVars[index] = data;
-      onVariationsChange?.(newVars);
-    } else rhfVariations.update(index, data);
-  };
+        const flatAttrs: ProductAttribute[] = Array.from(usedAttributes).map(name => ({
+            name,
+            options: []
+        }));
 
-  const [isAttributeFormVisible, setIsAttributeFormVisible] = useState(false);
-  const [editingAttributeIndex, setEditingAttributeIndex] = useState<number | null>(null);
-  const [attributeName, setAttributeName] = useState('');
-  const [attributeOptions, setAttributeOptions] = useState<{ name: string, priceModifier: number }[]>([]);
-  const [isCustomAttribute, setIsCustomAttribute] = useState(false);
+        flatAttrs.forEach(attr => {
+            const values = new Set<string>();
+            flatVars.forEach(v => {
+                if (v.combination[attr.name]) values.add(v.combination[attr.name]);
+            });
+            attr.options = Array.from(values).map(v => ({ name: v, priceModifier: 0 }));
+        });
 
-  const [editingVariationIndex, setEditingVariationIndex] = useState<number | null>(null);
-  const [tempDimensions, setTempDimensions] = useState({ weight: 0, length: 0, width: 0, height: 0 });
-  const [selectedIndices, setSelectedIndices] = useState<number[]>([]);
-  const [bulkPriceValue, setBulkPriceValue] = useState<string>('');
-  const [bulkStockValue, setBulkStockValue] = useState<string>('');
+        onVariationsChange(flatVars);
+        onAttributesChange(flatAttrs);
+    }, [tree]);
 
-  const cartesian = (args: any[][]): any[][] => {
-    if (args.length === 0) return [];
-    const r: any[][] = [];
-    const max = args.length - 1;
-    function helper(arr: any[], i: number) {
-      for (let j = 0, l = args[i].length; j < l; j++) {
-        const a = arr.slice(0);
-        a.push(args[i][j]);
-        if (i == max) r.push(a);
-        else helper(a, i + 1);
-      }
-    }
-    helper([], 0);
-    return r;
-  };
+    // --- Tree Mutations ---
 
-  React.useEffect(() => {
-    let currentAttributes = attributes;
-    if (!isControlled && context) currentAttributes = context.watch(attributesName);
+    const addTopLevelValues = (attrName: string, values: string[]) => {
+        const newNodes: VariantNode[] = values.map(val => ({
+            id: Math.random().toString(36).substr(2, 9),
+            attributeName: attrName,
+            value: val,
+            price: 0,
+            stock: 0,
+            sku: val.toUpperCase(),
+            available: true,
+            children: [],
+            isExpanded: true
+        }));
+        setTree(prev => [...prev, ...newNodes]);
+        setTopLevelAttribute(attrName);
+    };
 
-    if (!currentAttributes || currentAttributes.length === 0) {
-      if (variations.length > 0) replaceVariations([]);
-      return;
-    }
+    const addSubAttribute = (parentId: string, attrName: string, values: string[]) => {
+        const updateRecursive = (nodes: VariantNode[]): VariantNode[] => {
+            return nodes.map(node => {
+                if (node.id === parentId) {
+                    const newChildren: VariantNode[] = values.map(val => ({
+                        id: Math.random().toString(36).substr(2, 9),
+                        attributeName: attrName,
+                        value: val,
+                        price: node.price,
+                        stock: node.stock,
+                        sku: node.sku ? `${node.sku}-${val.toUpperCase()}` : val.toUpperCase(),
+                        available: true,
+                        children: [],
+                        isExpanded: true
+                    }));
+                    return { ...node, children: [...node.children, ...newChildren], isExpanded: true };
+                }
+                return { ...node, children: updateRecursive(node.children) };
+            });
+        };
+        setTree(prev => updateRecursive(prev));
+    };
 
-    const optionsArrays = currentAttributes.map(a => a.options);
-    if (optionsArrays.some(opts => opts.length === 0)) return;
+    const updateNode = (id: string, data: Partial<VariantNode>) => {
+        const updateRecursive = (nodes: VariantNode[]): VariantNode[] => {
+            return nodes.map(node => {
+                if (node.id === id) return { ...node, ...data };
+                return { ...node, children: updateRecursive(node.children) };
+            });
+        };
+        setTree(prev => updateRecursive(prev));
+    };
 
-    const combinations = cartesian(optionsArrays);
+    const removeNode = (id: string) => {
+        const removeRecursive = (nodes: VariantNode[]): VariantNode[] => {
+            return nodes.filter(node => node.id !== id).map(node => ({
+                ...node,
+                children: removeRecursive(node.children)
+            }));
+        };
+        setTree(prev => removeRecursive(prev));
+    };
 
-    const newVariations: ProductVariation[] = combinations.map(combo => {
-      const combinationMap: Record<string, string> = {};
-      let variationPriceModifier = 0;
+    // --- Bulk Actions ---
 
-      combo.forEach((opt, index) => {
-        const attr = currentAttributes![index];
-        combinationMap[attr.name] = opt.name;
-        variationPriceModifier += (opt.priceModifier || 0);
-      });
+    const applyBulkPrice = (price: number, startNodes?: VariantNode[]) => {
+        const traverse = (nodes: VariantNode[]) => {
+            nodes.forEach(node => {
+                node.price = price;
+                traverse(node.children);
+            });
+        };
+        const newTree: VariantNode[] = JSON.parse(JSON.stringify(tree));
+        if (startNodes) {
+            const ids = new Set(startNodes.map(n => n.id));
+            const findAndApply = (nodes: VariantNode[]) => {
+                nodes.forEach(node => {
+                    if (ids.has(node.id)) {
+                        node.price = price;
+                        traverse(node.children);
+                    } else {
+                        findAndApply(node.children);
+                    }
+                });
+            };
+            findAndApply(newTree);
+        } else {
+            traverse(newTree);
+        }
+        setTree(newTree);
+        toast.success(`Applied price £${price}`);
+    };
 
-      const existing = variations.find(v =>
-        Object.entries(combinationMap).every(([key, val]) => v.combination[key] === val) &&
-        Object.keys(v.combination).length === Object.keys(combinationMap).length
-      );
+    const applyBulkStock = (stock: number, startNodes?: VariantNode[]) => {
+        const traverse = (nodes: VariantNode[]) => {
+            nodes.forEach(node => {
+                node.stock = stock;
+                traverse(node.children);
+            });
+        };
+        const newTree: VariantNode[] = JSON.parse(JSON.stringify(tree));
+        if (startNodes) {
+            const ids = new Set(startNodes.map(n => n.id));
+            const findAndApply = (nodes: VariantNode[]) => {
+                nodes.forEach(node => {
+                    if (ids.has(node.id)) {
+                        node.stock = stock;
+                        traverse(node.children);
+                    } else {
+                        findAndApply(node.children);
+                    }
+                });
+            };
+            findAndApply(newTree);
+        } else {
+            traverse(newTree);
+        }
+        setTree(newTree);
+        toast.success(`Applied stock ${stock}`);
+    };
 
-      if (existing) return existing;
-
-      const skuSuffix = combo.map((opt: any) => opt.name).join('-').toUpperCase().replace(/\s+/g, '');
-
-      return {
-        combination: combinationMap,
-        sku: `${skuSuffix}`,
-        price: variationPriceModifier,
-        stock: 0,
-        available: true,
-        weight: 0, length: 0, width: 0, height: 0
-      };
-    });
-
-    if (JSON.stringify(newVariations.map(v => v.combination)) !== JSON.stringify(variations.map(v => v.combination))) {
-        replaceVariations(newVariations);
-    }
-  }, [attributes, isControlled, context, attributesName]);
-
-  const showAttributeForm = (attribute?: ProductAttribute, index?: number) => {
-    if (attribute) {
-      setEditingAttributeIndex(index as number);
-      setAttributeName(attribute.name);
-      setAttributeOptions(attribute.options || []);
-      const isPredefined = Object.keys(predefinedVariantOptions).includes(attribute.name);
-      setIsCustomAttribute(!isPredefined);
-    } else {
-      setEditingAttributeIndex(null);
-      setAttributeName('');
-      setAttributeOptions([]);
-      setIsCustomAttribute(false);
-    }
-    setIsAttributeFormVisible(true);
-  };
-
-  const hideAttributeForm = () => {
-    setIsAttributeFormVisible(false);
-    setEditingAttributeIndex(null);
-  };
-
-  const handleSaveAttribute = () => {
-    if (attributeName && attributeOptions.length > 0) {
-      const attributeData: ProductAttribute = { name: attributeName, options: attributeOptions };
-      if (editingAttributeIndex !== null) updateAttribute(editingAttributeIndex, attributeData);
-      else appendAttribute(attributeData);
-      hideAttributeForm();
-    }
-  };
-
-  const handleAddOptionToAttribute = (optionName: string, modifier: number) => {
-    if (optionName && !attributeOptions.some(o => o.name === optionName)) {
-      setAttributeOptions([...attributeOptions, { name: optionName, priceModifier: modifier }]);
-    }
-  };
-
-  const handleRemoveOptionFromAttribute = (optionName: string) => {
-    setAttributeOptions(attributeOptions.filter((o) => o.name !== optionName));
-  };
-
-  const openDimensionEditor = (variation: ProductVariation, index: number) => {
-    setEditingVariationIndex(index);
-    setTempDimensions({
-      weight: variation.weight || 0,
-      length: variation.length || 0,
-      width: variation.width || 0,
-      height: variation.height || 0
-    });
-  };
-
-  const saveDimensions = () => {
-    if (editingVariationIndex !== null) {
-      const currentVariation = variations[editingVariationIndex];
-      updateVariation(editingVariationIndex, { ...currentVariation, ...tempDimensions });
-      setEditingVariationIndex(null);
-    }
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIndices.length === variations.length) setSelectedIndices([]);
-    else setSelectedIndices(variations.map((_, i) => i));
-  };
-
-  const toggleSelect = (index: number) => {
-    setSelectedIndices(prev => prev.includes(index) ? prev.filter(i => i !== index) : [...prev, index]);
-  };
-
-  const applyBulkPrice = () => {
-    let val = parseFloat(bulkPriceValue);
-    if (isNaN(val)) {
-        if (variations.length > 0) val = variations[0].price;
-        else return;
-    }
-    const targets = selectedIndices.length > 0 ? selectedIndices : variations.map((_, i) => i);
-    targets.forEach(idx => updateVariation(idx, { ...variations[idx], price: val }));
-    setBulkPriceValue('');
-    toast.success(`Applied price to ${targets.length} variations`);
-  };
-
-  const applyBulkStock = () => {
-    let val = parseInt(bulkStockValue);
-    if (isNaN(val)) {
-        if (variations.length > 0) val = variations[0].stock;
-        else return;
-    }
-    const targets = selectedIndices.length > 0 ? selectedIndices : variations.map((_, i) => i);
-    targets.forEach(idx => updateVariation(idx, { ...variations[idx], stock: val }));
-    setBulkStockValue('');
-    toast.success(`Applied quantity to ${targets.length} variations`);
-  };
-
-  const bulkToggleAvailability = (available: boolean) => {
-    selectedIndices.forEach(idx => updateVariation(idx, { ...variations[idx], available }));
-    toast.success(`Updated status for ${selectedIndices.length} variations`);
-  };
-
-  return (
-    <div className="space-y-8">
-      <div className="space-y-4">
-        <div className="flex justify-between items-center">
-          <h3 className="text-lg font-medium">{attributes.length === 0 ? "Select Product Option Type" : "1. Define Attributes"}</h3>
-          {!isAttributeFormVisible && attributes.length < 4 && attributes.length > 0 && (
-            <Button type="button" variant="outline" size="sm" onClick={() => showAttributeForm()}>
-              <Plus className="mr-2 h-4 w-4" /> Add Another Variant Type
-            </Button>
-          )}
-        </div>
-
-        {attributes.length === 0 && !isAttributeFormVisible && (
-            <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-xl bg-gray-50 dark:bg-gray-800/20 text-center gap-6">
-                <div className="space-y-1">
-                    <p className="text-lg font-bold text-gray-800 dark:text-white">What variants does this product have?</p>
-                    <p className="text-sm text-gray-500 max-w-sm">Select an attribute like Size or Color to start building your variant table.</p>
-                </div>
-                <div className="w-full max-w-md">
-                    <Command className="rounded-xl border shadow-md bg-white dark:bg-gray-900">
-                        <CommandInput placeholder="Search all attributes (Size, Color, Material...)" />
-                        <CommandList className="max-h-[300px]">
-                            <CommandEmpty>No attribute found. Add "Custom" instead.</CommandEmpty>
-                            <CommandGroup heading="Common Attributes">
-                                {Object.keys(predefinedVariantOptions)
-                                    .filter(type => !attributes.some(a => a.name === type))
-                                    .map((type) => (
-                                    <CommandItem key={type} onSelect={() => { setAttributeName(type); setIsCustomAttribute(false); setAttributeOptions([]); setIsAttributeFormVisible(true); }} className="flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">
-                                        <div className="size-2 rounded-full bg-orange-400" />
-                                        {type}
-                                    </CommandItem>
-                                ))}
-                            </CommandGroup>
-                            <CommandGroup heading="Others">
-                                <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }} className="italic text-gray-500 flex items-center gap-2 cursor-pointer p-2 hover:bg-gray-100 dark:hover:bg-gray-800 text-sm">
-                                    <Plus className="size-4" /> Custom / Manual Input
-                                </CommandItem>
-                            </CommandGroup>
-                        </CommandList>
-                    </Command>
-                </div>
-            </div>
-        )}
-
-        {attributes && attributes.length > 0 && (
-          <div className="grid gap-4">
-            {attributes.map((field, index) => (
-              <div key={index} className="flex items-center justify-between p-4 border rounded-lg bg-gray-50 dark:bg-gray-800/50">
-                <div>
-                  <p className="font-semibold">{field.name}</p>
-                  <div className="flex flex-wrap gap-2 mt-1">
-                    {field.options.map((opt) => (
-                      <Badge key={opt.name} variant="secondary" className='text-[10px]'>
-                        {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
-                      </Badge>
-                    ))}
-                  </div>
-                </div>
-                <div className="flex gap-2">
-                  <Button type="button" variant="ghost" size="icon" onClick={() => showAttributeForm(field, index)}><Edit2 className="h-4 w-4" /></Button>
-                  <Button type="button" variant="ghost" size="icon" className="text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => removeAttribute(index)}><Trash2 className="h-4 w-4" /></Button>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {isAttributeFormVisible && (
-          <div className="p-6 border rounded-lg space-y-6 bg-white dark:bg-gray-900 shadow-sm animate-in fade-in zoom-in-95 duration-200">
-            <h4 className="text-md font-semibold text-gray-900 dark:text-white">{editingAttributeIndex !== null ? 'Edit Attribute' : 'New Attribute'}</h4>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="space-y-2">
-                <Label>Attribute Name</Label>
-                <Select onValueChange={(value) => { if (value === 'custom') { setIsCustomAttribute(true); setAttributeName(''); } else { setIsCustomAttribute(false); setAttributeName(value); } }} value={isCustomAttribute ? 'custom' : (Object.keys(predefinedVariantOptions).includes(attributeName) ? attributeName : (attributeName ? 'custom' : ''))}>
-                  <SelectTrigger><SelectValue placeholder="Select Name (e.g. Color)" /></SelectTrigger>
-                  <SelectContent>
-                    {Object.keys(predefinedVariantOptions).map(type => (
-                        <SelectItem key={type} value={type} disabled={attributes.some(a => a.name === type && editingAttributeIndex === null)}>{type}</SelectItem>
-                    ))}
-                    <SelectItem value="custom">Custom...</SelectItem>
-                  </SelectContent>
-                </Select>
-                {isCustomAttribute && <Input placeholder="Enter custom name" value={attributeName} onChange={(e) => setAttributeName(e.target.value)} className="mt-2" />}
-              </div>
-              <div className="space-y-2">
-                <Label>Options & Price Modifiers</Label>
-                {attributeName === 'Size' && (
-                    <div className="flex gap-2 mb-2">
-                        <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => { const standard = ['S', 'M', 'L', 'XL']; standard.forEach(s => handleAddOptionToAttribute(s, 0)); }}>Standard (S-XL)</Button>
-                        <Button variant="outline" size="sm" className="text-[10px] h-7" onClick={() => { const uk = ['6', '8', '10', '12', '14']; uk.forEach(s => handleAddOptionToAttribute(s, 0)); }}>UK (6-14)</Button>
+    return (
+        <div className="space-y-8 animate-in fade-in duration-500">
+            {/* 1. INITIAL STATE: CHOOSE TOP LEVEL */}
+            {tree.length === 0 && (
+                <div className="flex flex-col items-center justify-center p-12 border-2 border-dashed rounded-2xl bg-gray-50 dark:bg-gray-800/20 text-center gap-6">
+                    <div className="p-4 bg-orange-100 dark:bg-orange-900/30 rounded-full text-orange-600">
+                        <Layers size={48} />
                     </div>
-                )}
-                <VariantOptionInput variantName={attributeName || 'Color'} onAddOption={handleAddOptionToAttribute} existingOptions={attributeOptions.map(o => o.name)} />
-                <div className="flex flex-wrap gap-2 mt-2 min-h-[40px] p-2 bg-gray-50 dark:bg-gray-800 rounded-md">
-                  {attributeOptions.length === 0 && <span className="text-sm text-gray-400 italic">No options added yet.</span>}
-                  {attributeOptions.map((opt) => (
-                    <Badge key={opt.name} variant="secondary" className="pl-2 pr-1 py-1 flex items-center gap-1 text-[10px]">
-                      {opt.name} {opt.priceModifier !== 0 ? `(${opt.priceModifier > 0 ? '+' : ''}${opt.priceModifier})` : ''}
-                      <X className="h-3 w-3 cursor-pointer hover:text-red-500" onClick={() => handleRemoveOptionFromAttribute(opt.name)} />
-                    </Badge>
-                  ))}
+                    <div className="space-y-2">
+                        <h3 className="text-xl font-bold text-gray-900 dark:text-white">Start with your first variant</h3>
+                        <p className="text-sm text-gray-500 max-w-sm">Choose the main option customers see first (e.g., Color or Model).</p>
+                    </div>
+
+                    <div className="w-full max-w-md">
+                        <AttributeSelector
+                            onSelect={(name: string, values: string[]) => addTopLevelValues(name, values)}
+                            placeholder="Search main attribute (Color, Size...)"
+                        />
+                    </div>
                 </div>
-              </div>
-            </div>
-            <div className="flex justify-end gap-3 pt-4 border-t">
-              <Button type="button" variant="outline" onClick={hideAttributeForm}>Cancel</Button>
-              <Button type="button" onClick={handleSaveAttribute} disabled={!attributeName || attributeOptions.length === 0}>Save Attribute</Button>
-            </div>
-          </div>
-        )}
-      </div>
+            )}
 
-      <hr className="border-gray-200 dark:border-gray-800" />
+            {/* 2. HIERARCHICAL BUILDER TABLE */}
+            {tree.length > 0 && (
+                <div className="space-y-6">
+                    <div className="flex justify-between items-end bg-white dark:bg-[#1a120b] p-4 rounded-xl border border-gray-200 dark:border-gray-800 shadow-sm">
+                        <div>
+                            <h3 className="text-lg font-bold flex items-center gap-2">
+                                <Settings2 className="text-orange-500" size={20} />
+                                Product Variant Hierarchy
+                            </h3>
+                            <p className="text-sm text-gray-500 mt-1">Add sub-variants under each option to create your inventory matrix.</p>
+                        </div>
+                        <div className="flex gap-2">
+                            <Button variant="outline" size="sm" onClick={() => {
+                                const price = prompt("Enter price for all variants:");
+                                if (price) applyBulkPrice(parseFloat(price));
+                            }}>
+                                <Zap size={14} className="mr-1" /> Bulk Price
+                            </Button>
+                            <Button variant="outline" size="sm" onClick={() => {
+                                const stock = prompt("Enter stock for all variants:");
+                                if (stock) applyBulkStock(parseInt(stock));
+                            }}>
+                                <Package size={14} className="mr-1" /> Bulk Stock
+                            </Button>
+                        </div>
+                    </div>
 
-      <div className="space-y-4">
-        <div className="flex justify-between items-end">
-          <div>
-            <h3 className="text-lg font-medium">2. Configure Variations</h3>
-            <p className="text-sm text-gray-500">All possible combinations are auto-generated. Set unique prices and quantity here.</p>
-          </div>
+                    <div className="border border-gray-200 dark:border-gray-800 rounded-2xl overflow-hidden bg-white dark:bg-[#1a120b]">
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-left border-collapse min-w-[800px]">
+                                <thead>
+                                    <tr className="bg-gray-50 dark:bg-gray-800/50 text-gray-400 text-[10px] uppercase font-bold tracking-wider">
+                                        <th className="px-6 py-4 w-12 text-center">#</th>
+                                        <th className="px-6 py-4 min-w-[250px]">Option Hierarchy</th>
+                                        <th className="px-4 py-4 w-32 text-center">Image</th>
+                                        <th className="px-4 py-4 w-40">Price (£)</th>
+                                        <th className="px-4 py-4 w-32">Stock</th>
+                                        <th className="px-4 py-4">SKU</th>
+                                        <th className="px-4 py-4 w-20"></th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-gray-100 dark:divide-gray-800">
+                                    {tree.map((node, index) => (
+                                        <NodeRows
+                                            key={node.id}
+                                            node={node}
+                                            level={0}
+                                            onUpdate={updateNode}
+                                            onRemove={removeNode}
+                                            onAddSub={addSubAttribute}
+                                            index={index}
+                                            applyBulkPrice={applyBulkPrice}
+                                            applyBulkStock={applyBulkStock}
+                                        />
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+
+                        {/* Add another main value */}
+                        <div className="p-4 bg-gray-50 dark:bg-gray-800/20 border-t border-gray-100 dark:border-gray-800">
+                            <AttributeSelector
+                                label={`Add another ${topLevelAttribute}`}
+                                onSelect={(name: string, values: string[]) => addTopLevelValues(name, values)}
+                                fixedAttribute={topLevelAttribute}
+                                placeholder={`Add more ${topLevelAttribute}s...`}
+                            />
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
-
-        {variations && variations.length > 0 && (
-          <div className={cn("flex flex-wrap items-center gap-4 p-3 bg-orange-50 dark:bg-orange-950/20 border border-orange-100 dark:border-orange-900/30 rounded-lg transition-all duration-300", selectedIndices.length > 0 ? "opacity-100 translate-y-0" : "opacity-0 -translate-y-2 pointer-events-none")}>
-            <div className="flex items-center gap-2 text-sm font-medium text-orange-800 dark:text-orange-300"><Zap className="w-4 h-4" /><span className="uppercase text-[10px] font-bold">Bulk Fill Tools</span><span className="opacity-60">|</span><span>{selectedIndices.length} selected</span></div>
-            <div className="h-6 w-[1px] bg-orange-200 dark:bg-orange-800 mx-2 hidden sm:block" />
-            <div className="flex items-center gap-2">
-              <Input type="number" placeholder="Bulk Price" className="w-24 h-8 bg-white dark:bg-gray-900" value={bulkPriceValue} onChange={(e) => setBulkPriceValue(e.target.value)} />
-              <Button size="sm" onClick={applyBulkPrice} disabled={!bulkPriceValue}>Apply Price</Button>
-            </div>
-            <div className="flex items-center gap-2">
-              <Input type="number" placeholder="Bulk Quantity" className="w-24 h-8 bg-white dark:bg-gray-900" value={bulkStockValue} onChange={(e) => setBulkStockValue(e.target.value)} />
-              <Button size="sm" onClick={applyBulkStock} disabled={!bulkStockValue}>Apply Quantity</Button>
-            </div>
-            <div className="flex gap-1">
-              <Button size="sm" variant="outline" className="h-8 bg-white dark:bg-gray-900" onClick={() => bulkToggleAvailability(true)}>Set Active</Button>
-              <Button size="sm" variant="outline" className="h-8 bg-white dark:bg-gray-900 text-red-600 hover:text-red-700 font-medium" onClick={() => bulkToggleAvailability(false)}>Set Inactive</Button>
-            </div>
-          </div>
-        )}
-
-        {variations && variations.length > 0 ? (
-          <div className="border rounded-md overflow-x-auto">
-            <TableRoot className="min-w-[1000px]">
-              <TableHeader>
-                <TableRow className="bg-gray-50 dark:bg-gray-800 hover:bg-gray-50 dark:hover:bg-gray-800">
-                  <TableHead className="w-[40px]"><Checkbox checked={selectedIndices.length === variations.length && variations.length > 0} onCheckedChange={toggleSelectAll} /></TableHead>
-                  {Object.keys(variations[0].combination).map((key) => (
-                    <TableHead key={key} className="w-[120px]"><div className="flex flex-col gap-1"><span className="text-gray-400 text-[10px] uppercase font-bold tracking-wider">Attribute</span><span className="text-gray-900 dark:text-white font-bold">{key}</span></div></TableHead>
-                  ))}
-                  <TableHead className="w-[150px]">
-                      <Popover>
-                        <PopoverTrigger asChild><Button variant="ghost" size="sm" className="h-8 text-[#f48c25] hover:bg-[#f48c25]/10 font-bold" disabled={attributes.length >= 4}><Plus className="w-3 h-3 mr-1" /> Add Option</Button></PopoverTrigger>
-                        <PopoverContent className="p-0 w-60" align="start">
-                            <Command>
-                                <CommandInput placeholder="Search attributes..." />
-                                <CommandList>
-                                    <CommandEmpty>No attribute found.</CommandEmpty>
-                                    <CommandGroup heading="Common Attributes">
-                                        {Object.keys(predefinedVariantOptions).filter(type => !attributes.some(a => a.name === type)).map((type) => (
-                                                <CommandItem key={type} onSelect={() => { setAttributeName(type); setIsCustomAttribute(false); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>{type}</CommandItem>
-                                            ))
-                                        }
-                                    </CommandGroup>
-                                    <CommandGroup heading="Others">
-                                        <CommandItem onSelect={() => { setIsCustomAttribute(true); setAttributeName(''); setAttributeOptions([]); setIsAttributeFormVisible(true); }}>Custom...</CommandItem>
-                                    </CommandGroup>
-                                </CommandList>
-                            </Command>
-                        </PopoverContent>
-                      </Popover>
-                  </TableHead>
-                  <TableHead className="w-[60px]">Image</TableHead>
-                  <TableHead><div className="flex items-center gap-1 group/header"><span>Price</span><Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity" onClick={applyBulkPrice} title="Apply first row's price to all"><Zap className="w-3 h-3" /></Button></div></TableHead>
-                  <TableHead><div className="flex items-center gap-1 group/header"><span>Quantity</span><Button variant="ghost" size="icon" className="h-4 w-4 opacity-0 group-hover/header:opacity-100 transition-opacity" onClick={applyBulkStock} title="Apply first row's quantity to all"><Zap className="w-3 h-3" /></Button></div></TableHead>
-                  <TableHead className="w-[60px]">Reserved</TableHead>
-                  <TableHead className="w-[60px]">Sold</TableHead>
-                  <TableHead>SKU</TableHead>
-                  <TableHead className="w-[80px]">Dims</TableHead>
-                  <TableHead className="w-[80px]">Active</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {variations.map((field, index) => (
-                  <VariantTableRow
-                    key={index}
-                    index={index}
-                    field={field}
-                    attributes={attributes}
-                    variations={variations}
-                    updateVariation={updateVariation}
-                    updateAttribute={updateAttribute}
-                    selectedIndices={selectedIndices}
-                    toggleSelect={toggleSelect}
-                    openDimensionEditor={openDimensionEditor}
-                  />
-                ))}
-              </TableBody>
-            </TableRoot>
-          </div>
-        ) : (
-          <div className="flex flex-col items-center justify-center p-8 border-2 border-dashed rounded-lg bg-gray-50 dark:bg-gray-800/20 text-gray-500">
-            <Package className="h-12 w-12 mb-2 opacity-50" />
-            <p>No variations generated yet.</p>
-            <p className="text-sm">Add attributes and options above to see combinations.</p>
-          </div>
-        )}
-      </div>
-
-      <Dialog open={editingVariationIndex !== null} onOpenChange={(open) => { if (!open) setEditingVariationIndex(null); }}>
-          <DialogContent>
-            <DialogHeader>
-                <DialogTitle>Dimensions for Variation</DialogTitle>
-                <DialogDescription>Override the base product dimensions for this specific variation.</DialogDescription>
-            </DialogHeader>
-            <div className="grid grid-cols-2 gap-4 py-4">
-                <div className="space-y-2"><Label>Weight (kg)</Label><Input type="number" value={tempDimensions.weight} onChange={(e) => setTempDimensions({ ...tempDimensions, weight: parseFloat(e.target.value) || 0 })} /></div>
-                <div className="space-y-2"><Label>Length (cm)</Label><Input type="number" value={tempDimensions.length} onChange={(e) => setTempDimensions({ ...tempDimensions, length: parseFloat(e.target.value) || 0 })} /></div>
-                <div className="space-y-2"><Label>Width (cm)</Label><Input type="number" value={tempDimensions.width} onChange={(e) => setTempDimensions({ ...tempDimensions, width: parseFloat(e.target.value) || 0 })} /></div>
-                <div className="space-y-2"><Label>Height (cm)</Label><Input type="number" value={tempDimensions.height} onChange={(e) => setTempDimensions({ ...tempDimensions, height: parseFloat(e.target.value) || 0 })} /></div>
-            </div>
-            <DialogFooter><Button onClick={saveDimensions}>Save Dimensions</Button></DialogFooter>
-          </DialogContent>
-      </Dialog>
-    </div>
-  );
+    );
 }
 
-function VariantOptionInput({
-  variantName,
-  onAddOption,
-  existingOptions,
-}: {
-  variantName: string;
-  onAddOption: (optionName: string, modifier: number) => void;
-  existingOptions: string[];
-}) {
-  const [open, setOpen] = useState(false);
-  const [inputValue, setInputValue] = useState('');
-  const [priceModifier, setPriceModifier] = useState<number>(0);
-  const options = predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
+// --- Internal Helper Components ---
 
-  const handleAdd = () => {
-    if (inputValue) {
-      onAddOption(inputValue, priceModifier);
-      setInputValue('');
-      setPriceModifier(0);
-      setOpen(false);
+interface NodeRowsProps {
+    node: VariantNode;
+    level: number;
+    onUpdate: (id: string, data: Partial<VariantNode>) => void;
+    onRemove: (id: string) => void;
+    onAddSub: (parentId: string, attrName: string, values: string[]) => void;
+    index: number;
+    applyBulkPrice: (price: number, startNodes?: VariantNode[]) => void;
+    applyBulkStock: (stock: number, startNodes?: VariantNode[]) => void;
+}
+
+function NodeRows({ node, level, onUpdate, onRemove, onAddSub, index, applyBulkPrice, applyBulkStock }: NodeRowsProps) {
+    const isLeaf = node.children.length === 0;
+
+    return (
+        <>
+            <tr className={cn(
+                "group transition-colors",
+                level === 0 ? "bg-white dark:bg-transparent" : "bg-gray-50/30 dark:bg-gray-900/10",
+                !node.available && "opacity-50"
+            )}>
+                <td className="px-6 py-4 text-center">
+                    <span className="text-xs font-mono text-gray-400">{index + 1}</span>
+                </td>
+                <td className="px-6 py-4">
+                    <div className="flex items-center gap-2" style={{ paddingLeft: `${level * 24}px` }}>
+                        <div className={cn(
+                            "p-1.5 rounded-lg border",
+                            level === 0 ? "bg-orange-50 border-orange-200 text-orange-700" : "bg-blue-50 border-blue-200 text-blue-700"
+                        )}>
+                            <span className="text-[10px] font-black uppercase tracking-tighter block leading-none mb-0.5 opacity-60">
+                                {node.attributeName}
+                            </span>
+                            <span className="text-sm font-bold block leading-none">
+                                {node.value}
+                            </span>
+                        </div>
+
+                        {!isLeaf && (
+                            <div className="flex-1 h-px bg-gradient-to-r from-gray-200 to-transparent mx-2" />
+                        )}
+
+                        {isLeaf && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-gray-400 hover:text-orange-500">
+                                        <Plus size={16} />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-0 w-60" align="start">
+                                    <Command>
+                                        <CommandInput placeholder="Add sub-attribute..." />
+                                        <CommandList>
+                                            <CommandEmpty>No attribute found.</CommandEmpty>
+                                            <CommandGroup heading="Available Attributes">
+                                                {Object.keys(predefinedVariantOptions)
+                                                    .filter(type => type !== node.attributeName)
+                                                    .map((type) => (
+                                                        <CommandItem
+                                                            key={type}
+                                                            onSelect={() => {
+                                                                const values = prompt(`Enter values for ${type} (comma separated):`);
+                                                                if (values) onAddSub(node.id, type, values.split(',').map(v => v.trim()));
+                                                            }}
+                                                        >
+                                                            {type}
+                                                        </CommandItem>
+                                                    ))
+                                                }
+                                                <CommandItem onSelect={() => {
+                                                    const name = prompt("Enter attribute name:");
+                                                    const values = prompt(`Enter values for ${name} (comma separated):`);
+                                                    if (name && values) onAddSub(node.id, name, values.split(',').map(v => v.trim()));
+                                                }}>
+                                                    Custom...
+                                                </CommandItem>
+                                            </CommandGroup>
+                                        </CommandList>
+                                    </Command>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                    </div>
+                </td>
+
+                <td className="px-4 py-4">
+                    <div className="flex justify-center">
+                        <div className="size-10 rounded-lg bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-gray-200 dark:border-gray-700 flex items-center justify-center cursor-pointer hover:border-orange-500 transition-colors overflow-hidden">
+                            {node.image ? (
+                                <img src={node.image} className="w-full h-full object-cover" />
+                            ) : (
+                                <ImagePlus size={16} className="text-gray-400" />
+                            )}
+                        </div>
+                    </div>
+                </td>
+
+                <td className="px-4 py-4">
+                    <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs">£</span>
+                        <Input
+                            type="number"
+                            className="h-9 pl-6 text-sm font-medium"
+                            placeholder="0.00"
+                            value={node.price}
+                            onChange={(e) => onUpdate(node.id, { price: parseFloat(e.target.value) || 0 })}
+                        />
+                    </div>
+                    {!isLeaf && (
+                        <span className="text-[9px] text-gray-400 mt-1 block">Applies to all sub-variants</span>
+                    )}
+                </td>
+
+                <td className="px-4 py-4">
+                    <Input
+                        type="number"
+                        className="h-9 text-sm font-medium"
+                        placeholder="0"
+                        value={node.stock}
+                        onChange={(e) => onUpdate(node.id, { stock: parseInt(e.target.value) || 0 })}
+                    />
+                </td>
+
+                <td className="px-4 py-4">
+                    <Input
+                        type="text"
+                        className="h-9 text-xs font-mono uppercase"
+                        placeholder="SKU"
+                        value={node.sku}
+                        onChange={(e) => onUpdate(node.id, { sku: e.target.value })}
+                    />
+                </td>
+
+                <td className="px-4 py-4 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                        {!isLeaf && (
+                            <Popover>
+                                <PopoverTrigger asChild>
+                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-orange-400 hover:text-orange-600">
+                                        <Zap size={14} />
+                                    </Button>
+                                </PopoverTrigger>
+                                <PopoverContent className="p-3 w-48 space-y-3">
+                                    <p className="text-[10px] font-bold uppercase text-gray-500">Bulk Apply to {node.value}</p>
+                                    <Button size="sm" className="w-full text-xs" onClick={() => {
+                                        const p = prompt("Price:");
+                                        if(p) applyBulkPrice(parseFloat(p), [node]);
+                                    }}>Apply Price</Button>
+                                    <Button size="sm" variant="outline" className="w-full text-xs" onClick={() => {
+                                        const s = prompt("Stock:");
+                                        if(s) applyBulkStock(parseInt(s), [node]);
+                                    }}>Apply Stock</Button>
+                                </PopoverContent>
+                            </Popover>
+                        )}
+                        <Button
+                            variant="ghost"
+                            size="icon"
+                            className="h-8 w-8 text-gray-300 hover:text-red-500"
+                            onClick={() => onRemove(node.id)}
+                        >
+                            <Trash2 size={14} />
+                        </Button>
+                    </div>
+                </td>
+            </tr>
+
+            {node.children.map((child: VariantNode, idx: number) => (
+                <NodeRows
+                    key={child.id}
+                    node={child}
+                    level={level + 1}
+                    onUpdate={onUpdate}
+                    onRemove={onRemove}
+                    onAddSub={onAddSub}
+                    index={idx}
+                    applyBulkPrice={applyBulkPrice}
+                    applyBulkStock={applyBulkStock}
+                />
+            ))}
+        </>
+    );
+}
+
+interface AttributeSelectorProps {
+    onSelect: (name: string, values: string[]) => void;
+    placeholder?: string;
+    label?: string;
+    fixedAttribute?: string;
+}
+
+function AttributeSelector({ onSelect, placeholder, label, fixedAttribute }: AttributeSelectorProps) {
+    const [open, setOpen] = useState(false);
+
+    const handleConfirm = (name: string, valuesStr: string) => {
+        const values = valuesStr.split(',').map(v => v.trim()).filter(Boolean);
+        if (values.length > 0) {
+            onSelect(name, values);
+            setOpen(false);
+        }
+    };
+
+    if (fixedAttribute) {
+        return (
+            <div className="flex items-center gap-3">
+                <Input
+                    id="fixed-attr-input"
+                    placeholder={placeholder}
+                    className="max-w-xs h-9"
+                    onKeyDown={(e: React.KeyboardEvent) => {
+                        if (e.key === 'Enter') handleConfirm(fixedAttribute, (e.target as HTMLInputElement).value);
+                    }}
+                />
+                <Button size="sm" onClick={() => {
+                    const el = document.getElementById('fixed-attr-input') as HTMLInputElement;
+                    if (el) handleConfirm(fixedAttribute, el.value);
+                }}>Add</Button>
+            </div>
+        );
     }
-  };
 
-  return (
-    <div className="flex flex-col sm:flex-row gap-2">
-      <div className="flex-1 min-w-0">
+    return (
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild><Button variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between"><span className="truncate">{inputValue || "Type or select option..."}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-          <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
-            <Command>
-              <CommandInput placeholder="Type new option..." value={inputValue} onValueChange={setInputValue} onKeyDown={(e) => { if (e.key === 'Enter' && inputValue) { e.preventDefault(); handleAdd(); } }} />
-              <CommandList>
-                <CommandEmpty className="py-2 px-4 text-sm">Press Enter to add "{inputValue}"</CommandEmpty>
-                <CommandGroup heading="Suggestions">
-                  {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
-                    <CommandItem key={option} value={option} onSelect={() => { onAddOption(option, priceModifier); }}>{option}</CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
+            <PopoverTrigger asChild>
+                <Button variant="outline" className="w-full justify-between h-11 rounded-xl">
+                    {label || placeholder}
+                    <ChevronDown size={16} className="opacity-50" />
+                </Button>
+            </PopoverTrigger>
+            <PopoverContent className="p-0 w-80" align="center">
+                <Command>
+                    <CommandInput placeholder="Search attributes..." />
+                    <CommandList>
+                        <CommandEmpty>No attribute found.</CommandEmpty>
+                        <CommandGroup heading="Common Attributes">
+                            {Object.keys(predefinedVariantOptions).map((type) => (
+                                <CommandItem
+                                    key={type}
+                                    onSelect={() => {
+                                        const values = prompt(`Enter values for ${type} (comma separated):`);
+                                        if (values) handleConfirm(type, values);
+                                    }}
+                                >
+                                    {type}
+                                </CommandItem>
+                            ))}
+                            <CommandItem onSelect={() => {
+                                const name = prompt("Enter attribute name:");
+                                const values = prompt(`Enter values for ${name} (comma separated):`);
+                                if (name && values) handleConfirm(name, values);
+                            }}>
+                                Custom...
+                            </CommandItem>
+                        </CommandGroup>
+                    </CommandList>
+                </Command>
+            </PopoverContent>
         </Popover>
-      </div>
-      <div className="flex items-center gap-1 shrink-0"><span className="text-xs text-gray-500 whitespace-nowrap">Charge:</span><Input type="number" placeholder="0.00" value={priceModifier} onChange={(e) => setPriceModifier(parseFloat(e.target.value) || 0)} className="w-20" /><Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button"><Plus className="h-4 w-4" /></Button></div>
-    </div>
-  );
+    );
 }

@@ -506,8 +506,8 @@ export default function EditProductPage() {
                   </CardHeader>
                   <CardContent>
                       <VariantManager
-                          attributes={form.watch('attributes')}
-                          variations={form.watch('variations')}
+                          attributes={form.watch('attributes') || []}
+                          variations={form.watch('variations') || []}
                           onAttributesChange={(attrs) => form.setValue('attributes', attrs, { shouldValidate: true })}
                           onVariationsChange={(vars) => form.setValue('variations', vars, { shouldValidate: true })}
                       />

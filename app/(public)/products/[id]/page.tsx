@@ -18,6 +18,7 @@ import SellerCard from './components/SellerCard';
 import ProductFacts from './components/ProductFacts';
 import SafetyCard from './components/SafetyCard';
 import VisualVariantSelector from './components/VisualVariantSelector';
+import SizeGuideModal from './components/SizeGuideModal';
 
 export default function ProductPage() {
   const params = useParams();
@@ -87,15 +88,32 @@ export default function ProductPage() {
     }));
   };
 
+  // Determine which attributes are actually REQUIRED for the current selection path
+  const requiredAttributesForCurrentPath = useMemo(() => {
+    if (!isMatrixSystem || !product?.attributes || !product?.variations) return [];
+
+    // An attribute is required if there exists at least one variation matching current selection that has this attribute
+    return (product.attributes || []).filter(attr => {
+        return (product.variations || []).some(v => {
+            const matchesSelection = Object.entries(selectedVariants).every(([sName, sVal]) => {
+                if (sName === attr.name || !sVal) return true;
+                if (v.combination[sName] === undefined) return false;
+                return v.combination[sName] === sVal;
+            });
+            return matchesSelection && v.combination[attr.name] !== undefined;
+        });
+    });
+  }, [isMatrixSystem, product, selectedVariants]);
+
   // Check if all required variants are selected
   const allVariantsSelected = useMemo(() => {
       if (!product) return false;
       if (isMatrixSystem) {
-          return product.attributes?.every(attr => selectedVariants[attr.name]);
+          return requiredAttributesForCurrentPath.every(attr => selectedVariants[attr.name]);
       } else {
           return product.variants?.every(v => selectedVariants[v.name]);
       }
-  }, [product, isMatrixSystem, selectedVariants]);
+  }, [product, isMatrixSystem, selectedVariants, requiredAttributesForCurrentPath]);
 
   const { basePrice, totalPrice, priceBreakdown, isOutOfStock, priceRange } = useMemo(() => {
     if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false, priceRange: null };
@@ -317,11 +335,10 @@ export default function ProductPage() {
                      <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
                         <VisualVariantSelector
                             attributes={product.attributes}
-                            selectedVariants={selectedVariants}
+                            variations={product.variations || []}
+                            selectedValues={selectedVariants}
                             onChange={handleVariantChange}
-                            isOptionAvailable={isOptionAvailableInMatrix}
                             sizeGuide={product.sizeGuide}
-                            productGender={product.gender}
                         />
                      </div>
                   )}
@@ -338,9 +355,9 @@ export default function ProductPage() {
                                     priceModifier: Number(o.priceModifier) || 0
                                 }))
                             }))}
-                            selectedVariants={selectedVariants}
+                            variations={[]}
+                            selectedValues={selectedVariants}
                             onChange={handleVariantChange}
-                            isOptionAvailable={() => true} // Legacy doesn't have dependency logic usually
                         />
                     </div>
                   )}
@@ -365,7 +382,7 @@ export default function ProductPage() {
                   {/* Selection Status */}
                   {isMatrixSystem && !allVariantsSelected && Object.keys(selectedVariants).length > 0 && (
                       <div className="mb-4 p-3 bg-blue-50 border border-blue-100 rounded-lg text-xs text-blue-700 font-medium animate-in fade-in slide-in-from-top-1">
-                          Please select: {product.attributes?.filter(a => !selectedVariants[a.name]).map(a => a.name).join(', ')}
+                          Please select: {requiredAttributesForCurrentPath.filter(a => !selectedVariants[a.name]).map(a => a.name).join(', ')}
                       </div>
                   )}
 

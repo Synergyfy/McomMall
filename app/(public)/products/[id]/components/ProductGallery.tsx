@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import Image from 'next/image';
 
 interface ProductGalleryProps {
@@ -10,6 +10,11 @@ interface ProductGalleryProps {
 
 export default function ProductGallery({ images, title }: ProductGalleryProps) {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
+
+  // Auto-switch to variant image when it changes
+  useEffect(() => {
+    setCurrentImageIndex(0);
+  }, [images[0]]);
 
   if (!images || images.length === 0) return null;
 
