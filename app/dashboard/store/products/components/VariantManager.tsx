@@ -79,7 +79,7 @@ function VariantTableRow({
     return (
         <TableRow className={cn(
             selectedIndices.includes(index) && "bg-orange-50/30",
-            isParentStart && index > 0 && "border-t-2 border-gray-200"
+            isParentStart && index > 0 && "border-t-[3px] border-orange-200/50 shadow-sm"
         )}>
             <TableCell className={cn(isParentStart && "align-top pt-4")}>
                 <Checkbox
@@ -100,14 +100,32 @@ function VariantTableRow({
                 const displayOptions = Array.from(new Set([...allPredefined, ...currentAttrOptions]));
 
                 return (
-                    <TableCell key={i} rowSpan={rowSpan} className={cn(
-                        "relative group/cell border-r border-gray-100",
-                        rowSpan > 1 && "align-top pt-4 bg-gray-50/5"
-                    )}>
+                    <TableCell
+                        key={i}
+                        rowSpan={rowSpan}
+                        className={cn(
+                            "relative group/cell border-r border-gray-200 min-w-[120px]",
+                            rowSpan > 1 && "align-top pt-4",
+                            i === 0 && "bg-orange-50/[0.03] font-bold",
+                            i === 1 && "bg-blue-50/[0.02]",
+                            i === 2 && "bg-green-50/[0.02]",
+                            i > 0 && "border-l border-dashed border-gray-300 shadow-inner"
+                        )}
+                        style={{ paddingLeft: `${i * 1.5 + 0.5}rem` }}
+                    >
+                        <div className="flex items-center gap-1 group/val">
                         <Popover>
                             <PopoverTrigger asChild>
-                                <Button variant="ghost" size="sm" className="h-8 p-0 font-medium hover:bg-gray-100 transition-colors w-full justify-start px-2 text-xs">
-                                    {value as string}
+                                <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className={cn(
+                                        "h-8 p-0 font-bold hover:bg-gray-100 transition-colors flex-1 justify-start px-2 text-xs",
+                                        i === 0 ? "text-orange-900" : "text-gray-700",
+                                        !value && "text-gray-400 italic font-normal"
+                                    )}
+                                >
+                                    {value as string || `Select ${attrName}...`}
                                 </Button>
                             </PopoverTrigger>
                             <PopoverContent className="p-0 w-48" align="start">
@@ -169,16 +187,23 @@ function VariantTableRow({
                                 </Command>
                             </PopoverContent>
                         </Popover>
-                        {rowSpan >= 1 && i < attributes.length - 1 && (
+                        {rowSpan >= 1 && (attributes.length > 1) && (
                           <Button
-                            variant="default"
+                            variant="secondary"
                             size="icon"
-                            className="absolute bottom-1 right-1 h-6 w-6 opacity-0 group-hover/cell:opacity-100 transition-opacity bg-orange-600 shadow-md hover:bg-orange-700 z-10"
+                            className="h-5 w-5 opacity-0 group-hover/val:opacity-100 transition-opacity bg-orange-100 text-orange-600 hover:bg-orange-600 hover:text-white rounded-full shrink-0 ml-auto"
                             onClick={() => onAddSubVariant(index, i)}
-                            title={`Add more options under ${value}`}
+                            title={`Add sibling/child variation for ${value || attrName}`}
                           >
-                            <Plus className="h-3.5 w-3.5 text-white" />
+                            <Plus className="h-3 w-3" />
                           </Button>
+                        )}
+                        </div>
+                        {i > 0 && (
+                            <div
+                                className="absolute left-0 top-0 bottom-0 w-0.5 bg-gray-200"
+                                style={{ marginLeft: `${(i - 1) * 1.5 + 1.25}rem` }}
+                            />
                         )}
                     </TableCell>
                 );
