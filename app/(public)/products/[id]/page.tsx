@@ -121,16 +121,19 @@ export default function ProductPage() {
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
         if (currentVariation) {
+            const displayPrice = currentVariation.salePrice && currentVariation.salePrice < currentVariation.price
+                ? currentVariation.salePrice
+                : currentVariation.price;
             return {
                 basePrice: currentVariation.price,
-                totalPrice: currentVariation.price,
+                totalPrice: displayPrice,
                 priceBreakdown: [], // Matrix prices are all-inclusive
                 isOutOfStock: !currentVariation.available || currentVariation.stock <= 0,
                 priceRange: null
             };
         } else {
              // Calculate price range from matching variations
-             const prices = matchingVariations.map(v => v.price);
+             const prices = matchingVariations.map(v => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price);
              const minPrice = prices.length > 0 ? Math.min(...prices) : product.price;
              const maxPrice = prices.length > 0 ? Math.max(...prices) : product.price;
 
@@ -310,6 +313,11 @@ export default function ProductPage() {
                                 `£${totalPrice.toFixed(2)}`
                             )}
                         </span>
+                        {isMatrixSystem && currentVariation && currentVariation.salePrice && currentVariation.salePrice < currentVariation.price && (
+                             <span className="text-lg text-gray-400 line-through">
+                                £{currentVariation.price.toFixed(2)}
+                            </span>
+                        )}
                         {product.salePrice && product.salePrice < product.price && !isMatrixSystem && (
                             <span className="text-lg text-gray-400 line-through">
                                 £{product.price.toFixed(2)}

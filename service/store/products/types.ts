@@ -22,12 +22,14 @@ export interface ProductVariation {
   sku?: string;
   combination: Record<string, string>;
   price: number;
+  salePrice?: number;
   stock: number;
   reservedStock?: number;
   soldCount?: number;
   lowStockThreshold?: number;
   available: boolean;
   image?: string;
+  notes?: string;
   weight?: number;
   length?: number;
   width?: number;
