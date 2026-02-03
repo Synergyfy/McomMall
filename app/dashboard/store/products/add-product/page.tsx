@@ -17,8 +17,8 @@ import { ProductStatusModal } from './components/lib/ProductStatusModal';
 
 export default function AddProductPage() {
   const [step, setStep] = useState(1);
-  const [isPublished, setIsPublished] = useState(false); 
-  const [fulfillmentType, setFulfillmentType] = useState<'shipping' | 'pickup' | null>(null);
+  const [isPublished, setIsPublished] = useState(false);
+  const [fulfillmentType, setFulfillmentType] = useState<('shipping' | 'pickup')[]>([]);
   const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
 
   const [formData, setFormData] = useState({
@@ -68,10 +68,12 @@ export default function AddProductPage() {
     }
 
     if (step === 4) {
-      if (fulfillmentType === 'pickup') {
+      if (fulfillmentType.includes('shipping')) {
+        setStep(4.1);
+      } else if (fulfillmentType.includes('pickup')) {
         setStep(5.1);
       } else {
-        setStep(4.1);
+        setStep(8);
       }
       return;
     }
@@ -101,7 +103,16 @@ export default function AddProductPage() {
       return;
     }
 
-    if (step === 5 || step === 5.1 || step === 7) {
+    if (step === 5 || step === 7) {
+      if (fulfillmentType.includes('pickup')) {
+        setStep(5.1);
+      } else {
+        setStep(8);
+      }
+      return;
+    }
+
+    if (step === 5.1) {
       setStep(8);
       return;
     }
@@ -112,11 +123,14 @@ export default function AddProductPage() {
   const prevStep = () => {
     if (step === 8) {
       if (formData.product_type !== 'physical') return setStep(3);
-      if (fulfillmentType === 'pickup') return setStep(5.1);
-      if (shippingMethod === 'shipstation') return setStep(7);
-      return setStep(5);
+      if (fulfillmentType.includes('pickup')) return setStep(5.1);
+      if (fulfillmentType.includes('shipping')) {
+        if (shippingMethod === 'shipstation') return setStep(7);
+        return setStep(5);
+      }
+      return setStep(4);
     }
-    
+
     if (step === 7) return setStep(6);
     if (step === 6) return setStep(5.5);
     if (step === 5.5) return setStep(4.2);
@@ -124,24 +138,37 @@ export default function AddProductPage() {
     if (step === 4.1 || step === 5.1) return setStep(4);
     if (step === 4.2) return setStep(4.1);
     if (step === 5) return setStep(4.2);
-    
+    if (step === 5.1) {
+      if (fulfillmentType.includes('shipping')) {
+        if (shippingMethod === 'shipstation') return setStep(7);
+        return setStep(5);
+      }
+      return setStep(4);
+    }
+
     setStep((prev) => prev - 1);
   };
 
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => {}} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} />;
       case 2:
-        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => {}} />;
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:
         return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 4:
         return (
           <Step4aFulfillmentSelection
-            onSelect={(type: 'shipping' | 'pickup') => {
-              setFulfillmentType(type);
-              type === 'pickup' ? setStep(5.1) : setStep(4.1);
+            onSelect={(types: ('shipping' | 'pickup')[]) => {
+              setFulfillmentType(types);
+              if (types.includes('shipping')) {
+                setStep(4.1);
+              } else if (types.includes('pickup')) {
+                setStep(5.1);
+              } else {
+                setStep(8);
+              }
             }}
             onBack={prevStep}
           />
@@ -169,7 +196,7 @@ export default function AddProductPage() {
       case 7:
         return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => {}} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} />;
       default:
         return <div>Unknown Step</div>;
     }
@@ -177,9 +204,9 @@ export default function AddProductPage() {
 
   if (isPublished) {
     return (
-      <ProductStatusModal 
-        isOpen={true} 
-        onClose={() => setIsPublished(false)} 
+      <ProductStatusModal
+        isOpen={true}
+        onClose={() => setIsPublished(false)}
         type="success"
         title="Product Added Successfully!"
         message={`${formData.productName} is now live and ready for customers.`}
