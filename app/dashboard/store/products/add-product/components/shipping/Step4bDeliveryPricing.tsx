@@ -150,45 +150,15 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
 
         {isPaid && (
           <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/30 animate-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500 rounded-lg text-white">
                 <Truck size={20} />
               </div>
-              <h4 className="font-bold dark:text-white">Paid Delivery Settings</h4>
+              <h4 className="font-bold dark:text-white">Paid Delivery Selected</h4>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-[#9c7349] uppercase">Paid Delivery Radius (Miles)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 20"
-                  className="w-full p-3 rounded-xl border border-blue-200 dark:bg-[#1c140d] dark:text-white focus:border-blue-500 outline-none"
-                  value={formData.paidDeliveryRadius || ""}
-                  onChange={(e) => updateFormData({ paidDeliveryRadius: e.target.value })}
-                />
-                 {/* Map Visualization for Paid Radius */}
-                 {!isFree && ( // Only show if Free is not selected (to avoid clutter), or maybe show both? User said "when you select paid delivery remove the Paid Delivery Settings(its not needed)" - wait, user said REMOVE Paid Delivery Settings?
-                  // "when you select paid delivery remove the Paid Delivery Settings(its not needed)"
-                  // Ah, maybe they meant the text header "Paid Delivery Settings"? Or the whole block?
-                  // No, they likely meant "remove the *text* 'Paid Delivery Settings'" because the map explains it?
-                  // Or maybe they meant the *old* way of doing it?
-                  // The prompt said: "when you select paid delivery remove the Paid Delivery Settings(its not needed) still 4b FedEx UPS DHL Connect Existing Carriers should be lockedand unaccesible (with a tag coming soon)"
-                  // I will assume they want the Map to replace the "Settings" text/look, but we still need the input.
-                  // I'll keep the input but maybe simplify the header.
-                  <DeliveryMap radiusMiles={parseFloat(formData.paidDeliveryRadius || '0')} center={defaultCenter} />
-                 )}
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-[#9c7349] uppercase">Delivery Fee (£)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 15.00"
-                  className="w-full p-3 rounded-xl border border-blue-200 dark:bg-[#1c140d] dark:text-white focus:border-blue-500 outline-none"
-                  value={formData.paidDeliveryFee || ""}
-                  onChange={(e) => updateFormData({ paidDeliveryFee: e.target.value })}
-                />
-              </div>
-            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+              Standard delivery fees will apply. Rates can be configured in your Shipping Settings or calculated by carriers.
+            </p>
           </div>
         )}
       </div>
@@ -246,27 +216,6 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         </div>
       </div>
 
-       {/* Carrier Integration Section (Locked) */}
-       <div className="px-4 mt-8 opacity-60 pointer-events-none grayscale relative">
-        <div className="absolute inset-0 z-10 flex items-center justify-center">
-            <span className="bg-gray-800 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg transform -rotate-2">Coming Soon</span>
-        </div>
-        <h3 className="text-xl font-bold mb-4 text-[#1c140d] dark:text-white">Connect Existing Carriers</h3>
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-6 border border-gray-200 rounded-xl flex flex-col items-center justify-center gap-4 bg-gray-50">
-                <span className="text-2xl font-black text-[#4D148C]">FedEx</span>
-                <p className="text-xs text-center text-gray-500">Connect your FedEx account to calculate rates.</p>
-            </div>
-            <div className="p-6 border border-gray-200 rounded-xl flex flex-col items-center justify-center gap-4 bg-gray-50">
-                 <span className="text-2xl font-black text-[#FFB500]">UPS</span>
-                 <p className="text-xs text-center text-gray-500">Link UPS for real-time shipping quotes.</p>
-            </div>
-            <div className="p-6 border border-gray-200 rounded-xl flex flex-col items-center justify-center gap-4 bg-gray-50">
-                 <span className="text-2xl font-black text-[#D40511]">DHL</span>
-                 <p className="text-xs text-center text-gray-500">Enable DHL Express for international shipping.</p>
-            </div>
-        </div>
-      </div>
 
       {/* Footer Actions */}
       <div className="flex items-center justify-between px-4 py-10 mt-8 border-t border-[#f4ede7] dark:border-[#3d2f25]">

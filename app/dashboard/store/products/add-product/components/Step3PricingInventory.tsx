@@ -152,15 +152,19 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     <p className="text-[#1c140d] dark:text-white font-black text-xs">Does this product have variants or attributes?</p>
                                 </div>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={hasVariants}
-                                    onChange={(e) => toggleVariants(e.target.checked)}
-                                />
-                                <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
-                            </label>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-[#9c7349]">No</span>
+                                <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                    <input
+                                        type="checkbox"
+                                        className="sr-only peer"
+                                        checked={hasVariants}
+                                        onChange={(e) => toggleVariants(e.target.checked)}
+                                    />
+                                    <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
+                                </label>
+                                <span className="text-xs font-bold text-[#f48c25]">Yes</span>
+                            </div>
                         </div>
                     </section>
 
@@ -322,26 +326,41 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
 
                     {/* Conditional Shipping Section */}
                     {formData.product_type === 'physical' && (
-                        <section className="flex flex-col gap-4 px-2 md:px-0">
-                            <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
-                                <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
-                                <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold">Weight (kg)</label>
-                                    <input className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] py-3 px-4 bg-white dark:bg-[#2d241b] outline-none" placeholder="0.0" type="number" id="weight" value={formData.weight || ''} onChange={handleChange} />
+                        (hasVariants && (formData.useVariantPricing ?? true)) ? (
+                            <section className="flex flex-col gap-4 px-2 md:px-0">
+                                <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
+                                    <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
+                                <div className="p-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-800/30">
+                                    <p className="text-sm text-[#1c140d] dark:text-white font-medium">Shipping details are managed per variant.</p>
+                                    <p className="text-xs text-[#9c7349] dark:text-[#cba885] mt-1">
+                                        Since you have enabled variant pricing & inventory, please set weight and dimensions for each variation in the table above.
+                                    </p>
+                                </div>
+                            </section>
+                        ) : (
+                            <section className="flex flex-col gap-4 px-2 md:px-0">
+                                <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
+                                    <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[#1c140d] dark:text-white text-sm font-bold">Weight (kg)</label>
+                                        <input className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] py-3 px-4 bg-white dark:bg-[#2d241b] outline-none" placeholder="0.0" type="number" id="weight" value={formData.weight || ''} onChange={handleChange} />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
+                        )
                     )}
 
                     {/* Sticky Footer for Mobile */}

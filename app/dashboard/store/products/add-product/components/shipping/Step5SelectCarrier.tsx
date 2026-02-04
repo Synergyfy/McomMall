@@ -66,25 +66,32 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                     </div>
 
                     {/* Carrier Grid */}
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        {CARRIERS.map((carrier) => (
-                            <div key={carrier.id} className="relative flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-white dark:bg-[#2c241b] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none border border-transparent dark:border-[#3a2e26] opacity-60 grayscale pointer-events-none">
-                                <div className="absolute top-2 right-2 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">Coming Soon</div>
-                                <div className="shrink-0 w-16 h-16 bg-[#fcfaf8] dark:bg-[#3a2e26] rounded-lg p-2 flex items-center justify-center border border-[#f4ede7] dark:border-[#4a3e36]">
-                                    <div className="w-full h-full bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url("${carrier.logoUrl}")` }}></div>
-                                </div>
-                                <div className="flex flex-col flex-1 gap-1">
-                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">{carrier.name}</h3>
-                                    <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-normal leading-relaxed mb-3">{carrier.description}</p>
-                                    <button
-                                        disabled
-                                        className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-[#e8dbce] text-[#9c7349] text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"
-                                    >
-                                        Connect
-                                    </button>
-                                </div>
+                    <div className="flex flex-col gap-6">
+                        {/* Partner Carriers (Coming Soon) */}
+                        <div className="flex flex-col gap-4 opacity-60 grayscale pointer-events-none relative">
+                            <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                <span className="bg-gray-800 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg transform -rotate-1">Coming Soon</span>
                             </div>
-                        ))}
+                            <h3 className="text-lg font-bold text-[#1c140d] dark:text-white">Connect Existing Carriers</h3>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                {CARRIERS.map((carrier) => (
+                                    <div key={carrier.id} className="flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-white dark:bg-[#2c241b] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none border border-transparent dark:border-[#3a2e26]">
+                                        <div className="shrink-0 w-16 h-16 bg-[#fcfaf8] dark:bg-[#3a2e26] rounded-lg p-2 flex items-center justify-center border border-[#f4ede7] dark:border-[#4a3e36]">
+                                            <div className="w-full h-full bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url("${carrier.logoUrl}")` }}></div>
+                                        </div>
+                                        <div className="flex flex-col flex-1 gap-1">
+                                            <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">{carrier.name}</h3>
+                                            <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-normal leading-relaxed mb-3">{carrier.description}</p>
+                                            <button disabled className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-[#e8dbce] text-[#9c7349] text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed">
+                                                Connect
+                                            </button>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        <div className="h-px bg-[#e8dbce] dark:bg-[#3a2e26] w-full my-2"></div>
 
                         {/* Custom Carrier Card */}
                         <div className="flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-[#f4ede7] dark:bg-[#2a221a] shadow-none border border-transparent dark:border-[#3a2e26] hover:border-[#f48c25]/30 transition-all group opacity-80 hover:opacity-100">

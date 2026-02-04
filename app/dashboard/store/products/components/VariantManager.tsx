@@ -1359,8 +1359,8 @@ export default function VariantManager({
                   <TableHead className="text-xs font-bold text-gray-500">Qty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Weight</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Notes</TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 text-center w-[40px]">DIM</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 text-center w-[40px]">DEL</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
