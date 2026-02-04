@@ -1336,31 +1336,35 @@ export default function VariantManager({
                   <TableHead className="w-[50px] text-center">Img</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Warranty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">SKU</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500 flex items-center gap-1">
-                    Price (£)
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>The standard selling price.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <TableHead className="text-xs font-bold text-gray-500 min-w-[100px]">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      Price (£)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The standard selling price.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500 flex items-center gap-1">
-                    Sale (£)
-                    <TooltipProvider>
-                      <Tooltip>
-                        <TooltipTrigger asChild>
-                          <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                          <p>The discounted price. Must be lower than regular price.</p>
-                        </TooltipContent>
-                      </Tooltip>
-                    </TooltipProvider>
+                  <TableHead className="text-xs font-bold text-gray-500 min-w-[100px]">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      Sale (£)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The discounted price. Must be lower than regular price.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Qty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Weight</TableHead>
