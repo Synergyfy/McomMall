@@ -94,7 +94,10 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                         <div className="h-px bg-[#e8dbce] dark:bg-[#3a2e26] w-full my-2"></div>
 
                         {/* Custom Carrier Card */}
-                        <div className="flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-[#f4ede7] dark:bg-[#2a221a] shadow-none border border-transparent dark:border-[#3a2e26] hover:border-[#f48c25]/30 transition-all group opacity-80 hover:opacity-100">
+                        <div className="relative flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-[#f4ede7] dark:bg-[#2a221a] shadow-none border border-transparent dark:border-[#3a2e26] transition-all group opacity-60 grayscale pointer-events-none">
+                            <div className="absolute inset-0 z-10 flex items-center justify-center">
+                                <span className="bg-gray-800 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg transform -rotate-1">Coming Soon</span>
+                            </div>
                             <div className="shrink-0 w-16 h-16 bg-white dark:bg-[#3a2e26] rounded-lg p-2 flex items-center justify-center border border-white/50 dark:border-[#4a3e36]">
                                 <Truck className="text-3xl text-[#9c7349] dark:text-[#a08b7d]" size={32} />
                             </div>
@@ -102,8 +105,8 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                                 <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Custom Carrier</h3>
                                 <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-normal leading-relaxed mb-3">Set up shipping rates manually if your preferred carrier isn't listed here.</p>
                                 <button
-                                    onClick={onNext}
-                                    className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-transparent border border-[#9c7349] text-[#1c140d] dark:text-white text-sm font-bold hover:bg-[#9c7349]/10 transition-colors flex items-center justify-center gap-2"
+                                    disabled
+                                    className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-transparent border border-[#9c7349] text-[#1c140d] dark:text-white text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"
                                 >
                                     Configure
                                 </button>
