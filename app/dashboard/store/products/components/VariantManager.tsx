@@ -1176,6 +1176,12 @@ export default function VariantManager({
 
       {/* 1. Define Attributes Section */}
       <div className="space-y-4">
+        {attributes.length === 0 && (
+            <div className="mb-2">
+                <h4 className="font-semibold text-gray-900 dark:text-white">Define Product Attributes</h4>
+                <p className="text-sm text-gray-500">Start by selecting the main attribute that distinguishes your variants.</p>
+            </div>
+        )}
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium">{attributes.length === 0 ? "1. Select Primary Attribute" : "1. Define Attributes"}</h3>
