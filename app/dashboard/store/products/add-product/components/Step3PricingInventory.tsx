@@ -1,5 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, Layers } from 'lucide-react';
+import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, Layers, HelpCircle } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import VariantManager from '../../components/VariantManager';
 import SizeGuideBuilder from '../../components/SizeGuideBuilder';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -34,7 +40,10 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
 
     const toggleVariants = (enabled: boolean) => {
         updateFormData({ hasVariants: enabled });
-        if (!enabled) {
+        if (enabled) {
+            // Auto-enable variant pricing when variants are enabled
+            updateFormData({ useVariantPricing: true });
+        } else {
             // Clear variants in parent
             updateFormData({ attributes: [], variations: [] });
             methods.reset({ attributes: [], variations: [] });
@@ -127,38 +136,36 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     <Layers className="w-6 h-6 text-orange-600" />
                                 </div>
                                 <div>
-                                    <h3 className="text-[#1c140d] dark:text-white font-bold text-base">Product Options</h3>
-                                    <p className="text-[#1c140d] dark:text-white font-black text-xs">Does this product have variants like Size or Color?</p>
+                                    <h3 className="text-[#1c140d] dark:text-white font-bold text-base flex items-center gap-2">
+                                        Product Options
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Create variations if your product comes in different options (e.g., sizes, colors).</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </h3>
+                                    <p className="text-[#1c140d] dark:text-white font-black text-xs">Does this product have variants or attributes?</p>
                                 </div>
                             </div>
-                            <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
-                                <input
-                                    type="checkbox"
-                                    className="sr-only peer"
-                                    checked={hasVariants}
-                                    onChange={(e) => toggleVariants(e.target.checked)}
-                                />
-                                <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
-                            </label>
-                        </div>
-
-                        {hasVariants && (
-                            <div className="mt-4 pt-4 border-t border-orange-200/50 dark:border-orange-800/30 flex items-center justify-between">
-                                <div>
-                                    <h4 className="text-[#1c140d] dark:text-white font-bold text-sm">Use Variant Pricing & Inventory</h4>
-                                    <p className="text-[#9c7349] dark:text-[#cba885] text-[10px]">Enable to set unique prices/stock for each variant. Disable to use global values for all.</p>
-                                </div>
+                            <div className="flex items-center gap-3">
+                                <span className="text-xs font-bold text-[#9c7349]">No</span>
                                 <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
                                     <input
                                         type="checkbox"
                                         className="sr-only peer"
-                                        checked={formData.useVariantPricing ?? true}
-                                        onChange={(e) => updateFormData({ useVariantPricing: e.target.checked })}
+                                        checked={hasVariants}
+                                        onChange={(e) => toggleVariants(e.target.checked)}
                                     />
-                                    <div className="w-10 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                                    <div className="w-12 h-6 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:after:translate-x-6"></div>
                                 </label>
+                                <span className="text-xs font-bold text-[#f48c25]">Yes</span>
                             </div>
-                        )}
+                        </div>
                     </section>
 
                     {hasVariants ? (
@@ -173,6 +180,38 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     readOnlyPricing={!(formData.useVariantPricing ?? true)}
                                 />
                             </section>
+
+                            <div className="mx-2 md:mx-0 pt-4 border-t border-orange-200/50 dark:border-orange-800/30 flex items-center justify-between bg-orange-50/50 dark:bg-orange-900/10 p-4 rounded-xl">
+                                <div>
+                                    <h4 className="text-[#1c140d] dark:text-white font-bold text-sm flex items-center gap-2">
+                                        Use Variant Pricing & Inventory
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="w-3.5 h-3.5 text-gray-400 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Toggle On: Manage price/stock per variant.<br />Toggle Off: Apply global price/stock to all variants.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </h4>
+                                    <p className="text-[#9c7349] dark:text-[#cba885] text-[10px]">Enable to set unique prices/stock for each variant. Disable to use global values for all.</p>
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <span className="text-xs font-bold text-[#9c7349]">No</span>
+                                    <label className="relative inline-flex items-center cursor-pointer flex-shrink-0">
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.useVariantPricing ?? true}
+                                            onChange={(e) => updateFormData({ useVariantPricing: e.target.checked })}
+                                        />
+                                        <div className="w-10 h-5 bg-gray-200 peer-focus:ring-2 peer-focus:ring-[#f48c25]/20 rounded-full peer dark:bg-gray-700 peer-checked:bg-[#f48c25] after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:after:translate-x-5"></div>
+                                    </label>
+                                    <span className="text-xs font-bold text-[#f48c25]">Yes</span>
+                                </div>
+                            </div>
 
                             {/* Size Guide (Conditional - Show only if "Size" variant exists) */}
                             {formData.attributes?.some((a: any) => a.name.toLowerCase() === 'size') && (
@@ -287,26 +326,41 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
 
                     {/* Conditional Shipping Section */}
                     {formData.product_type === 'physical' && (
-                        <section className="flex flex-col gap-4 px-2 md:px-0">
-                            <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
-                                <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
-                                <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
-                            </div>
-                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold">Weight (kg)</label>
-                                    <input className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] py-3 px-4 bg-white dark:bg-[#2d241b] outline-none" placeholder="0.0" type="number" id="weight" value={formData.weight || ''} onChange={handleChange} />
+                        (hasVariants && (formData.useVariantPricing ?? true)) ? (
+                            <section className="flex flex-col gap-4 px-2 md:px-0">
+                                <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
+                                    <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
                                 </div>
-                                <div className="flex flex-col gap-2">
-                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
-                                    <div className="grid grid-cols-3 gap-2">
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
-                                        <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
+                                <div className="p-4 bg-orange-50/50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-800/30">
+                                    <p className="text-sm text-[#1c140d] dark:text-white font-medium">Shipping details are managed per variant.</p>
+                                    <p className="text-xs text-[#9c7349] dark:text-[#cba885] mt-1">
+                                        Since you have enabled variant pricing & inventory, please set weight and dimensions for each variation in the table above.
+                                    </p>
+                                </div>
+                            </section>
+                        ) : (
+                            <section className="flex flex-col gap-4 px-2 md:px-0">
+                                <div className="flex items-center justify-between border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Shipping Details</h3>
+                                    <span className="text-[10px] font-bold text-[#f48c25] bg-[#f48c25]/10 px-2 py-0.5 rounded uppercase">Physical Only</span>
+                                </div>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[#1c140d] dark:text-white text-sm font-bold">Weight (kg)</label>
+                                        <input className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] py-3 px-4 bg-white dark:bg-[#2d241b] outline-none" placeholder="0.0" type="number" id="weight" value={formData.weight || ''} onChange={handleChange} />
+                                    </div>
+                                    <div className="flex flex-col gap-2">
+                                        <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
+                                        <div className="grid grid-cols-3 gap-2">
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
+                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
+                                        </div>
                                     </div>
                                 </div>
-                            </div>
-                        </section>
+                            </section>
+                        )
                     )}
 
                     {/* Sticky Footer for Mobile */}

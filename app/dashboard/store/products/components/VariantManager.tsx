@@ -12,8 +12,14 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, CheckSquare, Zap, Package, ChevronDown, ChevronRight, Copy } from 'lucide-react';
+import { X, ChevronsUpDown, Plus, Trash2, Edit2, Settings, ImageIcon, Upload, CheckSquare, Zap, Package, ChevronDown, ChevronRight, Copy, HelpCircle } from 'lucide-react';
 import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import { ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Badge } from '@/components/ui/badge';
 import { predefinedVariantOptions, sizeSystems, sizeMapping } from '@/lib/variant-options';
@@ -192,14 +198,25 @@ function VariantGroupRows({
                   <div className="w-1.5 h-1.5 rounded-full bg-orange-400 opacity-60" />
                   <span className="font-semibold text-gray-700 dark:text-gray-300 text-sm">{groupValue}</span>
                 </div>
-                <AddVariantPopover
-                  groupValue={groupValue}
-                  attributes={attributes}
-                  baseCombination={variation.combination}
-                  onAdd={(combos) => addVariantToGroup(groupValue, combos)}
-                  triggerIcon={<Plus className="h-3 w-3" />}
-                  triggerClassName="h-5 w-5 rounded-full p-0 opacity-0 group-hover/row-picker:opacity-100 transition-opacity bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100"
-                />
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <div>
+                        <AddVariantPopover
+                          groupValue={groupValue}
+                          attributes={attributes}
+                          baseCombination={variation.combination}
+                          onAdd={(combos) => addVariantToGroup(groupValue, combos)}
+                          triggerIcon={<Plus className="h-3 w-3" />}
+                          triggerClassName="h-5 w-5 rounded-full p-0 opacity-100 transition-opacity bg-orange-50 text-orange-600 border-orange-100 hover:bg-orange-100"
+                        />
+                      </div>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Add a new variant in this group</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
               </div>
             </TableCell>
 
@@ -212,14 +229,25 @@ function VariantGroupRows({
                     <span className="text-sm text-gray-700 dark:text-gray-300">
                       {value || <span className="text-xs text-gray-400 italic">-</span>}
                     </span>
-                    <AddVariantPopover
-                      groupValue={groupValue}
-                      attributes={attributes}
-                      baseCombination={variation.combination}
-                      onAdd={(combos) => addVariantToGroup(groupValue, combos)}
-                      triggerIcon={<Plus className="h-3 w-3" />}
-                      triggerClassName="h-5 w-5 rounded-full p-0 opacity-0 group-hover/cell-picker:opacity-100 transition-opacity bg-white text-orange-600 border-orange-100 hover:bg-orange-50 shadow-sm"
-                    />
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <div>
+                            <AddVariantPopover
+                              groupValue={groupValue}
+                              attributes={attributes}
+                              baseCombination={variation.combination}
+                              onAdd={(combos) => addVariantToGroup(groupValue, combos)}
+                              triggerIcon={<Plus className="h-3 w-3" />}
+                              triggerClassName="h-5 w-5 rounded-full p-0 opacity-100 transition-opacity bg-white text-orange-600 border-orange-100 hover:bg-orange-50 shadow-sm"
+                            />
+                          </div>
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Add a variant based on this attribute</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
                   </div>
                 </TableCell>
               );
@@ -821,6 +849,12 @@ export default function VariantManager({
   };
 
   const updateVariation = (index: number, data: ProductVariation) => {
+    // Enforce sales price is not bigger than price
+    if (data.salePrice && data.price && data.salePrice > data.price) {
+      toast.error("Sale price cannot be higher than regular price");
+      data.salePrice = data.price;
+    }
+
     if (isControlled) {
       const newVars = [...(propVariations || [])];
       newVars[index] = data;
@@ -1142,6 +1176,12 @@ export default function VariantManager({
 
       {/* 1. Define Attributes Section */}
       <div className="space-y-4">
+        {attributes.length === 0 && (
+            <div className="mb-2">
+                <h4 className="font-semibold text-gray-900 dark:text-white">Define Product Attributes</h4>
+                <p className="text-sm text-gray-500">Start by selecting the main attribute that distinguishes your variants.</p>
+            </div>
+        )}
         <div className="flex justify-between items-center">
           <div>
             <h3 className="text-lg font-medium">{attributes.length === 0 ? "1. Select Primary Attribute" : "1. Define Attributes"}</h3>
@@ -1296,13 +1336,41 @@ export default function VariantManager({
                   <TableHead className="w-[50px] text-center">Img</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Warranty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">SKU</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500">Price (£)</TableHead>
-                  <TableHead className="text-xs font-bold text-gray-500">Sale (£)</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 min-w-[100px]">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      Price (£)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The standard selling price.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 min-w-[100px]">
+                    <div className="flex items-center gap-1 whitespace-nowrap">
+                      Sale (£)
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-gray-400 cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            <p>The discounted price. Must be lower than regular price.</p>
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Qty</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Weight</TableHead>
                   <TableHead className="text-xs font-bold text-gray-500">Notes</TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
-                  <TableHead className="w-[40px]"></TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 text-center w-[40px]">DIM</TableHead>
+                  <TableHead className="text-xs font-bold text-gray-500 text-center w-[40px]">DEL</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -1367,14 +1435,12 @@ function VariantOptionInput({
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
-  const [priceModifier, setPriceModifier] = useState<number>(0);
   const options = predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
 
   const handleAdd = () => {
     if (inputValue) {
-      onAddOption(inputValue, priceModifier);
+      onAddOption(inputValue, 0);
       setInputValue('');
-      setPriceModifier(0);
       setOpen(false);
     }
   };
@@ -1383,15 +1449,15 @@ function VariantOptionInput({
     <div className="flex gap-2">
       <div className="flex-1">
         <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between"><span className="truncate">{inputValue || "Type or select..."}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
+          <PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between"><span className="truncate">{inputValue || `Type custom ${variantName || 'attribute'}...`}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
           <PopoverContent className="w-[200px] p-0" align="start">
             <Command>
-              <CommandInput placeholder="Type..." value={inputValue} onValueChange={setInputValue} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
+              <CommandInput placeholder={`Type custom ${variantName || 'attribute'}...`} value={inputValue} onValueChange={setInputValue} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
               <CommandList>
                 <CommandEmpty className="py-2 px-2 text-xs">Press Enter to add "{inputValue}"</CommandEmpty>
                 <CommandGroup heading="Suggestions">
                   {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
-                    <CommandItem key={option} value={option} onSelect={() => { onAddOption(option, priceModifier); }}>{option}</CommandItem>
+                    <CommandItem key={option} value={option} onSelect={() => { onAddOption(option, 0); }}>{option}</CommandItem>
                   ))}
                 </CommandGroup>
               </CommandList>
@@ -1399,7 +1465,6 @@ function VariantOptionInput({
           </PopoverContent>
         </Popover>
       </div>
-      <Input type="number" placeholder="+/- £" value={priceModifier} onChange={(e) => setPriceModifier(parseFloat(e.target.value) || 0)} className="w-20" title="Price Modifier" />
       <Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button">
         <Plus className="h-4 w-4" />
       </Button>

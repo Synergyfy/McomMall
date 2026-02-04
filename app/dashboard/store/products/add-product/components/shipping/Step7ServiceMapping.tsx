@@ -1,4 +1,5 @@
 import React from 'react';
+import { Package, ChevronDown, Plus, Trash2, ArrowLeft, Check } from 'lucide-react';
 
 interface Step7Props {
     onBack: () => void;
@@ -25,7 +26,7 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                 <div className="p-6 md:p-8 flex flex-col md:flex-row gap-8 items-start md:items-center">
                     <div className="flex-1">
                         <div className="flex items-center gap-2 mb-2">
-                            <span className="material-symbols-outlined text-[#f48c25]">inventory_2</span>
+                            <Package className="text-[#f48c25]" />
                             <h3 className="text-xl font-bold text-[#1c140d] dark:text-white">Default Logic</h3>
                         </div>
                         <p className="text-[#9c7349] dark:text-[#b0967a] text-sm">Define the fallback package type used when product dimensions are missing from the order data.</p>
@@ -40,7 +41,7 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                                 <option>Letter Envelope</option>
                             </select>
                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-[#9c7349]">
-                                <span className="material-symbols-outlined">expand_more</span>
+                                <ChevronDown size={20} />
                             </div>
                         </div>
                     </div>
@@ -52,7 +53,7 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                 <div className="flex justify-between items-center">
                     <h3 className="text-xl font-bold text-[#1c140d] dark:text-white">Shipping Method Mappings</h3>
                     <button className="flex items-center gap-2 px-4 py-2 text-sm font-bold text-[#f48c25] border border-[#f48c25]/30 bg-[#f48c25]/5 hover:bg-[#f48c25]/10 rounded-lg transition-colors">
-                        <span className="material-symbols-outlined text-[20px]">add</span>
+                        <Plus size={20} />
                         Add New Mapping
                     </button>
                 </div>
@@ -81,13 +82,13 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                                                 <option>FedEx Ground</option>
                                             </select>
                                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#9c7349]">
-                                                <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                                                <ChevronDown size={18} />
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-right">
                                         <button className="text-[#9c7349] hover:text-red-500 transition-colors p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove Mapping">
-                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                            <Trash2 size={20} />
                                         </button>
                                     </td>
                                 </tr>
@@ -105,13 +106,13 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                                                 <option>USPS Priority Mail Express</option>
                                             </select>
                                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#9c7349]">
-                                                <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                                                <ChevronDown size={18} />
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-right">
                                         <button className="text-[#9c7349] hover:text-red-500 transition-colors p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove Mapping">
-                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                            <Trash2 size={20} />
                                         </button>
                                     </td>
                                 </tr>
@@ -129,13 +130,13 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                                                 <option>FedEx International Priority</option>
                                             </select>
                                             <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-[#9c7349]">
-                                                <span className="material-symbols-outlined text-[18px]">expand_more</span>
+                                                <ChevronDown size={18} />
                                             </div>
                                         </div>
                                     </td>
                                     <td className="p-4 text-right">
                                         <button className="text-[#9c7349] hover:text-red-500 transition-colors p-2 rounded-md hover:bg-red-50 dark:hover:bg-red-900/20" title="Remove Mapping">
-                                            <span className="material-symbols-outlined text-[20px]">delete</span>
+                                            <Trash2 size={20} />
                                         </button>
                                     </td>
                                 </tr>
@@ -151,7 +152,7 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                     onClick={onBack}
                     className="px-6 py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b30] text-[#1c140d] dark:text-white font-bold hover:bg-[#e8dbce] dark:hover:bg-[#332920] transition-colors flex items-center gap-2"
                 >
-                    <span className="material-symbols-outlined text-[20px]">arrow_back</span>
+                    <ArrowLeft size={20} />
                     Back
                 </button>
                 <button
@@ -159,7 +160,7 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
                     className="px-8 py-3 rounded-lg bg-[#f48c25] hover:bg-[#e07b1a] text-white font-bold shadow-sm transition-colors flex items-center gap-2"
                 >
                     Finish & Save
-                    <span className="material-symbols-outlined text-[20px]">check</span>
+                    <Check size={20} />
                 </button>
             </div>
         </div>
