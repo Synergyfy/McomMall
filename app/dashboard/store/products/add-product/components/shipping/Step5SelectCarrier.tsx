@@ -68,7 +68,8 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                     {/* Carrier Grid */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                         {CARRIERS.map((carrier) => (
-                            <div key={carrier.id} className="flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-white dark:bg-[#2c241b] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none border border-transparent dark:border-[#3a2e26] hover:border-[#f48c25]/30 transition-all group">
+                            <div key={carrier.id} className="relative flex flex-col sm:flex-row items-start gap-4 p-5 rounded-xl bg-white dark:bg-[#2c241b] shadow-[0_2px_8px_rgba(0,0,0,0.04)] dark:shadow-none border border-transparent dark:border-[#3a2e26] opacity-60 grayscale pointer-events-none">
+                                <div className="absolute top-2 right-2 bg-gray-800 text-white text-[10px] font-bold px-2 py-1 rounded-full z-10">Coming Soon</div>
                                 <div className="shrink-0 w-16 h-16 bg-[#fcfaf8] dark:bg-[#3a2e26] rounded-lg p-2 flex items-center justify-center border border-[#f4ede7] dark:border-[#4a3e36]">
                                     <div className="w-full h-full bg-contain bg-center bg-no-repeat" style={{ backgroundImage: `url("${carrier.logoUrl}")` }}></div>
                                 </div>
@@ -76,8 +77,8 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                                     <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">{carrier.name}</h3>
                                     <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-normal leading-relaxed mb-3">{carrier.description}</p>
                                     <button
-                                        onClick={onNext}
-                                        className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-[#f48c25] text-white dark:text-[#1c140d] text-sm font-bold hover:bg-[#f48c25]/90 transition-colors flex items-center justify-center gap-2"
+                                        disabled
+                                        className="mt-auto w-full sm:w-auto self-start px-4 h-9 rounded-lg bg-[#e8dbce] text-[#9c7349] text-sm font-bold flex items-center justify-center gap-2 cursor-not-allowed"
                                     >
                                         Connect
                                     </button>

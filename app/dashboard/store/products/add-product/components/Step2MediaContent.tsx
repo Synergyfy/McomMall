@@ -11,8 +11,15 @@ import {
     ArrowLeft,
     ArrowRight,
     Video,
-    Crop
+    Crop,
+    HelpCircle
 } from 'lucide-react';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 import MediaCropper from '@/app/dashboard/add-listing/components/steps/shared/MediaCropper';
 import { uploadFile } from '@/lib/upload';
 import { toast } from 'sonner';
@@ -59,7 +66,19 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                     <h2 className="text-md md:text-lg font-bold text-[#1c140d] dark:text-[#ece0d6] border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">Description</h2>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold" htmlFor="shortDesc">Short Description</label>
+                        <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold flex items-center gap-2" htmlFor="shortDesc">
+                            Short Description
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>A brief summary of your product that appears in list views.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </label>
                         <textarea
                             className="w-full resize-none rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#f8f7f5] dark:bg-[#221910] text-[#1c140d] dark:text-[#ece0d6] p-3 md:p-4 text-sm min-h-[100px] outline-none focus:ring-2 focus:ring-[#f48c25]/20 transition-all"
                             id="shortDesc"
@@ -67,10 +86,23 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                             value={formData.shortDesc || ''}
                             onChange={handleChange}
                         ></textarea>
+                        <p className="text-xs text-[#9c7349]">Recommended length: 150-160 characters for best SEO results.</p>
                     </div>
 
                     <div className="flex flex-col gap-2">
-                        <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold" htmlFor="fullDesc">Full Description</label>
+                        <label className="text-[#1c140d] dark:text-[#ece0d6] text-sm font-semibold flex items-center gap-2" htmlFor="fullDesc">
+                            Full Description
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Detailed information about your product features and benefits.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </label>
                         <div className="rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-[#f8f7f5] dark:bg-[#221910] overflow-hidden">
                             <div className="flex flex-wrap items-center gap-1 p-2 border-b border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b]">
                                 <button className="p-2 rounded hover:bg-gray-100 dark:hover:bg-white/10" type="button"><Bold size={18} /></button>
@@ -91,8 +123,20 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 {/* Images Section */}
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-center border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
-                        <h2 className="text-md md:text-lg font-bold">Product Images</h2>
-                        <span className="text-[10px] md:text-xs text-[#9c7349]">Max 5MB</span>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-md md:text-lg font-bold">Product Images</h2>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Upload high-quality images to showcase your product.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
+                        <span className="text-[10px] md:text-xs text-[#9c7349]">Max 5MB per file</span>
                     </div>
 
                     <div className="relative group">
@@ -134,7 +178,19 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 {/* --- RESPONSIVE VIDEO SECTION --- */}
                 <div className="flex flex-col gap-4">
                     <div className="flex justify-between items-center border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
-                        <h2 className="text-md md:text-lg font-bold">Product Videos</h2>
+                        <div className="flex items-center gap-2">
+                            <h2 className="text-md md:text-lg font-bold">Product Videos</h2>
+                            <TooltipProvider>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Add videos to demonstrate your product in action.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                            </TooltipProvider>
+                        </div>
                         <span className="text-[10px] md:text-xs text-[#9c7349]">Max 3 • 30MB Limit</span>
                     </div>
 
