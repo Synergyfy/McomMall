@@ -1,6 +1,6 @@
 export const predefinedVariantOptions: Record<string, string[]> = {
   Color: ['Red', 'Blue', 'Green', 'Yellow', 'Black', 'White', 'Silver', 'Gold'],
-  Size: ['Small', 'Medium', 'Large', 'X-Large', 'XX-Large', '38', '39', '40', '41', '42'],
+  Size: ['Small', 'Medium', 'Large', 'X-Large', 'XX-Large', 'XXL', 'XXXL', '38', '39', '40', '41', '42'],
   Storage: ['64GB', '128GB', '256GB', '512GB', '1TB'],
   Model: ['Pro', 'Standard', 'Max', 'Mini'],
   Material: ['Cotton', 'Polyester', 'Leather', 'Wool', 'Silk'],
@@ -12,7 +12,7 @@ export const predefinedVariantOptions: Record<string, string[]> = {
 };
 
 export const sizeSystems = {
-  Standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL'],
+  Standard: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL'],
   UK: ['34', '36', '38', '40', '42', '44'],
 };
 
