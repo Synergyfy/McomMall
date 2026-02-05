@@ -8,6 +8,7 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from '@/components/ui/form';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import {
@@ -17,10 +18,15 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Store, Image as ImageIcon, CheckCircle2 } from 'lucide-react';
+import { Store, Image as ImageIcon, CheckCircle2, HelpCircle } from 'lucide-react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { UserListing } from '@/service/listings/types';
 import { useGetUserListings } from '@/service/listings/hook';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 export function Step6FinalReview() {
   const { control, watch } = useFormContext();
@@ -39,7 +45,7 @@ export function Step6FinalReview() {
             <Store className="w-5 h-5 text-primary" />
             Business Selection
           </CardTitle>
-          <CardDescription>Select which business this service belongs to.</CardDescription>
+          <CardDescription>Assign this service to one of your verified businesses.</CardDescription>
         </CardHeader>
         <CardContent>
           <FormField
@@ -47,7 +53,19 @@ export function Step6FinalReview() {
             name="businessId"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Business <span className="text-red-500">*</span></FormLabel>
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Business <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Select which business will offer this service.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
                 <Select
                   onValueChange={field.onChange}
                   defaultValue={field.value}
@@ -56,7 +74,7 @@ export function Step6FinalReview() {
                   <FormControl>
                     <SelectTrigger className="py-6">
                       <SelectValue
-                        placeholder={isLoadingListings ? 'Loading...' : 'Select Business'}
+                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
                       />
                     </SelectTrigger>
                   </FormControl>
@@ -80,9 +98,9 @@ export function Step6FinalReview() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
             <ImageIcon className="w-5 h-5 text-primary" />
-            Media & Images
+            Media & Images <span className="text-red-500">*</span>
           </CardTitle>
-          <CardDescription>Upload up to 5 high-quality images of your service.</CardDescription>
+          <CardDescription>Upload up to 5 high-quality images to showcase your service.</CardDescription>
         </CardHeader>
         <CardContent>
           <FormField
@@ -93,6 +111,7 @@ export function Step6FinalReview() {
                 <FormControl>
                   <MultiMediaUpload onMediaChange={field.onChange} />
                 </FormControl>
+                <FormDescription>At least one image is required. Max file size: 5MB.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
@@ -107,28 +126,25 @@ export function Step6FinalReview() {
             <CheckCircle2 className="w-5 h-5 text-primary" />
             Final Review
           </CardTitle>
-          <CardDescription>Please review your service details before publishing.</CardDescription>
+          <CardDescription>Review the core details before publishing your service.</CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
-            <div className="space-y-1">
-              <span className="text-muted-foreground">Service Name:</span>
-              <p className="font-medium">{formValues.name || 'Not set'}</p>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div className="space-y-1 p-3 bg-white rounded-md border shadow-sm">
+              <span className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Service Name</span>
+              <p className="font-semibold text-base">{formValues.name || 'Not set'}</p>
             </div>
-            <div className="space-y-1">
-              <span className="text-muted-foreground">Pricing Model:</span>
-              <p className="font-medium capitalize">{formValues.pricingModel}</p>
+            <div className="space-y-1 p-3 bg-white rounded-md border shadow-sm">
+              <span className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Pricing Model</span>
+              <p className="font-semibold text-base capitalize">{formValues.pricingModel}</p>
             </div>
-            <div className="space-y-1">
-              <span className="text-muted-foreground">Delivery Mode:</span>
-              <p className="font-medium capitalize">{formValues.deliveryConfig?.mode}</p>
+            <div className="space-y-1 p-3 bg-white rounded-md border shadow-sm">
+              <span className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Delivery Mode</span>
+              <p className="font-semibold text-base capitalize">{formValues.deliveryConfig?.mode}</p>
             </div>
-            <div className="space-y-1">
-              <span className="text-muted-foreground">Business:</span>
-              <p className="font-medium">
-                {businesses.find((b: any) => b.id === formValues.businessId)?.businessName ||
-                  'Not selected'}
-              </p>
+            <div className="space-y-1 p-3 bg-white rounded-md border shadow-sm">
+              <span className="text-muted-foreground font-medium uppercase text-[10px] tracking-wider">Target Audience</span>
+              <p className="font-semibold text-base">{formValues.targetAudience || 'Not specified'}</p>
             </div>
           </div>
         </CardContent>

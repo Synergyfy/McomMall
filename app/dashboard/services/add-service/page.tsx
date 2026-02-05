@@ -262,19 +262,44 @@ export default function AddServicePage() {
   };
 
   const nextStep = async () => {
-    const fieldsToValidate: any = {
-      1: ['name', 'category'],
-      2: ['deliveryConfig.mode'],
-      3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit'],
-      6: ['businessId', 'media'],
-    };
+    let isValid = false;
+    const values = form.getValues();
 
-    const currentFields = fieldsToValidate[currentStep] || [];
-    const isValid = await form.trigger(currentFields);
+    if (currentStep === 1) {
+      isValid = !!values.name && !!values.category;
+    } else if (currentStep === 2) {
+      isValid = !!values.deliveryConfig?.mode;
+    } else if (currentStep === 3) {
+      isValid = !!values.pricingModel;
+      if (isValid) {
+        if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
+          isValid = values.fixedPrice !== undefined && values.fixedPrice !== null && values.fixedPrice !== '';
+        } else if (values.pricingModel === 'perHour') {
+          isValid = values.pricePerHour !== undefined && values.pricePerHour !== null && values.pricePerHour !== '';
+        } else if (values.pricingModel === 'perUnit') {
+          isValid = values.pricePerUnit !== undefined && values.pricePerUnit !== null && values.pricePerUnit !== '';
+        }
+      }
+    } else if (currentStep === 4 || currentStep === 5) {
+      isValid = true; // Mostly optional fields
+    } else if (currentStep === 6) {
+      isValid = !!values.businessId && values.media?.length > 0;
+    }
 
     if (isValid) {
       setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
       window.scrollTo({ top: 0, behavior: 'smooth' });
+    } else {
+      // Trigger validation to show error messages in the UI
+      const fieldsToValidate: any = {
+        1: ['name', 'category'],
+        2: ['deliveryConfig.mode'],
+        3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit'],
+        6: ['businessId', 'media'],
+      };
+      const currentFields = fieldsToValidate[currentStep] || [];
+      await form.trigger(currentFields);
+      toast.error('Please fill in all required fields correctly before proceeding.');
     }
   };
 
@@ -293,8 +318,8 @@ export default function AddServicePage() {
         }}
       />
 
-      <div className="max-w-5xl mx-auto">
-        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4">
+      <div className="max-w-4xl mx-auto px-4">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
           <div>
             <h1 className="text-3xl font-bold text-gray-800">Add New Service</h1>
             <p className="text-sm text-gray-500 mt-1">
@@ -311,7 +336,7 @@ export default function AddServicePage() {
         </header>
 
         {/* Progress Bar */}
-        <div className="mb-12 relative">
+        <div className="mb-8 relative px-2">
           <div className="flex justify-between items-center relative z-10">
             {STEPS.map((step) => (
               <div key={step.id} className="flex flex-col items-center">
