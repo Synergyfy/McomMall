@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/form';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
-import { Card } from '@/components/ui/card';
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
 import { Settings, Check, ChevronsUpDown } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,56 +30,42 @@ import {
 import { cn } from '@/lib/utils';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 
-interface Step1BasicInfoProps {
-  onNext: () => void;
-}
-
-export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
+export function Step1BasicInfo() {
   const form = useFormContext();
   const selectedCategory = form.watch('category');
 
-  const { data: categories, isLoading: isLoadingCats } = useGetCategories();
-  const { data: subCategories, isLoading: isLoadingSubCats } = useGetSubCategoriesByCategory(selectedCategory);
-
-  const onSubmit = (data: any) => {
-    // Validation is handled by react-hook-form
-    onNext();
-  };
+  const { data: categories } = useGetCategories();
+  const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
 
   return (
-    <div className="space-y-6">
-      <form id="step1-form" onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        <Card className="p-6">
-          <div className="flex items-center gap-2 mb-4">
+    <div className="space-y-6 animate-in fade-in duration-500">
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
             <Settings className="w-5 h-5 text-primary" />
-            <div>
-              <h3 className="text-lg font-semibold">Basic Information</h3>
-              <p className="text-sm text-muted-foreground">
-                Service name, description and categorization.
-              </p>
-            </div>
-          </div>
+            Basic Information
+          </CardTitle>
+          <CardDescription>Service name, description and categorization.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Service Name <span className="text-red-500">*</span></FormLabel>
+                <FormControl>
+                  <Input placeholder="e.g. Full Body Massage" {...field} className="py-6 text-base" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
-              name="name"
-              rules={{ required: "Service name is required" }}
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Service Name <span className="text-red-500">*</span></FormLabel>
-                  <FormControl>
-                    <Input placeholder="e.g. Full Body Massage" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
               name="category"
-              rules={{ required: "Category is required" }}
               render={({ field }) => (
                 <FormItem className="flex flex-col">
                   <FormLabel>Category <span className="text-red-500">*</span></FormLabel>
@@ -90,7 +76,7 @@ export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
                           variant="outline"
                           role="combobox"
                           className={cn(
-                            "w-full justify-between",
+                            "w-full justify-between py-6",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -152,7 +138,7 @@ export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
                           variant="outline"
                           role="combobox"
                           className={cn(
-                            "w-full justify-between",
+                            "w-full justify-between py-6",
                             !field.value && "text-muted-foreground"
                           )}
                         >
@@ -199,39 +185,41 @@ export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
                 </FormItem>
               )}
             />
+          </div>
 
-            <FormField
-              control={form.control}
-              name="shortDescription"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Short Description</FormLabel>
-                  <FormControl>
-                    <Input placeholder="Brief overview (max 150 chars)" {...field} />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="shortDescription"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Short Description</FormLabel>
+                <FormControl>
+                  <Input placeholder="Brief overview (max 150 chars)" {...field} maxLength={150} />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
-            <FormField
-              control={form.control}
-              name="description"
-              render={({ field }) => (
-                <FormItem className="md:col-span-2">
-                  <FormLabel>Full Description</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Detailed description of your service..."
-                      className="min-h-[120px]"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
+          <FormField
+            control={form.control}
+            name="description"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>Full Description</FormLabel>
+                <FormControl>
+                  <Textarea
+                    placeholder="Detailed description of your service..."
+                    className="min-h-[120px] text-base"
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
 
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
               control={form.control}
               name="targetAudience"
@@ -245,7 +233,6 @@ export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
                 </FormItem>
               )}
             />
-
             <FormField
               control={form.control}
               name="tags"
@@ -260,14 +247,8 @@ export default function Step1BasicInfo({ onNext }: Step1BasicInfoProps) {
               )}
             />
           </div>
-        </Card>
-      </form>
-
-      <div className="flex justify-end pt-4">
-        <Button type="submit" form="step1-form" className="w-full">
-          Next
-        </Button>
-      </div>
+        </CardContent>
+      </Card>
     </div>
   );
 }
