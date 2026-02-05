@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import {
   ChevronDown,
   Bold,
@@ -25,8 +26,16 @@ interface Step1Props {
 }
 
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel }: Step1Props) {
+  const { data: categories, isLoading: isLoadingCats } = useGetCategories();
+  const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
+
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
-    updateFormData({ [e.target.id]: e.target.value });
+    const { id, value } = e.target;
+    if (id === 'category') {
+      updateFormData({ [id]: value, subCategory: '' });
+    } else {
+      updateFormData({ [id]: value });
+    }
   };
 
   return (
@@ -105,17 +114,18 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none disabled:opacity-50"
                     id="category"
                     value={formData.category || ''}
                     onChange={handleChange}
+                    disabled={isLoadingCats}
                   >
-                    <option disabled value="">Select a category...</option>
-                    <option value="clothing">Clothing</option>
-                    <option value="shoes">Shoes</option>
-                    <option value="accessories">Accessories</option>
-                    <option value="electronics">Electronics</option>
-                    <option value="appliances">Appliances</option>
+                    <option disabled value="">{isLoadingCats ? 'Loading categories...' : 'Select a category...'}</option>
+                    {categories?.map((cat) => (
+                      <option key={cat.id} value={cat.id}>
+                        {cat.name}
+                      </option>
+                    ))}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                     <ChevronDown className="w-5 h-5" />
@@ -143,11 +153,20 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                     id="subCategory"
                     value={formData.subCategory || ''}
                     onChange={handleChange}
+                    disabled={!formData.category || isLoadingSubs}
                   >
-                    <option disabled value="">Select sub-category...</option>
-                    <option value="shirts">Shirts</option>
-                    <option value="pants">Pants</option>
-                    <option value="outerwear">Outerwear</option>
+                    <option disabled value="">
+                      {!formData.category
+                        ? 'Select a category first'
+                        : isLoadingSubs
+                          ? 'Loading sub-categories...'
+                          : 'Select sub-category...'}
+                    </option>
+                    {subCategories?.map((sub) => (
+                      <option key={sub.id} value={sub.id}>
+                        {sub.name}
+                      </option>
+                    ))}
                   </select>
                   <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                     <ChevronDown className="w-5 h-5" />

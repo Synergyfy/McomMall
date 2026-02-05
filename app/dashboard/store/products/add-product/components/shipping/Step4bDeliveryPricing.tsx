@@ -1,26 +1,19 @@
 "use client";
 
-import React, { useState, useMemo } from 'react';
-import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation, MapPin } from 'lucide-react';
+import React, { useState, useEffect, useCallback } from 'react';
+import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation, Search, MapPin } from 'lucide-react';
 import dynamic from 'next/dynamic';
-import 'leaflet/dist/leaflet.css';
+import { useGetShippingAddresses } from '@/service/shipping/hook';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Input } from '@/components/ui/input';
+import { Button } from '@/components/ui/button';
+import { toast } from 'sonner';
 
-// Dynamically import Leaflet components to avoid SSR issues
-const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
-const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
-const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
-const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
-const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
-
-// Fix for default marker icon in Leaflet
-import L from 'leaflet';
-const DefaultIcon = L.icon({
-  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
-  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
-  iconSize: [25, 41],
-  iconAnchor: [12, 41]
+// Dynamically import DeliveryMap to avoid SSR issues with Leaflet
+const DeliveryMap = dynamic(() => import('./DeliveryMap'), {
+  ssr: false,
+  loading: () => <div className="h-[300px] w-full bg-orange-50 animate-pulse rounded-xl mt-4 flex items-center justify-center text-orange-300 font-medium">Loading Map...</div>
 });
-L.Marker.prototype.options.icon = DefaultIcon;
 
 interface Props {
   formData: any;
@@ -29,42 +22,115 @@ interface Props {
   onBack: () => void;
 }
 
-function DeliveryMap({ radiusMiles, center }: { radiusMiles: number, center: [number, number] }) {
-  // Convert miles to meters for Leaflet
-  const radiusMeters = (radiusMiles || 0) * 1609.34;
-
-  return (
-    <div className="h-[300px] w-full rounded-xl overflow-hidden border border-orange-200 shadow-inner mt-4 z-0 relative">
-      <MapContainer center={center} zoom={10} style={{ height: '100%', width: '100%' }}>
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={center}>
-          <Popup>
-            Store Location
-          </Popup>
-        </Marker>
-        {radiusMeters > 0 && (
-          <Circle
-            center={center}
-            radius={radiusMeters}
-            pathOptions={{ color: '#f48c25', fillColor: '#f48c25', fillOpacity: 0.2 }}
-          />
-        )}
-      </MapContainer>
-    </div>
-  );
-}
-
 export default function Step4bDeliveryPricing({ formData, updateFormData, onNext, onBack }: Props) {
-  // Use initialized values or fall back to single type from legacy data
-  const [isFree, setIsFree] = useState<boolean>(formData.isFreeDelivery || formData.deliveryPricingType === 'free');
-  const [isPaid, setIsPaid] = useState<boolean>(formData.isPaidDelivery || formData.deliveryPricingType === 'paid');
+  const { data: addressData } = useGetShippingAddresses(1, 100);
+  const addresses = addressData?.data || [];
 
-  // Default center (San Francisco roughly as example, or London)
-  // Ideally this comes from Step 1 address geocoding, but we'll use a fixed point for demo if not available.
-  const defaultCenter: [number, number] = [37.7749, -122.4194]; // SF
+  const [isFree, setIsFree] = useState<boolean>(formData.isFreeDelivery !== undefined ? formData.isFreeDelivery : (formData.deliveryPricingType === 'free'));
+  const [isPaid, setIsPaid] = useState<boolean>(formData.isPaidDelivery !== undefined ? formData.isPaidDelivery : (formData.deliveryPricingType === 'paid'));
+
+  const defaultCenter: [number, number] = [51.505, -0.09]; // London as default
+
+  const [selectedAddressId, setSelectedAddressId] = useState<string>(formData.deliveryOriginAddressId || '');
+  const [isAddingNewAddress, setIsAddingNewAddress] = useState<boolean>(false);
+  const [addressSearchQuery, setAddressSearchQuery] = useState<string>('');
+  const [isSearching, setIsSearching] = useState<boolean>(false);
+
+  const [newAddress, setNewAddress] = useState({
+    addressLine1: formData.deliveryOriginAddressLine1 || '',
+    city: formData.deliveryOriginCity || '',
+    postalCode: formData.deliveryOriginPostalCode || ''
+  });
+  const [mapCenter, setMapCenter] = useState<[number, number]>(defaultCenter);
+
+  // Initialize center based on selected address or form data
+  useEffect(() => {
+    if (formData.deliveryOriginLat && formData.deliveryOriginLng) {
+      setMapCenter([parseFloat(formData.deliveryOriginLat), parseFloat(formData.deliveryOriginLng)]);
+    }
+  }, [formData.deliveryOriginLat, formData.deliveryOriginLng]);
+
+  const handleGeocode = useCallback(async (query: string) => {
+    if (!query) return;
+    setIsSearching(true);
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(query)}&limit=1&addressdetails=1`,
+        {
+          headers: {
+            'User-Agent': 'McomMall/1.0 (contact@mcommall.com)'
+          }
+        }
+      );
+      const data = await response.json();
+      if (data && data.length > 0) {
+        const { lat, lon, display_name, address } = data[0];
+        const newLat = parseFloat(lat);
+        const newLon = parseFloat(lon);
+        setMapCenter([newLat, newLon]);
+
+        // Auto-fill address fields if searching for a new address
+        if (isAddingNewAddress) {
+          const city = address?.city || address?.town || address?.village || address?.suburb || '';
+          const postcode = address?.postcode || '';
+          const road = address?.road || '';
+          const houseNumber = address?.house_number || '';
+          const line1 = houseNumber ? `${houseNumber} ${road}` : road;
+
+          setNewAddress({
+            addressLine1: line1,
+            city: city,
+            postalCode: postcode
+          });
+
+          updateFormData({
+            deliveryOriginAddressLine1: line1,
+            deliveryOriginCity: city,
+            deliveryOriginPostalCode: postcode,
+            deliveryOriginLat: lat,
+            deliveryOriginLng: lon
+          });
+        }
+        toast.success(`Found: ${display_name.split(',').slice(0, 2).join(',')}`);
+      } else {
+        toast.error("Address not found. Please try a different search term.");
+      }
+    } catch (error) {
+      console.error("Geocoding failed:", error);
+      toast.error("Failed to search address. Please try again.");
+    } finally {
+      setIsSearching(false);
+    }
+  }, [isAddingNewAddress, updateFormData]);
+
+  const handleAddressSelect = (value: string) => {
+    if (value === 'add-new') {
+      setIsAddingNewAddress(true);
+      setSelectedAddressId('');
+      setAddressSearchQuery('');
+    } else {
+      setIsAddingNewAddress(false);
+      setSelectedAddressId(value);
+      const addr = addresses.find(a => a.id === value);
+      if (addr) {
+        updateFormData({
+          deliveryOriginAddressId: addr.id,
+          deliveryOriginAddressLine1: addr.addressLine1,
+          deliveryOriginCity: addr.city,
+          deliveryOriginPostalCode: addr.postalCode
+        });
+        // Geocode the existing address to update map
+        handleGeocode(`${addr.addressLine1} ${addr.city} ${addr.postalCode}`);
+      }
+    }
+  };
+
+  // Auto-select first address if none is selected
+  useEffect(() => {
+    if (!selectedAddressId && !isAddingNewAddress && addresses.length > 0 && !formData.deliveryOriginAddressId) {
+      handleAddressSelect(addresses[0].id);
+    }
+  }, [addresses, selectedAddressId, isAddingNewAddress, formData.deliveryOriginAddressId]);
 
   const toggleFree = () => {
     const nextValue = !isFree;
@@ -78,10 +144,17 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
     updateFormData({ isPaidDelivery: nextValue });
   };
 
+  const handleRadiusChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    // Allow empty string or non-negative numbers
+    if (value === "" || parseFloat(value) >= 0) {
+      updateFormData({ freeDeliveryRadius: value });
+    }
+  };
+
   const handleContinue = () => {
-    // Basic validation
     if (!isFree && !isPaid) {
-      alert("Please select at least one delivery option.");
+      toast.error("Please select at least one delivery option.");
       return;
     }
     onNext();
@@ -116,8 +189,8 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         <h1 className="text-[#1c140d] dark:text-white tracking-tight text-3xl md:text-4xl font-black leading-tight px-4 mb-3">
           How would you like to handle delivery?
         </h1>
-        <p className="text-[#9c7349] dark:text-[#c4a687] text-lg max-w-2xl mx-auto">
-          Choose the shipping model that best fits your business strategy. Select one or both.
+        <p className="text-[#9c7349] dark:text-[#c4a687] text-lg max-w-2xl mx-auto italic font-medium">
+          Empower your business by defining exactly how your products reach your customers. Whether you&apos;re offering local warmth with Free Delivery or expanding your reach with flexible Paid Shipping, you&apos;re in full control of your growth strategy.
         </p>
       </div>
 
@@ -131,33 +204,134 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
               </div>
               <h4 className="font-bold dark:text-white">Free Delivery Settings</h4>
             </div>
-            <div className="flex flex-col gap-2">
-              <label className="text-xs font-bold text-[#9c7349] uppercase">Free Delivery Radius (Miles)</label>
-              <input
-                type="number"
-                placeholder="e.g. 5"
-                className="w-full p-3 rounded-xl border border-orange-200 dark:bg-[#1c140d] dark:text-white focus:border-orange-500 outline-none"
-                value={formData.freeDeliveryRadius || ""}
-                onChange={(e) => updateFormData({ freeDeliveryRadius: e.target.value })}
-              />
-              <p className="text-[10px] text-[#9c7349] mt-1 italic">* Customers within {formData.freeDeliveryRadius || 0} miles will see Free Delivery.</p>
 
-              {/* Map Visualization */}
-              <DeliveryMap radiusMiles={parseFloat(formData.freeDeliveryRadius || '0')} center={defaultCenter} />
+            <div className="flex flex-col gap-5">
+              {/* Address Selection */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#9c7349] uppercase flex items-center gap-1">
+                  <MapPin size={12} /> Delivery Origin Address
+                </label>
+                <Select value={selectedAddressId || (isAddingNewAddress ? 'add-new' : '')} onValueChange={handleAddressSelect}>
+                  <SelectTrigger className="w-full p-3 h-12 rounded-xl border-orange-200 dark:bg-[#1c140d] dark:text-white focus:border-orange-500 outline-none shadow-sm">
+                    <SelectValue placeholder="Select from your addresses..." />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {addresses.map((addr) => (
+                      <SelectItem key={addr.id} value={addr.id}>
+                        {addr.addressLine1}, {addr.city}, {addr.postalCode}
+                      </SelectItem>
+                    ))}
+                    <SelectItem value="add-new" className="font-bold text-orange-600">
+                      + Add New Business Address
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {/* Address Search (Visible when adding new or as a helper) */}
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#9c7349] uppercase">Search by Town, City, Neighborhood or Postal Code</label>
+                <div className="relative flex gap-2">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-orange-400" size={18} />
+                    <Input
+                      placeholder="e.g. London, SW1A 1AA..."
+                      className="pl-10 h-12 rounded-xl border-orange-200 dark:bg-[#1c140d] dark:text-white focus-visible:ring-orange-500 shadow-sm"
+                      value={addressSearchQuery}
+                      onChange={(e) => setAddressSearchQuery(e.target.value)}
+                      onKeyDown={(e) => e.key === 'Enter' && handleGeocode(addressSearchQuery)}
+                    />
+                  </div>
+                  <Button
+                    variant="outline"
+                    className="h-12 px-6 rounded-xl border-orange-200 hover:bg-orange-100 text-orange-700 font-bold"
+                    onClick={() => handleGeocode(addressSearchQuery)}
+                    disabled={isSearching}
+                  >
+                    {isSearching ? 'Finding...' : 'Find'}
+                  </Button>
+                </div>
+              </div>
+
+              {isAddingNewAddress && (
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 bg-white/50 dark:bg-black/20 rounded-xl border border-dashed border-orange-300 dark:border-orange-900/30 animate-in fade-in slide-in-from-top-2 duration-300">
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-[#9c7349] uppercase">Address Line 1</label>
+                    <Input
+                      placeholder="e.g. 123 Main St"
+                      className="h-10 rounded-lg border-orange-100 dark:bg-[#1c140d] dark:text-white focus-visible:ring-orange-500 text-black"
+                      value={newAddress.addressLine1}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewAddress(prev => ({ ...prev, addressLine1: val }));
+                        updateFormData({ deliveryOriginAddressLine1: val });
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-[#9c7349] uppercase">City</label>
+                    <Input
+                      placeholder="e.g. London"
+                      className="h-10 rounded-lg border-orange-100 dark:bg-[#1c140d] dark:text-white focus-visible:ring-orange-500 text-black"
+                      value={newAddress.city}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewAddress(prev => ({ ...prev, city: val }));
+                        updateFormData({ deliveryOriginCity: val });
+                      }}
+                    />
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="text-xs font-bold text-[#9c7349] uppercase">Postcode</label>
+                    <Input
+                      placeholder="e.g. SW1A 1AA"
+                      className="h-10 rounded-lg border-orange-100 dark:bg-[#1c140d] dark:text-white focus-visible:ring-orange-500 text-black"
+                      value={newAddress.postalCode}
+                      onChange={(e) => {
+                        const val = e.target.value;
+                        setNewAddress(prev => ({ ...prev, postalCode: val }));
+                        updateFormData({ deliveryOriginPostalCode: val });
+                      }}
+                    />
+                  </div>
+                </div>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <label className="text-xs font-bold text-[#9c7349] uppercase flex items-center gap-1">
+                   Free Delivery Radius (Miles)
+                </label>
+                <Input
+                  type="number"
+                  min="0"
+                  step="0.1"
+                  placeholder="e.g. 30"
+                  className="w-full h-12 p-3 rounded-xl border border-orange-200 dark:bg-[#1c140d] dark:text-white focus-visible:ring-orange-500 outline-none shadow-sm"
+                  value={formData.freeDeliveryRadius || ""}
+                  onChange={handleRadiusChange}
+                />
+                <p className="text-[11px] text-[#9c7349] mt-1 italic font-medium flex items-center gap-1">
+                  <CheckCircle2 size={12} className="text-green-500" />
+                  Customers within <span className="text-orange-600 font-bold">{formData.freeDeliveryRadius || 0} miles</span> will receive Free Delivery automatically.
+                </p>
+
+                {/* Map Visualization */}
+                <DeliveryMap radiusMiles={parseFloat(formData.freeDeliveryRadius || '0')} center={mapCenter} />
+              </div>
             </div>
           </div>
         )}
 
         {isPaid && (
-          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/30 animate-in slide-in-from-top-2 duration-300">
+          <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/30 animate-in slide-in-from-top-2 duration-300 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500 rounded-lg text-white">
                 <Truck size={20} />
               </div>
-              <h4 className="font-bold dark:text-white">Paid Delivery Selected</h4>
+              <h4 className="font-bold dark:text-white">Paid Delivery Configuration</h4>
             </div>
             <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
-              Standard delivery fees will apply. Rates can be configured in your Shipping Settings or calculated by carriers.
+              Standard delivery fees will apply to customers outside your free zone. Rates can be dynamically calculated based on distance or weight in the next steps.
             </p>
           </div>
         )}
@@ -168,7 +342,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         {/* Free Delivery Card */}
         <div
           onClick={toggleFree}
-          className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-200 cursor-pointer group ${isFree
+          className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${isFree
               ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
               : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
             }`}
@@ -180,7 +354,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
 
           <h3 className="text-2xl font-bold mb-3 text-[#1c140d] dark:text-white">Free Delivery</h3>
           <p className="text-[#9c7349] dark:text-[#c4a687] text-base leading-relaxed mb-6">
-            Boost sales by offering no-cost shipping within a specific radius. You cover the costs.
+            Incentivize local shoppers by offering zero-cost shipping within your neighborhood. A proven way to increase conversion!
           </p>
 
           <div className={`mt-auto flex items-center gap-2 font-bold transition-all ${isFree ? 'text-[#f48c25] opacity-100 translate-y-0' : 'opacity-0 translate-y-2'
@@ -193,7 +367,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         {/* Paid Delivery Card */}
         <div
           onClick={togglePaid}
-          className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-200 cursor-pointer group ${isPaid
+          className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${isPaid
               ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
               : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
             }`}
@@ -205,7 +379,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
 
           <h3 className="text-2xl font-bold mb-3 text-[#1c140d] dark:text-white">Paid Delivery</h3>
           <p className="text-[#9c7349] dark:text-[#c4a687] text-base leading-relaxed mb-6">
-            Charge customers based on distance radius for deliveries further out.
+            Expand your horizon. Charge a fair fee for deliveries beyond your local radius to cover fuel and time.
           </p>
 
           <div className={`mt-auto flex items-center gap-2 font-bold transition-all ${isPaid ? 'text-[#f48c25] opacity-100 translate-y-0' : 'opacity-0 translate-y-2'

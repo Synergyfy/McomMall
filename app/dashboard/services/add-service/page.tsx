@@ -689,7 +689,6 @@ export default function AddServicePage() {
                     <Card>
                       <CardHeader>
                         <CardTitle className="flex items-center gap-2">
-                          <DollarSign className="w-5 h-5 text-primary" />
                           Pricing Strategy
                         </CardTitle>
                         <CardDescription>Configure how you charge for this service.</CardDescription>
