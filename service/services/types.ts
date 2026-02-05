@@ -19,11 +19,17 @@ export interface IService extends Service {
   business: IBusiness;
 }
 
+export interface TimeRange {
+  start: string; // "09:00"
+  end: string;   // "13:00"
+}
+
 export interface DaySchedule {
   day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
   enabled: boolean;
-  startTime: string; // "09:00"
-  endTime: string; // "17:00"
+  startTime: string; // Main start time
+  endTime: string;   // Main end time
+  breaks?: TimeRange[]; // New: Break times
 }
 
 export interface AvailabilityProfile {
@@ -32,19 +38,63 @@ export interface AvailabilityProfile {
   bufferTime: number; // in minutes
   maxBookingsPerSlot: number;
   serviceRadiusKm?: number;
+  staffPerBooking?: number; // New: Staff per booking
+  publicHolidays?: string[]; // New: List of dates (ISO strings)
+}
+
+export interface ServicePricingRules {
+  weekendMultiplier?: number;
+  nightSurcharge?: number;
+  emergencySurcharge?: number;
+  holidaySurcharge?: number;
+}
+
+export interface BookingRequirements {
+  requireAddress: boolean;
+  requirePhone: boolean;
+  requirePhotos: boolean;
+  requireProblemDescription: boolean;
+  specialInstructions?: string; // Provider's instructions to customer
+  customQuestions?: { question: string; required: boolean }[];
+}
+
+export interface ServiceDeliveryConfig {
+  mode: 'onsite' | 'atShop' | 'remote' | 'hybrid';
+  // If onsite:
+  cities?: string[];
+  regions?: string[];
+  travelFee?: number;
+  // Radius is in AvailabilityProfile, but could be here too.
+}
+
+export interface ServiceVariant {
+  name: string; // e.g. "1 Hour", "2 Technicians"
+  type: 'time' | 'resource';
+  price: number;
+  duration?: number; // for time variants
 }
 
 export interface CreateServiceDto {
   name: string;
+  shortDescription?: string; // New
   description?: string;
+  category?: string; // New
+  subcategory?: string; // New
+  targetAudience?: string[]; // New
+  tags?: string[]; // New
+
   images?: string[];
   isActive?: boolean;
   businessId: string;
-  pricingModel: 'fixed' | 'perHour' | 'perUnit';
+
+  // Pricing
+  pricingModel: 'fixed' | 'perHour' | 'perUnit' | 'perJob' | 'perDistance' | 'perSession' | 'subscription'; // Expanded
   fixedPrice?: number;
   pricePerHour?: number;
   pricePerUnit?: number;
   unitName?: string;
+
+  // Guest Pricing
   enableGuestPricing?: boolean;
   guestPricingModel?: 'perGuest' | 'fixedGroup' | 'baseWithAdditional';
   minGuests?: number;
@@ -54,9 +104,13 @@ export interface CreateServiceDto {
   basePrice?: number;
   baseGuests?: number;
   additionalGuestPrice?: number;
+
+  // Quote
   isQuoteModel?: boolean;
   bookingFee?: number;
   requireApproval?: boolean;
+
+  // Bundles & Addons
   bundledServices?: { name: string; price?: number }[];
   configurableAddons?: {
     name: string;
@@ -64,6 +118,17 @@ export interface CreateServiceDto {
     pricingType: 'oneTime' | 'perGuest' | 'perUnit';
     unitName?: string;
   }[];
+
+  // Tiers (Packages)
+  enableTieredPackages?: boolean;
+  tiers?: { name: string; description?: string; price: number; features: string[] }[]; // Existing, covers "Package Builder"
+
+  // New Sections
+  deliveryConfig?: ServiceDeliveryConfig;
+  pricingRules?: ServicePricingRules;
+  bookingRequirements?: BookingRequirements;
+  variants?: ServiceVariant[]; // For Time/Resource variants
+
   hotspots?: Hotspot[];
   availability?: AvailabilityProfile;
 }
@@ -88,14 +153,22 @@ export interface Service {
   id: string;
   businessId: string;
   name: string;
+  shortDescription?: string;
   description?: string;
+  category?: string;
+  subcategory?: string;
+  targetAudience?: string[];
+  tags?: string[];
+
   media: string[] | null;
   isActive: boolean;
-  pricingModel: 'fixed' | 'perHour' | 'perUnit';
+
+  pricingModel: 'fixed' | 'perHour' | 'perUnit' | 'perJob' | 'perDistance' | 'perSession' | 'subscription';
   fixedPrice: string | null;
   pricePerHour: string | null;
   pricePerUnit: string | null;
   unitName: string | null;
+
   enableGuestPricing: boolean;
   guestPricingModel: string | null;
   minGuests: number;
@@ -105,16 +178,25 @@ export interface Service {
   basePrice: string | null;
   baseGuests: string | null;
   additionalGuestPrice: string | null;
+
   isQuoteModel: boolean;
   requireApproval?: boolean;
   bookingFee: string | null;
+
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
+
+  // New fields in Service object (reflected from DTO)
+  deliveryConfig?: ServiceDeliveryConfig;
+  pricingRules?: ServicePricingRules;
+  bookingRequirements?: BookingRequirements;
+  variants?: ServiceVariant[];
+
   hotspots?: Hotspot[];
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
-  // Added based on API response
+
   status?: string;
   duration?: number;
   isFeatured?: boolean;

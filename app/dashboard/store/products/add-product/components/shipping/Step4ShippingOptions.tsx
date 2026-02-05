@@ -33,10 +33,14 @@ export default function Step4ShippingOptions({ onSelectOption, onBack, onSkip }:
         
         {/* Card 1: Existing Carriers */}
         <div 
-          onClick={() => onSelectOption('existing')}
-          className="group relative flex flex-col rounded-2xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-8 cursor-pointer hover:border-[#f48c25] hover:shadow-xl transition-all duration-300"
+          className="group relative flex flex-col rounded-2xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-8 pointer-events-none grayscale opacity-60"
         >
-          <div className="absolute top-6 right-6 text-[#9c7349] group-hover:text-[#f48c25] transition-colors">
+          {/* Coming Soon Overlay */}
+          <div className="absolute inset-0 z-10 flex items-center justify-center">
+            <span className="bg-gray-800 text-white px-4 py-2 rounded-full font-bold text-sm shadow-lg transform -rotate-2">Coming Soon</span>
+          </div>
+
+          <div className="absolute top-6 right-6 text-[#9c7349]">
             <Truck size={32} strokeWidth={1.5} />
           </div>
 

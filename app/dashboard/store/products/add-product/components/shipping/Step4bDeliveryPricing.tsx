@@ -1,7 +1,26 @@
 "use client";
 
-import React, { useState } from 'react';
-import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { Heart, Truck, CheckCircle2, ChevronRight, ArrowLeft, ArrowRight, Navigation, MapPin } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import 'leaflet/dist/leaflet.css';
+
+// Dynamically import Leaflet components to avoid SSR issues
+const MapContainer = dynamic(() => import('react-leaflet').then(mod => mod.MapContainer), { ssr: false });
+const TileLayer = dynamic(() => import('react-leaflet').then(mod => mod.TileLayer), { ssr: false });
+const Circle = dynamic(() => import('react-leaflet').then(mod => mod.Circle), { ssr: false });
+const Marker = dynamic(() => import('react-leaflet').then(mod => mod.Marker), { ssr: false });
+const Popup = dynamic(() => import('react-leaflet').then(mod => mod.Popup), { ssr: false });
+
+// Fix for default marker icon in Leaflet
+import L from 'leaflet';
+const DefaultIcon = L.icon({
+  iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+  shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+  iconSize: [25, 41],
+  iconAnchor: [12, 41]
+});
+L.Marker.prototype.options.icon = DefaultIcon;
 
 interface Props {
   formData: any;
@@ -10,10 +29,42 @@ interface Props {
   onBack: () => void;
 }
 
+function DeliveryMap({ radiusMiles, center }: { radiusMiles: number, center: [number, number] }) {
+  // Convert miles to meters for Leaflet
+  const radiusMeters = (radiusMiles || 0) * 1609.34;
+
+  return (
+    <div className="h-[300px] w-full rounded-xl overflow-hidden border border-orange-200 shadow-inner mt-4 z-0 relative">
+      <MapContainer center={center} zoom={10} style={{ height: '100%', width: '100%' }}>
+        <TileLayer
+          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+        />
+        <Marker position={center}>
+          <Popup>
+            Store Location
+          </Popup>
+        </Marker>
+        {radiusMeters > 0 && (
+          <Circle
+            center={center}
+            radius={radiusMeters}
+            pathOptions={{ color: '#f48c25', fillColor: '#f48c25', fillOpacity: 0.2 }}
+          />
+        )}
+      </MapContainer>
+    </div>
+  );
+}
+
 export default function Step4bDeliveryPricing({ formData, updateFormData, onNext, onBack }: Props) {
   // Use initialized values or fall back to single type from legacy data
   const [isFree, setIsFree] = useState<boolean>(formData.isFreeDelivery || formData.deliveryPricingType === 'free');
   const [isPaid, setIsPaid] = useState<boolean>(formData.isPaidDelivery || formData.deliveryPricingType === 'paid');
+
+  // Default center (San Francisco roughly as example, or London)
+  // Ideally this comes from Step 1 address geocoding, but we'll use a fixed point for demo if not available.
+  const defaultCenter: [number, number] = [37.7749, -122.4194]; // SF
 
   const toggleFree = () => {
     const nextValue = !isFree;
@@ -66,7 +117,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
           How would you like to handle delivery?
         </h1>
         <p className="text-[#9c7349] dark:text-[#c4a687] text-lg max-w-2xl mx-auto">
-          Choose the shipping model that best fits your business strategy. You can select both.
+          Choose the shipping model that best fits your business strategy. Select one or both.
         </p>
       </div>
 
@@ -90,40 +141,24 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
                 onChange={(e) => updateFormData({ freeDeliveryRadius: e.target.value })}
               />
               <p className="text-[10px] text-[#9c7349] mt-1 italic">* Customers within {formData.freeDeliveryRadius || 0} miles will see Free Delivery.</p>
+
+              {/* Map Visualization */}
+              <DeliveryMap radiusMiles={parseFloat(formData.freeDeliveryRadius || '0')} center={defaultCenter} />
             </div>
           </div>
         )}
 
         {isPaid && (
           <div className="bg-blue-50 dark:bg-blue-950/20 rounded-2xl p-6 border border-blue-200 dark:border-blue-900/30 animate-in slide-in-from-top-2 duration-300">
-            <div className="flex items-center gap-3 mb-4">
+            <div className="flex items-center gap-3">
               <div className="p-2 bg-blue-500 rounded-lg text-white">
                 <Truck size={20} />
               </div>
-              <h4 className="font-bold dark:text-white">Paid Delivery Settings</h4>
+              <h4 className="font-bold dark:text-white">Paid Delivery Selected</h4>
             </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-[#9c7349] uppercase">Paid Delivery Radius (Miles)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 20"
-                  className="w-full p-3 rounded-xl border border-blue-200 dark:bg-[#1c140d] dark:text-white focus:border-blue-500 outline-none"
-                  value={formData.paidDeliveryRadius || ""}
-                  onChange={(e) => updateFormData({ paidDeliveryRadius: e.target.value })}
-                />
-              </div>
-              <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-[#9c7349] uppercase">Delivery Fee (£)</label>
-                <input
-                  type="number"
-                  placeholder="e.g. 15.00"
-                  className="w-full p-3 rounded-xl border border-blue-200 dark:bg-[#1c140d] dark:text-white focus:border-blue-500 outline-none"
-                  value={formData.paidDeliveryFee || ""}
-                  onChange={(e) => updateFormData({ paidDeliveryFee: e.target.value })}
-                />
-              </div>
-            </div>
+            <p className="text-sm text-blue-700 dark:text-blue-300 mt-2">
+              Standard delivery fees will apply. Rates can be configured in your Shipping Settings or calculated by carriers.
+            </p>
           </div>
         )}
       </div>
@@ -180,6 +215,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
           </div>
         </div>
       </div>
+
 
       {/* Footer Actions */}
       <div className="flex items-center justify-between px-4 py-10 mt-8 border-t border-[#f4ede7] dark:border-[#3d2f25]">

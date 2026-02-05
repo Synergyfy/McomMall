@@ -16,6 +16,26 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
   const [view, setView] = useState<'overview' | 'manage'>('overview');
   const [instructions, setInstructions] = useState(formData.pickupInstructions || "");
   const [showTooltip, setShowTooltip] = useState(false);
+  const [addressDetails, setAddressDetails] = useState({
+      postcode: '',
+      street: '',
+      city: '',
+      state: '',
+      country: '',
+      nickname: ''
+  });
+
+  const handleFetch = () => {
+      // Mock fetch implementation
+      setAddressDetails(prev => ({
+          ...prev,
+          city: 'London',
+          state: 'Greater London',
+          country: 'United Kingdom',
+          street: '123 High Street' // Mock street too if needed, or keep existing
+      }));
+      toast.success("Address details fetched successfully!");
+  };
 
   const handleFinish = () => {
     updateFormData({ pickupInstructions: instructions });
@@ -117,22 +137,64 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
                         type="text"
                         placeholder="E.g. SW1A 1AA"
                         className="flex-1 p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
-                        onChange={(e) => {
-                            if (e.target.value.length >= 5) {
-                                toast.info("Fetching address for " + e.target.value);
-                            }
-                        }}
+                        value={addressDetails.postcode}
+                        onChange={(e) => setAddressDetails({...addressDetails, postcode: e.target.value})}
                     />
-                    <Button variant="outline" className="h-full rounded-xl">Fetch</Button>
+                    <Button variant="outline" className="h-full rounded-xl" onClick={handleFetch}>Fetch</Button>
                   </div>
                 </div>
                 <div className="flex flex-col gap-2">
                   <label className="text-xs font-bold uppercase text-[#9c7349]">Location Nickname</label>
-                  <input type="text" placeholder="e.g. West End Branch" className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none" />
+                  <input
+                    type="text"
+                    placeholder="e.g. West End Branch"
+                    className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                    value={addressDetails.nickname}
+                    onChange={(e) => setAddressDetails({...addressDetails, nickname: e.target.value})}
+                  />
                 </div>
+
+                {/* Auto-filled Fields */}
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase text-[#9c7349]">City</label>
+                  <input
+                    type="text"
+                    placeholder="London"
+                    className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                    value={addressDetails.city}
+                    onChange={(e) => setAddressDetails({...addressDetails, city: e.target.value})}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase text-[#9c7349]">State / County</label>
+                  <input
+                    type="text"
+                    placeholder="Greater London"
+                    className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                    value={addressDetails.state}
+                    onChange={(e) => setAddressDetails({...addressDetails, state: e.target.value})}
+                  />
+                </div>
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase text-[#9c7349]">Country</label>
+                  <input
+                    type="text"
+                    placeholder="United Kingdom"
+                    className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                    value={addressDetails.country}
+                    onChange={(e) => setAddressDetails({...addressDetails, country: e.target.value})}
+                  />
+                </div>
+
                 <div className="flex flex-col gap-2 md:col-span-2">
                   <label className="text-xs font-bold uppercase text-[#9c7349]">Street Address</label>
-                  <input type="text" placeholder="123 Street Name" className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none" />
+                  <input
+                    type="text"
+                    placeholder="123 Street Name"
+                    className="p-3 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] dark:bg-[#1c140d] dark:text-white focus:border-[#f48c25] outline-none"
+                    value={addressDetails.street}
+                    onChange={(e) => setAddressDetails({...addressDetails, street: e.target.value})}
+                  />
                 </div>
               </div>
               <div className="h-[200px] bg-[#f4ede7] dark:bg-[#1c140d] rounded-xl flex items-center justify-center border border-[#e8dbce] dark:border-[#4a3b2e]">
