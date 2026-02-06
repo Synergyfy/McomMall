@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { UserListing } from '@/service/listings/types';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import {
   ChevronDown,
@@ -23,7 +24,7 @@ interface Step1Props {
   updateFormData: (data: any) => void;
   onNext: () => void;
   onCancel: () => void;
-  userListings?: any[];
+  userListings?: UserListing[];
 }
 
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings }: Step1Props) {
@@ -86,11 +87,13 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                   onChange={handleChange}
                 >
                   <option disabled value="">Select a business...</option>
-                  {userListings?.map((listing: any) => (
-                    <option key={listing.id} value={listing.id}>
-                      {listing.businessName}
-                    </option>
-                  ))}
+                  {userListings
+                    ?.filter(listing => listing.id && listing.id.trim() !== '')
+                    ?.map((listing) => (
+                      <option key={listing.id} value={listing.id}>
+                        {listing.businessName}
+                      </option>
+                    ))}
                 </select>
                 <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
                   <ChevronDown className="w-5 h-5" />

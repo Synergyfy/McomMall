@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import Step1BasicInfo from '../components/wizard/Step1BasicInfo';
 import Step2MediaContent from '../components/wizard/Step2MediaContent';
 import Step3PricingInventory from '../components/wizard/Step3PricingInventory';
@@ -16,16 +16,24 @@ import Step8Finalize from '../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
+import { UserListing } from '@/service/listings/types';
 import { useAddProduct } from '@/service/store/products/hook';
-import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
 export default function AddProductPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { data: userListings } = useGetUserListings();
+  const { data: userListings } = useGetUserListings(1, 100);
   const { mutate: addProduct, isPending } = useAddProduct();
+
+  const businesses = useMemo(() => {
+    if (!userListings?.data) return [];
+    return userListings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType?.some(type => type.toLowerCase() === 'product')
+    );
+  }, [userListings]);
 
   const [step, setStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
@@ -91,10 +99,10 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    if (userListings?.data?.length === 1 && !formData.bussinessId) {
-      updateFormData({ bussinessId: userListings.data[0].id });
+    if (businesses.length === 1 && !formData.bussinessId) {
+      updateFormData({ bussinessId: businesses[0].id });
     }
-  }, [userListings, formData.bussinessId]);
+  }, [businesses, formData.bussinessId, updateFormData]);
 
 
   const handlePublish = () => {
@@ -299,7 +307,7 @@ export default function AddProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={userListings?.data || []} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={businesses} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:
