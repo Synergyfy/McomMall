@@ -29,17 +29,18 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ fol
     }
 
     // Validate file type
-    if (!file.type.startsWith('image/')) {
+    const allowedTypes = ['image/', 'video/', 'application/'];
+    if (!allowedTypes.some((type) => file.type.startsWith(type))) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only images are allowed.' },
+        { error: 'Invalid file type. Only images, videos, and documents are allowed.' },
         { status: 400 }
       );
     }
 
-    // Validate file size (5MB limit)
-    if (file.size > 5 * 1024 * 1024) {
+    // Validate file size (30MB limit)
+    if (file.size > 30 * 1024 * 1024) {
       return NextResponse.json(
-        { error: 'File size exceeds the 5MB limit.' },
+        { error: 'File size exceeds the 30MB limit.' },
         { status: 400 }
       );
     }
@@ -51,7 +52,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ fol
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
       const stream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: 'image' },
+        { folder, resource_type: 'auto' },
         (error, result) => {
           if (result) {
             resolve(result);
