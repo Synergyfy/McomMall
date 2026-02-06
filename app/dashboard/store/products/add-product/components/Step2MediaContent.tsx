@@ -33,6 +33,30 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
         updateFormData({ [e.target.id]: e.target.value });
     };
 
+    const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'images' | 'videos') => {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+
+        const uploadPromises = Array.from(files).map(async (file) => {
+            try {
+                const { secure_url } = await uploadFile(file);
+                return secure_url;
+            } catch (error) {
+                console.error('Upload failed:', error);
+                toast.error(`Failed to upload ${file.name}`);
+                return null;
+            }
+        });
+
+        const urls = await Promise.all(uploadPromises);
+        const filteredUrls = urls.filter((url): url is string => url !== null);
+
+        if (filteredUrls.length > 0) {
+            updateFormData({ [type]: [...(formData[type] || []), ...filteredUrls] });
+            toast.success(`${filteredUrls.length} ${type} uploaded successfully!`);
+        }
+    };
+
     return (
         <div className="flex flex-col gap-6 md:gap-8 pb-32">
             {/* Progress Bar - Simplified for Mobile */}
@@ -107,7 +131,13 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                     </div>
 
                     <div className="relative group">
-                        <input accept="image/*" className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer" multiple type="file" />
+                        <input
+                            accept="image/*"
+                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                            multiple
+                            type="file"
+                            onChange={(e) => handleFileUpload(e, 'images')}
+                        />
                         <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl bg-[#f8f7f5]/50 dark:bg-[#221910]/50 group-hover:bg-[#f48c25]/5 transition-all">
                             <CloudUpload size={24} className="text-[#f48c25] mb-1" />
                             <p className="text-xs md:text-sm font-semibold text-center px-4">Tap to upload images</p>
@@ -153,7 +183,12 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                     </div>
 
                     <div className="relative group">
-                        <input accept="video/*" className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer" type="file" />
+                        <input
+                            accept="video/*"
+                            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer"
+                            type="file"
+                            onChange={(e) => handleFileUpload(e, 'videos')}
+                        />
                         <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl bg-[#f8f7f5]/50 dark:bg-[#221910]/50 group-hover:bg-[#f48c25]/5 transition-all">
                             <div className="bg-[#f48c25]/10 p-2 rounded-full mb-1 text-[#f48c25]">
                                 <Video size={24} />

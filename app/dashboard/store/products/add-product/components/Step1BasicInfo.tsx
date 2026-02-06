@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { UserListing } from '@/service/listings/types';
 import {
   ChevronDown,
   Bold,
@@ -28,6 +30,9 @@ interface Step1Props {
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel }: Step1Props) {
   const { data: categories, isLoading: isLoadingCats } = useGetCategories();
   const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
+
+  const businesses = listings?.data?.filter((l: UserListing) => l.listingType.includes('product') || l.listingType.includes('service')) || [];
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
@@ -68,6 +73,42 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </div>
 
           <form className="flex flex-col gap-6 max-w-3xl">
+            {/* Business Selection */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="bussinessId">
+                Business <span className="text-red-500">*</span>
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Select the business this product belongs to.</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none disabled:opacity-50"
+                  id="bussinessId"
+                  value={formData.bussinessId || ''}
+                  onChange={handleChange}
+                  disabled={isLoadingListings}
+                >
+                  <option disabled value="">{isLoadingListings ? 'Loading businesses...' : 'Select a business...'}</option>
+                  {businesses.map((b: UserListing) => (
+                    <option key={b.id} value={b.id}>
+                      {b.businessName}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
+                  <ChevronDown className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
             {/* Product Name */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="productName">

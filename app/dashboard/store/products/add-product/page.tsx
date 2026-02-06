@@ -14,6 +14,8 @@ import Step6ShipStationConfig from './components/shipping/Step6ShipStationConfig
 import Step7ServiceMapping from './components/shipping/Step7ServiceMapping';
 import Step8Finalize from './components/Step8Finalize';
 import { ProductStatusModal } from './components/lib/ProductStatusModal';
+import { useAddProduct } from '@/service/store/products/hook';
+import { toast } from 'sonner';
 
 export default function AddProductPage() {
   const [step, setStep] = useState(1);
@@ -22,6 +24,7 @@ export default function AddProductPage() {
   const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
 
   const [formData, setFormData] = useState({
+    bussinessId: '',
     productName: '',
     category: '',
     subCategory: '',
@@ -38,6 +41,8 @@ export default function AddProductPage() {
     stock_status: 'instock',
     quantity: 100,
     weight: '',
+    images: [],
+    videos: [],
     attributes: [],
     variations: [],
     sizeGuide: {
@@ -52,8 +57,45 @@ export default function AddProductPage() {
     setFormData((prev) => ({ ...prev, ...newData }));
   };
 
+  const { mutate: addProduct, isPending: isSubmitting } = useAddProduct();
+
   const handlePublish = () => {
-    setIsPublished(true);
+    if (!formData.bussinessId) {
+      toast.error('Please select a business first (Step 1)');
+      setStep(1);
+      return;
+    }
+
+    const payload: any = {
+      bussinessId: formData.bussinessId,
+      title: formData.productName,
+      category: formData.category,
+      subCategories: formData.subCategory ? [formData.subCategory] : [],
+      brand: formData.brand,
+      gender: formData.gender as any,
+      productType: formData.product_type,
+      price: parseFloat(formData.regular_price) || 0,
+      description: formData.fullDesc || formData.shortDesc || '',
+      sku: formData.sku,
+      shortDescription: formData.shortDesc,
+      imageUrl: formData.images?.[0] || '',
+      fileUrls: formData.images || [],
+      enableStockManagement: true,
+      weight: parseFloat(formData.weight) || 0,
+      productStatus: formData.productStatus,
+      attributes: formData.attributes,
+      variations: formData.variations,
+      sizeGuide: formData.sizeGuide
+    };
+
+    addProduct(payload, {
+      onSuccess: () => {
+        setIsPublished(true);
+      },
+      onError: (err: any) => {
+        toast.error(err.message || 'Failed to add product');
+      }
+    });
   };
 
   const nextStep = () => {
@@ -196,7 +238,7 @@ export default function AddProductPage() {
       case 7:
         return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isSubmitting={isSubmitting} />;
       default:
         return <div>Unknown Step</div>;
     }

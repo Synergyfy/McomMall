@@ -17,6 +17,7 @@ interface Step8Props {
     onBack: () => void;
     onPublish: () => void;
     onSaveDraft: () => void;
+    isSubmitting?: boolean;
 }
 
 interface AttributeValue {
@@ -30,7 +31,7 @@ interface Attribute {
     values: AttributeValue[];
 }
 
-export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft }: Step8Props) {
+export default function Step8Finalize({ formData, updateFormData, onBack, onPublish, onSaveDraft, isSubmitting }: Step8Props) {
     const [showSuccess, setShowSuccess] = useState(false);
 
     // attributes: { name: string, options: { name: string, priceModifier: number }[] }[]
@@ -225,9 +226,13 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                     </label>
                                 ))}
                             </div>
-                            <button onClick={handlePublish} className="w-full mt-6 bg-[#f48c25] hover:bg-orange-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center gap-2 transition-all active:scale-[0.98]">
-                                {showSuccess ? <UploadCloud className="w-6 h-6 animate-bounce" /> : <CheckCircle2 className="w-5 h-5" />}
-                                {showSuccess ? 'Publishing...' : 'Publish Product'}
+                            <button
+                                onClick={onPublish}
+                                disabled={isSubmitting}
+                                className="w-full mt-6 bg-[#f48c25] hover:bg-orange-600 text-white font-bold py-4 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center justify-center gap-2 transition-all active:scale-[0.98] disabled:opacity-50"
+                            >
+                                {isSubmitting ? <UploadCloud className="w-6 h-6 animate-bounce" /> : <CheckCircle2 className="w-5 h-5" />}
+                                {isSubmitting ? 'Publishing...' : 'Publish Product'}
                             </button>
                             <button onClick={onSaveDraft} className="w-full mt-3 text-[#9c7349] font-bold py-2 text-sm hover:text-[#f48c25] transition-colors">
                                 Save as Draft
@@ -241,8 +246,12 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                         <ArrowLeft className="w-4 h-4" />
                         Back to Inventory
                     </button>
-                    <button onClick={handlePublish} className="bg-[#f48c25] hover:bg-orange-600 text-white font-bold text-sm px-10 py-3 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center gap-2 transition-transform active:scale-95">
-                        Complete Setup
+                    <button
+                        onClick={onPublish}
+                        disabled={isSubmitting}
+                        className="bg-[#f48c25] hover:bg-orange-600 text-white font-bold text-sm px-10 py-3 rounded-lg shadow-lg shadow-orange-200 dark:shadow-none flex items-center gap-2 transition-transform active:scale-95 disabled:opacity-50"
+                    >
+                        {isSubmitting ? 'Processing...' : 'Complete Setup'}
                         <CheckCircle2 className="w-5 h-5" />
                     </button>
                 </div>
