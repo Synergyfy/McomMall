@@ -196,7 +196,22 @@ export default function AddServicePage() {
       configurableAddons: [],
       media: [],
       variants: [],
-      availability: undefined,
+      availability: {
+        schedule: [
+          { day: 'monday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'tuesday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'wednesday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'thursday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'friday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'saturday', enabled: false, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'sunday', enabled: false, startTime: '09:00', endTime: '17:00', breaks: [] },
+        ],
+        slotDuration: 60,
+        bufferTime: 15,
+        maxBookingsPerSlot: 1,
+        staffPerBooking: 1,
+        serviceRadiusKm: 10,
+      },
       enableTieredPackages: false,
       requireApproval: false,
       deliveryConfig: {
@@ -253,16 +268,6 @@ export default function AddServicePage() {
       const categoryName = categories?.find(c => c.id === data.category)?.name || data.category;
       const subcategoryName = subcategories?.find(s => s.id === data.subcategory)?.name || data.subcategory;
 
-      // Availability mapping
-      const availability = data.availability ? {
-        ...data.availability,
-        schedule: data.availability.schedule.map(s => ({
-          ...s,
-          day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
-          breaks: s.breaks?.map(b => `${b.start}-${b.end}`)
-        }))
-      } : undefined;
-
       const serviceData: CreateServiceDto = {
         ...data,
         shortDesc: data.shortDescription || '',
@@ -277,16 +282,16 @@ export default function AddServicePage() {
           cities: deliveryConfig.cities || [],
           regions: deliveryConfig.regions || [],
         } : { mode: 'onsite', cities: [], regions: [] },
-        availability: availability ? {
-          ...availability,
-          schedule: availability.schedule?.map(s => ({
+        availability: data.availability ? {
+          ...data.availability,
+          schedule: data.availability.schedule.map(s => ({
             ...s,
-            day: s.day as any, // day is already capitalized correctly
-            breaks: s.breaks || [],
-          })) || [],
-          slotDuration: availability.slotDuration || 60,
-          bufferTime: availability.bufferTime || 0,
-          maxBookingsPerSlot: availability.maxBookingsPerSlot || 1,
+            day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
+            breaks: s.breaks?.map(b => `${b.start}-${b.end}`) || []
+          })),
+          slotDuration: data.availability.slotDuration || 60,
+          bufferTime: data.availability.bufferTime || 0,
+          maxBookingsPerSlot: data.availability.maxBookingsPerSlot || 1,
         } : undefined,
         images: mediaUrls.filter(m => m.type === 'image').map(result => result.secure_url),
         media: mediaUrls.filter(m => m.type === 'video').map(result => result.secure_url),
