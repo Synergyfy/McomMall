@@ -22,7 +22,7 @@ interface MultiMediaUploadProps {
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
   maxFiles = 5,
-  maxSize = 5 * 1024 * 1024, // 5MB default
+  maxSize = 30 * 1024 * 1024, // 30MB default
   initialMedia = [],
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);

@@ -109,9 +109,9 @@ export function Step6FinalReview() {
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <MultiMediaUpload onMediaChange={field.onChange} />
+                  <MultiMediaUpload onMediaChange={field.onChange} maxSize={30 * 1024 * 1024} />
                 </FormControl>
-                <FormDescription>At least one image is required. Max file size: 5MB.</FormDescription>
+                <FormDescription>At least one image is required. Max file size: 30MB.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}
