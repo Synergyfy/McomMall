@@ -39,10 +39,7 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
     const variations = formData.variations || [];
 
     const handlePublish = () => {
-        setShowSuccess(true);
-        setTimeout(() => {
-            onPublish();
-        }, 2000);
+        onPublish();
     };
 
     // Helper to group variations by the first attribute's value

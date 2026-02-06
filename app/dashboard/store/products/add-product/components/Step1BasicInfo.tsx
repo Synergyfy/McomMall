@@ -33,7 +33,11 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     if (id === 'category') {
-      updateFormData({ [id]: value, subCategory: '' });
+      const cat = categories?.find(c => c.id === value);
+      updateFormData({ category: value, categoryName: cat?.name || '', subCategory: '', subCategoryName: '' });
+    } else if (id === 'subCategory') {
+      const sub = subCategories?.find(s => s.id === value);
+      updateFormData({ subCategory: value, subCategoryName: sub?.name || '' });
     } else {
       updateFormData({ [id]: value });
     }

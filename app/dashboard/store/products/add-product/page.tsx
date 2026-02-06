@@ -33,7 +33,9 @@ export default function AddProductPage() {
   const [formData, setFormData] = useState({
     productName: '',
     category: '',
+    categoryName: '',
     subCategory: '',
+    subCategoryName: '',
     shortDesc: '',
     fullDesc: '',
     product_type: 'physical',
@@ -92,11 +94,20 @@ export default function AddProductPage() {
       }))
     }));
 
+    // Determine shipping method based on fulfillment and pricing
+    let finalShippingMethod = 'delivery';
+    if (formData.isFreeDelivery) finalShippingMethod = 'free';
+    else if (fulfillmentType.includes('shipping')) finalShippingMethod = 'delivery';
+    else if (fulfillmentType.includes('pickup')) finalShippingMethod = 'pickup';
+
     const payload: any = {
       ...formData,
       title: formData.productName,
       description: formData.fullDesc,
       shortDescription: formData.shortDesc,
+      category: formData.categoryName || formData.category,
+      subCategory: formData.subCategoryName || formData.subCategory,
+      productType: formData.product_type,
       price: parseFloat(formData.regular_price) || 0,
       salePrice: parseFloat(formData.sale_price) || undefined,
       regular_price: parseFloat(formData.regular_price) || 0,
@@ -105,9 +116,8 @@ export default function AddProductPage() {
       stock: parseInt(formData.quantity.toString()) || 0,
       media: [...(formData.images || []), ...(formData.videos || [])],
       variantConfig,
-      subCategory: formData.subCategory,
       fulfillmentType: fulfillmentType,
-      shippingMethod: shippingMethod,
+      shippingMethod: finalShippingMethod,
       weight: formData.weight ? parseFloat(formData.weight) : 0,
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
     };
