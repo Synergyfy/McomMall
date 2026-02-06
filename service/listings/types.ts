@@ -76,8 +76,8 @@ export type GooglePlaceResults = GooglePlaceResult[];
 
 export interface UserService {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   imageUrl: string | null;
   title: string;
   description: string;
@@ -88,8 +88,8 @@ export interface UserService {
 
 export interface User {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   name: string;
   email: string;
   phoneNumber: string;
@@ -107,16 +107,16 @@ export interface User {
 
 interface Category {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   name: string;
   description: string | null;
 }
 
 export interface Location {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   postcode: string;
   addressLine1: string;
   addressLine2: string | null;
@@ -380,8 +380,8 @@ export interface Campaign {
 
 export interface InHouseBusiness {
   id: string;
-  created_at: string;
-  updated_at: string;
+  createdAt: string;
+  updatedAt: string;
   listingType: ListingType[];
   businessName: string;
   legalName?: string;
@@ -428,6 +428,9 @@ export interface RecentListing {
   shortDescription: string;
   businessPhone: string;
   status: string;
+  logoUrl?: string;
+  bannerUrl?: string;
+  media?: string[];
   categories: {
     id:string;
     name:string;
