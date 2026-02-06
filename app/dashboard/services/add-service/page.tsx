@@ -225,8 +225,8 @@ export default function AddServicePage() {
     try {
       const mediaUrls = await Promise.all(
         data.media.map((file: File | string) => {
-           if (typeof file === 'string') return { secure_url: file };
-           return uploadFile(file);
+          if (typeof file === 'string') return { secure_url: file };
+          return uploadFile(file);
         })
       );
 
@@ -273,11 +273,11 @@ export default function AddServicePage() {
       isValid = !!values.pricingModel;
       if (isValid) {
         if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
-          isValid = values.fixedPrice !== undefined && values.fixedPrice !== null && values.fixedPrice !== '';
+          isValid = values.fixedPrice !== undefined && values.fixedPrice !== null;
         } else if (values.pricingModel === 'perHour') {
-          isValid = values.pricePerHour !== undefined && values.pricePerHour !== null && values.pricePerHour !== '';
+          isValid = values.pricePerHour !== undefined && values.pricePerHour !== null;
         } else if (values.pricingModel === 'perUnit') {
-          isValid = values.pricePerUnit !== undefined && values.pricePerUnit !== null && values.pricePerUnit !== '';
+          isValid = values.pricePerUnit !== undefined && values.pricePerUnit !== null;
         }
       }
     } else if (currentStep === 4 || currentStep === 5) {
@@ -341,18 +341,16 @@ export default function AddServicePage() {
             {STEPS.map((step) => (
               <div key={step.id} className="flex flex-col items-center">
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${
-                    currentStep >= step.id
+                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${currentStep >= step.id
                       ? 'bg-primary text-white scale-110 shadow-lg'
                       : 'bg-gray-200 text-gray-500'
-                  }`}
+                    }`}
                 >
                   {step.label}
                 </div>
                 <span
-                  className={`mt-2 text-xs font-medium ${
-                    currentStep === step.id ? 'text-primary' : 'text-gray-500'
-                  }`}
+                  className={`mt-2 text-xs font-medium ${currentStep === step.id ? 'text-primary' : 'text-gray-500'
+                    }`}
                 >
                   {step.name}
                 </span>

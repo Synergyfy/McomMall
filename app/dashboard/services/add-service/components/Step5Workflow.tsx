@@ -143,7 +143,7 @@ export function Step5Workflow() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-             Quote Request <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+            Quote Request <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
           </CardTitle>
           <CardDescription>Switch from direct booking to a quote-based request system.</CardDescription>
         </CardHeader>
@@ -172,7 +172,7 @@ export function Step5Workflow() {
                   <FormLabel className="text-sm font-medium">Initial Booking Fee <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
                       <Input type="number" {...field} className="py-6 pl-8" placeholder="0.00" />
                     </div>
                   </FormControl>

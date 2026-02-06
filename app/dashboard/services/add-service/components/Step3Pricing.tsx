@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { DollarSign, Users, ListPlus, Trash2, PlusCircle, HelpCircle } from 'lucide-react';
+import { PoundSterling, Users, ListPlus, Trash2, PlusCircle, HelpCircle } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import {
@@ -44,7 +44,7 @@ export function Step3Pricing() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
-            <DollarSign className="w-5 h-5 text-primary" />
+            <PoundSterling className="w-5 h-5 text-primary" />
             Pricing Strategy
           </CardTitle>
           <CardDescription>Determine how customers will be charged for your service.</CardDescription>
@@ -98,7 +98,7 @@ export function Step3Pricing() {
                   <FormLabel className="text-sm font-medium">Base Price <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
                       <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
                     </div>
                   </FormControl>
@@ -117,7 +117,7 @@ export function Step3Pricing() {
                   <FormLabel className="text-sm font-medium">Hourly Rate <span className="text-red-500">*</span></FormLabel>
                   <FormControl>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
                       <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
                     </div>
                   </FormControl>
@@ -137,7 +137,7 @@ export function Step3Pricing() {
                     <FormLabel className="text-sm font-medium">Price per Unit <span className="text-red-500">*</span></FormLabel>
                     <FormControl>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">$</span>
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
                         <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
                       </div>
                     </FormControl>
@@ -192,7 +192,7 @@ export function Step3Pricing() {
                 name="pricingRules.nightSurcharge"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Night Surcharge <span className="text-muted-foreground">($ - Optional)</span></FormLabel>
+                    <FormLabel className="text-xs">Night Surcharge <span className="text-muted-foreground">(£ - Optional)</span></FormLabel>
                     <FormControl>
                       <Input type="number" {...field} className="h-10" />
                     </FormControl>
@@ -204,7 +204,7 @@ export function Step3Pricing() {
                 name="pricingRules.holidaySurcharge"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Holiday Surcharge <span className="text-muted-foreground">($ - Optional)</span></FormLabel>
+                    <FormLabel className="text-xs">Holiday Surcharge <span className="text-muted-foreground">(£ - Optional)</span></FormLabel>
                     <FormControl>
                       <Input type="number" {...field} className="h-10" />
                     </FormControl>
@@ -323,7 +323,7 @@ export function Step3Pricing() {
                 name={`configurableAddons.${index}.price`}
                 render={({ field }) => (
                   <div className="relative">
-                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">$</span>
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
                     <FormControl>
                       <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
                     </FormControl>
