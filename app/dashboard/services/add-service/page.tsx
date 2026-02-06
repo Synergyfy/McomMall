@@ -174,7 +174,7 @@ export default function AddServicePage() {
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     defaultValues: {
       name: '',
       shortDescription: '',

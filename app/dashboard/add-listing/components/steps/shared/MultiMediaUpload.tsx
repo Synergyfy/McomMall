@@ -115,7 +115,11 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   };
 
   useEffect(() => {
-    onMediaChange(mediaFiles.map(mf => mf.file));
+    try {
+      onMediaChange(mediaFiles.map(mf => mf.file));
+    } catch (e) {
+      console.error('Error in onMediaChange:', e);
+    }
     const hasImage = mediaFiles.some(mf => mf.type === 'image');
     if (mediaFiles.length > 0 && !hasImage) {
       setError('At least one image file is required.');
