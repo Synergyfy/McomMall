@@ -89,11 +89,6 @@ export default function AddProductPage() {
     }
   }, [userListings, formData.bussinessId]);
 
-  useEffect(() => {
-    if (user?.id && !formData.serviceProviderId) {
-      updateFormData({ serviceProviderId: user.id });
-    }
-  }, [user?.id, formData.serviceProviderId]);
 
   const handlePublish = () => {
     const variantConfig = formData.attributes.map((attr: any) => ({
