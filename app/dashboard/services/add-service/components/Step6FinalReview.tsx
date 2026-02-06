@@ -36,6 +36,7 @@ export function Step6FinalReview() {
   const businesses = React.useMemo(() => {
     if (!listings?.data) return [];
     return listings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
       l.listingType.some(type => type.toLowerCase() === 'service')
     );
   }, [listings]);
