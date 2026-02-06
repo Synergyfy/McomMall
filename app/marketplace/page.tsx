@@ -7,8 +7,7 @@ import { PageDto } from '@/service/marketplace/types';
 export const revalidate = 3600; // Revalidate every hour
 
 async function getMarketplacePublic() {
-  const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
-  const res = await fetch(`${cleanBaseURL}/marketplace/public`, {
+  const res = await fetch(`${baseURL}/marketplace/public`, {
     next: { revalidate: 3600 }
   });
   if (!res.ok) {
@@ -18,11 +17,14 @@ async function getMarketplacePublic() {
 }
 
 async function getNewProducts() {
-    const cleanBaseURL = baseURL.endsWith('/') ? baseURL.slice(0, -1) : baseURL;
-    const res = await fetch(`${cleanBaseURL}/product/public?page=1&limit=4`, {
+    // Manually constructing the query string as we can't use axios params here easily or it's just simpler
+    // Default params: page=1, limit=4
+    const res = await fetch(`${baseURL}/product/public?page=1&limit=4`, {
         next: { revalidate: 3600 }
     });
     if (!res.ok) {
+        // Fallback for new products if it fails? or throw?
+        // Let's return null or empty to avoid crashing the whole page if just products fail
         console.error('Failed to fetch new products');
         return { data: [], meta: { totalItems: 0, itemCount: 0, itemsPerPage: 4, totalPages: 0, currentPage: 1, hasNextPage: false, hasPreviousPage: false } } as PageDto<Product>;
     }

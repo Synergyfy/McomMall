@@ -182,13 +182,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
       rating: 4.5,
       reviews: 10,
       discountedPrice: item.salePrice ? Number(item.salePrice) : undefined,
-      link: `/${linkPrefix}/${id}`,
-      bonusThreshold: (item as any).bonusThreshold,
-      bonusAmount: (item as any).bonusAmount,
-      fixedAmounts: (item as any).fixedAmounts,
-      allowCustomAmount: (item as any).allowCustomAmount,
-      minCustomAmount: (item as any).minCustomAmount,
-      maxCustomAmount: (item as any).maxCustomAmount,
+      link: `/${linkPrefix}/${id}`
     } as PromotionalItem;
   };
 

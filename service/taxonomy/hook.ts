@@ -67,23 +67,6 @@ export const useGetCategories = () => {
   });
 };
 
-export const useGetAllCategories = () => {
-  return useQuery({
-    queryKey: ['taxonomy', 'categories', 'all'],
-    queryFn: async () => {
-      try {
-        const { data } = await api.get<Category[]>('taxonomy/categories/all');
-        return data;
-      } catch (error: unknown) {
-        const err = error as ErrorResponse;
-        throw new Error(
-          err.response?.data?.message || err.message || 'Failed to fetch all categories'
-        );
-      }
-    },
-  });
-};
-
 export const useGetCategoryById = (id: string) => {
   return useQuery({
     queryKey: ['taxonomy', 'categories', id],

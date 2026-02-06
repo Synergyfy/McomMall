@@ -28,7 +28,7 @@ import {
   HeartHandshake,
   LucideProps,
 } from 'lucide-react';
-import { useGetAllCategories } from '@/service/taxonomy/hook';
+import { useGetCategories, useGetSectors } from '@/service/taxonomy/hook';
 import { Sector } from '@/service/taxonomy/types';
 
 const iconMap: { [key: string]: React.ReactElement<LucideProps> } = {
@@ -131,13 +131,20 @@ export function BusinessCategoriesSection() {
     null
   );
 
-  const { data: categories, isLoading } = useGetAllCategories();
+  const { data: sectors } = useGetSectors();
+  const { data: categories, isLoading } = useGetCategories();
 
   const allDisplayCategories = useMemo(() => {
-    if (!categories) return [];
+    if (!categories || !sectors) return [];
 
-    const displayCats = categories.map((category: any) => {
-      const sectorName = category.sector?.name || 'Others';
+    // Create a map of Sector ID -> Sector Name
+    const sectorMap = new Map<string, string>();
+    sectors.forEach((sector: Sector) => {
+      sectorMap.set(sector.id, sector.name);
+    });
+
+    const displayCats = categories.map(category => {
+      const sectorName = sectorMap.get(category.sectorId) || 'Others';
       // Try to find an icon for the sector, defaulting to 'Others' or Users icon
       const icon = iconMap[sectorName] || iconMap['Others'] || <Users />;
 
@@ -148,7 +155,7 @@ export function BusinessCategoriesSection() {
     });
 
     return shuffleArray(displayCats);
-  }, [categories]);
+  }, [categories, sectors]);
 
   const duplicatedCategories = useMemo(
     () => [...allDisplayCategories, ...allDisplayCategories],

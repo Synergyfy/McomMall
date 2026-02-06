@@ -38,11 +38,6 @@ export function Step3Pricing() {
     name: 'configurableAddons',
   });
 
-  const { fields: bundleFields, append: appendBundle, remove: removeBundle } = useFieldArray({
-    control,
-    name: 'bundledServices',
-  });
-
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
       {/* Pricing Strategy */}
@@ -318,28 +313,24 @@ export function Step3Pricing() {
                 control={control}
                 name={`configurableAddons.${index}.name`}
                 render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Input placeholder="Add-on Name" {...field} className="h-9" />
-                    </FormControl>
-                  </FormItem>
+                  <FormControl>
+                    <Input placeholder="Add-on Name" {...field} className="h-9" />
+                  </FormControl>
                 )}
               />
               <FormField
                 control={control}
                 name={`configurableAddons.${index}.price`}
                 render={({ field }) => (
-                  <FormItem>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
-                      <FormControl>
-                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
-                      </FormControl>
-                    </div>
-                  </FormItem>
+                  <div className="relative">
+                    <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
+                    <FormControl>
+                      <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
+                    </FormControl>
+                  </div>
                 )}
               />
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeAddon(index)} className="hover:text-destructive h-9 w-9">
+              <Button type="button" variant="ghost" size="icon" onClick={() => removeAddon(index)} className="hover:text-destructive">
                 <Trash2 className="w-4 h-4" />
               </Button>
             </div>
@@ -351,59 +342,6 @@ export function Step3Pricing() {
             className="w-full py-6 border-dashed"
           >
             <PlusCircle className="mr-2 h-4 w-4" /> Add New Add-on
-          </Button>
-        </CardContent>
-      </Card>
-
-      {/* Bundled Services */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <PlusCircle className="w-5 h-5 text-primary" />
-            Bundled Services <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-          </CardTitle>
-          <CardDescription>Included sub-services that come with this package.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {bundleFields.map((field, index) => (
-            <div key={field.id} className="flex gap-4 items-center bg-muted/20 p-2 rounded-md">
-              <FormField
-                control={control}
-                name={`bundledServices.${index}.name`}
-                render={({ field }) => (
-                  <FormItem className="flex-1">
-                    <FormControl>
-                      <Input placeholder="Service Name" {...field} className="h-9" />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-              <FormField
-                control={control}
-                name={`bundledServices.${index}.price`}
-                render={({ field }) => (
-                  <FormItem>
-                    <div className="relative">
-                      <span className="absolute left-2 top-1/2 -translate-y-1/2 text-muted-foreground text-xs">£</span>
-                      <FormControl>
-                        <Input type="number" placeholder="0" className="w-24 h-9 pl-5" {...field} />
-                      </FormControl>
-                    </div>
-                  </FormItem>
-                )}
-              />
-              <Button type="button" variant="ghost" size="icon" onClick={() => removeBundle(index)} className="hover:text-destructive h-9 w-9">
-                <Trash2 className="w-4 h-4" />
-              </Button>
-            </div>
-          ))}
-          <Button
-            type="button"
-            variant="outline"
-            onClick={() => appendBundle({ name: '', price: 0 })}
-            className="w-full py-6 border-dashed"
-          >
-            <PlusCircle className="mr-2 h-4 w-4" /> Add Bundled Service
           </Button>
         </CardContent>
       </Card>
