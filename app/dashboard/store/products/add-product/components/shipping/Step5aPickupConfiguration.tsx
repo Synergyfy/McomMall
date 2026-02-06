@@ -82,10 +82,10 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
         <div className="flex flex-col gap-2">
           <div className="flex justify-between items-center text-xs font-bold uppercase text-[#1c140d] dark:text-white">
             <span>Step 5 of 8</span>
-            <span>65% Complete</span>
+            <span>62.5%</span>
           </div>
           <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-2 overflow-hidden">
-            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
+            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '62.5%' }}></div>
           </div>
         </div>
       </div>

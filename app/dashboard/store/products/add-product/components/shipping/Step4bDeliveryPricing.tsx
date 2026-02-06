@@ -176,10 +176,10 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
       <div className="flex flex-col gap-3 p-4">
         <div className="flex gap-6 justify-between items-end">
           <p className="text-lg font-bold text-[#1c140d] dark:text-white">Product Creation Progress</p>
-          <p className="text-sm font-bold text-[#1c140d] dark:text-white">Step 4b of 8</p>
+          <p className="text-sm font-bold text-[#1c140d] dark:text-white">Step 4 of 8</p>
         </div>
         <div className="rounded-full bg-[#e8dbce] dark:bg-[#3d2f25] overflow-hidden h-2.5">
-          <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500 shadow-[0_0_10px_rgba(244,140,37,0.4)]" style={{ width: '58%' }}></div>
+          <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500 shadow-[0_0_10px_rgba(244,140,37,0.4)]" style={{ width: '50%' }}></div>
         </div>
         <p className="text-[#9c7349] dark:text-[#c4a687] text-sm font-medium">Current: Delivery Pricing Strategy</p>
       </div>

@@ -30,13 +30,13 @@ export default function Step5bConnectShipStation({ onBack, onNext }: Step5bProps
             <div className="flex flex-col gap-3 p-4 bg-white dark:bg-[#2c2219] rounded-xl shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
                 <div className="flex gap-6 justify-between items-center">
                     <div>
-                        <p className="text-[#1c140d] dark:text-white text-base font-bold leading-normal">Step 5b: Connect ShipStation</p>
+                        <p className="text-[#1c140d] dark:text-white text-base font-bold leading-normal">Step 5: Connect ShipStation</p>
                         <p className="text-[#9c7349] dark:text-gray-400 text-xs font-normal leading-normal">Integration Setup</p>
                     </div>
-                    <p className="text-[#f48c25] font-bold text-sm bg-[#f48c25]/10 px-3 py-1 rounded-full">5 of 6</p>
+                    <p className="text-[#f48c25] font-bold text-sm bg-[#f48c25]/10 px-3 py-1 rounded-full">5 of 8</p>
                 </div>
                 <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2f] h-2 overflow-hidden">
-                    <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '83%' }}></div>
+                    <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '62.5%' }}></div>
                 </div>
             </div>
 

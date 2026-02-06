@@ -52,10 +52,10 @@ export default function Step5SelectCarrier({ onBack, onNext }: Step5Props) {
                                 <p className="text-[#f48c25] text-sm font-bold uppercase tracking-wide mb-1">Shipping Integration</p>
                                 <p className="text-[#1c140d] dark:text-white text-base font-medium leading-normal">Step 5.1: Select Carrier</p>
                             </div>
-                            <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-medium leading-normal">Step 5 of 6</p>
+                            <p className="text-[#9c7349] dark:text-[#a08b7d] text-sm font-medium leading-normal">Step 5 of 8</p>
                         </div>
                         <div className="rounded-full bg-[#e8dbce] dark:bg-[#3a2e26] h-2 w-full overflow-hidden">
-                            <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '83%' }}></div>
+                            <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '62.5%' }}></div>
                         </div>
                     </div>
 

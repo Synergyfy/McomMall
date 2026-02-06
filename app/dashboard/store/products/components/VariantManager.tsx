@@ -606,7 +606,7 @@ function AddVariantPopover({
                     {/* Multi-Select Dropdown using Popover/Combobox style */}
                     <Popover>
                       <PopoverTrigger asChild>
-                        <Button variant="outline" role="combobox" className="w-full justify-between h-8 text-xs bg-white border-orange-200/50">
+                        <Button type="button" variant="outline" role="combobox" className="w-full justify-between h-8 text-xs bg-white border-orange-200/50">
                           {selectedValues.length > 0
                             ? `${selectedValues.length} selected`
                             : `Select ${attrName}...`}
@@ -773,6 +773,7 @@ function QuickAttributePicker({
             ))}
           </div>
           <Button
+            type="button"
             size="sm"
             className="w-full h-8 bg-orange-600 hover:bg-orange-700 text-white text-xs"
             onClick={handleApply}
@@ -1501,7 +1502,7 @@ function AddGroupPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger asChild>
-        <Button variant="outline" size="sm" className="h-8 border-dashed text-orange-600 border-orange-200 bg-orange-50/50 hover:bg-orange-50 ml-2">
+        <Button type="button" variant="outline" size="sm" className="h-8 border-dashed text-orange-600 border-orange-200 bg-orange-50/50 hover:bg-orange-50 ml-2">
           <Plus className="mr-2 h-4 w-4" />
           Add {primaryAttr.name} Group
         </Button>

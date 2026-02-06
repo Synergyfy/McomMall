@@ -33,11 +33,11 @@ export default function Step6ShipStationConfig({ onBack, onNext }: Step6Props) {
             {/* Progress Bar */}
             <div className="flex flex-col gap-3 px-4 py-4">
                 <div className="flex gap-6 justify-between items-end">
-                    <p className="text-[#1c140d] dark:text-white text-base font-bold leading-normal">Step 6 of 7</p>
-                    <span className="text-[#9c7349] text-xs font-semibold uppercase tracking-wider">85% Completed</span>
+                    <p className="text-[#1c140d] dark:text-white text-base font-bold leading-normal">Step 6 of 8</p>
+                    <span className="text-[#9c7349] text-xs font-semibold uppercase tracking-wider">75%</span>
                 </div>
                 <div className="rounded-full bg-[#e8dbce] dark:bg-[#3a2d20] h-2 w-full overflow-hidden">
-                    <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500" style={{ width: '85%' }}></div>
+                    <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500" style={{ width: '75%' }}></div>
                 </div>
             </div>
 

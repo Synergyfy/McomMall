@@ -13,10 +13,10 @@ export default function Step7ServiceMapping({ onBack, onFinish }: Step7Props) {
             <div className="flex flex-col gap-3">
                 <div className="flex gap-6 justify-between items-end">
                     <h1 className="text-3xl sm:text-4xl font-black leading-tight tracking-[-0.033em] text-[#1c140d] dark:text-white">Service Mapping</h1>
-                    <p className="text-[#1c140d] dark:text-gray-300 text-base font-medium whitespace-nowrap">Step 7 of 7</p>
+                    <p className="text-[#1c140d] dark:text-gray-300 text-base font-medium whitespace-nowrap">Step 7 of 8</p>
                 </div>
                 <div className="w-full rounded-full bg-[#e8dbce] dark:bg-[#3a2e25] h-2.5 overflow-hidden">
-                    <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '100%' }}></div>
+                    <div className="h-full rounded-full bg-[#f48c25]" style={{ width: '87.5%' }}></div>
                 </div>
                 <p className="text-[#9c7349] dark:text-[#ccaa85] text-base font-normal">Configure how your store's shipping methods translate to carrier services.</p>
             </div>

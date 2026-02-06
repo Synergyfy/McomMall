@@ -84,11 +84,11 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                     {/* Responsive Progress Bar */}
                     <div className="flex flex-col gap-2 mt-2">
                         <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-[#1c140d] dark:text-white">
-                            <span>Step 3 of 4</span>
-                            <span>75%</span>
+                            <span>Step 3 of 8</span>
+                            <span>37.5%</span>
                         </div>
                         <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-1.5 md:h-2 overflow-hidden">
-                            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
+                            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '37.5%' }}></div>
                         </div>
                     </div>
                 </div>

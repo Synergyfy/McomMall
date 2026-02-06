@@ -39,10 +39,10 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
             <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
                     <p className="text-[#1c140d] dark:text-white text-sm md:text-base font-bold">Step 2: Media & Content</p>
-                    <p className="text-[#9c7349] dark:text-[#cba885] text-xs md:text-sm font-medium">Step 2 of 4</p>
+                    <p className="text-[#9c7349] dark:text-[#cba885] text-xs md:text-sm font-medium">Step 2 of 8</p>
                 </div>
                 <div className="w-full h-1.5 md:h-2 rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] overflow-hidden">
-                    <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500 ease-out" style={{ width: '50%' }}></div>
+                    <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500 ease-out" style={{ width: '25%' }}></div>
                 </div>
                 <div className="flex justify-between text-[10px] md:text-xs font-medium text-[#9c7349] dark:text-[#cba885]">
                     <span className="hidden xs:inline">Basic Info</span>
