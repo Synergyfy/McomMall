@@ -37,8 +37,14 @@ export default function ProductPage() {
     if (!isMatrixSystem || !product?.variations) return null;
 
     return product.variations.find(v => {
-      // Check if every key in the combination matches the selection
-      return Object.entries(v.combination).every(([key, value]) => selectedVariants[key] === value);
+      // Case-insensitive key matching for combinations
+      const normalizedCombo = Object.fromEntries(
+        Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+      );
+      // Check if every selected variant matches the normalized combination
+      return Object.entries(selectedVariants).every(([key, value]) =>
+        normalizedCombo[key.toLowerCase()] === value
+      );
     });
   }, [isMatrixSystem, product, selectedVariants]);
 
@@ -48,13 +54,17 @@ export default function ProductPage() {
 
      // Simple Approach: Just check if this option exists in any variation that matches the OTHER currently selected keys.
      return product.variations.some(v => {
+        const normalizedCombo = Object.fromEntries(
+          Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+        );
+
         // Does this variation have the option we are checking?
-        if (v.combination[attributeName] !== optionValue) return false;
+        if (normalizedCombo[attributeName.toLowerCase()] !== optionValue) return false;
 
         // Does it also match the OTHER currently selected attributes?
         return Object.entries(selectedVariants).every(([key, value]) => {
            if (key === attributeName) return true; // Skip the one we are changing
-           return v.combination[key] === value;
+           return normalizedCombo[key.toLowerCase()] === value;
         });
      });
   };
@@ -186,8 +196,9 @@ export default function ProductPage() {
   // Construct Images Array: Variant Image First!
   const images = useMemo(() => {
       if (!product) return [];
-      const baseImages = product.fileUrls && product.fileUrls.length > 0
-        ? product.fileUrls
+      const combinedMedia = [...(product.fileUrls || []), ...(product.media || [])];
+      const baseImages = combinedMedia.length > 0
+        ? combinedMedia
         : [product.imageUrl || 'https://via.placeholder.com/500'];
 
       // Find the best image to show based on current selection
@@ -196,9 +207,12 @@ export default function ProductPage() {
       let variantImage = currentVariation?.image;
 
       if (!variantImage && isMatrixSystem && Object.keys(selectedVariants).length > 0) {
-        const partialMatch = product.variations?.find(v =>
-           v.image && Object.entries(selectedVariants).every(([key, value]) => v.combination[key] === value)
-        );
+        const partialMatch = product.variations?.find(v => {
+           const normalizedCombo = Object.fromEntries(
+             Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+           );
+           return v.image && Object.entries(selectedVariants).every(([key, value]) => normalizedCombo[key.toLowerCase()] === value);
+        });
         variantImage = partialMatch?.image;
       }
 

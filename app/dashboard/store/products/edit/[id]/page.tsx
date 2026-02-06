@@ -1402,7 +1402,7 @@ export default function EditProductPage() {
                           <FormControl>
                             <MultiMediaUpload
                               onMediaChange={field.onChange}
-                              initialMedia={product?.fileUrls}
+                              initialMedia={[...(product?.fileUrls || []), ...(product?.media || [])]}
                             />
                           </FormControl>
                           <FormMessage className="text-red-500 text-base font-medium" />
