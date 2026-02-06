@@ -28,7 +28,8 @@ interface Step2Props {
 
 export default function Step2MediaContent({ formData, updateFormData, onNext, onBack, onSaveDraft }: Step2Props) {
     const [croppingIndex, setCroppingIndex] = React.useState<{ index: number, type: 'image' | 'video' } | null>(null);
-    const [isUploading, setIsUploading] = React.useState(false);
+    const [isUploadingImage, setIsUploadingImage] = React.useState(false);
+    const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
@@ -36,7 +37,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
 
     const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
-        setIsUploading(true);
+        setIsUploadingImage(true);
         try {
             const files = Array.from(e.target.files);
             const uploadPromises = files.map(file => uploadFile(file));
@@ -48,13 +49,13 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
             console.error('Upload failed:', error);
             toast.error('Failed to upload images.');
         } finally {
-            setIsUploading(false);
+            setIsUploadingImage(false);
         }
     };
 
     const handleVideoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
         if (!e.target.files?.length) return;
-        setIsUploading(true);
+        setIsUploadingVideo(true);
         try {
             const file = e.target.files[0];
             const { secure_url } = await uploadFile(file);
@@ -64,7 +65,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
             console.error('Upload failed:', error);
             toast.error('Failed to upload video.');
         } finally {
-            setIsUploading(false);
+            setIsUploadingVideo(false);
         }
     };
 
@@ -148,12 +149,12 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                             multiple
                             type="file"
                             onChange={handleImageUpload}
-                            disabled={isUploading}
+                            disabled={isUploadingImage}
                         />
                         <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl bg-[#f8f7f5]/50 dark:bg-[#221910]/50 group-hover:bg-[#f48c25]/5 transition-all">
-                            <CloudUpload size={24} className={`text-[#f48c25] mb-1 ${isUploading ? 'animate-bounce' : ''}`} />
+                            <CloudUpload size={24} className={`text-[#f48c25] mb-1 ${isUploadingImage ? 'animate-bounce' : ''}`} />
                             <p className="text-xs md:text-sm font-semibold text-center px-4">
-                                {isUploading ? 'Uploading...' : 'Tap to upload images'}
+                                {isUploadingImage ? 'Uploading...' : 'Tap to upload images'}
                             </p>
                         </div>
                     </div>
@@ -202,14 +203,14 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                             className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer disabled:cursor-not-allowed"
                             type="file"
                             onChange={handleVideoUpload}
-                            disabled={isUploading}
+                            disabled={isUploadingVideo}
                         />
                         <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#e8dbce] dark:border-[#4a3b2e] rounded-xl bg-[#f8f7f5]/50 dark:bg-[#221910]/50 group-hover:bg-[#f48c25]/5 transition-all">
-                            <div className={`bg-[#f48c25]/10 p-2 rounded-full mb-1 text-[#f48c25] ${isUploading ? 'animate-spin' : ''}`}>
+                            <div className={`bg-[#f48c25]/10 p-2 rounded-full mb-1 text-[#f48c25] ${isUploadingVideo ? 'animate-spin' : ''}`}>
                                 <Video size={24} />
                             </div>
                             <p className="text-xs md:text-sm font-semibold text-center px-4">
-                                {isUploading ? 'Processing...' : 'Tap to upload videos'}
+                                {isUploadingVideo ? 'Processing...' : 'Tap to upload videos'}
                             </p>
                         </div>
                     </div>

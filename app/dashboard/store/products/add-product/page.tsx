@@ -76,12 +76,6 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    if (user?.id) {
-      updateFormData({ serviceProviderId: user.id });
-    }
-  }, [user]);
-
-  useEffect(() => {
     if (userListings?.data?.length === 1 && !formData.bussinessId) {
       updateFormData({ bussinessId: userListings.data[0].id });
     }
@@ -131,6 +125,10 @@ export default function AddProductPage() {
       weight: formData.weight ? parseFloat(formData.weight) : 0,
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
     };
+
+    if (!payload.serviceProviderId) {
+      delete payload.serviceProviderId;
+    }
 
     addProduct(payload, {
       onSuccess: () => {
