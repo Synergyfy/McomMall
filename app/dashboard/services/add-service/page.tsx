@@ -16,6 +16,8 @@ import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { UserListing } from '@/service/listings/types';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -171,6 +173,15 @@ export default function AddServicePage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+
+  const businesses = React.useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType.some(type => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
@@ -244,6 +255,12 @@ export default function AddServicePage() {
   const { data: categories } = useGetCategories();
   const categoryId = form.watch('category');
   const { data: subcategories } = useGetSubCategoriesByCategory(categoryId);
+
+  React.useEffect(() => {
+    if (!isLoadingListings && businesses.length === 1 && !form.getValues('businessId')) {
+      form.setValue('businessId', businesses[0].id);
+    }
+  }, [isLoadingListings, businesses, form]);
 
   const onSubmit = async (data: ServiceFormValues) => {
     try {
@@ -431,7 +448,12 @@ export default function AddServicePage() {
                 {currentStep === 3 && <Step3Pricing />}
                 {currentStep === 4 && <Step4Availability />}
                 {currentStep === 5 && <Step5Workflow />}
-                {currentStep === 6 && <Step6FinalReview />}
+                {currentStep === 6 && (
+                  <Step6FinalReview
+                    businesses={businesses}
+                    isLoadingListings={isLoadingListings}
+                  />
+                )}
               </div>
 
               <div className="flex justify-between pt-8 border-t">

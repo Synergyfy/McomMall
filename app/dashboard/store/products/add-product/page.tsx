@@ -24,8 +24,14 @@ import { useRouter } from 'next/navigation';
 export default function AddProductPage() {
   const router = useRouter();
   const { user } = useAuth();
-  const { data: userListings } = useGetUserListings();
+  const { data: userListings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
   const { mutate: addProduct, isPending } = useAddProduct();
+
+  const businesses = React.useMemo(() => {
+    return userListings?.data?.filter((l: any) =>
+      l.listingType?.some((t: string) => t.toLowerCase() === 'product')
+    ) || [];
+  }, [userListings]);
 
   const [step, setStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
@@ -91,10 +97,10 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    if (userListings?.data?.length === 1 && !formData.bussinessId) {
-      updateFormData({ bussinessId: userListings.data[0].id });
+    if (!isLoadingListings && businesses.length === 1 && !formData.bussinessId) {
+      updateFormData({ bussinessId: businesses[0].id });
     }
-  }, [userListings, formData.bussinessId]);
+  }, [isLoadingListings, businesses, formData.bussinessId]);
 
 
   const handlePublish = () => {
@@ -204,6 +210,7 @@ export default function AddProductPage() {
   };
 
   const nextStep = () => {
+    window.scrollTo(0, 0);
     // Branching from Step 3
     if (step === 3) {
       if (formData.product_type !== 'physical') {
@@ -268,6 +275,7 @@ export default function AddProductPage() {
   };
 
   const prevStep = () => {
+    window.scrollTo(0, 0);
     if (step === 8) {
       if (formData.product_type !== 'physical') return setStep(3);
       if (fulfillmentType.includes('pickup')) return setStep(5.1);
@@ -299,7 +307,7 @@ export default function AddProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={userListings?.data || []} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={businesses} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:

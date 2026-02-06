@@ -21,7 +21,6 @@ import {
 import { Store, Image as ImageIcon, CheckCircle2, HelpCircle } from 'lucide-react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { UserListing } from '@/service/listings/types';
-import { useGetUserListings } from '@/service/listings/hook';
 import { toast } from 'sonner';
 import {
   Tooltip,
@@ -29,17 +28,13 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 
-export function Step6FinalReview() {
-  const { control, watch } = useFormContext();
-  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+interface Step6FinalReviewProps {
+  businesses: UserListing[];
+  isLoadingListings: boolean;
+}
 
-  const businesses = React.useMemo(() => {
-    if (!listings?.data) return [];
-    return listings.data.filter((l: UserListing) =>
-      l.id && l.id.trim() !== '' &&
-      l.listingType.some(type => type.toLowerCase() === 'service')
-    );
-  }, [listings]);
+export function Step6FinalReview({ businesses, isLoadingListings }: Step6FinalReviewProps) {
+  const { control, watch } = useFormContext();
 
   React.useEffect(() => {
     if (!isLoadingListings && businesses.length === 0) {
