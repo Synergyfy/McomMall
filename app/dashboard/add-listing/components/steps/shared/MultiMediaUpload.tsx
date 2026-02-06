@@ -26,7 +26,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   initialMedia = [],
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia);
+  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia || []);
   const [error, setError] = useState<string | null>(null);
 
   // Cropping State

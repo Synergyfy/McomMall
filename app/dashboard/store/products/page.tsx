@@ -190,10 +190,8 @@ export default function StoreDashboard() {
     'Pending Review',
     'In stock',
   ];
-  const categories = [...new Set((products || []).map(p => p.category))];
-  const brands = [...new Set((products || []).map(p => p.brand))].filter(
-    (b): b is string => b !== undefined
-  );
+  const categories = [...new Set((products || []).map(p => p.category))].filter((cat): cat is string => Boolean(cat));
+  const brands = [...new Set((products || []).map(p => p.brand))].filter((brand): brand is string => Boolean(brand));
   const isAllSelected =
     selectedRows.length > 0 &&
     filteredProducts &&
@@ -531,15 +529,31 @@ export default function StoreDashboard() {
                           className="mobile-table-cell md:table-cell text-gray-600"
                         >
                           <div className="flex flex-col items-end md:items-start">
-                            {product.price !== product.salePrice &&
-                              product.salePrice && (
-                                <span className="line-through text-gray-400">
-                                  £{product.price.toFixed(2)}
-                                </span>
-                              )}
-                            <span>
-                              £{(product.salePrice || product.price).toFixed(2)}
-                            </span>
+                            {product.variations && product.variations.length > 0 ? (
+                                (() => {
+                                    const prices = product.variations.map((v: any) => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter((p: number) => p > 0);
+                                    if (prices.length === 0) return <span>£{(product.salePrice || product.price || 0).toFixed(2)}</span>;
+                                    const min = Math.min(...prices);
+                                    const max = Math.max(...prices);
+                                    return (
+                                        <span className="font-semibold text-orange-600">
+                                            {min === max ? `£${min.toFixed(2)}` : `£${min.toFixed(2)} - £${max.toFixed(2)}`}
+                                        </span>
+                                    );
+                                })()
+                            ) : (
+                                <>
+                                    {product.price !== product.salePrice &&
+                                    product.salePrice && (
+                                        <span className="line-through text-gray-400">
+                                        £{product.price.toFixed(2)}
+                                        </span>
+                                    )}
+                                    <span>
+                                    £{(product.salePrice || product.price || 0).toFixed(2)}
+                                    </span>
+                                </>
+                            )}
                           </div>
                         </TableCell>
                         <TableCell

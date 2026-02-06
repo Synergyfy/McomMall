@@ -313,7 +313,7 @@ const EditServicePage = () => {
                         Loading businesses...
                       </SelectItem>
                     ) : (
-                      businesses.map((business: UserListing) => (
+                      businesses.filter((b: UserListing) => b.id && b.id.trim() !== '').map((business: UserListing) => (
                         <SelectItem key={business.id} value={business.id}>
                           {business.businessName}
                         </SelectItem>
