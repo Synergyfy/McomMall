@@ -14,8 +14,17 @@ import Step6ShipStationConfig from './components/shipping/Step6ShipStationConfig
 import Step7ServiceMapping from './components/shipping/Step7ServiceMapping';
 import Step8Finalize from './components/Step8Finalize';
 import { ProductStatusModal } from './components/lib/ProductStatusModal';
+import { useAuth } from '@/service/auth/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { useAddProduct } from '@/service/store/products/hook';
+import { useEffect } from 'react';
+import { toast } from 'sonner';
 
 export default function AddProductPage() {
+  const { user } = useAuth();
+  const { data: userListings } = useGetUserListings();
+  const { mutate: addProduct, isPending } = useAddProduct();
+
   const [step, setStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
   const [fulfillmentType, setFulfillmentType] = useState<('shipping' | 'pickup')[]>([]);
@@ -45,15 +54,74 @@ export default function AddProductPage() {
       system: 'international',
       measurements: [],
       diagrams: { male: '', female: '', unisex: '' }
-    }
+    },
+    bussinessId: '',
+    serviceProviderId: '',
+    fulfillmentType: [] as string[],
+    pickupInstructions: '',
+    isFreeDelivery: false,
+    isPaidDelivery: false,
+    freeDeliveryRadius: 0,
+    tags: [] as string[],
+    useVariantPricing: true,
   });
 
   const updateFormData = (newData: any) => {
     setFormData((prev) => ({ ...prev, ...newData }));
   };
 
+  useEffect(() => {
+    if (user?.id) {
+      updateFormData({ serviceProviderId: user.id });
+    }
+  }, [user]);
+
+  useEffect(() => {
+    if (userListings?.data?.length === 1 && !formData.bussinessId) {
+      updateFormData({ bussinessId: userListings.data[0].id });
+    }
+  }, [userListings, formData.bussinessId]);
+
   const handlePublish = () => {
-    setIsPublished(true);
+    const variantConfig = formData.attributes.map((attr: any) => ({
+      name: attr.name,
+      type: attr.type || 'select',
+      options: attr.options.map((opt: any) => ({
+        name: opt.name,
+        priceModifier: opt.priceModifier || 0
+      }))
+    }));
+
+    const payload: any = {
+      ...formData,
+      title: formData.productName,
+      description: formData.fullDesc,
+      shortDescription: formData.shortDesc,
+      price: parseFloat(formData.regular_price) || 0,
+      salePrice: parseFloat(formData.sale_price) || undefined,
+      regular_price: parseFloat(formData.regular_price) || 0,
+      sale_price: parseFloat(formData.sale_price) || undefined,
+      quantity: parseInt(formData.quantity.toString()) || 0,
+      stock: parseInt(formData.quantity.toString()) || 0,
+      media: [...(formData.images || []), ...(formData.videos || [])],
+      variantConfig,
+      subCategory: formData.subCategory,
+      fulfillmentType: fulfillmentType,
+      shippingMethod: shippingMethod,
+      weight: formData.weight ? parseFloat(formData.weight) : 0,
+      lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
+    };
+
+    addProduct(payload, {
+      onSuccess: () => {
+        setIsPublished(true);
+        toast.success('Product created successfully!');
+      },
+      onError: (error: any) => {
+        console.error('Failed to add product:', error);
+        toast.error(error.message || 'Failed to create product');
+      }
+    });
   };
 
   const nextStep = () => {
@@ -152,7 +220,7 @@ export default function AddProductPage() {
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={userListings?.data || []} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:
@@ -196,7 +264,7 @@ export default function AddProductPage() {
       case 7:
         return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isPending={isPending} />;
       default:
         return <div>Unknown Step</div>;
     }
