@@ -19,6 +19,7 @@ import { useGetUserListings } from '@/service/listings/hook';
 import { useAddProduct } from '@/service/store/products/hook';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
+import { useRouter } from 'next/navigation';
 
 export default function AddProductPage() {
   const router = useRouter();
