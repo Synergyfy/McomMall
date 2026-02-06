@@ -40,8 +40,8 @@ export default function AddProductPage() {
     fullDesc: '',
     product_type: 'physical',
     brand: '',
-    gender: '',
-    productStatus: 'publish',
+    gender: 'none',
+    productStatus: 'published',
     hasVariants: false,
     regular_price: '',
     sale_price: '',
@@ -103,6 +103,11 @@ export default function AddProductPage() {
     else if (fulfillmentType.includes('shipping')) finalShippingMethod = 'delivery';
     else if (fulfillmentType.includes('pickup')) finalShippingMethod = 'pickup';
 
+    // Auto-generate SKU if empty
+    const finalSku = formData.sku || (formData.productName
+      ? formData.productName.replace(/[^a-z0-9]/gi, '-').toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase()
+      : 'SKU-' + Date.now());
+
     const payload: any = {
       ...formData,
       title: formData.productName,
@@ -112,6 +117,7 @@ export default function AddProductPage() {
       category: formData.categoryName || formData.category,
       subCategory: formData.subCategoryName || formData.subCategory,
       productType: formData.product_type,
+      sku: finalSku,
       price: parseFloat(formData.regular_price) || 0,
       salePrice: parseFloat(formData.sale_price) || undefined,
       regular_price: parseFloat(formData.regular_price) || 0,
