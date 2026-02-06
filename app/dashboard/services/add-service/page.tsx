@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
@@ -16,6 +16,7 @@ import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetUserListings } from '@/service/listings/hook';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -171,6 +172,15 @@ export default function AddServicePage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
+  const { data: listings } = useGetUserListings(1, 100);
+
+  const businesses = useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: any) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType?.some((type: string) => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
@@ -240,6 +250,12 @@ export default function AddServicePage() {
       ],
     },
   });
+
+  useEffect(() => {
+    if (businesses.length === 1 && !form.getValues('businessId')) {
+      form.setValue('businessId', businesses[0].id);
+    }
+  }, [businesses, form]);
 
   const { data: categories } = useGetCategories();
   const categoryId = form.watch('category');
@@ -316,7 +332,7 @@ export default function AddServicePage() {
     const values = form.getValues();
 
     if (currentStep === 1) {
-      isValid = !!values.name && !!values.category;
+      isValid = !!values.name && !!values.category && !!values.businessId;
     } else if (currentStep === 2) {
       isValid = !!values.deliveryConfig?.mode;
     } else if (currentStep === 3) {
@@ -343,7 +359,7 @@ export default function AddServicePage() {
     } else {
       // Trigger validation to show error messages in the UI
       const fieldsToValidate: any = {
-        1: ['name', 'category'],
+        1: ['name', 'category', 'businessId'],
         2: ['deliveryConfig.mode'],
         3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit'],
         6: ['businessId', 'media'],

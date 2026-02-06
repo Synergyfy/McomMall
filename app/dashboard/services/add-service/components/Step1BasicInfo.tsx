@@ -28,8 +28,17 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
 import { cn } from '@/lib/utils';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetUserListings } from '@/service/listings/hook';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
@@ -51,6 +60,21 @@ export function Step1BasicInfo() {
 
   const { data: categories } = useGetCategories();
   const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+
+  const businesses = React.useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: any) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType?.some((type: string) => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
+
+  React.useEffect(() => {
+    if (!isLoadingListings && businesses.length === 0) {
+      toast.error("No service businesses found. Please create a 'Service' business listing first in 'My Listings'.");
+    }
+  }, [isLoadingListings, businesses.length]);
 
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -85,6 +109,56 @@ export function Step1BasicInfo() {
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Business Selection */}
+          <FormField
+            control={form.control}
+            name="businessId"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Business <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Select which business will offer this service.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  onValueChange={field.onChange}
+                  value={field.value}
+                  disabled={isLoadingListings}
+                >
+                  <FormControl>
+                    <SelectTrigger className="py-6">
+                      <SelectValue
+                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {businesses.length > 0 ? (
+                      businesses.map((b: any) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.businessName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No service businesses available
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {/* Service Name */}
           <FormField
             control={form.control}
