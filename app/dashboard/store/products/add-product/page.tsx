@@ -21,12 +21,14 @@ import { useEffect } from 'react';
 import { toast } from 'sonner';
 
 export default function AddProductPage() {
+  const router = useRouter();
   const { user } = useAuth();
   const { data: userListings } = useGetUserListings();
   const { mutate: addProduct, isPending } = useAddProduct();
 
   const [step, setStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
+  const [createdProductId, setCreatedProductId] = useState<string | null>(null);
   const [fulfillmentType, setFulfillmentType] = useState<('shipping' | 'pickup')[]>([]);
   const [shippingMethod, setShippingMethod] = useState<'existing' | 'shipstation' | null>(null);
 
@@ -131,7 +133,8 @@ export default function AddProductPage() {
     }
 
     addProduct(payload, {
-      onSuccess: () => {
+      onSuccess: (data: any) => {
+        setCreatedProductId(data.id);
         setIsPublished(true);
         toast.success('Product created successfully!');
       },
@@ -292,24 +295,33 @@ export default function AddProductPage() {
     return (
       <ProductStatusModal
         isOpen={true}
-        onClose={() => setIsPublished(false)}
+        onClose={() => {
+            setIsPublished(false);
+            router.push('/dashboard/store/products');
+        }}
         type="success"
         title="Product Added Successfully!"
         message={`${formData.productName} is now live and ready for customers.`}
         primaryAction={{
           label: "View Product",
-          onClick: () => console.log("Navigate to product")
+          onClick: () => {
+            if (createdProductId) {
+                router.push(`/dashboard/product/${createdProductId}`);
+            }
+          }
         }}
         secondaryAction={{
           label: "Add Another Product",
           onClick: () => {
             setIsPublished(false);
+            setCreatedProductId(null);
             setStep(1);
+            // Reset form data if needed, but for now just go back to step 1
           }
         }}
         dashboardAction={{
           label: "Go to Dashboard",
-          onClick: () => console.log("Navigate to dashboard")
+          onClick: () => router.push('/dashboard/store/products')
         }}
       />
     );
