@@ -149,7 +149,7 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                             </Tooltip>
                                         </TooltipProvider>
                                     </h3>
-                                    <p className="text-[#1c140d] dark:text-white font-black text-xs">Does this product have variants or attributes?</p>
+                                    <p className="text-[#1c140d] dark:text-white font-black text-xs">Does this product have different options (Size, Color, Storage, etc.)?</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
