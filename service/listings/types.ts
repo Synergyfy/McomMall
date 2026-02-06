@@ -325,7 +325,12 @@ export interface Product {
   title: string;
   category: string;
   subCategories?: string[];
-  shippingMethod?: 'free' | 'pickup' | 'delivery';
+  shippingMethod?: 'free' | 'pickup' | 'delivery' | string;
+  fulfillmentType?: string[];
+  pickupInstructions?: string;
+  isFreeDelivery?: boolean;
+  isPaidDelivery?: boolean;
+  freeDeliveryRadius?: number;
   productType: string;
   price: number;
   salePrice?: number;
@@ -357,6 +362,8 @@ export interface Product {
   variants?: ProductVariant[];
   attributes?: ProductAttribute[];
   variations?: ProductVariation[];
+  useVariantPricing?: boolean;
+  serviceProviderId?: string;
   sizeGuide?: SizeGuideConfig;
   points?: number;
   bonusThreshold?: number;
