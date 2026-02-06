@@ -111,19 +111,40 @@ export default function AddProductPage() {
       ? formData.productName.replace(/[^a-z0-9]/gi, '-').toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase()
       : 'SKU-' + Date.now());
 
-    // Map variations based on useVariantPricing toggle
+    // Map variations and ensure SKUs exist
     const finalVariations = (formData.variations || []).map((v: any) => {
+      const generatedSku = (finalSku ? `${finalSku}-${Object.values(v.combination).join('-').toUpperCase()}` : `VAR-${Math.random().toString(36).substring(2, 5).toUpperCase()}`);
+
       if (!formData.useVariantPricing) {
         return {
           ...v,
           price: parseFloat(formData.regular_price) || 0,
           salePrice: parseFloat(formData.sale_price) || undefined,
-          sku: v.sku || (finalSku ? `${finalSku}-${Object.values(v.combination).join('-').toUpperCase()}` : undefined),
+          sku: v.sku || generatedSku,
           stock: parseInt(formData.quantity.toString()) || 0
         };
       }
-      return v;
+      return {
+        ...v,
+        sku: v.sku || generatedSku
+      };
     });
+
+    let topLevelPrice = parseFloat(formData.regular_price) || 0;
+    let topLevelSalePrice = parseFloat(formData.sale_price) || undefined;
+    let topLevelSku = finalSku;
+
+    // Requirement: "if a user selects yes price sku should come from the varaition table"
+    if (formData.useVariantPricing && finalVariations.length > 0) {
+      const firstVar = finalVariations[0];
+      if (!topLevelPrice || topLevelPrice === 0) {
+        topLevelPrice = firstVar.price;
+        topLevelSalePrice = firstVar.salePrice;
+      }
+      if (!formData.sku) {
+        topLevelSku = firstVar.sku;
+      }
+    }
 
     const payload: any = {
       ...formData,
@@ -134,11 +155,11 @@ export default function AddProductPage() {
       category: formData.categoryName || formData.category,
       subCategory: formData.subCategoryName || formData.subCategory,
       productType: formData.product_type,
-      sku: finalSku,
-      price: parseFloat(formData.regular_price) || 0,
-      salePrice: parseFloat(formData.sale_price) || undefined,
-      regular_price: parseFloat(formData.regular_price) || 0,
-      sale_price: parseFloat(formData.sale_price) || undefined,
+      sku: topLevelSku,
+      price: topLevelPrice,
+      salePrice: topLevelSalePrice,
+      regular_price: topLevelPrice,
+      sale_price: topLevelSalePrice,
       quantity: parseInt(formData.quantity.toString()) || 0,
       stock: parseInt(formData.quantity.toString()) || 0,
       media: [...(formData.images || []), ...(formData.videos || [])],
@@ -153,9 +174,14 @@ export default function AddProductPage() {
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
     };
 
-    if (!payload.serviceProviderId) {
-      delete payload.serviceProviderId;
-    }
+    // Clean up payload to avoid backend validation errors
+    if (!payload.serviceProviderId) delete payload.serviceProviderId;
+    if (payload.sale_price === undefined || payload.sale_price === null || isNaN(payload.sale_price)) delete payload.sale_price;
+    if (payload.salePrice === undefined || payload.salePrice === null || isNaN(payload.salePrice)) delete payload.salePrice;
+
+    // Ensure price is a positive number
+    if (payload.price <= 0) payload.price = 0;
+    if (payload.regular_price <= 0) payload.regular_price = 0;
 
     addProduct(payload, {
       onSuccess: (data: any) => {
