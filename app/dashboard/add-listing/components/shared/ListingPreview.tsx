@@ -24,8 +24,8 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
   // Create a comprehensive listing object for the new components
   const listingDataForPreview: InHouseBusiness = {
     id: 'preview',
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     listingType: ['product', 'service'],
     businessName: formData.businessName || 'Business Name',
     legalName: formData.legalName || '',
@@ -46,8 +46,8 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
     isClaimed: true,
     location: {
       id: '',
-      created_at: '',
-      updated_at: '',
+      createdAt: '',
+      updatedAt: '',
       postcode: formData.postcode || '',
       addressLine1: formData.address || 'Address Line 1',
       addressLine2: '',
@@ -59,7 +59,7 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
       servicePostcodes: [],
       serviceModel: 'at_location',
     },
-    categories: formData.serviceData?.tradeCategory ? [{ id: 'cat1', name: formData.serviceData.tradeCategory, created_at: '', updated_at: '', description: null }] : [],
+    categories: formData.serviceData?.tradeCategory ? [{ id: 'cat1', name: formData.serviceData.tradeCategory, createdAt: '', updatedAt: '', description: null }] : [],
     socialLinks: [
       { id: 'fb', platform: 'facebook', url: formData.socials?.facebook || '' },
       { id: 'tw', platform: 'twitter', url: formData.socials?.twitter || '' },
@@ -72,8 +72,8 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
     campaigns: [],
     user: {
       id: '',
-      created_at: '',
-      updated_at: '',
+      createdAt: '',
+      updatedAt: '',
       name: '',
       email: '',
       phoneNumber: '',

@@ -24,10 +24,9 @@ export async function POST(req: NextRequest) {
     }
 
     // Validate file type
-    const allowedTypes = ['image/', 'video/', 'application/'];
-    if (!allowedTypes.some((type) => file.type.startsWith(type))) {
+    if (!file.type.startsWith('image/')) {
       return NextResponse.json(
-        { error: 'Invalid file type. Only images, videos, and documents are allowed.' },
+        { error: 'Invalid file type. Only images are allowed.' },
         { status: 400 }
       );
     }

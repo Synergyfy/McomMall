@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PromotionalItem } from '@/lib/listing-data';
+import { useMarketplaceContext } from '@/context/MarketplaceContext';
 
 interface ProductCardProps {
   product: PromotionalItem;
@@ -14,6 +15,11 @@ interface ProductCardProps {
 }
 
 export default function ProductCard({ product, viewMode = 'grid' }: ProductCardProps) {
+  const { setSelectedItem } = useMarketplaceContext();
+
+  const isVoucherLike = ['vouchers', 'gift-cards', 'coupons'].includes(product.category.toLowerCase()) || 
+                       (product.link && (product.link.includes('/vouchers/') || product.link.includes('/gift-cards/') || product.link.includes('/coupons/')));
+
   const discountPercentage = product.discountedPrice
     ? Math.round(((product.price - product.discountedPrice) / product.price) * 100)
     : 0;
@@ -31,6 +37,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   const reviewCount = Math.floor(pseudoRandom * 200) + 10;
 
   const productLink = product.link || `/products/${product.id}`;
+
+  const handleProductClick = () => {
+    setSelectedItem(product);
+  };
 
   if (viewMode === 'list') {
     return (
@@ -68,7 +78,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
               <Heart className="h-5 w-5" />
             </Button>
           </div>
-          <Link href={productLink} className="group-hover:text-primary transition-colors">
+          <Link href={productLink} onClick={handleProductClick} className="group-hover:text-primary transition-colors">
             <h3 className="text-xl font-bold text-gray-900 mb-2 line-clamp-1">{product.title}</h3>
           </Link>
           <div className="flex items-center space-x-1 mb-4">
@@ -85,19 +95,21 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           </div>
           <div className="flex items-baseline space-x-3 mb-6">
             <span className="text-2xl font-bold text-gray-900">
-              £{(product.discountedPrice || product.price).toFixed(2)}
+              £{Number(product.discountedPrice || product.price || 0).toFixed(2)}
             </span>
             {product.discountedPrice && (
               <span className="text-lg text-gray-400 line-through">
-                £{product.price.toFixed(2)}
+                £{Number(product.price || 0).toFixed(2)}
               </span>
             )}
           </div>
           <div className="mt-auto flex items-center gap-3">
-            <Button className="flex-1 bg-primary hover:bg-primary/90 text-white font-semibold shadow-md hover:shadow-lg transition-all">
-              <ShoppingCart className="w-4 h-4 mr-2" />
-              Add to Cart
-            </Button>
+            <Link href={productLink} onClick={handleProductClick} className="flex-1">
+              <Button className="w-full bg-primary hover:bg-primary/90 text-white font-semibold shadow-md hover:shadow-lg transition-all">
+                <ShoppingCart className="w-4 h-4 mr-2" />
+                {isVoucherLike ? 'Buy Now' : 'Add to Cart'}
+              </Button>
+            </Link>
             <Button variant="outline" size="icon" className="border-gray-200 hover:border-primary hover:text-primary">
               <Eye className="w-4 h-4" />
             </Button>
@@ -106,6 +118,12 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
       </div>
     );
   }
+
+  const minPrice = product.fixedAmounts && product.fixedAmounts.length > 0 
+    ? Math.min(...product.fixedAmounts) 
+    : (product.minCustomAmount || product.price);
+
+  const hasMultiplePrices = (product.fixedAmounts && product.fixedAmounts.length > 1) || product.allowCustomAmount;
 
   // Grid View - Enforced Sizing
   return (
@@ -127,6 +145,11 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           {discountPercentage > 0 && (
             <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm text-[10px] md:text-xs px-1.5 py-0 md:px-2 md:py-0.5">
               -{discountPercentage}%
+            </Badge>
+          )}
+          {product.bonusAmount && (
+            <Badge className="bg-green-600 hover:bg-green-700 text-white border-0 shadow-sm text-[10px] md:text-xs px-1.5 py-0 md:px-2 md:py-0.5">
+              Bonus
             </Badge>
           )}
           {isOutOfStock && (
@@ -154,9 +177,12 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         {/* Quick Add Overlay */}
         {!isOutOfStock && (
           <div className="absolute bottom-0 left-0 right-0 p-2 md:p-4 translate-y-full group-hover:translate-y-0 transition-transform duration-300 bg-white/90 backdrop-blur-sm border-t border-gray-100 flex justify-center">
-            <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90 text-xs h-8 md:h-10 md:text-sm">
-              <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> Add to Cart
-            </Button>
+            <Link href={productLink} onClick={handleProductClick} className="w-full">
+              <Button size="sm" className="w-full bg-primary text-white hover:bg-primary/90 text-xs h-8 md:h-10 md:text-sm">
+                <ShoppingCart className="w-3 h-3 md:w-4 md:h-4 mr-1 md:mr-2" /> 
+                {isVoucherLike ? 'Buy Now' : 'Add to Cart'}
+              </Button>
+            </Link>
           </div>
         )}
       </div>
@@ -164,7 +190,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
       {/* Product Details - Flex Grow to fill height */}
       <div className="p-2 md:p-4 flex flex-col flex-grow">
         <div className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
-        <Link href={productLink} className="block mb-1 md:mb-2">
+        <Link href={productLink} onClick={handleProductClick} className="block mb-1 md:mb-2">
           <h3 className="text-sm md:text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
             {product.title}
           </h3>
@@ -188,12 +214,13 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         <div className="mt-auto flex items-center justify-between">
           <div className="flex flex-col">
             <span className="text-base md:text-lg font-bold text-gray-900">
-              £{(product.discountedPrice || product.price).toFixed(2)}
+              {hasMultiplePrices && <span className="text-[10px] md:text-xs font-normal text-gray-500 mr-1">From</span>}
+              £{Number(product.discountedPrice || minPrice || 0).toFixed(2)}
               {product.pricingModel === 'perHour' && <span className="text-[10px] md:text-sm font-normal text-gray-500"> / hr</span>}
             </span>
             {product.discountedPrice && (
               <span className="text-[10px] md:text-xs text-gray-400 line-through">
-                £{product.price.toFixed(2)}
+                £{Number(minPrice || 0).toFixed(2)}
               </span>
             )}
           </div>

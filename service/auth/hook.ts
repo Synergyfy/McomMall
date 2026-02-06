@@ -29,6 +29,25 @@ export interface ErrorResponse {
   message?: string;
 }
 
+export const useCheckEmail = () => {
+  const checkEmail = async (email: string) => {
+    try {
+      const response = await api.get(`users/check-email?email=${email}`);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to check email'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: checkEmail,
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
 export const useCreateUser = () => {
   const create = async (payload: UserInterface) => {
     try {

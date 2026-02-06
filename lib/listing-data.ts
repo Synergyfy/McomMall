@@ -101,6 +101,12 @@ export interface PromotionalItem {
     link?: string;
     pricingModel?: 'fixed' | 'perHour' | 'perUnit';
     unitName?: string;
+    bonusThreshold?: number;
+    bonusAmount?: number;
+    fixedAmounts?: number[];
+    allowCustomAmount?: boolean;
+    minCustomAmount?: number;
+    maxCustomAmount?: number;
 }
 
 
