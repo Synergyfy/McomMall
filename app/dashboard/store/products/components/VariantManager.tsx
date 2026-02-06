@@ -415,6 +415,7 @@ function AddVariantPopover({
 
   // Track which attributes the user has decided to "add" to this specific variation
   const [activeAttributes, setActiveAttributes] = useState<string[]>([]);
+  const [sizeMode, setSizeMode] = useState<'Standard' | 'UK'>('Standard');
 
   const firstAttrName = attributes[0]?.name;
 
@@ -583,24 +584,65 @@ function AddVariantPopover({
 
                 const selectedValues = selections[attrName] || [];
 
+                // Dynamic options for Size attribute
+                let currentOptions = attr.options;
+                if (attrName === 'Size') {
+                  if (sizeMode === 'Standard') {
+                    currentOptions = sizeSystems.Standard.map(s => ({ name: s, priceModifier: 0 }));
+                  } else {
+                    currentOptions = sizeSystems.Standard.map(s => {
+                      const uk = sizeMapping[s];
+                      return { name: uk ? `${s} (UK ${uk})` : s, priceModifier: 0 };
+                    });
+                  }
+                }
+
                 return (
                   <div key={attrName} className="space-y-1.5 p-2 bg-orange-50/30 rounded-lg border border-orange-100/50 relative group/attr">
-                    <div className="flex justify-between items-center mb-1">
-                      <Label className="text-[10px] uppercase font-bold text-orange-600">{attrName}</Label>
-                      <Button
-                        type="button"
-                        variant="ghost"
-                        size="icon"
-                        className="h-4 w-4 text-orange-300 hover:text-orange-500"
-                        onClick={() => {
-                          setActiveAttributes(prev => prev.filter(a => a !== attrName));
-                          const newSels = { ...selections };
-                          delete newSels[attrName];
-                          setSelections(newSels);
-                        }}
-                      >
-                        <X className="h-3 w-3" />
-                      </Button>
+                    <div className="flex flex-col gap-2 mb-1">
+                      <div className="flex justify-between items-center">
+                        <Label className="text-[10px] uppercase font-bold text-orange-600">{attrName}</Label>
+                        <Button
+                          type="button"
+                          variant="ghost"
+                          size="icon"
+                          className="h-4 w-4 text-orange-300 hover:text-orange-500"
+                          onClick={() => {
+                            setActiveAttributes(prev => prev.filter(a => a !== attrName));
+                            const newSels = { ...selections };
+                            delete newSels[attrName];
+                            setSelections(newSels);
+                          }}
+                        >
+                          <X className="h-3 w-3" />
+                        </Button>
+                      </div>
+
+                      {/* Size System Toggle */}
+                      {attrName === 'Size' && (
+                        <div className="flex p-1 bg-white/50 rounded-md border border-orange-100/50">
+                          <button
+                            type="button"
+                            onClick={() => setSizeMode('Standard')}
+                            className={cn(
+                              "flex-1 text-[10px] font-medium py-1 rounded transition-colors",
+                              sizeMode === 'Standard' ? "bg-orange-100 text-orange-700" : "text-gray-500 hover:text-orange-600"
+                            )}
+                          >
+                            Standard
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSizeMode('UK')}
+                            className={cn(
+                              "flex-1 text-[10px] font-medium py-1 rounded transition-colors",
+                              sizeMode === 'UK' ? "bg-orange-100 text-orange-700" : "text-gray-500 hover:text-orange-600"
+                            )}
+                          >
+                            UK
+                          </button>
+                        </div>
+                      )}
                     </div>
 
                     {/* Multi-Select Dropdown using Popover/Combobox style */}
@@ -619,7 +661,7 @@ function AddVariantPopover({
                           <CommandList>
                             <CommandEmpty>No option found.</CommandEmpty>
                             <CommandGroup className="max-h-[200px] overflow-auto">
-                              {attr.options.map((option) => (
+                              {currentOptions.map((option) => (
                                 <CommandItem
                                   key={option.name}
                                   value={option.name}
@@ -1177,10 +1219,10 @@ export default function VariantManager({
       {/* 1. Define Attributes Section */}
       <div className="space-y-4">
         {attributes.length === 0 && (
-            <div className="mb-2">
-                <h4 className="font-semibold text-gray-900 dark:text-white">Define Product Attributes</h4>
-                <p className="text-sm text-gray-500">Start by selecting the main attribute that distinguishes your variants.</p>
-            </div>
+          <div className="mb-2">
+            <h4 className="font-semibold text-gray-900 dark:text-white">Define Product Attributes</h4>
+            <p className="text-sm text-gray-500">Start by selecting the main attribute that distinguishes your variants.</p>
+          </div>
         )}
         <div className="flex justify-between items-center">
           <div>
@@ -1435,6 +1477,8 @@ function VariantOptionInput({
 }) {
   const [open, setOpen] = useState(false);
   const [inputValue, setInputValue] = useState('');
+  const [sizeMode, setSizeMode] = useState<'Standard' | 'UK'>('Standard');
+
   const options = predefinedVariantOptions[variantName as keyof typeof predefinedVariantOptions] || [];
 
   const handleAdd = () => {
@@ -1445,29 +1489,99 @@ function VariantOptionInput({
     }
   };
 
+  const isSize = variantName === 'Size';
+
+  // Calculate display options based on mode
+  const displayOptions = useMemo(() => {
+    if (!isSize) return options.map(o => ({ value: o, label: o }));
+
+    // For size, use the appropriate system list to ensure order
+    const baseList = sizeSystems.Standard;
+
+    return baseList.map(std => {
+      const uk = sizeMapping[std];
+      const label = (sizeMode === 'UK' && uk) ? `${std} (UK ${uk})` : std;
+      return { value: std, label };
+    });
+  }, [variantName, options, sizeMode, isSize]);
+
   return (
-    <div className="flex gap-2">
-      <div className="flex-1">
-        <Popover open={open} onOpenChange={setOpen}>
-          <PopoverTrigger asChild><Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between"><span className="truncate">{inputValue || `Type custom ${variantName || 'attribute'}...`}</span><ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" /></Button></PopoverTrigger>
-          <PopoverContent className="w-[200px] p-0" align="start">
-            <Command>
-              <CommandInput placeholder={`Type custom ${variantName || 'attribute'}...`} value={inputValue} onValueChange={setInputValue} onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }} />
-              <CommandList>
-                <CommandEmpty className="py-2 px-2 text-xs">Press Enter to add "{inputValue}"</CommandEmpty>
-                <CommandGroup heading="Suggestions">
-                  {options.filter(opt => !existingOptions.includes(opt)).map((option) => (
-                    <CommandItem key={option} value={option} onSelect={() => { onAddOption(option, 0); }}>{option}</CommandItem>
-                  ))}
-                </CommandGroup>
-              </CommandList>
-            </Command>
-          </PopoverContent>
-        </Popover>
+    <div className="flex flex-col gap-2 w-full">
+      {isSize && (
+        <div className="flex p-1 bg-gray-100 rounded-md w-full">
+          <button
+            type="button"
+            onClick={() => setSizeMode('Standard')}
+            className={cn(
+              "flex-1 text-[10px] font-medium py-1.5 rounded transition-colors",
+              sizeMode === 'Standard' ? "bg-white text-orange-700 shadow-sm border border-gray-200" : "text-gray-500 hover:text-orange-600"
+            )}
+          >
+            Standard
+          </button>
+          <button
+            type="button"
+            onClick={() => setSizeMode('UK')}
+            className={cn(
+              "flex-1 text-[10px] font-medium py-1.5 rounded transition-colors",
+              sizeMode === 'UK' ? "bg-white text-orange-700 shadow-sm border border-gray-200" : "text-gray-500 hover:text-orange-600"
+            )}
+          >
+            UK
+          </button>
+        </div>
+      )}
+
+      <div className="flex gap-2 w-full">
+        <div className="flex-1">
+          <Popover open={open} onOpenChange={setOpen}>
+            <PopoverTrigger asChild>
+              <Button type="button" variant="outline" role="combobox" aria-expanded={open} className="w-full justify-between">
+                <span className="truncate">{inputValue || `Select ${variantName}...`}</span>
+                <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+              </Button>
+            </PopoverTrigger>
+            <PopoverContent className="w-[220px] p-0" align="start">
+              <Command>
+                <CommandInput
+                  placeholder={isSize ? (sizeMode === 'Standard' ? "Search Standard Size..." : "Search UK Size...") : `Type custom ${variantName || 'attribute'}...`}
+                  value={inputValue}
+                  onValueChange={setInputValue}
+                  onKeyDown={(e) => { if (e.key === 'Enter') { e.preventDefault(); handleAdd(); } }}
+                />
+                <CommandList>
+                  <CommandEmpty className="py-2 px-2 text-xs">
+                    <div className="flex flex-col gap-1">
+                      <span>No option found.</span>
+                      <Button type="button" variant="ghost" size="sm" className="h-6 text-xs justify-start px-0 text-blue-500" onClick={handleAdd}>
+                        Add "{inputValue}" as custom
+                      </Button>
+                    </div>
+                  </CommandEmpty>
+                  <CommandGroup heading="Suggestions" className="max-h-[200px] overflow-auto">
+                    {displayOptions.filter(opt => !existingOptions.includes(opt.value)).map(({ value, label }) => (
+                      <CommandItem
+                        key={value}
+                        value={label} // Use label for searching
+                        onSelect={() => { onAddOption(value, 0); }}
+                        className="text-xs"
+                      >
+                        <div className="flex items-center gap-2">
+                          {/* If UK mode, maybe show a little icon or flag? optional */}
+                          {label}
+                        </div>
+                      </CommandItem>
+                    ))}
+                  </CommandGroup>
+                </CommandList>
+              </Command>
+            </PopoverContent>
+          </Popover>
+        </div>
+        <Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button">
+          <Plus className="h-4 w-4" />
+        </Button>
       </div>
-      <Button size="icon" variant="ghost" onClick={handleAdd} disabled={!inputValue} type="button">
-        <Plus className="h-4 w-4" />
-      </Button>
     </div>
   );
 }
