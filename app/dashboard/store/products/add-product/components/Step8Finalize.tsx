@@ -203,9 +203,39 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                         <p className="text-sm text-[#9c7349]">Allow customers to leave reviews for this product.</p>
                                     </div>
                                     <label className="relative inline-flex items-center cursor-pointer">
-                                        <input type="checkbox" className="sr-only peer" defaultChecked />
+                                        <input
+                                            type="checkbox"
+                                            className="sr-only peer"
+                                            checked={formData.enableReviews}
+                                            onChange={(e) => updateFormData({ enableReviews: e.target.checked })}
+                                        />
                                         <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-[#f48c25]"></div>
                                     </label>
+                                </div>
+
+                                <div className="flex flex-col gap-2 p-4 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-[#f8f7f5] dark:bg-[#2a1f16]">
+                                    <label className="font-bold text-[#1c140d] dark:text-white" htmlFor="purchaseNote">Purchase Note</label>
+                                    <textarea
+                                        id="purchaseNote"
+                                        className="w-full min-h-[80px] p-3 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-sm outline-none focus:ring-1 focus:ring-[#f48c25]"
+                                        placeholder="Note shown to customers after purchase..."
+                                        value={formData.purchaseNote || ''}
+                                        onChange={(e) => updateFormData({ purchaseNote: e.target.value })}
+                                    />
+                                </div>
+
+                                <div className="flex flex-col gap-2 p-4 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-[#f8f7f5] dark:bg-[#2a1f16]">
+                                    <label className="font-bold text-[#1c140d] dark:text-white" htmlFor="visibility">Visibility</label>
+                                    <select
+                                        id="visibility"
+                                        className="w-full p-3 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-white dark:bg-[#1a120b] text-sm outline-none focus:ring-1 focus:ring-[#f48c25]"
+                                        value={formData.visibility || 'public'}
+                                        onChange={(e) => updateFormData({ visibility: e.target.value })}
+                                    >
+                                        <option value="public">Public</option>
+                                        <option value="private">Private</option>
+                                        <option value="password">Password Protected</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>
@@ -216,10 +246,16 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                         <div className="sticky top-6 rounded-xl bg-white dark:bg-[#1a120b] border border-[#e5e7eb] dark:border-[#3d2e20] p-6 shadow-sm">
                             <h3 className="font-bold text-lg text-[#1c140d] dark:text-white mb-4">Product Status</h3>
                             <div className="space-y-3">
-                                {['Published', 'Draft', 'Scheduled'].map((status) => (
+                                {['published', 'draft', 'scheduled'].map((status) => (
                                     <label key={status} className="flex items-center p-3 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] cursor-pointer hover:bg-[#f8f7f5] dark:hover:bg-[#2a1f16] transition-colors">
-                                        <input type="radio" name="status" className="w-4 h-4 text-[#f48c25] focus:ring-[#f48c25] border-gray-300" defaultChecked={status === 'Published'} />
-                                        <span className="ml-3 text-sm font-medium text-[#1c140d] dark:text-white">{status}</span>
+                                        <input
+                                            type="radio"
+                                            name="productStatus"
+                                            className="w-4 h-4 text-[#f48c25] focus:ring-[#f48c25] border-gray-300"
+                                            checked={formData.productStatus === status}
+                                            onChange={() => updateFormData({ productStatus: status })}
+                                        />
+                                        <span className="ml-3 text-sm font-medium text-[#1c140d] dark:text-white capitalize">{status}</span>
                                     </label>
                                 ))}
                             </div>

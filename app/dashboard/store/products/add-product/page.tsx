@@ -66,6 +66,9 @@ export default function AddProductPage() {
     freeDeliveryRadius: 0,
     tags: [] as string[],
     useVariantPricing: true,
+    visibility: 'public',
+    enableReviews: true,
+    purchaseNote: '',
   });
 
   const updateFormData = (newData: any) => {
@@ -103,6 +106,7 @@ export default function AddProductPage() {
     const payload: any = {
       ...formData,
       title: formData.productName,
+      productName: formData.productName,
       description: formData.fullDesc,
       shortDescription: formData.shortDesc,
       category: formData.categoryName || formData.category,
