@@ -3,8 +3,17 @@ import api from '@/service/api';
 import { CreateProductDto, Product, UpdateProductDto } from './types';
 
 const getMyProducts = async (): Promise<Product[]> => {
-  const { data } = await api.get('/product/mine');
-  return data;
+  const { data } = await api.get('product/mine', {
+    params: { page: 1, limit: 1000 },
+  });
+  // Handle both array and paginated response
+  if (Array.isArray(data)) {
+    return data;
+  }
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  return [];
 };
 
 export const useGetMyProducts = () => {
@@ -15,7 +24,7 @@ export const useGetMyProducts = () => {
 };
 
 const addProduct = async (productData: CreateProductDto) => {
-  const { data } = await api.post('/product', productData);
+  const { data } = await api.post('product', productData);
   return data;
 };
 
@@ -26,7 +35,7 @@ export const useAddProduct = () => {
 };
 
 export const getProductById = async (id: string): Promise<Product> => {
-  const { data } = await api.get(`/product/${id}`);
+  const { data } = await api.get(`product/${id}`);
   return data;
 };
 
@@ -39,7 +48,7 @@ export const useGetProductById = (id: string) => {
 };
 
 const updateProduct = async (productData: UpdateProductDto) => {
-  const { data } = await api.patch(`/product/${productData.id}`, productData);
+  const { data } = await api.patch(`product/${productData.id}`, productData);
   return data;
 };
 
@@ -54,14 +63,22 @@ export const useUpdateProduct = () => {
   });
 };
 
-const getProductsByBusiness = async (businessId: string, page: number, limit: number): Promise<{ data: Product[], total: number, page: number, limit: number }> => {
-  const { data } = await api.get(`/product/business/${businessId}`, {
+const getProductsByBusiness = async (
+  businessId: string,
+  page: number,
+  limit: number
+): Promise<{ data: Product[]; total: number; page: number; limit: number }> => {
+  const { data } = await api.get(`product/business/${businessId}`, {
     params: { page, limit },
   });
   return data;
 };
 
-export const useGetProductsByBusiness = (businessId: string, page: number, limit: number) => {
+export const useGetProductsByBusiness = (
+  businessId: string,
+  page: number,
+  limit: number
+) => {
   return useQuery({
     queryKey: ['products', businessId, page, limit],
     queryFn: () => getProductsByBusiness(businessId, page, limit),
@@ -70,7 +87,7 @@ export const useGetProductsByBusiness = (businessId: string, page: number, limit
 };
 
 const deleteProduct = async (id: string) => {
-  const { data } = await api.delete(`/product/${id}`);
+  const { data } = await api.delete(`product/${id}`);
   return data;
 };
 
