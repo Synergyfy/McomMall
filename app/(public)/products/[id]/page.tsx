@@ -91,13 +91,16 @@ export default function ProductPage() {
       }
   }, [product, isMatrixSystem, selectedVariants]);
 
-  const { basePrice, totalPrice, priceBreakdown, isOutOfStock } = useMemo(() => {
-    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false };
+  const { basePrice, totalPrice, priceBreakdown, isOutOfStock, priceRange } = useMemo(() => {
+    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false, priceRange: null };
 
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
         if (currentVariation) {
-            let finalPrice = currentVariation.price;
+            // Priority: variation salePrice > variation price
+            let finalPrice = currentVariation.salePrice && currentVariation.salePrice < currentVariation.price
+              ? currentVariation.salePrice
+              : currentVariation.price;
 
             // Hierarchical Price Fallback: Priority Variation > Parent Option > Base
             if ((!finalPrice || finalPrice <= 0) && product.attributes && product.attributes.length > 0) {
@@ -122,10 +125,23 @@ export default function ProductPage() {
                 basePrice: finalPrice,
                 totalPrice: finalPrice,
                 priceBreakdown: [], // Matrix prices are all-inclusive
-                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
+                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0,
+                priceRange: null
             };
-        } else {
-             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false };
+        } else if (product.variations && product.variations.length > 0) {
+             const prices = product.variations.map(v => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter(p => p > 0);
+             if (prices.length > 0) {
+               const min = Math.min(...prices);
+               const max = Math.max(...prices);
+               return {
+                 basePrice: product.price,
+                 totalPrice: product.price,
+                 priceBreakdown: [],
+                 isOutOfStock: false,
+                 priceRange: min === max ? null : { min, max, startPrice: min }
+               };
+             }
+             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false, priceRange: null };
         }
     }
 
@@ -306,8 +322,17 @@ export default function ProductPage() {
 
                     <div className="mt-4 flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-orange-600">
-                            £{totalPrice.toFixed(2)}
+                            {priceRange && !currentVariation ? (
+                              <>£{priceRange.min.toFixed(2)} - £{priceRange.max.toFixed(2)}</>
+                            ) : (
+                              <>£{totalPrice.toFixed(2)}</>
+                            )}
                         </span>
+                        {currentVariation && currentVariation.salePrice && currentVariation.salePrice < currentVariation.price && (
+                             <span className="text-lg text-gray-400 line-through">
+                                £{currentVariation.price.toFixed(2)}
+                             </span>
+                        )}
                         {product.salePrice && product.salePrice < product.price && !isMatrixSystem && (
                             <span className="text-lg text-gray-400 line-through">
                                 £{product.price.toFixed(2)}

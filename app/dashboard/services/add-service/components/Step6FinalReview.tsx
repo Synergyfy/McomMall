@@ -79,7 +79,7 @@ export function Step6FinalReview() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {businesses.map((b: UserListing) => (
+                    {businesses.filter((b: UserListing) => b.id && b.id.trim() !== '').map((b: UserListing) => (
                       <SelectItem key={b.id} value={b.id}>
                         {b.businessName}
                       </SelectItem>

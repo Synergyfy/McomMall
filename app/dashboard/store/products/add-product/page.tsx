@@ -49,9 +49,14 @@ export default function AddProductPage() {
     regular_price: '',
     sale_price: '',
     sku: '',
+    images: [] as string[],
+    videos: [] as string[],
     stock_status: 'instock',
     quantity: 100,
     weight: '',
+    length: '',
+    width: '',
+    height: '',
     attributes: [],
     variations: [],
     sizeGuide: {
@@ -84,6 +89,12 @@ export default function AddProductPage() {
     }
   }, [userListings, formData.bussinessId]);
 
+  useEffect(() => {
+    if (user?.id && !formData.serviceProviderId) {
+      updateFormData({ serviceProviderId: user.id });
+    }
+  }, [user?.id, formData.serviceProviderId]);
+
   const handlePublish = () => {
     const variantConfig = formData.attributes.map((attr: any) => ({
       name: attr.name,
@@ -105,6 +116,20 @@ export default function AddProductPage() {
       ? formData.productName.replace(/[^a-z0-9]/gi, '-').toUpperCase() + '-' + Math.random().toString(36).substring(2, 7).toUpperCase()
       : 'SKU-' + Date.now());
 
+    // Map variations based on useVariantPricing toggle
+    const finalVariations = (formData.variations || []).map((v: any) => {
+      if (!formData.useVariantPricing) {
+        return {
+          ...v,
+          price: parseFloat(formData.regular_price) || 0,
+          salePrice: parseFloat(formData.sale_price) || undefined,
+          sku: v.sku || (finalSku ? `${finalSku}-${Object.values(v.combination).join('-').toUpperCase()}` : undefined),
+          stock: parseInt(formData.quantity.toString()) || 0
+        };
+      }
+      return v;
+    });
+
     const payload: any = {
       ...formData,
       title: formData.productName,
@@ -122,10 +147,14 @@ export default function AddProductPage() {
       quantity: parseInt(formData.quantity.toString()) || 0,
       stock: parseInt(formData.quantity.toString()) || 0,
       media: [...(formData.images || []), ...(formData.videos || [])],
+      variations: finalVariations,
       variantConfig,
       fulfillmentType: fulfillmentType,
       shippingMethod: finalShippingMethod,
       weight: formData.weight ? parseFloat(formData.weight) : 0,
+      length: formData.length ? parseFloat(formData.length) : 0,
+      width: formData.width ? parseFloat(formData.width) : 0,
+      height: formData.height ? parseFloat(formData.height) : 0,
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
     };
 
