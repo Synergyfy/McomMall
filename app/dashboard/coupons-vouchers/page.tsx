@@ -770,7 +770,7 @@ export default function CouponsVouchersPage() {
                                 <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
                                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Select source" /></SelectTrigger>
                                     <SelectContent position="popper">
-                                        {myVouchers.map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
+                                        {myVouchers.filter(v => v.id).map(v => <SelectItem key={v.id} value={v.id}>{v.name}</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -789,7 +789,7 @@ export default function CouponsVouchersPage() {
                                 <Select value={selectedVoucher} onValueChange={setSelectedVoucher}>
                                     <SelectTrigger className="rounded-xl"><SelectValue placeholder="Choose source" /></SelectTrigger>
                                     <SelectContent position="popper" className="z-[1000]">
-                                        {myVouchers.map(v => <SelectItem key={v.id} value={v.id}>{v.name} (£{v.balance})</SelectItem>)}
+                                        {myVouchers.filter(v => v.id).map(v => <SelectItem key={v.id} value={v.id}>{v.name} (£{v.balance})</SelectItem>)}
                                     </SelectContent>
                                 </Select>
                             </div>
