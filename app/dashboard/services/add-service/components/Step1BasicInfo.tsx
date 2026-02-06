@@ -46,6 +46,10 @@ import {
 } from '@/components/ui/tooltip';
 import { Badge } from '@/components/ui/badge';
 
+interface Step1Props {
+  userListings?: any[];
+}
+
 const AUDIENCE_OPTIONS = [
   "Families", "Seniors", "Students", "Professionals", "Couples", "Children", "Business Owners", "Everyone"
 ];
@@ -54,27 +58,12 @@ const COMMON_TAGS = [
   "Reliable", "Fast", "Affordable", "Premium", "Eco-friendly", "Expert", "Licensed", "Insured", "24/7 Service"
 ];
 
-export function Step1BasicInfo() {
+export function Step1BasicInfo({ userListings = [] }: Step1Props) {
   const form = useFormContext();
   const selectedCategory = form.watch('category');
 
   const { data: categories } = useGetCategories();
   const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
-  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
-
-  const businesses = React.useMemo(() => {
-    if (!listings?.data) return [];
-    return listings.data.filter((l: any) =>
-      l.id && l.id.trim() !== '' &&
-      l.listingType?.some((type: string) => type.toLowerCase() === 'service')
-    );
-  }, [listings]);
-
-  React.useEffect(() => {
-    if (!isLoadingListings && businesses.length === 0) {
-      toast.error("No service businesses found. Please create a 'Service' business listing first in 'My Listings'.");
-    }
-  }, [isLoadingListings, businesses.length]);
 
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
@@ -131,18 +120,17 @@ export function Step1BasicInfo() {
                 <Select
                   onValueChange={field.onChange}
                   value={field.value}
-                  disabled={isLoadingListings}
                 >
                   <FormControl>
                     <SelectTrigger className="py-6">
                       <SelectValue
-                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
+                        placeholder="Select Business"
                       />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {businesses.length > 0 ? (
-                      businesses.map((b: any) => (
+                    {userListings.length > 0 ? (
+                      userListings.map((b: any) => (
                         <SelectItem key={b.id} value={b.id}>
                           {b.businessName}
                         </SelectItem>

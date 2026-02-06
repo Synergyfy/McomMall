@@ -172,7 +172,7 @@ export default function AddServicePage() {
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
-  const { data: listings } = useGetUserListings(1, 100);
+  const { data: listings } = useGetUserListings();
 
   const businesses = useMemo(() => {
     if (!listings?.data) return [];
@@ -442,7 +442,7 @@ export default function AddServicePage() {
               className="space-y-8"
             >
               <div className="min-h-[400px]">
-                {currentStep === 1 && <Step1BasicInfo />}
+                {currentStep === 1 && <Step1BasicInfo userListings={businesses} />}
                 {currentStep === 2 && <Step2ServiceType />}
                 {currentStep === 3 && <Step3Pricing />}
                 {currentStep === 4 && <Step4Availability />}
