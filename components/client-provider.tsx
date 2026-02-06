@@ -12,6 +12,7 @@ import { useTokenRefresh } from '@/service/auth/useTokenRefresh';
 import { PayPalScriptProvider } from '@paypal/react-paypal-js';
 import { Elements } from '@stripe/react-stripe-js';
 import { loadStripe } from '@stripe/stripe-js';
+import { MarketplaceProvider } from '@/context/MarketplaceContext';
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || ''
@@ -42,15 +43,17 @@ export function ClientProviders({
   return (
     <Provider store={store}>
       <QueryClientProvider client={queryClient}>
-        <PayPalScriptProvider
-          options={{
-            clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
-          }}
-        >
-          <Elements stripe={stripePromise}>
-            <AuthLoader>{children}</AuthLoader>
-          </Elements>
-        </PayPalScriptProvider>
+        <MarketplaceProvider>
+          <PayPalScriptProvider
+            options={{
+              clientId: process.env.NEXT_PUBLIC_PAYPAL_CLIENT_ID!,
+            }}
+          >
+            <Elements stripe={stripePromise}>
+              <AuthLoader>{children}</AuthLoader>
+            </Elements>
+          </PayPalScriptProvider>
+        </MarketplaceProvider>
         <ReactQueryDevtools initialIsOpen={false} />
       </QueryClientProvider>
     </Provider>
