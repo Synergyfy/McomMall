@@ -138,11 +138,11 @@ export const useGetSalesAndRedemptions = (startDate: string, endDate: string) =>
   });
 };
 
-export const useGetGiftCardTemplateById = (id: string) => {
+export const useGetGiftCardTemplateById = (id: string, options?: { enabled?: boolean }) => {
   return useQuery<GiftCardTemplate, Error>({
     queryKey: ['giftCardTemplate', id],
     queryFn: () => fetchGiftCardTemplateById(id),
-    enabled: !!id,
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
   });
 };
 
