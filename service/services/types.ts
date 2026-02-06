@@ -24,12 +24,12 @@ export interface TimeRange {
   end: string;   // "13:00"
 }
 
-export type DaySchedule = {
-  day: string; // Can be lowercase or capitalized
+export interface DaySchedule {
+  day: 'monday' | 'tuesday' | 'wednesday' | 'thursday' | 'friday' | 'saturday' | 'sunday';
   enabled: boolean;
   startTime: string; // Main start time
   endTime: string;   // Main end time
-  breaks?: (TimeRange | string)[]; // Can be TimeRange objects or "HH:mm-HH:mm" strings
+  breaks?: TimeRange[]; // New: Break times
 }
 
 export interface AvailabilityProfile {
@@ -78,15 +78,12 @@ export interface CreateServiceDto {
   name: string;
   shortDescription?: string; // New
   description?: string;
-  shortDesc?: string; // New
-  fullDesc?: string; // New
   category?: string; // New
   subcategory?: string; // New
   targetAudience?: string[]; // New
   tags?: string[]; // New
 
   images?: string[];
-  media?: string[] | null; // New
   isActive?: boolean;
   businessId: string;
 
@@ -158,14 +155,11 @@ export interface Service {
   name: string;
   shortDescription?: string;
   description?: string;
-  shortDesc?: string;
-  fullDesc?: string;
   category?: string;
   subcategory?: string;
   targetAudience?: string[];
   tags?: string[];
 
-  images?: string[];
   media: string[] | null;
   isActive: boolean;
 

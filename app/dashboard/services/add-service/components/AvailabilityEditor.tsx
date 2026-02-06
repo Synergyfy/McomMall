@@ -56,7 +56,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
     const handleBreakChange = (dayIndex: number, breakIndex: number, field: keyof TimeRange, val: string) => {
         const newSchedule = [...profile.schedule];
         const newBreaks = [...(newSchedule[dayIndex].breaks || [])];
-        newBreaks[breakIndex] = { ...(newBreaks[breakIndex] as TimeRange), [field]: val };
+        newBreaks[breakIndex] = { ...newBreaks[breakIndex], [field]: val };
         newSchedule[dayIndex] = { ...newSchedule[dayIndex], breaks: newBreaks };
         updateProfile({ ...profile, schedule: newSchedule });
     };
@@ -70,9 +70,8 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
 
     const applyToAll = (index: number) => {
         const source = profile.schedule[index];
-        if (!source) return;
         const newSchedule = profile.schedule.map(d => ({
-            day: d.day,
+            ...d,
             enabled: source.enabled,
             startTime: source.startTime,
             endTime: source.endTime,
@@ -208,14 +207,14 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                                     <div key={bIdx} className="flex items-center gap-2">
                                                         <Input
                                                             type="time"
-                                                            value={typeof brk === 'string' ? brk.split('-')[0] : brk.start}
+                                                            value={brk.start}
                                                             onChange={(e) => handleBreakChange(index, bIdx, 'start', e.target.value)}
                                                             className="h-8"
                                                         />
                                                         <span>-</span>
                                                         <Input
                                                             type="time"
-                                                            value={typeof brk === 'string' ? brk.split('-')[1] : brk.end}
+                                                            value={brk.end}
                                                             onChange={(e) => handleBreakChange(index, bIdx, 'end', e.target.value)}
                                                             className="h-8"
                                                         />

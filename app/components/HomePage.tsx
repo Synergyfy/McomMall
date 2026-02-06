@@ -120,7 +120,7 @@ export default function HomePage() {
     data: recentListings,
     isLoading,
     isError,
-  } = useGetRecentListings(15);
+  } = useGetRecentListings();
 
   const { data: categories } = useGetCategories();
 
@@ -272,7 +272,7 @@ export default function HomePage() {
                   categories.slice(0, 4).map(category => (
                     <Link
                       key={category.id}
-                      href={`/all-listings?category=${encodeURIComponent(
+                      href={`/listings?category=${encodeURIComponent(
                         category.name
                       )}`}
                       className="underline hover:text-orange-300"
@@ -284,7 +284,7 @@ export default function HomePage() {
                   <span>Loading popular categories...</span>
                 )}
                 <Link
-                  href="/all-listings"
+                  href="/listings?showFilters=true"
                   className="font-bold hover:text-orange-300"
                 >
                   + See All
@@ -302,116 +302,72 @@ export default function HomePage() {
 
         {/* --- Recent Listings Section --- */}
         <ScrollAnimatedSection>
-          <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
-              <div className="flex justify-between items-center mb-8">
-                <h2 className="text-3xl sm:text-4xl font-bold">
-                  Recent Listings
-                </h2>
-                <Link
-                  href="/all-listings"
-                  className="hidden md:flex items-center gap-2 text-[#f58220] font-bold hover:underline"
-                >
-                  See More Listings <ArrowRight size={20} />
-                </Link>
-              </div>
-
-              <div className="relative group">
-                <div
-                  className="flex overflow-x-auto pb-8 gap-6 hide-scrollbar scroll-smooth"
-                  style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-                >
-                  <AnimatePresence>
-                    {isLoading ? (
-                      [...Array(6)].map((_, i) => (
-                        <div
-                          key={i}
-                          className="min-w-[300px] h-[400px] bg-gray-200 animate-pulse rounded-2xl"
-                        />
-                      ))
-                    ) : isError ? (
-                      <p>Error fetching listings.</p>
-                    ) : (
-                      recentListings?.map(ad => (
-                        <motion.div
-                          key={ad.id}
-                          initial={{ opacity: 0, x: 50 }}
-                          animate={{ opacity: 1, x: 0 }}
-                          className="min-w-[300px] max-w-[300px] bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow border border-gray-100"
-                        >
-                          <div className="relative h-48 w-full">
-                            <Image
-                              src={
-                                ad.logoUrl ||
-                                ad.bannerUrl ||
-                                (ad.media && ad.media.length > 0
-                                  ? ad.media[0]
-                                  : '') ||
-                                'https://via.placeholder.com/300x200?text=No+Image'
-                              }
-                              alt={ad.businessName}
-                              layout="fill"
-                              objectFit="cover"
-                              loading="lazy"
-                            />
-                            <div className="absolute top-4 left-4">
-                              <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                                {ad.categories[0]?.name || 'Uncategorized'}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="p-5 flex flex-col justify-between flex-grow">
-                            <div>
-                              <div className="flex justify-between items-start mb-2">
-                                <Link href={`/listings/${ad.id}`}>
-                                  <h3 className="font-bold text-lg hover:text-[#f58220] transition-colors line-clamp-1">
-                                    {ad.businessName}
-                                  </h3>
-                                </Link>
-                                <button className="text-gray-400 hover:text-red-500 transition-colors">
-                                  <Heart size={20} />
-                                </button>
-                              </div>
-                              <p className="text-gray-500 text-sm line-clamp-2 mb-4">
-                                {ad.shortDescription}
-                              </p>
-                              <div className="space-y-2">
-                                <div className="flex items-center text-gray-500 text-xs">
-                                  <MapPin size={14} className="mr-2 text-[#f58220]" />
-                                  <span className="truncate">
-                                    {ad.location?.city || 'N/A'}, {ad.location?.postcode || ''}
-                                  </span>
-                                </div>
-                                <div className="flex items-center text-gray-500 text-xs">
-                                  <span className="mr-4">
-                                    🕒 {new Date(ad.createdAt).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </div>
-                            </div>
-                            <Link
-                              href={`/listings/${ad.id}`}
-                              className="mt-6 w-full py-2.5 rounded-xl border border-[#f58220] text-[#f58220] font-bold text-sm text-center hover:bg-[#f58220] hover:text-white transition-all"
-                            >
-                              View Details
+          <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50">
+            <h2 className="text-3xl sm:text-4xl font-bold text-center mb-4">
+              Recent Listings
+            </h2>
+            <motion.div
+              layout
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto"
+            >
+              <AnimatePresence>
+                {isLoading ? (
+                  <p>Loading...</p>
+                ) : isError ? (
+                  <p>Error fetching listings.</p>
+                ) : (
+                  recentListings?.slice(0, 3).map(ad => (
+                    <motion.div
+                      key={ad.id}
+                      layout
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      exit={{ opacity: 0, scale: 0.8 }}
+                      transition={{ duration: 0.3 }}
+                      className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow"
+                    >
+                      <Image
+                        src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`}
+                        alt={ad.businessName}
+                        width={300}
+                        height={200}
+                        loading="lazy"
+                        className="w-full h-48 object-cover"
+                      />
+                      <div className="flex flex-col justify-between w-full p-4">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <Link href={`/listings/${ad.id}`}>
+                              <h3 className="font-bold text-lg mb-2 hover:underline">
+                                {ad.businessName}
+                              </h3>
                             </Link>
+                            <button className="text-gray-400 hover:text-red-500">
+                              <Heart />
+                            </button>
                           </div>
-                        </motion.div>
-                      ))
-                    )}
-                  </AnimatePresence>
-                </div>
-              </div>
-
-              <div className="mt-8 flex md:hidden justify-center">
-                <Link
-                  href="/all-listings"
-                  className="flex items-center gap-2 bg-[#f58220] text-white font-bold py-3 px-8 rounded-full shadow-lg"
-                >
-                  See More Listings <ArrowRight size={20} />
-                </Link>
-              </div>
-            </div>
+                          <div className="flex items-center text-gray-500 text-sm mb-1">
+                            <MapPin size={16} className="mr-2" />{' '}
+                            {ad.location.addressLine1}, {ad.location.city}
+                          </div>
+                          <div className="flex items-center text-gray-500 text-sm mb-4">
+                            <span className="mr-4">
+                              🕒{' '}
+                              {new Date(ad.createdAt).toLocaleDateString()}
+                            </span>
+                          </div>
+                        </div>
+                        <div className="flex justify-between items-center mt-4">
+                          <span className="bg-gray-100 text-gray-600 text-xs font-semibold px-3 py-1 rounded-full">
+                            {ad.categories[0]?.name}
+                          </span>
+                        </div>
+                      </div>
+                    </motion.div>
+                  ))
+                )}
+              </AnimatePresence>
+            </motion.div>
           </div>
         </ScrollAnimatedSection>
 

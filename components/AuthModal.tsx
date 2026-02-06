@@ -87,13 +87,8 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
 
     try {
       if (mode === 'register') {
-        const nameParts = formData.fullName.split(' ');
-        const firstName = nameParts[0];
-        const lastName = nameParts.slice(1).join(' ') || '';
-
         await registerAsync({
-          firstName,
-          lastName,
+          name: formData.fullName,
           email: formData.email,
           phoneNumber: formData.phoneNumber,
           password: formData.password,
