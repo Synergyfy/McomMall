@@ -23,16 +23,21 @@ interface Step1Props {
   updateFormData: (data: any) => void;
   onNext: () => void;
   onCancel: () => void;
+  userListings?: any[];
 }
 
-export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel }: Step1Props) {
+export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings }: Step1Props) {
   const { data: categories, isLoading: isLoadingCats } = useGetCategories();
   const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     if (id === 'category') {
-      updateFormData({ [id]: value, subCategory: '' });
+      const cat = categories?.find(c => c.id === value);
+      updateFormData({ category: value, categoryName: cat?.name || '', subCategory: '', subCategoryName: '' });
+    } else if (id === 'subCategory') {
+      const sub = subCategories?.find(s => s.id === value);
+      updateFormData({ subCategory: value, subCategoryName: sub?.name || '' });
     } else {
       updateFormData({ [id]: value });
     }
@@ -68,6 +73,31 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </div>
 
           <form className="flex flex-col gap-6 max-w-3xl">
+            {/* Business Selection */}
+            <div className="flex flex-col gap-2">
+              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="bussinessId">
+                Select Business <span className="text-red-500">*</span>
+              </label>
+              <div className="relative">
+                <select
+                  className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                  id="bussinessId"
+                  value={formData.bussinessId || ''}
+                  onChange={handleChange}
+                >
+                  <option disabled value="">Select a business...</option>
+                  {userListings?.map((listing: any) => (
+                    <option key={listing.id} value={listing.id}>
+                      {listing.businessName}
+                    </option>
+                  ))}
+                </select>
+                <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
+                  <ChevronDown className="w-5 h-5" />
+                </div>
+              </div>
+            </div>
+
             {/* Product Name */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="productName">
@@ -284,15 +314,36 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                 </TooltipProvider>
               </label>
               <div className="flex flex-wrap items-center gap-2 p-2 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] min-h-[48px] focus-within:ring-2 focus-within:ring-[#f48c25]/50 focus-within:border-[#f48c25] transition-all">
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#f48c25]/10 text-[#f48c25] text-sm font-medium">
-                  Summer
-                  <button className="hover:text-red-500" type="button"><X className="w-4 h-4" /></button>
-                </span>
-                <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#f48c25]/10 text-[#f48c25] text-sm font-medium">
-                  Casual
-                  <button className="hover:text-red-500" type="button"><X className="w-4 h-4" /></button>
-                </span>
-                <input className="flex-1 min-w-[120px] bg-transparent border-none p-1 focus:ring-0 text-[#1c140d] dark:text-white placeholder:text-[#9c7349]/60 outline-none" placeholder="Add a tag..." type="text" />
+                {formData.tags?.map((tag: string, index: number) => (
+                  <span key={index} className="inline-flex items-center gap-1 px-2.5 py-1 rounded bg-[#f48c25]/10 text-[#f48c25] text-sm font-medium">
+                    {tag}
+                    <button
+                      className="hover:text-red-500"
+                      type="button"
+                      onClick={() => {
+                        const newTags = formData.tags.filter((_: any, i: number) => i !== index);
+                        updateFormData({ tags: newTags });
+                      }}
+                    >
+                      <X className="w-4 h-4" />
+                    </button>
+                  </span>
+                ))}
+                <input
+                  className="flex-1 min-w-[120px] bg-transparent border-none p-1 focus:ring-0 text-[#1c140d] dark:text-white placeholder:text-[#9c7349]/60 outline-none"
+                  placeholder="Add a tag..."
+                  type="text"
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') {
+                      e.preventDefault();
+                      const value = e.currentTarget.value.trim();
+                      if (value && !formData.tags?.includes(value)) {
+                        updateFormData({ tags: [...(formData.tags || []), value] });
+                        e.currentTarget.value = '';
+                      }
+                    }
+                  }}
+                />
               </div>
               <p className="text-xs text-[#9c7349]">Press enter to add tags. Used for internal search and filters.</p>
             </div>

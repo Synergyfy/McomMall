@@ -37,8 +37,14 @@ export default function ProductPage() {
     if (!isMatrixSystem || !product?.variations) return null;
 
     return product.variations.find(v => {
-      // Check if every key in the combination matches the selection
-      return Object.entries(v.combination).every(([key, value]) => selectedVariants[key] === value);
+      // Case-insensitive key matching for combinations
+      const normalizedCombo = Object.fromEntries(
+        Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+      );
+      // Check if every selected variant matches the normalized combination
+      return Object.entries(selectedVariants).every(([key, value]) =>
+        normalizedCombo[key.toLowerCase()] === value
+      );
     });
   }, [isMatrixSystem, product, selectedVariants]);
 
@@ -48,13 +54,17 @@ export default function ProductPage() {
 
      // Simple Approach: Just check if this option exists in any variation that matches the OTHER currently selected keys.
      return product.variations.some(v => {
+        const normalizedCombo = Object.fromEntries(
+          Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+        );
+
         // Does this variation have the option we are checking?
-        if (v.combination[attributeName] !== optionValue) return false;
+        if (normalizedCombo[attributeName.toLowerCase()] !== optionValue) return false;
 
         // Does it also match the OTHER currently selected attributes?
         return Object.entries(selectedVariants).every(([key, value]) => {
            if (key === attributeName) return true; // Skip the one we are changing
-           return v.combination[key] === value;
+           return normalizedCombo[key.toLowerCase()] === value;
         });
      });
   };
@@ -81,13 +91,16 @@ export default function ProductPage() {
       }
   }, [product, isMatrixSystem, selectedVariants]);
 
-  const { basePrice, totalPrice, priceBreakdown, isOutOfStock } = useMemo(() => {
-    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false };
+  const { basePrice, totalPrice, priceBreakdown, isOutOfStock, priceRange } = useMemo(() => {
+    if (!product) return { basePrice: 0, totalPrice: 0, priceBreakdown: [], isOutOfStock: false, priceRange: null };
 
     // MATRIX SYSTEM PRICE/STOCK
     if (isMatrixSystem) {
         if (currentVariation) {
-            let finalPrice = currentVariation.price;
+            // Priority: variation salePrice > variation price
+            let finalPrice = currentVariation.salePrice && currentVariation.salePrice < currentVariation.price
+              ? currentVariation.salePrice
+              : currentVariation.price;
 
             // Hierarchical Price Fallback: Priority Variation > Parent Option > Base
             if ((!finalPrice || finalPrice <= 0) && product.attributes && product.attributes.length > 0) {
@@ -112,10 +125,23 @@ export default function ProductPage() {
                 basePrice: finalPrice,
                 totalPrice: finalPrice,
                 priceBreakdown: [], // Matrix prices are all-inclusive
-                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0
+                isOutOfStock: !currentVariation.available || currentVariation.stock <= 0,
+                priceRange: null
             };
-        } else {
-             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false };
+        } else if (product.variations && product.variations.length > 0) {
+             const prices = product.variations.map(v => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter(p => p > 0);
+             if (prices.length > 0) {
+               const min = Math.min(...prices);
+               const max = Math.max(...prices);
+               return {
+                 basePrice: product.price,
+                 totalPrice: product.price,
+                 priceBreakdown: [],
+                 isOutOfStock: false,
+                 priceRange: min === max ? null : { min, max, startPrice: min }
+               };
+             }
+             return { basePrice: product.price, totalPrice: product.price, priceBreakdown: [], isOutOfStock: false, priceRange: null };
         }
     }
 
@@ -186,8 +212,9 @@ export default function ProductPage() {
   // Construct Images Array: Variant Image First!
   const images = useMemo(() => {
       if (!product) return [];
-      const baseImages = product.fileUrls && product.fileUrls.length > 0
-        ? product.fileUrls
+      const combinedMedia = [...(product.fileUrls || []), ...(product.media || [])];
+      const baseImages = combinedMedia.length > 0
+        ? combinedMedia
         : [product.imageUrl || 'https://via.placeholder.com/500'];
 
       // Find the best image to show based on current selection
@@ -196,9 +223,12 @@ export default function ProductPage() {
       let variantImage = currentVariation?.image;
 
       if (!variantImage && isMatrixSystem && Object.keys(selectedVariants).length > 0) {
-        const partialMatch = product.variations?.find(v =>
-           v.image && Object.entries(selectedVariants).every(([key, value]) => v.combination[key] === value)
-        );
+        const partialMatch = product.variations?.find(v => {
+           const normalizedCombo = Object.fromEntries(
+             Object.entries(v.combination).map(([k, val]) => [k.toLowerCase(), val])
+           );
+           return v.image && Object.entries(selectedVariants).every(([key, value]) => normalizedCombo[key.toLowerCase()] === value);
+        });
         variantImage = partialMatch?.image;
       }
 
@@ -292,8 +322,17 @@ export default function ProductPage() {
 
                     <div className="mt-4 flex items-baseline gap-2">
                         <span className="text-3xl font-bold text-orange-600">
-                            £{totalPrice.toFixed(2)}
+                            {priceRange && !currentVariation ? (
+                              <>£{priceRange.min.toFixed(2)} - £{priceRange.max.toFixed(2)}</>
+                            ) : (
+                              <>£{totalPrice.toFixed(2)}</>
+                            )}
                         </span>
+                        {currentVariation && currentVariation.salePrice && currentVariation.salePrice < currentVariation.price && (
+                             <span className="text-lg text-gray-400 line-through">
+                                £{currentVariation.price.toFixed(2)}
+                             </span>
+                        )}
                         {product.salePrice && product.salePrice < product.price && !isMatrixSystem && (
                             <span className="text-lg text-gray-400 line-through">
                                 £{product.price.toFixed(2)}

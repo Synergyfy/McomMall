@@ -6,6 +6,7 @@ import {
   CreateBusinessPayload,
   GooglePlaceResult,
   GooglePlaceResults,
+  InHouseBusiness,
   InHouseBusinessResults,
   RecentListings,
   UserListing,
@@ -55,10 +56,10 @@ export const useGetGoogleListings = ({
   return query;
 };
 
-export const useGetRecentListings = () => {
+export const useGetRecentListings = (limit?: number) => {
   const fetch = async () => {
     try {
-      const response = await api.get('listings/recent');
+      const response = await api.get('listings/recent', { params: { limit } });
       return response.data as RecentListings;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -72,7 +73,7 @@ export const useGetRecentListings = () => {
 
   const query = useQuery({
     queryFn: fetch,
-    queryKey: ['FETCH_RECENT_LISTINGS'],
+    queryKey: ['FETCH_RECENT_LISTINGS', limit],
   });
   return query;
 };
@@ -302,6 +303,35 @@ export const useGetUserListings = (page = 1, limit = 10) => {
   const query = useQuery({
     queryFn: fetch,
     queryKey: ['FETCH_USER_LISTINGS', page, limit],
+  });
+  return query;
+};
+
+export const useGetAllListings = (params: {
+  queryText?: string;
+  category?: string;
+  location?: string;
+  page?: number;
+  limit?: number;
+  sortBy?: string;
+}) => {
+  const fetcher = async (): Promise<PaginatedResponse<InHouseBusiness>> => {
+    try {
+      const response = await api.get('listings/search', {
+        params,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to fetch listings'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetcher,
+    queryKey: ['FETCH_ALL_LISTINGS', params],
   });
   return query;
 };

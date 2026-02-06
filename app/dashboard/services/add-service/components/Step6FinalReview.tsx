@@ -22,6 +22,7 @@ import { Store, Image as ImageIcon, CheckCircle2, HelpCircle } from 'lucide-reac
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { UserListing } from '@/service/listings/types';
 import { useGetUserListings } from '@/service/listings/hook';
+import { toast } from 'sonner';
 import {
   Tooltip,
   TooltipContent,
@@ -30,9 +31,20 @@ import {
 
 export function Step6FinalReview() {
   const { control, watch } = useFormContext();
-  const { data: listings, isLoading: isLoadingListings } = useGetUserListings();
-  const businesses =
-    listings?.data?.filter((l: UserListing) => l.listingType.includes('service')) || [];
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+
+  const businesses = React.useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: UserListing) =>
+      l.listingType.some(type => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
+
+  React.useEffect(() => {
+    if (!isLoadingListings && businesses.length === 0) {
+      toast.error("No service businesses found. Please create a 'Service' business listing first in 'My Listings'.");
+    }
+  }, [isLoadingListings, businesses.length]);
 
   const formValues = watch();
 
@@ -79,11 +91,17 @@ export function Step6FinalReview() {
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    {businesses.map((b: UserListing) => (
-                      <SelectItem key={b.id} value={b.id}>
-                        {b.businessName}
-                      </SelectItem>
-                    ))}
+                    {businesses.length > 0 ? (
+                      businesses.map((b: UserListing) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.businessName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No service businesses available
+                      </div>
+                    )}
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -109,9 +127,9 @@ export function Step6FinalReview() {
             render={({ field }) => (
               <FormItem>
                 <FormControl>
-                  <MultiMediaUpload onMediaChange={field.onChange} />
+                  <MultiMediaUpload onMediaChange={field.onChange} maxSize={30 * 1024 * 1024} />
                 </FormControl>
-                <FormDescription>At least one image is required. Max file size: 5MB.</FormDescription>
+                <FormDescription>At least one image is required. Max file size: 30MB.</FormDescription>
                 <FormMessage />
               </FormItem>
             )}

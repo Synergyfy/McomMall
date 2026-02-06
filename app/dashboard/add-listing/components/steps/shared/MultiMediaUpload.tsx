@@ -22,11 +22,11 @@ interface MultiMediaUploadProps {
 const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   onMediaChange,
   maxFiles = 5,
-  maxSize = 5 * 1024 * 1024, // 5MB default
+  maxSize = 30 * 1024 * 1024, // 30MB default
   initialMedia = [],
 }) => {
   const [mediaFiles, setMediaFiles] = useState<MediaFile[]>([]);
-  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia);
+  const [initialMediaFiles, setInitialMediaFiles] = useState<string[]>(initialMedia || []);
   const [error, setError] = useState<string | null>(null);
 
   // Cropping State
@@ -115,7 +115,11 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
   };
 
   useEffect(() => {
-    onMediaChange(mediaFiles.map(mf => mf.file));
+    try {
+      onMediaChange(mediaFiles.map(mf => mf.file));
+    } catch (e) {
+      console.error('Error in onMediaChange:', e);
+    }
     const hasImage = mediaFiles.some(mf => mf.type === 'image');
     if (mediaFiles.length > 0 && !hasImage) {
       setError('At least one image file is required.');

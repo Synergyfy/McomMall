@@ -22,10 +22,16 @@ const getVoucherById = async (id: string): Promise<Voucher> => {
   return data;
 };
 
-export const useGetVoucherById = (id: string) => {
+export const useGetVoucherById = (id: string, options?: { enabled?: boolean }) => {
+
   return useQuery({
+
     queryKey: ['voucher', id],
+
     queryFn: () => getVoucherById(id),
-    enabled: !!id,
+
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
+
   });
+
 };

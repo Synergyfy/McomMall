@@ -12,8 +12,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { useAddService } from '@/service/services/hook';
+import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
+import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -134,14 +136,14 @@ const serviceSchema = z.object({
   media: z.array(z.any()).min(1, 'At least one image is required'),
 }).superRefine((data, ctx) => {
   // Pricing Model Validation
-  if (data.pricingModel === 'fixed' && data.fixedPrice === undefined) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Fixed price is required', path: ['fixedPrice'] });
+  if (['fixed', 'perJob', 'perSession', 'subscription'].includes(data.pricingModel) && (data.fixedPrice === undefined || data.fixedPrice === null)) {
+    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Base price is required', path: ['fixedPrice'] });
   }
-  if (data.pricingModel === 'perHour' && data.pricePerHour === undefined) {
+  if (data.pricingModel === 'perHour' && (data.pricePerHour === undefined || data.pricePerHour === null)) {
     ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per hour is required', path: ['pricePerHour'] });
   }
   if (data.pricingModel === 'perUnit') {
-    if (data.pricePerUnit === undefined) {
+    if (data.pricePerUnit === undefined || data.pricePerUnit === null) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per unit is required', path: ['pricePerUnit'] });
     }
   }
@@ -172,7 +174,7 @@ export default function AddServicePage() {
 
   const form = useForm<ServiceFormValues>({
     resolver: zodResolver(serviceSchema),
-    mode: 'onChange',
+    mode: 'onSubmit',
     defaultValues: {
       name: '',
       shortDescription: '',
@@ -184,6 +186,9 @@ export default function AddServicePage() {
       isActive: true,
       businessId: '',
       pricingModel: 'fixed',
+      fixedPrice: 0,
+      pricePerHour: 0,
+      pricePerUnit: 0,
       enableGuestPricing: false,
       guestPricingModel: 'perGuest',
       isQuoteModel: false,
@@ -191,7 +196,22 @@ export default function AddServicePage() {
       configurableAddons: [],
       media: [],
       variants: [],
-      availability: undefined,
+      availability: {
+        schedule: [
+          { day: 'monday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'tuesday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'wednesday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'thursday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'friday', enabled: true, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'saturday', enabled: false, startTime: '09:00', endTime: '17:00', breaks: [] },
+          { day: 'sunday', enabled: false, startTime: '09:00', endTime: '17:00', breaks: [] },
+        ],
+        slotDuration: 60,
+        bufferTime: 15,
+        maxBookingsPerSlot: 1,
+        staffPerBooking: 1,
+        serviceRadiusKm: 10,
+      },
       enableTieredPackages: false,
       requireApproval: false,
       deliveryConfig: {
@@ -221,12 +241,17 @@ export default function AddServicePage() {
     },
   });
 
+  const { data: categories } = useGetCategories();
+  const categoryId = form.watch('category');
+  const { data: subcategories } = useGetSubCategoriesByCategory(categoryId);
+
   const onSubmit = async (data: ServiceFormValues) => {
     try {
       const mediaUrls = await Promise.all(
-        data.media.map((file: File | string) => {
-          if (typeof file === 'string') return { secure_url: file };
-          return uploadFile(file);
+        data.media.map(async (file: File | string) => {
+          if (typeof file === 'string') return { secure_url: file, type: 'image' };
+          const result = await uploadFile(file);
+          return { ...result, type: (file as File).type.startsWith('video/') ? 'video' : 'image' };
         })
       );
 
@@ -239,12 +264,37 @@ export default function AddServicePage() {
         regions: data.deliveryConfig.regions?.split(',').map(s => s.trim()).filter(Boolean),
       } : undefined;
 
-      const serviceData: any = {
+      // Taxonomy mapping
+      const categoryName = categories?.find(c => c.id === data.category)?.name || data.category;
+      const subcategoryName = subcategories?.find(s => s.id === data.subcategory)?.name || data.subcategory;
+
+      const serviceData: CreateServiceDto = {
         ...data,
-        targetAudience,
-        tags,
-        deliveryConfig,
-        images: mediaUrls.map(result => result.secure_url),
+        shortDesc: data.shortDescription || '',
+        fullDesc: data.description || '',
+        category: categoryName,
+        subcategory: subcategoryName || '',
+        targetAudience: targetAudience || [],
+        tags: tags || [],
+        deliveryConfig: deliveryConfig ? {
+          ...deliveryConfig,
+          mode: deliveryConfig.mode || 'onsite',
+          cities: deliveryConfig.cities || [],
+          regions: deliveryConfig.regions || [],
+        } : { mode: 'onsite', cities: [], regions: [] },
+        availability: data.availability ? {
+          ...data.availability,
+          schedule: data.availability.schedule.map(s => ({
+            ...s,
+            day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
+            breaks: s.breaks?.map(b => `${b.start}-${b.end}`) || []
+          })),
+          slotDuration: data.availability.slotDuration || 60,
+          bufferTime: data.availability.bufferTime || 0,
+          maxBookingsPerSlot: data.availability.maxBookingsPerSlot || 1,
+        } : undefined,
+        images: mediaUrls.filter(m => m.type === 'image').map(result => result.secure_url),
+        media: mediaUrls.filter(m => m.type === 'video').map(result => result.secure_url),
       };
 
       addService(serviceData, {
@@ -272,12 +322,13 @@ export default function AddServicePage() {
     } else if (currentStep === 3) {
       isValid = !!values.pricingModel;
       if (isValid) {
+        const isSet = (val: any) => val !== undefined && val !== null && val !== '';
         if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
-          isValid = values.fixedPrice !== undefined && values.fixedPrice !== null;
+          isValid = isSet(values.fixedPrice);
         } else if (values.pricingModel === 'perHour') {
-          isValid = values.pricePerHour !== undefined && values.pricePerHour !== null;
+          isValid = isSet(values.pricePerHour);
         } else if (values.pricingModel === 'perUnit') {
-          isValid = values.pricePerUnit !== undefined && values.pricePerUnit !== null;
+          isValid = isSet(values.pricePerUnit);
         }
       }
     } else if (currentStep === 4 || currentStep === 5) {
@@ -367,7 +418,13 @@ export default function AddServicePage() {
 
         <FormProvider {...form}>
           <Form {...form}>
-            <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+            <form
+              onSubmit={form.handleSubmit(onSubmit, (errors) => {
+                console.error('Validation Errors:', errors);
+                toast.error('Please check the form for errors before publishing.');
+              })}
+              className="space-y-8"
+            >
               <div className="min-h-[400px]">
                 {currentStep === 1 && <Step1BasicInfo />}
                 {currentStep === 2 && <Step2ServiceType />}

@@ -353,9 +353,30 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     <div className="flex flex-col gap-2">
                                         <label className="text-[#1c140d] dark:text-white text-sm font-bold">Dimensions (L x W x H cm)</label>
                                         <div className="grid grid-cols-3 gap-2">
-                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="L" type="number" />
-                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="W" type="number" />
-                                            <input className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none" placeholder="H" type="number" />
+                                            <input
+                                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none"
+                                                placeholder="L"
+                                                type="number"
+                                                id="length"
+                                                value={formData.length || ''}
+                                                onChange={handleChange}
+                                            />
+                                            <input
+                                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none"
+                                                placeholder="W"
+                                                type="number"
+                                                id="width"
+                                                value={formData.width || ''}
+                                                onChange={handleChange}
+                                            />
+                                            <input
+                                                className="w-full rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] py-3 bg-white dark:bg-[#2d241b] text-center outline-none"
+                                                placeholder="H"
+                                                type="number"
+                                                id="height"
+                                                value={formData.height || ''}
+                                                onChange={handleChange}
+                                            />
                                         </div>
                                     </div>
                                 </div>

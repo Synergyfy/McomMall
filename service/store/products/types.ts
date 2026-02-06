@@ -64,24 +64,43 @@ export interface SizeGuideConfig {
 }
 
 export interface CreateProductDto {
+  serviceProviderId?: string;
   bussinessId: string;
+  productName?: string;
   title: string;
   category: string;
+  subCategory?: string;
   subCategories?: string[];
   brand?: string;
-  gender?: 'male' | 'female' | 'unisex' | 'none';
-  shippingMethod?: 'free' | 'pickup' | 'delivery';
+  gender?: 'male' | 'female' | 'unisex' | 'none' | string;
+  shippingMethod?: 'free' | 'pickup' | 'delivery' | string;
+  fulfillmentType?: string[];
+  isFreeDelivery?: boolean;
+  isPaidDelivery?: boolean;
+  freeDeliveryRadius?: number;
+  pickupInstructions?: string;
   productType: string;
+  regular_price?: number;
+  sale_price?: number;
   price: number;
+  salePrice?: number;
+  shortDesc?: string;
+  fullDesc?: string;
   description: string;
   sku: string;
   shortDescription?: string;
+  images?: string[];
+  videos?: string[];
+  media?: string[];
   imageUrl?: string;
   productUrl?: string;
   fileUrls?: string[];
   downloadLimit?: number;
   downloadExpiry?: number;
   enableStockManagement?: boolean;
+  quantity?: number;
+  stock?: number;
+  lowStockThreshold?: number;
   weight?: number;
   length?: number;
   width?: number;
@@ -94,6 +113,8 @@ export interface CreateProductDto {
   variants?: ProductVariant[];
   attributes?: ProductAttribute[];
   variations?: ProductVariation[];
+  variantConfig?: any[];
+  useVariantPricing?: boolean;
   sizeGuide?: SizeGuideConfig;
 }
 
