@@ -12,8 +12,10 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Form } from '@/components/ui/form';
 import { useAddService } from '@/service/services/hook';
+import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
+import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -221,12 +223,17 @@ export default function AddServicePage() {
     },
   });
 
+  const { data: categories } = useGetCategories();
+  const categoryId = form.watch('category');
+  const { data: subcategories } = useGetSubCategoriesByCategory(categoryId);
+
   const onSubmit = async (data: ServiceFormValues) => {
     try {
       const mediaUrls = await Promise.all(
-        data.media.map((file: File | string) => {
-          if (typeof file === 'string') return { secure_url: file };
-          return uploadFile(file);
+        data.media.map(async (file: File | string) => {
+          if (typeof file === 'string') return { secure_url: file, type: 'image' };
+          const result = await uploadFile(file);
+          return { ...result, type: (file as File).type.startsWith('video/') ? 'video' : 'image' };
         })
       );
 
@@ -239,12 +246,47 @@ export default function AddServicePage() {
         regions: data.deliveryConfig.regions?.split(',').map(s => s.trim()).filter(Boolean),
       } : undefined;
 
-      const serviceData: any = {
+      // Taxonomy mapping
+      const categoryName = categories?.find(c => c.id === data.category)?.name || data.category;
+      const subcategoryName = subcategories?.find(s => s.id === data.subcategory)?.name || data.subcategory;
+
+      // Availability mapping
+      const availability = data.availability ? {
+        ...data.availability,
+        schedule: data.availability.schedule.map(s => ({
+          ...s,
+          day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
+          breaks: s.breaks?.map(b => `${b.start}-${b.end}`)
+        }))
+      } : undefined;
+
+      const serviceData: CreateServiceDto = {
         ...data,
-        targetAudience,
-        tags,
-        deliveryConfig,
-        images: mediaUrls.map(result => result.secure_url),
+        shortDesc: data.shortDescription || '',
+        fullDesc: data.description || '',
+        category: categoryName,
+        subcategory: subcategoryName || '',
+        targetAudience: targetAudience || [],
+        tags: tags || [],
+        deliveryConfig: deliveryConfig ? {
+          ...deliveryConfig,
+          mode: deliveryConfig.mode || 'onsite',
+          cities: deliveryConfig.cities || [],
+          regions: deliveryConfig.regions || [],
+        } : { mode: 'onsite', cities: [], regions: [] },
+        availability: availability ? {
+          ...availability,
+          schedule: availability.schedule?.map(s => ({
+            ...s,
+            day: s.day as any, // day is already capitalized correctly
+            breaks: s.breaks || [],
+          })) || [],
+          slotDuration: availability.slotDuration || 60,
+          bufferTime: availability.bufferTime || 0,
+          maxBookingsPerSlot: availability.maxBookingsPerSlot || 1,
+        } : undefined,
+        images: mediaUrls.filter(m => m.type === 'image').map(result => result.secure_url),
+        media: mediaUrls.filter(m => m.type === 'video').map(result => result.secure_url),
       };
 
       addService(serviceData, {
