@@ -190,8 +190,8 @@ export default function StoreDashboard() {
     'Pending Review',
     'In stock',
   ];
-  const categories = [...new Set((products || []).map(p => p.category))].filter(Boolean);
-  const brands = [...new Set((products || []).map(p => p.brand))].filter(Boolean);
+  const categories = [...new Set((products || []).map(p => p.category))].filter((cat): cat is string => Boolean(cat));
+  const brands = [...new Set((products || []).map(p => p.brand))].filter((brand): brand is string => Boolean(brand));
   const isAllSelected =
     selectedRows.length > 0 &&
     filteredProducts &&

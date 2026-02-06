@@ -77,6 +77,13 @@ export default function AddProductPage() {
     visibility: 'public',
     enableReviews: true,
     purchaseNote: '',
+    lowStockThreshold: '',
+    deliveryOriginAddressId: '',
+    deliveryOriginAddressLine1: '',
+    deliveryOriginCity: '',
+    deliveryOriginPostalCode: '',
+    deliveryOriginLat: '',
+    deliveryOriginLng: '',
   });
 
   const updateFormData = (newData: any) => {

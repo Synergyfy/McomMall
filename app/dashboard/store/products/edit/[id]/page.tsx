@@ -102,7 +102,7 @@ export default function EditProductPage() {
         sku: product.sku || '',
         images: product.fileUrls?.filter((url: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) || [],
         videos: product.fileUrls?.filter((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || product.media?.filter((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || [],
-        stock_status: product.stock > 0 ? 'instock' : 'outofstock',
+        stock_status: (product.stock ?? 0) > 0 ? 'instock' : 'outofstock',
         quantity: product.stock || 0,
         weight: product.weight?.toString() || '',
         length: product.length?.toString() || '',
@@ -132,7 +132,7 @@ export default function EditProductPage() {
       setFormData(initialData);
 
       if (product.fulfillmentType) {
-          setFulfillmentType(product.fulfillmentType);
+          setFulfillmentType(product.fulfillmentType as ('shipping' | 'pickup')[]);
       }
     }
   }, [product]);

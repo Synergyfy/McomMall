@@ -78,7 +78,7 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                 <div>
                                     <h3 className="text-[#1c140d] dark:text-white text-lg font-bold flex items-center gap-2">
                                         Variations
-                                        <InfoIcon text="Adjust pricing and inventory per variant before completion." />
+                                        <InfoIcon tooltip="Adjust pricing and inventory per variant before completion." />
                                     </h3>
                                     <p className="text-sm text-[#9c7349]">Configure specific details for each combination.</p>
                                 </div>

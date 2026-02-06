@@ -324,6 +324,7 @@ export interface Product {
   bussinessId?: string;
   title: string;
   category: string;
+  subCategory?: string;
   subCategories?: string[];
   shippingMethod?: 'free' | 'pickup' | 'delivery' | string;
   fulfillmentType?: string[];
