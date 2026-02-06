@@ -1,10 +1,7 @@
 'use client';
 
-'use client';
-
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useGetCoupon } from '@/service/coupons/hook';
 import { Loader, ChevronLeft, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
@@ -15,18 +12,19 @@ import CouponPurchaseModal from '@/app/(public)/listings/[id]/components/CouponP
 import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
 import { CouponProduct } from '@/service/coupon-products/types';
 import { Coupon } from '@/service/my-coupons/types';
+import { useGetCouponProduct } from '@/service/coupon-products/hooks';
 
 export default function CouponPage() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   
   const { selectedItem } = useMarketplaceContext();
-  const cachedItem = selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null;
+  const cachedItem = (selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null) as unknown as CouponProduct;
 
-  // useGetCoupon returns 'coupon' which matches Coupon/CouponProduct structure
-  const { coupon, isLoading, isError } = useGetCoupon(id || '', !cachedItem);
+  const { data: couponResponse, isLoading, isError } = useGetCouponProduct(id || '');
 
-  const displayCoupon = (cachedItem || coupon) as unknown as CouponProduct;
+  const product = couponResponse?.data as CouponProduct | undefined;
+  const displayCoupon = cachedItem || product;
 
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -59,20 +57,20 @@ export default function CouponPage() {
     setPurchasedCoupon(null);
   };
   
-  const title = displayCoupon.name || (displayCoupon as any).title || displayCoupon.couponCode || 'Coupon';
-  const description = displayCoupon.description || displayCoupon.couponDescription || "No description.";
+  const title = displayCoupon.name || (displayCoupon as any).title || 'Coupon';
+  const description = displayCoupon.description || (displayCoupon as any).couponDescription || "No description.";
   
-  const discountDisplay = displayCoupon.discountType 
-    ? (displayCoupon.discountType === 'percentage' ? `${displayCoupon.couponAmount}%` : `£${displayCoupon.couponAmount}`)
-    : (displayCoupon.price ? `Value: £${displayCoupon.price}` : 'Special Offer');
+  const discountDisplay = (displayCoupon as any).discountType 
+    ? ((displayCoupon as any).discountType === 'percentage' ? `${(displayCoupon as any).couponAmount}%` : `£${(displayCoupon as any).couponAmount}`)
+    : ((displayCoupon as any).price ? `Value: £${(displayCoupon as any).price}` : 'Special Offer');
 
-  const codeDisplay = displayCoupon.couponCode || (cachedItem ? 'Login to view code' : 'N/A');
+  const codeDisplay = (displayCoupon as any).couponCode || (cachedItem ? 'Login to view code' : 'N/A');
 
-  const images = (displayCoupon.media && displayCoupon.media.length > 0)
-    ? displayCoupon.media
-    : (displayCoupon.imageUrl 
-        ? [displayCoupon.imageUrl] 
-        : ((displayCoupon as any).image ? [(displayCoupon as any).image] : ['/placeholder.png']));
+  const images = (displayCoupon as any).media && (displayCoupon as any).media.length > 0
+    ? (displayCoupon as any).media
+    : (displayCoupon.backgroundImage 
+        ? [displayCoupon.backgroundImage] 
+        : ((displayCoupon as any).imageUrl ? [(displayCoupon as any).imageUrl] : ['/placeholder.png']));
 
   return (
     <div className="min-h-screen bg-gray-50 pb-12 pt-3">
