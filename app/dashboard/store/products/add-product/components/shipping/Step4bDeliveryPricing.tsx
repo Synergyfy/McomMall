@@ -208,8 +208,13 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
             <div className="flex flex-col gap-5">
               {/* Address Selection */}
               <div className="flex flex-col gap-2">
-                <label className="text-xs font-bold text-[#9c7349] uppercase flex items-center gap-1">
-                  <MapPin size={12} /> Delivery Origin Address
+                <label className="text-xs font-bold text-[#9c7349] uppercase flex items-center justify-between gap-1">
+                  <div className="flex items-center gap-1">
+                    <MapPin size={12} /> Delivery Origin Address
+                  </div>
+                  <span className="text-[10px] normal-case font-medium text-orange-600 bg-orange-50 px-2 py-0.5 rounded-full border border-orange-100">
+                    You can add other pick up address
+                  </span>
                 </label>
                 <Select value={selectedAddressId || (isAddingNewAddress ? 'add-new' : '')} onValueChange={handleAddressSelect}>
                   <SelectTrigger className="w-full p-3 h-12 rounded-xl border-orange-200 dark:bg-[#1c140d] dark:text-white focus:border-orange-500 outline-none shadow-sm">
@@ -299,7 +304,7 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
 
               <div className="flex flex-col gap-2">
                 <label className="text-xs font-bold text-[#9c7349] uppercase flex items-center gap-1">
-                   Free Delivery Radius (Miles)
+                  Free Delivery Radius (Miles)
                 </label>
                 <Input
                   type="number"
@@ -343,8 +348,8 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         <div
           onClick={toggleFree}
           className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${isFree
-              ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
-              : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
+            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
+            : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
             }`}
         >
           <div className={`size-14 rounded-xl flex items-center justify-center mb-6 transition-colors ${isFree ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3d2f25] text-[#1c140d] dark:text-white'
@@ -368,8 +373,8 @@ export default function Step4bDeliveryPricing({ formData, updateFormData, onNext
         <div
           onClick={togglePaid}
           className={`relative flex flex-col p-8 rounded-2xl border-2 transition-all duration-300 cursor-pointer group ${isPaid
-              ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
-              : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
+            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/10 shadow-xl shadow-[#f48c25]/10 scale-[1.02]'
+            : 'border-[#e8dbce] dark:border-[#3d2f25] bg-white dark:bg-[#2d2116] hover:border-[#f48c25]/50 hover:shadow-lg'
             }`}
         >
           <div className={`size-14 rounded-xl flex items-center justify-center mb-6 transition-colors ${isPaid ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3d2f25] text-[#1c140d] dark:text-white'
