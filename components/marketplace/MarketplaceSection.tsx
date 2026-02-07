@@ -5,6 +5,9 @@ import { useRef, useMemo } from 'react';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import { getProductById } from '@/service/store/products/hook';
 import ProductCard from '@/components/marketplace/ProductCard';
+import VoucherCard from '@/components/marketplace/VoucherCard';
+import GiftCardCard from '@/components/marketplace/GiftCardCard';
+import ServiceCard from '@/components/marketplace/ServiceCard';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Button } from '@/components/ui/button';
 import { EmbeddedProduct } from '@/service/marketplace/types';
@@ -53,6 +56,11 @@ export default function MarketplaceSection({ title, productIds = [], products: i
           items_left: itemsLeft,
           pricingModel: p.pricingModel,
           unitName: p.unitName,
+          fixedPrice: p.fixedPrice,
+          pricePerHour: p.pricePerHour,
+          basePrice: p.basePrice,
+          pricePerGuest: p.pricePerGuest,
+          additionalGuestPrice: p.additionalGuestPrice,
         } as PromotionalItem;
       });
     }
@@ -77,6 +85,11 @@ export default function MarketplaceSection({ title, productIds = [], products: i
           items_left: itemsLeft,
           pricingModel: (p as any).pricingModel,
           unitName: (p as any).unitName,
+          fixedPrice: (p as any).fixedPrice,
+          pricePerHour: (p as any).pricePerHour,
+          basePrice: (p as any).basePrice,
+          pricePerGuest: (p as any).pricePerGuest,
+          additionalGuestPrice: (p as any).additionalGuestPrice,
         } as PromotionalItem;
       });
   }, [hasDirectProducts, initialProducts, productQueries]);
@@ -91,6 +104,28 @@ export default function MarketplaceSection({ title, productIds = [], products: i
         current.scrollBy({ left: scrollAmount, behavior: 'smooth' });
       }
     }
+  };
+
+  // Helper to render the appropriate card based on item type
+  const renderItemCard = (item: PromotionalItem) => {
+    const category = item.category?.toLowerCase() || '';
+    // We can also check the link if available, but for embedded products in sections we mainly rely on category
+
+    // Detect item type and render appropriate card
+    if (category.includes('voucher') || category.includes('coupon')) {
+      return <VoucherCard voucher={item} viewMode="grid" />;
+    }
+
+    if (category.includes('gift')) {
+      return <GiftCardCard giftCard={item} viewMode="grid" />;
+    }
+
+    if (category.includes('service')) {
+      return <ServiceCard service={item} viewMode="grid" />;
+    }
+
+    // Default to ProductCard
+    return <ProductCard product={item} viewMode="grid" />;
   };
 
   return (
@@ -129,7 +164,7 @@ export default function MarketplaceSection({ title, productIds = [], products: i
         >
           {finalProducts.map((product) => (
             <div key={product.id} className="min-w-[170px] w-[170px] md:min-w-[300px] md:w-[300px]">
-              <ProductCard product={product} viewMode="grid" />
+              {renderItemCard(product)}
             </div>
           ))}
         </div>

@@ -1,23 +1,32 @@
 'use client';
 
 import { Product } from '@/service/listings/types';
+import { ProductVariation } from '@/service/store/products/types';
 
 interface ProductFactsProps {
   product: Product;
+  variation?: ProductVariation;
 }
 
-export default function ProductFacts({ product }: ProductFactsProps) {
+export default function ProductFacts({ product, variation }: ProductFactsProps) {
   const facts = [
     { label: 'Status', value: product.productStatus, capitalize: true },
     { label: 'Category', value: product.category },
-    { label: 'SKU', value: product.sku },
-    { label: 'Stock', value: product.enableStockManagement ? (product.stock !== undefined ? `${product.stock} units` : 'Managed') : 'Available' },
-    { label: 'Weight', value: product.weight ? `${product.weight} kg` : null },
+    { label: 'SKU', value: variation?.sku || product.sku },
+    {
+      label: 'Stock',
+      value: variation
+        ? (variation.stock > 0 ? `${variation.stock} units` : 'Out of Stock')
+        : (product.enableStockManagement ? (product.stock !== undefined ? `${product.stock} units` : 'Managed') : 'Available')
+    },
+    { label: 'Weight', value: (variation?.weight || product.weight) ? `${variation?.weight || product.weight} kg` : null },
     {
       label: 'Dimensions',
-      value: (product.length && product.width && product.height)
-        ? `${product.length} × ${product.width} × ${product.height} cm`
-        : null
+      value: (variation?.length && variation?.width && variation?.height)
+        ? `${variation.length} × ${variation.width} × ${variation.height} cm`
+        : ((product.length && product.width && product.height)
+          ? `${product.length} × ${product.width} × ${product.height} cm`
+          : null)
     },
   ];
 

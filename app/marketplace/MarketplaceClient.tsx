@@ -20,6 +20,9 @@ import {
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
 import ProductCard from '@/components/marketplace/ProductCard';
+import VoucherCard from '@/components/marketplace/VoucherCard';
+import GiftCardCard from '@/components/marketplace/GiftCardCard';
+import ServiceCard from '@/components/marketplace/ServiceCard';
 import Pagination from '@/components/marketplace/Pagination';
 import MarketplaceSection from '@/components/marketplace/MarketplaceSection';
 import { Input } from '@/components/ui/input';
@@ -189,6 +192,12 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
       allowCustomAmount: (item as any).allowCustomAmount,
       minCustomAmount: (item as any).minCustomAmount,
       maxCustomAmount: (item as any).maxCustomAmount,
+      fixedPrice: (item as any).fixedPrice,
+      pricePerHour: (item as any).pricePerHour,
+      basePrice: (item as any).basePrice,
+      pricePerGuest: (item as any).pricePerGuest,
+      additionalGuestPrice: (item as any).additionalGuestPrice,
+      pricingModel: (item as any).pricingModel,
     } as PromotionalItem;
   };
 
@@ -342,24 +351,53 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
     );
   };
 
+  // Helper to render the appropriate card based on item type
+  const renderItemCard = (item: PromotionalItem, mode: 'grid' | 'list' = 'grid') => {
+    const category = item.category?.toLowerCase() || '';
+    const link = item.link || '';
+
+    // Detect item type and render appropriate card
+    if (category.includes('voucher') || link.includes('/vouchers/') || category.includes('coupon') || link.includes('/coupons/')) {
+      return <VoucherCard key={item.id} voucher={item} viewMode={mode} />;
+    }
+
+    if (category.includes('gift') || link.includes('/gift-cards/')) {
+      return <GiftCardCard key={item.id} giftCard={item} viewMode={mode} />;
+    }
+
+    if (category.includes('service') || link.includes('/services/')) {
+      return <ServiceCard key={item.id} service={item} viewMode={mode} />;
+    }
+
+    // Default to ProductCard
+    return <ProductCard key={item.id} product={item} viewMode={mode} />;
+  };
+
   // Reusable Component for "All" View Sections
   const SectionRow = ({ title, type, items }: { title: string, type: ListingType, items: MarketItem[] }) => {
     // Only render if items exist
     if (!items || items.length === 0) return null;
     const displayItems = items.map(item => mapToDisplayItem(item, type));
 
+    let href = '/marketplace';
+    if (type === 'products') href = '/products';
+    if (type === 'services') href = '/services';
+    if (type === 'vouchers') href = '/vouchers';
+    if (type === 'gift-cards') href = '/gift-cards';
+    if (type === 'coupons') href = '/coupons';
+
     return (
       <div className="mb-10">
         <div className="flex items-center justify-between mb-2 md:mb-4">
           <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
-          <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" onClick={() => setListingType(type)}>
-            View All
+          <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" asChild>
+            <Link href={href}>
+              View All
+            </Link>
           </Button>
         </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {displayItems.slice(0, 4).map((item) => (
-            <ProductCard key={item.id} product={item} viewMode="grid" />
-          ))}
+          {displayItems.slice(0, 4).map((item) => renderItemCard(item, 'grid'))}
         </div>
       </div>
     );
@@ -469,24 +507,66 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
               <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
                 <h3 className="font-bold text-gray-900 mb-4">Explore</h3>
                 <div className="space-y-2">
-                  <button onClick={() => setListingType('all')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <LayoutDashboard className="w-4 h-4" /> All
-                  </button>
-                  <button onClick={() => setListingType('products')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'products' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <ShoppingBag className="w-4 h-4" /> Products
-                  </button>
-                  <button onClick={() => setListingType('services')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'services' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <Briefcase className="w-4 h-4" /> Services
-                  </button>
-                  <button onClick={() => setListingType('vouchers')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'vouchers' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <Ticket className="w-4 h-4" /> Vouchers
-                  </button>
-                  <button onClick={() => setListingType('gift-cards')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'gift-cards' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <Gift className="w-4 h-4" /> Gift Cards
-                  </button>
-                  <button onClick={() => setListingType('coupons')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'coupons' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
-                    <Tag className="w-4 h-4" /> Coupons
-                  </button>
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('all')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'all' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <LayoutDashboard className="w-4 h-4" /> All
+                    </button>
+                  </div>
+
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('products')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'products' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <ShoppingBag className="w-4 h-4" /> Products
+                    </button>
+                    {listingType === 'products' && (
+                      <Link href="/products" className="block w-full text-left pl-9 py-1 text-sm text-primary hover:underline">
+                        View All Products Page
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('services')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'services' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <Briefcase className="w-4 h-4" /> Services
+                    </button>
+                    {listingType === 'services' && (
+                      <Link href="/services" className="block w-full text-left pl-9 py-1 text-sm text-primary hover:underline">
+                        View All Services Page
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('vouchers')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'vouchers' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <Ticket className="w-4 h-4" /> Vouchers
+                    </button>
+                    {listingType === 'vouchers' && (
+                      <Link href="/vouchers" className="block w-full text-left pl-9 py-1 text-sm text-primary hover:underline">
+                        View All Vouchers Page
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('gift-cards')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'gift-cards' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <Gift className="w-4 h-4" /> Gift Cards
+                    </button>
+                    {listingType === 'gift-cards' && (
+                      <Link href="/gift-cards" className="block w-full text-left pl-9 py-1 text-sm text-primary hover:underline">
+                        View All Gift Cards Page
+                      </Link>
+                    )}
+                  </div>
+
+                  <div className="space-y-1">
+                    <button onClick={() => setListingType('coupons')} className={`w-full flex items-center gap-3 p-2 rounded-lg transition-colors ${listingType === 'coupons' ? 'bg-primary/10 text-primary font-semibold' : 'hover:bg-gray-50 text-gray-600'}`}>
+                      <Tag className="w-4 h-4" /> Coupons
+                    </button>
+                    {listingType === 'coupons' && (
+                      <Link href="/coupons" className="block w-full text-left pl-9 py-1 text-sm text-primary hover:underline">
+                        View All Coupons Page
+                      </Link>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -601,9 +681,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
                       ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6"
                       : "flex flex-col gap-4"
                   }>
-                    {displayItems.map((item) => (
-                      <ProductCard key={item.id} product={item} viewMode={viewMode} />
-                    ))}
+                    {displayItems.map((item) => renderItemCard(item, viewMode))}
                   </div>
                 ) : (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">

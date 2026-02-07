@@ -2,6 +2,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { Ticket, Percent, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -48,13 +49,15 @@ export function McomVouchersCouponsSection() {
                 <span className="text-green-500">+20%</span> with enticing
                 voucher offers.
               </p>
-              <Button
-                className="group mt-6 flex justify-center items-center bg-orange-600 hover:bg-orange-700 cursor-pointer text-white text-xl font-semibold"
-                size={'lg'}
-              >
-                See how it works
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
-              </Button>
+              <Link href="/vouchers">
+                <Button
+                  className="group mt-6 flex justify-center items-center bg-orange-600 hover:bg-orange-700 cursor-pointer text-white text-xl font-semibold"
+                  size={'lg'}
+                >
+                  See how it works
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
+                </Button>
+              </Link>
             </div>
           </div>
 
@@ -85,13 +88,15 @@ export function McomVouchersCouponsSection() {
                 Achieve a <span className="text-blue-500">+18%</span> conversion
                 rate with well-targeted coupon strategies.
               </p>
-              <Button
-                className="group mt-6 flex justify-center items-center bg-orange-600 hover:bg-orange-700 cursor-pointer text-white text-xl font-semibold"
-                size={'lg'}
-              >
-                Explore targeting options{' '}
-                <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
-              </Button>
+              <Link href="/coupons">
+                <Button
+                  className="group mt-6 flex justify-center items-center bg-orange-600 hover:bg-orange-700 cursor-pointer text-white text-xl font-semibold"
+                  size={'lg'}
+                >
+                  Explore targeting options{' '}
+                  <ArrowRight className="ml-2 h-5 w-5 group-hover:translate-x-1 transition-transform duration-200" />
+                </Button>
+              </Link>
             </div>
           </div>
         </div>
