@@ -41,7 +41,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
     if (viewMode === 'list') {
         return (
             <Link href={voucher.link || `/vouchers/${voucher.id}`} className="block">
-                <div className="group relative bg-gradient-to-r from-purple-600 via-purple-500 to-indigo-600 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-purple-400/30">
+                <div className="group relative bg-gradient-to-r from-orange-600 via-orange-500 to-amber-600 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 border-2 border-orange-400/30">
                     <div className="flex flex-col sm:flex-row h-full">
                         {/* Left Section - Image */}
                         <div className="relative w-full sm:w-48 h-32 sm:h-auto bg-white/10 backdrop-blur-sm flex-shrink-0">
@@ -51,7 +51,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
                                 fill
                                 className="object-cover opacity-90"
                             />
-                            <div className="absolute inset-0 bg-gradient-to-r from-purple-600/20 to-transparent" />
+                            <div className="absolute inset-0 bg-gradient-to-r from-orange-600/20 to-transparent" />
                         </div>
 
                         {/* Perforated Divider */}
@@ -71,13 +71,13 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
                                         Voucher
                                     </Badge>
                                     <h3 className="text-2xl font-bold mb-1">{voucher.title}</h3>
-                                    <p className="text-purple-100 text-sm flex items-center gap-1">
+                                    <p className="text-orange-50 text-sm flex items-center gap-1">
                                         <Calendar className="w-3 h-3" />
                                         Valid until {formattedExpiry}
                                     </p>
                                 </div>
                                 {discountPercentage > 0 && (
-                                    <div className="bg-white text-purple-600 rounded-full px-4 py-2 font-black text-2xl shadow-lg">
+                                    <div className="bg-white text-orange-600 rounded-full px-4 py-2 font-black text-2xl shadow-lg">
                                         -{discountPercentage}%
                                     </div>
                                 )}
@@ -91,7 +91,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
                                     variant="secondary"
                                     size="sm"
                                     onClick={handleCopyCode}
-                                    className="bg-white text-purple-600 hover:bg-purple-50 font-semibold"
+                                    className="bg-white text-orange-600 hover:bg-orange-50 font-semibold"
                                 >
                                     {copied ? (
                                         <>
@@ -120,7 +120,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
     // Grid View - Ticket Style
     return (
         <Link href={voucher.link || `/vouchers/${voucher.id}`} className="block h-full">
-            <div className="group relative bg-gradient-to-br from-purple-600 via-purple-500 to-indigo-600 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col border-2 border-purple-400/30 hover:scale-[1.02]">
+            <div className="group relative bg-gradient-to-br from-orange-600 via-orange-500 to-amber-600 rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col border-2 border-orange-400/30 hover:scale-[1.02]">
                 {/* Top Section - Image & Discount */}
                 <div className="relative h-32 bg-white/10 backdrop-blur-sm overflow-hidden">
                     <Image
@@ -129,11 +129,11 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
                         fill
                         className="object-cover opacity-80 group-hover:scale-110 transition-transform duration-500"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-purple-900/50" />
+                    <div className="absolute inset-0 bg-gradient-to-b from-transparent to-orange-900/50" />
 
                     {/* Discount Badge */}
                     {discountPercentage > 0 && (
-                        <div className="absolute top-3 right-3 bg-white text-purple-600 rounded-full px-3 py-1 font-black text-xl shadow-lg z-10">
+                        <div className="absolute top-3 right-3 bg-white text-orange-600 rounded-full px-3 py-1 font-black text-xl shadow-lg z-10">
                             -{discountPercentage}%
                         </div>
                     )}
@@ -158,11 +158,11 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
 
                 {/* Bottom Section - Details */}
                 <div className="flex-1 p-4 text-white flex flex-col">
-                    <h3 className="text-base font-bold mb-2 line-clamp-2 group-hover:text-purple-100 transition-colors">
+                    <h3 className="text-base font-bold mb-2 line-clamp-2 group-hover:text-orange-100 transition-colors">
                         {voucher.title}
                     </h3>
 
-                    <div className="text-sm text-purple-100 mb-3 flex items-center gap-1">
+                    <div className="text-sm text-orange-50 mb-3 flex items-center gap-1">
                         <Calendar className="w-3 h-3" />
                         <span className="text-xs">Valid until {formattedExpiry}</span>
                     </div>
@@ -173,7 +173,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
                             <code className="text-white font-mono font-bold text-sm tracking-wide">{voucherCode}</code>
                             <button
                                 onClick={handleCopyCode}
-                                className="text-white hover:text-purple-200 transition-colors p-1"
+                                className="text-white hover:text-orange-200 transition-colors p-1"
                                 aria-label="Copy code"
                             >
                                 {copied ? <Check className="w-4 h-4" /> : <Copy className="w-4 h-4" />}
@@ -191,7 +191,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid' }: VoucherCardP
 
                 {/* Decorative Elements */}
                 <div className="absolute -bottom-10 -right-10 w-32 h-32 bg-white/5 rounded-full blur-2xl pointer-events-none" />
-                <div className="absolute -top-10 -left-10 w-32 h-32 bg-purple-400/10 rounded-full blur-2xl pointer-events-none" />
+                <div className="absolute -top-10 -left-10 w-32 h-32 bg-orange-400/10 rounded-full blur-2xl pointer-events-none" />
             </div>
         </Link>
     );

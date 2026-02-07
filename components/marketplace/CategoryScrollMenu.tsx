@@ -71,7 +71,7 @@ export default function CategoryScrollMenu({
 
             <div
                 ref={scrollContainerRef}
-                className="flex gap-2 overflow-x-auto pb-4 pt-2 -mx-4 px-4 scrollbar-hide scroll-smooth w-[calc(100%+2rem)]"
+                className="flex flex-row flex-nowrap gap-2 overflow-x-auto pb-4 pt-2 px-1 w-full max-w-full"
                 style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
             >
                 <Button
