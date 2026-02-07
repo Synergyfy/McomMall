@@ -52,7 +52,7 @@ export default function McomSolutions() {
 
   return (
     <section className="bg-white w-full py-16 md:py-24">
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8 max-w-7xl">
+      <div className="max-w-[1600px] mx-auto px-8">
         {/* Tabs Navigation */}
         <div className="border-b border-gray-200 mb-12">
           <nav

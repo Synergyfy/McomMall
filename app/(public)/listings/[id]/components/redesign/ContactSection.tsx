@@ -15,6 +15,10 @@ import {
   Navigation
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 
 interface ContactSectionProps {
   listing: InHouseBusiness;
@@ -30,6 +34,23 @@ const socialIconMap = {
 };
 
 export default function ContactSection({ listing }: ContactSectionProps) {
+  const router = useRouter();
+  const { accessToken } = useSelector((state: RootState) => state.auth);
+
+  const handleOpenChat = () => {
+    if (!accessToken) {
+      const callbackUrl = window.location.href;
+      const separator = callbackUrl.includes('?') ? '&' : '?';
+      const redirectUrl = `/signin?callbackUrl=${encodeURIComponent(callbackUrl)}${separator}activeSection=contact`;
+      
+      toast.error('Please sign in to message the business');
+      router.push(redirectUrl);
+      return;
+    }
+    // Logic for opening chat would go here
+    toast.info('Chat room will open soon!');
+  };
+
   return (
     <div className="bg-[#1A1A1A] rounded-[3rem] p-8 md:p-16 text-white overflow-hidden relative">
       {/* Background decoration */}
@@ -112,7 +133,10 @@ export default function ContactSection({ listing }: ContactSectionProps) {
               <p className="text-white/80 text-sm font-bold mb-6 leading-relaxed">
                 Connect with our account managers for personalized service requests.
               </p>
-              <Button className="w-full bg-white text-orange-600 hover:bg-black hover:text-white font-black text-xs uppercase tracking-widest py-6 rounded-xl transition-all h-auto">
+              <Button 
+                onClick={handleOpenChat}
+                className="w-full bg-white text-orange-600 hover:bg-black hover:text-white font-black text-xs uppercase tracking-widest py-6 rounded-xl transition-all h-auto"
+              >
                 Open Chat Room
               </Button>
            </div>

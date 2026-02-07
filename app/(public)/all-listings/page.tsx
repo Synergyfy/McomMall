@@ -112,7 +112,7 @@ function AllListingsPageContent() {
         <div className="absolute top-0 right-0 w-1/3 h-full bg-gradient-to-l from-orange-500/10 to-transparent" />
         <div className="absolute -bottom-24 -left-24 w-96 h-96 bg-orange-600/5 rounded-full blur-3xl" />
         
-        <div className="max-w-7xl mx-auto px-4 relative z-10">
+        <div className="max-w-[1600px] mx-auto px-8 relative z-10">
           <nav className="flex items-center gap-2 text-orange-500/80 text-sm font-medium mb-6">
             <Link href="/" className="hover:text-orange-400 transition-colors flex items-center gap-1">
               <Home size={14} /> Home
@@ -142,7 +142,7 @@ function AllListingsPageContent() {
       </div>
 
       {/* Main Search Bar (Floating) */}
-      <div className="max-w-7xl mx-auto px-4 -mt-10 mb-12 relative z-20">
+      <div className="max-w-[1600px] mx-auto px-8 -mt-10 mb-12 relative z-20">
         <div className="bg-white p-4 md:p-6 rounded-2xl shadow-2xl border border-gray-100">
           <div className="flex flex-col lg:flex-row gap-4">
             <div className="flex-[2] relative">
@@ -171,7 +171,7 @@ function AllListingsPageContent() {
       </div>
 
       {/* Content Layout */}
-      <div className="max-w-7xl mx-auto px-4 pb-20">
+      <div className="max-w-[1600px] mx-auto px-8 pb-20">
         <div className="flex flex-col lg:flex-row gap-10">
           
           {/* Left Sidebar - Desktop */}

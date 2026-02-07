@@ -109,10 +109,13 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
   }, [pathname, roleParam]);
 
   const handleToggleMode = (newMode: Mode) => {
+    const currentParams = searchParams.toString();
+    const queryString = currentParams ? `?${currentParams}` : '';
+
     if (newMode === 'login') {
-      router.push('/signin');
+      router.push(`/signin${queryString}`);
     } else if (newMode === 'register') {
-      router.push('/signup');
+      router.push(`/signup${queryString}`);
     } else {
       setMode(newMode);
     }

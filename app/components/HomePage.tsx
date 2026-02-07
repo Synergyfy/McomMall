@@ -303,7 +303,7 @@ export default function HomePage() {
         {/* --- Recent Listings Section --- */}
         <ScrollAnimatedSection>
           <div className="py-16 px-4 md:px-8 lg:px-16 bg-gray-50 overflow-hidden">
-            <div className="max-w-7xl mx-auto">
+            <div className="max-w-[1600px] mx-auto px-8">
               <div className="flex justify-between items-center mb-8">
                 <h2 className="text-3xl sm:text-4xl font-bold">
                   Recent Listings
@@ -437,7 +437,7 @@ export default function HomePage() {
           <h2 className="text-3xl sm:text-4xl font-bold text-center mb-12">
             Our Latest Blog Post
           </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-7xl mx-auto">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-[1600px] mx-auto px-8">
             {blogPosts.map((post, index) => (
               <div
                 key={index}

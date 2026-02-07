@@ -62,7 +62,7 @@ export const ParticipationSection = () => {
 
   return (
     <section className="w-full bg-slate-900 py-16 md:py-24">
-      <div className="container mx-auto px-4">
+      <div className="max-w-[1600px] mx-auto px-8">
         {/* Tab Controls */}
         <div className="flex w-full justify-center">
           <div className="mb-10 flex w-full max-w-md items-center justify-center overflow-x-auto rounded-full bg-slate-800 p-2 sm:w-auto">

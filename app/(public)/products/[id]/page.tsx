@@ -9,7 +9,8 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { useCart } from '@/hooks/useCart';
-import { Loader, ShoppingCart, CreditCard, ChevronLeft, AlertTriangle } from 'lucide-react';
+import { useGetWishlist, useAddToWishlist, useRemoveFromWishlist } from '@/service/wishlist/hook';
+import { Loader, ShoppingCart, CreditCard, ChevronLeft, AlertTriangle, Heart } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -24,10 +25,32 @@ export default function ProductPage() {
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
   const router = useRouter();
   const { addItemToCart } = useCart();
+  const { data: wishlist } = useGetWishlist();
+  const { mutateAsync: addToWishlist, isPending: isAddingToWishlist } = useAddToWishlist();
+  const { mutateAsync: removeFromWishlist, isPending: isRemovingFromWishlist } = useRemoveFromWishlist();
+
+  const isInWishlist = useMemo(() => {
+    return wishlist?.items?.some(item => item.product?.id === id);
+  }, [wishlist, id]);
 
   const { data: product, isLoading, isError } = useGetProductById(id || '');
 
   const [selectedVariants, setSelectedVariants] = useState<Record<string, string[]>>({});
+
+  const handleWishlistAction = async () => {
+    if (!id) return;
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist(id);
+        toast.success('Removed from wishlist');
+      } else {
+        await addToWishlist({ productId: id });
+        toast.success('Added to wishlist');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update wishlist');
+    }
+  };
 
   // Matrix System Logic
   const isMatrixSystem = useMemo(() => {
@@ -483,6 +506,16 @@ export default function ProductPage() {
                   >
                     <CreditCard className="mr-2 h-5 w-5" />
                     Buy Now
+                  </Button>
+                  <Button
+                    size="lg"
+                    variant="outline"
+                    className="w-full py-6 text-lg border-2 border-gray-100 text-gray-700 hover:bg-gray-50 transition-all gap-2"
+                    onClick={handleWishlistAction}
+                    disabled={isAddingToWishlist || isRemovingFromWishlist}
+                  >
+                    <Heart className={`h-5 w-5 ${isInWishlist ? 'fill-red-500 text-red-500' : ''}`} />
+                    {isInWishlist ? 'Remove from Wishlist' : 'Add to Wishlist'}
                   </Button>
                 </div>
 

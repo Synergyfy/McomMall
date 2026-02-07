@@ -1,6 +1,7 @@
 export interface WishlistItem {
   id: string;
-  product: any; // Replace with a proper Product interface
+  product?: any; // Replace with a proper Product interface
+  service?: any; // Added service support
   createdAt: Date;
   updatedAt: Date;
 }
