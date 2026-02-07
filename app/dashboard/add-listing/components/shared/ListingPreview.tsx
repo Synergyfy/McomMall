@@ -43,6 +43,7 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
     media: formData.media?.map(m => m.url).filter((url): url is string => !!url) || [],
     status: 'DRAFT',
     isGoogleVerified: false,
+    isVerified: true,
     isClaimed: true,
     location: {
       id: '',

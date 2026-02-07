@@ -151,6 +151,7 @@ export interface UserListing {
   categories: Category[];
   location: Location;
   isGoogleVerified: boolean;
+  isVerified: boolean;
 }
 
 // --- Enums as String Literal Types ---
@@ -400,6 +401,7 @@ export interface InHouseBusiness {
   status: BusinessStatus;
   googlePlaceId?: string;
   isGoogleVerified: boolean;
+  isVerified: boolean;
   isClaimed: boolean;
   location: Location;
   categories: Category[];
