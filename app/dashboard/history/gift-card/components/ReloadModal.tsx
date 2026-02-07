@@ -16,7 +16,9 @@ interface ReloadModalProps {
   onClose: () => void;
 }
 
-const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY || '');
+const stripePromise = process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY
+  ? loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY)
+  : null;
 
 const ReloadForm = ({ purchase, onClose }: ReloadModalProps) => {
   const [amount, setAmount] = useState<number | ''>('');

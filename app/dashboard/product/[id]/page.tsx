@@ -58,7 +58,9 @@ function ProductDetailsContent({ productId }: { productId: string }) {
 
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-16">
           <ProductMediaGallery
-            images={product.fileUrls || []}
+            images={[...(product.fileUrls || []), ...(product.media || [])].length > 0
+                ? [...(product.fileUrls || []), ...(product.media || [])]
+                : [product.imageUrl || 'https://via.placeholder.com/500']}
             productTitle={product.title}
           />
           <div className="flex flex-col gap-8">

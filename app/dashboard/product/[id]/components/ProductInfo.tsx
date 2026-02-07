@@ -18,6 +18,19 @@ interface ProductInfoProps {
 export default function ProductInfo({ product, onAddPartner }: ProductInfoProps) {
   const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(product.id);
 
+  const priceDisplay = React.useMemo(() => {
+    if (product.useVariantPricing && product.variations && product.variations.length > 0) {
+      const prices = product.variations.map(v => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter(p => p > 0);
+      if (prices.length > 0) {
+        const min = Math.min(...prices);
+        const max = Math.max(...prices);
+        if (min === max) return `£${min.toFixed(2)}`;
+        return `£${min.toFixed(2)} - £${max.toFixed(2)}`;
+      }
+    }
+    return `£${product.price.toFixed(2)}`;
+  }, [product]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between">
@@ -50,7 +63,7 @@ export default function ProductInfo({ product, onAddPartner }: ProductInfoProps)
       <p className="text-gray-600 text-base leading-relaxed">{product.shortDescription}</p>
 
       <div className="text-5xl font-extrabold text-gray-800">
-        £{product.price.toFixed(2)}
+        {priceDisplay}
       </div>
 
       <Card className="bg-gray-50 border-gray-200 shadow-sm">

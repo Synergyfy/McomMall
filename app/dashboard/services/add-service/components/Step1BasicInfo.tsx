@@ -63,13 +63,13 @@ export function Step1BasicInfo() {
     } else {
       newValues = [...currentValues, value];
     }
-    form.setValue(fieldName, newValues.join(', '), { shouldValidate: true });
+    form.setValue(fieldName, newValues.join(', '));
   };
 
   const removeValue = (fieldName: string, value: string) => {
     const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
     const newValues = currentValues.filter((v: string) => v !== value);
-    form.setValue(fieldName, newValues.join(', '), { shouldValidate: true });
+    form.setValue(fieldName, newValues.join(', '));
   };
 
   return (
@@ -163,7 +163,7 @@ export function Step1BasicInfo() {
                                 value={category.name}
                                 key={category.id}
                                 onSelect={() => {
-                                  form.setValue("category", category.id, { shouldValidate: true });
+                                  form.setValue("category", category.id);
                                   form.setValue("subcategory", ""); // Reset subcategory
                                 }}
                               >
@@ -236,7 +236,7 @@ export function Step1BasicInfo() {
                                 value={sub.name}
                                 key={sub.id}
                                 onSelect={() => {
-                                  form.setValue("subcategory", sub.id, { shouldValidate: true });
+                                  form.setValue("subcategory", sub.id);
                                 }}
                               >
                                 <Check
