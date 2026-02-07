@@ -3,12 +3,16 @@
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { useGetServicesByBusiness } from '@/service/services/hook';
+import { useGetWishlist, useAddToWishlist, useRemoveFromWishlist } from '@/service/wishlist/hook';
 import { Service } from '@/service/services/types';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { BookingModal } from '@/components/BookingModal';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
-import { Calendar, Clock, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight } from 'lucide-react';
+import { useRouter, useSearchParams } from 'next/navigation';
+import { Calendar, Clock, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, Wrench, Heart } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { toast } from 'sonner';
 
 interface ServicesSectionProps {
   businessId: string;
@@ -34,14 +38,62 @@ const getPriceDisplay = (service: Service) => {
 
 export default function ServicesSection({ businessId }: ServicesSectionProps) {
   const router = useRouter();
+  const searchParams = useSearchParams();
   const [page, setPage] = useState(1);
   const limit = 6;
   const { data: servicesData, isLoading, isError } = useGetServicesByBusiness(businessId, page, limit);
+  const { data: wishlist } = useGetWishlist();
+  const { mutateAsync: addToWishlist } = useAddToWishlist();
+  const { mutateAsync: removeFromWishlist } = useRemoveFromWishlist();
+
   const [selectedService, setSelectedService] = useState<Service | null>(null);
+  const { accessToken } = useSelector((state: RootState) => state.auth);
+
+  const handleWishlistAction = async (e: React.MouseEvent, serviceId: string) => {
+    e.preventDefault();
+    e.stopPropagation();
+    
+    const isInWishlist = wishlist?.items?.some(item => item.service?.id === serviceId);
+    
+    try {
+      if (isInWishlist) {
+        await removeFromWishlist(serviceId);
+        toast.success('Removed from wishlist');
+      } else {
+        await addToWishlist({ productId: serviceId });
+        toast.success('Added to wishlist');
+      }
+    } catch (error: any) {
+      toast.error(error.message || 'Failed to update wishlist');
+    }
+  };
+
+  // Auto-open booking modal if redirecting back from sign-in
+  useEffect(() => {
+    const bookServiceId = searchParams.get('bookService');
+    if (bookServiceId && servicesData?.data && accessToken) {
+      const service = servicesData.data.find(s => s.id === bookServiceId);
+      if (service) {
+        setSelectedService(service);
+        // Clear the URL parameter without refreshing the page
+        const newUrl = window.location.pathname + window.location.search.replace(/[?&]bookService=[^&]+/, '');
+        window.history.replaceState({}, '', newUrl);
+      }
+    }
+  }, [searchParams, servicesData, accessToken]);
 
   const handleBookNow = (e: React.MouseEvent, service: Service) => {
     e.preventDefault();
     e.stopPropagation();
+    
+    if (!accessToken) {
+      const callbackUrl = window.location.href;
+      const signInUrl = `/signin?callbackUrl=${encodeURIComponent(callbackUrl)}&bookService=${service.id}`;
+      toast.error('Please sign in to book a service');
+      router.push(signInUrl);
+      return;
+    }
+    
     setSelectedService(service);
   };
 
@@ -65,8 +117,16 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
 
   return (
     <>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-        {servicesData.data.map((service, index) => {
+      <div className="space-y-12">
+        <div>
+          <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
+            <Wrench className="text-[#f58220]" /> Expert Services
+          </h2>
+          <p className="text-gray-500 font-medium">Professional solutions tailored to your specific needs.</p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {servicesData.data.map((service, index) => {
            const firstImageUrl = service.media?.find(isImageUrl) || 'https://images.unsplash.com/photo-1521737604893-d14cc237f11d?auto=format&fit=crop&w=800&q=80';
           return (
             <motion.div
@@ -93,6 +153,20 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                     <span className="bg-white/10 backdrop-blur-md border border-white/20 text-white text-[10px] font-black uppercase tracking-widest px-4 py-2 rounded-full">
                       Service
                     </span>
+                  </div>
+
+                  <div className="absolute top-5 right-5 z-10">
+                    <Button
+                      size="icon"
+                      variant="ghost"
+                      className="bg-white/20 backdrop-blur-md hover:bg-white text-white hover:text-red-500 rounded-full border border-white/20 shadow-lg"
+                      onClick={(e) => handleWishlistAction(e, service.id)}
+                    >
+                      <Heart 
+                        size={20} 
+                        className={wishlist?.items?.some(item => item.service?.id === service.id) ? "fill-red-500 text-red-500" : ""} 
+                      />
+                    </Button>
                   </div>
 
                   <div className="absolute bottom-5 left-5 right-5 flex justify-between items-end">
@@ -155,6 +229,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
           </Button>
         </div>
       )}
+      </div>
       
       <BookingModal
         service={selectedService}

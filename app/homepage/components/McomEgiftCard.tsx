@@ -96,7 +96,7 @@ export function McomEgiftCard() {
 
   return (
     <div className="bg-gray-50/50 min-h-screen w-full font-sans hide-scrollbar">
-      <section className="container mx-auto px-4 py-12 md:py-16 lg:py-20">
+      <section className="max-w-[1600px] mx-auto px-8 py-12 md:py-16 lg:py-20">
         {/* Header Section */}
         <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-end mb-8">
           <div className="max-w-xl">

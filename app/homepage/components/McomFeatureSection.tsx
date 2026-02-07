@@ -105,7 +105,7 @@ export function McomFeatureSection() {
 
   return (
     <div className="bg-slate-900 py-20 text-white sm:py-24">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-8">
         <div className="mx-auto max-w-4xl text-center">
           <p className="mt-6 text-lg leading-8 text-gray-300">
             McomMall is a premier business listing website designed to connect

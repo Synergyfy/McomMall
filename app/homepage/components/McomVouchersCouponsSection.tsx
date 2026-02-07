@@ -9,7 +9,7 @@ import { Button } from '@/components/ui/button';
 export function McomVouchersCouponsSection() {
   return (
     <div className="bg-gray-100 py-16">
-      <div className="mx-auto max-w-7xl px-6 lg:px-8">
+      <div className="mx-auto max-w-[1600px] px-8">
         <div className="mb-10 text-center">
           <h2 className="text-3xl font-bold text-gray-900 sm:text-4xl">
             Boost local sales with smart offers

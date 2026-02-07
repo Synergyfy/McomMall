@@ -75,7 +75,7 @@ function ListingsPageContent() {
             lng: position.coords.longitude,
           });
         },
-        () => {}
+        () => { }
       );
     }
   }, []);
@@ -283,11 +283,10 @@ function ListingsPageContent() {
               ) : (
                 <>
                   <div
-                    className={`grid gap-6 w-full ${
-                      layout === 'grid'
-                        ? `grid-cols-1 ${filtersVisible ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`
-                        : 'grid-cols-1'
-                    }`}
+                    className={`grid gap-6 w-full ${layout === 'grid'
+                      ? `grid-cols-1 ${filtersVisible ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`
+                      : 'grid-cols-1'
+                      }`}
                   >
                     {combinedListings.map(listing => (
                       <ListingCard

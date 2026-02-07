@@ -100,7 +100,7 @@ const LoyaltyProgramSection = () => {
 
   return (
     <section className="bg-white font-sans py-5 sm:py-20 px-4 sm:px-6 lg:px-5">
-      <div className="max-w-7xl mx-auto">
+      <div className="max-w-[1600px] mx-auto px-8">
         {/* Tab Navigation */}
         <div className="mb-10 border-b border-gray-200">
           <div className="overflow-x-auto pb-1 -mx-4 px-4">

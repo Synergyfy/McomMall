@@ -10,7 +10,8 @@ import {
   Heart, 
   CheckCircle2,
   Calendar,
-  Globe
+  Globe,
+  MessageSquare
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -57,7 +58,7 @@ export default function HeroSection({ listing }: HeroSectionProps) {
 
       {/* Main Content Area */}
       <div className="absolute inset-0 flex items-end">
-        <div className="max-w-7xl mx-auto w-full px-4 pb-12">
+        <div className="max-w-[1600px] mx-auto w-full px-8 pb-12">
           <div className="flex flex-col md:flex-row items-end gap-8">
             {/* Logo/Avatar */}
             <motion.div
@@ -126,8 +127,17 @@ export default function HeroSection({ listing }: HeroSectionProps) {
               transition={{ delay: 0.9, duration: 0.5 }}
               className="flex items-center gap-3 pb-2"
             >
-              <Button size="lg" className="h-14 px-8 bg-[#f58220] hover:bg-[#e67a1d] text-white font-black text-lg rounded-2xl shadow-xl shadow-orange-500/20">
-                Book Consultation
+              <Button 
+                size="lg" 
+                onClick={() => {
+                  const contactSection = document.getElementById('contact');
+                  if (contactSection) {
+                    contactSection.scrollIntoView({ behavior: 'smooth' });
+                  }
+                }}
+                className="h-14 px-8 bg-[#f58220] hover:bg-[#e67a1d] text-white font-black text-lg rounded-2xl shadow-xl shadow-orange-500/20 flex items-center gap-2"
+              >
+                <MessageSquare size={20} /> Send Message
               </Button>
               <Button variant="secondary" size="icon" className="h-14 w-14 rounded-2xl bg-white/10 backdrop-blur-md border border-white/20 text-white hover:bg-white hover:text-red-500 transition-all">
                 <Heart size={24} />
