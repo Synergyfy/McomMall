@@ -147,7 +147,7 @@ export const useGetGiftCardTemplateById = (id: string, options?: { enabled?: boo
 };
 
 const fetchBusinessGiftCardTemplates = async (businessId: string): Promise<GiftCardTemplate[]> => {
-  const { data } = await api.get<GiftCardTemplate[]>(`/gift-cards/templates/${businessId}`);
+  const { data } = await api.get<GiftCardTemplate[]>(`/gift-cards/templates/business/${businessId}`);
   return data;
 };
 

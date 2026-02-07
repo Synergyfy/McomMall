@@ -8,6 +8,8 @@ import { CURRENCY } from '@/lib/utils';
 import CouponPurchaseModal from './CouponPurchaseModal';
 import { Coupon } from '@/service/my-coupons/types';
 import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
+import { motion } from 'framer-motion';
+import { Sparkles, Zap, Timer } from 'lucide-react';
 
 interface CouponTabContentProps {
   businessId: string;
@@ -21,44 +23,28 @@ export default function CouponTabContent({
     isLoading,
     isError,
   } = useGetPublicCouponProductsByBusiness(businessId);
+  
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [selectedProduct, setSelectedProduct] = useState<CouponProduct | null>(
-    null
-  );
+  const [selectedProduct, setSelectedProduct] = useState<CouponProduct | null>(null);
   const [purchasedCoupon, setPurchasedCoupon] = useState<Coupon | null>(null);
 
   if (isLoading) {
     return (
-      <div className="mt-4 space-y-4">
-        <div className="animate-pulse rounded-lg bg-gray-100 p-6">
-          <div className="mb-4 h-6 w-3/4 rounded bg-gray-300"></div>
-          <div className="mb-2 h-4 w-full rounded bg-gray-300"></div>
-          <div className="h-4 w-5/6 rounded bg-gray-300"></div>
-        </div>
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {[...Array(2)].map((_, i) => (
+          <div key={i} className="aspect-[1.58/1] bg-gray-100 animate-pulse rounded-3xl" />
+        ))}
       </div>
     );
   }
 
-  if (isError) {
+  if (isError || !couponProducts || couponProducts.length === 0) {
     return (
-      <div className="rounded-lg bg-red-50 p-4 text-red-500">
-        <h4 className="font-bold">Error</h4>
-        <p>Could not load coupons at this time. Please try again later.</p>
-      </div>
-    );
-  }
-
-  if (!couponProducts || couponProducts.length === 0) {
-    return (
-      <div className="mt-6 rounded-lg bg-gray-50 px-6 py-12 text-center">
-        <h4 className="text-lg font-semibold text-gray-700">
-          No Coupons Available
-        </h4>
-        <p className="mt-2 text-gray-500">
-          This business does not have any coupons available for purchase at the
-          moment.
-        </p>
+      <div className="text-center py-20 bg-gray-50 rounded-[2.5rem] border border-dashed border-gray-200">
+        <Sparkles className="mx-auto text-gray-300 mb-4" size={48} />
+        <h4 className="text-xl font-black text-gray-900">No Active Coupons</h4>
+        <p className="text-gray-500 font-bold text-sm mt-2">Check back soon for seasonal discounts and flash coupons.</p>
       </div>
     );
   }
@@ -68,75 +54,65 @@ export default function CouponTabContent({
     setIsPurchaseModalOpen(true);
   };
 
-  const handleClosePurchaseModal = () => {
-    setIsPurchaseModalOpen(false);
-    setSelectedProduct(null);
-  };
-
-  const handlePurchaseSuccess = (coupon: Coupon) => {
-    handleClosePurchaseModal();
-    setPurchasedCoupon(coupon);
-    setIsSuccessModalOpen(true);
-  };
-
-  const handleCloseSuccessModal = () => {
-    setIsSuccessModalOpen(false);
-    setPurchasedCoupon(null);
-  };
-
   return (
     <>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3">
-        {couponProducts.map(product => (
-          <div
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+        {couponProducts.map((product, index) => (
+          <motion.div
             key={product.id}
-            className="transform overflow-hidden rounded-lg bg-white shadow-md transition-transform hover:scale-105"
+            initial={{ opacity: 0, scale: 0.95 }}
+            animate={{ opacity: 1, scale: 1 }}
+            transition={{ delay: index * 0.1 }}
+            className="group relative aspect-[1.58/1]"
           >
-            <div className="p-4">
-              <h3 className="text-lg font-bold text-gray-900">{product.name}</h3>
-              {product.description && (
-                <p className="mt-1 text-sm text-gray-600">
-                  {product.description}
-                </p>
-              )}
-              {product.bonusThreshold && product.bonusAmount && (
-                <div className="mt-2">
-                    <span className="rounded-full bg-green-100 px-3 py-1 text-sm text-green-800">
-                        Buy for {CURRENCY}{product.bonusThreshold} and get {CURRENCY}{product.bonusAmount} extra!
-                    </span>
+             <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] p-8 shadow-2xl border border-white/10 flex flex-col justify-between overflow-hidden">
+                {/* Abstract pattern overlay */}
+                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" 
+                     style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+                
+                <div className="flex justify-between items-start">
+                   <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
+                      <div className="flex items-center gap-2">
+                        <Zap className="text-yellow-400 fill-yellow-400" size={16} />
+                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Flash Coupon</span>
+                      </div>
+                   </div>
+                   <div className="flex items-center gap-1.5 text-white/60 text-[10px] font-black uppercase tracking-tighter">
+                      <Timer size={14} /> Limited Time
+                   </div>
                 </div>
-              )}
-              <div className="mt-4">
-                <h4 className="text-sm font-semibold text-gray-700">
-                  Pricing Options:
-                </h4>
-                <div className="mt-2 flex flex-wrap gap-2">
-                  {product.fixedAmounts?.map(amount => (
-                    <span
-                      key={amount}
-                      className="rounded-full bg-gray-200 px-3 py-1 text-sm text-gray-800"
-                    >
-                      {CURRENCY}
-                      {amount}
-                    </span>
-                  ))}
-                  {product.allowCustomAmount && (
-                    <span className="rounded-full bg-blue-100 px-3 py-1 text-sm text-blue-800">
-                      Custom: {CURRENCY}
-                      {product.minCustomAmount} - {CURRENCY}
-                      {product.maxCustomAmount}
-                    </span>
-                  )}
+
+                <div className="text-center py-4">
+                   <h3 className="text-3xl md:text-4xl font-black text-white drop-shadow-lg mb-2">
+                      {product.name}
+                   </h3>
+                   <p className="text-white/60 text-xs font-bold uppercase tracking-[0.2em]">Unlock Exclusive Savings</p>
                 </div>
-              </div>
-              <Button
-                className="mt-6 w-full bg-orange-600 text-white hover:bg-orange-700"
-                onClick={() => handleBuyNow(product)}
-              >
-                Buy Now
-              </Button>
-            </div>
-          </div>
+
+                <div className="flex items-center justify-between mt-auto">
+                   <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center text-white">
+                         <Sparkles size={20} />
+                      </div>
+                      <div>
+                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Coupon Price</p>
+                        <p className="text-2xl font-black text-white">{CURRENCY}{product.fixedAmounts?.[0] || '5'}</p>
+                      </div>
+                   </div>
+                   
+                   <Button 
+                    onClick={() => handleBuyNow(product)}
+                    className="h-14 px-8 bg-white text-indigo-600 hover:bg-yellow-400 hover:text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-black/20"
+                   >
+                     Buy Now
+                   </Button>
+                </div>
+
+                {/* Corner cut-outs like a real ticket/coupon */}
+                <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
+                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
+             </div>
+          </motion.div>
         ))}
       </div>
 
@@ -144,15 +120,15 @@ export default function CouponTabContent({
         <CouponPurchaseModal
           product={selectedProduct}
           isOpen={isPurchaseModalOpen}
-          onClose={handleClosePurchaseModal}
-          onPurchaseSuccess={handlePurchaseSuccess}
+          onClose={() => setSelectedProduct(null)}
+          onPurchaseSuccess={(c) => { setSelectedProduct(null); setPurchasedCoupon(c); setIsSuccessModalOpen(true); }}
         />
       )}
 
       {purchasedCoupon && (
         <CouponPaymentSuccessModal
           isOpen={isSuccessModalOpen}
-          onClose={handleCloseSuccessModal}
+          onClose={() => { setIsSuccessModalOpen(false); setPurchasedCoupon(null); }}
           couponCode={purchasedCoupon.code}
           recipientEmail={purchasedCoupon.recipientEmail}
         />

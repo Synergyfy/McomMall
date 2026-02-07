@@ -54,19 +54,17 @@ export default function ClientListingDetail({
 
   useEffect(() => {
     const handleScroll = () => {
-      if (navRef.current) {
-        const navTop = navRef.current.getBoundingClientRect().top;
-        setIsNavSticky(window.scrollY > 400);
-      }
+      setIsNavSticky(window.scrollY > 400);
 
       // Update active section based on scroll position
-      const scrollPosition = window.scrollY + 150;
+      const headerOffset = 200;
       for (const item of NAV_ITEMS) {
         const element = document.getElementById(item.id);
         if (element) {
-          const { offsetTop, offsetHeight } = element;
-          if (scrollPosition >= offsetTop && scrollPosition < offsetTop + offsetHeight) {
+          const rect = element.getBoundingClientRect();
+          if (rect.top <= headerOffset && rect.bottom > headerOffset) {
             setActiveSection(item.id);
+            break;
           }
         }
       }
@@ -79,9 +77,9 @@ export default function ClientListingDetail({
   const scrollToSection = (id: string) => {
     const element = document.getElementById(id);
     if (element) {
-      const offset = 100;
+      const headerOffset = 160;
       const elementPosition = element.getBoundingClientRect().top;
-      const offsetPosition = elementPosition + window.pageYOffset - offset;
+      const offsetPosition = elementPosition + window.scrollY - headerOffset;
 
       window.scrollTo({
         top: offsetPosition,
@@ -128,10 +126,10 @@ export default function ClientListingDetail({
       {/* Sub-Navigation */}
       <div 
         ref={navRef}
-        className={`z-40 transition-all duration-300 ${
+        className={`z-40 transition-all duration-300 sticky top-16 border-b ${
           isNavSticky 
-            ? 'fixed top-0 left-0 right-0 bg-white/80 backdrop-blur-md shadow-md py-2' 
-            : 'bg-white border-b sticky top-0'
+            ? 'bg-white/80 backdrop-blur-md shadow-md py-2' 
+            : 'bg-white py-4'
         }`}
       >
         <div className="max-w-7xl mx-auto px-4">
@@ -148,6 +146,7 @@ export default function ClientListingDetail({
               return (
                 <button
                   key={item.id}
+                  type="button"
                   onClick={() => scrollToSection(item.id)}
                   className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
                     isActive 
@@ -166,13 +165,13 @@ export default function ClientListingDetail({
 
       <div className="max-w-7xl mx-auto px-4 py-12 space-y-24">
         {/* About Section */}
-        <section id="about" className="scroll-mt-32">
+        <section id="about" className="scroll-mt-24">
           <AboutSection listing={inHouseListing} />
         </section>
 
         {/* Media Gallery */}
         {inHouseListing.media && inHouseListing.media.length > 0 && (
-          <section id="media" className="scroll-mt-32">
+          <section id="media" className="scroll-mt-24">
             <div className="mb-12">
               <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
                 <ImageIcon className="text-[#f58220]" /> Visual Gallery
@@ -185,7 +184,7 @@ export default function ClientListingDetail({
 
         {/* Products Section */}
         {inHouseListing.products && inHouseListing.products.length > 0 && (
-          <section id="products" className="scroll-mt-32">
+          <section id="products" className="scroll-mt-24">
             <div className="mb-12">
               <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
                 <Package className="text-[#f58220]" /> Featured Products
@@ -198,7 +197,7 @@ export default function ClientListingDetail({
 
         {/* Services Section */}
         {inHouseListing.serviceProviderProfile && (
-          <section id="services" className="scroll-mt-32">
+          <section id="services" className="scroll-mt-24">
             <div className="mb-12">
               <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
                 <Wrench className="text-[#f58220]" /> Expert Services
@@ -210,7 +209,7 @@ export default function ClientListingDetail({
         )}
 
         {/* Promotions Section */}
-        <section id="promotions" className="scroll-mt-32">
+        <section id="promotions" className="scroll-mt-24">
            <div className="mb-12">
               <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
                 <Tag className="text-[#f58220]" /> Exclusive Offers
@@ -221,7 +220,7 @@ export default function ClientListingDetail({
         </section>
 
         {/* Reviews Section */}
-        <section id="reviews" className="scroll-mt-32">
+        <section id="reviews" className="scroll-mt-24">
           <div className="mb-12">
             <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
               <MessageSquare className="text-[#f58220]" /> Customer Feedback
@@ -234,7 +233,7 @@ export default function ClientListingDetail({
         </section>
 
         {/* Contact Section */}
-        <section id="contact" className="scroll-mt-32 pb-20">
+        <section id="contact" className="scroll-mt-24 pb-20">
           <ContactSection listing={inHouseListing} />
         </section>
       </div>
