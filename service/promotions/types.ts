@@ -21,8 +21,9 @@ export interface Promotion {
   minimumSpend: string; // decimal serialized as string
   includedProducts?: Product[]; // Assuming Product type is defined elsewhere
   excludedProducts?: Product[]; // Assuming Product type is defined elsewhere
-  created_at: string; // ISO
-  updated_at: string; // ISO
+  points?: number;
+  createdAt: string; // ISO
+  updatedAt: string; // ISO
 }
 
 // Based on the Create Promotion DTO

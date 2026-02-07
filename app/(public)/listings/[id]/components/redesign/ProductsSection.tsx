@@ -1,15 +1,14 @@
-
 'use client';
 
 import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
-import { Card, CardContent, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import Image from 'next/image';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
+import { Star, ShoppingCart, ArrowRight, Zap } from 'lucide-react';
 
 interface ProductsSectionProps {
   products: Product[];
@@ -28,103 +27,99 @@ export default function ProductsSection({ products }: ProductsSectionProps) {
     e.preventDefault();
     e.stopPropagation();
     addItemToCart({ productId: product.id, quantity: 1 });
-    toast.success(`${product.title} has been added to your cart.`);
+    toast.success(`${product.title} added to cart`);
   };
 
-  const handleOrderNow = (e: React.MouseEvent, product: Product) => {
+  const handleBuyNow = (e: React.MouseEvent, product: Product) => {
     e.preventDefault();
     e.stopPropagation();
-    router.push(`/checkout?productId=${product.id}`);
+    addItemToCart({ productId: product.id, quantity: 1 });
+    router.push('/cart');
   };
 
   return (
-    <motion.div
-      initial={{ opacity: 0, y: 20 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, delay: 0.8 }}
-      className="py-12"
-    >
-      <div className="container mx-auto px-4 sm:px-6 lg:px-8">
-        <h2 className="text-4xl font-extrabold mb-8 text-center text-gray-900">
-          Our <span className="text-orange-600">Products</span>
-        </h2>
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {products.map((product) => {
-            const firstImageUrl =
-              product.fileUrls?.find(isImageUrl) || product.imageUrl;
-            return (
-              <motion.div
-                key={product.id}
-                whileHover={{ y: -8 }}
-                className="h-full"
-              >
-                <Card
-                  onClick={() => router.push(`/products/${product.id}`)}
-                  className="flex flex-col h-full overflow-hidden border border-orange-200/80 hover:border-orange-400 transition-all duration-300 bg-white cursor-pointer"
-                >
-                  <CardHeader className="p-0 border-b border-orange-200/80">
-                    <div className="relative h-48 w-full">
-                      <Image
-                        src={firstImageUrl || '/placeholder-image.png'}
-                        alt={product.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="transition-transform duration-500 hover:scale-105"
-                      />
-                    </div>
-                  </CardHeader>
-                  <CardContent className="p-4 flex-grow">
-                    {product.bonusAmount && product.bonusThreshold && (
-                        <Badge
-                            variant="default"
-                            className="mb-2 bg-green-100 text-green-800 border-green-300 text-sm font-semibold"
-                        >
-                            Bonus: Buy for £{product.bonusThreshold} get £{product.bonusAmount} extra!
-                        </Badge>
-                    )}
-                    <CardTitle className="text-xl font-bold text-gray-900 mb-2">
-                      {product.title}
-                    </CardTitle>
-                    <p className="text-gray-600 text-sm">
-                      {product.shortDescription}
-                    </p>
-                  </CardContent>
-                  <CardFooter className="p-4 bg-gray-50/50 flex-col items-start space-y-2">
-                    <div className="flex justify-between items-center w-full">
-                      <p className="text-xl font-extrabold text-orange-600">
-                        £{product.price}
-                      </p>
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
+      {products.map((product, index) => {
+        const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl || '/images/placeholder-product.png';
+        
+        return (
+          <motion.div
+            key={product.id}
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: index * 0.1 }}
+            className="group"
+          >
+            <div 
+              onClick={() => router.push(`/products/${product.id}`)}
+              className="h-full bg-white rounded-[2rem] overflow-hidden border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer"
+            >
+              {/* Image Header */}
+              <div className="relative aspect-square overflow-hidden bg-gray-50">
+                <Image
+                  src={firstImageUrl}
+                  alt={product.title}
+                  fill
+                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity" />
+                
+                {product.bonusAmount && (
+                  <div className="absolute top-4 left-4 z-10">
+                    <span className="bg-green-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1.5 rounded-full shadow-lg">
+                      £{product.bonusAmount} Bonus
+                    </span>
+                  </div>
+                )}
+
+                <div className="absolute bottom-4 left-4 right-4 translate-y-4 opacity-0 group-hover:translate-y-0 group-hover:opacity-100 transition-all">
+                   <Button 
+                    className="w-full bg-white text-black hover:bg-black hover:text-white font-black text-xs uppercase tracking-widest rounded-xl py-6 h-auto border-none"
+                    onClick={(e) => handleAddToCart(e, product)}
+                   >
+                     Add To Cart
+                   </Button>
+                </div>
+              </div>
+
+              {/* Content */}
+              <div className="p-6 flex flex-col flex-1">
+                <div className="flex justify-between items-start mb-2">
+                  <h3 className="text-xl font-black text-gray-900 group-hover:text-[#f58220] transition-colors line-clamp-1">{product.title}</h3>
+                </div>
+                
+                <p className="text-gray-400 text-xs font-bold mb-4 line-clamp-2 leading-relaxed">
+                  {product.shortDescription || "Premium quality product from our collection."}
+                </p>
+
+                <div className="mt-auto flex items-center justify-between pt-5 border-t border-gray-50">
+                   <div>
+                      <p className="text-2xl font-black text-gray-900">£{product.price}</p>
                       {product.points && (
-                        <Badge
-                          variant="default"
-                          className="bg-orange-100 text-orange-800 border-orange-300 text-sm font-semibold"
-                        >
-                          Earn {product.points} points
-                        </Badge>
+                        <span className="text-[10px] font-black text-orange-500 uppercase tracking-widest flex items-center gap-1">
+                          <Zap size={10} fill="currentColor" /> Earn {product.points} Pts
+                        </span>
                       )}
-                    </div>
-                    <div className="flex flex-col gap-2 w-full">
-                      <Button
-                        variant="outline"
-                        className="w-full border-2 border-orange-600 text-orange-600 bg-transparent hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold"
-                        onClick={(e) => handleAddToCart(e, product)}
+                   </div>
+                   <div className="flex gap-2">
+                      <Button 
+                        size="icon" 
+                        variant="secondary" 
+                        className="rounded-xl w-10 h-10 hover:bg-black hover:text-white transition-all"
+                        onClick={(e) => handleBuyNow(e, product)}
                       >
-                        Add to Cart
+                        <ShoppingCart size={18} />
                       </Button>
-                      <Button
-                        className="w-full bg-gradient-to-r from-orange-500 to-orange-600 hover:from-orange-600 hover:to-orange-700 text-white transition-all duration-300 font-bold shadow-md hover:shadow-lg"
-                        onClick={(e) => handleOrderNow(e, product)}
-                      >
-                        Buy Now
-                      </Button>
-                    </div>
-                  </CardFooter>
-                </Card>
-              </motion.div>
-            );
-          })}
-        </div>
-      </div>
-    </motion.div>
+                      <div className="w-10 h-10 rounded-xl bg-gray-50 flex items-center justify-center text-gray-400 group-hover:bg-orange-50 group-hover:text-[#f58220] transition-all">
+                        <ArrowRight size={20} />
+                      </div>
+                   </div>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+        );
+      })}
+    </div>
   );
 }

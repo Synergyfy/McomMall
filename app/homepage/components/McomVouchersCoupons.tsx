@@ -14,6 +14,7 @@ const contentData = {
     description:
       'Gain a competitive edge in your Master of Commerce studies. Our voucher system provides incredible discounts on essential textbooks, online courses, and academic software. Maximize your learning potential while minimizing costs.',
     buttonText: 'Explore Voucher Deals',
+    buttonLink: '/vouchers',
     videoUrl: 'https://www.youtube.com/embed/YykjpeuMNEk',
   },
   coupons: {
@@ -21,6 +22,7 @@ const contentData = {
     description:
       'Instantly apply coupons at checkout for your Mcom resources. We partner with top educational providers to bring you exclusive coupon codes that make your study materials more affordable than ever.',
     buttonText: 'Find Coupons Now',
+    buttonLink: '/coupons',
     videoUrl: 'https://www.youtube.com/embed/dQw4w9WgXcQ',
   },
 };
@@ -66,10 +68,9 @@ export default function McomVouchersCoupons() {
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id)}
                 className={`whitespace-nowrap py-3 px-1 border-b-2 font-medium text-base sm:py-4 sm:text-lg transition-colors duration-200
-                  ${
-                    activeTab === tab.id
-                      ? 'border-orange-600 text-orange-600'
-                      : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+                  ${activeTab === tab.id
+                    ? 'border-orange-600 text-orange-600'
+                    : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
                   }`}
               >
                 {tab.name}
@@ -90,7 +91,7 @@ export default function McomVouchersCoupons() {
             </p>
             <div className="mt-8">
               <a
-                href="#"
+                href="/coupons"
                 className="inline-flex items-center justify-center px-6 py-3 sm:px-8 sm:py-4 border border-transparent text-base font-medium rounded-full text-white bg-orange-600 hover:bg-orange-700 transition-transform duration-200 hover:scale-105"
               >
                 {currentContent.buttonText}

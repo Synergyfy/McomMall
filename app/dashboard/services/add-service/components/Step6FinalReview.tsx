@@ -2,6 +2,7 @@
 
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import {
   FormControl,
   FormField,
@@ -18,7 +19,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { Store, Image as ImageIcon, CheckCircle2, HelpCircle } from 'lucide-react';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
+import { Store, Image as ImageIcon, CheckCircle2, HelpCircle, AlertCircle } from 'lucide-react';
 import MultiMediaUpload from '@/app/dashboard/add-listing/components/steps/shared/MultiMediaUpload';
 import { UserListing } from '@/service/listings/types';
 import { useGetUserListings } from '@/service/listings/hook';
@@ -30,21 +41,33 @@ import {
 } from '@/components/ui/tooltip';
 
 export function Step6FinalReview() {
-  const { control, watch } = useFormContext();
+  const router = useRouter();
+  const { control, watch, setValue } = useFormContext();
   const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
+  const [showNoBusinessDialog, setShowNoBusinessDialog] = React.useState(false);
 
   const businesses = React.useMemo(() => {
     if (!listings?.data) return [];
     return listings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
       l.listingType.some(type => type.toLowerCase() === 'service')
     );
   }, [listings]);
 
+  const currentBusinessId = watch('businessId');
+
   React.useEffect(() => {
     if (!isLoadingListings && businesses.length === 0) {
-      toast.error("No service businesses found. Please create a 'Service' business listing first in 'My Listings'.");
+      setShowNoBusinessDialog(true);
     }
   }, [isLoadingListings, businesses.length]);
+
+  // Auto-populate business when user has exactly one service business
+  React.useEffect(() => {
+    if (!isLoadingListings && businesses.length === 1 && !currentBusinessId) {
+      setValue('businessId', businesses[0].id);
+    }
+  }, [isLoadingListings, businesses, currentBusinessId, setValue]);
 
   const formValues = watch();
 
@@ -167,6 +190,33 @@ export function Step6FinalReview() {
           </div>
         </CardContent>
       </Card>
+
+      {/* No Business Found Dialog */}
+      <AlertDialog open={showNoBusinessDialog} onOpenChange={setShowNoBusinessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-xl">No Service Business Found</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base leading-relaxed">
+              You need to create a <span className="font-semibold">Service</span> type business listing before you can add a service.
+              <br /><br />
+              Please go to <span className="font-semibold">"My Listings"</span> and create a new business with the listing type set to <span className="font-semibold">"Service"</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => router.push('/dashboard/services')}>
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/dashboard/add-listing')}>
+              Create Business
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
