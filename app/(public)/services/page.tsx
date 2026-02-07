@@ -14,7 +14,9 @@ import {
 import { Button } from '@/components/ui/button';
 import ServiceCard from '@/components/marketplace/ServiceCard';
 import Pagination from '@/components/marketplace/Pagination';
+import CategoryScrollMenu from '@/components/marketplace/CategoryScrollMenu';
 import { useGetPublicServices } from '@/service/marketplace/discovery';
+import { useGetMarketplacePublic } from '@/service/marketplace/hook';
 import { PromotionalItem } from '@/lib/listing-data';
 
 const ITEMS_PER_PAGE = 12;
@@ -40,11 +42,17 @@ export default function ServicesPage() {
     const [currentPage, setCurrentPage] = useState(1);
     const [sortOption, setSortOption] = useState('newest');
     const [searchQuery, setSearchQuery] = useState('');
+    const [selectedCategoryId, setSelectedCategoryId] = useState<string | undefined>(undefined);
+
+    // Fetch Categories (Using same global categories for now)
+    const { data: publicData, isLoading: isPublicDataLoading } = useGetMarketplacePublic();
+    const categories = useMemo(() => publicData?.categories || [], [publicData]);
 
     const { data: servicesData, isLoading } = useGetPublicServices({
         page: currentPage,
         limit: ITEMS_PER_PAGE,
         search: searchQuery,
+        category: selectedCategoryId,
     });
 
     // Transform to display items
@@ -74,11 +82,16 @@ export default function ServicesPage() {
         });
     }, [servicesData]);
 
+    const handleCategorySelect = (id: string | undefined) => {
+        setSelectedCategoryId(id);
+        setCurrentPage(1);
+    };
+
     return (
         <div className="bg-gray-50 min-h-screen pt-28 pb-12">
             <div className="container mx-auto px-4">
                 {/* Header */}
-                <div className="mb-8">
+                <div className="mb-6">
                     <div className="flex items-center gap-3 mb-4">
                         <div className="bg-orange-100 p-3 rounded-xl">
                             <Briefcase className="h-8 w-8 text-orange-600" />
@@ -87,6 +100,16 @@ export default function ServicesPage() {
                             <h1 className="text-3xl md:text-4xl font-bold text-gray-900">All Services</h1>
                             <p className="text-gray-600 mt-1">Discover professional services for your needs</p>
                         </div>
+                    </div>
+
+                    {/* Category Scroll Menu */}
+                    <div className="mt-6 border-t border-gray-100 pt-4">
+                        <CategoryScrollMenu
+                            categories={categories}
+                            selectedId={selectedCategoryId}
+                            onSelect={handleCategorySelect}
+                            isLoading={isPublicDataLoading}
+                        />
                     </div>
                 </div>
 
