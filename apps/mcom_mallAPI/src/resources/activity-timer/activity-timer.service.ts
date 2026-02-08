@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThanOrEqual, MoreThanOrEqual } from 'typeorm';
+import { Repository, In, LessThanOrEqual, MoreThanOrEqual, Raw } from 'typeorm';
 import { ActivityTimerTemplate } from './entities/activity-timer-template.entity';
 import { ActivityTimer } from './entities/activity-timer.entity';
 import { CreateActivityTimerTemplateDto, UpdateActivityTimerTemplateDto } from './dto/activity-timer.dto';
@@ -14,7 +14,7 @@ export class ActivityTimerService {
     private readonly templateRepository: Repository<ActivityTimerTemplate>,
     @InjectRepository(ActivityTimer)
     private readonly timerRepository: Repository<ActivityTimer>,
-  ) {}
+  ) { }
 
   // --- Template Management (Admin) ---
 
@@ -56,13 +56,13 @@ export class ActivityTimerService {
     for (const timer of activeTimers) {
       if (timer.taskStatus[actionType] === false) {
         timer.taskStatus[actionType] = true;
-        
+
         // Check if all tasks are done
         const allDone = Object.values(timer.taskStatus).every(val => val === true);
         if (allDone) {
           timer.completedAt = new Date();
         }
-        
+
         await this.timerRepository.save(timer);
       }
     }
@@ -118,8 +118,14 @@ export class ActivityTimerService {
     const eligibleGeneralTemplates = await this.templateRepository.find({
       where: [
         { type: ActivityTimerType.GENERAL, isPublished: true, isForAllTiers: true },
-        { type: ActivityTimerType.GENERAL, isPublished: true, includedTierIds: In([userTierId || 'none']) }
-      ]
+        {
+          type: ActivityTimerType.GENERAL,
+          isPublished: true,
+          includedTierIds: Raw((alias) => `${alias} @> :tiers`, {
+            tiers: JSON.stringify([userTierId || 'none']),
+          }),
+        },
+      ],
     });
 
     for (const template of eligibleGeneralTemplates) {
@@ -175,7 +181,7 @@ export class ActivityTimerService {
     timer.type = template.type;
     timer.startedAt = new Date();
     timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
-    
+
     timer.taskStatus = {};
     template.tasks.forEach(task => {
       timer.taskStatus[task.key] = false;
@@ -212,9 +218,9 @@ export class ActivityTimerService {
   async completeTask(userId: string, taskKey: ActivityTaskType): Promise<ActivityTimer[]> {
     await this.handleAction(userId, taskKey);
     // Return fresh list after action
-    const user = await this.timerRepository.manager.findOne(User, { 
-      where: { id: userId }, 
-      relations: ['membership'] 
+    const user = await this.timerRepository.manager.findOne(User, {
+      where: { id: userId },
+      relations: ['membership']
     });
     return this.getUserActiveTimer(user);
   }

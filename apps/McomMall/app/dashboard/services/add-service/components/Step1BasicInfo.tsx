@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import {
   FormControl,
   FormField,
@@ -13,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Settings, Check, ChevronsUpDown, HelpCircle, X } from 'lucide-react';
+import { Settings, Check, ChevronsUpDown, HelpCircle, X, Store, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -28,8 +29,27 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { UserListing } from '@/service/listings/types';
+import { useGetUserListings } from '@/service/listings/hook';
 import {
   Tooltip,
   TooltipContent,
@@ -46,14 +66,39 @@ const COMMON_TAGS = [
 ];
 
 export function Step1BasicInfo() {
+  const router = useRouter();
   const form = useFormContext();
   const selectedCategory = form.watch('category');
+  const currentBusinessId = form.watch('businessId');
 
   const { data: categories } = useGetCategories();
   const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
 
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [showNoBusinessDialog, setShowNoBusinessDialog] = useState(false);
+
+  const businesses = useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType.some(type => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
+
+  useEffect(() => {
+    if (!isLoadingListings && businesses.length === 0) {
+      setShowNoBusinessDialog(true);
+    }
+  }, [isLoadingListings, businesses.length]);
+
+  // Auto-populate business when user has exactly one service business
+  useEffect(() => {
+    if (!isLoadingListings && businesses.length === 1 && !currentBusinessId) {
+      form.setValue('businessId', businesses[0].id);
+    }
+  }, [isLoadingListings, businesses, currentBusinessId, form]);
 
   const toggleSelection = (fieldName: string, value: string) => {
     const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
@@ -81,10 +126,61 @@ export function Step1BasicInfo() {
             Basic Information
           </CardTitle>
           <CardDescription>
-            Start by providing the fundamental details of your service.
+            Start by selecting your business and providing the fundamental details of your service.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Business Selection */}
+          <FormField
+            control={form.control}
+            name="businessId"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Business <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Select which business will offer this service.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={isLoadingListings}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="py-6">
+                      <SelectValue
+                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {businesses.length > 0 ? (
+                      businesses.map((b: UserListing) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.businessName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No service businesses available
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {/* Service Name */}
           <FormField
             control={form.control}
@@ -469,6 +565,33 @@ export function Step1BasicInfo() {
           </div>
         </CardContent>
       </Card>
+
+      {/* No Business Found Dialog */}
+      <AlertDialog open={showNoBusinessDialog} onOpenChange={setShowNoBusinessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-xl">No Service Business Found</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base leading-relaxed">
+              You need to create a <span className="font-semibold">Service</span> type business listing before you can add a service.
+              <br /><br />
+              Please go to <span className="font-semibold">"My Listings"</span> and create a new business with the listing type set to <span className="font-semibold">"Service"</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => router.push('/dashboard/services')}>
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/dashboard/add-listing')}>
+              Create Business
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

@@ -23,6 +23,7 @@ import { Step3Pricing } from './components/Step3Pricing';
 import { Step4Availability } from './components/Step4Availability';
 import { Step5Workflow } from './components/Step5Workflow';
 import { Step6FinalReview } from './components/Step6FinalReview';
+import { Step7FinalReview } from './components/Step7FinalReview';
 
 // --- ZOD SCHEMA ---
 const serviceSchema = z.object({
@@ -162,7 +163,8 @@ const STEPS = [
   { id: 3, name: 'Pricing', label: '3' },
   { id: 4, name: 'Availability', label: '4' },
   { id: 5, name: 'Workflow', label: '5' },
-  { id: 6, name: 'Review', label: '6' },
+  { id: 6, name: 'Media', label: '6' },
+  { id: 7, name: 'Review', label: '7' },
 ];
 
 export default function AddServicePage() {
@@ -316,7 +318,7 @@ export default function AddServicePage() {
     const values = form.getValues();
 
     if (currentStep === 1) {
-      isValid = !!values.name && !!values.category;
+      isValid = !!values.name && !!values.category && !!values.businessId;
     } else if (currentStep === 2) {
       isValid = !!values.deliveryConfig?.mode;
     } else if (currentStep === 3) {
@@ -334,7 +336,9 @@ export default function AddServicePage() {
     } else if (currentStep === 4 || currentStep === 5) {
       isValid = true; // Mostly optional fields
     } else if (currentStep === 6) {
-      isValid = !!values.businessId && values.media?.length > 0;
+      isValid = values.media?.length > 0;
+    } else if (currentStep === 7) {
+      isValid = true;
     }
 
     if (isValid) {
@@ -343,10 +347,10 @@ export default function AddServicePage() {
     } else {
       // Trigger validation to show error messages in the UI
       const fieldsToValidate: any = {
-        1: ['name', 'category'],
+        1: ['name', 'category', 'businessId'],
         2: ['deliveryConfig.mode'],
         3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit'],
-        6: ['businessId', 'media'],
+        6: ['media'],
       };
       const currentFields = fieldsToValidate[currentStep] || [];
       await form.trigger(currentFields);
@@ -390,7 +394,11 @@ export default function AddServicePage() {
         <div className="mb-8 relative px-2">
           <div className="flex justify-between items-center relative z-10">
             {STEPS.map((step) => (
-              <div key={step.id} className="flex flex-col items-center">
+              <div 
+                key={step.id} 
+                className="flex flex-col items-center cursor-pointer"
+                onClick={() => setCurrentStep(step.id)}
+              >
                 <div
                   className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${currentStep >= step.id
                       ? 'bg-primary text-white scale-110 shadow-lg'
@@ -432,6 +440,7 @@ export default function AddServicePage() {
                 {currentStep === 4 && <Step4Availability />}
                 {currentStep === 5 && <Step5Workflow />}
                 {currentStep === 6 && <Step6FinalReview />}
+                {currentStep === 7 && <Step7FinalReview />}
               </div>
 
               <div className="flex justify-between pt-8 border-t">
