@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function Newsletter() {
   return (
@@ -53,9 +54,9 @@ export default function Newsletter() {
           {/* A small note to build trust and reassure users */}
           <p className="mt-5 text-sm text-slate-500">
             We care about your data. Read our{' '}
-            <a href="#" className="underline hover:text-slate-400">
+            <Link href="/privacy-policy" className="underline hover:text-slate-400">
               privacy policy
-            </a>
+            </Link>
             .
           </p>
         </div>

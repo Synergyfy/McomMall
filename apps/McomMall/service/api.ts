@@ -22,4 +22,21 @@ if (initialToken) {
   setBearerToken(initialToken);
 }
 
+// Global response interceptor to handle trial expiration
+api.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    if (error.response?.status === 403) {
+      const message = error.response.data?.message || "";
+      if (message.toLowerCase().includes("trial period has expired")) {
+        // Redirect to Pricing/Tiers page
+        if (typeof window !== "undefined") {
+          window.location.href = "/pricing";
+        }
+      }
+    }
+    return Promise.reject(error);
+  }
+);
+
 export default api;

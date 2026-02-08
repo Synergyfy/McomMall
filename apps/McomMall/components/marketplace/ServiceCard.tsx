@@ -66,9 +66,9 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
     const deliveryMode = deliveryModes[idNum % deliveryModes.length];
 
     const deliveryConfig = {
-        onsite: { label: 'On-site Service', color: 'bg-blue-100 text-blue-700', icon: MapPin },
+        onsite: { label: 'On-site Service', color: 'bg-orange-100 text-orange-700', icon: MapPin },
         remote: { label: 'Remote Service', color: 'bg-green-100 text-green-700', icon: Briefcase },
-        hybrid: { label: 'Flexible', color: 'bg-purple-100 text-purple-700', icon: Calendar }
+        hybrid: { label: 'Flexible', color: 'bg-amber-100 text-amber-700', icon: Calendar }
     };
 
     const config = deliveryConfig[deliveryMode as keyof typeof deliveryConfig];
@@ -80,7 +80,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                 <div className="group bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 border border-gray-100">
                     <div className="flex flex-col sm:flex-row">
                         {/* Left - Service Image */}
-                        <div className="relative w-full sm:w-64 h-48 sm:h-auto bg-gradient-to-br from-blue-50 to-indigo-50 flex-shrink-0">
+                        <div className="relative w-full sm:w-64 h-48 sm:h-auto bg-gradient-to-br from-orange-50 to-amber-50 flex-shrink-0">
                             <Image
                                 src={imageSrc}
                                 alt={title}
@@ -100,11 +100,11 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                         <div className="flex-1 p-6">
                             <div className="flex items-start justify-between mb-2">
                                 <div>
-                                    <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 mb-2">
+                                    <Badge className="bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 mb-2">
                                         <Briefcase className="w-3 h-3 mr-1" />
                                         Service
                                     </Badge>
-                                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-blue-600 transition-colors">
+                                    <h3 className="text-2xl font-bold text-gray-900 group-hover:text-orange-600 transition-colors">
                                         {title}
                                     </h3>
                                 </div>
@@ -145,7 +145,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                                 {isHourly && <span className="text-gray-500 text-sm">/ hour</span>}
                             </div>
 
-                            <Button className="mt-4 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-md">
+                            <Button className="mt-4 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold shadow-md">
                                 Book Now
                             </Button>
                         </div>
@@ -158,10 +158,10 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
     // Grid View - Professional Card
     return (
         <Link href={service.link || `/services/${service.id}`} className="block h-full">
-            <div className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-gray-100 hover:border-blue-200 hover:scale-[1.02]">
+            <div className="group relative bg-white rounded-2xl overflow-hidden shadow-md hover:shadow-xl transition-all duration-300 h-full flex flex-col border border-gray-100 hover:border-orange-200 hover:scale-[1.02]">
 
                 {/* Service Image */}
-                <div className="relative h-40 bg-gradient-to-br from-blue-50 to-indigo-50 overflow-hidden">
+                <div className="relative h-40 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden">
                     <Image
                         src={imageSrc}
                         alt={title}
@@ -172,7 +172,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
 
                     {/* Badges */}
                     <div className="absolute top-3 left-3 flex flex-col gap-2 z-10">
-                        <Badge className="bg-gradient-to-r from-blue-500 to-indigo-600 text-white border-0 shadow-md text-[10px] md:text-xs">
+                        <Badge className="bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 shadow-md text-[10px] md:text-xs">
                             <Briefcase className="w-3 h-3 mr-1" />
                             Service
                         </Badge>
@@ -198,7 +198,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                     </div>
 
                     {/* Title */}
-                    <h3 className="text-sm md:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-blue-600 transition-colors min-h-[2.5rem]">
+                    <h3 className="text-sm md:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors min-h-[2.5rem]">
                         {title}
                     </h3>
 
@@ -222,7 +222,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                     <div className="mt-auto">
                         <div className="flex items-baseline gap-1 mb-3">
                             <span className="text-[10px] text-gray-500">From</span>
-                            <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">
+                            <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                                 £{Number(price).toFixed(2)}
                             </span>
                             {isHourly && <span className="text-[10px] md:text-xs text-gray-500">/hr</span>}
@@ -231,7 +231,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                         {/* Book Button */}
                         <Button
                             size="sm"
-                            className="w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-semibold shadow-sm text-xs h-9"
+                            className="w-full bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-700 hover:to-amber-700 text-white font-semibold shadow-sm text-xs h-9"
                             onClick={(e) => {
                                 e.preventDefault();
                                 // Handle booking
@@ -244,7 +244,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                 </div>
 
                 {/* Decorative gradient accent */}
-                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-blue-400/10 to-transparent rounded-bl-full" />
+                <div className="absolute top-0 right-0 w-20 h-20 bg-gradient-to-br from-orange-400/10 to-transparent rounded-bl-full" />
             </div>
         </Link>
     );

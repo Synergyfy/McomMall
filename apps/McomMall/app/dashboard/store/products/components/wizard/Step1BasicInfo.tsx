@@ -205,39 +205,6 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
               </div>
             </div>
 
-            {/* Row: Status */}
-            <div className="grid grid-cols-1 gap-6">
-              <div className="flex flex-col gap-2">
-                <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="productStatus">
-                  Product Status
-                  <TooltipProvider>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>Set to 'Publish' to make it visible immediately, or 'Draft' to save for later.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </TooltipProvider>
-                </label>
-                <div className="relative">
-                  <select
-                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
-                    id="productStatus"
-                    value={formData.productStatus || 'publish'}
-                    onChange={handleChange}
-                  >
-                    <option value="publish">Publish</option>
-                    <option value="draft">Draft</option>
-                  </select>
-                  <div className="absolute inset-y-0 right-0 flex items-center px-3 pointer-events-none text-[#9c7349]">
-                    <ChevronDown className="w-5 h-5" />
-                  </div>
-                </div>
-              </div>
-            </div>
-
             {/* Row: Brand & Gender */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="flex flex-col gap-2">
