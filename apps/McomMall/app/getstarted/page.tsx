@@ -1,0 +1,191 @@
+'use client';
+
+import React from 'react';
+import Link from 'next/link';
+import { motion, Variants } from 'framer-motion';
+import { ShoppingBag, Store, Users, ArrowRight, Sparkles } from 'lucide-react';
+
+const containerVariants: Variants = {
+  hidden: { opacity: 0 },
+  visible: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.1,
+      delayChildren: 0.2,
+    },
+  },
+};
+
+const itemVariants: Variants = {
+  hidden: { y: 20, opacity: 0 },
+  visible: {
+    y: 0,
+    opacity: 1,
+    transition: {
+      type: 'spring',
+      stiffness: 100,
+      damping: 15,
+    },
+  },
+};
+
+export default function GetStartedPage() {
+  return (
+    <div className="relative min-h-screen w-full overflow-hidden bg-gradient-to-br from-orange-50 via-white to-orange-50/50 text-gray-900 selection:bg-orange-500 selection:text-white font-sans">
+
+      {/* Animated Background Elements - Adjusted for Light Mode */}
+      <div className="absolute inset-0 z-0 pointer-events-none">
+        <div className="absolute top-[-20%] left-[-10%] w-[60%] h-[60%] bg-orange-200/40 rounded-full blur-[130px] animate-pulse" />
+        <div className="absolute bottom-[-10%] right-[-5%] w-[50%] h-[50%] bg-red-200/40 rounded-full blur-[110px] animate-pulse delay-1000" />
+        <div className="absolute top-[30%] left-[40%] w-[40%] h-[40%] bg-amber-200/40 rounded-full blur-[100px] animate-pulse delay-700" />
+      </div>
+
+      {/* Grid Pattern Overlay - Lighter for Light Mode */}
+      <div className="absolute inset-0 z-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-10 mix-blend-multiply" />
+
+      <main className="relative z-10 flex flex-col items-center justify-center min-h-screen px-4 py-20 md:px-8">
+
+        <motion.div
+          variants={containerVariants}
+          initial="hidden"
+          animate="visible"
+          className="w-full max-w-7xl mx-auto flex flex-col items-center"
+        >
+
+          {/* Header */}
+          <motion.div variants={itemVariants} className="text-center mb-20 max-w-4xl">
+            <span className="inline-flex items-center gap-2 px-4 py-2 mb-8 text-sm font-bold tracking-wide text-orange-600 uppercase bg-orange-100 border border-orange-200 rounded-full shadow-sm">
+              <Sparkles className="w-4 h-4 text-orange-500" />
+              Welcome to the Future of Commerce
+            </span>
+            <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-orange-900 to-gray-800 drop-shadow-sm">
+              How will you <br className="hidden md:block" />
+              use <span className="text-orange-600 inline-block transform hover:scale-105 transition-transform duration-300 cursor-default filter drop-shadow-lg">McomMall</span>?
+            </h1>
+            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
+              Join thousands of users building the next generation marketplace.
+              Select your role to get started with a tailored experience.
+            </p>
+          </motion.div>
+
+          {/* Cards Container */}
+          <motion.div
+            variants={containerVariants}
+            className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-[1400px]"
+          >
+
+            {/* Shopper Card */}
+            <Link href="/customer" className="group w-full block h-full">
+              <motion.div
+                variants={itemVariants}
+                whileHover={{
+                  y: -12,
+                  scale: 1.03,
+                  boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)', // Soft Orange shadow
+                  borderColor: 'rgba(251, 146, 60, 0.8)',
+                  transition: { type: 'spring', stiffness: 300, damping: 20 }
+                }}
+                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-orange-100/50 shadow-xl shadow-orange-500/5 transition-all flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                <div>
+                  <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-orange-100">
+                    <ShoppingBag className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-orange-600 transition-colors">Shop & Discover</h3>
+                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
+                    Find unique products, enjoy secure transactions, and get the best deals from top-rated sellers worldwide.
+                  </p>
+                </div>
+
+                <div className="flex items-center text-orange-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
+                  Explore Benefits <ArrowRight className="ml-2 w-5 h-5" />
+                </div>
+              </motion.div>
+            </Link>
+
+            {/* Merchant Card */}
+            <Link href="/business" className="group w-full block h-full">
+              <motion.div
+                variants={itemVariants}
+                whileHover={{
+                  y: -12,
+                  scale: 1.03,
+                  boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)', // Red shadow
+                  borderColor: 'rgba(248, 113, 113, 0.8)',
+                  transition: { type: 'spring', stiffness: 300, damping: 20 }
+                }}
+                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-red-100/50 shadow-xl shadow-red-500/5 transition-all flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                <div>
+                  <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-red-100">
+                    <Store className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-red-600 transition-colors">Sell & Grow</h3>
+                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
+                    Launch your store in minutes. Access powerful tools, analytics, and a global audience to scale your business.
+                  </p>
+                </div>
+
+                <div className="flex items-center text-red-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
+                  Explore Business Tools <ArrowRight className="ml-2 w-5 h-5" />
+                </div>
+              </motion.div>
+            </Link>
+
+            {/* Affiliate Card */}
+            <Link href="/affiliate" className="group w-full block h-full">
+              <motion.div
+                variants={itemVariants}
+                whileHover={{
+                  y: -12,
+                  scale: 1.03,
+                  boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.25)', // Amber shadow
+                  borderColor: 'rgba(251, 191, 36, 0.8)',
+                  transition: { type: 'spring', stiffness: 300, damping: 20 }
+                }}
+                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-amber-100/50 shadow-xl shadow-amber-500/5 transition-all flex flex-col justify-between min-h-[420px]"
+              >
+                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
+
+                <div>
+                  <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-amber-100">
+                    <Users className="w-8 h-8 text-white" />
+                  </div>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-amber-600 transition-colors">Promote & Earn</h3>
+                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
+                    Join our affiliate network. Share products you love and earn attractive commissions for every sale.
+                  </p>
+                </div>
+
+                <div className="flex items-center text-amber-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
+                  Join as Affiliate <ArrowRight className="ml-2 w-5 h-5" />
+                </div>
+              </motion.div>
+            </Link>
+
+          </motion.div>
+
+          {/* Footer Area */}
+          <motion.div variants={itemVariants} className="mt-24 text-center">
+            <p className="text-gray-500 mb-6 text-lg">
+              Already have an account?{' '}
+              <Link href="/signin" className="text-orange-600 hover:text-orange-700 font-bold transition-colors">
+                Sign In
+              </Link>
+            </p>
+            <div className="flex items-center justify-center gap-8 text-sm font-medium text-gray-400">
+              <Link href="/terms" className="hover:text-orange-600 transition-colors">Terms of Service</Link>
+              <span className="w-1.5 h-1.5 rounded-full bg-gray-300" />
+              <Link href="/privacy" className="hover:text-orange-600 transition-colors">Privacy Policy</Link>
+            </div>
+          </motion.div>
+
+        </motion.div>
+      </main>
+    </div>
+  );
+}

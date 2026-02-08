@@ -1,0 +1,324 @@
+import { useMemo } from 'react';
+import { useMutation } from '@tanstack/react-query';
+import Cookies from 'js-cookie';
+import api, { setBearerToken } from '../api';
+import { useSelector } from 'react-redux';
+import {
+  UserInterface,
+  AuthInterface,
+  LoginResponse,
+  ClaimInterface,
+  SendOtpInterface,
+  ValidateOtpInterface,
+  ResetPasswordInterface,
+} from './types';
+import { useDispatch } from 'react-redux';
+import {
+  setAuthTokens,
+  setUserData,
+  logout as logoutAction,
+} from '../store/authSlice';
+import { AppDispatch, RootState } from '../store/store';
+
+export interface ErrorResponse {
+  response?: {
+    data?: {
+      message?: string;
+    };
+  };
+  message?: string;
+}
+
+export const useCheckEmail = () => {
+  const checkEmail = async (email: string) => {
+    try {
+      const response = await api.get(`users/check-email?email=${email}`);
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to check email'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: checkEmail,
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
+export const useCreateUser = () => {
+  const create = async (payload: UserInterface) => {
+    try {
+      const response = await api.post('users/create', { ...payload });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to create user account'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: create,
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
+export const useSendOtp = () => {
+  const sendOtp = async (payload: SendOtpInterface) => {
+    try {
+      const response = await api.post('email/send-otp', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to send OTP');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to send OTP'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: sendOtp,
+  });
+  return mutation;
+};
+
+export const useValidateOtp = () => {
+  const validateOtp = async (payload: ValidateOtpInterface) => {
+    try {
+      const response = await api.post('email/validate-otp', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to validate OTP');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to validate OTP'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: validateOtp,
+  });
+  return mutation;
+};
+
+export const useResetPassword = () => {
+  const resetPassword = async (payload: ResetPasswordInterface) => {
+    try {
+      const response = await api.post('auth/reset-password', {
+        ...payload,
+      });
+      if (response.data && response.data.success === false) {
+        throw new Error(response.data.message || 'Failed to reset password');
+      }
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to reset password'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: resetPassword,
+  });
+  return mutation;
+};
+
+export const useAuth = () => {
+  const { accessToken, userId, userName, userRole } = useSelector(
+    (state: RootState) => state.auth
+  );
+
+  const user = useMemo(() => {
+    return userId ? { id: userId, name: userName, role: userRole } : null;
+  }, [userId, userName, userRole]);
+
+  return useMemo(() => ({ user, token: accessToken }), [user, accessToken]);
+};
+
+export const useLogin = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const login = async (payload: AuthInterface): Promise<LoginResponse> => {
+    try {
+      const response = await api.post('auth/', {
+        ...payload,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to login. Please check your credentials and try again.'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: login,
+    onSuccess: data => {
+      dispatch(
+        setAuthTokens({
+          accessToken: data.auth.accessToken,
+          refreshToken: data.auth.refreshToken,
+        })
+      );
+      dispatch(
+        setUserData({
+          id: data.userId,
+          userName: data.name,
+          userRole: String(data.role),
+          packageInfo: data.packageInfo
+            ? { planType: data.packageInfo.planType }
+            : null,
+        })
+      );
+      setBearerToken(data.auth.accessToken);
+    },
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
+export const useSsoLogin = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const ssoLogin = async (token: string): Promise<LoginResponse> => {
+    try {
+      const response = await api.post('auth/sso', {
+        token,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'SSO login failed'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: ssoLogin,
+    onSuccess: data => {
+      dispatch(
+        setAuthTokens({
+          accessToken: data.auth.accessToken,
+          refreshToken: data.auth.refreshToken,
+        })
+      );
+      dispatch(
+        setUserData({
+          id: data.userId,
+          userName: data.name,
+          userRole: String(data.role),
+          packageInfo: data.packageInfo
+            ? { planType: data.packageInfo.planType }
+            : null,
+        })
+      );
+      setBearerToken(data.auth.accessToken);
+    },
+  });
+  return { ...mutation, mutateAsync: mutation.mutateAsync };
+};
+
+export const useRefreshToken = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const refresh = async (
+    refreshToken: string
+  ): Promise<LoginResponse['auth']> => {
+    try {
+      const response = await api.post('auth/refresh', {
+        refreshToken,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to refresh token'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: refresh,
+    onSuccess: data => {
+      dispatch(
+        setAuthTokens({
+          accessToken: data.accessToken,
+          refreshToken: data.refreshToken,
+        })
+      );
+      setBearerToken(data.accessToken);
+    },
+    onError: () => {
+      dispatch(logoutAction());
+    },
+  });
+  return mutation;
+};
+
+export const useLogout = () => {
+  const dispatch: AppDispatch = useDispatch();
+  const logout = () => {
+    dispatch(logoutAction());
+  };
+  return logout;
+};
+
+export const useClaimBusiness = () => {
+  const claim = async (payload: ClaimInterface) => {
+    try {
+      const response = await api.post('claim/start', {
+        ...payload,
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+          err.message ||
+          'Failed to create business'
+      );
+    }
+  };
+
+  const mutation = useMutation({
+    mutationFn: claim,
+    onSuccess: data => {
+      if (data.authUrl) {
+        const width = 600;
+        const height = 700;
+        const left = window.screen.width / 2 - width / 2;
+        const top = window.screen.height / 2 - height / 2;
+        window.open(
+          data.authUrl,
+          'GoogleAuth',
+          `width=${width},height=${height},top=${top},left=${left}`
+        );
+      } else {
+        alert('Unable to start Google verification.');
+      }
+    },
+  });
+  return mutation;
+};

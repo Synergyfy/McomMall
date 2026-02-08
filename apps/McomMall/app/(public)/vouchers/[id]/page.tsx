@@ -1,0 +1,172 @@
+'use client';
+
+'use client';
+
+import { useState } from 'react';
+import { useParams } from 'next/navigation';
+import { useGetVoucherProduct } from '@/service/hooks/useVoucherService';
+import { Loader, ChevronLeft, ShoppingCart } from 'lucide-react';
+import Link from 'next/link';
+import { Button } from '@/components/ui/button';
+import ServiceSafetyCard from '@/app/(public)/services/[id]/components/ServiceSafetyCard';
+import ServiceGallery from '@/app/(public)/services/[id]/components/ServiceGallery';
+import { useMarketplaceContext } from '@/context/MarketplaceContext';
+import VoucherPurchaseModal from '@/app/(public)/listings/[id]/components/VoucherPurchaseModal';
+import VoucherPaymentSuccessModal from '@/components/VoucherPaymentSuccessModal';
+import { Voucher, VoucherProduct } from '@/service/vouchers/types';
+
+export default function VoucherPage() {
+  const params = useParams();
+  const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  
+  const { selectedItem } = useMarketplaceContext();
+  const cachedItem = selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null;
+
+  // We assume the ID corresponds to a VoucherProduct
+  const { voucherProduct, isLoading, isError } = useGetVoucherProduct(id || '');
+
+  // Merge cached item with fetched product if needed, but for purchase we need full product details
+  // If fetched product is available, use it. Otherwise use cached item (which might be partial).
+  // Ideally we wait for fetch if we want to buy, to get latest price/rules.
+  
+  const displayVoucher = (voucherProduct || cachedItem) as unknown as VoucherProduct;
+
+  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+  const [purchasedVoucher, setPurchasedVoucher] = useState<Voucher | null>(null);
+
+  if (isLoading && !cachedItem) {
+    return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><Loader className="animate-spin text-orange-600" size={48} /></div>;
+  }
+
+  if ((!displayVoucher && isError) || (!displayVoucher && !isLoading && !cachedItem)) {
+    return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><p className="text-xl text-red-500">Voucher not found.</p></div>;
+  }
+
+  const handleBuyNow = () => {
+    setIsPurchaseModalOpen(true);
+  };
+
+  const handlePurchaseSuccess = (voucher: Voucher) => {
+    setIsPurchaseModalOpen(false);
+    setPurchasedVoucher(voucher);
+    setIsSuccessModalOpen(true);
+  };
+
+  const handleClosePurchaseModal = () => {
+    setIsPurchaseModalOpen(false);
+  };
+
+  const handleCloseSuccessModal = () => {
+    setIsSuccessModalOpen(false);
+    setPurchasedVoucher(null);
+  };
+
+  // Safe property access
+  const title = displayVoucher.name || (cachedItem as any)?.title || 'Voucher';
+  // Check if fixedAmounts exist or default to price/amount
+  const amountDisplay = displayVoucher.fixedAmounts?.length 
+    ? `From £${Math.min(...displayVoucher.fixedAmounts)}`
+    : (displayVoucher.minCustomAmount ? `Custom Amount` : `£${(cachedItem as any)?.price || 0}`);
+  
+  const status = displayVoucher.isEnabled === false ? 'Unavailable' : 'Available';
+  
+  const images = (displayVoucher.media && displayVoucher.media.length > 0) 
+    ? displayVoucher.media 
+    : (displayVoucher.backgroundImage 
+        ? [displayVoucher.backgroundImage] 
+        : ((displayVoucher as any).image ? [(displayVoucher as any).image] : ['/placeholder.png']));
+
+  return (
+    <div className="min-h-screen bg-gray-50 pb-12 pt-3">
+        {/* Navigation */}
+        <div className="bg-white border-b shadow-sm mb-6">
+            <div className="container mx-auto px-4 h-14 flex items-center">
+                <Link href="/marketplace" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
+                    <ChevronLeft className="w-4 h-4 mr-1" /> Back to Listings
+                </Link>
+            </div>
+        </div>
+
+        <div className="container mx-auto px-4">
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                {/* Left Column */}
+                <div className="lg:col-span-2 space-y-8">
+                    <ServiceGallery images={images} title={title} />
+                    <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                        <h2 className="text-xl font-bold text-gray-900 mb-4">Voucher Details</h2>
+                        <p className="text-gray-700">Name: <span className="font-bold">{title}</span></p>
+                        <p className="text-gray-700">Value: {amountDisplay}</p>
+                        <p className="text-gray-700">Status: {status}</p>
+                        {displayVoucher.description && <p className="text-gray-600 mt-2">{displayVoucher.description}</p>}
+                    </div>
+                </div>
+
+                {/* Right Column */}
+                <div className="relative">
+                    <div className="sticky top-20 space-y-6">
+                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                            <h1 className="text-2xl font-bold text-gray-900 mb-4">Purchase Voucher</h1>
+                            
+                            {/* Bonus Offer Display */}
+                            {displayVoucher.bonusThreshold && displayVoucher.bonusAmount && (
+                                <div className="mb-6 rounded-lg bg-green-50 p-3 border border-green-100">
+                                    <p className="font-bold text-green-700 text-sm">🎉 Special Bonus Offer!</p>
+                                    <p className="text-green-800 text-sm mt-1">
+                                        Buy for <span className="font-bold">£{displayVoucher.bonusThreshold}</span> or more and get an extra <span className="font-bold">£{displayVoucher.bonusAmount}</span> free!
+                                    </p>
+                                </div>
+                            )}
+
+                            {/* Pricing Options Display */}
+                            <div className="mb-6">
+                                <p className="text-sm font-semibold text-gray-700 mb-3">Available Amounts:</p>
+                                <div className="flex flex-wrap gap-2">
+                                    {displayVoucher.fixedAmounts?.map((amt) => (
+                                        <span key={amt} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                            £{amt}
+                                        </span>
+                                    ))}
+                                    {displayVoucher.allowCustomAmount && (
+                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                            Custom (£{displayVoucher.minCustomAmount} - £{displayVoucher.maxCustomAmount})
+                                        </span>
+                                    )}
+                                </div>
+                            </div>
+
+                            <div className="text-3xl font-bold text-orange-600 mb-6">{amountDisplay}</div>
+                            <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700" onClick={handleBuyNow}>
+                                <ShoppingCart className="mr-2 h-5 w-5" /> Buy Now
+                            </Button>
+                        </div>
+                        <ServiceSafetyCard />
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        {/* Modals */}
+        {/* We need full voucherProduct for the modal. If cachedItem is all we have, modal might break if it relies on specific fields like id, fixedAmounts etc. 
+            Ideally useGetVoucherProduct fetches quickly. If not, we block or show loader in modal? 
+            The modal expects 'product' prop. */}
+        {displayVoucher && (
+           <VoucherPurchaseModal
+             product={displayVoucher} 
+             isOpen={isPurchaseModalOpen} 
+             onClose={handleClosePurchaseModal} 
+             onPurchaseSuccess={handlePurchaseSuccess} 
+           />
+        )}
+
+        {purchasedVoucher && (
+            <VoucherPaymentSuccessModal
+                isOpen={isSuccessModalOpen}
+                onClose={handleCloseSuccessModal}
+                voucherCode={purchasedVoucher.code}
+                recipientEmail={purchasedVoucher.recipientEmail}
+            />
+        )}
+    </div>
+  );
+}

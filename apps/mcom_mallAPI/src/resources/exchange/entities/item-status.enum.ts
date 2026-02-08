@@ -1,0 +1,7 @@
+export enum ItemStatus {
+  AVAILABLE = 'AVAILABLE',
+  IN_TRADE = 'IN_TRADE',
+  IN_ESCROW = 'IN_ESCROW',
+  TRADED = 'TRADED',
+  REMOVED = 'REMOVED',
+}

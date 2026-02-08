@@ -1,0 +1,5 @@
+export enum PaymentPurpose {
+  MEMBERSHIP = 'MEMBERSHIP',
+  VOUCHER_PURCHASE = 'VOUCHER_PURCHASE',
+  PAYG_TOPUP = 'PAYG_TOPUP',
+}

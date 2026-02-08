@@ -1,0 +1,360 @@
+import {
+  ConflictException,
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  ForbiddenException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, DataSource } from 'typeorm';
+import { User } from '../users/entities/user.entity';
+import { Membership } from './entities/membership.entity';
+import { MembershipTier } from './membership-tier.enum';
+import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { CentralIntegrationService } from '../payments/services/central-integration.service';
+import { CashbackEvent } from '../../common/enums/cashback-event.enum';
+import { InitiateMembershipPaymentDto, PlanType } from './dto/initiate-membership-payment.dto';
+import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
+import { PaymentMethod } from '../order/entities/order-payment.entity';
+import { MembershipPayment } from './entities/membership-payment.entity';
+import { Tier } from '../tier/entities/tier.entity';
+
+@Injectable()
+export class MembershipService {
+  private readonly membershipPrices: Map<MembershipTier, number> = new Map([
+    [MembershipTier.BASIC, 10],
+    [MembershipTier.EXTENDED, 50],
+    [MembershipTier.PROFESSIONAL, 100],
+  ]);
+
+  constructor(
+    @InjectRepository(Membership)
+    private readonly membershipRepository: Repository<Membership>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(MembershipPayment)
+    private readonly paymentRepository: Repository<MembershipPayment>,
+    @InjectRepository(Tier)
+    private readonly tierRepository: Repository<Tier>,
+    private readonly paymentProviderService: PaymentProviderService,
+    private readonly centralIntegrationService: CentralIntegrationService,
+    private readonly dataSource: DataSource,
+  ) {}
+
+  async findOne(userId: string): Promise<Membership> {
+    const membership = await this.membershipRepository.findOne({
+      where: { user: { id: userId } },
+      relations: ['tier'],
+    });
+    if (!membership) {
+      throw new NotFoundException('Membership not found.');
+    }
+    return membership;
+  }
+
+  async findActiveWithTier(userId: string): Promise<Membership> {
+    const membership = await this.membershipRepository.findOne({
+      where: { user: { id: userId }, isActive: true },
+      relations: ['tier'],
+    });
+
+    if (membership && !membership.tier && membership.tierType) {
+      console.log(`[MembershipService] Self-healing initiated for user ${userId} with tierType ${membership.tierType}`);
+      
+      const legacyTierMap: Record<string, string> = {
+        'basic': 'Basic',
+        'extended': 'Extended',
+        'professional': 'Professional',
+      };
+
+      const targetName = legacyTierMap[membership.tierType] || membership.tierType;
+      
+      const tier = await this.tierRepository.findOne({
+        where: { name: targetName },
+      });
+
+      if (tier) {
+        console.log(`[MembershipService] Found matching tier: ${tier.name} (${tier.id})`);
+        membership.tier = tier;
+        membership.tierId = tier.id;
+        await this.membershipRepository.save(membership);
+        console.log(`[MembershipService] Membership updated with tier link.`);
+      } else {
+         console.warn(`[MembershipService] Could not find tier with name: ${targetName}`);
+      }
+    }
+
+    return membership;
+  }
+
+  getMembershipPrice(tier: MembershipTier): number {
+    const price = this.membershipPrices.get(tier);
+    if (price === undefined) {
+      throw new NotFoundException(`Membership tier "${tier}" not found.`);
+    }
+    return price;
+  }
+
+  async initiateMembershipPayment(
+    initiateDto: InitiateMembershipPaymentDto,
+    user: User,
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
+    const existingMembership = await this.membershipRepository.findOne({
+      where: { user: { id: user.id }, isActive: true },
+    });
+
+    if (existingMembership) {
+      // Allow upgrade if needed, but for now strict conflict
+      throw new ConflictException('User already has an active membership.');
+    }
+
+    let price = 0;
+    const currency = 'GBP';
+    let planId: string | null = null;
+
+    if (initiateDto.tierId) {
+      const tier = await this.tierRepository.findOne({ where: { id: initiateDto.tierId } });
+      if (!tier) throw new NotFoundException('Tier not found');
+      
+      const planType = initiateDto.planType || PlanType.MONTHLY;
+      if (planType === PlanType.ANNUAL) {
+          price = tier.annualPrice;
+      } else if (planType === PlanType.QUARTERLY) {
+          price = tier.quarterlyPrice;
+      } else {
+          price = tier.monthlyPrice;
+      }
+      
+      // If using PayPal subscriptions or similar, fetch plan ID
+      if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
+          if (planType === PlanType.ANNUAL) {
+              planId = tier.paypalAnnualPlanId;
+          } else if (planType === PlanType.QUARTERLY) {
+              planId = tier.paypalQuarterlyPlanId;
+          } else {
+              planId = tier.paypalMonthlyPlanId;
+          }
+      }
+    } else {
+      // Legacy Enum Support
+      price = this.getMembershipPrice(initiateDto.tier);
+    }
+
+    if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
+      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
+        price,
+        currency,
+      );
+      return {
+        clientSecret: paymentIntent.client_secret,
+        provider: PaymentMethod.STRIPE,
+      };
+    } else if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
+      // If we had a planId logic for PayPal Subscriptions, we would use createSubscription here.
+      // But adhering to current createOrder logic for one-time payments (or initial payment):
+      const order = await this.paymentProviderService.createPaypalOrder(
+        price,
+        currency,
+      );
+      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+    } else {
+      throw new BadRequestException('Invalid payment provider specified.');
+    }
+  }
+
+  async verifyAndCreateMembership(
+    verifyDto: VerifyMembershipPaymentDto,
+    user: User,
+  ): Promise<Membership> {
+    const { paymentProvider, transactionId, purchaseDetails } = verifyDto;
+    const { tier: tierEnum, tierId, planType = PlanType.MONTHLY } = purchaseDetails;
+
+    const existingMembership = await this.membershipRepository.findOne({
+      where: { user: { id: user.id }, isActive: true },
+    });
+
+    if (existingMembership) {
+      throw new ConflictException('User already has an active membership.');
+    }
+
+    let price = 0;
+    let tierEntity: Tier | null = null;
+    const currency = 'GBP';
+
+    if (tierId) {
+        tierEntity = await this.tierRepository.findOne({ where: { id: tierId } });
+        if (!tierEntity) throw new NotFoundException('Tier not found');
+        
+        if (planType === PlanType.ANNUAL) {
+            price = tierEntity.annualPrice;
+        } else if (planType === PlanType.QUARTERLY) {
+            price = tierEntity.quarterlyPrice;
+        } else {
+            price = tierEntity.monthlyPrice;
+        }
+    } else {
+        price = this.getMembershipPrice(tierEnum);
+    }
+
+    let verificationResult;
+
+    if (paymentProvider === PaymentMethod.STRIPE) {
+      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
+        transactionId,
+        price,
+        currency,
+      );
+    } else if (paymentProvider === PaymentMethod.PAYPAL) {
+      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
+        transactionId,
+        price,
+        currency,
+      );
+    } else {
+      throw new BadRequestException('Invalid payment provider specified.');
+    }
+
+    if (!verificationResult.ok) {
+      throw new BadRequestException(
+        `Payment verification failed: ${verificationResult.reason}`,
+      );
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const paymentRepo = manager.getRepository(MembershipPayment);
+      const membershipRepo = manager.getRepository(Membership);
+      const userRepo = manager.getRepository(User);
+
+      const newPayment = paymentRepo.create({
+        user,
+        amount: price,
+        currency,
+        paymentMethod: paymentProvider,
+        transactionId,
+      });
+      const savedPayment = await paymentRepo.save(newPayment);
+
+      const expiresAt = new Date();
+      // Add 1 month or 1 year
+      if (planType === PlanType.ANNUAL) {
+        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      } else {
+        expiresAt.setMonth(expiresAt.getMonth() + 1);
+      }
+
+      const membership = membershipRepo.create({
+        tierType: tierEnum, // keep legacy if present
+        tier: tierEntity,
+        user,
+        expiresAt,
+        isActive: true,
+        planType,
+        payment: savedPayment,
+      });
+
+      const savedMembership = await membershipRepo.save(membership);
+
+      user.membership = savedMembership;
+      await userRepo.save(user);
+
+      // Process Cashback
+      if (user.email) {
+        await this.centralIntegrationService.processCashback(
+          user.email,
+          Number(price),
+          CashbackEvent.MALL_MEMBERSHIP_PAYMENT,
+          transactionId,
+        );
+      }
+
+      return savedMembership;
+    });
+  }
+
+  async joinTrial(tierId: string, user: User): Promise<Membership> {
+      const existingMembership = await this.membershipRepository.findOne({
+          where: { user: { id: user.id } },
+          order: { created_at: 'DESC' } // Check mostly recent
+      });
+
+      // Simple check: if they ever had a membership (trial or paid), deny?
+      // Or checking specifically for isTrial usage if we had history.
+      // For now, if they have an *active* membership, deny.
+      if (existingMembership && existingMembership.isActive) {
+          throw new ConflictException('User already has an active membership.');
+      }
+
+      // If we want strict "one trial per user ever", we'd check if any previous membership had isTrial=true
+      const trialUsage = await this.membershipRepository.findOne({
+          where: { user: { id: user.id }, isTrial: true }
+      });
+      if (trialUsage) {
+          throw new ForbiddenException('User has already used their trial period.');
+      }
+
+      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+      if (!tier) throw new NotFoundException('Tier not found');
+
+      return this.dataSource.transaction(async (manager) => {
+          const membershipRepo = manager.getRepository(Membership);
+          const userRepo = manager.getRepository(User);
+
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + 7); // 7 Days Trial
+
+          const membership = membershipRepo.create({
+              tier,
+              user,
+              expiresAt,
+              isActive: true,
+              isTrial: true,
+              planType: PlanType.MONTHLY // Default to monthly after trial usually
+          });
+
+          const savedMembership = await membershipRepo.save(membership);
+          user.membership = savedMembership;
+          await userRepo.save(user);
+
+          return savedMembership;
+      });
+  }
+
+  async grantAccess(user: User, tierId: string, durationDays: number, source: string): Promise<Membership> {
+      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+      if (!tier) throw new NotFoundException('Tier not found');
+
+      // Check for existing active membership
+      const existingMembership = await this.membershipRepository.findOne({
+          where: { user: { id: user.id }, isActive: true }
+      });
+      if (existingMembership) {
+          // In a real scenario we might extend it, or upgrade it.
+          // For now, we will expire the old one and create new one (Upgrade/Replace behavior).
+          existingMembership.isActive = false;
+          await this.membershipRepository.save(existingMembership);
+      }
+
+      return this.dataSource.transaction(async (manager) => {
+          const membershipRepo = manager.getRepository(Membership);
+          const userRepo = manager.getRepository(User);
+
+          const expiresAt = new Date();
+          expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+          const membership = membershipRepo.create({
+              tier,
+              user,
+              expiresAt,
+              isActive: true,
+              planType: PlanType.MONTHLY, // Default
+              // We could add a note or flag about source if entity supported it
+          });
+
+          const savedMembership = await membershipRepo.save(membership);
+          user.membership = savedMembership;
+          await userRepo.save(user);
+
+          return savedMembership;
+      });
+  }
+}
