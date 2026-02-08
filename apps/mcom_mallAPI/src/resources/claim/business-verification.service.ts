@@ -16,15 +16,16 @@ export class BusinessVerificationService {
     for (const account of accounts) {
       let pageToken: string | undefined;
       do {
-        const { data } = await bizInfo.accounts.locations.list({
+        const locationsResp = await bizInfo.accounts.locations.list({
           auth: oauthClient,
-          parent: account.name!, // e.g. "accounts/1234567890"
+          parent: account.name!,
           readMask: 'name,title,metadata',
           pageSize: 100,
           pageToken,
         });
 
-        const locations = data.locations ?? [];
+        const data = (locationsResp as any).data;
+        const locations = data?.locations ?? [];
         const match = locations.find(
           (loc: any) => loc?.metadata?.placeId === placeId,
         );
