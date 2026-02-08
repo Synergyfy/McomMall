@@ -10,12 +10,9 @@ import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CamelCaseInterceptor } from './interceptors/camel-case.interceptor';
 
-async function bootstrap() {
-  const logger = new Logger('Bootstrap');
-  const app = await NestFactory.create(AppModule, {
-    logger: ['error', 'warn', 'log', 'debug', 'verbose'],
-  });
-
+// 1. Shared Configuration Function
+// This setup applies to both Local and Vercel environments
+async function configureApp(app: any) {
   app.enableCors({
     origin: true,
     credentials: true,
@@ -39,6 +36,7 @@ async function bootstrap() {
     .setVersion('1.0')
     .addBearerAuth()
     .build();
+
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('/api-docs', app, document, {
     customfavIcon:
@@ -53,10 +51,36 @@ async function bootstrap() {
       persistAuthorization: true,
     },
   });
-
-  const port = process.env.PORT ?? 3000;
-  await app.listen(port);
-  logger.log(`Application is running on: http://localhost:${port}`);
 }
 
-bootstrap();
+// 2. Local Development Bootstrap
+// This only runs if you execute the file directly (e.g., `nest start` or `node dist/main`)
+if (require.main === module) {
+  async function bootstrap() {
+    const logger = new Logger('Bootstrap');
+    const app = await NestFactory.create(AppModule, {
+      logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+    });
+
+    await configureApp(app);
+
+    const port = process.env.PORT ?? 3000;
+    await app.listen(port);
+    logger.log(`Application is running on: http://localhost:${port}`);
+  }
+  bootstrap();
+}
+
+// 3. Vercel Serverless Handler
+// Vercel imports this file and calls the default export
+let cachedApp: any;
+
+export default async (req: any, res: any) => {
+  if (!cachedApp) {
+    const app = await NestFactory.create(AppModule);
+    await configureApp(app);
+    await app.init();
+    cachedApp = app.getHttpAdapter().getInstance();
+  }
+  return cachedApp(req, res);
+};
