@@ -1,6 +1,6 @@
 import { DataSource } from 'typeorm';
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 
 export async function clearDatabase(app: INestApplication) {
   const dataSource = app.get(DataSource);

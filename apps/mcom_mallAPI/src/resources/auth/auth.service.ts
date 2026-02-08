@@ -38,11 +38,11 @@ export class AuthService {
     if (payload) {
       const accessToken = this.jwtService.sign(payload, {
         expiresIn: (accessTokenExpiry || '30m') as any,
-      });
+      } as any);
 
       const refreshToken = this.jwtService.sign(payload, {
         expiresIn: (refreshTokenExpiry || '7d') as any,
-      });
+      } as any);
 
       return {
         accessToken,
@@ -79,10 +79,10 @@ export class AuthService {
 
       const newAccessToken = this.jwtService.sign(tokenPayload, {
         expiresIn: '30m' as any,
-      });
+      } as any);
       const newRefreshToken = this.jwtService.sign(tokenPayload, {
         expiresIn: '7d' as any,
-      });
+      } as any);
 
       return {
         accessToken: newAccessToken,
