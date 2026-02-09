@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, Brackets } from 'typeorm';
 import { Review, ReviewStatus } from './entities/review.entity';
@@ -7,6 +7,7 @@ import { UpdateReviewDto } from './dto/update-review.dto';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { PageDto } from '../../common/dto/page.dto';
+import { UserRole } from '../../common/role.enum';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
@@ -33,19 +34,72 @@ export class ReviewsService {
   }
 
   async findAll(): Promise<Review[]> {
-    return this.reviewRepository.find();
+    return this.reviewRepository.find({
+      where: { status: ReviewStatus.PUBLISHED },
+    });
   }
 
-  async findOne(id: string): Promise<Review> {
-    return this.reviewRepository.findOne({ where: { id } });
+  async findOne(id: string, currentUser?: User): Promise<Review> {
+    const review = await this.findByIdInternal(id);
+
+    if (!review) {
+      throw new NotFoundException(`Review with ID ${id} not found`);
+    }
+
+    if (review.status === ReviewStatus.PUBLISHED) {
+      return review;
+    }
+
+    if (currentUser) {
+      if (currentUser.role === UserRole.ADMIN) {
+        return review;
+      }
+      if (review.user?.id === currentUser.id) {
+        return review;
+      }
+      if (review.business?.user?.id === currentUser.id) {
+        return review;
+      }
+    }
+
+    throw new NotFoundException(`Review with ID ${id} not found`);
   }
 
-  async update(id: string, updateReviewDto: UpdateReviewDto): Promise<Review> {
+  private async findByIdInternal(id: string): Promise<Review> {
+    return this.reviewRepository.findOne({
+      where: { id },
+      relations: ['user', 'business', 'business.user'],
+    });
+  }
+
+  async update(
+    id: string,
+    updateReviewDto: UpdateReviewDto,
+    user: User,
+  ): Promise<Review> {
+    const review = await this.findByIdInternal(id);
+    if (!review) {
+      throw new NotFoundException(`Review with ID ${id} not found`);
+    }
+
+    if (user.role !== UserRole.ADMIN && review.user?.id !== user.id) {
+      throw new ForbiddenException('You are not allowed to update this review');
+    }
+
     await this.reviewRepository.update(id, updateReviewDto);
-    return this.findOne(id);
+    return this.findByIdInternal(id);
   }
 
-  async remove(id: string): Promise<void> {
+  async remove(id: string, user: User): Promise<void> {
+    const review = await this.findByIdInternal(id);
+    if (!review) {
+      throw new NotFoundException(`Review with ID ${id} not found`);
+    }
+
+    if (user.role !== UserRole.ADMIN && review.user?.id !== user.id) {
+      throw new ForbiddenException('You are not allowed to delete this review');
+    }
+
     await this.reviewRepository.delete(id);
   }
 
@@ -123,7 +177,7 @@ export class ReviewsService {
   }
 
   async publish(id: string): Promise<Review> {
-    const review = await this.findOne(id);
+    const review = await this.findByIdInternal(id);
     if (!review) {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }
@@ -132,7 +186,7 @@ export class ReviewsService {
   }
 
   async unpublish(id: string): Promise<Review> {
-    const review = await this.findOne(id);
+    const review = await this.findByIdInternal(id);
     if (!review) {
       throw new NotFoundException(`Review with ID ${id} not found`);
     }

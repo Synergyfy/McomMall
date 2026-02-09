@@ -7,7 +7,8 @@ import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
 import { CreateReviewDto } from './dto/create-review.dto';
 import { UpdateReviewDto } from './dto/update-review.dto';
-import { NotFoundException } from '@nestjs/common';
+import { NotFoundException, ForbiddenException } from '@nestjs/common';
+import { UserRole } from '../../common/role.enum';
 
 describe('ReviewsService', () => {
   let service: ReviewsService;
@@ -97,6 +98,135 @@ describe('ReviewsService', () => {
         business,
       });
       expect(mockReviewRepository.save).toHaveBeenCalledWith(review);
+    });
+  });
+
+  describe('findAll', () => {
+    it('should return only published reviews', async () => {
+      const reviews = [new Review()];
+      mockReviewRepository.find.mockResolvedValue(reviews);
+
+      const result = await service.findAll();
+
+      expect(result).toEqual(reviews);
+      expect(mockReviewRepository.find).toHaveBeenCalledWith({
+        where: { status: ReviewStatus.PUBLISHED },
+      });
+    });
+  });
+
+  describe('findOne', () => {
+    it('should return published review', async () => {
+        const id = '1';
+        const review = { id, status: ReviewStatus.PUBLISHED } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
+
+        const result = await service.findOne(id);
+
+        expect(result).toEqual(review);
+    });
+
+    it('should return pending review to admin', async () => {
+        const id = '1';
+        const review = { id, status: ReviewStatus.PENDING } as Review;
+        const admin = { id: 'admin', role: UserRole.ADMIN } as User;
+        mockReviewRepository.findOne.mockResolvedValue(review);
+
+        const result = await service.findOne(id, admin);
+
+        expect(result).toEqual(review);
+    });
+
+    it('should return pending review to reviewer', async () => {
+        const id = '1';
+        const reviewer = { id: 'reviewer' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
+
+        const result = await service.findOne(id, reviewer);
+
+        expect(result).toEqual(review);
+    });
+
+    it('should return pending review to business owner', async () => {
+        const id = '1';
+        const owner = { id: 'owner' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' }, business: { user: { id: 'owner' } } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
+
+        const result = await service.findOne(id, owner);
+
+        expect(result).toEqual(review);
+    });
+
+    it('should throw NotFoundException for pending review if user not authorized', async () => {
+        const id = '1';
+        const user = { id: 'other' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' }, business: { user: { id: 'owner' } } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
+
+        await expect(service.findOne(id, user)).rejects.toThrow(NotFoundException);
+    });
+
+     it('should return null (or throw) if not found', async () => {
+         mockReviewRepository.findOne.mockResolvedValue(null);
+         await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
+     });
+  });
+
+  describe('update', () => {
+    it('should allow admin to update any review', async () => {
+      const updateReviewDto: UpdateReviewDto = { rating: 4 };
+      const adminUser = { id: 'admin1', role: UserRole.ADMIN } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+      mockReviewRepository.update.mockResolvedValue(undefined);
+
+      await service.update('1', updateReviewDto, adminUser);
+
+      expect(mockReviewRepository.update).toHaveBeenCalledWith(
+        '1',
+        updateReviewDto,
+      );
+    });
+
+    it('should allow owner to update their own review', async () => {
+      const updateReviewDto: UpdateReviewDto = { rating: 4 };
+      const user = { id: 'user1', role: UserRole.CUSTOMER } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+      mockReviewRepository.update.mockResolvedValue(undefined);
+
+      await service.update('1', updateReviewDto, user);
+
+      expect(mockReviewRepository.update).toHaveBeenCalledWith(
+        '1',
+        updateReviewDto,
+      );
+    });
+
+    it('should throw ForbiddenException if user tries to update another user review', async () => {
+      const updateReviewDto: UpdateReviewDto = { rating: 4 };
+      const user = { id: 'user2', role: UserRole.CUSTOMER } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+
+      await expect(
+        service.update('1', updateReviewDto, user),
+      ).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException if review not found', async () => {
+      const updateReviewDto: UpdateReviewDto = { rating: 4 };
+      const user = { id: 'user1' } as User;
+      mockReviewRepository.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.update('1', updateReviewDto, user),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -219,6 +349,52 @@ describe('ReviewsService', () => {
 
       expect(result.status).toEqual(ReviewStatus.PENDING);
       expect(mockReviewRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: ReviewStatus.PENDING }));
+    });
+  });
+
+  describe('remove', () => {
+    it('should allow admin to delete any review', async () => {
+      const id = '1';
+      const adminUser = { id: 'admin1', role: UserRole.ADMIN } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+      mockReviewRepository.delete.mockResolvedValue(undefined);
+
+      await service.remove(id, adminUser);
+
+      expect(mockReviewRepository.delete).toHaveBeenCalledWith(id);
+    });
+
+    it('should allow owner to delete their own review', async () => {
+      const id = '1';
+      const user = { id: 'user1', role: UserRole.CUSTOMER } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+      mockReviewRepository.delete.mockResolvedValue(undefined);
+
+      await service.remove(id, user);
+
+      expect(mockReviewRepository.delete).toHaveBeenCalledWith(id);
+    });
+
+    it('should throw ForbiddenException if user tries to delete another user review', async () => {
+      const id = '1';
+      const user = { id: 'user2', role: UserRole.CUSTOMER } as User;
+      const review = { id: '1', user: { id: 'user1' } } as Review;
+
+      mockReviewRepository.findOne.mockResolvedValue(review);
+
+      await expect(service.remove(id, user)).rejects.toThrow(ForbiddenException);
+    });
+
+    it('should throw NotFoundException if review not found', async () => {
+      const id = '1';
+      const user = { id: 'user1' } as User;
+      mockReviewRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.remove(id, user)).rejects.toThrow(NotFoundException);
     });
   });
 });
