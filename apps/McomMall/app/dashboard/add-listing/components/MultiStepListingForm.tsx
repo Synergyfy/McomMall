@@ -600,11 +600,16 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
       status: status as any,
       categoryIds: [
-        data.productData?.primaryCategory,
-        data.productData?.subCategory,
-        ...(data.productData?.subCategories || []),
-        data.serviceData?.primaryCategory,
-        data.serviceData?.tradeCategory,
+        ...(listingType.includes('product')
+          ? [
+            data.productData?.subCategory,
+          ]
+          : []),
+        ...(listingType.includes('service')
+          ? [
+            data.serviceData?.tradeCategory,
+          ]
+          : []),
       ]
         .filter((id): id is string => !!id)
         .filter((id, index, self) => self.indexOf(id) === index),
