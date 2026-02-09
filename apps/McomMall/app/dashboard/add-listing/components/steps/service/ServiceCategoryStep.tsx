@@ -9,13 +9,13 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import {
-    Command,
-    CommandInput,
-    CommandItem,
-    CommandList,
-    CommandEmpty,
-    CommandGroup,
-  } from '@/components/ui/command';
+  Command,
+  CommandInput,
+  CommandItem,
+  CommandList,
+  CommandEmpty,
+  CommandGroup,
+} from '@/components/ui/command';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
 import { Button } from '@/components/ui/button';
 import { z } from 'zod';
@@ -35,16 +35,16 @@ interface StepProps {
 }
 
 const isFieldOptional = (schema: z.ZodSchema<unknown>, fieldName: string) => {
-    if (!schema || !('shape' in schema)) {
-      return true; // Default to optional if schema is not as expected
-    }
-    const fieldSchema = (schema as z.ZodObject<z.ZodRawShape>).shape[fieldName];
-    if (!fieldSchema) {
-        return true;
-    }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    return (fieldSchema as any)._def.typeName === 'ZodOptional';
-  };
+  if (!schema || !('shape' in schema)) {
+    return true; // Default to optional if schema is not as expected
+  }
+  const fieldSchema = (schema as z.ZodObject<z.ZodRawShape>).shape[fieldName];
+  if (!fieldSchema) {
+    return true;
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return (fieldSchema as any)._def.typeName === 'ZodOptional';
+};
 
 const ServiceCategoryStep: React.FC<StepProps> = ({
   formData,
@@ -59,7 +59,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
   const { data: sectors = [] } = useGetSectors();
 
   const selectedSector = useMemo(
-    () => sectors.find(s => s.name === serviceData.primaryCategory),
+    () => sectors.find(s => s.id === serviceData.primaryCategory),
     [sectors, serviceData.primaryCategory]
   );
 
@@ -68,7 +68,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
     useGetCategoriesBySector(selectedSector?.id || '');
 
   const selectedCategory = useMemo(
-    () => categories.find(c => c.name === serviceData.tradeCategory),
+    () => categories.find(c => c.id === serviceData.tradeCategory),
     [categories, serviceData.tradeCategory]
   );
 
@@ -116,13 +116,13 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
       {/* Level 1: Sector */}
       <div>
         <Label htmlFor="primaryCategory">
-            Sector
-            {isFieldOptional(schema!, 'serviceData.primaryCategory') && (
-                <span className="text-muted-foreground font-normal text-sm">
-                    {' '}
-                    (optional)
-                </span>
-            )}
+          Sector
+          {isFieldOptional(schema!, 'serviceData.primaryCategory') && (
+            <span className="text-muted-foreground font-normal text-sm">
+              {' '}
+              (optional)
+            </span>
+          )}
         </Label>
         <Select
           value={serviceData.primaryCategory}
@@ -133,7 +133,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
           </SelectTrigger>
           <SelectContent>
             {sectors.map(cat => (
-              <SelectItem key={cat.id} value={cat.name}>
+              <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -147,59 +147,59 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
       {/* Level 2: Trade/Industry (Category) */}
       <div>
         <Label htmlFor="tradeCategory">
-            Trade/Industry Section
-            {isFieldOptional(schema!, 'serviceData.tradeCategory') && (
-                <span className="text-muted-foreground font-normal text-sm">
-                    {' '}
-                    (optional)
-                </span>
-            )}
+          Trade/Industry Section
+          {isFieldOptional(schema!, 'serviceData.tradeCategory') && (
+            <span className="text-muted-foreground font-normal text-sm">
+              {' '}
+              (optional)
+            </span>
+          )}
         </Label>
         <Popover open={open} onOpenChange={setOpen}>
-            <PopoverTrigger asChild>
-                <Button
-                    variant="outline"
-                    role="combobox"
-                    aria-expanded={open}
-                    className="w-full justify-between"
-                    disabled={!serviceData.primaryCategory || isCategoriesLoading}
-                >
-                    {serviceData.tradeCategory
-                        ? serviceData.tradeCategory
-                        : isCategoriesLoading ? "Loading..." : "Select a trade or industry"}
-                </Button>
-            </PopoverTrigger>
-            <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
-                <Command>
-                    <CommandInput placeholder="Search..." />
-                    <CommandList>
-                        <CommandEmpty>No category found.</CommandEmpty>
-                        <CommandGroup>
-                        {categories.map(sub => (
-                            <CommandItem
-                                key={sub.id}
-                                value={sub.name}
-                                onSelect={(currentValue) => {
-                                    handleTradeCategoryChange(sub.name); // Store name
-                                    setOpen(false);
-                                }}
-                            >
-                                <Check
-                                    className={cn(
-                                        "mr-2 h-4 w-4",
-                                        serviceData.tradeCategory === sub.name ? "opacity-100" : "opacity-0"
-                                    )}
-                                />
-                                {sub.name}
-                            </CommandItem>
-                        ))}
-                        </CommandGroup>
-                    </CommandList>
-                </Command>
-            </PopoverContent>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              role="combobox"
+              aria-expanded={open}
+              className="w-full justify-between"
+              disabled={!serviceData.primaryCategory || isCategoriesLoading}
+            >
+              {serviceData.tradeCategory
+                ? categories.find(c => c.id === serviceData.tradeCategory)?.name
+                : isCategoriesLoading ? "Loading..." : "Select a trade or industry"}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-[--radix-popover-trigger-width] p-0">
+            <Command>
+              <CommandInput placeholder="Search..." />
+              <CommandList>
+                <CommandEmpty>No category found.</CommandEmpty>
+                <CommandGroup>
+                  {categories.map(sub => (
+                    <CommandItem
+                      key={sub.id}
+                      value={sub.id}
+                      onSelect={(currentValue) => {
+                        handleTradeCategoryChange(sub.id); // Store ID
+                        setOpen(false);
+                      }}
+                    >
+                      <Check
+                        className={cn(
+                          "mr-2 h-4 w-4",
+                          serviceData.tradeCategory === sub.id ? "opacity-100" : "opacity-0"
+                        )}
+                      />
+                      {sub.name}
+                    </CommandItem>
+                  ))}
+                </CommandGroup>
+              </CommandList>
+            </Command>
+          </PopoverContent>
         </Popover>
         {errors['serviceData.tradeCategory'] && (
-            <p className="text-sm text-red-500">{errors['serviceData.tradeCategory']}</p>
+          <p className="text-sm text-red-500">{errors['serviceData.tradeCategory']}</p>
         )}
       </div>
 
@@ -220,7 +220,7 @@ const ServiceCategoryStep: React.FC<StepProps> = ({
           </SelectTrigger>
           <SelectContent>
             {subCategoriesList.map(sub => (
-              <SelectItem key={sub.id} value={sub.name}>
+              <SelectItem key={sub.id} value={sub.id}>
                 {sub.name}
               </SelectItem>
             ))}

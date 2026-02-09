@@ -166,6 +166,7 @@ const validationRules = {
 const StepIndicator = ({
   currentStep,
   steps,
+  onStepClick,
 }: {
   currentStep: number;
   steps: {
@@ -173,19 +174,22 @@ const StepIndicator = ({
     component: React.ElementType;
     icon: React.ElementType;
   }[];
+  onStepClick: (stepIndex: number) => void;
 }) => (
   <div className="flex justify-center items-center mb-8 overflow-x-auto py-2">
     {steps.map((step, index) => (
       <div key={step.title} className="flex items-center flex-shrink-0">
-        <div className="flex flex-col items-center w-24">
+        <div
+          className="flex flex-col items-center w-24 cursor-pointer group"
+          onClick={() => onStepClick(index + 1)}
+        >
           <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold transition-colors duration-300 ${
-              currentStep > index + 1
-                ? 'bg-blue-600 text-white'
-                : currentStep === index + 1
+            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold transition-colors duration-300 ${currentStep > index + 1
+              ? 'bg-blue-600 text-white'
+              : currentStep === index + 1
                 ? 'bg-orange-700 text-white'
                 : 'bg-muted text-muted-foreground'
-            }`}
+              } group-hover:ring-2 group-hover:ring-orange-400 group-hover:ring-offset-2`}
           >
             {currentStep > index + 1 ? (
               <Check />
@@ -194,20 +198,18 @@ const StepIndicator = ({
             )}
           </div>
           <p
-            className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${
-              currentStep >= index + 1
-                ? 'text-primary'
-                : 'text-muted-foreground'
-            }`}
+            className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${currentStep >= index + 1
+              ? 'text-primary'
+              : 'text-muted-foreground'
+              } group-hover:text-orange-600`}
           >
             {step.title}
           </p>
         </div>
         {index < steps.length - 1 && (
           <div
-            className={`w-16 h-1 mx-4 transition-colors duration-300 ${
-              currentStep > index + 1 ? 'bg-blue-600' : 'bg-muted'
-            }`}
+            className={`w-16 h-1 mx-4 transition-colors duration-300 ${currentStep > index + 1 ? 'bg-blue-600' : 'bg-muted'
+              }`}
           />
         )}
       </div>
@@ -435,6 +437,18 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     return Object.keys(newErrors).length === 0;
   };
 
+  const handleStepClick = (stepIndex: number) => {
+    // Only allow jumping back or to steps already validated
+    if (stepIndex < currentStep) {
+      setCurrentStep(stepIndex);
+    } else if (stepIndex > currentStep) {
+      // If jumping forward, validate current step first
+      if (validateStep()) {
+        setCurrentStep(stepIndex);
+      }
+    }
+  };
+
   const nextStep = () => {
     if (validateStep()) {
       setCurrentStep(prev => Math.min(prev + 1, steps.length));
@@ -444,7 +458,8 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
 
   const transformFormDataToPayload = (
-    data: ListingFormData
+    data: ListingFormData,
+    status: 'published' | 'draft' = 'published'
   ): CreateBusinessPayload => {
     const listingType = data.businessTypes.map(
       t => t.toLowerCase() as ListingType
@@ -452,14 +467,26 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     const formatUrl = (url?: string): string | undefined => {
       if (!url) return undefined;
-      if (url.startsWith('http://') || url.startsWith('https://')) {
-        return url;
+      const trimmed = url.trim();
+      if (!trimmed) return undefined;
+      if (trimmed.startsWith('http://') || trimmed.startsWith('https://')) {
+        return trimmed;
       }
-      return `https://${url}`;
+      return `https://${trimmed}`;
+    };
+
+    // Helper to strip empty values
+    const stripEmpty = <T extends object>(obj: T): T => {
+      return Object.entries(obj).reduce((acc, [key, value]) => {
+        if (value !== undefined && value !== null && value !== '') {
+          acc[key as keyof T] = value;
+        }
+        return acc;
+      }, {} as T);
     };
 
     // --- Location and Service Area ---
-    const location: CreateBusinessPayload['location'] = {
+    const location: CreateBusinessPayload['location'] = stripEmpty({
       addressLine1: data.address || '',
       postcode: data.postcode || '',
       city: data.city || '',
@@ -472,18 +499,18 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         data.productData?.deliveryArea?.type === 'postcodes'
           ? (data.productData.deliveryArea.value as string[])
           : data.serviceData?.serviceArea?.type === 'postcodes'
-          ? data.serviceData.serviceArea.value.split(',').map(p => p.trim())
-          : undefined,
+            ? data.serviceData.serviceArea.value.split(',').map(p => p.trim())
+            : undefined,
       serviceModel:
         data.serviceData?.serviceLocation?.atBusinessLocation &&
-        data.serviceData?.serviceLocation?.customerTravels
+          data.serviceData?.serviceLocation?.customerTravels
           ? 'both'
           : data.serviceData?.serviceLocation?.atBusinessLocation
-          ? 'at_location'
-          : data.serviceData?.serviceLocation?.customerTravels
-          ? 'travel_to_customer'
-          : undefined,
-    };
+            ? 'at_location'
+            : data.serviceData?.serviceLocation?.customerTravels
+              ? 'travel_to_customer'
+              : undefined,
+    });
 
     // --- Social Links ---
     const socialLinks: SocialLinkPayload[] = Object.entries(data.socials)
@@ -547,9 +574,9 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
             const formattedUrl = formatUrl(link.url);
             return formattedUrl
               ? {
-                  platform: link.name,
-                  url: formattedUrl,
-                }
+                platform: link.name as any,
+                url: formattedUrl,
+              }
               : null;
           }
           return null;
@@ -559,28 +586,31 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
             link !== null && link.url !== undefined
         );
 
-      productSellerProfile = {
+      productSellerProfile = stripEmpty({
         sellingModes,
         fulfilmentNotes: data.productData.fulfilmentNotes,
         returnsPolicy: data.productData.returnsPolicy,
         hasAgeRestrictedItems: !!data.productData.hasAgeRestrictedItems,
-        storefrontLinks,
-      };
+        storefrontLinks: storefrontLinks.length > 0 ? storefrontLinks : undefined,
+      });
     }
 
     // --- Service Provider Profile ---
     let serviceProviderProfile: ServiceProviderProfilePayload | undefined;
     if (data.serviceData) {
-      serviceProviderProfile = {
-        bookingUrl: data.serviceData.bookingURL,
+      serviceProviderProfile = stripEmpty({
+        bookingUrl: formatUrl(data.serviceData.bookingURL),
         quoteOnly: data.serviceData.pricingVisibility === 'quote',
         hasPublicLiabilityInsurance:
           !!data.serviceData.hasPublicLiabilityInsurance,
-        certifications: [], // File upload needed
-      };
+        certifications: data.serviceData.qualifications?.map(q => ({
+          name: q.altText || 'Certification',
+          fileUrl: q.url || '',
+        })).filter(c => c.fileUrl),
+      });
     }
 
-    const payload: CreateBusinessPayload = {
+    const payload: CreateBusinessPayload = stripEmpty({
       media: [],
       listingType,
       businessName: data.businessName,
@@ -589,11 +619,12 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       vatNumber: data.vatNo,
       shortDescription: data.shortDesc,
       about: data.longDesc,
-      website: data.socials.website,
+      website: formatUrl(data.socials.website),
       businessPhone: data.phone,
       businessEmail: data.email,
       location,
-      socialLinks,
+      socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
+      status: status as any,
       categoryIds: [
         data.productData?.primaryCategory,
         data.productData?.subCategory,
@@ -603,11 +634,11 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       ]
         .filter((id): id is string => !!id)
         .filter((id, index, self) => self.indexOf(id) === index),
-      businessHours,
-      specialDays,
+      businessHours: businessHours.length > 0 ? businessHours : undefined,
+      specialDays: specialDays.length > 0 ? specialDays : undefined,
       productSellerProfile,
       serviceProviderProfile,
-    };
+    });
 
     return payload;
   };
@@ -659,9 +690,9 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     return { isValid, firstErrorStep };
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (status: 'published' | 'draft' = 'published') => {
     const { isValid, firstErrorStep } = validateAllSteps();
-    if (!isValid) {
+    if (!isValid && status === 'PUBLISHED') {
       if (firstErrorStep !== null) {
         setCurrentStep(firstErrorStep);
       }
@@ -670,6 +701,28 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     setIsUploading(true);
     let uploadedFiles: { secure_url: string; public_id: string }[] = [];
+
+    const deepDiff = (obj1: any, obj2: any): any => {
+      const diff: any = {};
+      Object.keys(obj1).forEach(key => {
+        const val1 = obj1[key];
+        const val2 = obj2[key];
+
+        if (val1 && typeof val1 === 'object' && !Array.isArray(val1)) {
+          if (val2 && typeof val2 === 'object') {
+            const nestedDiff = deepDiff(val1, val2);
+            if (Object.keys(nestedDiff).length > 0) {
+              diff[key] = nestedDiff;
+            }
+          } else {
+            diff[key] = val1;
+          }
+        } else if (JSON.stringify(val1) !== JSON.stringify(val2)) {
+          diff[key] = val1;
+        }
+      });
+      return diff;
+    };
 
     try {
       // Wrap upload and mutation in a promise
@@ -690,33 +743,53 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
           uploadedFiles = [...mediaResults, logoResult, bannerResult].filter(Boolean) as { secure_url: string; public_id: string }[];
 
-          const payload = transformFormDataToPayload(formData);
-          payload.media = mediaResults.map(r => r.secure_url);
-          payload.logoUrl = logoResult?.secure_url;
-          payload.bannerUrl = bannerResult?.secure_url;
+          const fullPayload = transformFormDataToPayload(formData, status);
+
+          // Inject uploaded URLs
+          fullPayload.media = [
+            ...formData.media.filter(m => m.url).map(m => m.url!),
+            ...mediaResults.map(r => r.secure_url)
+          ];
+          if (logoResult) fullPayload.logoUrl = logoResult.secure_url;
+          if (bannerResult) fullPayload.bannerUrl = bannerResult.secure_url;
+
+          let finalPayload = fullPayload;
+
+          // Partial update logic if editing
+          if (listingId && propInitialData) {
+            const initialPayload = transformFormDataToPayload(propInitialData as any);
+            const diffPayload = deepDiff(fullPayload, initialPayload);
+
+            // Strategy: always send listingType and businessName for context if available
+            diffPayload.listingType = fullPayload.listingType;
+            diffPayload.businessName = fullPayload.businessName;
+            diffPayload.status = status; // Ensure status reflects draft/published
+
+            finalPayload = diffPayload;
+          }
 
           if (listingId) {
-            editListing({ listingId, payload }, {
+            editListing({ listingId, payload: finalPayload }, {
               onSuccess: () => {
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: () => {
-                setErrorMessage('An unknown error occurred.');
+              onError: (err) => {
+                setErrorMessage(err.message || 'An error occurred during update.');
                 setUploadError(true);
-                reject(new Error('Submission failed'));
+                reject(err);
               },
             });
           } else {
-            addListing(payload, {
+            addListing(finalPayload, {
               onSuccess: () => {
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: () => {
-                setErrorMessage('An unknown error occurred.');
+              onError: (err) => {
+                setErrorMessage(err.message || 'An error occurred during submission.');
                 setUploadError(true);
-                reject(new Error('Submission failed'));
+                reject(err);
               },
             });
           }
@@ -759,7 +832,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       <UploadSuccessDialog
         isOpen={uploadSuccess}
         onClose={() => setUploadSuccess(false)}
-        message="Listing published successfully!"
+        message={listingId ? "Listing updated successfully!" : "Listing published successfully!"}
       />
       <ErrorDialog
         isOpen={uploadError}
@@ -770,7 +843,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         <CardHeader>
           <div className="flex justify-between items-center">
             <CardTitle className="text-2xl font-bold">
-              Add a New <span className="text-orange-700">{getTitle()}</span>{' '}
+              {listingId ? 'Edit' : 'Add a New'} <span className="text-orange-700">{getTitle()}</span>{' '}
               Listing
             </CardTitle>
             <Button
@@ -784,7 +857,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         </CardHeader>
         <Separator />
         <CardContent className="pt-6">
-          <StepIndicator currentStep={currentStep} steps={steps} />
+          <StepIndicator currentStep={currentStep} steps={steps} onStepClick={handleStepClick} />
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
@@ -804,34 +877,45 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
           </AnimatePresence>
         </CardContent>
         <Separator />
-        <CardFooter className="flex justify-between mt-6">
+        <CardFooter className="flex justify-between py-6">
           <Button
             variant="outline"
             onClick={prevStep}
-            className={`${
-              currentStep === 1 ? 'invisible' : 'visible'
-            } text-blue-600 border-blue-600 hover:bg-blue-50`}
+            disabled={currentStep === 1 || isPending}
+            className="w-32"
           >
-            Back
+            Previous
           </Button>
-
-          {currentStep < steps.length ? (
+          <div className="flex gap-4">
             <Button
-              onClick={nextStep}
-              className="bg-orange-700 hover:bg-orange-800"
-            >
-              Next
-            </Button>
-          ) : (
-            <Button
-              onClick={handleSubmit}
+              variant="outline"
+              onClick={() => handleSubmit('draft')}
               disabled={isPending}
-              className="bg-orange-700 hover:bg-orange-800"
+              className="w-32 border-orange-200 text-orange-700 hover:bg-orange-50"
             >
-              {isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-              {isPending ? 'Publishing...' : 'Publish'}
+              Save as Draft
             </Button>
-          )}
+            {currentStep < steps.length ? (
+              <Button onClick={nextStep} disabled={isPending} className="w-32 bg-orange-600 hover:bg-orange-700">
+                Next
+              </Button>
+            ) : (
+              <Button
+                onClick={() => handleSubmit('published')}
+                disabled={isPending}
+                className="w-32 bg-green-600 hover:bg-green-700"
+              >
+                {isPending ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Publishing...
+                  </>
+                ) : (
+                  listingId ? 'Update' : 'Publish'
+                )}
+              </Button>
+            )}
+          </div>
         </CardFooter>
       </Card>
     </>

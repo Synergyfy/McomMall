@@ -41,7 +41,7 @@ export function McomEgiftCard() {
           id: gc.id,
           title: gc.name,
           tag: 'eGift Card',
-          tagColor: 'bg-purple-100 text-purple-800',
+          tagColor: 'bg-orange-100 text-orange-800',
           imageUrl: gc.backgroundImageUrl || 'https://placehold.co/400x250/F87171/FFFFFF?text=Gift+Card',
           backgroundStyle: 'bg-gradient-to-br from-red-100 to-orange-100',
           type: 'giftcard',

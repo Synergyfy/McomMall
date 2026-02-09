@@ -7,6 +7,8 @@ import { toast } from 'sonner';
 import { ChevronRight, Search, MoreHorizontal, Download } from 'lucide-react';
 import { useGetStoreOrders } from '@/service/store/orders/hook';
 import Papa from 'papaparse';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
 import { useMarkNotificationsAsSeen, useGetNotifications } from '@/service/notifications/hook';
 import { type Order as ApiOrder } from '@/service/store/orders/types';
 
@@ -105,6 +107,7 @@ const StatusBadge: React.FC<{ status: BadgeStatus }> = ({ status }) => {
 
 // --- MAIN DASHBOARD COMPONENT ---
 export default function OrdersDashboard() {
+  const { userRole } = useSelector((state: RootState) => state.auth);
   const { data: apiOrders, isLoading } = useGetStoreOrders();
   const router = useRouter();
   const [activeTab, setActiveTab] = React.useState<OrderStatus>('All');
@@ -114,11 +117,13 @@ export default function OrdersDashboard() {
   const { newOrdersCount, newOrderIds } = useGetNotifications();
   const { mutate: markAsSeen } = useMarkNotificationsAsSeen();
 
+  const isMerchant = userRole !== 'customer';
+
   useEffect(() => {
-    if (newOrdersCount > 0) {
+    if (newOrdersCount > 0 && isMerchant) {
       markAsSeen({ notificationIds: newOrderIds });
     }
-  }, [newOrdersCount, newOrderIds, markAsSeen]);
+  }, [newOrdersCount, newOrderIds, markAsSeen, isMerchant]);
 
   const orders = useMemo(() => {
     if (!apiOrders) return [];
@@ -146,7 +151,8 @@ export default function OrdersDashboard() {
       tempOrders = tempOrders.filter(
         o =>
           o.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
-          o.customerName.toLowerCase().includes(searchTerm.toLowerCase())
+          o.customerName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+          o.productName.toLowerCase().includes(searchTerm.toLowerCase())
       );
     return tempOrders;
   }, [orders, activeTab, searchTerm]);
@@ -175,7 +181,7 @@ export default function OrdersDashboard() {
     const csv = Papa.unparse(
       orders.map(order => ({
         ID: order.id,
-        Customer: order.customerName,
+        [isMerchant ? 'Customer' : 'Store/Merchant']: order.customerName,
         Email: order.customerEmail,
         Product: order.productName,
         Status: order.status,
@@ -187,7 +193,7 @@ export default function OrdersDashboard() {
     const blob = new Blob([csv], { type: 'text/csv;charset=utf-t;' });
     const link = document.createElement('a');
     link.href = URL.createObjectURL(blob);
-    link.setAttribute('download', 'orders.csv');
+    link.setAttribute('download', `${isMerchant ? 'sales' : 'purchases'}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -217,16 +223,18 @@ export default function OrdersDashboard() {
               </DialogDescription>
             </DialogHeader>
             <div className="space-y-4">
-              <p><strong>Customer:</strong> {selectedOrder.customerName}</p>
+              <p><strong>{isMerchant ? 'Customer' : 'Store'}:</strong> {selectedOrder.customerName}</p>
               <p><strong>Email:</strong> {selectedOrder.customerEmail}</p>
               <p><strong>Product:</strong> {selectedOrder.productName}</p>
               <p><strong>Status:</strong> {selectedOrder.status}</p>
               <p><strong>Items:</strong> {selectedOrder.itemCount}</p>
               <p><strong>Total:</strong> £{selectedOrder.total.toFixed(2)}</p>
               <p><strong>Date:</strong> {formatDate(selectedOrder.date).main}</p>
-              <Button onClick={() => router.push(`/dashboard/messages?receiverId=${selectedOrder.userId}`)}>
-                <MessageSquare className="mr-2 h-4 w-4" /> Message Customer
-              </Button>
+              {isMerchant && (
+                <Button onClick={() => router.push(`/dashboard/messages?receiverId=${selectedOrder.userId}`)}>
+                  <MessageSquare className="mr-2 h-4 w-4" /> Message Customer
+                </Button>
+              )}
             </div>
           </DialogContent>
         </Dialog>
@@ -268,7 +276,7 @@ export default function OrdersDashboard() {
           <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
             <div>
               <h1 className="text-3xl font-bold text-gray-800">
-                Orders Dashboard
+                {isMerchant ? 'Sales Dashboard' : 'My Purchases'}
               </h1>
               <TooltipProvider>
                 <div className="text-sm text-gray-600 mt-2 flex items-center gap-2">
@@ -330,11 +338,10 @@ export default function OrdersDashboard() {
                         toast.info('Filtering by status is not yet available.');
                       }
                     }}
-                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${
-                      activeTab === tab
-                        ? 'bg-gray-100 font-semibold text-gray-800'
-                        : ''
-                    }`}
+                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${activeTab === tab
+                      ? 'bg-gray-100 font-semibold text-gray-800'
+                      : ''
+                      }`}
                   >
                     {tab} (
                     {tab === 'All'
@@ -344,48 +351,52 @@ export default function OrdersDashboard() {
                   </button>
                 ))}
               </div>
-              <Button className="mt-4 sm:mt-0 w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white" onClick={handleExport} disabled={!orders || orders.length === 0}>
-                <Download className="mr-2 h-4 w-4" /> Export Orders
+              <Button className="mt-4 sm:mt-0 w-full sm:w-auto bg-orange-600 hover:bg-orange-700 text-white" onClick={handleExport} disabled={!orders || orders.length === 0}>
+                <Download className="mr-2 h-4 w-4" /> Export {isMerchant ? 'Orders' : 'History'}
               </Button>
             </div>
 
             <div className="flex flex-col md:flex-row justify-between gap-4 mb-4">
               <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <Checkbox
-                    id="select-all"
-                    onCheckedChange={handleSelectAll}
-                    checked={
-                      isAllSelected ||
-                      (isIndeterminate ? 'indeterminate' : false)
-                    }
-                  />
-                  <label htmlFor="select-all" className="text-sm font-medium">
-                    Select All
-                  </label>
-                </div>
-                <Select onValueChange={handleBulkAction} disabled={selectedRows.length === 0}>
-                  <SelectTrigger className="w-[180px]">
-                    <SelectValue placeholder="Bulk Actions" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    <SelectItem value="delete">
-                      Delete Selected
-                    </SelectItem>
-                    <SelectItem value="mark-shipped">
-                      Mark as Shipped
-                    </SelectItem>
-                    <SelectItem value="mark-delivered">
-                      Mark as Delivered
-                    </SelectItem>
-                  </SelectContent>
-                </Select>
+                {isMerchant && (
+                  <div className="flex items-center gap-2">
+                    <Checkbox
+                      id="select-all"
+                      onCheckedChange={handleSelectAll}
+                      checked={
+                        isAllSelected ||
+                        (isIndeterminate ? 'indeterminate' : false)
+                      }
+                    />
+                    <label htmlFor="select-all" className="text-sm font-medium">
+                      Select All
+                    </label>
+                  </div>
+                )}
+                {isMerchant && (
+                  <Select onValueChange={handleBulkAction} disabled={selectedRows.length === 0}>
+                    <SelectTrigger className="w-[180px]">
+                      <SelectValue placeholder="Bulk Actions" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="delete">
+                        Delete Selected
+                      </SelectItem>
+                      <SelectItem value="mark-shipped">
+                        Mark as Shipped
+                      </SelectItem>
+                      <SelectItem value="mark-delivered">
+                        Mark as Delivered
+                      </SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
               </div>
               <div className="relative flex-grow md:flex-grow-0 md:w-1/3">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" />
-                <Input
-                  placeholder="Search Orders by ID or Customer..."
-                  className="pl-10"
+                <input
+                  placeholder={isMerchant ? "Search Orders by ID or Customer..." : "Search by ID or Product..."}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50 pl-10"
                   value={searchTerm}
                   onChange={e => setSearchTerm(e.target.value)}
                 />
@@ -396,17 +407,19 @@ export default function OrdersDashboard() {
               <Table className="min-w-full responsive-table">
                 <TableHeader className="hidden md:table-header-group bg-gray-50">
                   <TableRow>
-                    <TableHead className="w-[50px]">
-                      <Checkbox
-                        onCheckedChange={handleSelectAll}
-                        checked={
-                          isAllSelected ||
-                          (isIndeterminate ? 'indeterminate' : false)
-                        }
-                      />
-                    </TableHead>
+                    {isMerchant && (
+                      <TableHead className="w-[50px]">
+                        <Checkbox
+                          onCheckedChange={handleSelectAll}
+                          checked={
+                            isAllSelected ||
+                            (isIndeterminate ? 'indeterminate' : false)
+                          }
+                        />
+                      </TableHead>
+                    )}
                     <TableHead>Order ID</TableHead>
-                    <TableHead>Customer</TableHead>
+                    <TableHead>{isMerchant ? 'Customer' : 'Store'}</TableHead>
                     <TableHead>Product Name</TableHead>
                     <TableHead>Status</TableHead>
                     <TableHead>Items</TableHead>
@@ -429,20 +442,22 @@ export default function OrdersDashboard() {
                     filteredOrders.map(order => (
                       <TableRow
                         key={order.id}
-                        className="mobile-table-card md:table-row"
+                        className="mobile-table-card md:table-row hover:bg-gray-50 transition-colors"
                         data-state={
                           selectedRows.includes(order.id) ? 'selected' : ''
                         }
                       >
-                        <TableCell
-                          data-label="Select"
-                          className="responsive-cell"
-                        >
-                          <Checkbox
-                            checked={selectedRows.includes(order.id)}
-                            onCheckedChange={() => handleSelectRow(order.id)}
-                          />
-                        </TableCell>
+                        {isMerchant && (
+                          <TableCell
+                            data-label="Select"
+                            className="responsive-cell"
+                          >
+                            <Checkbox
+                              checked={selectedRows.includes(order.id)}
+                              onCheckedChange={() => handleSelectRow(order.id)}
+                            />
+                          </TableCell>
+                        )}
                         <TableCell
                           data-label="Order ID"
                           className="responsive-cell font-medium text-gray-800"
@@ -450,11 +465,11 @@ export default function OrdersDashboard() {
                           {order.id}
                         </TableCell>
                         <TableCell
-                          data-label="Customer"
+                          data-label={isMerchant ? "Customer" : "Store"}
                           className="responsive-cell"
                         >
                           <div className="flex flex-col items-end md:items-start">
-                            <span className="font-medium">
+                            <span className="font-medium text-blue-600">
                               {order.customerName}
                             </span>
                             <span className="text-xs text-gray-500">
@@ -491,7 +506,7 @@ export default function OrdersDashboard() {
                           className="responsive-cell text-gray-600"
                         >
                           <div className="flex flex-col text-xs items-end md:items-start">
-                            <span>{formatDate(order.date).main}</span>
+                            <span className="font-medium">{formatDate(order.date).main}</span>
                             <span className="text-gray-400">
                               {formatDate(order.date).sub}
                             </span>
@@ -508,9 +523,9 @@ export default function OrdersDashboard() {
                     <TableRow className="block md:table-row">
                       <TableCell
                         colSpan={8}
-                        className="h-24 text-center block md:table-cell"
+                        className="h-24 text-center block md:table-cell text-gray-500"
                       >
-                        No orders found. Try adjusting your filters.
+                        No orders found.
                       </TableCell>
                     </TableRow>
                   )}

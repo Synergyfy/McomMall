@@ -97,11 +97,14 @@ export interface ListingFormData {
   postcode?: string;
   city?: string;
   phone: string;
-  email:string;
+  email: string;
   socials: Socials;
   logo?: Media | null;
   banner?: Media | null;
   media: Media[];
+
+  // Main status
+  status: 'draft' | 'published' | 'archived' | 'scheduled';
 
   // Conditional data
   productData?: Partial<ProductSellerData>;

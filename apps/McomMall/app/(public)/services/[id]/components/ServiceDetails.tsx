@@ -11,8 +11,8 @@ import { BookingModal } from '@/components/BookingModal';
 import { Service } from '@/service/services/types';
 
 const isImageUrl = (url: string) => {
-    if (!url) return false;
-    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+  if (!url) return false;
+  return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
 }
 
 type ServiceDetailsProps = {
@@ -88,13 +88,12 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
                 {service.name}
               </h1>
               <div className="flex items-center">
-                 <div className="flex items-center text-yellow-400">
+                <div className="flex items-center text-yellow-400">
                   {[...Array(5)].map((_, i) => (
                     <Star
                       key={i}
-                      className={`h-6 w-6 ${
-                        i < 4 ? 'fill-current' : ''
-                      }`}
+                      className={`h-6 w-6 ${i < 4 ? 'fill-current' : ''
+                        }`}
                     />
                   ))}
                 </div>
@@ -133,10 +132,10 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
                 <span>Professional & Verified Provider</span>
               </div>
               {service.pricingModel === 'perHour' && (
-                  <div className="flex items-center text-gray-600"><Clock className="h-5 w-5 mr-3 text-blue-500" /> Billed on an hourly basis</div>
+                <div className="flex items-center text-gray-600"><Clock className="h-5 w-5 mr-3 text-blue-500" /> Billed on an hourly basis</div>
               )}
               {service.enableGuestPricing && (
-                <div className="flex items-center text-gray-600"><Users className="h-5 w-5 mr-3 text-purple-500" /> Custom pricing per guest available</div>
+                <div className="flex items-center text-gray-600"><Users className="h-5 w-5 mr-3 text-orange-500" /> Custom pricing per guest available</div>
               )}
             </div>
           </div>
