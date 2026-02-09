@@ -42,6 +42,8 @@ import RecentActivities from './component/RecentActivities';
 import EarningProgressionChart from './component/EarningProgressionChart';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
+import { Progress } from '@/components/ui/progress';
+import { useGetTiers } from '@/service/tiers/hook';
 
 
 // --- TYPE DEFINITIONS ---
@@ -61,33 +63,64 @@ const listingPackage: ListingPackage = {
 };
 
 // --- SUB-COMPONENTS ---
-const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
-  <Card className="shadow-sm">
-    <CardHeader>
-      <CardTitle className="text-lg font-semibold">
-        Your Listing Packages
-      </CardTitle>
-    </CardHeader>
-    <CardContent className="flex items-start space-x-4">
-      <div className="flex-shrink-0 w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center">
-        <Diamond className="w-5 h-5 text-gray-600" />
-      </div>
-      <div>
-        <p className="font-semibold text-gray-800">{pkg.name}</p>
-        <p className="text-sm text-gray-500">{pkg.description}</p>
-      </div>
-    </CardContent>
-  </Card>
-);
+const ListingPackages: FC<{
+  name: string;
+  current: number;
+  max: number;
+}> = ({ name, current, max }) => {
+  const percentage = Math.min(Math.round((current / max) * 100), 100);
+
+  return (
+    <Card className="shadow-sm">
+      <CardHeader>
+        <CardTitle className="text-lg font-semibold">
+          Your Listing Packages
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="flex items-start space-x-4">
+          <div className="flex-shrink-0 w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+            <Diamond className="w-5 h-5 text-orange-600" />
+          </div>
+          <div className="flex-grow">
+            <div className="flex justify-between items-center mb-1">
+              <p className="font-semibold text-gray-800">{name}</p>
+              <span className="text-xs font-medium text-gray-500">
+                {current} / {max}
+              </span>
+            </div>
+            <Progress value={percentage} className="h-2" />
+            <p className="text-sm text-gray-500 mt-2">
+              You have used {current} out of {max} listing slots.
+            </p>
+          </div>
+        </div>
+      </CardContent>
+    </Card>
+  );
+};
 
 // --- MAIN PAGE COMPONENT ---
 const DashboardPage: FC = () => {
-  const { userName, userRole } = useSelector((state: RootState) => state.auth);
-  const { data: stats, isLoading: isLoadingStats } = useGetStats<OwnerStatsDto | CustomerStatsDto>();
-  const {
-    data: activities,
-    isLoading: isLoadingActivities,
-  } = useRecentActivities();
+  const { userName, userRole, packageInfo } = useSelector(
+    (state: RootState) => state.auth
+  );
+  const { data: stats, isLoading: isLoadingStats } = useGetStats<
+    OwnerStatsDto | CustomerStatsDto
+  >();
+  const { data: activities, isLoading: isLoadingActivities } =
+    useRecentActivities();
+  const { data: tiers } = useGetTiers();
+
+  const currentTier = tiers?.find(
+    t => t.name.toLowerCase() === packageInfo?.planType?.toLowerCase()
+  );
+
+  const maxListings = currentTier?.configuration?.quotas?.maxListings || 1;
+  const currentListings =
+    userRole === UserRole.OWNER
+      ? (stats as OwnerStatsDto)?.totalAmountOfListing || 0
+      : 0;
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -117,14 +150,18 @@ const DashboardPage: FC = () => {
             <StatsCards stats={stats} role={userRole as UserRole} />
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
               <div className="lg:col-span-1 space-y-8">
-                 <RecentActivities
-                    activities={activities}
-                    isLoading={isLoadingActivities}
-                  />
+                <RecentActivities
+                  activities={activities}
+                  isLoading={isLoadingActivities}
+                />
               </div>
               {userRole === UserRole.OWNER && (
                 <div className="lg:col-span-2 space-y-8">
-                  <ListingPackages pkg={listingPackage} />
+                  <ListingPackages
+                    name={packageInfo?.planType || 'Basic'}
+                    current={currentListings}
+                    max={maxListings}
+                  />
                   <EarningProgressionChart />
                 </div>
               )}

@@ -107,6 +107,7 @@ export interface Service extends AbstractBaseEntity {
   business?: Business;
   businessId: string;
   name: string;
+  sector: string;
   description?: string;
   media: string[] | null;
   isActive: boolean;

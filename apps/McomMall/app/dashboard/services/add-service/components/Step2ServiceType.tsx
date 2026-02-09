@@ -87,7 +87,7 @@ export function Step2ServiceType() {
                   <FormControl>
                     <SelectTrigger type="button" className={cn(
                       "py-6 transition-all",
-                      form.formState.errors.deliveryConfig?.mode && "border-destructive ring-destructive focus:ring-destructive"
+                      form.formState.errors.deliveryConfig && (form.formState.errors.deliveryConfig as any).mode && "border-destructive ring-destructive focus:ring-destructive"
                     )}>
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>

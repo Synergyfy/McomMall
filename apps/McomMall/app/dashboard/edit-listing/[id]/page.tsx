@@ -3,81 +3,134 @@
 import { useParams, useRouter } from 'next/navigation';
 import { useGetBusinessData } from '@/service/listings/hook';
 import MultiStepListingForm from '@/app/dashboard/add-listing/components/MultiStepListingForm';
-import { ListingFormData } from '@/app/dashboard/add-listing/types';
-import { InHouseBusiness } from '@/service/listings/types';
+import { ListingFormData, WeeklyHours } from '@/app/dashboard/add-listing/types';
+import { InHouseBusiness, BusinessHour } from '@/service/listings/types';
 
 const transformApiDataToFormData = (
   apiData: InHouseBusiness
 ): Partial<ListingFormData> => {
-  const formData: Partial<ListingFormData> = {
-    businessTypes: apiData.listingType.map(
-      t => t.charAt(0).toUpperCase() + t.slice(1)
-    ) as ('Product' | 'Service')[],
-    businessName: apiData.businessName,
-    phone: apiData.businessPhone,
-    email: apiData.businessEmail,
-    shortDesc: apiData.shortDescription,
-    socials: {
-      website: apiData.website,
-      // The UserListing type doesn't include other social media links.
-      // They would need to be added to the type and fetched from the API
-      // to be populated here.
-    },
-    media: [], // This needs to be populated from the API, assuming the API provides a list of media URLs.
+  const findSocial = (platform: string) =>
+    apiData.socialLinks.find(
+      s => s.platform.toLowerCase() === platform.toLowerCase()
+    )?.url;
+
+  const mapWeeklyHours = (hours: BusinessHour[]) => {
+    const dayMap: Record<number, keyof WeeklyHours> = {
+      1: 'Monday',
+      2: 'Tuesday',
+      3: 'Wednesday',
+      4: 'Thursday',
+      5: 'Friday',
+      6: 'Saturday',
+      0: 'Sunday',
+    };
+    return hours.reduce((acc, curr) => {
+      const day = dayMap[curr.dayOfWeek];
+      if (day) {
+        if (!acc[day]) acc[day] = [];
+        acc[day]!.push({ start: curr.openTime, end: curr.closeTime });
+      }
+      return acc;
+    }, {} as WeeklyHours);
   };
 
-  const mediaItems = [];
-  if (apiData.logoUrl) {
-    mediaItems.push({ url: apiData.logoUrl, altText: apiData.logoAltText || '' });
-  }
-  if (apiData.bannerUrl) {
-    mediaItems.push({ url: apiData.bannerUrl, altText: apiData.bannerAltText || '' });
-  }
-  formData.media = mediaItems;
+  const formData: Partial<ListingFormData> = {
+    id: apiData.id,
+    status: (apiData.status?.toLowerCase() || 'published') as ListingFormData['status'],
+    businessTypes: apiData.listingType.map(
+      t => (t.charAt(0).toUpperCase() + t.slice(1)) as 'Product' | 'Service'
+    ),
+    businessName: apiData.businessName,
+    legalName: apiData.legalName,
+    companyRegNo: apiData.companyRegistrationNumber || '',
+    vatNo: apiData.vatNumber || '',
+    shortDesc: apiData.shortDescription,
+    longDesc: apiData.about || '',
+    address: apiData.location.addressLine1,
+    postcode: apiData.location.postcode,
+    city: apiData.location.city,
+    phone: apiData.businessPhone,
+    email: apiData.businessEmail || '',
+    socials: {
+      website: apiData.website || '',
+      facebook: findSocial('facebook') || '',
+      instagram: findSocial('instagram') || '',
+      twitter: findSocial('twitter') || '',
+      youtube: findSocial('youtube') || '',
+      linkedin: findSocial('linkedin') || '',
+    },
+    logo: apiData.logoUrl
+      ? { url: apiData.logoUrl, altText: apiData.logoAltText || '' }
+      : null,
+    banner: apiData.bannerUrl
+      ? { url: apiData.bannerUrl, altText: apiData.bannerAltText || '' }
+      : null,
+    media: apiData.media.map(url => ({
+      url,
+      altText: '',
+    })),
+  };
 
   if (apiData.listingType.includes('product')) {
     formData.productData = {
-      primaryCategory: apiData.categories[0]?.name || '',
-      subCategories: apiData.categories.slice(1).map(c => c.name),
+      primaryCategory: apiData.categories[0]?.id || '',
+      subCategory: apiData.categories[1]?.id || '',
+      subCategories: apiData.categories.slice(2).map(c => c.id),
       showAddressPublicly: apiData.location.showPublicly,
       deliveryArea: {
-        type: 'radius',
-        value: apiData.location.deliveryRadiusKm?.toString() || '',
+        type: apiData.location.deliveryRadiusKm ? 'radius' : 'postcodes',
+        value: apiData.location.deliveryRadiusKm
+          ? apiData.location.deliveryRadiusKm.toString()
+          : apiData.location.servicePostcodes || [],
       },
       sellingModes: {
-        inStorePickup:
-          apiData.productSellerProfile?.sellingModes.includes('pickup') ||
-          false,
-        localDelivery:
-          apiData.productSellerProfile?.sellingModes.includes(
-            'local_delivery'
-          ) || false,
-        ukWideShipping:
-          apiData.productSellerProfile?.sellingModes.includes('uk_shipping') ||
-          false,
+        inStorePickup: !!apiData.productSellerProfile?.sellingModes.includes('pickup'),
+        localDelivery: !!apiData.productSellerProfile?.sellingModes.includes('local_delivery'),
+        ukWideShipping: !!apiData.productSellerProfile?.sellingModes.includes('uk_shipping'),
       },
       fulfilmentNotes: apiData.productSellerProfile?.fulfilmentNotes || '',
       returnsPolicy: apiData.productSellerProfile?.returnsPolicy || '',
-      storefrontLinks:
-        apiData.productSellerProfile?.storefrontLinks.map(link => ({
-          name: link.platform,
-          url: link.url,
-        })) || [],
+      hasAgeRestrictedItems: apiData.productSellerProfile?.hasAgeRestrictedItems || false,
+      storefrontLinks: apiData.productSellerProfile?.storefrontLinks.map(link => ({
+        name: link.platform,
+        url: link.url,
+      })) || [],
+      is247: apiData.businessHours.every(h => h.is24h),
+      weeklyHours: mapWeeklyHours(apiData.businessHours),
+      specialDays: apiData.specialDays.map(sd => ({
+        date: new Date(sd.date),
+        isClosed: !sd.isOpen,
+        openingHours: sd.openTime && sd.closeTime ? [{ start: sd.openTime, end: sd.closeTime }] : undefined,
+      })),
     };
   }
 
   if (apiData.listingType.includes('service')) {
     formData.serviceData = {
-      tradeCategory: apiData.categories[0]?.name || '',
+      primaryCategory: apiData.categories[0]?.id || '',
+      tradeCategory: apiData.categories[1]?.id || apiData.categories[0]?.id || '',
+      subCategories: apiData.categories.slice(2).map(c => c.id),
       serviceLocation: {
         atBusinessLocation: apiData.location.serviceModel !== 'travel_to_customer',
         customerTravels: apiData.location.serviceModel !== 'at_location',
       },
-      serviceArea: { type: 'postcodes', value: apiData.location.servicePostcodes?.join(', ') || '' },
-      // Other service fields are not available on UserListing type
-      hoursType: 'weekly',
-      bookingMethod: 'call',
-      pricingVisibility: 'quote',
+      serviceArea: {
+        type: apiData.location.deliveryRadiusKm ? 'radius' : 'postcodes',
+        value: apiData.location.deliveryRadiusKm
+          ? apiData.location.deliveryRadiusKm.toString()
+          : (apiData.location.servicePostcodes || []).join(', '),
+      },
+      hoursType: apiData.serviceProviderProfile?.bookingMethod === 'book_online' ? 'weekly' : 'appointmentOnly',
+      weeklyHours: mapWeeklyHours(apiData.businessHours),
+      bookingMethod: apiData.serviceProviderProfile?.bookingMethod === 'book_online' ? 'online' : apiData.serviceProviderProfile?.bookingMethod === 'request_a_quote' ? 'quote' : 'call',
+      bookingURL: apiData.serviceProviderProfile?.bookingUrl || '',
+      pricingVisibility: apiData.serviceProviderProfile?.quoteOnly ? 'quote' : 'fixed',
+      hasPublicLiabilityInsurance: apiData.serviceProviderProfile?.hasPublicLiabilityInsurance || false,
+      insuranceCertificates: [], // API doesn't seem to separate insurance from certs cleanly in the simplified profile, but we expect Media[]
+      qualifications: apiData.serviceProviderProfile?.certifications.map(c => ({
+        url: c.fileUrl,
+        altText: c.name,
+      })) || [],
     };
   }
 

@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ListingFormData } from '../../../types';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
+import { Switch } from '@/components/ui/switch';
 import {
   Tooltip,
   TooltipContent,
@@ -10,6 +11,7 @@ import {
   TooltipTrigger,
 } from '@/components/ui/tooltip';
 import { Info } from 'lucide-react';
+import { useGetUserProfile } from '@/service/user/hook';
 
 interface StepProps {
   formData: ListingFormData;
@@ -77,6 +79,9 @@ const BusinessInfoStep: React.FC<StepProps> = ({
   errors,
   validationRules,
 }) => {
+  const { data: userProfile } = useGetUserProfile();
+  const [useAccountInfo, setUseAccountInfo] = useState(false);
+
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
   ) => {
@@ -90,6 +95,17 @@ const BusinessInfoStep: React.FC<StepProps> = ({
       ...prev,
       socials: { ...prev.socials, [id]: value },
     }));
+  };
+
+  const handleToggleAccountInfo = (checked: boolean) => {
+    setUseAccountInfo(checked);
+    if (checked && userProfile) {
+      setFormData(prev => ({
+        ...prev,
+        email: userProfile.email || prev.email,
+        phone: userProfile.phoneNumber || prev.phone,
+      }));
+    }
   };
 
   const shortDescLength = formData.shortDesc?.length || 0;
@@ -164,6 +180,21 @@ const BusinessInfoStep: React.FC<StepProps> = ({
       </div>
 
       <FormField
+        id="postcode"
+        label="Postcode"
+        tooltip="Postcode for your business location."
+        error={errors.postcode}
+        isOptional={isFieldOptional(validationRules, 'postcode')}
+      >
+        <Input
+          id="postcode"
+          value={formData.postcode || ''}
+          onChange={handleChange}
+          placeholder="SW1A 1AA"
+        />
+      </FormField>
+
+      <FormField
         id="address"
         label="Address"
         tooltip="Your business address. This appears on your listing if you choose to show it."
@@ -193,20 +224,7 @@ const BusinessInfoStep: React.FC<StepProps> = ({
         />
       </FormField>
 
-      <FormField
-        id="postcode"
-        label="Postcode"
-        tooltip="Postcode for your business location."
-        error={errors.postcode}
-        isOptional={isFieldOptional(validationRules, 'postcode')}
-      >
-        <Input
-          id="postcode"
-          value={formData.postcode || ''}
-          onChange={handleChange}
-          placeholder="SW1A 1AA"
-        />
-      </FormField>
+      <div className="md:col-span-1" />
 
       <div className="md:col-span-2">
         <FormField
@@ -223,6 +241,17 @@ const BusinessInfoStep: React.FC<StepProps> = ({
             rows={5}
           />
         </FormField>
+      </div>
+
+      <div className="md:col-span-2 flex items-center space-x-2 mb-2 p-3 bg-orange-50 rounded-lg border border-orange-100">
+        <Switch
+          id="use-account-info"
+          checked={useAccountInfo}
+          onCheckedChange={handleToggleAccountInfo}
+        />
+        <Label htmlFor="use-account-info" className="text-orange-900 font-medium">
+          Use account information for contact details
+        </Label>
       </div>
 
       <FormField
@@ -368,3 +397,4 @@ const BusinessInfoStep: React.FC<StepProps> = ({
 };
 
 export default BusinessInfoStep;
+

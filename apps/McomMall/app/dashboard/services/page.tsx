@@ -280,7 +280,7 @@ export default function ServicesDashboard() {
                         >
                           <div className="flex flex-col text-xs items-end md:items-start">
                             <span className="font-medium text-gray-900">
-                              {formatDate(service.created_at || service.createdAt || '')}
+                              {formatDate(service.created_at || '')}
                             </span>
                             <span className="text-gray-400 text-[10px] uppercase tracking-tighter">Created</span>
                           </div>

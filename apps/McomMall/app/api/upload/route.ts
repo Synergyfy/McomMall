@@ -41,28 +41,33 @@ export async function POST(req: NextRequest) {
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const readableStream = new Readable();
-    readableStream.push(buffer);
-    readableStream.push(null);
 
     const result = await new Promise((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder: 'profile-pictures', resource_type: 'auto' },
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder: 'profile-pictures',
+          resource_type: 'auto',
+          // Ensure we don't hang on large files
+          timeout: 60000
+        },
         (error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
+          if (error) {
             reject(error);
+          } else {
+            resolve(result);
           }
         }
       );
-      readableStream.pipe(stream);
+
+      // Using end() with buffer is more reliable in serverless environments than piping
+      uploadStream.end(buffer);
     });
 
     return NextResponse.json(result);
   } catch (error) {
+    console.error('Upload Error:', error);
     return NextResponse.json(
-      { error: (error as Error).message },
+      { error: (error as Error).message || 'Failed to upload to Cloudinary' },
       { status: 500 }
     );
   }

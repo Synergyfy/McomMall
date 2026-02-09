@@ -114,17 +114,23 @@ const ListingCard: React.FC<{
               </div>
             )}
           </div>
-          
+
           <div className="flex-grow text-center md:text-left space-y-2">
             <div className="flex flex-col md:flex-row md:items-center gap-2">
               <h3 className="text-xl font-bold text-slate-900">
                 {listing.businessName}
               </h3>
-              <Badge variant="outline" className="w-fit mx-auto md:mx-0 bg-emerald-50 text-emerald-600 border-emerald-100 font-bold uppercase tracking-wider text-[10px]">
-                {listing.status === 'published' ? 'Active' : listing.status}
+              <Badge
+                variant="outline"
+                className={`w-fit mx-auto md:mx-0 font-bold uppercase tracking-wider text-[10px] border-none ${listing.status?.toLowerCase() === 'published'
+                    ? 'bg-emerald-50 text-emerald-600'
+                    : 'bg-orange-50 text-orange-600'
+                  }`}
+              >
+                {listing.status?.toLowerCase() === 'published' ? 'Active' : listing.status}
               </Badge>
             </div>
-            
+
             <div className="flex flex-wrap justify-center md:justify-start gap-2">
               {listing.listingType.map(type => (
                 <Badge key={type} className="bg-slate-100 text-slate-600 border-none font-semibold">
@@ -132,7 +138,7 @@ const ListingCard: React.FC<{
                 </Badge>
               ))}
             </div>
-            
+
             <div className="flex items-center justify-center md:justify-start gap-1.5 text-sm text-slate-500">
               <MapPin className="h-4 w-4 text-slate-400" />
               <span className="truncate">{listing.location.addressLine1}, {listing.location.city}</span>
@@ -174,7 +180,7 @@ const Pagination: React.FC<PaginationProps> = ({
   onPageChange,
 }) => {
   const pageNumbers: (number | string)[] = [];
-  
+
   if (totalPages <= 5) {
     for (let i = 1; i <= totalPages; i++) pageNumbers.push(i);
   } else {
@@ -231,7 +237,7 @@ export default function ActiveListingsPage() {
   React.useEffect(() => {
     setMounted(true);
   }, []);
-  
+
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedListingId, setSelectedListingId] = useState<string | null>(null);
 
@@ -241,7 +247,7 @@ export default function ActiveListingsPage() {
     isError,
     error,
   } = useGetUserListings(page, limit);
-  
+
   const { mutate: deleteListing } = useDeleteListing();
 
   const handleDeleteClick = (listingId: string) => {
@@ -271,8 +277,8 @@ export default function ActiveListingsPage() {
             <h1 className="text-4xl font-black tracking-tight text-slate-900">Active <span className="text-orange-600">Listings</span></h1>
             <p className="text-slate-500 font-medium italic">Manage and monitor your currently live business storefronts</p>
           </div>
-          <Button 
-            variant="primary" 
+          <Button
+            variant="primary"
             className="h-12 px-6 gap-2"
             onClick={() => router.push('/dashboard/add-listing')}
           >
@@ -343,7 +349,7 @@ export default function ActiveListingsPage() {
           </AlertDialogHeader>
           <AlertDialogFooter className="gap-2">
             <AlertDialogCancel className="rounded-xl font-bold">Keep Listing</AlertDialogCancel>
-            <AlertDialogAction 
+            <AlertDialogAction
               onClick={handleConfirmDelete}
               className="rounded-xl bg-red-600 font-bold hover:bg-red-700"
             >

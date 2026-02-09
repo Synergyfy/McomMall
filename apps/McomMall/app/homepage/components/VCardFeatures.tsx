@@ -53,7 +53,7 @@ const FeatureCard = ({
   description,
   imageUrl,
 }: {
-  title:string;
+  title: string;
   description: string;
   imageUrl: string;
 }) => (
@@ -138,8 +138,7 @@ export default function VCardFeaturesSection() {
 
   return (
     <section
-      className="bg-gray-50 w-full py-16 md:py-24"
-      style={{ clipPath: 'polygon(0 5vw, 100% 0, 100% 100%, 0 100%)' }}
+      className="w-full py-16 md:py-24"
     >
       <div className="max-w-[1600px] mx-auto px-8">
         {/* Header */}

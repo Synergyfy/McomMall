@@ -160,9 +160,17 @@ const ListingCard: React.FC<ListingCardProps> = ({
             </div>
           )}
           <div className="flex-grow">
-            <h3 className="text-lg font-bold text-slate-800">
-              {listing.businessName}
-            </h3>
+            <div className="flex flex-col md:flex-row md:items-center gap-2">
+              <h3 className="text-lg font-bold text-slate-800">
+                {listing.businessName}
+              </h3>
+              <Badge
+                variant={listing.status?.toLowerCase() === 'published' ? 'default' : 'secondary'}
+                className={listing.status?.toLowerCase() === 'published' ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200 border-none' : 'bg-orange-100 text-orange-700 hover:bg-orange-200 border-none'}
+              >
+                {listing.status?.charAt(0).toUpperCase() + listing.status?.slice(1)}
+              </Badge>
+            </div>
             <div className="mt-2 flex flex-wrap gap-2">
               {listing.listingType.map(type => (
                 <Badge key={type} variant="secondary">
@@ -264,9 +272,8 @@ const Pagination: React.FC<PaginationProps> = ({
           variant={num === currentPage ? 'primary' : 'ghost'}
           onClick={() => typeof num === 'number' && onPageChange(num)}
           disabled={typeof num !== 'number'}
-          className={`px-4 py-2 ${
-            num === currentPage ? 'bg-slate-800 text-white' : 'bg-white'
-          }`}
+          className={`px-4 py-2 ${num === currentPage ? 'bg-slate-800 text-white' : 'bg-white'
+            }`}
         >
           {num}
         </Button>
@@ -307,7 +314,7 @@ export default function MyListingsPage() {
     isError,
     error,
   } = useGetUserListings(currentPage, itemsPerPage);
-  
+
   const { mutate: claimBusiness } = useClaimBusiness();
   const { mutate: deleteListing } = useDeleteListing();
 
@@ -388,7 +395,7 @@ export default function MyListingsPage() {
         {/* Main Content */}
         <div className="rounded-xl border bg-white p-4 shadow-sm sm:p-6">
           <div className="flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-            <h2 className="text-lg font-semibold">Pending Listings</h2>
+            <h2 className="text-lg font-semibold">Business Storefronts</h2>
             <SearchBar searchTerm={searchTerm} setSearchTerm={setSearchTerm} />
           </div>
 

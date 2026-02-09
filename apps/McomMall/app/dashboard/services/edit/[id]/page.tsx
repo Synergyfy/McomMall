@@ -25,6 +25,7 @@ import Link from 'next/link';
 
 interface ServiceError {
   name?: string;
+  sector?: string;
   businessId?: string;
   pricingModel?: string;
   fixedPrice?: string;
@@ -58,6 +59,7 @@ const EditServicePage = () => {
   const [formData, setFormData] = React.useState<UpdateServiceDto>({
     id: serviceId,
     name: '',
+    sector: '',
     description: '',
     images: [],
     isActive: true,
@@ -138,6 +140,7 @@ const EditServicePage = () => {
     const newErrors: ServiceError = {};
 
     if (!formData.name) newErrors.name = 'Service name is required.';
+    if (formData.sector === undefined || formData.sector === '') newErrors.sector = 'Sector is required.';
     if (formData.name.length > 160)
       newErrors.name = 'Service name must be 160 characters or less.';
     if (!formData.businessId)

@@ -23,7 +23,7 @@ export default function CouponTabContent({
     isLoading,
     isError,
   } = useGetPublicCouponProductsByBusiness(businessId);
-  
+
   const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<CouponProduct | null>(null);
@@ -65,53 +65,53 @@ export default function CouponTabContent({
             transition={{ delay: index * 0.1 }}
             className="group relative aspect-[1.58/1]"
           >
-             <div className="absolute inset-0 bg-gradient-to-br from-indigo-600 to-purple-700 rounded-[2.5rem] p-8 shadow-2xl border border-white/10 flex flex-col justify-between overflow-hidden">
-                {/* Abstract pattern overlay */}
-                <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none" 
-                     style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
-                
-                <div className="flex justify-between items-start">
-                   <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
-                      <div className="flex items-center gap-2">
-                        <Zap className="text-yellow-400 fill-yellow-400" size={16} />
-                        <span className="text-[10px] font-black text-white uppercase tracking-widest">Flash Coupon</span>
-                      </div>
-                   </div>
-                   <div className="flex items-center gap-1.5 text-white/60 text-[10px] font-black uppercase tracking-tighter">
-                      <Timer size={14} /> Limited Time
-                   </div>
+            <div className="absolute inset-0 bg-gradient-to-br from-orange-600 to-orange-700 rounded-[2.5rem] p-8 shadow-2xl border border-white/10 flex flex-col justify-between overflow-hidden">
+              {/* Abstract pattern overlay */}
+              <div className="absolute top-0 left-0 w-full h-full opacity-10 pointer-events-none"
+                style={{ backgroundImage: 'radial-gradient(circle at 2px 2px, white 1px, transparent 0)', backgroundSize: '24px 24px' }} />
+
+              <div className="flex justify-between items-start">
+                <div className="bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
+                  <div className="flex items-center gap-2">
+                    <Zap className="text-yellow-400 fill-yellow-400" size={16} />
+                    <span className="text-[10px] font-black text-white uppercase tracking-widest">Flash Coupon</span>
+                  </div>
+                </div>
+                <div className="flex items-center gap-1.5 text-white/60 text-[10px] font-black uppercase tracking-tighter">
+                  <Timer size={14} /> Limited Time
+                </div>
+              </div>
+
+              <div className="text-center py-4">
+                <h3 className="text-3xl md:text-4xl font-black text-white drop-shadow-lg mb-2">
+                  {product.name}
+                </h3>
+                <p className="text-white/60 text-xs font-bold uppercase tracking-[0.2em]">Unlock Exclusive Savings</p>
+              </div>
+
+              <div className="flex items-center justify-between mt-auto">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center text-white">
+                    <Sparkles size={20} />
+                  </div>
+                  <div>
+                    <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Coupon Price</p>
+                    <p className="text-2xl font-black text-white">{CURRENCY}{product.fixedAmounts?.[0] || '5'}</p>
+                  </div>
                 </div>
 
-                <div className="text-center py-4">
-                   <h3 className="text-3xl md:text-4xl font-black text-white drop-shadow-lg mb-2">
-                      {product.name}
-                   </h3>
-                   <p className="text-white/60 text-xs font-bold uppercase tracking-[0.2em]">Unlock Exclusive Savings</p>
-                </div>
+                <Button
+                  onClick={() => handleBuyNow(product)}
+                  className="h-14 px-8 bg-white text-orange-600 hover:bg-yellow-400 hover:text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-black/20"
+                >
+                  Buy Now
+                </Button>
+              </div>
 
-                <div className="flex items-center justify-between mt-auto">
-                   <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 rounded-full border-2 border-white/20 flex items-center justify-center text-white">
-                         <Sparkles size={20} />
-                      </div>
-                      <div>
-                        <p className="text-[10px] font-black text-white/40 uppercase tracking-widest mb-1">Coupon Price</p>
-                        <p className="text-2xl font-black text-white">{CURRENCY}{product.fixedAmounts?.[0] || '5'}</p>
-                      </div>
-                   </div>
-                   
-                   <Button 
-                    onClick={() => handleBuyNow(product)}
-                    className="h-14 px-8 bg-white text-indigo-600 hover:bg-yellow-400 hover:text-black font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all shadow-xl shadow-black/20"
-                   >
-                     Buy Now
-                   </Button>
-                </div>
-
-                {/* Corner cut-outs like a real ticket/coupon */}
-                <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
-                <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
-             </div>
+              {/* Corner cut-outs like a real ticket/coupon */}
+              <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
+              <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full hidden md:block" />
+            </div>
           </motion.div>
         ))}
       </div>

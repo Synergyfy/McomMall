@@ -255,9 +255,10 @@ export interface CreateBusinessPayload {
   specialDays?: SpecialDayPayload[];
   productSellerProfile?: ProductSellerProfilePayload;
   serviceProviderProfile?: ServiceProviderProfilePayload;
+  status?: BusinessStatus;
 }
 
-export type BusinessStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
+export type BusinessStatus = 'draft' | 'published' | 'archived' | 'scheduled';
 
 // --- Detailed In-House Business Types ---
 
@@ -442,8 +443,8 @@ export interface RecentListing {
   bannerUrl?: string;
   media?: string[];
   categories: {
-    id:string;
-    name:string;
+    id: string;
+    name: string;
   }[];
   location: {
     id: string;

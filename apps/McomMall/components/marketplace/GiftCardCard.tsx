@@ -14,9 +14,9 @@ interface GiftCardCardProps {
 }
 
 const gradientThemes = [
-    'from-amber-400 via-orange-400 to-rose-500', // Gold
-    'from-purple-400 via-pink-400 to-rose-500', // Rose
-    'from-blue-400 via-cyan-400 to-teal-500', // Ocean
+    'from-amber-400 via-orange-400 to-rose-500', // Gold/Orange (Primary)
+    'from-orange-400 via-amber-500 to-yellow-500', // Amber
+    'from-rose-400 via-orange-400 to-amber-500', // Rose Gold
     'from-slate-300 via-gray-300 to-zinc-400', // Silver
 ];
 
@@ -66,7 +66,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
 
                         {/* Right - Details */}
                         <div className="flex-1 p-6">
-                            <Badge className="bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 mb-3">
+                            <Badge className="bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 mb-3">
                                 <Gift className="w-3 h-3 mr-1" />
                                 Gift Card
                             </Badge>
@@ -91,7 +91,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                         {displayAmounts.map((amount, idx) => (
                                             <div
                                                 key={idx}
-                                                className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border border-gray-200 font-semibold text-gray-900 hover:border-primary hover:shadow-md transition-all"
+                                                className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border border-gray-200 font-semibold text-gray-900 hover:border-orange-500 hover:shadow-md transition-all"
                                             >
                                                 £{amount}
                                             </div>
@@ -153,7 +153,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                     </div>
 
                     {/* Type Badge */}
-                    <Badge className="absolute top-3 left-3 bg-gradient-to-r from-purple-500 to-pink-500 text-white border-0 shadow-lg z-10">
+                    <Badge className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 shadow-lg z-10">
                         <Gift className="w-3 h-3 mr-1" />
                         Gift Card
                     </Badge>
@@ -161,7 +161,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
 
                 {/* Details Section */}
                 <div className="flex-1 p-4 flex flex-col">
-                    <h3 className="text-sm md:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-primary transition-colors">
+                    <h3 className="text-sm md:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
                         {giftCard.title}
                     </h3>
 
@@ -199,14 +199,14 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                         {hasMultipleAmounts && (
                             <span className="text-xs text-gray-500">From</span>
                         )}
-                        <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-purple-600 to-pink-600 bg-clip-text text-transparent">
+                        <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
                             £{Number(minPrice).toFixed(2)}
                         </span>
                     </div>
                 </div>
 
                 {/* Decorative corner accent */}
-                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-purple-400/20 to-transparent rounded-bl-full" />
+                <div className="absolute top-0 right-0 w-16 h-16 bg-gradient-to-br from-orange-400/20 to-transparent rounded-bl-full" />
             </div>
         </Link>
     );

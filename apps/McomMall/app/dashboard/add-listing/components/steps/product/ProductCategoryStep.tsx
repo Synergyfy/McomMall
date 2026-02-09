@@ -47,7 +47,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
 
   // Find selected sector object to get ID for next level
   const selectedSector = useMemo(
-    () => sectors.find(s => s.name === productData.primaryCategory),
+    () => sectors.find(s => s.id === productData.primaryCategory),
     [sectors, productData.primaryCategory]
   );
 
@@ -57,7 +57,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
 
   // Find selected category object to get ID for next level
   const selectedCategory = useMemo(
-    () => categories.find(c => c.name === productData.subCategory),
+    () => categories.find(c => c.id === productData.subCategory),
     [categories, productData.subCategory]
   );
 
@@ -123,7 +123,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
           </SelectTrigger>
           <SelectContent>
             {sectors.map(sector => (
-              <SelectItem key={sector.id} value={sector.name}>
+              <SelectItem key={sector.id} value={sector.id}>
                 {sector.name}
               </SelectItem>
             ))}
@@ -153,7 +153,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
           </SelectTrigger>
           <SelectContent>
             {categories.map(cat => (
-              <SelectItem key={cat.id} value={cat.name}>
+              <SelectItem key={cat.id} value={cat.id}>
                 {cat.name}
               </SelectItem>
             ))}
@@ -178,7 +178,7 @@ const ProductCategoryStep: React.FC<StepProps> = ({
           </SelectTrigger>
           <SelectContent>
             {subCategoriesList.map(sub => (
-              <SelectItem key={sub.id} value={sub.name}>
+              <SelectItem key={sub.id} value={sub.id}>
                 {sub.name}
               </SelectItem>
             ))}

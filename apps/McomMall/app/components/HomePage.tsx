@@ -22,10 +22,10 @@ const VirtualCardCarousel = dynamic(() => import('@/app/homepage/components/Virt
 const HowItWorks = dynamic(() => import('@/app/homepage/components/HowItWorks'));
 const AuditSection = dynamic(() => import('@/app/homepage/components/AuditSection').then(mod => mod.AuditSection));
 const VCardFeaturesSection = dynamic(() => import('@/app/homepage/components/VCardFeatures'));
-const McomVouchersCoupons = dynamic(() => import('@/app/homepage/components/McomVouchersCoupons'));
 const McomSolutions = dynamic(() => import('@/app/homepage/components/McomSolutions'));
 const LoyaltyProgramSection = dynamic(() => import('@/app/homepage/components/LoyaltyProgramSection'));
 const Footer = dynamic(() => import('@/components/Footer'));
+const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -422,9 +422,21 @@ export default function HomePage() {
         <LoyaltyProgramSection />
         {/* <StockAuditSection /> */}
         <McomEgiftCard />
-        <VirtualCardCarousel />
-        <VCardFeaturesSection />
-        <McomVouchersCoupons />
+        <div className="bg-gray-50 py-16">
+          <VirtualCardCarousel />
+          <VCardFeaturesSection />
+
+          <div className="flex justify-center mt-8 pb-8">
+            <Link
+              href="https://mcomvcardsocialbio.com/"
+              target="_blank"
+              className="bg-[#f58220] text-white font-bold py-4 px-10 rounded-full shadow-lg hover:shadow-orange-500/30 transition-all hover:scale-105 text-lg"
+            >
+              Get Your VCard
+            </Link>
+          </div>
+        </div>
+
         <McomSolutions />
 
         <McomMallBrandsSection />
@@ -495,6 +507,8 @@ export default function HomePage() {
           </motion.button>
         )}
       </AnimatePresence>
+
+      <ChatWidget />
     </div>
   );
 }
