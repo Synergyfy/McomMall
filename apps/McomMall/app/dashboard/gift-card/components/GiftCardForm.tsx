@@ -77,7 +77,7 @@ export function GiftCardForm({
             />
             <Button
               variant="ghost"
-              className="text-purple-600 hover:text-purple-700"
+              className="text-orange-600 hover:text-orange-700"
               onClick={handleClearAmount}
             >
               Clear
@@ -174,7 +174,7 @@ export function GiftCardForm({
                 <Button
                   variant="ghost"
                   size="sm"
-                  className="text-purple-600 hover:text-purple-700"
+                  className="text-orange-600 hover:text-orange-700"
                 >
                   Preview
                 </Button>
@@ -198,7 +198,7 @@ export function GiftCardForm({
                 className={cn(
                   'p-2 rounded-lg border-2 transition-all',
                   selectedDesign.id === design.id
-                    ? 'border-purple-500 ring-2 ring-purple-200'
+                    ? 'border-orange-500 ring-2 ring-orange-200'
                     : 'border-gray-200 hover:border-gray-300'
                 )}
               >
@@ -219,7 +219,7 @@ export function GiftCardForm({
         </div>
       </CardContent>
       <CardFooter className="flex justify-end p-0 pt-8">
-        <Button size="lg" className="bg-purple-600 hover:bg-purple-700">
+        <Button size="lg" className="bg-orange-600 hover:bg-orange-700">
           Add to cart
         </Button>
       </CardFooter>

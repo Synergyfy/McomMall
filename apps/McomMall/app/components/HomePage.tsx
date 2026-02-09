@@ -22,6 +22,10 @@ const VirtualCardCarousel = dynamic(() => import('@/app/homepage/components/Virt
 const HowItWorks = dynamic(() => import('@/app/homepage/components/HowItWorks'));
 const AuditSection = dynamic(() => import('@/app/homepage/components/AuditSection').then(mod => mod.AuditSection));
 const VCardFeaturesSection = dynamic(() => import('@/app/homepage/components/VCardFeatures'));
+<<<<<<< HEAD
+
+=======
+>>>>>>> ff401fadfec72e88dbd07aad46cbc813fb86a4fa
 const McomSolutions = dynamic(() => import('@/app/homepage/components/McomSolutions'));
 const LoyaltyProgramSection = dynamic(() => import('@/app/homepage/components/LoyaltyProgramSection'));
 const Footer = dynamic(() => import('@/components/Footer'));

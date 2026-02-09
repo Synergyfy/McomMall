@@ -5,9 +5,16 @@ import Link from 'next/link';
 import { useDispatch, useSelector } from 'react-redux';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, Lock } from 'lucide-react';
 import { RootState } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
+import { useGetTiers } from '@/service/tiers/hook';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
 import {
   mainMenuItems,
   listingMenuItems,
@@ -25,12 +32,17 @@ interface MenuContentProps {
 }
 
 export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
-  const { userRole } = useSelector((state: RootState) => state.auth);
+  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
+  const { data: tiers } = useGetTiers();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
+  );
+
+  const currentTier = tiers?.find(
+    t => t.name.toLowerCase() === packageInfo?.planType?.toLowerCase()
   );
 
   useEffect(() => {
@@ -62,6 +74,17 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
     }
   };
 
+  const isAllowed = (title: string) => {
+    if (userRole === 'customer') return true;
+    if (!currentTier) return true; // Default to true if tier not loaded yet
+
+    const quotas = currentTier.configuration?.quotas;
+    if (title === 'Product' && !quotas?.allowProductListing) return false;
+    if (title === 'Service' && !quotas?.allowServiceListing) return false;
+    // Add more restrictions as needed
+    return true;
+  };
+
   const customerListingMenu = listingMenuItems.filter(item =>
     ['Reviews', 'Bookmarks'].includes(item.title)
   );
@@ -84,19 +107,21 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   );
 
   const toggleSubMenu = (title: string) => {
+    if (!isAllowed(title)) return;
     setOpenSubMenus(prev => ({ ...prev, [title]: !prev[title] }));
   };
 
   const renderMenuItems = (items: MenuItem[]) => (
     <ul className="space-y-1">
       {items.map((item, i) => {
+        const allowed = isAllowed(item.title);
         const isParentActive =
           item.subMenu?.some(subItem => pathname.startsWith(subItem.href)) ??
           false;
         const isActive = pathname === item.href || isParentActive;
 
         const MenuItemContent = (
-          <div className="flex items-center space-x-2">
+          <div className={`flex items-center space-x-2 ${!allowed ? 'filter blur-[1px]' : ''}`}>
             <item.icon
               className={`w-5 h-5 ${isActive ? 'text-orange-600' : 'text-orange-500'
                 }`}
@@ -105,38 +130,23 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
           </div>
         );
 
-        return (
-          <li key={i}>
+        const content = (
+          <li key={i} className={!allowed ? 'cursor-not-allowed opacity-70' : ''}>
             <motion.div
-              whileHover={{ scale: 1.02, backgroundColor: '#ffffff' }}
+              whileHover={allowed ? { scale: 1.02, backgroundColor: '#ffffff' } : {}}
               transition={{ duration: 0.2 }}
               className="rounded-2xl"
             >
               <div
-                className={`flex items-center justify-between p-2 text-gray-700 hover:text-orange-500 transition-colors cursor-pointer rounded-2xl hover:shadow hover:bg-white ${isActive ? 'bg-white text-orange-600' : ''
+                className={`flex items-center justify-between p-2 text-gray-700 transition-colors rounded-2xl ${allowed ? 'hover:text-orange-500 cursor-pointer hover:shadow hover:bg-white' : 'pointer-events-none'
+                  } ${isActive ? 'bg-white text-orange-600' : ''
                   }`}
-                onClick={() => item.subMenu && toggleSubMenu(item.title)}
+                onClick={() => allowed && item.subMenu && toggleSubMenu(item.title)}
               >
-                {item.subMenu ? (
-                  <div className="flex items-center space-x-2">
-                    {MenuItemContent}
-                  </div>
-                ) : (
-                  <Link
-                    href={item.href}
-                    className="flex items-center space-x-2"
-                    onClick={e => {
-                      if (item.title === 'Logout') {
-                        e.preventDefault();
-                        handleLogout();
-                      } else if (onLinkClick) {
-                        onLinkClick();
-                      }
-                    }}
-                  >
-                    {MenuItemContent}
-                  </Link>
-                )}
+                <div className="flex items-center space-x-2">
+                  {MenuItemContent}
+                  {!allowed && <Lock className="w-3 h-3 text-gray-400" />}
+                </div>
                 {item.subMenu && (
                   <ChevronDown
                     className={`w-5 h-5 transition-transform ${openSubMenus[item.title] ? 'rotate-180' : ''
@@ -146,7 +156,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               </div>
             </motion.div>
             <AnimatePresence>
-              {item.subMenu && openSubMenus[item.title] && (
+              {allowed && item.subMenu && openSubMenus[item.title] && (
                 <motion.ul
                   initial={{ height: 0, opacity: 0 }}
                   animate={{ height: 'auto', opacity: 1 }}
@@ -173,6 +183,44 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               )}
             </AnimatePresence>
           </li>
+        );
+
+        if (!allowed) {
+          return (
+            <TooltipProvider key={i}>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  {content}
+                </TooltipTrigger>
+                <TooltipContent side="right">
+                  <p>Upgrade to unlock {item.title} listings</p>
+                </TooltipContent>
+              </Tooltip>
+            </TooltipProvider>
+          );
+        }
+
+        return (
+          <div key={i}>
+            {!item.subMenu ? (
+              <Link
+                href={item.href}
+                className="block"
+                onClick={e => {
+                  if (item.title === 'Logout') {
+                    e.preventDefault();
+                    handleLogout();
+                  } else if (onLinkClick) {
+                    onLinkClick();
+                  }
+                }}
+              >
+                {content}
+              </Link>
+            ) : (
+              content
+            )}
+          </div>
         );
       })}
     </ul>
