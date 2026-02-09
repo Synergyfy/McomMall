@@ -17,7 +17,9 @@ export function McomMallBrandsSection() {
         </p>
         <div className="mt-8">
           <a
-            href="#"
+            href="https://247-gbs-expo.vercel.app/"
+            target="_blank"
+            rel="noopener noreferrer"
             className="rounded-md bg-orange-600 px-6 py-3 text-sm md:text-lg font-semibold text-white shadow-sm hover:bg-slate-700 focus-visible:outline focus-visible:outline-offset-2 focus-visible:outline-slate-800"
           >
             View all exhibitors
