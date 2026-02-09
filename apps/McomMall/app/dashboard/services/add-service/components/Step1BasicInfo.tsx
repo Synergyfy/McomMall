@@ -1,7 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useFormContext } from 'react-hook-form';
+import { useRouter } from 'next/navigation';
 import {
   FormControl,
   FormField,
@@ -13,7 +14,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card';
-import { Settings, Check, ChevronsUpDown, HelpCircle, X } from 'lucide-react';
+import { Settings, Check, ChevronsUpDown, HelpCircle, X, Store, AlertCircle } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import {
   Command,
@@ -28,8 +29,27 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select';
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 import { cn } from '@/lib/utils';
-import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetCategories, useGetSubCategoriesByCategory, useGetSectors, useGetCategoriesBySector } from '@/service/taxonomy/hook';
+import { UserListing } from '@/service/listings/types';
+import { useGetUserListings } from '@/service/listings/hook';
 import {
   Tooltip,
   TooltipContent,
@@ -46,14 +66,44 @@ const COMMON_TAGS = [
 ];
 
 export function Step1BasicInfo() {
+  const router = useRouter();
   const form = useFormContext();
+  const selectedSector = form.watch('sector');
   const selectedCategory = form.watch('category');
+  const currentBusinessId = form.watch('businessId');
 
-  const { data: categories } = useGetCategories();
+  const { data: sectors } = useGetSectors();
+  const { data: categories } = useGetCategoriesBySector(selectedSector);
   const { data: subCategories } = useGetSubCategoriesByCategory(selectedCategory);
+  const { data: listings, isLoading: isLoadingListings } = useGetUserListings(1, 100);
 
   const [audienceOpen, setAudienceOpen] = useState(false);
   const [tagsOpen, setTagsOpen] = useState(false);
+  const [sectorOpen, setSectorOpen] = useState(false);
+  const [categoryOpen, setCategoryOpen] = useState(false);
+  const [subcategoryOpen, setSubcategoryOpen] = useState(false);
+  const [showNoBusinessDialog, setShowNoBusinessDialog] = useState(false);
+
+  const businesses = useMemo(() => {
+    if (!listings?.data) return [];
+    return listings.data.filter((l: UserListing) =>
+      l.id && l.id.trim() !== '' &&
+      l.listingType.some(type => type.toLowerCase() === 'service')
+    );
+  }, [listings]);
+
+  useEffect(() => {
+    if (!isLoadingListings && businesses.length === 0) {
+      setShowNoBusinessDialog(true);
+    }
+  }, [isLoadingListings, businesses.length]);
+
+  // Auto-populate business when user has exactly one service business
+  useEffect(() => {
+    if (!isLoadingListings && businesses.length === 1 && !currentBusinessId) {
+      form.setValue('businessId', businesses[0].id);
+    }
+  }, [isLoadingListings, businesses, currentBusinessId, form]);
 
   const toggleSelection = (fieldName: string, value: string) => {
     const currentValues = form.getValues(fieldName)?.split(',').map((v: string) => v.trim()).filter(Boolean) || [];
@@ -81,10 +131,61 @@ export function Step1BasicInfo() {
             Basic Information
           </CardTitle>
           <CardDescription>
-            Start by providing the fundamental details of your service.
+            Start by selecting your business and providing the fundamental details of your service.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
+          {/* Business Selection */}
+          <FormField
+            control={form.control}
+            name="businessId"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Business <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Select which business will offer this service.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Select
+                  onValueChange={field.onChange}
+                  defaultValue={field.value}
+                  disabled={isLoadingListings}
+                  value={field.value}
+                >
+                  <FormControl>
+                    <SelectTrigger className="py-6">
+                      <SelectValue
+                        placeholder={isLoadingListings ? 'Loading businesses...' : 'Select Business'}
+                      />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {businesses.length > 0 ? (
+                      businesses.map((b: UserListing) => (
+                        <SelectItem key={b.id} value={b.id}>
+                          {b.businessName}
+                        </SelectItem>
+                      ))
+                    ) : (
+                      <div className="p-2 text-sm text-muted-foreground text-center">
+                        No service businesses available
+                      </div>
+                    )}
+                  </SelectContent>
+                </Select>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {/* Service Name */}
           <FormField
             control={form.control}
@@ -112,6 +213,84 @@ export function Step1BasicInfo() {
             )}
           />
 
+          {/* Sector */}
+          <FormField
+            control={form.control}
+            name="sector"
+            render={({ field }) => (
+              <FormItem className="flex flex-col">
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Sector <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      Select the primary sector for your service.
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <Popover open={sectorOpen} onOpenChange={setSectorOpen}>
+                  <PopoverTrigger asChild>
+                    <FormControl>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        role="combobox"
+                        className={cn(
+                          "w-full justify-between py-6",
+                          !field.value && "text-muted-foreground"
+                        )}
+                      >
+                        {field.value
+                          ? sectors?.find(
+                              (sector) => sector.id === field.value
+                            )?.name
+                          : "Select sector"}
+                        <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                      </Button>
+                    </FormControl>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[var(--radix-popover-trigger-width)] p-0">
+                    <Command>
+                      <CommandInput placeholder="Search sector..." />
+                      <CommandList>
+                        <CommandEmpty>No sector found.</CommandEmpty>
+                        <CommandGroup>
+                          {sectors?.map((sector) => (
+                            <CommandItem
+                              value={sector.name}
+                              key={sector.id}
+                              onSelect={() => {
+                                form.setValue("sector", sector.id);
+                                form.setValue("category", ""); // Reset category
+                                form.setValue("subcategory", ""); // Reset subcategory
+                                setSectorOpen(false);
+                              }}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  sector.id === field.value
+                                    ? "opacity-100"
+                                    : "opacity-0"
+                                )}
+                              />
+                              {sector.name}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {/* Category & Subcategory */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <FormField
@@ -121,8 +300,9 @@ export function Step1BasicInfo() {
                 <FormItem className="flex flex-col">
                   <div className="flex items-center gap-2 mb-2">
                     <FormLabel className="text-base font-semibold">
-                      Category <span className="text-red-500">*</span>
+                      Category
                     </FormLabel>
+                    <span className="text-xs text-muted-foreground">(Optional)</span>
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
@@ -132,10 +312,11 @@ export function Step1BasicInfo() {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <Popover>
-                    <PopoverTrigger asChild>
+                  <Popover open={categoryOpen} onOpenChange={setCategoryOpen}>
+                    <PopoverTrigger asChild disabled={!selectedSector}>
                       <FormControl>
                         <Button
+                          type="button"
                           variant="outline"
                           role="combobox"
                           className={cn(
@@ -165,6 +346,7 @@ export function Step1BasicInfo() {
                                 onSelect={() => {
                                   form.setValue("category", category.id);
                                   form.setValue("subcategory", ""); // Reset subcategory
+                                  setCategoryOpen(false);
                                 }}
                               >
                                 <Check
@@ -205,10 +387,11 @@ export function Step1BasicInfo() {
                       </TooltipContent>
                     </Tooltip>
                   </div>
-                  <Popover>
+                  <Popover open={subcategoryOpen} onOpenChange={setSubcategoryOpen}>
                     <PopoverTrigger asChild disabled={!selectedCategory}>
                       <FormControl>
                         <Button
+                          type="button"
                           variant="outline"
                           role="combobox"
                           className={cn(
@@ -237,6 +420,7 @@ export function Step1BasicInfo() {
                                 key={sub.id}
                                 onSelect={() => {
                                   form.setValue("subcategory", sub.id);
+                                  setSubcategoryOpen(false);
                                 }}
                               >
                                 <Check
@@ -469,6 +653,33 @@ export function Step1BasicInfo() {
           </div>
         </CardContent>
       </Card>
+
+      {/* No Business Found Dialog */}
+      <AlertDialog open={showNoBusinessDialog} onOpenChange={setShowNoBusinessDialog}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <div className="flex items-center gap-3 mb-2">
+              <div className="p-3 rounded-full bg-destructive/10">
+                <AlertCircle className="h-6 w-6 text-destructive" />
+              </div>
+              <AlertDialogTitle className="text-xl">No Service Business Found</AlertDialogTitle>
+            </div>
+            <AlertDialogDescription className="text-base leading-relaxed">
+              You need to create a <span className="font-semibold">Service</span> type business listing before you can add a service.
+              <br /><br />
+              Please go to <span className="font-semibold">"My Listings"</span> and create a new business with the listing type set to <span className="font-semibold">"Service"</span>.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => router.push('/dashboard/services')}>
+              Go Back
+            </AlertDialogCancel>
+            <AlertDialogAction onClick={() => router.push('/dashboard/add-listing')}>
+              Create Business
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

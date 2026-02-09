@@ -10,11 +10,23 @@ import { Button } from './ui/button';
 interface SuccessAnimationDialogProps {
   isOpen: boolean;
   onClose: () => void;
+  title?: string;
+  description?: string;
+  redirectPath?: string;
+  buttonText?: string;
+  icon?: React.ReactNode;
+  nextStepText?: string;
 }
 
 export function SuccessAnimationDialog({
   isOpen,
   onClose,
+  title = "Booking Confirmed!",
+  description = "Your appointment has been successfully scheduled and your payment is verified.",
+  redirectPath = "/dashboard/bookings",
+  buttonText = "Go to My Bookings",
+  icon = <Calendar size={24} />,
+  nextStepText = "Check your dashboard for details",
 }: SuccessAnimationDialogProps) {
   const router = useRouter();
   const [countdown, setCountdown] = useState(5);
@@ -27,7 +39,7 @@ export function SuccessAnimationDialog({
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(timer);
-            router.push('/dashboard/bookings');
+            router.push(redirectPath);
             onClose();
             return 0;
           }
@@ -36,10 +48,10 @@ export function SuccessAnimationDialog({
       }, 1000);
     }
     return () => clearInterval(timer);
-  }, [isOpen, router, onClose]);
+  }, [isOpen, router, onClose, redirectPath]);
 
   const handleManualRedirect = () => {
-    router.push('/dashboard/bookings');
+    router.push(redirectPath);
     onClose();
   };
 
@@ -79,19 +91,19 @@ export function SuccessAnimationDialog({
           </div>
 
           <div className="space-y-4 mb-10">
-            <h2 className="text-3xl font-black text-gray-900 tracking-tight">Booking Confirmed!</h2>
+            <h2 className="text-3xl font-black text-gray-900 tracking-tight">{title}</h2>
             <p className="text-gray-500 font-bold leading-relaxed">
-              Your appointment has been successfully scheduled and your payment is verified.
+              {description}
             </p>
           </div>
 
           <div className="bg-gray-50 rounded-[2rem] p-6 mb-8 border border-gray-100 flex items-center gap-6">
             <div className="w-12 h-12 bg-white rounded-2xl flex items-center justify-center text-orange-500 shadow-sm">
-              <Calendar size={24} />
+              {icon}
             </div>
             <div className="text-left">
               <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest">Next Step</p>
-              <p className="text-sm font-black text-gray-800">Check your dashboard for details</p>
+              <p className="text-sm font-black text-gray-800">{nextStepText}</p>
             </div>
           </div>
 
@@ -100,7 +112,7 @@ export function SuccessAnimationDialog({
               onClick={handleManualRedirect}
               className="w-full h-16 bg-[#f58220] hover:bg-black text-white font-black text-lg rounded-2xl shadow-xl shadow-orange-500/20 transition-all flex items-center justify-center gap-3 group"
             >
-              Go to My Bookings <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
+              {buttonText} <ArrowRight size={20} className="group-hover:translate-x-1 transition-transform" />
             </Button>
             
             <p className="text-xs font-bold text-gray-400 uppercase tracking-widest">

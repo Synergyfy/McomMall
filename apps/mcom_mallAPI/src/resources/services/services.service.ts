@@ -110,8 +110,11 @@ export class ServicesService {
       createServiceDto;
 
     // Map frontend fields to backend
-    if (serviceData.images && !serviceData.media) {
-      serviceData.media = serviceData.images;
+    if (serviceData.images || serviceData.media) {
+      serviceData.media = [
+        ...(serviceData.images || []),
+        ...(serviceData.media || []),
+      ];
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
@@ -178,6 +181,7 @@ export class ServicesService {
     const [data, total] = await this.serviceRepository.findAndCount({
       where: { businessId },
       relations: ['bundledServices', 'configurableAddons'],
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -198,6 +202,7 @@ export class ServicesService {
     return this.serviceRepository.find({
       where: { businessId: In(businessIds) },
       relations: ['bundledServices', 'configurableAddons'],
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -243,8 +248,11 @@ export class ServicesService {
       updateServiceDto;
 
     // Map frontend fields to backend
-    if (serviceData.images && !serviceData.media) {
-      serviceData.media = serviceData.images;
+    if (serviceData.images || serviceData.media) {
+      serviceData.media = [
+        ...(serviceData.images || []),
+        ...(serviceData.media || []),
+      ];
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;

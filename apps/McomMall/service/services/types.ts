@@ -59,7 +59,7 @@ export interface BookingRequirements {
 }
 
 export interface ServiceDeliveryConfig {
-  mode: 'onsite' | 'atShop' | 'remote' | 'hybrid';
+  mode: 'onsite' | 'atShop' | 'remote';
   // If onsite:
   cities?: string[];
   regions?: string[];
@@ -76,6 +76,7 @@ export interface ServiceVariant {
 
 export interface CreateServiceDto {
   name: string;
+  sector: string; // New Required
   shortDescription?: string; // New
   description?: string;
   shortDesc?: string; // New
@@ -156,6 +157,7 @@ export interface Service {
   id: string;
   businessId: string;
   name: string;
+  sector: string;
   shortDescription?: string;
   description?: string;
   shortDesc?: string;

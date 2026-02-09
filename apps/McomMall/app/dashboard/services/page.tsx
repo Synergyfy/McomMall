@@ -187,7 +187,11 @@ export default function ServicesDashboard() {
                     </TableRow>
                   ) : services.length > 0 ? (
                     services.map(service => {
-                      const firstImageUrl = service.media?.find(isImageUrl);
+                      const firstImageUrl = (service.media && service.media.length > 0) 
+                        ? service.media.find(isImageUrl) 
+                        : (service.images && service.images.length > 0)
+                          ? service.images.find(isImageUrl)
+                          : null;
                       return (
                       <TableRow
                         key={service.id}
@@ -210,15 +214,17 @@ export default function ServicesDashboard() {
                             className="mobile-table-cell md:table-cell"
                         >
                             <Link href={`/services/${service.id}`} passHref>
-                                <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
+                                <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer overflow-hidden border border-gray-100">
                                     {firstImageUrl ? (
                                         <img
                                             src={firstImageUrl}
                                             alt={service.name}
-                                            className="w-full h-full object-cover rounded-md"
+                                            className="w-full h-full object-cover"
                                         />
                                     ) : (
-                                        <div className="w-8 h-8 text-gray-400" />
+                                        <div className="w-8 h-8 text-gray-400 bg-gray-100 rounded flex items-center justify-center">
+                                          <MoreHorizontal className="w-4 h-4 opacity-20" />
+                                        </div>
                                     )}
                                 </div>
                             </Link>
@@ -244,8 +250,8 @@ export default function ServicesDashboard() {
                             }
                             className={
                               service.isActive
-                                ? 'bg-green-100 text-green-800'
-                                : ''
+                                ? 'bg-green-100 text-green-800 border-none px-3'
+                                : 'px-3'
                             }
                           >
                             {service.isActive ? 'Active' : 'Inactive'}
@@ -253,13 +259,13 @@ export default function ServicesDashboard() {
                         </TableCell>
                         <TableCell
                           data-label="Pricing Model"
-                          className="mobile-table-cell md:table-cell text-gray-600"
+                          className="mobile-table-cell md:table-cell text-gray-600 capitalize"
                         >
-                          {service.pricingModel}
+                          {service.pricingModel?.replace(/([A-Z])/g, ' $1').trim()}
                         </TableCell>
                         <TableCell
                           data-label="Price"
-                          className="mobile-table-cell md:table-cell text-gray-600"
+                          className="mobile-table-cell md:table-cell text-gray-900 font-bold"
                         >
                           {service.pricingModel === 'fixed' &&
                             `£${service.fixedPrice}`}
@@ -273,12 +279,10 @@ export default function ServicesDashboard() {
                           className="mobile-table-cell md:table-cell text-gray-600"
                         >
                           <div className="flex flex-col text-xs items-end md:items-start">
-                            <span>
-                              {formatDate(
-                                service.updated_at || service.created_at || ''
-                              )}
+                            <span className="font-medium text-gray-900">
+                              {formatDate(service.created_at || '')}
                             </span>
-                            <span className="text-gray-400">Last Modified</span>
+                            <span className="text-gray-400 text-[10px] uppercase tracking-tighter">Created</span>
                           </div>
                         </TableCell>
                         <TableCell className="mobile-table-cell md:table-cell">

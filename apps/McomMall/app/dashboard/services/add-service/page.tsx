@@ -3,9 +3,7 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import * as z from 'zod';
-import { ChevronRight, Save, ArrowLeft, ArrowRight } from 'lucide-react';
+import { ChevronRight, Save, ArrowLeft, ArrowRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
 import Link from 'next/link';
 
@@ -15,7 +13,7 @@ import { useAddService } from '@/service/services/hook';
 import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
-import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
+import { useGetCategories, useGetSubCategoriesByCategory, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -23,138 +21,9 @@ import { Step3Pricing } from './components/Step3Pricing';
 import { Step4Availability } from './components/Step4Availability';
 import { Step5Workflow } from './components/Step5Workflow';
 import { Step6FinalReview } from './components/Step6FinalReview';
+import { Step7FinalReview } from './components/Step7FinalReview';
 
-// --- ZOD SCHEMA ---
-const serviceSchema = z.object({
-  name: z.string().min(1, 'Service name is required').max(160, 'Max 160 characters'),
-  shortDescription: z.string().optional(),
-  description: z.string().optional(),
-  category: z.string().min(1, 'Category is required'),
-  subcategory: z.string().optional(),
-  targetAudience: z.string().optional(), // CSV
-  tags: z.string().optional(), // CSV
-
-  businessId: z.string().min(1, 'Please select a business'),
-  isActive: z.boolean().default(true),
-
-  // Service Type
-  deliveryConfig: z.object({
-    mode: z.enum(['onsite', 'atShop', 'remote', 'hybrid']),
-    cities: z.string().optional(), // CSV
-    regions: z.string().optional(), // CSV
-    travelFee: z.coerce.number().min(0).optional(),
-  }).optional(),
-
-  // Pricing
-  pricingModel: z.enum(['fixed', 'perHour', 'perUnit', 'perJob', 'perDistance', 'perSession', 'subscription']),
-  fixedPrice: z.coerce.number().min(0, 'Price must be >= 0').optional(),
-  pricePerHour: z.coerce.number().min(0, 'Price must be >= 0').optional(),
-  pricePerUnit: z.coerce.number().min(0, 'Price must be >= 0').optional(),
-  unitName: z.string().optional(),
-
-  pricingRules: z.object({
-    weekendMultiplier: z.coerce.number().min(0).optional(),
-    nightSurcharge: z.coerce.number().min(0).optional(),
-    emergencySurcharge: z.coerce.number().min(0).optional(),
-    holidaySurcharge: z.coerce.number().min(0).optional(),
-  }).optional(),
-
-  // Guest Pricing
-  enableGuestPricing: z.boolean().default(false),
-  minGuests: z.coerce.number().min(1).optional(),
-  maxGuests: z.coerce.number().min(1).optional(),
-  guestPricingModel: z.enum(['perGuest', 'fixedGroup', 'baseWithAdditional']).optional(),
-  pricePerGuest: z.coerce.number().min(0).optional(),
-  fixedGroupPrice: z.coerce.number().min(0).optional(),
-  basePrice: z.coerce.number().min(0).optional(),
-  baseGuests: z.coerce.number().min(1).optional(),
-  additionalGuestPrice: z.coerce.number().min(0).optional(),
-
-  // Quote Model
-  isQuoteModel: z.boolean().default(false),
-  bookingFee: z.coerce.number().min(0).optional(),
-
-  // Availability
-  availability: z.object({
-    schedule: z.array(z.object({
-      day: z.enum(['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']),
-      enabled: z.boolean(),
-      startTime: z.string(),
-      endTime: z.string(),
-      breaks: z.array(z.object({
-        start: z.string(),
-        end: z.string(),
-      })).optional()
-    })),
-    slotDuration: z.number().min(5),
-    bufferTime: z.number().min(0),
-    maxBookingsPerSlot: z.number().min(1),
-    serviceRadiusKm: z.number().optional(),
-    staffPerBooking: z.number().min(1).optional(),
-  }).optional(),
-
-  // Variants
-  variants: z.array(z.object({
-    name: z.string().min(1, 'Name required'),
-    type: z.enum(['time', 'resource']),
-    price: z.coerce.number().min(0),
-    duration: z.coerce.number().optional(),
-  })).optional(),
-
-  // Arrays
-  bundledServices: z.array(z.object({
-    name: z.string().min(1, 'Name required'),
-    price: z.coerce.number().optional(),
-  })).optional(),
-
-  configurableAddons: z.array(z.object({
-    name: z.string().min(1, 'Name required'),
-    price: z.coerce.number().optional(),
-    pricingType: z.enum(['oneTime', 'perGuest', 'perUnit']),
-    unitName: z.string().optional(),
-  })).optional(),
-
-  // Tiered Packages
-  enableTieredPackages: z.boolean().default(false),
-  tiers: z.array(z.object({
-    name: z.string().min(1, 'Name required'),
-    description: z.string().optional(),
-    price: z.coerce.number().min(0),
-    features: z.array(z.string())
-  })).optional(),
-
-  // Booking Logic
-  requireApproval: z.boolean().default(false),
-  bookingRequirements: z.object({
-    requireAddress: z.boolean().default(false),
-    requirePhone: z.boolean().default(false),
-    requirePhotos: z.boolean().default(false),
-    requireProblemDescription: z.boolean().default(false),
-    specialInstructions: z.string().optional(),
-  }).optional(),
-
-  media: z.array(z.any()).min(1, 'At least one image is required'),
-}).superRefine((data, ctx) => {
-  // Pricing Model Validation
-  if (['fixed', 'perJob', 'perSession', 'subscription'].includes(data.pricingModel) && (data.fixedPrice === undefined || data.fixedPrice === null)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Base price is required', path: ['fixedPrice'] });
-  }
-  if (data.pricingModel === 'perHour' && (data.pricePerHour === undefined || data.pricePerHour === null)) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per hour is required', path: ['pricePerHour'] });
-  }
-  if (data.pricingModel === 'perUnit') {
-    if (data.pricePerUnit === undefined || data.pricePerUnit === null) {
-      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Price per unit is required', path: ['pricePerUnit'] });
-    }
-  }
-
-  // Media Validation
-  if (data.media.length > 5) {
-    ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Max 5 files allowed', path: ['media'] });
-  }
-});
-
-type ServiceFormValues = z.infer<typeof serviceSchema>;
+type ServiceFormValues = any;
 
 const STEPS = [
   { id: 1, name: 'Basic Info', label: '1' },
@@ -162,35 +31,43 @@ const STEPS = [
   { id: 3, name: 'Pricing', label: '3' },
   { id: 4, name: 'Availability', label: '4' },
   { id: 5, name: 'Workflow', label: '5' },
-  { id: 6, name: 'Review', label: '6' },
+  { id: 6, name: 'Media', label: '6' },
+  { id: 7, name: 'Review', label: '7' },
 ];
 
 export default function AddServicePage() {
   const router = useRouter();
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
+  const [isUploading, setIsUploading] = useState(false);
+  const [isNavigating, setIsNavigating] = useState(false);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
 
+  // Scroll to top on step change
+  React.useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentStep]);
+
   const form = useForm<ServiceFormValues>({
-    resolver: zodResolver(serviceSchema),
-    mode: 'onSubmit',
+    mode: 'onChange',
     defaultValues: {
       name: '',
       shortDescription: '',
       description: '',
+      sector: '',
       category: '',
       subcategory: '',
       targetAudience: '',
       tags: '',
       isActive: true,
       businessId: '',
-      pricingModel: 'fixed',
-      fixedPrice: 0,
-      pricePerHour: 0,
-      pricePerUnit: 0,
+      pricingModel: undefined,
+      fixedPrice: undefined,
+      pricePerHour: undefined,
+      pricePerUnit: undefined,
       enableGuestPricing: false,
-      guestPricingModel: 'perGuest',
+      guestPricingModel: undefined,
       isQuoteModel: false,
       bundledServices: [],
       configurableAddons: [],
@@ -213,9 +90,9 @@ export default function AddServicePage() {
         serviceRadiusKm: 10,
       },
       enableTieredPackages: false,
-      requireApproval: false,
+      requireApproval: true,
       deliveryConfig: {
-        mode: 'onsite',
+        mode: undefined,
         cities: '',
         regions: '',
         travelFee: 0
@@ -241,11 +118,74 @@ export default function AddServicePage() {
     },
   });
 
-  const { data: categories } = useGetCategories();
+  const sectorId = form.watch('sector');
+  const { data: categories } = useGetCategoriesBySector(sectorId);
   const categoryId = form.watch('category');
   const { data: subcategories } = useGetSubCategoriesByCategory(categoryId);
 
+  // Define fields for each step to map errors to steps
+  const fieldsByStep: Record<number, string[]> = {
+    1: ['businessId', 'name', 'sector', 'category', 'subcategory', 'shortDescription', 'description', 'targetAudience', 'tags'],
+    2: ['deliveryConfig.mode', 'deliveryConfig.cities', 'deliveryConfig.regions', 'deliveryConfig.travelFee'],
+    3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit', 'unitName', 'pricingRules', 'enableGuestPricing', 'guestPricingModel', 'minGuests', 'maxGuests', 'configurableAddons', 'bundledServices', 'isQuoteModel', 'bookingFee'],
+    4: ['availability.schedule', 'availability.slotDuration', 'availability.bufferTime', 'availability.maxBookingsPerSlot', 'availability.staffPerBooking', 'availability.serviceRadiusKm'],
+    5: ['requireApproval', 'bookingRequirements'],
+    6: ['media'],
+    7: []
+  };
+
+  const validateStep = (stepNumber: number) => {
+    const values = form.getValues();
+    let isValid = true;
+    
+    // Clear relevant errors before re-validating
+    const fieldsToClear = fieldsByStep[stepNumber] || [];
+    fieldsToClear.forEach(f => form.clearErrors(f as any));
+
+    const setError = (path: string, message: string) => {
+      form.setError(path as any, { type: 'manual', message });
+      isValid = false;
+    };
+
+    if (stepNumber === 1) {
+      if (!values.businessId) setError('businessId', 'Please select a business');
+      if (!values.name?.trim()) setError('name', 'Service name is required');
+      if (!values.sector) setError('sector', 'Sector is required');
+    } else if (stepNumber === 2) {
+      if (!values.deliveryConfig?.mode) setError('deliveryConfig.mode', 'Delivery mode is required');
+    } else if (stepNumber === 3) {
+      if (!values.pricingModel) setError('pricingModel', 'Pricing model is required');
+      if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
+        if (values.fixedPrice === undefined || values.fixedPrice === null || values.fixedPrice === '') {
+           setError('fixedPrice', 'Base price is required');
+        }
+      }
+      if (values.pricingModel === 'perHour' && (values.pricePerHour === undefined || values.pricePerHour === null || values.pricePerHour === '')) {
+         setError('pricePerHour', 'Price per hour is required');
+      }
+      if (values.pricingModel === 'perUnit' && (values.pricePerUnit === undefined || values.pricePerUnit === null || values.pricePerUnit === '')) {
+         setError('pricePerUnit', 'Price per unit is required');
+      }
+    } else if (stepNumber === 6) {
+       // media is optional per backend but good to have
+    }
+
+    return isValid;
+  };
+
   const onSubmit = async (data: ServiceFormValues) => {
+    // Manual final check for all steps
+    let allValid = true;
+    for (let i = 1; i <= 6; i++) {
+        if (!validateStep(i)) {
+            allValid = false;
+            setCurrentStep(i);
+            toast.error('Please fix the errors before publishing.');
+            return; // Stop and stay on the step with error
+        }
+    }
+
+    setIsUploading(true);
     try {
       const mediaUrls = await Promise.all(
         data.media.map(async (file: File | string) => {
@@ -256,47 +196,82 @@ export default function AddServicePage() {
       );
 
       // Transform CSV strings to arrays
-      const targetAudience = data.targetAudience?.split(',').map(s => s.trim()).filter(Boolean);
-      const tags = data.tags?.split(',').map(s => s.trim()).filter(Boolean);
+      const targetAudience = data.targetAudience?.split(',').map((s: string) => s.trim()).filter(Boolean);
+      const tags = data.tags?.split(',').map((s: string) => s.trim()).filter(Boolean);
       const deliveryConfig = data.deliveryConfig ? {
         ...data.deliveryConfig,
-        cities: data.deliveryConfig.cities?.split(',').map(s => s.trim()).filter(Boolean),
-        regions: data.deliveryConfig.regions?.split(',').map(s => s.trim()).filter(Boolean),
+        cities: data.deliveryConfig.cities?.split(',').map((s: string) => s.trim()).filter(Boolean),
+        regions: data.deliveryConfig.regions?.split(',').map((s: string) => s.trim()).filter(Boolean),
       } : undefined;
 
       // Taxonomy mapping
       const categoryName = categories?.find(c => c.id === data.category)?.name || data.category;
       const subcategoryName = subcategories?.find(s => s.id === data.subcategory)?.name || data.subcategory;
 
+      const parseNum = (val: any) => {
+        if (val === undefined || val === null || val === '') return undefined;
+        const n = parseFloat(val);
+        return isNaN(n) ? undefined : n;
+      };
+
       const serviceData: CreateServiceDto = {
         ...data,
+        sector: data.sector,
         shortDesc: data.shortDescription || '',
         fullDesc: data.description || '',
-        category: categoryName,
+        category: categoryName || '',
         subcategory: subcategoryName || '',
         targetAudience: targetAudience || [],
         tags: tags || [],
-        deliveryConfig: deliveryConfig ? {
-          ...deliveryConfig,
-          mode: deliveryConfig.mode || 'onsite',
-          cities: deliveryConfig.cities || [],
-          regions: deliveryConfig.regions || [],
-        } : { mode: 'onsite', cities: [], regions: [] },
+        
+        // Ensure Numeric Data Types
+        fixedPrice: parseNum(data.fixedPrice),
+        pricePerHour: parseNum(data.pricePerHour),
+        pricePerUnit: parseNum(data.pricePerUnit),
+        bookingFee: parseNum(data.bookingFee),
+        
+        minGuests: parseNum(data.minGuests),
+        maxGuests: parseNum(data.maxGuests),
+        pricePerGuest: parseNum(data.pricePerGuest),
+        fixedGroupPrice: parseNum(data.fixedGroupPrice),
+        basePrice: parseNum(data.basePrice),
+        baseGuests: parseNum(data.baseGuests),
+        additionalGuestPrice: parseNum(data.additionalGuestPrice),
+
+        deliveryConfig: data.deliveryConfig ? {
+          ...data.deliveryConfig,
+          mode: data.deliveryConfig.mode || 'onsite',
+          cities: data.deliveryConfig.cities?.split(',').map((s: string) => s.trim()).filter(Boolean) || [],
+          regions: data.deliveryConfig.regions?.split(',').map((s: string) => s.trim()).filter(Boolean) || [],
+          travelFee: parseNum(data.deliveryConfig.travelFee) || 0,
+        } : { mode: 'onsite', cities: [], regions: [], travelFee: 0 },
+
+        pricingRules: data.pricingRules ? {
+            weekendMultiplier: parseNum(data.pricingRules.weekendMultiplier) || 1,
+            nightSurcharge: parseNum(data.pricingRules.nightSurcharge) || 0,
+            emergencySurcharge: parseNum(data.pricingRules.emergencySurcharge) || 0,
+            holidaySurcharge: parseNum(data.pricingRules.holidaySurcharge) || 0,
+        } : undefined,
+
         availability: data.availability ? {
           ...data.availability,
-          schedule: data.availability.schedule.map(s => ({
+          schedule: data.availability.schedule.map((s: any) => ({
             ...s,
             day: s.day.charAt(0).toUpperCase() + s.day.slice(1),
-            breaks: s.breaks?.map(b => `${b.start}-${b.end}`) || []
+            breaks: s.breaks?.map((b: any) => `${b.start}-${b.end}`) || []
           })),
-          slotDuration: data.availability.slotDuration || 60,
-          bufferTime: data.availability.bufferTime || 0,
-          maxBookingsPerSlot: data.availability.maxBookingsPerSlot || 1,
+          slotDuration: parseNum(data.availability.slotDuration) || 60,
+          bufferTime: parseNum(data.availability.bufferTime) || 0,
+          maxBookingsPerSlot: parseNum(data.availability.maxBookingsPerSlot) || 1,
+          staffPerBooking: parseNum(data.availability.staffPerBooking) || 1,
+          serviceRadiusKm: parseNum(data.availability.serviceRadiusKm) || 0,
         } : undefined,
+
         images: mediaUrls.filter(m => m.type === 'image').map(result => result.secure_url),
         media: mediaUrls.filter(m => m.type === 'video').map(result => result.secure_url),
       };
 
+      setIsUploading(false);
       addService(serviceData, {
         onSuccess: () => {
           setShowSuccessDialog(true);
@@ -307,122 +282,122 @@ export default function AddServicePage() {
       });
     } catch (error) {
       console.error(error);
+      setIsUploading(false);
       toast.error('An error occurred during upload');
     }
   };
 
   const nextStep = async () => {
-    let isValid = false;
-    const values = form.getValues();
+    if (isNavigating) return;
+    setIsNavigating(true);
 
-    if (currentStep === 1) {
-      isValid = !!values.name && !!values.category;
-    } else if (currentStep === 2) {
-      isValid = !!values.deliveryConfig?.mode;
-    } else if (currentStep === 3) {
-      isValid = !!values.pricingModel;
-      if (isValid) {
-        const isSet = (val: any) => val !== undefined && val !== null && val !== '';
-        if (['fixed', 'perJob', 'perSession', 'subscription'].includes(values.pricingModel)) {
-          isValid = isSet(values.fixedPrice);
-        } else if (values.pricingModel === 'perHour') {
-          isValid = isSet(values.pricePerHour);
-        } else if (values.pricingModel === 'perUnit') {
-          isValid = isSet(values.pricePerUnit);
-        }
-      }
-    } else if (currentStep === 4 || currentStep === 5) {
-      isValid = true; // Mostly optional fields
-    } else if (currentStep === 6) {
-      isValid = !!values.businessId && values.media?.length > 0;
-    }
-
-    if (isValid) {
+    if (validateStep(currentStep)) {
       setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      setTimeout(() => setIsNavigating(false), 500);
     } else {
-      // Trigger validation to show error messages in the UI
-      const fieldsToValidate: any = {
-        1: ['name', 'category'],
-        2: ['deliveryConfig.mode'],
-        3: ['pricingModel', 'fixedPrice', 'pricePerHour', 'pricePerUnit'],
-        6: ['businessId', 'media'],
-      };
-      const currentFields = fieldsToValidate[currentStep] || [];
-      await form.trigger(currentFields);
-      toast.error('Please fill in all required fields correctly before proceeding.');
+      setIsNavigating(false);
+      toast.error('Please fix the errors before proceeding.');
+      setTimeout(() => {
+        const errorElement = document.querySelector('[aria-invalid="true"], .text-destructive, [role="alert"]');
+        if (errorElement) {
+          errorElement.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          (errorElement as HTMLElement).focus();
+        }
+      }, 150);
     }
   };
 
   const prevStep = () => {
+    if (isNavigating || isUploading || isAddingService) return;
     setCurrentStep((prev) => Math.max(prev - 1, 1));
-    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   return (
-    <div className="font-sans">
+    <div className="font-sans min-h-screen bg-gray-50/50">
       <SuccessAnimationDialog
         isOpen={showSuccessDialog}
         onClose={() => {
           setShowSuccessDialog(false);
           router.push('/dashboard/services');
         }}
+        title="Service Published!"
+        description="Your service has been successfully created and is now live."
+        redirectPath="/dashboard/services"
+        buttonText="Go to My Services"
+        icon={<Store size={24} />}
+        nextStepText="You can now manage your service from the dashboard"
       />
 
-      <div className="max-w-4xl mx-auto px-4">
-        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 gap-4">
+      <div className="max-w-5xl mx-auto px-4 py-8">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
           <div>
-            <h1 className="text-3xl font-bold text-gray-800">Add New Service</h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Create a new service offering for your business.
+            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Add New Service</h1>
+            <p className="text-sm text-gray-500 mt-1 font-medium">
+              Launch your next offering in just a few steps.
             </p>
           </div>
-          <div className="flex items-center text-sm text-gray-500">
-            <Link href="/dashboard" className="hover:text-primary transition-colors">Home</Link>
-            <ChevronRight className="h-4 w-4 mx-1" />
-            <Link href="/dashboard/services" className="hover:text-primary transition-colors">Services</Link>
-            <ChevronRight className="h-4 w-4 mx-1" />
-            <span className="text-gray-900 font-medium">Add Service</span>
+          <div className="flex items-center text-sm font-bold bg-[#f48c25]/10 px-4 py-2 rounded-full text-[#f48c25]">
+            <Link href="/dashboard" className="hover:underline transition-all">Home</Link>
+            <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+            <Link href="/dashboard/services" className="hover:underline transition-all">Services</Link>
+            <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+            <span className="text-gray-900">Add Service</span>
           </div>
         </header>
 
-        {/* Progress Bar */}
-        <div className="mb-8 relative px-2">
-          <div className="flex justify-between items-center relative z-10">
+        {/* New Colorful Progress Bar */}
+        <div className="mb-10 bg-white p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
+          <div className="flex justify-between items-center mb-6">
+            <span className="text-[#f48c25] text-xs font-black uppercase tracking-[0.2em]">Step {currentStep} of {STEPS.length}</span>
+            <span className="text-gray-900 text-sm font-black">{STEPS.find(s => s.id === currentStep)?.name}</span>
+          </div>
+          
+          <div className="flex justify-between items-center relative z-10 mb-2">
             {STEPS.map((step) => (
-              <div key={step.id} className="flex flex-col items-center">
+              <div 
+                key={step.id} 
+                className="flex flex-col items-center cursor-pointer group"
+                onClick={() => !isAddingService && !isUploading && !isNavigating && setCurrentStep(step.id)}
+              >
                 <div
-                  className={`w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all duration-300 ${currentStep >= step.id
-                      ? 'bg-primary text-white scale-110 shadow-lg'
-                      : 'bg-gray-200 text-gray-500'
+                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${currentStep >= step.id
+                      ? 'bg-[#f48c25] text-white scale-110 shadow-lg shadow-[#f48c25]/30'
+                      : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
                     }`}
                 >
                   {step.label}
                 </div>
-                <span
-                  className={`mt-2 text-xs font-medium ${currentStep === step.id ? 'text-primary' : 'text-gray-500'
-                    }`}
-                >
-                  {step.name}
-                </span>
               </div>
             ))}
           </div>
-          <div className="absolute top-5 left-0 h-0.5 bg-gray-200 w-full -z-0">
+          
+          {/* Background Line */}
+          <div className="relative w-full h-2 bg-gray-100 rounded-full mt-6 overflow-hidden">
             <div
-              className="h-full bg-primary transition-all duration-500"
+              className="absolute top-0 left-0 h-full bg-[#f48c25] transition-all duration-700 ease-in-out"
               style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
             />
+          </div>
+          
+          <div className="hidden sm:flex justify-between mt-4">
+            {STEPS.map((step) => (
+              <span 
+                key={step.id}
+                className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${currentStep === step.id ? 'text-[#f48c25]' : 'text-gray-400'}`}
+              >
+                {step.name}
+              </span>
+            ))}
           </div>
         </div>
 
         <FormProvider {...form}>
           <Form {...form}>
             <form
-              onSubmit={form.handleSubmit(onSubmit, (errors) => {
-                console.error('Validation Errors:', errors);
-                toast.error('Please check the form for errors before publishing.');
-              })}
+              onSubmit={(e) => {
+                  e.preventDefault(); // Extra safety
+                  form.handleSubmit(onSubmit)(e);
+              }}
               className="space-y-8"
             >
               <div className="min-h-[400px]">
@@ -432,26 +407,36 @@ export default function AddServicePage() {
                 {currentStep === 4 && <Step4Availability />}
                 {currentStep === 5 && <Step5Workflow />}
                 {currentStep === 6 && <Step6FinalReview />}
+                {currentStep === 7 && <Step7FinalReview />}
               </div>
 
-              <div className="flex justify-between pt-8 border-t">
+              <div className="flex justify-between pt-8 border-t border-gray-200">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={prevStep}
-                  disabled={currentStep === 1}
-                  className="px-8"
+                  disabled={currentStep === 1 || isAddingService || isUploading || isNavigating}
+                  className="px-8 h-12 rounded-xl font-bold border-gray-300 hover:bg-gray-50 transition-all"
                 >
                   <ArrowLeft className="w-4 h-4 mr-2" /> Back
                 </Button>
 
                 {currentStep < STEPS.length ? (
-                  <Button type="button" onClick={nextStep} className="px-8 bg-primary">
+                  <Button 
+                    type="button" 
+                    onClick={nextStep} 
+                    disabled={isAddingService || isUploading || isNavigating} 
+                    className="px-10 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+                  >
                     Next <ArrowRight className="w-4 h-4 ml-2" />
                   </Button>
                 ) : (
-                  <Button type="submit" disabled={isAddingService} className="px-12 bg-primary">
-                    {isAddingService ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Service</>}
+                  <Button 
+                    type="submit" 
+                    disabled={isAddingService || isUploading || isNavigating} 
+                    className="px-14 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+                  >
+                    {isUploading ? 'Uploading Media...' : isAddingService ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Service</>}
                   </Button>
                 )}
               </div>

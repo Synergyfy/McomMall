@@ -24,7 +24,6 @@ export enum DeliveryMode {
   ONSITE = 'onsite',
   AT_SHOP = 'atShop',
   REMOTE = 'remote',
-  HYBRID = 'hybrid',
 }
 
 export enum VariantType {

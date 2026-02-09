@@ -19,7 +19,7 @@ import {
 } from '@/components/ui/select';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { MapPin, ListPlus, Briefcase, Trash2, PlusCircle, HelpCircle } from 'lucide-react';
+import { MapPin, ListPlus, Briefcase, Trash2, PlusCircle, HelpCircle, Store } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
@@ -28,11 +28,20 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { useGetUserListings } from '@/service/listings/hook';
+import { cn } from '@/lib/utils';
 
 export function Step2ServiceType() {
-  const { control, watch, setValue } = useFormContext();
+  const form = useFormContext();
+  const { control, watch, setValue, trigger } = form;
   const deliveryMode = watch('deliveryConfig.mode');
+  const businessId = watch('businessId');
   const enableTieredPackages = watch('enableTieredPackages');
+
+  const { data: listings } = useGetUserListings(1, 100);
+  const selectedBusiness = React.useMemo(() => {
+    return listings?.data?.find((l: any) => l.id === businessId);
+  }, [listings, businessId]);
 
   const { fields: variantFields, append: appendVariant, remove: removeVariant } = useFieldArray({
     control,
@@ -69,9 +78,17 @@ export function Step2ServiceType() {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select 
+                  onValueChange={(val) => {
+                    field.onChange(val);
+                  }} 
+                  value={field.value}
+                >
                   <FormControl>
-                    <SelectTrigger className="py-6">
+                    <SelectTrigger type="button" className={cn(
+                      "py-6 transition-all",
+                      form.formState.errors.deliveryConfig && (form.formState.errors.deliveryConfig as any).mode && "border-destructive ring-destructive focus:ring-destructive"
+                    )}>
                       <SelectValue placeholder="Select mode" />
                     </SelectTrigger>
                   </FormControl>
@@ -79,15 +96,40 @@ export function Step2ServiceType() {
                     <SelectItem value="onsite">On-site (Customer Location)</SelectItem>
                     <SelectItem value="atShop">At Shop/Office</SelectItem>
                     <SelectItem value="remote">Remote/Online</SelectItem>
-                    <SelectItem value="hybrid">Hybrid</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
               </FormItem>
             )}
           />
 
-          {(deliveryMode === 'onsite' || deliveryMode === 'hybrid') && (
+          {deliveryMode === 'atShop' && selectedBusiness && (
+            <div className="p-4 border rounded-lg bg-primary/5 border-primary/20 animate-in fade-in slide-in-from-top-2">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="p-2 bg-primary/10 rounded-full">
+                  <Store className="w-5 h-5 text-primary" />
+                </div>
+                <div>
+                  <h4 className="font-semibold text-sm">Business Location</h4>
+                  <p className="text-xs text-muted-foreground">The address for this service as per your business listing.</p>
+                </div>
+              </div>
+              <div className="space-y-1 pl-10 text-sm">
+                <p className="font-medium">{selectedBusiness.businessName}</p>
+                <p className="text-muted-foreground">
+                  {selectedBusiness.location?.addressLine1}
+                  {selectedBusiness.location?.addressLine2 && `, ${selectedBusiness.location.addressLine2}`}
+                </p>
+                <p className="text-muted-foreground">
+                  {selectedBusiness.location?.city}
+                </p>
+                <p className="text-primary font-semibold mt-1">
+                  Postcode: {selectedBusiness.location?.postcode}
+                </p>
+              </div>
+            </div>
+          )}
+
+          {(deliveryMode === 'onsite') && (
             <div className="space-y-4 p-4 border rounded-lg bg-slate-50">
               <div className="flex items-center gap-2">
                 <h4 className="font-medium text-sm">Service Area Configuration</h4>
@@ -132,7 +174,7 @@ export function Step2ServiceType() {
                     <FormItem>
                       <FormLabel className="text-xs">Travel Fee <span className="text-muted-foreground">(Optional)</span></FormLabel>
                       <FormControl>
-                        <Input type="number" placeholder="0.00" {...field} />
+                        <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} />
                       </FormControl>
                     </FormItem>
                   )}
