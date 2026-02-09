@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, InternalServerErrorException } from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CouponProduct } from './entities/coupon-product.entity';
@@ -18,6 +18,7 @@ export class CouponProductService {
     private readonly couponProductRepository: Repository<CouponProduct>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) {}
 
@@ -78,6 +79,10 @@ export class CouponProductService {
       return null;
     }
     return this.couponProductRepository.softRemove(couponProduct);
+  }
+
+  async countForUser(userId: string): Promise<number> {
+    return this.couponProductRepository.count({ where: { user: { id: userId } } });
   }
 
   async findAllPublic(searchDto: CouponProductSearchDto): Promise<PageDto<CouponProduct>> {

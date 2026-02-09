@@ -137,6 +137,10 @@ export class PromotionService {
     return this.promotionRepository.find({ where: { user: { id: userId } } });
   }
 
+  async countForUser(userId: string): Promise<number> {
+    return this.promotionRepository.count({ where: { user: { id: userId } } });
+  }
+
   async findOne(userId: string, id: string): Promise<Promotion> {
     const promotion = await this.promotionRepository
       .createQueryBuilder('promotion')

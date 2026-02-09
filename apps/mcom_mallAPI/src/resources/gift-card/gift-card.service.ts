@@ -90,6 +90,7 @@ export class GiftCardService {
     private readonly walletService: WalletService,
     private readonly mailerService: MailerService,
     private readonly dataSource: DataSource,
+    @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) { }
 
@@ -1296,6 +1297,10 @@ export class GiftCardService {
       throw new NotFoundException('Gift card template not found.');
     }
     return template;
+  }
+
+  async countTemplatesForOwner(ownerId: string): Promise<number> {
+    return this.templateRepository.count({ where: { owner: { id: ownerId } } });
   }
 
   // --- Admin-Facing Methods ---

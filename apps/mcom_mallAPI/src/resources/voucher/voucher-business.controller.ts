@@ -47,8 +47,8 @@ export class VoucherBusinessController {
 
   @Get('products')
   async getMyVoucherProducts(@Req() req: Request) {
-    const businessId = req.user.businessId;
-    return this.voucherService.findVoucherProductsByBusiness(businessId);
+    const userId = req.user.id;
+    return this.voucherService.findVoucherProductsForUser(userId);
   }
 
   @Get('sold')

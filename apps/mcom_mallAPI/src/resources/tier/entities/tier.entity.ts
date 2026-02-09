@@ -86,4 +86,8 @@ export class Tier extends AbstractBaseEntity {
   @ApiProperty({ example: true, description: 'Is tier active' })
   @Column({ default: true })
   isActive: boolean;
+
+  @ApiProperty({ example: false, description: 'Is this the default/free tier' })
+  @Column({ default: false })
+  isDefault: boolean;
 }

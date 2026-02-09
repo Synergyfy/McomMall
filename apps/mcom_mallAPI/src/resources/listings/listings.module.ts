@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 
 import { HttpModule } from '@nestjs/axios';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -26,7 +26,7 @@ import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
-    CapabilityModule,
+    forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Business,
       Location,
@@ -48,7 +48,7 @@ import { CapabilityModule } from '../capability/capability.module';
     ServicesModule,
     ActivitiesModule,
     TrialModule,
-    PromotionModule,
+    forwardRef(() => PromotionModule),
   ],
   controllers: [ListingsController, ListingsGoogleController],
   providers: [ListingsService, GooglePlacesService],
