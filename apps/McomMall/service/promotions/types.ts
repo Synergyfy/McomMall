@@ -24,6 +24,7 @@ export interface Promotion {
   points?: number;
   createdAt: string; // ISO
   updatedAt: string; // ISO
+  isParticipating?: boolean;
 }
 
 // Based on the Create Promotion DTO

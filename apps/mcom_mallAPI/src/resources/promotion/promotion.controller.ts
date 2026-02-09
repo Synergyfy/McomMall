@@ -36,8 +36,11 @@ export class PromotionController {
   @Public()
   @Get('check')
   @ApiOperation({ summary: 'Check for promotions' })
-  check(@Query() checkPromotionDto: CheckPromotionDto) {
-    return this.promotionService.check(checkPromotionDto);
+  check(
+    @Query() checkPromotionDto: CheckPromotionDto,
+    @CurrentUser() user?: User,
+  ) {
+    return this.promotionService.check(checkPromotionDto, user?.id);
   }
 
   @Post()
@@ -86,8 +89,6 @@ export class PromotionController {
   remove(@CurrentUser() user: User, @Param('id') id: string) {
     return this.promotionService.remove(user.id, id);
   }
-
-
 
   @Post(':id/participate')
   @UseGuards(JwtAuthGuard)

@@ -64,6 +64,11 @@ const getParticipants = async (): Promise<Participant[]> => {
   return data;
 };
 
+const getMyParticipations = async (): Promise<Promotion[]> => {
+  const { data } = await api.get<Promotion[]>('/promotions/my-participations');
+  return data;
+};
+
 const updateParticipantPoints = async ({
   participantId,
   amount,
@@ -84,6 +89,13 @@ export const useGetPromotions = () => {
   return useQuery<Promotion[], Error>({
     queryKey: ['promotions'],
     queryFn: fetchPromotions,
+  });
+};
+
+export const useGetMyParticipations = () => {
+  return useQuery<Promotion[], Error>({
+    queryKey: ['promotions', 'my-participations'],
+    queryFn: getMyParticipations,
   });
 };
 

@@ -91,13 +91,9 @@ export class PromotionService {
         user: { id: userId },
       });
     } else if (promotionScope === PromotionScope.ALL_PRODUCTS) {
-      const businesses = await this.businessRepository.find({
+      promotion.businesses = await this.businessRepository.find({
         where: { user: { id: userId } },
-        relations: ['products'],
       });
-      promotion.includedProducts = businesses.flatMap(
-        (business) => business.products,
-      );
     } else if (promotionScope === PromotionScope.SPECIFIC_PRODUCTS) {
       if (includedProductIds) {
         promotion.includedProducts = await this.productRepository.findBy({
@@ -134,7 +130,10 @@ export class PromotionService {
   }
 
   findAll(userId: string): Promise<Promotion[]> {
-    return this.promotionRepository.find({ where: { user: { id: userId } } });
+    return this.promotionRepository.find({
+      where: { user: { id: userId } },
+      order: { created_at: 'DESC' },
+    });
   }
 
   async countForUser(userId: string): Promise<number> {
@@ -181,13 +180,9 @@ export class PromotionService {
         user: { id: userId },
       });
     } else if (promotionScope === PromotionScope.ALL_PRODUCTS) {
-      const businesses = await this.businessRepository.find({
+      promotion.businesses = await this.businessRepository.find({
         where: { user: { id: userId } },
-        relations: ['products'],
       });
-      promotion.includedProducts = businesses.flatMap(
-        (business) => business.products,
-      );
     } else if (promotionScope === PromotionScope.SPECIFIC_PRODUCTS) {
       if (includedProductIds) {
         promotion.includedProducts = await this.productRepository.findBy({
@@ -245,7 +240,10 @@ export class PromotionService {
     );
   }
 
-  async check(checkPromotionDto: CheckPromotionDto): Promise<Promotion[]> {
+  async check(
+    checkPromotionDto: CheckPromotionDto,
+    userId?: string,
+  ): Promise<(Promotion & { isParticipating: boolean })[]> {
     const { businessId, productId } = checkPromotionDto;
 
     if (!businessId && !productId) {
@@ -271,8 +269,6 @@ export class PromotionService {
       allProducts: PromotionScope.ALL_PRODUCTS,
     };
 
-
-
     if (businessId) {
       orConditions.push('business.id = :businessId');
       params.businessId = businessId;
@@ -283,16 +279,37 @@ export class PromotionService {
       orConditions.push('includedProduct.id = :productId');
       orConditions.push('businessProduct.id = :productId');
       params.productId = productId;
-      qb.leftJoin('promotion.includedProducts', 'includedProduct').leftJoin(
-        'promotion.businesses',
-        'pBusiness',
-      );
-      qb.leftJoin('pBusiness.products', 'businessProduct');
+      qb.leftJoin('promotion.includedProducts', 'includedProduct')
+        .leftJoin('promotion.businesses', 'pBusiness')
+        .leftJoin('pBusiness.products', 'businessProduct');
     }
 
     qb.andWhere(`(${orConditions.join(' OR ')})`, params);
 
-    return qb.getMany();
+    const promotions = await qb.getMany();
+
+    if (promotions.length === 0) {
+      return [];
+    }
+
+    if (!userId) {
+      return promotions.map((p) => ({ ...p, isParticipating: false }));
+    }
+
+    const participations = await this.promotionParticipantRepository.find({
+      where: {
+        user: { id: userId },
+        promotion: { id: In(promotions.map((p) => p.id)) },
+      },
+      relations: ['promotion'],
+    });
+
+    const participationMap = new Set(participations.map((p) => p.promotion.id));
+
+    return promotions.map((p) => ({
+      ...p,
+      isParticipating: participationMap.has(p.id),
+    }));
   }
 
   async participate(
@@ -445,13 +462,10 @@ export class PromotionService {
       );
     }
 
-    const earnedPointsQuery = this.pointTransactionRepository
-      .createQueryBuilder('transaction')
-      .select('SUM(transaction.points)', 'total')
-      .where('transaction.promotionId = :promotionId', { promotionId })
-      .andWhere('transaction.type = :type', {
-        type: PointTransactionType.EARNED,
-      });
+    const earnedPointsQuery = this.promotionParticipantRepository
+      .createQueryBuilder('participant')
+      .select('SUM(participant.pointsEarned)', 'total')
+      .where('participant.promotion.id = :promotionId', { promotionId });
 
     const redeemedPointsQuery = this.pointTransactionRepository
       .createQueryBuilder('transaction')
@@ -461,10 +475,10 @@ export class PromotionService {
         type: PointTransactionType.REDEMPTION,
       });
 
-    const participantsQuery = this.pointTransactionRepository
-      .createQueryBuilder('transaction')
-      .select('COUNT(DISTINCT transaction.userId)', 'total')
-      .where('transaction.promotionId = :promotionId', { promotionId });
+    const participantsQuery = this.promotionParticipantRepository
+      .createQueryBuilder('participant')
+      .select('COUNT(participant.id)', 'total')
+      .where('participant.promotion.id = :promotionId', { promotionId });
 
     const [earned, redeemed, participants] = await Promise.all([
       earnedPointsQuery.getRawOne(),
