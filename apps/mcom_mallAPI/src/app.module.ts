@@ -76,6 +76,7 @@ import { ActivityTimerModule } from './resources/activity-timer/activity-timer.m
     TypeOrmModule.forRootAsync({
       useFactory: async () => ({
         ...dataSource.options,
+        autoLoadEntities: true,
       }),
       dataSourceFactory: async () => dataSource,
     }),

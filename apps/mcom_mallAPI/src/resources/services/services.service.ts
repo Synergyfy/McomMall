@@ -110,8 +110,11 @@ export class ServicesService {
       createServiceDto;
 
     // Map frontend fields to backend
-    if (serviceData.images && !serviceData.media) {
-      serviceData.media = serviceData.images;
+    if (serviceData.images || serviceData.media) {
+      serviceData.media = [
+        ...(serviceData.images || []),
+        ...(serviceData.media || []),
+      ];
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;
@@ -245,8 +248,11 @@ export class ServicesService {
       updateServiceDto;
 
     // Map frontend fields to backend
-    if (serviceData.images && !serviceData.media) {
-      serviceData.media = serviceData.images;
+    if (serviceData.images || serviceData.media) {
+      serviceData.media = [
+        ...(serviceData.images || []),
+        ...(serviceData.media || []),
+      ];
     }
     if (serviceData.shortDesc && !serviceData.shortDescription) {
       serviceData.shortDescription = serviceData.shortDesc;

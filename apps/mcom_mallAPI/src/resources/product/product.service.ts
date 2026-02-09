@@ -121,8 +121,12 @@ export class ProductService {
     if (restOfDto.quantity !== undefined && restOfDto.stock === undefined) {
       restOfDto.stock = restOfDto.quantity;
     }
-    if ((restOfDto.images || restOfDto.videos) && !restOfDto.media) {
-      restOfDto.media = [...(restOfDto.images || []), ...(restOfDto.videos || [])];
+    if (restOfDto.images || restOfDto.videos || restOfDto.media) {
+      restOfDto.media = [
+        ...(restOfDto.images || []),
+        ...(restOfDto.videos || []),
+        ...(restOfDto.media || []),
+      ];
     }
 
     const product = this.productRepository.create({
@@ -210,8 +214,12 @@ export class ProductService {
     if (restOfDto.quantity !== undefined && restOfDto.stock === undefined) {
       restOfDto.stock = restOfDto.quantity;
     }
-    if ((restOfDto.images || restOfDto.videos) && !restOfDto.media) {
-      restOfDto.media = [...(restOfDto.images || []), ...(restOfDto.videos || [])];
+    if (restOfDto.images || restOfDto.videos || restOfDto.media) {
+      restOfDto.media = [
+        ...(restOfDto.images || []),
+        ...(restOfDto.videos || []),
+        ...(restOfDto.media || []),
+      ];
     }
 
     Object.assign(product, restOfDto);
