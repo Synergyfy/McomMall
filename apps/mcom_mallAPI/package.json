@@ -22,9 +22,9 @@
     "test:cov": "jest --coverage",
     "test:debug": "node --inspect-brk -r tsconfig-paths/register -r ts-node/register node_modules/.bin/jest --runInBand",
     "test:e2e": "NODE_ENV=test dotenv -e .env.test -- jest --config ./test/jest-e2e.json --runInBand",
-    "migration:generate": "dotenv -e .env -- ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
-    "migration:run": "dotenv -e .env -- ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
-    "migration:revert": "dotenv -e .env -- ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts"
+    "migration:generate": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:generate -d src/database/data-source.ts",
+    "migration:run": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:run -d src/database/data-source.ts",
+    "migration:revert": "dotenv -e .env -- ts-node -P tsconfig.json --transpile-only -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:revert -d src/database/data-source.ts"
   },
   "dependencies": {
     "@googleapis/mybusinessaccountmanagement": "^5.0.1",

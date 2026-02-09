@@ -27,11 +27,15 @@ import {
   TooltipContent,
   TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 export function Step3Pricing() {
-  const { control, watch } = useFormContext();
+  const form = useFormContext();
+  const { control, watch, trigger } = form;
   const pricingModel = watch('pricingModel');
   const enableGuestPricing = watch('enableGuestPricing');
+  const guestPricingModel = watch('guestPricingModel');
+  const isQuoteModel = watch('isQuoteModel');
 
   const { fields: addonFields, append: appendAddon, remove: removeAddon } = useFieldArray({
     control,
@@ -73,9 +77,17 @@ export function Step3Pricing() {
                     </TooltipContent>
                   </Tooltip>
                 </div>
-                <Select onValueChange={field.onChange} defaultValue={field.value}>
+                <Select 
+                  onValueChange={(val) => {
+                    field.onChange(val);
+                  }} 
+                  value={field.value}
+                >
                   <FormControl>
-                    <SelectTrigger className="py-6">
+                    <SelectTrigger type="button" className={cn(
+                      "py-6 transition-all",
+                      form.formState.errors.pricingModel && "border-destructive ring-destructive focus:ring-destructive"
+                    )}>
                       <SelectValue placeholder="Select model" />
                     </SelectTrigger>
                   </FormControl>
@@ -89,7 +101,6 @@ export function Step3Pricing() {
                     <SelectItem value="subscription">Subscription</SelectItem>
                   </SelectContent>
                 </Select>
-                <FormMessage />
               </FormItem>
             )}
           />
@@ -104,7 +115,7 @@ export function Step3Pricing() {
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
-                      <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
+                      <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="py-6 pl-8" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -123,7 +134,7 @@ export function Step3Pricing() {
                   <FormControl>
                     <div className="relative">
                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
-                      <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
+                      <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="py-6 pl-8" />
                     </div>
                   </FormControl>
                   <FormMessage />
@@ -134,23 +145,22 @@ export function Step3Pricing() {
 
           {pricingModel === 'perUnit' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={control}
-                name="pricePerUnit"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel className="text-sm font-medium">Price per Unit <span className="text-red-500">*</span></FormLabel>
-                    <FormControl>
-                      <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
-                        <Input type="number" placeholder="0.00" {...field} className="py-6 pl-8" />
-                      </div>
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-              <FormField
+                              <FormField
+                              control={control}
+                              name="pricePerUnit"
+                              render={({ field }) => (
+                                <FormItem>
+                                  <FormLabel className="text-sm font-medium">Price per Unit <span className="text-red-500">*</span></FormLabel>
+                                  <FormControl>
+                                    <div className="relative">
+                                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                                      <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="py-6 pl-8" />
+                                    </div>
+                                  </FormControl>
+                                  <FormMessage />
+                                </FormItem>
+                              )}
+                            />              <FormField
                 control={control}
                 name="unitName"
                 render={({ field }) => (
@@ -221,6 +231,53 @@ export function Step3Pricing() {
         </CardContent>
       </Card>
 
+      {/* Quote Model */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <PoundSterling className="w-5 h-5 text-primary" />
+            Quote Request <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
+          </CardTitle>
+          <CardDescription>Switch from direct booking to a quote-based request system.</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <FormField
+            control={control}
+            name="isQuoteModel"
+            render={({ field }) => (
+              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-primary/5 border-primary/20">
+                <div className="space-y-0.5">
+                  <FormLabel className="text-base font-semibold">Enable Quote Mode</FormLabel>
+                  <FormDescription>Customers request a price estimate instead of booking instantly.</FormDescription>
+                </div>
+                <FormControl>
+                  <Switch checked={field.value} onCheckedChange={field.onChange} />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+          {isQuoteModel && (
+            <FormField
+              control={control}
+              name="bookingFee"
+              render={({ field }) => (
+                <FormItem className="animate-in slide-in-from-top-2">
+                  <FormLabel className="text-sm font-medium">Initial Booking Fee <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
+                  <FormControl>
+                    <div className="relative">
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                      <Input type="number" {...field} value={field.value ?? ''} className="py-6 pl-8" placeholder="0.00" />
+                    </div>
+                  </FormControl>
+                  <FormDescription>A small fee charged at the time of the quote request.</FormDescription>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          )}
+        </CardContent>
+      </Card>
+
       {/* Guest Pricing */}
       <Card>
         <CardHeader>
@@ -237,7 +294,17 @@ export function Step3Pricing() {
             render={({ field }) => (
               <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-primary/5 border-primary/20">
                 <div className="space-y-0.5">
-                  <FormLabel className="text-base font-semibold">Enable Guest Pricing</FormLabel>
+                  <div className="flex items-center gap-2">
+                    <FormLabel className="text-base font-semibold">Enable Guest Pricing</FormLabel>
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        Enable this if the service price changes based on how many people are attending.
+                      </TooltipContent>
+                    </Tooltip>
+                  </div>
                   <FormDescription>Charge more or less depending on the group size.</FormDescription>
                 </div>
                 <FormControl>
@@ -255,10 +322,21 @@ export function Step3Pricing() {
                   name="minGuests"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Min Guests</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormLabel className="text-xs font-semibold">Min Guests</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            The minimum number of people allowed for a single booking.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <FormControl>
                         <Input type="number" {...field} className="h-9" />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -267,10 +345,21 @@ export function Step3Pricing() {
                   name="maxGuests"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel className="text-xs">Max Guests</FormLabel>
+                      <div className="flex items-center gap-2">
+                        <FormLabel className="text-xs font-semibold">Max Guests</FormLabel>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                          </TooltipTrigger>
+                          <TooltipContent>
+                            The maximum capacity for a single booking.
+                          </TooltipContent>
+                        </Tooltip>
+                      </div>
                       <FormControl>
                         <Input type="number" {...field} className="h-9" />
                       </FormControl>
+                      <FormMessage />
                     </FormItem>
                   )}
                 />
@@ -281,22 +370,136 @@ export function Step3Pricing() {
                 name="guestPricingModel"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-xs">Guest Pricing Model</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <div className="flex items-center gap-2">
+                      <FormLabel className="text-xs font-semibold">Guest Pricing Model</FormLabel>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <HelpCircle className="w-3 h-3 text-muted-foreground cursor-help" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          Select how you want to calculate the price for different group sizes.
+                        </TooltipContent>
+                      </Tooltip>
+                    </div>
+                    <Select 
+                      onValueChange={(val) => {
+                        field.onChange(val);
+                      }} 
+                      value={field.value}
+                    >
                       <FormControl>
-                        <SelectTrigger className="h-10">
+                        <SelectTrigger type="button" className="h-10">
                           <SelectValue />
                         </SelectTrigger>
                       </FormControl>
                       <SelectContent>
-                        <SelectItem value="perGuest">Per Guest</SelectItem>
-                        <SelectItem value="fixedGroup">Fixed Group</SelectItem>
-                        <SelectItem value="baseWithAdditional">Base + Additional</SelectItem>
+                        <SelectItem value="perGuest">Per Guest (Charge per person)</SelectItem>
+                        <SelectItem value="fixedGroup">Fixed Group (One price for all)</SelectItem>
+                        <SelectItem value="baseWithAdditional">Base + Additional (Base fee + extra per person)</SelectItem>
                       </SelectContent>
                     </Select>
+                    <FormMessage />
                   </FormItem>
                 )}
               />
+
+              {/* Conditional Guest Pricing Fields */}
+              <div className="pt-4 border-t border-slate-200">
+                {guestPricingModel === 'perGuest' && (
+                  <FormField
+                    control={control}
+                    name="pricePerGuest"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-primary">Price Per Guest</FormLabel>
+                        <FormDescription>The amount charged for every single attendee (e.g. £20 x 5 guests = £100).</FormDescription>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                            <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="h-11 pl-8" />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {guestPricingModel === 'fixedGroup' && (
+                  <FormField
+                    control={control}
+                    name="fixedGroupPrice"
+                    render={({ field }) => (
+                      <FormItem>
+                        <FormLabel className="text-sm font-medium text-primary">Fixed Group Price</FormLabel>
+                        <FormDescription>One flat fee for the entire booking, regardless of how many guests attend (within your min/max limits).</FormDescription>
+                        <FormControl>
+                          <div className="relative">
+                            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                            <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="h-11 pl-8" />
+                          </div>
+                        </FormControl>
+                        <FormMessage />
+                      </FormItem>
+                    )}
+                  />
+                )}
+
+                {guestPricingModel === 'baseWithAdditional' && (
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <FormField
+                        control={control}
+                        name="basePrice"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">Base Price</FormLabel>
+                            <FormControl>
+                              <div className="relative">
+                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                                <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="h-10 pl-8" />
+                              </div>
+                            </FormControl>
+                            <FormDescription className="text-[10px]">The starting price.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      <FormField
+                        control={control}
+                        name="baseGuests"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel className="text-xs font-semibold">Base Guests Included</FormLabel>
+                            <FormControl>
+                              <Input type="number" placeholder="1" {...field} value={field.value ?? ''} className="h-10" />
+                            </FormControl>
+                            <FormDescription className="text-[10px]">Number of people covered by base price.</FormDescription>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                    <FormField
+                      control={control}
+                      name="additionalGuestPrice"
+                      render={({ field }) => (
+                        <FormItem>
+                          <FormLabel className="text-sm font-medium text-primary">Price Per Additional Guest</FormLabel>
+                          <FormDescription>The extra cost for each person ABOVE the "Base Guests Included" limit.</FormDescription>
+                          <FormControl>
+                            <div className="relative">
+                              <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
+                              <Input type="number" placeholder="0.00" {...field} value={field.value ?? ''} className="h-11 pl-8" />
+                            </div>
+                          </FormControl>
+                          <FormMessage />
+                        </FormItem>
+                      )}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
           )}
         </CardContent>
