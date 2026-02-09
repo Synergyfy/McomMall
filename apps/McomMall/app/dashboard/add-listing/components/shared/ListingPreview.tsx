@@ -41,7 +41,7 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
     logoAltText: formData.logo?.altText || '',
     bannerAltText: formData.banner?.altText || '',
     media: formData.media?.map(m => m.url).filter((url): url is string => !!url) || [],
-    status: 'DRAFT',
+    status: 'draft',
     isGoogleVerified: false,
     isVerified: true,
     isClaimed: true,
@@ -80,10 +80,10 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
       phoneNumber: '',
       isActive: true,
       isEmailVerified: true,
-        role: 'owner',
-        giftCard: true,
-        voucher: true,
-        promotion: true,
+      role: 'owner',
+      giftCard: true,
+      voucher: true,
+      promotion: true,
     },
     giftCard: true,
     voucher: true,
@@ -105,9 +105,8 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
             className="p-2"
           >
             <Smartphone
-              className={`h-5 w-5 ${
-                previewMode === 'mobile' ? '' : 'text-muted-foreground'
-              }`}
+              className={`h-5 w-5 ${previewMode === 'mobile' ? '' : 'text-muted-foreground'
+                }`}
             />
           </Button>
           <Button
@@ -117,17 +116,15 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
             className="p-2"
           >
             <Monitor
-              className={`h-5 w-5 ${
-                previewMode === 'desktop' ? '' : 'text-muted-foreground'
-              }`}
+              className={`h-5 w-5 ${previewMode === 'desktop' ? '' : 'text-muted-foreground'
+                }`}
             />
           </Button>
         </div>
       </div>
       <div
-        className={`bg-gray-100 p-4 transition-all duration-300 ${
-          previewMode === 'mobile' ? 'max-w-sm mx-auto' : ''
-        }`}
+        className={`bg-gray-100 p-4 transition-all duration-300 ${previewMode === 'mobile' ? 'max-w-sm mx-auto' : ''
+          }`}
       >
         <div
           className="w-full overflow-hidden rounded-lg border"

@@ -226,6 +226,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   const [currentStep, setCurrentStep] = useState(1);
   const [formData, setFormData] = useState<ListingFormData>(() => {
     const initialData: ListingFormData = {
+      status: 'draft',
       businessTypes: businessTypes as ('Product' | 'Service')[],
       businessName: '',
       phone: '',
@@ -692,7 +693,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
   const handleSubmit = async (status: 'published' | 'draft' = 'published') => {
     const { isValid, firstErrorStep } = validateAllSteps();
-    if (!isValid && status === 'PUBLISHED') {
+    if (!isValid && status === 'published') {
       if (firstErrorStep !== null) {
         setCurrentStep(firstErrorStep);
       }

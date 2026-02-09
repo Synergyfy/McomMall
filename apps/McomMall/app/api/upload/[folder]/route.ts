@@ -46,22 +46,24 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ fol
     }
 
     const buffer = Buffer.from(await file.arrayBuffer());
-    const readableStream = new Readable();
-    readableStream.push(buffer);
-    readableStream.push(null);
 
     const result = await new Promise<UploadApiResponse>((resolve, reject) => {
-      const stream = cloudinary.uploader.upload_stream(
-        { folder, resource_type: 'auto' },
+      const uploadStream = cloudinary.uploader.upload_stream(
+        {
+          folder,
+          resource_type: 'auto',
+          timeout: 60000
+        },
         (error, result) => {
-          if (result) {
-            resolve(result);
-          } else {
+          if (error) {
             reject(error);
+          } else {
+            resolve(result!);
           }
         }
       );
-      readableStream.pipe(stream);
+
+      uploadStream.end(buffer);
     });
 
     return NextResponse.json(result);

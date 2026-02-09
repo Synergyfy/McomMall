@@ -1,7 +1,7 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import { Dialog, DialogContent } from '@/components/ui/dialog';
+import { Dialog, DialogContent, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 import { Loader2 } from 'lucide-react';
 
 interface InProgressDialogProps {
@@ -16,6 +16,8 @@ export function InProgressDialog({
   return (
     <Dialog open={isOpen}>
       <DialogContent className="sm:max-w-[400px] flex flex-col items-center justify-center">
+        <DialogTitle className="sr-only">Processing Upload</DialogTitle>
+        <DialogDescription className="sr-only">Please wait while we process your request.</DialogDescription>
         <motion.div
           animate={{ rotate: 360 }}
           transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
