@@ -1,14 +1,18 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  PlusCircle,
-  Edit,
-  Copy,
+  Plus,
+  Edit2,
   Trash2,
   Loader2,
+  Gift,
+  Tag,
+  MoreVertical,
+  Calendar,
+  AlertCircle,
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -32,19 +36,25 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import {
-  TooltipProvider,
-} from '@/components/ui/tooltip';
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
+import { Badge } from '@/components/ui/badge';
+import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card';
 import { useGetOffers, useDeleteOffer } from '@/service/offers/hook';
 import { Offer } from '@/service/offers/types';
 import { toast } from 'sonner';
+import { format } from 'date-fns';
 
 type FormCouponType =
-  | 'Fixed cart discount'
-  | 'Percentage discount'
-  | 'Free product(s)'
-  | 'Bonus points';
+  | 'FIXED CART DISCOUNT'
+  | 'PERCENTAGE DISCOUNT'
+  | 'FREE PRODUCT(S)'
+  | 'BONUS POINTS';
 
-// Main Component
 export function OffersManager() {
   const router = useRouter();
   const { data: offers, isLoading, error } = useGetOffers();
@@ -57,13 +67,13 @@ export function OffersManager() {
   ): FormCouponType => {
     switch (type) {
       case 'FIXED_CART_DISCOUNT':
-        return 'Fixed cart discount';
+        return 'FIXED CART DISCOUNT';
       case 'PERCENTAGE_DISCOUNT':
-        return 'Percentage discount';
+        return 'PERCENTAGE DISCOUNT';
       case 'FREE_PRODUCTS':
-        return 'Free product(s)';
+        return 'FREE PRODUCT(S)';
       case 'BONUS_POINTS':
-        return 'Bonus points';
+        return 'BONUS POINTS';
     }
   };
 
@@ -86,170 +96,153 @@ export function OffersManager() {
     setDeleteAlertOpen(true);
   };
 
-  return (
-    <TooltipProvider>
-      <div className="w-full max-w-7xl mx-auto p-4 md:p-6">
-        <p className="text-gray-600 mb-4">
-          Offers are a great way to reward your customers for their loyalty. You
-          can create as many offers as you want and set the number of points
-          required to redeem them.
-        </p>
-        <div className="flex items-center gap-4 mb-6">
-          <Button
-            onClick={() => router.push('/dashboard/loyalty/offers/new')}
-            className="bg-orange-600 hover:bg-orange-700"
-          >
-            <PlusCircle className="h-4 w-4 mr-2" /> Create Offer
-          </Button>
-        </div>
+  if (isLoading) {
+    return (
+      <div className="flex justify-center items-center h-64">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    );
+  }
 
-        {/* Offers Table */}
-        <div className="rounded-lg border overflow-hidden">
-          <div className="overflow-x-auto">
-            <Table>
-              <TableHeader className="bg-orange-600">
-                <TableRow className="hover:bg-orange-600">
-                  <TableHead className="text-white font-bold">Status</TableHead>
-                  <TableHead className="text-white font-bold">
-                    Offer name
-                  </TableHead>
-                  <TableHead className="text-white font-bold">Scope</TableHead>
-                  <TableHead className="text-white font-bold">
-                    Description
-                  </TableHead>
-                  <TableHead className="text-white font-bold">Points</TableHead>
-                  <TableHead className="text-white font-bold">Coupon</TableHead>
-                  <TableHead className="text-white font-bold">
-                    Begin / end dates
-                  </TableHead>
-                  <TableHead className="text-white font-bold">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {isLoading ? (
-                  <TableRow>
-                    <TableCell colSpan={8} className="text-center">
-                      <div className="flex justify-center items-center p-8">
-                        <Loader2 className="h-8 w-8 animate-spin text-gray-500" />
+  if (error) {
+    return (
+      <div className="flex flex-col items-center justify-center h-64 text-red-500">
+        <AlertCircle className="h-8 w-8 mb-2" />
+        <p>Error loading offers: {error.message}</p>
+      </div>
+    );
+  }
+
+  const activeCount = offers?.filter(o => o.isActive).length || 0;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <div>
+          <h2 className="text-2xl font-bold tracking-tight">Rewards</h2>
+          <p className="text-muted-foreground">
+            Manage rewards that customers can redeem with their points.
+          </p>
+        </div>
+        <Button onClick={() => router.push('/dashboard/loyalty/offers/new')} className="bg-orange-600 hover:bg-orange-700">
+          <Plus className="h-4 w-4 mr-2" /> Create Reward
+        </Button>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Rewards</CardTitle>
+            <Gift className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{offers?.length || 0}</div>
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Rewards</CardTitle>
+            <div className="h-2 w-2 rounded-full bg-green-500" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{activeCount}</div>
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <div className="rounded-md border">
+          <Table>
+            <TableHeader className="bg-muted/50">
+              <TableRow>
+                <TableHead>Status</TableHead>
+                <TableHead>Reward Name</TableHead>
+                <TableHead>Points Cost</TableHead>
+                <TableHead>Type</TableHead>
+                <TableHead>Duration</TableHead>
+                <TableHead className="text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {offers && offers.length > 0 ? (
+                offers.map((offer) => (
+                  <TableRow key={offer.id} className="group">
+                    <TableCell>
+                      <Badge variant={offer.isActive ? "default" : "secondary"} className={offer.isActive ? "bg-green-600 hover:bg-green-700" : ""}>
+                        {offer.isActive ? "Active" : "Inactive"}
+                      </Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div>
+                        <div className="font-medium text-foreground">{offer.name}</div>
+                        <div className="text-xs text-muted-foreground line-clamp-1">{offer.description}</div>
                       </div>
                     </TableCell>
-                  </TableRow>
-                ) : error ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="text-center text-red-500"
-                    >
-                      Error loading offers: {error.message}
+                    <TableCell>
+                      <div className="flex items-center font-medium">
+                        {offer.points.toLocaleString()} pts
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <Badge variant="outline">{formatCouponTypeFromDto(offer.rewardCouponType)}</Badge>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex items-center text-sm text-muted-foreground">
+                        <Calendar className="mr-2 h-4 w-4 opacity-70" />
+                        {offer.beginDate ? format(new Date(offer.beginDate), 'MMM d, yyyy') : 'Start'}
+                        {' - '}
+                        {offer.endDate ? format(new Date(offer.endDate), 'MMM d, yyyy') : 'End'}
+                      </div>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" className="h-8 w-8 p-0">
+                            <span className="sr-only">Open menu</span>
+                            <MoreVertical className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                          <DropdownMenuItem onClick={() => router.push(`/dashboard/loyalty/offers/edit/${offer.id}`)}>
+                            <Edit2 className="mr-2 h-4 w-4" /> Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => openDeleteConfirmation(offer.id)} className="text-red-600">
+                            <Trash2 className="mr-2 h-4 w-4" /> Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
                     </TableCell>
                   </TableRow>
-                ) : (
-                  <AnimatePresence>
-                    {offers?.map(offer => (
-                      <motion.tr
-                        key={offer.id}
-                        layout
-                        initial={{ opacity: 0 }}
-                        animate={{ opacity: 1 }}
-                        exit={{ opacity: 0, x: -50 }}
-                        transition={{ duration: 0.3 }}
-                        className="odd:bg-white even:bg-orange-50/50 hover:bg-gray-100"
-                      >
-                        <TableCell>
-                          <div className="flex items-center gap-2">
-                            <span
-                              className={`h-3 w-3 rounded-full ${
-                                offer.isActive ? 'bg-green-500' : 'bg-gray-400'
-                              }`}
-                            ></span>
-                            {offer.isActive ? 'Active' : 'Inactive'}
-                          </div>
-                        </TableCell>
-                        <TableCell>
-                          <a
-                            href="#"
-                            className="font-medium text-orange-600 hover:underline"
-                          >
-                            {offer.name}
-                          </a>
-                        </TableCell>
-                        <TableCell>
-                          {offer.offerScope === 'ALL_LISTINGS'
-                            ? 'All Listings'
-                            : offer.offerScope === 'SPECIFIC_LISTINGS'
-                            ? 'Specific Listings'
-                            : 'Specific Products'}
-                        </TableCell>
-                        <TableCell>{offer.description}</TableCell>
-                        <TableCell>{offer.points.toLocaleString()}</TableCell>
-                        <TableCell>
-                          {formatCouponTypeFromDto(offer.rewardCouponType)}
-                        </TableCell>
-                        <TableCell>
-                          {offer.beginDate
-                            ? new Date(offer.beginDate).toLocaleString()
-                            : 'N/A'}{' '}
-                          -{' '}
-                          {offer.endDate
-                            ? new Date(offer.endDate).toLocaleString()
-                            : 'N/A'}
-                        </TableCell>
-                        <TableCell>
-                          <div className="flex gap-2">
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => router.push(`/dashboard/loyalty/offers/edit/${offer.id}`)}
-                            >
-                              <Edit className="h-4 w-4 mr-1" /> Edit
-                            </Button>
-                            <Button variant="outline" size="sm" disabled>
-                              <Copy className="h-4 w-4 mr-1" /> Copy
-                            </Button>
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openDeleteConfirmation(offer.id)}
-                            >
-                              <Trash2 className="h-4 w-4 mr-1" /> Delete
-                            </Button>
-                          </div>
-                        </TableCell>
-                      </motion.tr>
-                    ))}
-                  </AnimatePresence>
-                )}
-              </TableBody>
-            </Table>
-          </div>
+                ))
+              ) : (
+                <TableRow>
+                  <TableCell colSpan={6} className="h-24 text-center text-muted-foreground">
+                    No rewards found. Create one to let customers redeem points.
+                  </TableCell>
+                </TableRow>
+              )}
+            </TableBody>
+          </Table>
         </div>
+      </Card>
 
-        {/* Delete Confirmation Dialog */}
-        <AlertDialog open={isDeleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
-          <AlertDialogContent>
-            <AlertDialogHeader>
-              <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
-              <AlertDialogDescription>
-                This action cannot be undone. This will permanently delete this
-                offer.
-              </AlertDialogDescription>
-            </AlertDialogHeader>
-            <AlertDialogFooter>
-              <AlertDialogCancel onClick={() => setOfferToDelete(null)}>
-                Cancel
-              </AlertDialogCancel>
-              <AlertDialogAction
-                onClick={handleDeleteOffer}
-                className="bg-red-600 hover:bg-red-700"
-              >
-                Yes, delete
-              </AlertDialogAction>
-            </AlertDialogFooter>
-          </AlertDialogContent>
-        </AlertDialog>
-      </div>
-    </TooltipProvider>
+      <AlertDialog open={isDeleteAlertOpen} onOpenChange={setDeleteAlertOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Reward?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This action cannot be undone. This will permanently delete this reward option.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel onClick={() => setOfferToDelete(null)}>Cancel</AlertDialogCancel>
+            <AlertDialogAction onClick={handleDeleteOffer} className="bg-red-600 hover:bg-red-700">
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+    </div>
   );
 }

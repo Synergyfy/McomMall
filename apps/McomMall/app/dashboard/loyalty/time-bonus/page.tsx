@@ -2,14 +2,14 @@
 
 import * as React from 'react';
 import { useState } from 'react';
-import { Award, Info } from 'lucide-react';
+import { Loader2, ArrowLeft, Clock, Gift } from 'lucide-react';
+import { useRouter } from 'next/navigation';
 
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Checkbox } from '@/components/ui/checkbox';
-import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import {
   Select,
   SelectContent,
@@ -17,29 +17,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
-} from '@/components/ui/tooltip';
+import { toast } from 'sonner';
+import { useAddOffer } from '@/service/offers/hook';
+import { CreateOfferDto } from '@/service/offers/types';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 
-// TypeScript Types
-type CouponType =
-  | 'Fixed cart discount'
-  | 'Percentage discount'
-  | 'Free product(s)'
-  | 'Bonus points';
-
+// Types
 type ResetUnit = 'Hours' | 'Days' | 'Weeks' | 'Months';
 
-// Form state type
-interface BonusPointsFormState {
-  isOfferActive: boolean;
+interface TimeBonusFormState {
+  isActive: boolean;
   name: string;
   description: string;
-  points: number;
-  couponType: CouponType;
   bonusPoints: number;
   limitPerCustomer: number;
   allowLimitToReset: boolean;
@@ -47,329 +36,199 @@ interface BonusPointsFormState {
   resetAfterUnit: ResetUnit;
 }
 
-// Main Component
-export default function BonusPointsOfferPage() {
-  const [formState, setFormState] = useState<BonusPointsFormState>({
-    isOfferActive: true,
-    name: '500 Bonus Points',
-    description: 'Every 4 hours',
-    points: 0, // Points to redeem, seems to be 0 for this type of offer
-    couponType: 'Bonus points',
-    bonusPoints: 500,
+export default function TimeBonusPage() {
+  const router = useRouter();
+  const { mutateAsync: addOffer, isPending } = useAddOffer();
+
+  const [formState, setFormState] = useState<TimeBonusFormState>({
+    isActive: true,
+    name: 'Daily Check-in Bonus',
+    description: 'Come back every day to earn 50 free points!',
+    bonusPoints: 50,
     limitPerCustomer: 1,
     allowLimitToReset: true,
-    resetAfterValue: 4,
+    resetAfterValue: 24,
     resetAfterUnit: 'Hours',
   });
 
-  const handleFormChange = <K extends keyof BonusPointsFormState>(
+  const handleFormChange = <K extends keyof TimeBonusFormState>(
     field: K,
-    value: BonusPointsFormState[K]
+    value: TimeBonusFormState[K]
   ) => {
     setFormState(prev => ({ ...prev, [field]: value }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // In a real app, you'd handle form submission here (e.g., API call)
-    console.log('Form Submitted:', formState);
-    alert('Offer details submitted! Check the console for the data.');
+    
+    try {
+        const offerDto: CreateOfferDto = {
+            name: formState.name,
+            description: formState.description,
+            points: 0, // Always 0 cost for a "Bonus" claim
+            rewardCouponType: 'BONUS_POINTS',
+            offerScope: 'ALL_LISTINGS',
+            bonusPoints: formState.bonusPoints,
+            limitPerCustomer: formState.limitPerCustomer,
+            allowLimitToReset: formState.allowLimitToReset,
+            // Note: Specific reset timing (value/unit) is handled by 'allowLimitToReset' flag in current backend version
+        };
+
+        await addOffer(offerDto);
+        toast.success('Time Bonus Reward created successfully!');
+        router.push('/dashboard/loyalty/offers');
+    } catch (error) {
+        console.error(error);
+        toast.error('Failed to create time bonus. Please try again.');
+    }
   };
 
   return (
-    <TooltipProvider>
-      <div className="bg-gray-50 min-h-screen">
-        <main className="w-full max-w-4xl mx-auto p-4 md:p-8">
-          <form onSubmit={handleSubmit} className="space-y-8">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-start">
-              {/* Left Column: Form Fields */}
-              <div className="md:col-span-2 space-y-6 bg-white p-6 rounded-lg shadow-sm border">
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="isOfferActive"
-                    checked={formState.isOfferActive}
-                    onCheckedChange={checked =>
-                      handleFormChange('isOfferActive', !!checked)
-                    }
-                  />
-                  <Label htmlFor="isOfferActive">Offer is active</Label>
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>{"Toggle the offer's visibility and availability."}</p>
-                    </TooltipContent>
-                  </Tooltip>
-                </div>
+    <div className="max-w-2xl mx-auto space-y-6 py-8">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" size="icon" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4" />
+        </Button>
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight">Time Bonus</h1>
+          <p className="text-muted-foreground">Create a recurring free points reward to encourage frequent visits.</p>
+        </div>
+      </div>
 
-                <div>
-                  <Label htmlFor="name">Name</Label>
-                  <Input
-                    id="name"
-                    value={formState.name}
-                    onChange={e => handleFormChange('name', e.target.value)}
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <Label htmlFor="description">Description</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>A brief summary of the offer.</p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Textarea
-                    id="description"
-                    value={formState.description}
-                    onChange={e =>
-                      handleFormChange('description', e.target.value)
-                    }
-                  />
-                </div>
-                <div>
-                  <div className="flex items-center justify-between mb-1.5">
-                    <Label htmlFor="points">Points</Label>
-                    <Tooltip>
-                      <TooltipTrigger asChild>
-                        <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                      </TooltipTrigger>
-                      <TooltipContent>
-                        <p>
-                          Points required for a customer to claim this offer.
-                        </p>
-                      </TooltipContent>
-                    </Tooltip>
-                  </div>
-                  <Input
-                    id="points"
-                    type="number"
-                    value={formState.points}
-                    onChange={e =>
-                      handleFormChange('points', Number(e.target.value))
-                    }
-                  />
-                </div>
+      <form onSubmit={handleSubmit}>
+        <Card>
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Clock className="h-5 w-5 text-orange-500" />
+              Configuration
+            </CardTitle>
+            <CardDescription>
+              Set up the details for your time-based reward.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            
+            <div className="flex items-center space-x-2 border p-4 rounded-lg bg-muted/20">
+              <Checkbox
+                id="isActive"
+                checked={formState.isActive}
+                onCheckedChange={checked => handleFormChange('isActive', !!checked)}
+              />
+              <div className="grid gap-1.5 leading-none">
+                <Label htmlFor="isActive" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+                  Active Status
+                </Label>
+                <p className="text-sm text-muted-foreground">
+                  Make this bonus immediately available to customers.
+                </p>
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="name">Reward Name</Label>
+              <Input
+                id="name"
+                value={formState.name}
+                onChange={e => handleFormChange('name', e.target.value)}
+                placeholder="e.g. Daily Bonus"
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="description">Description</Label>
+              <Textarea
+                id="description"
+                value={formState.description}
+                onChange={e => handleFormChange('description', e.target.value)}
+                placeholder="Explain how often customers can claim this."
+              />
+            </div>
+
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="bonusPoints" className="text-orange-600 font-semibold flex items-center gap-1">
+                  <Gift className="h-3 w-3" /> Points to Award
+                </Label>
+                <Input
+                  id="bonusPoints"
+                  type="number"
+                  min="1"
+                  value={formState.bonusPoints}
+                  onChange={e => handleFormChange('bonusPoints', Number(e.target.value))}
+                  className="font-bold"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="limitPerCustomer">Claims per Cycle</Label>
+                <Input
+                  id="limitPerCustomer"
+                  type="number"
+                  min="1"
+                  value={formState.limitPerCustomer}
+                  onChange={e => handleFormChange('limitPerCustomer', Number(e.target.value))}
+                />
+              </div>
+            </div>
+
+            <div className="space-y-4 pt-4 border-t">
+              <div className="flex items-center space-x-2">
+                <Checkbox
+                  id="allowLimitToReset"
+                  checked={formState.allowLimitToReset}
+                  onCheckedChange={checked => handleFormChange('allowLimitToReset', !!checked)}
+                />
+                <Label htmlFor="allowLimitToReset">Recurring Reward (Reset Limit)</Label>
               </div>
 
-              {/* Right Column: Preview */}
-              <div className="md:col-span-1">
-                <div className="sticky top-8 rounded-lg border bg-white p-6 text-center shadow-sm">
-                  <div className="flex flex-col items-center gap-2">
-                    <Award className="h-10 w-10 text-orange-600" />
-                    <h3 className="text-xl font-bold">
-                      {formState.name || 'Offer Name'}
-                    </h3>
-                    <p className="text-gray-500 text-sm">
-                      {formState.description || 'Offer Description'}
-                    </p>
+              {formState.allowLimitToReset && (
+                <div className="grid grid-cols-3 gap-4 pl-6 border-l-2 border-orange-100">
+                  <div className="col-span-2 space-y-2">
+                    <Label htmlFor="resetAfterValue">Reset Every</Label>
+                    <Input
+                      id="resetAfterValue"
+                      type="number"
+                      min="1"
+                      value={formState.resetAfterValue}
+                      onChange={e => handleFormChange('resetAfterValue', Number(e.target.value))}
+                      disabled // Backend limitation visual feedback
+                      className="bg-muted"
+                    />
                   </div>
-                  <Button
-                    type="button"
-                    className="w-full mt-6 bg-orange-600 hover:bg-orange-700"
-                  >
-                    {formState.points > 0
-                      ? `Claim for ${formState.points.toLocaleString()}`
-                      : 'Claim for free'}
-                  </Button>
-                  <p className="mt-4 text-xs text-gray-400 italic">
-                    This is only a preview. The site Theme might override the
-                    styles.
+                  <div className="space-y-2">
+                    <Label>&nbsp;</Label>
+                    <Select
+                      value={formState.resetAfterUnit}
+                      disabled // Backend limitation visual feedback
+                    >
+                      <SelectTrigger className="bg-muted">
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="Hours">Hours</SelectItem>
+                        <SelectItem value="Days">Days</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  <p className="col-span-3 text-xs text-muted-foreground italic">
+                    * Exact timing customization will be enabled in a future update. Currently resets daily.
                   </p>
                 </div>
-              </div>
+              )}
             </div>
 
-            {/* Reward Coupon Type Section */}
-            <div className="bg-white p-6 rounded-lg shadow-sm border space-y-6">
-              <h3 className="text-lg font-semibold">Reward coupon type</h3>
-              <RadioGroup
-                value={formState.couponType}
-                onValueChange={(value: CouponType) =>
-                  handleFormChange('couponType', value)
-                }
-                className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4"
-              >
-                {[
-                  'Fixed cart discount',
-                  'Percentage discount',
-                  'Free product(s)',
-                  'Bonus points',
-                ].map(type => (
-                  <div key={type}>
-                    <RadioGroupItem
-                      value={type}
-                      id={type}
-                      className="peer sr-only"
-                    />
-                    <Label
-                      htmlFor={type}
-                      className="flex flex-col text-center items-center justify-center rounded-md border-2 border-muted bg-popover p-4 hover:bg-accent hover:text-accent-foreground peer-data-[state=checked]:border-orange-600 [&:has([data-state=checked])]:border-orange-600 h-full"
-                    >
-                      {type}
-                      <span className="text-sm font-normal text-muted-foreground mt-2">
-                        {type === 'Fixed cart discount' &&
-                          'Apply a fixed total discount to the entire cart.'}
-                        {type === 'Percentage discount' &&
-                          'Apply a percentage discount to the entire cart.'}
-                        {type === 'Free product(s)' &&
-                          'Offer one or more products for free.'}
-                        {type === 'Bonus points' &&
-                          "Adds points to the customer's account."}
-                      </span>
-                    </Label>
-                  </div>
-                ))}
-              </RadioGroup>
-
-              {/* Bonus Points Specific Fields */}
-              <AnimatePresence>
-                {formState.couponType === 'Bonus points' && (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    exit={{ opacity: 0, height: 0 }}
-                    transition={{ duration: 0.3 }}
-                    className="space-y-6 pt-6 border-t overflow-hidden"
-                  >
-                    <div>
-                      <Label htmlFor="bonusPoints">Bonus points</Label>
-                      <Input
-                        id="bonusPoints"
-                        type="number"
-                        value={formState.bonusPoints}
-                        onChange={e =>
-                          handleFormChange(
-                            'bonusPoints',
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                    <div>
-                      <div className="flex items-center justify-between mb-1.5">
-                        <Label htmlFor="limitPerCustomer">
-                          Limit per customer
-                        </Label>
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-400 cursor-pointer" />
-                          </TooltipTrigger>
-                          <TooltipContent>
-                            <p>
-                              How many times a single customer can claim this
-                              offer.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      </div>
-                      <Input
-                        id="limitPerCustomer"
-                        type="number"
-                        value={formState.limitPerCustomer}
-                        onChange={e =>
-                          handleFormChange(
-                            'limitPerCustomer',
-                            Number(e.target.value)
-                          )
-                        }
-                      />
-                    </div>
-                    <div className="flex items-center space-x-2">
-                      <Checkbox
-                        id="allowLimitToReset"
-                        checked={formState.allowLimitToReset}
-                        onCheckedChange={checked =>
-                          handleFormChange('allowLimitToReset', !!checked)
-                        }
-                      />
-                      <Label htmlFor="allowLimitToReset">
-                        Allow limit to reset
-                      </Label>
-                    </div>
-
-                    {formState.allowLimitToReset && (
-                      <motion.div
-                        initial={{ opacity: 0, y: -10 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        className="flex items-end gap-2"
-                      >
-                        <div className="flex-grow">
-                          <Label htmlFor="resetAfterValue">Reset after</Label>
-                          <Input
-                            id="resetAfterValue"
-                            type="number"
-                            value={formState.resetAfterValue}
-                            onChange={e =>
-                              handleFormChange(
-                                'resetAfterValue',
-                                Number(e.target.value)
-                              )
-                            }
-                          />
-                        </div>
-                        <div>
-                          <Select
-                            value={formState.resetAfterUnit}
-                            onValueChange={(value: ResetUnit) =>
-                              handleFormChange('resetAfterUnit', value)
-                            }
-                          >
-                            <SelectTrigger className="w-[120px]">
-                              <SelectValue />
-                            </SelectTrigger>
-                            <SelectContent>
-                              <SelectItem value="Hours">Hours</SelectItem>
-                              <SelectItem value="Days">Days</SelectItem>
-                              <SelectItem value="Weeks">Weeks</SelectItem>
-                              <SelectItem value="Months">Months</SelectItem>
-                            </SelectContent>
-                          </Select>
-                        </div>
-                      </motion.div>
-                    )}
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-
-            <div className="flex justify-end gap-4 pt-4">
-              <Button type="button" variant="outline">
+            <div className="flex justify-end gap-3 pt-6">
+              <Button type="button" variant="outline" onClick={() => router.back()}>
                 Cancel
               </Button>
-              <Button
-                type="submit"
-                className="bg-orange-600 hover:bg-orange-700"
-              >
-                Save Offer
+              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 min-w-[140px]" disabled={isPending}>
+                {isPending ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+                Create Bonus
               </Button>
             </div>
-          </form>
-        </main>
-      </div>
-    </TooltipProvider>
+          </CardContent>
+        </Card>
+      </form>
+    </div>
   );
 }
-
-// Dummy AnimatePresence and motion for structure, replace with framer-motion
-const AnimatePresence = ({ children }: { children: React.ReactNode }) => (
-  <>{children}</>
-);
-type MotionProps = {
-  children: React.ReactNode;
-  className?: string;
-  initial?: Record<string, number | string>;
-  animate?: Record<string, number | string>;
-  exit?: Record<string, number | string>;
-  transition?: Record<string, number>;
-};
-
-const motion = {
-  div: ({ children, ...props }: MotionProps) => (
-    <div {...props}>{children}</div>
-  ),
-};

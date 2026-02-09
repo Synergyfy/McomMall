@@ -98,8 +98,12 @@ export class TrialService {
   async markTaskAsCompleted(
     userId: string,
     task: keyof TrialTask,
-  ): Promise<Trial> {
-    const trial = await this.findTrialByUserId(userId);
+  ): Promise<Trial | null> {
+    const trial = await this.trialRepository.findOne({ where: { user: { id: userId } } });
+
+    if (!trial) {
+        return null;
+    }
 
     if (trial.isActive && !trial.tasks[task]) {
       trial.tasks[task] = true;

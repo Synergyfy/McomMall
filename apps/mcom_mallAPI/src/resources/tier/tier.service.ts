@@ -21,6 +21,10 @@ export class TierService {
         quarterlyPrice: Number(createTierDto.quarterlyPrice || 0),
         annualPrice: Number(createTierDto.annualPrice || 0),
       };
+
+      if (tierData.isDefault) {
+        await this.clearDefaultTier();
+      }
       
       const tier = this.tierRepository.create(tierData);
       return await this.tierRepository.save(tier);
@@ -54,6 +58,10 @@ export class TierService {
     if (updateData.quarterlyPrice !== undefined) updateData.quarterlyPrice = Number(updateData.quarterlyPrice);
     if (updateData.annualPrice !== undefined) updateData.annualPrice = Number(updateData.annualPrice);
 
+    if (updateData.isDefault) {
+      await this.clearDefaultTier(id);
+    }
+
     Object.assign(tier, updateData);
     try {
       return await this.tierRepository.save(tier);
@@ -68,5 +76,17 @@ export class TierService {
   async remove(id: string): Promise<void> {
     const tier = await this.findOne(id);
     await this.tierRepository.remove(tier);
+  }
+
+  async findDefaultTier(): Promise<Tier | null> {
+    return this.tierRepository.findOne({ where: { isDefault: true } });
+  }
+
+  private async clearDefaultTier(excludeId?: string): Promise<void> {
+    const defaultTier = await this.findDefaultTier();
+    if (defaultTier && defaultTier.id !== excludeId) {
+      defaultTier.isDefault = false;
+      await this.tierRepository.save(defaultTier);
+    }
   }
 }

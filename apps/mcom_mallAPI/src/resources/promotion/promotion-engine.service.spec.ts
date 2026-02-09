@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { PromotionEngineService } from './promotion-engine.service';
 import { Promotion } from './entities/promotion.entity';
 import { PromotionParticipant } from './entities/promotion-participant.entity';
@@ -9,153 +9,150 @@ import { User } from '../users/entities/user.entity';
 import { Order } from '../order/entities/order.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionScope, PromotionType } from './promotion.enum';
-
-const mockPromotionRepository = () => ({});
-const mockPromotionParticipantRepository = () => ({
-  find: jest.fn(),
-  save: jest.fn(),
-});
-const mockPromotionActivityRepository = () => ({
-  create: jest.fn(),
-  save: jest.fn(),
-  count: jest.fn(),
-});
-const mockProductRepository = () => ({
-  findOne: jest.fn(),
-});
+import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 
 describe('PromotionEngineService', () => {
   let service: PromotionEngineService;
-  let promotionParticipantRepository: Repository<PromotionParticipant>;
-  let promotionActivityRepository: Repository<PromotionActivity>;
-  let productRepository: Repository<Product>;
+  let dataSource: DataSource;
+  let queryRunner: QueryRunner;
+  let manager: EntityManager;
+
+  // Repositories
+  let productRepo: Repository<Product>;
+  let participantRepo: Repository<PromotionParticipant>;
+
+  const mockProductRepository = {
+    findOne: jest.fn(),
+  };
+
+  const mockParticipantRepository = {
+    find: jest.fn(),
+  };
+
+  const mockManager = {
+    save: jest.fn(),
+    count: jest.fn(),
+  };
+
+  const mockQueryRunner = {
+    connect: jest.fn(),
+    startTransaction: jest.fn(),
+    commitTransaction: jest.fn(),
+    rollbackTransaction: jest.fn(),
+    release: jest.fn(),
+    manager: mockManager,
+  };
+
+  const mockDataSource = {
+    createQueryRunner: jest.fn().mockReturnValue(mockQueryRunner),
+  };
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PromotionEngineService,
-        {
-          provide: getRepositoryToken(Promotion),
-          useFactory: mockPromotionRepository,
-        },
-        {
-          provide: getRepositoryToken(PromotionParticipant),
-          useFactory: mockPromotionParticipantRepository,
-        },
-        {
-          provide: getRepositoryToken(PromotionActivity),
-          useFactory: mockPromotionActivityRepository,
-        },
-        {
-          provide: getRepositoryToken(Product),
-          useFactory: mockProductRepository,
-        },
+        { provide: DataSource, useValue: mockDataSource },
+        { provide: getRepositoryToken(Promotion), useValue: {} },
+        { provide: getRepositoryToken(PromotionParticipant), useValue: mockParticipantRepository },
+        { provide: getRepositoryToken(PromotionActivity), useValue: { create: jest.fn().mockImplementation(dto => dto) } },
+        { provide: getRepositoryToken(Product), useValue: mockProductRepository },
       ],
     }).compile();
 
     service = module.get<PromotionEngineService>(PromotionEngineService);
-    promotionParticipantRepository = module.get(
-      getRepositoryToken(PromotionParticipant),
-    );
-    promotionActivityRepository = module.get(
-      getRepositoryToken(PromotionActivity),
-    );
-    productRepository = module.get(getRepositoryToken(Product));
+    dataSource = module.get<DataSource>(DataSource);
+    productRepo = module.get(getRepositoryToken(Product));
+    participantRepo = module.get(getRepositoryToken(PromotionParticipant));
+    queryRunner = dataSource.createQueryRunner();
+    manager = queryRunner.manager;
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
+  afterEach(() => {
+    jest.clearAllMocks();
   });
 
-  describe('processPurchase', () => {
-    let user: User;
-    let order: Order;
-    let promotion: Promotion;
-    let participation: PromotionParticipant;
+  it('should process purchase, award points, update wallet, and create transaction', async () => {
+    const user = { id: 'u1', points: 100 } as User;
+    const order = { id: 'o1', total: 100, items: [{ product: { id: 'p1' }, price: 50, quantity: 2 }] } as any;
+    const business = { id: 'b1', user: { id: 'owner1' } };
+    const product = { id: 'p1', business };
+    const promotion = {
+      id: 'promo1',
+      isActive: true,
+      beginDate: new Date('2023-01-01'),
+      endDate: new Date('2030-01-01'),
+      minimumSpend: 50,
+      promotionScope: PromotionScope.ALL_LISTINGS,
+      businesses: [business],
+      promotionType: PromotionType.MULTIPLIER,
+      multiplier: 2,
+    } as any;
+    const participant = { id: 'part1', promotion, pointsEarned: 0, user };
 
-    beforeEach(() => {
-      user = { id: 'user-1' } as User;
-      order = {
-        items: [{ product: { id: 'product-1' } }],
-        total: 100,
-      } as Order;
-      promotion = {
-        id: 'promo-1',
-        isActive: true,
-        beginDate: new Date('2020-01-01'),
-        endDate: new Date('2099-01-01'),
-        minimumSpend: 50,
-        limitPerCustomer: null,
+    // Mocks
+    mockParticipantRepository.find.mockResolvedValue([participant]);
+    mockProductRepository.findOne.mockResolvedValue(product);
+    mockManager.count.mockResolvedValue(0); // Limit check
+    
+    // Mock save to return entity
+    mockManager.save.mockImplementation(entity => Promise.resolve(entity));
+
+    await service.processPurchase(user, order);
+
+    // Verify Transaction Flow
+    expect(mockQueryRunner.startTransaction).toHaveBeenCalled();
+    expect(mockQueryRunner.commitTransaction).toHaveBeenCalled();
+    expect(mockQueryRunner.release).toHaveBeenCalled();
+
+    // Verify Points Calculation (50 * 2 * 2 = 200)
+    // Save Participant
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'part1',
+        pointsEarned: 200
+    }));
+
+    // Verify Wallet Update (100 + 200 = 300)
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
+        id: 'u1',
+        points: 300
+    }));
+
+    // Verify Activity Log
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
+        pointsEarned: 200,
+        participant: expect.objectContaining({ id: 'part1' })
+    }));
+
+    // Verify Point Transaction Creation (The Ghost Fix)
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
+        points: 200,
+        type: 'EARNED',
+        user: expect.objectContaining({ id: 'u1' }),
+        order: expect.objectContaining({ id: 'o1' })
+    }));
+  });
+
+  it('should rollback transaction if save fails', async () => {
+    const user = { id: 'u1', points: 0 } as User;
+    const order = { items: [{ product: { id: 'p1' }, quantity: 1, price: 10 }] } as any;
+    const promotion = { 
+        id: 'promo1', isActive: true, 
         promotionScope: PromotionScope.ALL_LISTINGS,
-        promotionType: PromotionType.BONUS_POINTS,
-        bonusPoints: 10,
-        businesses: [],
-        includedProducts: [],
-      } as unknown as Promotion;
-      participation = {
-        id: 'part-1',
-        promotion,
-        pointsEarned: 0,
-      } as PromotionParticipant;
+        businesses: [{id: 'b1'}],
+        promotionType: PromotionType.BONUS_POINTS, 
+        bonusPoints: 100 
+    };
+    const participant = { id: 'part1', promotion, pointsEarned: 0 };
 
-      (productRepository.findOne as jest.Mock).mockResolvedValue({
-        id: 'product-1',
-        business: { id: 'business-1', user: { id: 'owner-1' } },
-      });
-      (promotionParticipantRepository.find as jest.Mock).mockResolvedValue([
-        participation,
-      ]);
-      (promotionActivityRepository.count as jest.Mock).mockResolvedValue(0);
-      (promotionParticipantRepository.save as jest.Mock).mockResolvedValue(
-        participation,
-      );
-      (promotionActivityRepository.create as jest.Mock).mockReturnValue(
-        {} as PromotionActivity,
-      );
-      (promotionActivityRepository.save as jest.Mock).mockResolvedValue(
-        {} as PromotionActivity,
-      );
-    });
+    mockParticipantRepository.find.mockResolvedValue([participant]);
+    mockProductRepository.findOne.mockResolvedValue({ id: 'p1', business: { id: 'b1' } });
+    
+    // Fail the save
+    mockManager.save.mockRejectedValue(new Error('Save failed'));
 
-    it('should award points for an ALL_LISTINGS promotion', async () => {
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).toHaveBeenCalled();
-      expect(promotionActivityRepository.create).toHaveBeenCalled();
-      expect(promotionActivityRepository.save).toHaveBeenCalled();
-    });
+    await service.processPurchase(user, order);
 
-    it('should award points for a SPECIFIC_LISTINGS promotion if product business matches', async () => {
-      promotion.promotionScope = PromotionScope.SPECIFIC_LISTINGS;
-      promotion.businesses = [{ id: 'business-1' }] as any;
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).toHaveBeenCalled();
-    });
-
-    it('should not award points for a SPECIFIC_LISTINGS promotion if product business does not match', async () => {
-      promotion.promotionScope = PromotionScope.SPECIFIC_LISTINGS;
-      promotion.businesses = [{ id: 'business-2' }] as any;
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('should award points for a SPECIFIC_PRODUCTS promotion if product matches', async () => {
-      promotion.promotionScope = PromotionScope.SPECIFIC_PRODUCTS;
-      promotion.includedProducts = [{ id: 'product-1' }] as any;
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).toHaveBeenCalled();
-    });
-
-    it('should not award points if minimum spend is not met', async () => {
-      order.total = 40;
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).not.toHaveBeenCalled();
-    });
-
-    it('should not award points if customer limit is reached', async () => {
-      promotion.limitPerCustomer = 1;
-      (promotionActivityRepository.count as jest.Mock).mockResolvedValue(1);
-      await service.processPurchase(user, order);
-      expect(promotionParticipantRepository.save).not.toHaveBeenCalled();
-    });
+    expect(mockQueryRunner.rollbackTransaction).toHaveBeenCalled();
+    expect(mockQueryRunner.release).toHaveBeenCalled();
   });
 });

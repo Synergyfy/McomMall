@@ -123,6 +123,12 @@ export class VoucherService {
     });
   }
 
+  async findVoucherProductsForUser(userId: string): Promise<VoucherProduct[]> {
+    return this.voucherProductRepository.find({
+      where: { user: { id: userId } },
+    });
+  }
+
   async findActiveVoucherProductsByBusiness(
     businessId: string,
   ): Promise<VoucherProduct[]> {
