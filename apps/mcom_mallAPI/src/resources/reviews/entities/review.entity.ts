@@ -10,6 +10,11 @@ import {
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
 
+export enum ReviewStatus {
+  PENDING = 'pending',
+  PUBLISHED = 'published',
+}
+
 @Entity('reviews')
 export class Review {
   @PrimaryGeneratedColumn('uuid')
@@ -20,6 +25,13 @@ export class Review {
 
   @Column({ type: 'text' })
   comment: string;
+
+  @Column({
+    type: 'enum',
+    enum: ReviewStatus,
+    default: ReviewStatus.PENDING,
+  })
+  status: ReviewStatus;
 
   @ManyToOne(() => User, (user) => user.reviews)
   @JoinColumn({ name: 'user_id' })
