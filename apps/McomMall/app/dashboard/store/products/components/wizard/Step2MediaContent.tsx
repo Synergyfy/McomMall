@@ -12,7 +12,9 @@ import {
     ArrowRight,
     Video,
     Crop,
-    HelpCircle
+    HelpCircle,
+    FileDown,
+    FileText
 } from 'lucide-react';
 import MediaCropper from '@/app/dashboard/add-listing/components/steps/shared/MediaCropper';
 import { uploadFile } from '@/lib/upload';
@@ -30,6 +32,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
     const [croppingIndex, setCroppingIndex] = React.useState<{ index: number, type: 'image' | 'video' } | null>(null);
     const [isUploadingImage, setIsUploadingImage] = React.useState(false);
     const [isUploadingVideo, setIsUploadingVideo] = React.useState(false);
+    const [isUploadingDigital, setIsUploadingDigital] = React.useState(false);
 
     const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
         updateFormData({ [e.target.id]: e.target.value });
@@ -66,6 +69,24 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
             toast.error('Failed to upload video.');
         } finally {
             setIsUploadingVideo(false);
+        }
+    };
+
+    const handleDigitalFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+        if (!e.target.files?.length) return;
+        setIsUploadingDigital(true);
+        try {
+            const files = Array.from(e.target.files);
+            const uploadPromises = files.map(file => uploadFile(file));
+            const results = await Promise.all(uploadPromises);
+            const newFiles = results.map(r => r.secure_url);
+            updateFormData({ fileUrls: [...(formData.fileUrls || []), ...newFiles] });
+            toast.success(`${newFiles.length} digital files uploaded successfully!`);
+        } catch (error) {
+            console.error('Upload failed:', error);
+            toast.error('Failed to upload digital files.');
+        } finally {
+            setIsUploadingDigital(false);
         }
     };
 
@@ -243,6 +264,65 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                         ))}
                     </div>
                 </div>
+
+                {/* Digital Assets Section (Conditional) */}
+                {formData.product_type === 'downloadable' && (
+                    <div className="flex flex-col gap-4">
+                        <div className="flex flex-col border-b border-[#e8dbce] dark:border-[#4a3b2e] pb-2">
+                            <div className="flex justify-between items-center">
+                                <h2 className="text-md md:text-lg font-bold text-[#f48c25]">Digital Product Assets</h2>
+                                <span className="text-[10px] md:text-xs text-[#9c7349]">PDF, ZIP, MP3, etc.</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-1">Upload the actual files that customers will receive after purchase.</p>
+                        </div>
+
+                        <div className="relative group">
+                            <input
+                                className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer disabled:cursor-not-allowed"
+                                multiple
+                                type="file"
+                                onChange={handleDigitalFileUpload}
+                                disabled={isUploadingDigital}
+                            />
+                            <div className="flex flex-col items-center justify-center w-full h-32 md:h-40 border-2 border-dashed border-[#f48c25]/30 dark:border-[#f48c25]/20 rounded-xl bg-[#fff8f1] dark:bg-[#f48c25]/5 group-hover:bg-[#f48c25]/10 transition-all">
+                                <div className={`bg-[#f48c25]/10 p-2 rounded-full mb-1 text-[#f48c25] ${isUploadingDigital ? 'animate-bounce' : ''}`}>
+                                    <FileDown size={24} />
+                                </div>
+                                <p className="text-xs md:text-sm font-semibold text-center px-4">
+                                    {isUploadingDigital ? 'Uploading Files...' : 'Tap to upload digital assets'}
+                                </p>
+                            </div>
+                        </div>
+
+                        <div className="flex flex-col gap-2">
+                            {formData.fileUrls?.map((file: string, index: number) => (
+                                <div key={index} className="flex items-center justify-between p-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#1c140d]">
+                                    <div className="flex items-center gap-3 overflow-hidden">
+                                        <div className="p-2 rounded bg-gray-100 dark:bg-gray-800 text-[#9c7349]">
+                                            <FileText size={18} />
+                                        </div>
+                                        <div className="flex flex-col overflow-hidden">
+                                            <p className="text-xs font-semibold text-[#1c140d] dark:text-white truncate">
+                                                {file.split('/').pop() || `Digital Asset ${index + 1}`}
+                                            </p>
+                                            <p className="text-[10px] text-[#9c7349]">Securely Uploaded</p>
+                                        </div>
+                                    </div>
+                                    <button
+                                        onClick={() => {
+                                            const newFiles = formData.fileUrls.filter((_: any, i: number) => i !== index);
+                                            updateFormData({ fileUrls: newFiles });
+                                        }}
+                                        className="p-2 text-[#9c7349] hover:text-red-500 transition-colors"
+                                        type="button"
+                                    >
+                                        <Trash2 size={16} />
+                                    </button>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Mobile-First Sticky Footer */}

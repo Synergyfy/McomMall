@@ -2,14 +2,16 @@
 
 import { FC, useState, useEffect } from "react";
 import { ActiveTimerResponse, ActivityTimerType } from "@/service/activity-timer/types";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import {
-    PlayIcon,
-    PauseIcon,
+    Play,
+    Pause,
     CheckCircle2,
     ExternalLink,
     Clock,
-    AlertCircle
+    AlertCircle,
+    ChevronRight,
+    Trophy
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -25,11 +27,11 @@ interface ActivityTimerCardProps {
 }
 
 const TimeUnit: FC<{ value: string; unit: string }> = ({ value, unit }) => (
-    <div className="flex flex-col items-center justify-center bg-orange-600 p-2 rounded-lg w-16 h-16 sm:w-20 sm:h-20 shadow-md">
-        <span className="text-xl sm:text-2xl font-bold text-white leading-none">
+    <div className="flex flex-col items-center justify-center bg-white/10 backdrop-blur-md border border-white/20 p-2 rounded-2xl w-16 h-16 sm:w-20 sm:h-20 shadow-lg transition-transform hover:scale-105">
+        <span className="text-xl sm:text-2xl font-bold text-white leading-none tracking-tight">
             {value}
         </span>
-        <span className="text-[10px] sm:text-xs font-medium uppercase text-orange-100 mt-1">
+        <span className="text-[10px] sm:text-xs font-bold uppercase text-orange-200 mt-1.5 opacity-80">
             {unit}
         </span>
     </div>
@@ -74,38 +76,57 @@ export const ActivityTimerCard: FC<ActivityTimerCardProps> = ({
 
     return (
         <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
-            className="bg-white rounded-3xl border border-gray-100 shadow-xl overflow-hidden mb-8"
+            transition={{ duration: 0.6, ease: "easeOut" }}
+            className="group relative bg-white rounded-[2.5rem] border border-gray-100 shadow-[0_20px_50px_rgba(0,0,0,0.05)] overflow-hidden mb-10 transition-all hover:shadow-[0_40px_80px_rgba(0,0,0,0.08)]"
         >
-            {/* Header Banner */}
+            {/* Background Decorative Element */}
+            <div className="absolute top-0 right-0 w-64 h-64 bg-orange-50 rounded-full -mr-32 -mt-32 blur-3xl opacity-50 group-hover:opacity-80 transition-opacity" />
+
+            {/* Header Section */}
             <div className={cn(
-                "px-6 py-4 flex items-center justify-between",
-                timer.type === ActivityTimerType.TRIAL ? "bg-orange-600 text-white" : "bg-slate-900 text-white"
+                "relative px-8 py-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4",
+                timer.type === ActivityTimerType.TRIAL
+                    ? "bg-gradient-to-r from-orange-600 to-orange-500 text-white"
+                    : "bg-gradient-to-r from-slate-900 to-slate-800 text-white"
             )}>
-                <div className="flex items-center gap-3">
-                    <Badge variant="outline" className="border-white/30 text-white bg-white/10 uppercase font-bold text-[10px]">
-                        {timer.type}
-                    </Badge>
-                    <h3 className="text-lg font-bold truncate">{timer.name}</h3>
+                <div className="flex items-center gap-4">
+                    <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center shadow-inner">
+                        <Trophy className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                        <div className="flex items-center gap-2 mb-0.5">
+                            <Badge variant="outline" className="border-white/30 text-[10px] text-white bg-white/10 px-2 py-0 uppercase font-black tracking-widest leading-none h-5">
+                                {timer.type}
+                            </Badge>
+                            <span className="text-[10px] font-bold text-orange-200 uppercase tracking-tighter opacity-80">Activity Hub</span>
+                        </div>
+                        <h3 className="text-xl font-bold tracking-tight leading-tight">{timer.name}</h3>
+                    </div>
                 </div>
+
                 {!isExpired && (
-                    <div className="flex items-center gap-2 text-sm font-medium bg-white/20 px-3 py-1 rounded-full">
-                        <Clock className="w-4 h-4" />
-                        <span>{timer.isPaused ? "Paused" : "Active"}</span>
+                    <div className="flex items-center gap-2.5 text-sm font-bold bg-white/20 backdrop-blur-md px-4 py-2 rounded-2xl shadow-sm self-start sm:self-center">
+                        <div className={cn(
+                            "w-2 h-2 rounded-full",
+                            timer.isPaused ? "bg-yellow-400" : "bg-green-400 animate-pulse"
+                        )} />
+                        <span>{timer.isPaused ? "Paused" : "Active Now"}</span>
                     </div>
                 )}
             </div>
 
-            <div className="p-6 md:p-8">
-                <div className="grid grid-cols-1 lg:grid-cols-5 gap-8 items-center">
-                    {/* Left: Timer Content */}
-                    <div className="lg:col-span-2 space-y-6">
+            <div className="relative p-8 md:p-10">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
+                    {/* Left: Timer Content (5 cols) */}
+                    <div className="lg:col-span-5 space-y-8">
                         <div>
-                            <p className="text-gray-500 text-sm mb-4 leading-relaxed line-clamp-2">
-                                {timer.description || "Complete these tasks to unlock more features and optimize your business profile."}
+                            <h4 className="text-slate-900 font-bold text-lg mb-2">Time Remaining</h4>
+                            <p className="text-slate-500 text-sm mb-6 leading-relaxed max-w-sm">
+                                {timer.description || "Complete your profile tasks before the timer expires to unlock premium features."}
                             </p>
-                            <div className="flex flex-wrap gap-2 sm:gap-3">
+                            <div className="flex flex-wrap gap-3 sm:gap-4">
                                 <TimeUnit value={formattedTime.days} unit="Days" />
                                 <TimeUnit value={formattedTime.hours} unit="Hrs" />
                                 <TimeUnit value={formattedTime.minutes} unit="Min" />
@@ -113,79 +134,125 @@ export const ActivityTimerCard: FC<ActivityTimerCardProps> = ({
                             </div>
                         </div>
 
-                        {timer.type === ActivityTimerType.TRIAL && (
-                            <div className="flex items-center gap-3">
-                                {timer.isPaused ? (
+                        <div className="flex flex-col gap-4">
+                            {timer.type === ActivityTimerType.TRIAL && !isExpired && (
+                                <div className="flex items-center gap-3">
                                     <Button
-                                        onClick={onResume}
-                                        disabled={isActionPending || isExpired}
-                                        className="bg-green-600 hover:bg-green-700 text-white font-bold rounded-full px-6"
+                                        onClick={timer.isPaused ? onResume : onPause}
+                                        disabled={isActionPending}
+                                        className={cn(
+                                            "h-12 rounded-2xl px-8 font-bold transition-all shadow-md active:scale-95",
+                                            timer.isPaused
+                                                ? "bg-green-600 hover:bg-green-700 text-white shadow-green-100"
+                                                : "bg-orange-50 text-orange-600 hover:bg-orange-100 shadow-orange-50"
+                                        )}
                                     >
-                                        <PlayIcon className="w-4 h-4 mr-2" /> Resume Trial
+                                        {timer.isPaused ? (
+                                            <><Play className="w-4 h-4 mr-2 fill-current" /> Resume Now</>
+                                        ) : (
+                                            <><Pause className="w-4 h-4 mr-2 fill-current" /> Pause Timer</>
+                                        )}
                                     </Button>
-                                ) : (
-                                    <Button
-                                        onClick={onPause}
-                                        disabled={isActionPending || isExpired}
-                                        className="bg-orange-100 text-orange-700 hover:bg-orange-200 font-bold rounded-full px-6"
-                                    >
-                                        <PauseIcon className="w-4 h-4 mr-2" /> Pause Timer
-                                    </Button>
-                                )}
-                            </div>
-                        )}
 
-                        {isExpired && (
-                            <div className="flex items-center gap-2 text-red-600 bg-red-50 p-3 rounded-xl border border-red-100">
-                                <AlertCircle className="w-5 h-5 flex-shrink-0" />
-                                <span className="text-sm font-semibold">This period has expired. Please upgrade your tier.</span>
-                            </div>
-                        )}
-                    </div>
-
-                    {/* Right: Task Progress */}
-                    <div className="lg:col-span-3">
-                        <div className="flex justify-between items-end mb-2">
-                            <h4 className="font-bold text-gray-900">Task Completion</h4>
-                            <span className="text-sm font-mono text-orange-600 font-bold">{completedTasks}/{timer.tasks.length}</span>
-                        </div>
-                        <Progress value={progress} className="h-2 mb-6" />
-
-                        <div className="space-y-3">
-                            {timer.tasks.map((task) => (
-                                <div
-                                    key={task.key}
-                                    className={cn(
-                                        "flex items-center justify-between p-3 rounded-2xl border transition-all",
-                                        task.isCompleted
-                                            ? "bg-green-50 border-green-100"
-                                            : "bg-gray-50 border-gray-100 hover:border-orange-200 group"
-                                    )}
-                                >
-                                    <div className="flex items-center gap-3">
-                                        <div className={cn(
-                                            "w-6 h-6 rounded-full flex items-center justify-center flex-shrink-0",
-                                            task.isCompleted ? "bg-green-600 text-white" : "bg-gray-200 text-gray-500"
-                                        )}>
-                                            {task.isCompleted ? <CheckCircle2 className="w-4 h-4" /> : <span className="text-[10px] font-black">?</span>}
-                                        </div>
-                                        <div>
-                                            <h5 className={cn("text-sm font-bold", task.isCompleted ? "text-green-800" : "text-gray-700")}>
-                                                {task.title}
-                                            </h5>
-                                            <p className="text-[10px] md:text-xs text-gray-500 line-clamp-1">{task.description}</p>
-                                        </div>
-                                    </div>
-
-                                    {!task.isCompleted && (
-                                        <Link href={task.url}>
-                                            <Button size="sm" variant="ghost" className="text-orange-600 hover:text-orange-700 hover:bg-orange-50 font-bold text-[10px] h-8 rounded-full">
-                                                GO <ExternalLink className="w-3 h-3 ml-1" />
-                                            </Button>
-                                        </Link>
+                                    {timer.isPaused && (
+                                        <p className="text-xs font-semibold text-slate-400 italic">Trial is currently frozen</p>
                                     )}
                                 </div>
-                            ))}
+                            )}
+
+                            {isExpired && (
+                                <motion.div
+                                    initial={{ scale: 0.95, opacity: 0 }}
+                                    animate={{ scale: 1, opacity: 1 }}
+                                    className="flex items-center gap-4 text-red-600 bg-red-50/50 p-5 rounded-[2rem] border border-red-100"
+                                >
+                                    <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600 flex-shrink-0">
+                                        <AlertCircle className="w-6 h-6" />
+                                    </div>
+                                    <div>
+                                        <span className="text-sm font-bold block mb-0.5">Session Expired</span>
+                                        <span className="text-xs text-red-500 font-medium">Please upgrade your current tier to continue.</span>
+                                    </div>
+                                </motion.div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Right: Task Progress (7 cols) */}
+                    <div className="lg:col-span-7 space-y-6">
+                        <div className="bg-slate-50 rounded-[2rem] p-6 sm:p-8 border border-slate-100/50">
+                            <div className="flex justify-between items-end mb-4">
+                                <div>
+                                    <h4 className="font-bold text-slate-900 text-lg tracking-tight">Milestones</h4>
+                                    <p className="text-xs text-slate-500 font-medium">{timer.tasks.length} tasks identified for your business</p>
+                                </div>
+                                <div className="text-right">
+                                    <span className="text-2xl font-black text-orange-600 leading-none">{completedTasks}</span>
+                                    <span className="text-sm font-bold text-slate-400">/{timer.tasks.length}</span>
+                                </div>
+                            </div>
+
+                            <div className="relative h-3 w-full bg-slate-200 rounded-full overflow-hidden mb-8 shadow-inner">
+                                <motion.div
+                                    initial={{ width: 0 }}
+                                    animate={{ width: `${progress}%` }}
+                                    transition={{ duration: 1, ease: "easeOut" }}
+                                    className="absolute top-0 left-0 h-full bg-gradient-to-r from-orange-500 to-orange-400 rounded-full shadow-[0_0_15px_rgba(249,115,22,0.4)]"
+                                />
+                            </div>
+
+                            <div className="grid gap-3">
+                                {timer.tasks.map((task, idx) => (
+                                    <motion.div
+                                        key={task.key}
+                                        initial={{ opacity: 0, x: 20 }}
+                                        animate={{ opacity: 1, x: 0 }}
+                                        transition={{ delay: 0.1 * idx }}
+                                        className={cn(
+                                            "flex items-center justify-between p-4 rounded-2xl border transition-all duration-300",
+                                            task.isCompleted
+                                                ? "bg-green-50/40 border-green-100 hover:bg-green-50/60"
+                                                : "bg-white border-slate-100 hover:border-orange-200 hover:shadow-md group/task"
+                                        )}
+                                    >
+                                        <div className="flex items-center gap-4">
+                                            <div className={cn(
+                                                "w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0 transition-transform group-hover/task:scale-110",
+                                                task.isCompleted
+                                                    ? "bg-green-600 text-white shadow-lg shadow-green-100"
+                                                    : "bg-slate-100 text-slate-400 border border-slate-50"
+                                            )}>
+                                                {task.isCompleted ? (
+                                                    <CheckCircle2 className="w-5 h-5" />
+                                                ) : (
+                                                    <span className="text-xs font-black tracking-tighter italic">STEP</span>
+                                                )}
+                                            </div>
+                                            <div>
+                                                <h5 className={cn(
+                                                    "text-sm font-bold tracking-tight",
+                                                    task.isCompleted ? "text-green-800" : "text-slate-700"
+                                                )}>
+                                                    {task.title}
+                                                </h5>
+                                                <p className="text-[10px] sm:text-xs text-slate-400 line-clamp-1 font-medium">{task.description}</p>
+                                            </div>
+                                        </div>
+
+                                        {!task.isCompleted && (
+                                            <Link href={task.url} className="flex-shrink-0">
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    className="group/btn text-orange-600 hover:text-white hover:bg-orange-600 font-black text-[10px] h-9 px-4 rounded-xl transition-all active:scale-95"
+                                                >
+                                                    COMPLETE <ChevronRight className="w-3.5 h-3.5 ml-1 transition-transform group-hover/btn:translate-x-1" />
+                                                </Button>
+                                            </Link>
+                                        )}
+                                    </motion.div>
+                                ))}
+                            </div>
                         </div>
                     </div>
                 </div>

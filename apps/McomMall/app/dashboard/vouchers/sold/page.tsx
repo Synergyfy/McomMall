@@ -11,7 +11,8 @@ type SoldVoucherRowProps = {
 };
 
 const getStatusChipClass = (status: Voucher['status']) => {
-  switch (status) {
+  const normalizedStatus = status.toUpperCase();
+  switch (normalizedStatus) {
     case 'UNREDEEMED':
       return 'bg-blue-100 text-blue-800';
     case 'PARTIALLY_REDEEMED':
@@ -36,13 +37,13 @@ const SoldVoucherRow: React.FC<SoldVoucherRowProps> = ({ voucher }) => {
   return (
     <motion.tr
       variants={rowVariants}
-      className="border-b border-slate-200 bg-white"
+      className="border-b border-slate-200 bg-white hover:bg-slate-50 transition-colors"
     >
       <td className="whitespace-nowrap px-6 py-4 font-mono text-sm font-medium text-slate-800">
         {voucher.code}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {voucher.voucherProduct?.name ?? 'N/A'}
+        {voucher.voucherProduct?.name || voucher.recipientName || 'Gen. Voucher'}
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
         {CURRENCY}
@@ -58,7 +59,7 @@ const SoldVoucherRow: React.FC<SoldVoucherRowProps> = ({ voucher }) => {
             voucher.status
           )}`}
         >
-          {voucher.status.replace('_', ' ')}
+          {voucher.status.replace(/_/g, ' ').toUpperCase()}
         </span>
       </td>
       <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">

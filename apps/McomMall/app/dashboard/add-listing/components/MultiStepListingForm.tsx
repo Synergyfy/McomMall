@@ -1,37 +1,21 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { useAddListing, useEditListing } from '@/service/listings/hook';
-import {
-  type BusinessHourPayload,
-  type CreateBusinessPayload,
-  type DayOfWeek,
-  type ListingType,
-  type ProductSellerProfilePayload,
-  type SellingMode,
-  type ServiceProviderProfilePayload,
-  type SocialLinkPayload,
-  type SpecialDayPayload,
-  type StorefrontLinkPayload,
-} from '@/service/listings/types';
-import { Separator } from '@/components/ui/separator';
-import {
+  ChevronRight,
+  Save,
+  ArrowLeft,
+  ArrowRight,
+  Store,
   Check,
   Loader2,
   Building2,
   LayoutGrid,
   MapPin,
   Clock,
-  Store,
   Wrench,
   Map,
   CalendarDays,
@@ -45,11 +29,25 @@ import {
   isValidPhone,
   isValidUrl,
 } from '@/lib/validation';
+import {
+  CreateBusinessPayload,
+  ListingType,
+  SocialLinkPayload,
+  DayOfWeek,
+  BusinessHourPayload,
+  SpecialDayPayload,
+  ProductSellerProfilePayload,
+  ServiceProviderProfilePayload,
+  SellingMode,
+  StorefrontLinkPayload,
+} from '@/service/listings/types';
 import { ListingFormData } from '../types';
 import { uploadFile } from '@/lib/upload';
 import { InProgressDialog } from '@/components/InProgressDialog';
 import { UploadSuccessDialog } from '@/components/UploadSuccessDialog';
 import { ErrorDialog } from '@/components/ErrorDialog';
+import { useAddListing, useEditListing } from '@/service/listings/hook';
+import { toast } from 'sonner';
 
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
@@ -163,59 +161,7 @@ const validationRules = {
   booking: {},
 };
 
-const StepIndicator = ({
-  currentStep,
-  steps,
-  onStepClick,
-}: {
-  currentStep: number;
-  steps: {
-    title: string;
-    component: React.ElementType;
-    icon: React.ElementType;
-  }[];
-  onStepClick: (stepIndex: number) => void;
-}) => (
-  <div className="flex justify-center items-center mb-8 overflow-x-auto py-2">
-    {steps.map((step, index) => (
-      <div key={step.title} className="flex items-center flex-shrink-0">
-        <div
-          className="flex flex-col items-center w-24 cursor-pointer group"
-          onClick={() => onStepClick(index + 1)}
-        >
-          <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold transition-colors duration-300 ${currentStep > index + 1
-              ? 'bg-blue-600 text-white'
-              : currentStep === index + 1
-                ? 'bg-orange-700 text-white'
-                : 'bg-muted text-muted-foreground'
-              } group-hover:ring-2 group-hover:ring-orange-400 group-hover:ring-offset-2`}
-          >
-            {currentStep > index + 1 ? (
-              <Check />
-            ) : (
-              <step.icon className="w-5 h-5" />
-            )}
-          </div>
-          <p
-            className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${currentStep >= index + 1
-              ? 'text-primary'
-              : 'text-muted-foreground'
-              } group-hover:text-orange-600`}
-          >
-            {step.title}
-          </p>
-        </div>
-        {index < steps.length - 1 && (
-          <div
-            className={`w-16 h-1 mx-4 transition-colors duration-300 ${currentStep > index + 1 ? 'bg-blue-600' : 'bg-muted'
-              }`}
-          />
-        )}
-      </div>
-    ))}
-  </div>
-);
+// StepIndicator component removed as it is now inlined
 
 const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   businessTypes,
@@ -224,6 +170,11 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   initialData: propInitialData,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [formData, setFormData] = useState<ListingFormData>(() => {
     const initialData: ListingFormData = {
       status: 'draft',
@@ -284,6 +235,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Building2,
         component: BusinessInfoStep,
         validationRules: validationRules.businessInfo,
+        section: 'Business Info',
       },
     ];
     const productSteps = [
@@ -292,24 +244,28 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: LayoutGrid,
         component: ProductCategoryStep,
         validationRules: validationRules.productCategory,
+        section: 'Product Details',
       },
       {
         title: 'Location',
         icon: MapPin,
         component: ProductLocationStep,
         validationRules: validationRules.productLocation,
+        section: 'Product Details',
       },
       {
         title: 'Hours',
         icon: Clock,
         component: ProductHoursStep,
         validationRules: {},
+        section: 'Product Details',
       },
       {
         title: 'Selling Modes',
         icon: Store,
         component: SellingModesStep,
         validationRules: validationRules.sellingModes,
+        section: 'Product Details',
       },
     ];
     const serviceSteps = [
@@ -318,25 +274,28 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Wrench,
         component: ServiceCategoryStep,
         validationRules: validationRules.serviceCategory,
+        section: 'Service Details',
       },
       {
         title: 'Service Area',
         icon: Map,
         component: ServiceAreaStep,
         validationRules: {},
+        section: 'Service Details',
       },
       {
         title: 'Availability',
         icon: CalendarDays,
         component: ServiceHoursStep,
         validationRules: {},
+        section: 'Service Details',
       },
-      // Booking step removed per new service creation requirements
       {
         title: 'Credentials',
         icon: Award,
         component: CredentialsStep,
         validationRules: {},
+        section: 'Service Details',
       },
     ];
     const sharedFinal = [
@@ -345,6 +304,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Camera,
         component: MediaStep,
         validationRules: validationRules.media,
+        section: 'Media & Finalize',
       },
     ];
 
@@ -353,6 +313,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       icon: React.ElementType;
       component: React.ElementType;
       validationRules: object;
+      section: string;
     }[] = [];
 
     if (
@@ -439,24 +400,36 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   };
 
   const handleStepClick = (stepIndex: number) => {
-    // Only allow jumping back or to steps already validated
-    if (stepIndex < currentStep) {
-      setCurrentStep(stepIndex);
-    } else if (stepIndex > currentStep) {
-      // If jumping forward, validate current step first
-      if (validateStep()) {
-        setCurrentStep(stepIndex);
-      }
-    }
+    // Allow jumping to any step without immediate validation
+    setCurrentStep(stepIndex);
   };
 
   const nextStep = () => {
     if (validateStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      const nextIdx = currentStep; // 1-indexed, so currentStep is the index of the next step
+      if (nextIdx < steps.length) {
+        const currentSection = steps[currentStep - 1].section;
+        const nextSection = steps[nextIdx].section;
+
+        if (currentSection === 'Product Details' && nextSection === 'Service Details') {
+          toast.success('Product details completed! Now moving to Service details.', {
+            description: 'You are now in the service section.',
+            duration: 4000,
+          });
+        }
+
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+  const prevStep = () => {
+    if (currentStep === 1) {
+      onBack();
+    } else {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
 
   const transformFormDataToPayload = (
     data: ListingFormData,
@@ -775,7 +748,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: (err) => {
+              onError: (err: any) => {
                 setErrorMessage(err.message || 'An error occurred during update.');
                 setUploadError(true);
                 reject(err);
@@ -787,7 +760,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: (err) => {
+              onError: (err: any) => {
                 setErrorMessage(err.message || 'An error occurred during submission.');
                 setUploadError(true);
                 reject(err);
@@ -814,112 +787,167 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     }
   };
 
-  const CurrentStepComponent = steps[currentStep - 1].component;
-
-  const formVariants = {
-    hidden: { opacity: 0, x: 50 },
-    visible: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
-  };
+  if (!mounted) return null;
 
   const getTitle = () => {
     if (businessTypes.length > 1) return 'Product & Service';
     return businessTypes[0];
   };
 
+  const CurrentStepComponent = steps[currentStep - 1].component;
+
   return (
-    <>
-      <InProgressDialog isOpen={isUploading} message="Publishing your listing, please wait..." />
+    <div className="space-y-8">
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            {listingId ? 'Edit' : 'Add New'} <span className="text-[#f48c25]">{getTitle()}</span> Listing
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 font-medium">
+            Launch your next storefront in just a few steps.
+          </p>
+        </div>
+        <div className="flex items-center text-sm font-bold bg-[#f48c25]/10 px-4 py-2 rounded-full text-[#f48c25]">
+          <Link href="/dashboard" className="hover:underline transition-all">Home</Link>
+          <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+          <Link href="/dashboard/my-listings" className="hover:underline transition-all">My Listings</Link>
+          <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+          {!listingId ? (
+            <button onClick={onBack} className="hover:underline transition-all">
+              Change Type
+            </button>
+          ) : (
+            <span className="text-gray-900">Edit</span>
+          )}
+          {!listingId && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+              <span className="text-gray-900">Add</span>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* New Colorful Progress Bar */}
+      <div className="mb-10 bg-white p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
+        <div className="flex justify-between items-center mb-6">
+          <span className="text-[#f48c25] text-xs font-black uppercase tracking-[0.2em]">Step {currentStep} of {steps.length}</span>
+          <span className="text-gray-900 text-sm font-black">{steps[currentStep - 1]?.title}</span>
+        </div>
+
+        <div className="flex justify-between items-center relative z-10 mb-2">
+          {steps.map((step, index) => (
+            <div
+              key={step.title}
+              className="flex flex-col items-center cursor-pointer group"
+              onClick={() => handleStepClick(index + 1)}
+            >
+              <div
+                className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${currentStep >= index + 1
+                  ? 'bg-[#f48c25] text-white scale-110 shadow-lg shadow-[#f48c25]/30'
+                  : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
+                  }`}
+              >
+                {index + 1}
+              </div>
+            </div>
+          ))}
+        </div>
+
+        {/* Background Line */}
+        <div className="relative w-full h-2 bg-gray-100 rounded-full mt-6 overflow-hidden">
+          <div
+            className="absolute top-0 left-0 h-full bg-[#f48c25] transition-all duration-700 ease-in-out"
+            style={{ width: steps.length > 1 ? `${((currentStep - 1) / (steps.length - 1)) * 100}%` : '100%' }}
+          />
+        </div>
+
+        <div className="hidden sm:flex justify-between mt-4">
+          {steps.map((step, index) => (
+            <span
+              key={step.title}
+              className={`text-[10px] font-black uppercase tracking-wider transition-colors duration-300 ${currentStep === index + 1 ? 'text-[#f48c25]' : 'text-gray-400'}`}
+            >
+              {step.title}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="min-h-[400px]">
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={currentStep}
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: -20 }}
+            transition={{ duration: 0.3 }}
+          >
+            <CurrentStepComponent
+              formData={formData}
+              setFormData={setFormData}
+              errors={errors}
+            />
+          </motion.div>
+        </AnimatePresence>
+      </div>
+
+      <div className="flex justify-between pt-8 border-t border-gray-200">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={prevStep}
+          disabled={isPending}
+          className="px-8 h-12 rounded-xl font-bold border-gray-300 hover:bg-gray-50 transition-all"
+        >
+          <ArrowLeft className="w-4 h-4 mr-2" /> {currentStep === 1 ? 'Change Type' : 'Back'}
+        </Button>
+
+        <div className="flex gap-4">
+          <Button
+            type="button"
+            variant="ghost"
+            onClick={() => handleSubmit('draft')}
+            disabled={isPending}
+            className="h-12 px-6 rounded-xl font-bold text-gray-500 hover:bg-gray-100"
+          >
+            Save as Draft
+          </Button>
+
+          {currentStep < steps.length ? (
+            <Button
+              type="button"
+              onClick={nextStep}
+              disabled={isPending}
+              className="px-10 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+            >
+              Next <ArrowRight className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              type="button"
+              onClick={() => handleSubmit('published')}
+              disabled={isPending}
+              className="px-14 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+            >
+              {isUploading ? 'Uploading...' : isAdding ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Listing</>}
+            </Button>
+          )}
+        </div>
+      </div>
+
+      <InProgressDialog isOpen={isPending} message="Saving your changes..." />
       <UploadSuccessDialog
         isOpen={uploadSuccess}
-        onClose={() => setUploadSuccess(false)}
-        message={listingId ? "Listing updated successfully!" : "Listing published successfully!"}
+        onClose={() => (window.location.href = '/dashboard/my-listings/active')}
+        message="Listing saved successfully!"
       />
       <ErrorDialog
         isOpen={uploadError}
         onClose={() => setUploadError(false)}
         message={errorMessage}
       />
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">
-              {listingId ? 'Edit' : 'Add a New'} <span className="text-orange-700">{getTitle()}</span>{' '}
-              Listing
-            </CardTitle>
-            <Button
-              variant="ghost"
-              onClick={onBack}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              &larr; Back to selection
-            </Button>
-          </div>
-        </CardHeader>
-        <Separator />
-        <CardContent className="pt-6">
-          <StepIndicator currentStep={currentStep} steps={steps} onStepClick={handleStepClick} />
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={currentStep}
-              variants={formVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ type: 'tween', ease: 'easeInOut', duration: 0.4 }}
-            >
-              <CurrentStepComponent
-                formData={formData}
-                setFormData={setFormData}
-                errors={errors}
-                validationRules={steps[currentStep - 1].validationRules}
-              />
-            </motion.div>
-          </AnimatePresence>
-        </CardContent>
-        <Separator />
-        <CardFooter className="flex justify-between py-6">
-          <Button
-            variant="outline"
-            onClick={prevStep}
-            disabled={currentStep === 1 || isPending}
-            className="w-32"
-          >
-            Previous
-          </Button>
-          <div className="flex gap-4">
-            <Button
-              variant="outline"
-              onClick={() => handleSubmit('draft')}
-              disabled={isPending}
-              className="w-32 border-orange-200 text-orange-700 hover:bg-orange-50"
-            >
-              Save as Draft
-            </Button>
-            {currentStep < steps.length ? (
-              <Button onClick={nextStep} disabled={isPending} className="w-32 bg-orange-600 hover:bg-orange-700">
-                Next
-              </Button>
-            ) : (
-              <Button
-                onClick={() => handleSubmit('published')}
-                disabled={isPending}
-                className="w-32 bg-green-600 hover:bg-green-700"
-              >
-                {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Publishing...
-                  </>
-                ) : (
-                  listingId ? 'Update' : 'Publish'
-                )}
-              </Button>
-            )}
-          </div>
-        </CardFooter>
-      </Card>
-    </>
+    </div>
   );
 };
 

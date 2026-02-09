@@ -84,6 +84,9 @@ export default function AddProductPage() {
     deliveryOriginPostalCode: '',
     deliveryOriginLat: '',
     deliveryOriginLng: '',
+    fileUrls: [] as string[],
+    downloadLimit: '',
+    downloadExpiry: '',
   });
 
   const updateFormData = (newData: any) => {
@@ -179,6 +182,9 @@ export default function AddProductPage() {
       width: formData.width ? parseFloat(formData.width) : 0,
       height: formData.height ? parseFloat(formData.height) : 0,
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
+      fileUrls: formData.product_type === 'downloadable' ? formData.fileUrls : [],
+      downloadLimit: formData.product_type === 'downloadable' && formData.downloadLimit ? parseInt(formData.downloadLimit.toString()) : undefined,
+      downloadExpiry: formData.product_type === 'downloadable' && formData.downloadExpiry ? parseInt(formData.downloadExpiry.toString()) : undefined,
     };
 
     // Clean up payload to avoid backend validation errors
@@ -354,8 +360,8 @@ export default function AddProductPage() {
       <ProductStatusModal
         isOpen={true}
         onClose={() => {
-            setIsPublished(false);
-            router.push('/dashboard/store/products');
+          setIsPublished(false);
+          router.push('/dashboard/store/products');
         }}
         type="success"
         title="Product Added Successfully!"
@@ -364,7 +370,7 @@ export default function AddProductPage() {
           label: "View Product",
           onClick: () => {
             if (createdProductId) {
-                router.push(`/dashboard/product/${createdProductId}`);
+              router.push(`/dashboard/product/${createdProductId}`);
             }
           }
         }}

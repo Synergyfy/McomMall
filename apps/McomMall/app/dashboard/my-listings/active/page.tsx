@@ -123,8 +123,8 @@ const ListingCard: React.FC<{
               <Badge
                 variant="outline"
                 className={`w-fit mx-auto md:mx-0 font-bold uppercase tracking-wider text-[10px] border-none ${listing.status?.toLowerCase() === 'published'
-                    ? 'bg-emerald-50 text-emerald-600'
-                    : 'bg-orange-50 text-orange-600'
+                  ? 'bg-emerald-50 text-emerald-600'
+                  : 'bg-orange-50 text-orange-600'
                   }`}
               >
                 {listing.status?.toLowerCase() === 'published' ? 'Active' : listing.status}
@@ -246,7 +246,7 @@ export default function ActiveListingsPage() {
     isLoading,
     isError,
     error,
-  } = useGetUserListings(page, limit);
+  } = useGetUserListings(page, limit, 'published');
 
   const { mutate: deleteListing } = useDeleteListing();
 
@@ -263,7 +263,9 @@ export default function ActiveListingsPage() {
     }
   };
 
-  const listings = paginatedData?.data || [];
+  const listings = useMemo(() => {
+    return (paginatedData?.data || []).filter(l => l.status?.toLowerCase() === 'published');
+  }, [paginatedData]);
   const totalPages = paginatedData?.meta.lastPage || 0;
 
   if (!mounted) return null;

@@ -41,8 +41,8 @@ export const useGetGoogleListings = ({
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch businesses'
+        err.message ||
+        'Failed to fetch businesses'
       );
     }
   };
@@ -65,8 +65,8 @@ export const useGetRecentListings = (limit?: number) => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch recent listings'
+        err.message ||
+        'Failed to fetch recent listings'
       );
     }
   };
@@ -179,8 +179,8 @@ export const useGetInHouseBusiness = ({
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch in-house businesses'
+        err.message ||
+        'Failed to fetch in-house businesses'
       );
     }
   };
@@ -204,8 +204,8 @@ export const useAddListing = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to create listing'
+        err.message ||
+        'Failed to create listing'
       );
     }
   };
@@ -283,26 +283,26 @@ export interface PaginatedResponse<T> {
   };
 }
 
-export const useGetUserListings = (page = 1, limit = 10) => {
+export const useGetUserListings = (page = 1, limit = 10, status?: string) => {
   const fetch = async (): Promise<PaginatedResponse<UserListing>> => {
     try {
       const response = await api.get('listings/mine', {
-        params: { page, limit },
+        params: { page, limit, status },
       });
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch user listings'
+        err.message ||
+        'Failed to fetch user listings'
       );
     }
   };
 
   const query = useQuery({
     queryFn: fetch,
-    queryKey: ['FETCH_USER_LISTINGS', page, limit],
+    queryKey: ['FETCH_USER_LISTINGS', page, limit, status],
   });
   return query;
 };
