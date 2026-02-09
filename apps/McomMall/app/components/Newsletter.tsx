@@ -3,6 +3,7 @@
 import React from 'react';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 
 export default function Newsletter() {
   return (
@@ -14,7 +15,7 @@ export default function Newsletter() {
           <div className="mx-auto max-w-7xl h-96 bg-gradient-to-r from-orange-600/20 to-purple-600/20 blur-3xl" />
         </div>
 
-        <div className="max-w-3xl mx-auto text-center">
+        <div className="relative z-10 max-w-3xl mx-auto text-center">
           {/* Main heading with a striking gradient text effect */}
           <h2 className="text-4xl font-extrabold tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-pink-500 sm:text-5xl">
             Get Notified First
@@ -51,11 +52,11 @@ export default function Newsletter() {
           </form>
 
           {/* A small note to build trust and reassure users */}
-          <p className="mt-5 text-sm text-slate-500">
+          <p className="mt-5 text-sm text-slate-500 z-[1000]">
             We care about your data. Read our{' '}
-            <a href="#" className="underline hover:text-slate-400">
+            <Link href="/privacy-policy" className="underline hover:text-slate-400 z-[1000000]">
               privacy policy
-            </a>
+            </Link>
             .
           </p>
         </div>
