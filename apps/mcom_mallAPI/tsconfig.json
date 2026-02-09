@@ -20,5 +20,9 @@
     "paths": {
       "src/*": ["src/*"]
     }
+  },
+  "ts-node": {
+    "transpileOnly": true,
+    "require": ["tsconfig-paths/register"]
   }
 }

@@ -171,6 +171,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
               className="rounded-lg"
             />
             <button
+              type="button"
               onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
               className="absolute top-1 right-1 bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
               aria-label="Delete file"
@@ -198,6 +199,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
             )}
             <div className="absolute top-1 right-1 flex gap-1">
               <button
+                type="button"
                 onClick={() => setCroppingIndex(index)}
                 className="bg-orange-600 text-white rounded-full p-1.5 hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
                 aria-label="Crop file"
@@ -205,6 +207,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
                 <Crop className="h-4 w-4" />
               </button>
               <button
+                type="button"
                 onClick={() => handleDelete(index)}
                 className="bg-red-600 text-white rounded-full p-1.5 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
                 aria-label="Delete file"
@@ -216,6 +219,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         ))}
         {mediaFiles.length < maxFiles && (
           <button
+            type="button"
             onClick={() => document.getElementById('media-upload-input')?.click()}
             className="relative aspect-square border-2 border-dashed rounded-lg flex flex-col items-center justify-center text-gray-400 hover:text-orange-500 hover:border-orange-500 transition-colors"
             aria-label="Add more files"

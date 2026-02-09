@@ -243,10 +243,15 @@ export class CreateServiceDto {
   @IsOptional()
   description?: string;
 
-  @ApiProperty({ description: 'Service category', example: 'Home Services' })
+  @ApiProperty({ description: 'Service sector', example: 'Home Improvement' })
   @IsString()
   @IsNotEmpty()
-  category: string;
+  sector: string;
+
+  @ApiPropertyOptional({ description: 'Service category', example: 'Home Services' })
+  @IsString()
+  @IsOptional()
+  category?: string;
 
   @ApiPropertyOptional({ description: 'Service subcategory', example: 'Cleaning' })
   @IsString()
@@ -438,7 +443,7 @@ export class CreateServiceDto {
   @IsOptional()
   tiers?: ServiceTierDto[];
 
-  @ApiPropertyOptional({ description: 'Whether booking requests require provider approval', example: true })
+  @ApiPropertyOptional({ description: 'Whether booking requests require provider approval', example: true, default: true })
   @IsBoolean()
   @IsOptional()
   requireApproval?: boolean;

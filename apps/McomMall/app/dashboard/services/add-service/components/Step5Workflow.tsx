@@ -24,8 +24,7 @@ import {
 } from '@/components/ui/tooltip';
 
 export function Step5Workflow() {
-  const { control, watch } = useFormContext();
-  const isQuoteModel = watch('isQuoteModel');
+  const { control } = useFormContext();
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -136,52 +135,6 @@ export function Step5Workflow() {
               )}
             />
           </div>
-        </CardContent>
-      </Card>
-
-      {/* Quote Model */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-lg">
-            Quote Request <span className="text-xs font-normal text-muted-foreground">(Optional)</span>
-          </CardTitle>
-          <CardDescription>Switch from direct booking to a quote-based request system.</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          <FormField
-            control={control}
-            name="isQuoteModel"
-            render={({ field }) => (
-              <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4 bg-primary/5 border-primary/20">
-                <div className="space-y-0.5">
-                  <FormLabel className="text-base font-semibold">Enable Quote Mode</FormLabel>
-                  <FormDescription>Customers request a price estimate instead of booking instantly.</FormDescription>
-                </div>
-                <FormControl>
-                  <Switch checked={field.value} onCheckedChange={field.onChange} />
-                </FormControl>
-              </FormItem>
-            )}
-          />
-          {isQuoteModel && (
-            <FormField
-              control={control}
-              name="bookingFee"
-              render={({ field }) => (
-                <FormItem className="animate-in slide-in-from-top-2">
-                  <FormLabel className="text-sm font-medium">Initial Booking Fee <span className="text-muted-foreground text-xs font-normal">(Optional)</span></FormLabel>
-                  <FormControl>
-                    <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground">£</span>
-                      <Input type="number" {...field} className="py-6 pl-8" placeholder="0.00" />
-                    </div>
-                  </FormControl>
-                  <FormDescription>A small fee charged at the time of the quote request.</FormDescription>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          )}
         </CardContent>
       </Card>
     </div>

@@ -131,7 +131,7 @@ export class Service extends AbstractBaseEntity {
   @Column('jsonb', { nullable: true })
   tiers: any[];
 
-  @Column({ default: false })
+  @Column({ default: true })
   requireApproval: boolean;
 
   @Column('jsonb', { nullable: true })

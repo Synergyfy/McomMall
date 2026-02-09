@@ -7,12 +7,17 @@ import { Label } from '@/components/ui/label';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Calendar, Plus, Trash2, Coffee } from 'lucide-react';
+import { Calendar, Plus, Trash2, Coffee, HelpCircle } from 'lucide-react';
 import {
     Popover,
     PopoverContent,
     PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipTrigger,
+} from '@/components/ui/tooltip';
 
 interface AvailabilityEditorProps {
     value?: AvailabilityProfile;
@@ -95,7 +100,17 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                 {/* Global Settings */}
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="space-y-2">
-                        <Label>Slot Duration (min)</Label>
+                        <div className="flex items-center gap-2">
+                            <Label>Slot Duration (min)</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    The length of time allocated for a single appointment or service session.
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Input
                             type="number"
                             min={1}
@@ -104,7 +119,17 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Buffer Time (min)</Label>
+                        <div className="flex items-center gap-2">
+                            <Label>Buffer Time (min)</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    Extra time added after each appointment for cleaning, prep, or travel.
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Input
                             type="number"
                             min={0}
@@ -113,7 +138,17 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Max Bookings/Slot</Label>
+                        <div className="flex items-center gap-2">
+                            <Label>Max Bookings/Slot</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    The maximum number of customers that can book the same time slot.
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Input
                             type="number"
                             min={1}
@@ -122,7 +157,17 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Staff per Booking</Label>
+                        <div className="flex items-center gap-2">
+                            <Label>Staff per Booking</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    The number of staff members required to perform this service.
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Input
                             type="number"
                             min={1}
@@ -131,7 +176,17 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                         />
                     </div>
                     <div className="space-y-2">
-                        <Label>Service Radius (km)</Label>
+                        <div className="flex items-center gap-2">
+                            <Label>Service Radius (km)</Label>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    The maximum distance from your base location that you are willing to travel.
+                                </TooltipContent>
+                            </Tooltip>
+                        </div>
                         <Input
                             type="number"
                             min={0}
@@ -189,6 +244,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                 <Popover>
                                     <PopoverTrigger asChild>
                                         <Button
+                                            type="button"
                                             variant={day.breaks?.length ? "secondary" : "ghost"}
                                             size="sm"
                                             disabled={!day.enabled}
@@ -220,6 +276,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                                             className="h-8"
                                                         />
                                                         <Button
+                                                            type="button"
                                                             variant="ghost"
                                                             size="icon"
                                                             className="h-8 w-8 text-destructive"
@@ -234,7 +291,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                                 )}
                                             </div>
 
-                                            <Button variant="outline" size="sm" onClick={() => handleBreakAdd(index)} className="w-full">
+                                            <Button type="button" variant="outline" size="sm" onClick={() => handleBreakAdd(index)} className="w-full">
                                                 <Plus className="w-3 h-3 mr-2" /> Add Break
                                             </Button>
                                         </div>
@@ -253,7 +310,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                 type="button"
                                 onClick={() => applyToAll(index)}
                                 className="text-xs text-primary hover:underline whitespace-nowrap w-full md:w-auto text-right md:text-left mt-2 md:mt-0"
-                                title="Apply these hours and breaks to all days"
+                                title="Copy these hours and breaks to all other days of the week"
                             >
                                 Apply to All
                             </button>

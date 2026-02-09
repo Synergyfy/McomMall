@@ -178,6 +178,7 @@ export class ServicesService {
     const [data, total] = await this.serviceRepository.findAndCount({
       where: { businessId },
       relations: ['bundledServices', 'configurableAddons'],
+      order: { created_at: 'DESC' },
       skip: (page - 1) * limit,
       take: limit,
     });
@@ -198,6 +199,7 @@ export class ServicesService {
     return this.serviceRepository.find({
       where: { businessId: In(businessIds) },
       relations: ['bundledServices', 'configurableAddons'],
+      order: { created_at: 'DESC' },
     });
   }
 
