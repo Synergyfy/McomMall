@@ -12,10 +12,9 @@ import {
 } from 'lucide-react';
 import { usePauseOrPlay } from '@/service/payments/hook';
 import {
-  TrialStatusResponse,
   TrialAction,
-  TrialTasks,
 } from '@/service/payments/types';
+import { ActivityTimer } from '@/service/activity-timer/types';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -25,19 +24,26 @@ import {
 } from './ui/dropdown-menu';
 
 interface TrialCountdownTimerProps {
-  trialStatus: TrialStatusResponse;
+  timer: ActivityTimer;
 }
 
 const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
-  trialStatus,
+  timer,
 }) => {
   const {
     isPaused = false,
-    isTrialPausable = false,
-    remainingPauses = 0,
     remainingTime,
     tasks,
-  } = trialStatus;
+    type,
+    name
+  } = timer;
+
+  // Derive pause info since it's not directly in the new DTO but we have the pauses array
+  const maxPauses = 2;
+  const pausesCount = timer.pauses?.length || 0;
+  const remainingPauses = Math.max(0, maxPauses - pausesCount);
+  const isPausable = remainingPauses > 0;
+
   const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
   const [timeLeft, setTimeLeft] = useState(remainingTime);
   const [isExpanded, setIsExpanded] = useState(false);
@@ -69,14 +75,6 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
 
   const formattedTime = formatTime(timeLeft);
 
-  const taskLabels: Record<keyof TrialTasks, string> = {
-    createdBusiness: 'Create a business',
-    createdProductOrService: 'Create a product or service',
-    createdPromotion: 'Create a promotion',
-    createdOffer: 'Create an offer',
-    createdCoupon: 'Create a coupon',
-  };
-
   const timeUnits = Object.entries(formattedTime);
 
   return (
@@ -94,6 +92,7 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
         <TimerIcon className="w-8 h-8 flex-shrink-0" />
         <div className="flex items-center space-x-2">
           <div className="flex flex-col items-center">
+            <span className="text-sm font-medium uppercase opacity-80">{type} TIMER</span>
             <span className="text-2xl font-bold">{formattedTime.days}</span>
             <span className="text-xs uppercase">days left</span>
           </div>
@@ -127,12 +126,13 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
             <ChevronsRightLeft className="w-6 h-6" />
           </Button>
 
-          {isTrialPausable && (
+          {(isPausable || timer.isPaused) && (
             <div className="flex items-center space-x-2">
               <Button
                 onClick={() =>
                   pauseOrPlay({
                     action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+                    timerId: timer.id,
                   })
                 }
                 disabled={isPending || (!isPaused && remainingPauses <= 0)}
@@ -157,17 +157,20 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <p className="text-sm cursor-pointer hover:underline">
-              See your trial period tasks
+              See your tasks for {name}
             </p>
           </DropdownMenuTrigger>
           <DropdownMenuContent className="w-64 bg-gray-900 text-white">
-            {Object.entries(tasks).map(([key, completed]) => (
+            {tasks.map((task) => (
               <DropdownMenuItem
-                key={key}
+                key={task.key}
                 className="flex items-center justify-between"
               >
-                <span>{taskLabels[key as keyof TrialTasks]}</span>
-                {completed ? (
+                <div className="flex flex-col">
+                  <span className="font-semibold">{task.title}</span>
+                  <span className="text-xs opacity-70">{task.description}</span>
+                </div>
+                {task.isCompleted ? (
                   <CheckCircleIcon className="w-5 h-5 text-green-500" />
                 ) : (
                   <XCircleIcon className="w-5 h-5 text-red-500" />

@@ -83,7 +83,7 @@ const SubscriptionCountdownTimer: React.FC<SubscriptionCountdownTimerProps> = ({
     const action = subscription.isPaused
       ? TrialAction.RESUME
       : TrialAction.PAUSE;
-    pauseOrPlay({ action });
+    pauseOrPlay({ action, timerId: subscription.id });
   };
 
   const timerComponents = Object.entries(timeLeft).map(([interval, value]) => (

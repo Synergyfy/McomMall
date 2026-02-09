@@ -158,10 +158,10 @@ export const usePauseOrPlay = () => {
   const queryClient = useQueryClient();
   const mutation = useMutation({
     mutationFn: (payload: PauseResumeTrialDto) => {
-      const { action } = payload;
+      const { action, timerId } = payload;
       const endpoint =
         action === TrialAction.PAUSE ? '/trial/pause' : '/trial/resume';
-      return api.post(endpoint);
+      return api.post(endpoint, { timerId });
     },
     onSuccess: () => {
       toast.success('Trial status updated successfully');

@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetActivityTimers } from '@/service/activity-timer/hook';
 import TrialCountdownTimer from '@/components/TrialCountdownTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
@@ -33,7 +33,9 @@ export default function DashboardLayout({
   const [mounted, setMounted] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
-  const { data: trialStatus } = useGetTrialStatus();
+  const { data: timers } = useGetActivityTimers();
+
+  const generalTimer = timers?.find((t) => t.type === 'GENERAL');
 
   useEffect(() => {
     setMounted(true);
@@ -46,8 +48,8 @@ export default function DashboardLayout({
   return (
     <>
       <AuthRedirect />
-      {trialStatus?.isActive && (
-        <TrialCountdownTimer trialStatus={trialStatus} />
+      {generalTimer && (
+        <TrialCountdownTimer timer={generalTimer} />
       )}
       <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}

@@ -129,4 +129,5 @@ export enum TrialAction {
 
 export interface PauseResumeTrialDto {
   action: TrialAction;
+  timerId?: string;
 }
