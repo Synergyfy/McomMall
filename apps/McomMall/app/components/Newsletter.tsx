@@ -54,11 +54,7 @@ export default function Newsletter() {
           {/* A small note to build trust and reassure users */}
           <p className="mt-5 text-sm text-slate-500 z-[1000]">
             We care about your data. Read our{' '}
-<<<<<<< HEAD
             <Link href="/privacy-policy" className="underline hover:text-slate-400">
-=======
-            <Link href="/privacy-policy" className="underline hover:text-slate-400 z-[1000000]">
->>>>>>> ff401fadfec72e88dbd07aad46cbc813fb86a4fa
               privacy policy
             </Link>
             .
