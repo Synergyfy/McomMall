@@ -21,6 +21,9 @@ export class UserPartnershipRequest extends AbstractBaseEntity {
   @Column({ nullable: true })
   rejectionMessage?: string;
 
+  @Column({ nullable: true })
+  message?: string;
+
   @CreateDateColumn()
   sentAt: Date;
 

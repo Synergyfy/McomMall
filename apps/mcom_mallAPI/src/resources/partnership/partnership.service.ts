@@ -185,9 +185,10 @@ export class PartnershipService {
         userRequest = this.userPartnershipRequestRepository.create({
           sender: currentUser,
           receiver: targetUser,
-                            status: PartnershipStatus.PENDING,
-                            sentAt: new Date(),
-                        });
+          status: PartnershipStatus.PENDING,
+          sentAt: new Date(),
+          message: dto.message,
+        });
                         await this.userPartnershipRequestRepository.save(userRequest);
                         
                         await this.emailService.sendPartnershipRequestEmail(targetUser, currentUser);
@@ -204,16 +205,17 @@ export class PartnershipService {
                   : { id: dto.plusServiceId } as Service;
           
                 const itemRequest = this.itemPartnershipRequestRepository.create({
-                    partnership: userPartnership || null, // Can be null now
-                    proposer: currentUser,
-                    receiver: targetUser,
-                    baseProduct: dto.baseProductId ? baseItem as Product : null,
-                    baseService: dto.baseServiceId ? baseItem as Service : null,
-                    plusProduct: dto.plusProductId ? plusItem as Product : null,
-                    plusService: dto.plusServiceId ? plusItem as Service : null,
-                    status: PartnershipStatus.PENDING,
-                    sentAt: new Date(),
-                });
+          partnership: userPartnership || null, // Can be null now
+          proposer: currentUser,
+          receiver: targetUser,
+          baseProduct: dto.baseProductId ? baseItem as Product : null,
+          baseService: dto.baseServiceId ? baseItem as Service : null,
+          plusProduct: dto.plusProductId ? plusItem as Product : null,
+          plusService: dto.plusServiceId ? plusItem as Service : null,
+          status: PartnershipStatus.PENDING,
+          sentAt: new Date(),
+          message: dto.message,
+        });
           
                 const savedItemRequest = await this.itemPartnershipRequestRepository.save(itemRequest);
           
@@ -262,6 +264,7 @@ export class PartnershipService {
       receiver,
       status: PartnershipStatus.PENDING,
       sentAt: new Date(),
+      message: dto.message,
     });
 
     const savedRequest = await this.userPartnershipRequestRepository.save(request);
@@ -428,6 +431,7 @@ export class PartnershipService {
       plusService: dto.plusServiceId ? { id: dto.plusServiceId } as Service : null,
       status: PartnershipStatus.PENDING,
       sentAt: new Date(),
+      message: dto.message,
     });
 
     const savedRequest = await this.itemPartnershipRequestRepository.save(request);

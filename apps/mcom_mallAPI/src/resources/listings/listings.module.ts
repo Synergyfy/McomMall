@@ -11,7 +11,9 @@ import { StorefrontLink } from './entities/storefront_links.entity';
 import { ServiceProviderProfile } from './entities/service_provider_profiles.entity';
 import { Certification } from './entities/certifications.entity';
 import { User } from '../users/entities/user.entity';
-import { Category } from './entities/category.entity';
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { ListingsController } from './listings.controller';
 import { ListingsService } from './listing.service';
 import { Location } from './entities/location.entity';
@@ -31,7 +33,9 @@ import { CapabilityModule } from '../capability/capability.module';
       Business,
       Location,
       SocialLink,
-      Category,
+      Sector,
+      TaxonomyCategory,
+      TaxonomySubcategory,
       BusinessHour,
       SpecialDay,
       ProductSellerProfile,
@@ -54,4 +58,4 @@ import { CapabilityModule } from '../capability/capability.module';
   providers: [ListingsService, GooglePlacesService],
   exports: [ListingsService],
 })
-export class ListingsModule {}
+export class ListingsModule { }

@@ -236,6 +236,12 @@ const UserRequestCard = ({
                     <div className="flex items-center justify-center gap-4 text-slate-400 text-xs font-medium">
                         <span className="flex items-center gap-1"><Calendar className="h-3 w-3" /> {formatDate(request.sentAt)}</span>
                     </div>
+                    {request.message && (
+                        <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 font-medium italic relative">
+                            <MessageSquare className="h-4 w-4 text-slate-300 absolute -top-2 left-4 bg-slate-50 px-0.5" />
+                            "{request.message}"
+                        </div>
+                    )}
                     {request.rejectionMessage && (
                         <div className="mt-3 p-3 bg-rose-50 rounded-xl border border-rose-100 text-[10px] text-rose-600 font-medium italic">
                             "{request.rejectionMessage}"
@@ -376,6 +382,13 @@ const ItemRequestCard = ({
                             </div>
                         </div>
                     </div>
+
+                    {request.message && (
+                        <div className="mt-4 p-3 bg-slate-50/80 rounded-2xl border border-slate-100 text-[10px] text-slate-600 font-medium italic relative">
+                            <MessageSquare className="h-3 w-3 text-slate-300 absolute -top-1.5 left-4 bg-slate-50 px-0.5" />
+                            "{request.message}"
+                        </div>
+                    )}
                 </CardHeader>
                 <CardContent className="px-6 py-4 flex-1">
                     <div className="flex items-center gap-2 mt-2">
@@ -789,12 +802,16 @@ export default function MyPartnersPage() {
 
 function SearchPartnersDialog({ open, onOpenChange, onRequestSent }: { open: boolean, onOpenChange: (open: boolean) => void, onRequestSent: () => void }) {
     const [query, setQuery] = useState('');
+    const [message, setMessage] = useState('');
     const { data: owners, isLoading } = useSearchOwners(query);
     const { mutate: createRequest, isPending } = useCreateUserPartnershipRequest();
 
     const handleSendRequest = (targetUserId: string) => {
-        createRequest({ targetUserId }, {
-            onSuccess: () => onRequestSent(),
+        createRequest({ targetUserId, message }, {
+            onSuccess: () => {
+                onRequestSent();
+                setMessage('');
+            },
             onError: (err: any) => toast.error(err.message || 'Failed to send request'),
         });
     };
@@ -810,13 +827,21 @@ function SearchPartnersDialog({ open, onOpenChange, onRequestSent }: { open: boo
                         </DialogDescription>
                     </div>
 
-                    <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                        <Input 
-                            placeholder="Enter name or email..." 
-                            className="pl-12 h-12 rounded-xl border-slate-200 focus:ring-orange-500/10 transition-all text-sm font-medium shadow-inner"
-                            value={query}
-                            onChange={(e) => setQuery(e.target.value)}
+                    <div className="space-y-4">
+                        <div className="relative">
+                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                            <Input 
+                                placeholder="Enter name or email..." 
+                                className="pl-12 h-12 rounded-xl border-slate-200 focus:ring-orange-500/10 transition-all text-sm font-medium shadow-inner"
+                                value={query}
+                                onChange={(e) => setQuery(e.target.value)}
+                            />
+                        </div>
+                        <Textarea 
+                            placeholder="Optional message to the owner..." 
+                            className="min-h-[80px] rounded-xl border-slate-200 focus:ring-orange-500/10 transition-all text-sm font-medium shadow-inner resize-none"
+                            value={message}
+                            onChange={(e) => setMessage(e.target.value)}
                         />
                     </div>
 
@@ -975,6 +1000,7 @@ function NewIntegrationDialog({ open, onOpenChange, partner, onRequested }: { op
 
     const [selectedBase, setSelectedBase] = useState<{ id: string, type: 'product' | 'service' } | null>(null);
     const [selectedPlus, setSelectedPlus] = useState<{ id: string, type: 'product' | 'service' } | null>(null);
+    const [message, setMessage] = useState('');
 
     const { mutate: createRequest, isPending } = useCreateItemPartnershipRequest();
 
@@ -987,8 +1013,12 @@ function NewIntegrationDialog({ open, onOpenChange, partner, onRequested }: { op
             baseServiceId: selectedBase.type === 'service' ? selectedBase.id : undefined,
             plusProductId: selectedPlus.type === 'product' ? selectedPlus.id : undefined,
             plusServiceId: selectedPlus.type === 'service' ? selectedPlus.id : undefined,
+            message,
         }, {
-            onSuccess: () => onRequested(),
+            onSuccess: () => {
+                onRequested();
+                setMessage('');
+            },
             onError: (err: any) => toast.error(err.message || 'Failed to propose link'),
         });
     };
@@ -1089,6 +1119,13 @@ function NewIntegrationDialog({ open, onOpenChange, partner, onRequested }: { op
                              <p className="text-sm font-bold text-slate-400 italic">Select one item from each side to propose a link</p>
                          )}
                     </div>
+                    
+                    <Textarea 
+                        placeholder="Add an optional message describing the partnership idea..." 
+                        className="min-h-[80px] rounded-2xl border-slate-200 focus:ring-orange-500/10 transition-all text-sm font-medium shadow-inner resize-none"
+                        value={message}
+                        onChange={(e) => setMessage(e.target.value)}
+                    />
                 </div>
                 <div className="p-6 bg-slate-50 border-t flex justify-end gap-3">
                     <Button variant="ghost" className="rounded-xl font-bold h-12 px-8 text-slate-500" onClick={() => onOpenChange(false)}>Cancel</Button>
