@@ -11,7 +11,7 @@ import {
   SelectValue,
 } from '@/components/ui/select';
 import { useGetProductById } from '@/service/store/products/hook';
-import { useGetServicesByProductId } from '@/service/partnerships/hooks';
+import { useGetProductPlusItems as useGetServicesByProductId } from '@/service/partnerships/hooks';
 import { ProductVariant, ProductAttribute, ProductVariation } from '@/service/store/products/types';
 import { Button } from '@/components/ui/button';
 import { Star, Minus, Plus, Heart, CheckCircle, Truck, Shield } from 'lucide-react';

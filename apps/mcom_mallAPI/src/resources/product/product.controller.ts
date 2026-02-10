@@ -87,6 +87,12 @@ export class ProductController {
     return this.productService.findAllByUser(userId);
   }
 
+  @Get('/user/:userId')
+  @ApiOperation({ summary: 'Get all products for a specific user' })
+  findAllBySpecificUser(@Param('userId') userId: string) {
+    return this.productService.findAllByUser(userId);
+  }
+
   @Public()
   @Get('public')
   findAllPublic(@Query() searchDto: ProductSearchDto): Promise<PageDto<Product>> {

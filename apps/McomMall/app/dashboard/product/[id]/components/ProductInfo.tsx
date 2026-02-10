@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { PlusCircle, Star } from 'lucide-react';
 import { Product } from '@/service/store/products/types';
 import { cn } from '@/lib/utils';
-import { useGetServicesByProductId } from '@/service/partnerships/hooks';
+import { useGetProductPlusItems } from '@/service/partnerships/hooks';
 import ServiceList from '@/components/ServiceList';
 
 interface ProductInfoProps {
@@ -16,7 +16,7 @@ interface ProductInfoProps {
 }
 
 export default function ProductInfo({ product, onAddPartner }: ProductInfoProps) {
-  const { data: services, isLoading: servicesLoading } = useGetServicesByProductId(product.id);
+  const { data: services, isLoading: servicesLoading } = useGetProductPlusItems(product.id);
 
   const priceDisplay = React.useMemo(() => {
     if (product.useVariantPricing && product.variations && product.variations.length > 0) {

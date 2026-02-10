@@ -1,10 +1,10 @@
 "use client";
-import { PartnershipService } from "@/service/partnerships/types";
+import { IService } from "@/service/services/types";
 import ServiceBooking from "./ServiceBooking";
 import { ServiceBookingDetailsDto } from "@/hooks/useCheckout";
 
 interface ServiceListProps {
-  services: PartnershipService[];
+  services: IService[];
   isDashboardView?: boolean;
   onServiceBooked?: (bookingDetails: ServiceBookingDetailsDto) => void;
 }

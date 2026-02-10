@@ -81,7 +81,7 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
-  ) {}
+  ) { }
 
   // Method is not used in checkout, but keeping it for other potential uses.
   async createOrder(
@@ -129,10 +129,10 @@ export class OrderService {
       directPurchaseProduct = product;
       businessContextId = product.business.id;
       const ownerId = product.business.user.id;
-      
+
       const price = this.productService.calculatePrice(product, directPurchase.variant || {});
       productTotal = price * directPurchase.quantity;
-      
+
       productIds.push(product.id);
       earningsPerOwner.set(ownerId, (earningsPerOwner.get(ownerId) || 0) + productTotal);
     } else if (isCartCheckout) {
@@ -143,7 +143,7 @@ export class OrderService {
         const price = this.productService.calculatePrice(item.product, item.selectedVariants || {});
         const itemTotal = price * item.quantity;
         const ownerId = item.product.business.user.id;
-        
+
         productTotal += itemTotal;
         productIds.push(item.product.id);
         earningsPerOwner.set(ownerId, (earningsPerOwner.get(ownerId) || 0) + itemTotal);
@@ -166,13 +166,13 @@ export class OrderService {
     let giftCardPurchaseTotal = 0;
     if (hasGiftCardPurchases) {
       for (const gcPurchase of giftCardPurchases) {
-        const business = await this.businessRepository.findOne({ where: {id: gcPurchase.businessId}, relations: ['user']});
+        const business = await this.businessRepository.findOne({ where: { id: gcPurchase.businessId }, relations: ['user'] });
         const purchaseOwnerId = business.user.id;
 
-        if (!businessContextId) { 
+        if (!businessContextId) {
           businessContextId = gcPurchase.businessId;
         }
-        
+
         giftCardPurchaseTotal += gcPurchase.amount;
         // Gift card purchases are also earnings for the owner
         earningsPerOwner.set(purchaseOwnerId, (earningsPerOwner.get(purchaseOwnerId) || 0) + gcPurchase.amount);
@@ -185,7 +185,7 @@ export class OrderService {
     if (createCheckoutDto.couponCode) {
       try {
         const coupon = await this.couponService.findCouponByCode(createCheckoutDto.couponCode);
-        if ( coupon.status === CouponStatus.REDEEMED || coupon.status === CouponStatus.DISABLED || (coupon.expiresAt && new Date() > coupon.expiresAt)) {
+        if (coupon.status === CouponStatus.REDEEMED || coupon.status === CouponStatus.DISABLED || (coupon.expiresAt && new Date() > coupon.expiresAt)) {
           throw new BadRequestException('Coupon is invalid or expired.');
         }
         couponAmountToApply = Math.min(totalBeforeRedemption, coupon.balance);
@@ -219,7 +219,7 @@ export class OrderService {
     if (createCheckoutDto.voucherCode) {
       try {
         const voucher = await this.voucherService.findVoucherByCode(createCheckoutDto.voucherCode);
-        if ( voucher.status === VoucherStatus.REDEEMED || voucher.status === VoucherStatus.DISABLED || (voucher.expiresAt && new Date() > voucher.expiresAt)) {
+        if (voucher.status === VoucherStatus.REDEEMED || voucher.status === VoucherStatus.DISABLED || (voucher.expiresAt && new Date() > voucher.expiresAt)) {
           throw new BadRequestException('Voucher is invalid or expired.');
         }
         if (createCheckoutDto.voucherAmount) {
@@ -314,11 +314,18 @@ export class OrderService {
           );
 
           const partnership = await this.partnershipRepository.findOne({
-            where: {
-              product: { id: directPurchaseProduct.id },
-              service: { id: bookingDetail.serviceId },
-              isActive: true,
-            },
+            where: [
+              {
+                baseProduct: { id: directPurchaseProduct.id },
+                plusService: { id: bookingDetail.serviceId },
+                isActive: true,
+              },
+              {
+                plusProduct: { id: directPurchaseProduct.id },
+                baseService: { id: bookingDetail.serviceId },
+                isActive: true,
+              },
+            ],
           });
           if (!partnership) {
             // This check is a safeguard; the earlier validation should prevent this.
