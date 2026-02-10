@@ -833,6 +833,30 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         </div>
       </header>
 
+      {/* Listing Type Indicator Tabs - Only show when both types are selected to reduce confusion */}
+      {businessTypes.length > 1 && (
+        <div className="flex gap-1 mb-8 p-1 bg-gray-100/50 rounded-[1.25rem] w-fit border border-gray-100 shadow-sm transition-all duration-500 hover:shadow-md">
+          <div
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-[1rem] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 ease-out ${steps[currentStep - 1].section === 'Product Details'
+                ? 'bg-white text-[#f48c25] shadow-md shadow-[#f48c25]/5 scale-[1.02]'
+                : 'text-gray-400 opacity-60'
+              }`}
+          >
+            <Store size={15} className={steps[currentStep - 1].section === 'Product Details' ? 'text-[#f48c25]' : 'text-gray-400'} />
+            Product Seller
+          </div>
+          <div
+            className={`flex items-center gap-2.5 px-6 py-3 rounded-[1rem] text-[10px] sm:text-[11px] font-black uppercase tracking-[0.1em] transition-all duration-500 ease-out ${steps[currentStep - 1].section === 'Service Details'
+                ? 'bg-white text-[#f48c25] shadow-md shadow-[#f48c25]/5 scale-[1.02]'
+                : 'text-gray-400 opacity-60'
+              }`}
+          >
+            <Wrench size={15} className={steps[currentStep - 1].section === 'Service Details' ? 'text-[#f48c25]' : 'text-gray-400'} />
+            Service Provider
+          </div>
+        </div>
+      )}
+
       {/* New Colorful Progress Bar */}
       <div className="mb-10 bg-white p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
         <div className="flex justify-between items-center mb-6">

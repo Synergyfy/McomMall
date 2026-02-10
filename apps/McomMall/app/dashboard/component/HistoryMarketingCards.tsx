@@ -94,36 +94,36 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
 
                     {/* Header */}
-                    <div className="absolute top-6 inset-x-8 flex justify-between items-start">
-                        <div className="space-y-1">
-                            <h3 className="text-white font-black text-xl tracking-tight drop-shadow-lg uppercase italic">
+                    <div className="absolute top-4 inset-x-6 flex justify-between items-start">
+                        <div className="space-y-0.5">
+                            <h3 className="text-white font-black text-lg tracking-tight drop-shadow-lg uppercase italic">
                                 {purchase.purchaseBusiness.businessName}
                             </h3>
-                            <p className="text-white/60 text-[8px] font-bold uppercase tracking-[0.2em]">Premium Gift Experience</p>
+                            <p className="text-white/60 text-[7px] font-bold uppercase tracking-[0.2em]">Premium Gift Experience</p>
                         </div>
-                        <ShieldCheck className="text-white/40" size={20} />
+                        <ShieldCheck className="text-white/40" size={16} />
                     </div>
 
                     {/* Chip visual */}
-                    <div className="absolute top-20 left-8 w-12 h-9 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-90 border border-white/30" />
+                    <div className="absolute top-14 left-6 w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-90 border border-white/30" />
 
                     {/* Balance & Code */}
-                    <div className="absolute inset-x-8 bottom-8 flex justify-between items-end">
-                        <div className="space-y-1">
-                            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest block">Current Balance</span>
-                            <p className="text-4xl font-black text-white leading-none tracking-tighter">
+                    <div className="absolute inset-x-6 bottom-6 flex justify-between items-end">
+                        <div className="space-y-0.5">
+                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block">Current Balance</span>
+                            <p className="text-3xl font-black text-white leading-none tracking-tighter">
                                 {CURRENCY}{Number(purchase.currentBalance).toFixed(2)}
                             </p>
-                            <div className="flex items-center gap-2 mt-4 bg-white/10 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
-                                <span className="text-white/90 font-mono text-xs tracking-[0.2em]">{purchase.code}</span>
+                            <div className="flex items-center gap-2 mt-3 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+                                <span className="text-white/90 font-mono text-[10px] tracking-[0.2em]">{purchase.code}</span>
                                 <button onClick={handleCopy} className="text-white/60 hover:text-white transition-colors">
-                                    {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
+                                    {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
                                 </button>
                             </div>
                         </div>
                         <div className="text-right">
-                            <Gift className="text-[#f58220] ml-auto mb-2" size={24} />
-                            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest">Official Card</span>
+                            <Gift className="text-[#f58220] ml-auto mb-1.5" size={20} />
+                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">Official Card</span>
                         </div>
                     </div>
 

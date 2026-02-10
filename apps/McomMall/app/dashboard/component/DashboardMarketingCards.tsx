@@ -40,24 +40,24 @@ export const DashboardGiftCard: React.FC<GiftCardProps> = ({ template, onEdit, o
 
                 <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
 
-                <div className="absolute top-6 left-6 w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-80 border border-white/30" />
-                <ShieldCheck className="absolute top-6 right-6 text-white/50" size={20} />
+                <div className="absolute top-4 left-4 w-8 h-6 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-md opacity-80 border border-white/30" />
+                <ShieldCheck className="absolute top-4 right-4 text-white/50" size={16} />
 
-                <div className="absolute inset-x-6 bottom-6">
+                <div className="absolute inset-x-4 bottom-4">
                     <div className="flex justify-between items-end">
-                        <div className="space-y-1">
-                            <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">{template.name}</h3>
-                            <p className="text-white/70 text-[10px] font-bold uppercase tracking-[0.2em]">{template.description || 'Premium Gift Experience'}</p>
+                        <div className="space-y-0.5">
+                            <h3 className="text-lg font-black text-white tracking-tight drop-shadow-md">{template.name}</h3>
+                            <p className="text-white/70 text-[8px] font-bold uppercase tracking-[0.2em]">{template.description || 'Premium Gift Experience'}</p>
                         </div>
                         <div className="text-right">
-                            <span className="text-[8px] font-black text-white/40 uppercase tracking-widest block mb-1">Gift Card</span>
-                            <Gift className="text-[#f58220] ml-auto" size={18} />
+                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block mb-0.5">Gift Card</span>
+                            <Gift className="text-[#f58220] ml-auto" size={14} />
                         </div>
                     </div>
                 </div>
 
                 {/* Action Overlay */}
-                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-4">
+                <div className="absolute inset-0 bg-black/60 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center gap-2">
                     <Button
                         onClick={() => onEdit(template.id)}
                         variant="secondary"
@@ -152,8 +152,8 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
                         </p>
                     </div>
                     <div className={`p-3 rounded-2xl border transition-colors ${product.backgroundImage
-                            ? 'bg-white/20 border-white/30 text-white'
-                            : 'bg-gray-50 border-gray-100 group-hover:bg-orange-50 group-hover:text-orange-500'
+                        ? 'bg-white/20 border-white/30 text-white'
+                        : 'bg-gray-50 border-gray-100 group-hover:bg-orange-50 group-hover:text-orange-500'
                         }`}>
                         <Tag size={20} />
                     </div>
@@ -175,8 +175,8 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
                             size="sm"
                             onClick={() => onEdit(product.id)}
                             className={`h-10 w-10 p-0 rounded-xl transition-colors ${product.backgroundImage
-                                    ? 'bg-white/20 border-white/30 text-white hover:bg-white hover:text-orange-600 hover:border-white'
-                                    : 'border-gray-200 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50'
+                                ? 'bg-white/20 border-white/30 text-white hover:bg-white hover:text-orange-600 hover:border-white'
+                                : 'border-gray-200 hover:border-orange-500 hover:text-orange-500 hover:bg-orange-50'
                                 }`}
                         >
                             <Pencil size={16} />
@@ -186,8 +186,8 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
                             size="sm"
                             onClick={() => onDelete(product.id)}
                             className={`h-10 w-10 p-0 rounded-xl transition-colors ${product.backgroundImage
-                                    ? 'bg-red-500/80 border-transparent text-white hover:bg-red-600'
-                                    : 'border-gray-200 hover:border-red-500 hover:text-red-500 hover:bg-red-50'
+                                ? 'bg-red-500/80 border-transparent text-white hover:bg-red-600'
+                                : 'border-gray-200 hover:border-red-500 hover:text-red-500 hover:bg-red-50'
                                 }`}
                         >
                             <Trash2 size={16} />

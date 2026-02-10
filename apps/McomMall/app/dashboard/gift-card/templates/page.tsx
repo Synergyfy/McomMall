@@ -3,7 +3,7 @@ import React from 'react';
 import { Button } from "@/components/ui/button";
 import Link from 'next/link';
 import { PlusCircle } from 'lucide-react';
-import { DashboardGiftCard } from '@/app/dashboard/component/DashboardMarketingCards';
+import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { Badge } from "@/components/ui/badge";
@@ -23,6 +23,11 @@ import { toast } from "sonner";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Terminal } from "lucide-react";
 import { useGetGiftCardTemplates, useDeleteGiftCardTemplate } from '@/service/gift-card/hook';
+
+const DashboardGiftCard = dynamic(() => import('@/app/dashboard/component/DashboardMarketingCards').then(mod => mod.DashboardGiftCard), {
+  loading: () => <div className="aspect-[1.58/1] w-full bg-gray-100 animate-pulse rounded-[2rem]" />,
+  ssr: false
+});
 
 const GiftCardTemplatesPage = () => {
   const router = useRouter();
@@ -81,7 +86,7 @@ const GiftCardTemplatesPage = () => {
           </Link>
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
           {templates && templates.map((template) => (
             <DashboardGiftCard
               key={template.id}

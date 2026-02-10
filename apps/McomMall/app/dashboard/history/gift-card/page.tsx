@@ -5,7 +5,11 @@ import { useGetMyPurchases } from "@/service/gift-card/hook";
 import { MyPurchase } from "@/service/gift-card/types";
 import { Gift, Loader2, Terminal } from "lucide-react";
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { HistoryGiftCard } from "@/app/dashboard/component/HistoryMarketingCards";
+import dynamic from "next/dynamic";
+const HistoryGiftCard = dynamic(() => import("@/app/dashboard/component/HistoryMarketingCards").then(mod => mod.HistoryGiftCard), {
+  loading: () => <div className="aspect-[1.58/1] w-full bg-slate-100 animate-pulse rounded-[2rem]" />,
+  ssr: false
+});
 import ReloadModal from "./components/ReloadModal";
 import { useShareLink } from "@/lib/hooks/useShareLink";
 
@@ -47,7 +51,7 @@ const GiftCardHistoryPage = () => {
         </header>
 
         {purchases && purchases.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-12">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
             {purchases.map((purchase: MyPurchase) => (
               <HistoryGiftCard
                 key={purchase.id}
