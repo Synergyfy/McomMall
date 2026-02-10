@@ -25,7 +25,7 @@ import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
-    CapabilityModule,
+    forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       GiftCard,
       GiftCardTemplate,

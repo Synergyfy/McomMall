@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
 import { GroupingService } from './grouping.service';
 import { GroupingController } from './grouping.controller';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -13,7 +13,7 @@ import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
   imports: [
-    CapabilityModule,
+    forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Group,
       GroupMember,

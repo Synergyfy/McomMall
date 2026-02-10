@@ -141,4 +141,14 @@ export class CreateTierDto {
   @IsBoolean()
   @IsOptional()
   isActive?: boolean;
+
+  @ApiProperty({
+    example: false,
+    description: 'Whether this is the default/free tier',
+    required: false,
+    default: false,
+  })
+  @IsBoolean()
+  @IsOptional()
+  isDefault?: boolean;
 }

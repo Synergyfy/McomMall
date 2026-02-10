@@ -63,9 +63,13 @@ export class OrderService {
     private readonly cartService: CartService,
     @Inject(forwardRef(() => CouponService))
     private readonly couponService: CouponService,
+    @Inject(forwardRef(() => GiftCardService))
     private readonly giftCardService: GiftCardService,
+    @Inject(forwardRef(() => VoucherService))
     private readonly voucherService: VoucherService,
+    @Inject(forwardRef(() => BookingService))
     private readonly bookingService: BookingService,
+    @Inject(forwardRef(() => PartnershipService))
     private readonly partnershipService: PartnershipService,
     private readonly promotionEngineService: PromotionEngineService,
     private readonly pointsService: PointsService,
@@ -75,6 +79,7 @@ export class OrderService {
     private readonly notificationService: NotificationService,
     private readonly configService: ConfigService,
     private readonly eventEmitter: EventEmitter2,
+    @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
   ) {}
 
