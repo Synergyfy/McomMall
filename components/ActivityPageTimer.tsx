@@ -1,7 +1,7 @@
 "use client";
 
 import { FC, useState, useEffect, useRef } from "react";
-import { ActivityTimer, ActivityTimerTask } from "@/service/activity-timer/types";
+import { ActivityTimer } from "@/service/activity-timer/types";
 import { usePauseOrResumeActivityTimer } from "@/service/activity-timer/hook";
 import { TrialAction } from "@/service/payments/types";
 import { motion } from "framer-motion";
@@ -16,11 +16,11 @@ import { Button } from "@/components/ui/button";
 import StyledNumber from "@/components/svgs/StyledNumber";
 
 const TimeCard: FC<{ value: string; unit: string }> = ({ value, unit }) => (
-  <div className="flex flex-col items-center justify-center bg-orange-600 p-4 rounded-lg w-20 h-20 sm:w-24 sm:h-24">
-    <span className="text-2xl sm:text-4xl font-bold tracking-tight text-white">
+  <div className="flex flex-col items-center justify-center bg-orange-600 p-2 rounded-xl min-w-[70px] sm:min-w-[80px]">
+    <span className="text-xl sm:text-2xl font-bold tracking-tight text-white leading-none">
       {value}
     </span>
-    <span className="text-[10px] sm:text-sm font-light uppercase text-white">{unit}</span>
+    <span className="text-[10px] font-medium uppercase text-white/90 mt-1">{unit}</span>
   </div>
 );
 
@@ -73,104 +73,102 @@ const ActivityPageTimer: FC<ActivityPageTimerProps> = ({ timer }) => {
   const isPausable = remainingPauses > 0;
 
   return (
-    <div className="mb-12 last:mb-0">
-      <header className="text-center mb-8">
-        <motion.h2
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="text-2xl font-bold tracking-tight sm:text-3xl"
-        >
-          {timer.name} Dashboard
-        </motion.h2>
-        <p className="mt-2 text-gray-600">
-          {timer.description}
-        </p>
-      </header>
-
-      {/* Countdown Timer */}
-      <motion.section
-        initial={{ opacity: 0, scale: 0.9 }}
-        animate={{ opacity: 1, scale: 1 }}
-        transition={{ delay: 0.3 }}
-        className="mb-8"
-      >
-        <div className="flex flex-wrap justify-center items-center gap-2 sm:gap-4 mb-4">
-          {Object.entries(formattedTime).map(([unit, value]) => (
-            <TimeCard key={unit} value={value} unit={unit} />
-          ))}
-        </div>
-
-        {(isPausable || timer.isPaused) && (
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-4 mt-6">
-            <Button
-              onClick={() =>
-                pauseOrPlay({
-                  action: timer.isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
-                  timerId: timer.id,
-                })
-              }
-              disabled={
-                isPending || (!timer.isPaused && remainingPauses <= 0)
-              }
-              size="lg"
-              className="bg-orange-600 hover:bg-orange-700 text-white font-bold w-full sm:w-auto"
+    <div className="mb-12 last:mb-0 bg-white border border-gray-200 shadow-sm rounded-[2.5rem] overflow-hidden">
+      <div className="p-6 sm:p-10 md:p-12">
+        {/* Activity Header with Integrated Timer */}
+        <header className="flex flex-col lg:flex-row lg:items-center justify-between gap-8 mb-12">
+          <div className="flex-1">
+            <motion.h2
+              initial={{ opacity: 0, x: -20 }}
+              animate={{ opacity: 1, x: 0 }}
+              className="text-3xl font-extrabold tracking-tight text-gray-900 sm:text-4xl"
             >
-              {isPending ? (
-                <Loader className="w-5 h-5 animate-spin" />
-              ) : timer.isPaused ? (
-                <>
-                  <PlayIcon className="w-5 h-5 mr-2" /> Resume
-                </>
-              ) : (
-                <>
-                  <PauseIcon className="w-5 h-5 mr-2" /> Pause
-                </>
-              )}
-            </Button>
-            <span className="text-sm text-black">
-              ({remainingPauses} pause
-              {remainingPauses !== 1 ? "s" : ""} left)
-            </span>
+              {timer.name}
+            </motion.h2>
+            <p className="mt-3 text-lg text-gray-600 max-w-2xl">
+              {timer.description}
+            </p>
           </div>
-        )}
-      </motion.section>
 
-      {/* Task Display */}
-      <div className="w-full mx-auto">
-        <h3 className="text-xl sm:text-2xl font-bold text-black mb-6 text-center sm:text-left sm:ml-4">
-          Tasks to complete
-        </h3>
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6 p-0 sm:p-4">
-          {timer.tasks.map((task, index) => {
-            return (
+          <div className="flex flex-col items-center lg:items-end gap-4">
+            <div className="flex flex-wrap justify-center gap-2">
+              {Object.entries(formattedTime).map(([unit, value]) => (
+                <TimeCard key={unit} value={value} unit={unit} />
+              ))}
+            </div>
+
+            {(isPausable || timer.isPaused) && (
+              <div className="flex items-center gap-3">
+                <Button
+                  onClick={() =>
+                    pauseOrPlay({
+                      action: timer.isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+                      timerId: timer.id,
+                    })
+                  }
+                  disabled={
+                    isPending || (!timer.isPaused && remainingPauses <= 0)
+                  }
+                  variant="outline"
+                  size="sm"
+                  className="rounded-full h-9 px-4 border-orange-200 text-orange-600 hover:bg-orange-50 font-semibold"
+                >
+                  {isPending ? (
+                    <Loader className="w-4 h-4 animate-spin" />
+                  ) : timer.isPaused ? (
+                    <>
+                      <PlayIcon className="w-4 h-4 mr-2" /> Resume
+                    </>
+                  ) : (
+                    <>
+                      <PauseIcon className="w-4 h-4 mr-2" /> Pause
+                    </>
+                  )}
+                </Button>
+                <span className="text-xs font-medium text-gray-400">
+                  {remainingPauses} pause{remainingPauses !== 1 ? "s" : ""} left
+                </span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Task Grid */}
+        <div className="w-full">
+          <h3 className="text-2xl font-bold text-gray-900 mb-8 flex items-center gap-3">
+            Tasks to complete
+            <div className="h-px flex-1 bg-gray-100" />
+          </h3>
+          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
+            {timer.tasks.map((task, index) => (
               <div
                 key={task.key}
-                className="bg-white border-2 border-orange-400 shadow-xl rounded-2xl p-4 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-4"
+                className="bg-white border-2 border-orange-100 hover:border-orange-300 transition-colors shadow-sm rounded-3xl p-6 sm:p-8 flex flex-col sm:flex-row items-center sm:items-start gap-6"
               >
-                <div className="w-full sm:w-1/3 flex items-center justify-center text-orange-500">
-                  <span className="text-orange-500 transform scale-75 sm:scale-100">
+                <div className="flex-shrink-0">
+                  <span className="transform scale-90 sm:scale-100 block">
                     <StyledNumber number={index + 1} />
                   </span>
                 </div>
-                <div className="w-full sm:w-2/3 flex flex-col justify-between h-full">
+                <div className="flex-grow flex flex-col justify-between h-full text-center sm:text-left">
                   <div>
-                    <h4 className="text-lg font-bold text-gray-900 mb-2 text-center sm:text-left">
+                    <h4 className="text-xl font-bold text-gray-900 mb-2">
                       {task.title}
                     </h4>
-                    <p className="text-black mb-4 text-sm text-center sm:text-left">
+                    <p className="text-gray-600 mb-6 text-sm leading-relaxed">
                       {task.description}
                     </p>
                   </div>
-                  <div className="flex items-center justify-center sm:justify-start mt-auto">
+                  <div className="mt-auto">
                     {task.isCompleted ? (
-                      <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white w-full sm:w-auto cursor-default">
+                      <div className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl text-sm font-bold bg-green-50 text-green-600 border border-green-100">
                         <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Done
-                      </button>
+                        Completed
+                      </div>
                     ) : (
                       <Link
                         href={task.url}
-                        className="flex items-center justify-center sm:justify-start text-orange-500 hover:text-orange-400 font-medium text-sm w-full sm:w-auto"
+                        className="inline-flex items-center justify-center px-6 py-2.5 rounded-xl text-sm font-bold bg-orange-600 text-white hover:bg-orange-700 transition-all shadow-md hover:shadow-lg"
                       >
                         Finish this activity
                       </Link>
@@ -178,11 +176,10 @@ const ActivityPageTimer: FC<ActivityPageTimerProps> = ({ timer }) => {
                   </div>
                 </div>
               </div>
-            );
-          })}
+            ))}
+          </div>
         </div>
       </div>
-      <div className="border-b border-gray-200 my-12" />
     </div>
   );
 };
