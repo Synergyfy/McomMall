@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
@@ -29,25 +29,37 @@ import {
     SheetTitle,
 } from '@/components/ui/sheet';
 import { Textarea } from '@/components/ui/textarea';
-import { supportTickets } from '../data/mock-data';
-import { SupportTicket } from '../types';
+import {
+    useGetSupportTickets,
+    useGetSupportTicket,
+    useAddSupportMessage,
+    useResolveSupportTicket,
+    useCloseSupportTicket
+} from '../../../service/support-tickets/hook';
+import { SupportTicket, TicketStatus } from '../../../service/support-tickets/types';
 import {
     Search,
-    Plus,
     MessageSquare,
     Clock,
     AlertCircle,
-    CheckCircle,
     User,
     Send,
     Paperclip,
-    MoreHorizontal,
-    Filter,
+    Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { formatDistanceToNow, addHours, isValid } from 'date-fns';
+
+// Extended type for UI
+interface UITicket extends SupportTicket {
+    userName: string;
+    priority: 'low' | 'medium' | 'high' | 'urgent';
+    type: string;
+    slaDeadline: Date;
+}
 
 // Priority Badge
-function PriorityBadge({ priority }: { priority: SupportTicket['priority'] }) {
+function PriorityBadge({ priority }: { priority: UITicket['priority'] }) {
     const config = {
         low: { label: 'Low', className: 'bg-slate-100 text-slate-700' },
         medium: { label: 'Medium', className: 'bg-blue-100 text-blue-700' },
@@ -63,31 +75,32 @@ function PriorityBadge({ priority }: { priority: SupportTicket['priority'] }) {
 }
 
 // Status Badge
-function StatusBadge({ status }: { status: SupportTicket['status'] }) {
-    const config = {
-        open: { label: 'Open', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-        in_progress: { label: 'In Progress', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-        pending: { label: 'Pending', className: 'bg-purple-100 text-purple-700 border-purple-200' },
-        resolved: { label: 'Resolved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-        closed: { label: 'Closed', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+function StatusBadge({ status }: { status: string }) {
+    const config: Record<string, { label: string, className: string }> = {
+        OPEN: { label: 'Open', className: 'bg-blue-100 text-blue-700 border-blue-200' },
+        IN_PROGRESS: { label: 'In Progress', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+        RESOLVED: { label: 'Resolved', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+        CLOSED: { label: 'Closed', className: 'bg-slate-100 text-slate-700 border-slate-200' },
     };
 
+    const statusKey = status as string;
+    const conf = config[statusKey] || { label: status, className: 'bg-gray-100' };
+
     return (
-        <Badge variant="outline" className={cn('font-medium', config[status].className)}>
-            {config[status].label}
+        <Badge variant="outline" className={cn('font-medium', conf.className)}>
+            {conf.label}
         </Badge>
     );
 }
 
 // SLA Indicator
-function SLAIndicator({ deadline, status }: { deadline: string; status: string }) {
-    if (status === 'resolved' || status === 'closed') {
+function SLAIndicator({ deadline, status }: { deadline: Date; status: string }) {
+    if (status === 'RESOLVED' || status === 'CLOSED') {
         return <span className="text-sm text-emerald-600">Completed</span>;
     }
 
     const now = new Date();
-    const slaDate = new Date(deadline);
-    const diffMs = slaDate.getTime() - now.getTime();
+    const diffMs = deadline.getTime() - now.getTime();
     const diffHours = Math.round(diffMs / (1000 * 60 * 60));
 
     if (diffHours < 0) {
@@ -118,139 +131,188 @@ function SLAIndicator({ deadline, status }: { deadline: string; status: string }
 
 // Ticket Detail Sheet
 function TicketDetailSheet({
-    ticket,
+    ticketId,
     open,
     onOpenChange,
 }: {
-    ticket: SupportTicket | null;
+    ticketId: string | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
 }) {
     const [reply, setReply] = useState('');
 
-    if (!ticket) return null;
+    const { data: fullTicket, isLoading } = useGetSupportTicket(ticketId || undefined);
+    const addMessageMutation = useAddSupportMessage();
+    const resolveMutation = useResolveSupportTicket();
+    const closeMutation = useCloseSupportTicket();
 
-    // Mock messages
-    const messages = [
-        {
-            id: '1',
-            sender: ticket.userName,
-            message: 'I am having trouble uploading my verification documents. The page keeps showing an error.',
-            time: '2 hours ago',
-            isAdmin: false,
-        },
-        {
-            id: '2',
-            sender: 'Support Agent',
-            message: 'Thank you for reaching out. Can you please provide more details about the error message you are seeing?',
-            time: '1 hour ago',
-            isAdmin: true,
-        },
-    ];
+    const handleSend = async () => {
+        if (!ticketId || !reply.trim()) return;
+        try {
+            await addMessageMutation.mutateAsync({ id: ticketId, content: reply });
+            setReply('');
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    const handleStatusChange = async (status: string) => {
+        if (!ticketId) return;
+        try {
+            if (status === 'RESOLVED') await resolveMutation.mutateAsync(ticketId);
+            if (status === 'CLOSED') await closeMutation.mutateAsync(ticketId);
+        } catch (error) {
+            console.error(error);
+        }
+    };
+
+    if (!ticketId && !open) return null;
+
+    const userName = fullTicket?.user ? `${fullTicket.user.firstName} ${fullTicket.user.lastName}` : 'User';
+    const messages = fullTicket?.messages || [];
+    const createdAt = fullTicket ? new Date(fullTicket.createdAt) : new Date();
+    const slaDeadline = fullTicket && isValid(new Date(fullTicket.createdAt))
+        ? addHours(new Date(fullTicket.createdAt), 24)
+        : new Date();
 
     return (
         <Sheet open={open} onOpenChange={onOpenChange}>
             <SheetContent className="w-full sm:max-w-lg flex flex-col">
-                <SheetHeader className="pb-4">
-                    <div className="flex items-center justify-between">
-                        <SheetTitle className="text-lg">{ticket.subject}</SheetTitle>
-                        <StatusBadge status={ticket.status} />
-                    </div>
-                    <SheetDescription className="flex items-center gap-2">
-                        <PriorityBadge priority={ticket.priority} />
-                        <span>•</span>
-                        <span>{ticket.type.replace('_', ' ')}</span>
-                    </SheetDescription>
-                </SheetHeader>
-
-                {/* Ticket Info */}
-                <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 mb-4">
-                    <div className="flex items-center gap-3">
-                        <Avatar className="h-10 w-10">
-                            <AvatarFallback className="bg-gradient-to-br from-orange-400 to-orange-600 text-white text-sm">
-                                {ticket.userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <p className="font-medium text-sm">{ticket.userName}</p>
-                            <p className="text-xs text-slate-500">Ticket #{ticket.id}</p>
+                {isLoading ? (
+                    <>
+                        <SheetHeader className="sr-only">
+                            <SheetTitle>Loading Ticket Details</SheetTitle>
+                        </SheetHeader>
+                        <div className="flex-1 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
                         </div>
-                    </div>
-                    <SLAIndicator deadline={ticket.slaDeadline} status={ticket.status} />
-                </div>
+                    </>
+                ) : fullTicket ? (
+                    <>
+                        <SheetHeader className="pb-4">
+                            <div className="flex items-center justify-between">
+                                <SheetTitle className="text-lg">{fullTicket.subject}</SheetTitle>
+                                <StatusBadge status={fullTicket.status} />
+                            </div>
+                            <SheetDescription className="flex items-center gap-2">
+                                <PriorityBadge priority="medium" />
+                                <span>•</span>
+                                <span>General Support</span>
+                            </SheetDescription>
+                        </SheetHeader>
 
-                {/* Messages */}
-                <div className="flex-1 overflow-y-auto space-y-4 mb-4">
-                    {messages.map((msg) => (
-                        <div
-                            key={msg.id}
-                            className={cn(
-                                'flex gap-3',
-                                msg.isAdmin && 'flex-row-reverse'
-                            )}
-                        >
-                            <Avatar className="h-8 w-8 flex-shrink-0">
-                                <AvatarFallback className={cn(
-                                    'text-xs',
-                                    msg.isAdmin
-                                        ? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white'
-                                        : 'bg-slate-200 text-slate-600'
-                                )}>
-                                    {msg.sender.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                                </AvatarFallback>
-                            </Avatar>
-                            <div className={cn(
-                                'flex-1 max-w-[80%]',
-                                msg.isAdmin && 'text-right'
-                            )}>
-                                <div className={cn(
-                                    'inline-block p-3 rounded-lg text-sm',
-                                    msg.isAdmin
-                                        ? 'bg-blue-500 text-white rounded-br-none'
-                                        : 'bg-slate-100 text-slate-900 rounded-bl-none'
-                                )}>
-                                    {msg.message}
+                        {/* Ticket Info */}
+                        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50 mb-4">
+                            <div className="flex items-center gap-3">
+                                <Avatar className="h-10 w-10">
+                                    <AvatarFallback className="bg-gradient-to-br from-orange-400 to-orange-600 text-white text-sm">
+                                        {userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div>
+                                    <p className="font-medium text-sm">{userName}</p>
+                                    <p className="text-xs text-slate-500">Ticket #{fullTicket.id}</p>
                                 </div>
-                                <p className="text-xs text-slate-400 mt-1">{msg.time}</p>
+                            </div>
+                            <SLAIndicator deadline={slaDeadline} status={fullTicket.status} />
+                        </div>
+
+                        {/* Messages */}
+                        <div className="flex-1 overflow-y-auto space-y-4 mb-4">
+                            {/* Initial Description as first message */}
+                            <div className="flex gap-3">
+                                <Avatar className="h-8 w-8 flex-shrink-0">
+                                    <AvatarFallback className="bg-slate-200 text-slate-600 text-xs">
+                                        {userName.slice(0, 2)}
+                                    </AvatarFallback>
+                                </Avatar>
+                                <div className="flex-1 max-w-[80%]">
+                                    <div className="inline-block p-3 rounded-lg text-sm bg-slate-100 text-slate-900 rounded-bl-none">
+                                        {fullTicket.description}
+                                    </div>
+                                    <p className="text-xs text-slate-400 mt-1">
+                                        {isValid(createdAt) ? formatDistanceToNow(createdAt, { addSuffix: true }) : 'Unknown date'}
+                                    </p>
+                                </div>
+                            </div>
+
+                            {messages.map((msg) => (
+                                <div
+                                    key={msg.id}
+                                    className={cn(
+                                        'flex gap-3',
+                                        msg.isAdminMessage && 'flex-row-reverse'
+                                    )}
+                                >
+                                    <Avatar className="h-8 w-8 flex-shrink-0">
+                                        <AvatarFallback className={cn(
+                                            'text-xs',
+                                            msg.isAdminMessage
+                                                ? 'bg-gradient-to-br from-blue-400 to-blue-600 text-white'
+                                                : 'bg-slate-200 text-slate-600'
+                                        )}>
+                                            {msg.isAdminMessage ? 'SA' : userName.slice(0, 2)}
+                                        </AvatarFallback>
+                                    </Avatar>
+                                    <div className={cn(
+                                        'flex-1 max-w-[80%]',
+                                        msg.isAdminMessage && 'text-right'
+                                    )}>
+                                        <div className={cn(
+                                            'inline-block p-3 rounded-lg text-sm',
+                                            msg.isAdminMessage
+                                                ? 'bg-blue-500 text-white rounded-br-none'
+                                                : 'bg-slate-100 text-slate-900 rounded-bl-none'
+                                        )}>
+                                            {msg.content}
+                                        </div>
+                                        <p className="text-xs text-slate-400 mt-1">
+                                            {isValid(new Date(msg.createdAt)) ? formatDistanceToNow(new Date(msg.createdAt), { addSuffix: true }) : 'Unknown date'}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* Reply Input */}
+                        <div className="border-t pt-4">
+                            <div className="flex gap-2">
+                                <Textarea
+                                    placeholder="Type your reply..."
+                                    value={reply}
+                                    onChange={(e) => setReply(e.target.value)}
+                                    rows={2}
+                                    className="flex-1"
+                                />
+                            </div>
+                            <div className="flex items-center justify-between mt-3">
+                                <Button variant="ghost" size="sm">
+                                    <Paperclip className="h-4 w-4 mr-2" />
+                                    Attach
+                                </Button>
+                                <div className="flex gap-2">
+                                    <Select onValueChange={handleStatusChange}>
+                                        <SelectTrigger className="w-32">
+                                            <SelectValue placeholder="Action" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="RESOLVED">Resolve</SelectItem>
+                                            <SelectItem value="CLOSED">Close</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                    <Button className="bg-orange-500 hover:bg-orange-600" onClick={handleSend} disabled={addMessageMutation.isPending}>
+                                        {addMessageMutation.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4 mr-2" />}
+                                        Send
+                                    </Button>
+                                </div>
                             </div>
                         </div>
-                    ))}
-                </div>
-
-                {/* Reply Input */}
-                <div className="border-t pt-4">
-                    <div className="flex gap-2">
-                        <Textarea
-                            placeholder="Type your reply..."
-                            value={reply}
-                            onChange={(e) => setReply(e.target.value)}
-                            rows={2}
-                            className="flex-1"
-                        />
-                    </div>
-                    <div className="flex items-center justify-between mt-3">
-                        <Button variant="ghost" size="sm">
-                            <Paperclip className="h-4 w-4 mr-2" />
-                            Attach
-                        </Button>
-                        <div className="flex gap-2">
-                            <Select defaultValue="open">
-                                <SelectTrigger className="w-32">
-                                    <SelectValue />
-                                </SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="open">Keep Open</SelectItem>
-                                    <SelectItem value="pending">Set Pending</SelectItem>
-                                    <SelectItem value="resolved">Resolve</SelectItem>
-                                </SelectContent>
-                            </Select>
-                            <Button className="bg-orange-500 hover:bg-orange-600">
-                                <Send className="h-4 w-4 mr-2" />
-                                Send
-                            </Button>
-                        </div>
-                    </div>
-                </div>
+                    </>
+                ) : (
+                    <SheetHeader className="sr-only">
+                        <SheetTitle>No Ticket Selected</SheetTitle>
+                    </SheetHeader>
+                )}
             </SheetContent>
         </Sheet>
     );
@@ -259,34 +321,39 @@ function TicketDetailSheet({
 export default function SupportPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [priorityFilter, setPriorityFilter] = useState<string>('all');
-    const [selectedTicket, setSelectedTicket] = useState<SupportTicket | null>(null);
+    const [selectedTicketId, setSelectedTicketId] = useState<string | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
 
+    const { data: ticketsData, isLoading } = useGetSupportTickets();
+
+    // Map to UI Ticket
+    const tickets: UITicket[] = (ticketsData || []).map(t => ({
+        ...t,
+        userName: t.user ? `${t.user.firstName} ${t.user.lastName}` : 'Unknown User',
+        priority: 'medium' as const,
+        type: 'General Support',
+        slaDeadline: addHours(new Date(t.createdAt), 24),
+    }));
+
     // Filter tickets
-    const filteredTickets = supportTickets.filter((ticket) => {
+    const filteredTickets = tickets.filter((ticket) => {
         const matchesSearch =
             ticket.subject.toLowerCase().includes(searchQuery.toLowerCase()) ||
             ticket.userName.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || ticket.status === statusFilter;
-        const matchesPriority = priorityFilter === 'all' || ticket.priority === priorityFilter;
-        return matchesSearch && matchesStatus && matchesPriority;
+        return matchesSearch && matchesStatus;
     });
 
     // Stats
     const stats = {
-        total: supportTickets.length,
-        open: supportTickets.filter((t) => t.status === 'open').length,
-        inProgress: supportTickets.filter((t) => t.status === 'in_progress').length,
-        overdue: supportTickets.filter((t) => {
-            const now = new Date();
-            const sla = new Date(t.slaDeadline);
-            return sla < now && t.status !== 'resolved' && t.status !== 'closed';
-        }).length,
+        total: tickets.length,
+        open: tickets.filter((t) => t.status === TicketStatus.OPEN).length,
+        inProgress: tickets.filter((t) => t.status === TicketStatus.IN_PROGRESS).length,
+        resolved: tickets.filter((t) => t.status === TicketStatus.RESOLVED).length,
     };
 
-    const handleViewTicket = (ticket: SupportTicket) => {
-        setSelectedTicket(ticket);
+    const handleViewTicket = (ticketId: string) => {
+        setSelectedTicketId(ticketId);
         setSheetOpen(true);
     };
 
@@ -298,10 +365,6 @@ export default function SupportPage() {
                     <h1 className="text-2xl font-bold text-slate-900">Support</h1>
                     <p className="text-slate-500">Manage support tickets and customer inquiries</p>
                 </div>
-                <Button className="bg-orange-500 hover:bg-orange-600">
-                    <Plus className="h-4 w-4 mr-2" />
-                    Create Ticket
-                </Button>
             </div>
 
             {/* Stats */}
@@ -345,15 +408,15 @@ export default function SupportPage() {
                         </div>
                     </CardContent>
                 </Card>
-                <Card className="border-0 shadow-sm bg-gradient-to-br from-red-50 to-red-100">
+                <Card className="border-0 shadow-sm bg-gradient-to-br from-green-50 to-green-100">
                     <CardContent className="p-4">
                         <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-red-200">
-                                <AlertCircle className="h-5 w-5 text-red-700" />
+                            <div className="p-2 rounded-lg bg-green-200">
+                                <AlertCircle className="h-5 w-5 text-green-700" />
                             </div>
                             <div>
-                                <p className="text-2xl font-bold text-red-700">{stats.overdue}</p>
-                                <p className="text-xs text-red-600">Overdue</p>
+                                <p className="text-2xl font-bold text-green-700">{stats.resolved}</p>
+                                <p className="text-xs text-green-600">Resolved</p>
                             </div>
                         </div>
                     </CardContent>
@@ -379,23 +442,10 @@ export default function SupportPage() {
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="open">Open</SelectItem>
-                                <SelectItem value="in_progress">In Progress</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                                <SelectItem value="resolved">Resolved</SelectItem>
-                                <SelectItem value="closed">Closed</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={priorityFilter} onValueChange={setPriorityFilter}>
-                            <SelectTrigger className="w-full sm:w-40">
-                                <SelectValue placeholder="Priority" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Priority</SelectItem>
-                                <SelectItem value="urgent">Urgent</SelectItem>
-                                <SelectItem value="high">High</SelectItem>
-                                <SelectItem value="medium">Medium</SelectItem>
-                                <SelectItem value="low">Low</SelectItem>
+                                <SelectItem value="OPEN">Open</SelectItem>
+                                <SelectItem value="IN_PROGRESS">In Progress</SelectItem>
+                                <SelectItem value="RESOLVED">Resolved</SelectItem>
+                                <SelectItem value="CLOSED">Closed</SelectItem>
                             </SelectContent>
                         </Select>
                     </div>
@@ -405,58 +455,64 @@ export default function SupportPage() {
             {/* Tickets Table */}
             <Card className="border-0 shadow-sm">
                 <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Ticket</TableHead>
-                                <TableHead>User</TableHead>
-                                <TableHead>Type</TableHead>
-                                <TableHead>Priority</TableHead>
-                                <TableHead>Status</TableHead>
-                                <TableHead>SLA</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredTickets.map((ticket) => (
-                                <TableRow
-                                    key={ticket.id}
-                                    className="cursor-pointer hover:bg-slate-50"
-                                    onClick={() => handleViewTicket(ticket)}
-                                >
-                                    <TableCell>
-                                        <div>
-                                            <p className="font-medium text-slate-900">{ticket.subject}</p>
-                                            <p className="text-xs text-slate-500">#{ticket.id}</p>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-7 w-7">
-                                                <AvatarFallback className="text-xs bg-slate-200">
-                                                    {ticket.userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="text-sm">{ticket.userName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm capitalize">{ticket.type.replace('_', ' ')}</span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <PriorityBadge priority={ticket.priority} />
-                                    </TableCell>
-                                    <TableCell>
-                                        <StatusBadge status={ticket.status} />
-                                    </TableCell>
-                                    <TableCell>
-                                        <SLAIndicator deadline={ticket.slaDeadline} status={ticket.status} />
-                                    </TableCell>
+                    {isLoading ? (
+                        <div className="flex items-center justify-center p-8">
+                            <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
+                        </div>
+                    ) : (
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead>Ticket</TableHead>
+                                    <TableHead>User</TableHead>
+                                    <TableHead>Type</TableHead>
+                                    <TableHead>Priority</TableHead>
+                                    <TableHead>Status</TableHead>
+                                    <TableHead>SLA</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredTickets.map((ticket) => (
+                                    <TableRow
+                                        key={ticket.id}
+                                        className="cursor-pointer hover:bg-slate-50"
+                                        onClick={() => handleViewTicket(ticket.id)}
+                                    >
+                                        <TableCell>
+                                            <div>
+                                                <p className="font-medium text-slate-900">{ticket.subject}</p>
+                                                <p className="text-xs text-slate-500">#{ticket.id}</p>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <div className="flex items-center gap-2">
+                                                <Avatar className="h-7 w-7">
+                                                    <AvatarFallback className="text-xs bg-slate-200">
+                                                        {ticket.userName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
+                                                    </AvatarFallback>
+                                                </Avatar>
+                                                <span className="text-sm">{ticket.userName}</span>
+                                            </div>
+                                        </TableCell>
+                                        <TableCell>
+                                            <span className="text-sm capitalize">{ticket.type}</span>
+                                        </TableCell>
+                                        <TableCell>
+                                            <PriorityBadge priority={ticket.priority} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <StatusBadge status={ticket.status} />
+                                        </TableCell>
+                                        <TableCell>
+                                            <SLAIndicator deadline={ticket.slaDeadline} status={ticket.status} />
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
+                    )}
 
-                    {filteredTickets.length === 0 && (
+                    {!isLoading && filteredTickets.length === 0 && (
                         <div className="p-8 text-center">
                             <MessageSquare className="h-12 w-12 mx-auto text-slate-300 mb-4" />
                             <h3 className="text-lg font-medium text-slate-900 mb-1">No tickets found</h3>
@@ -468,7 +524,7 @@ export default function SupportPage() {
 
             {/* Ticket Detail Sheet */}
             <TicketDetailSheet
-                ticket={selectedTicket}
+                ticketId={selectedTicketId}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
             />

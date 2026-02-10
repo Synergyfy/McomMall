@@ -95,7 +95,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
   const customerMainMenu = [
     ...mainMenuItems.filter(item =>
-      ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback'].includes(item.title)
+      ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'].includes(item.title)
     ),
     ...(cashbackItem ? [cashbackItem] : []),
   ];

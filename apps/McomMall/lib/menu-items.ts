@@ -22,6 +22,7 @@ import {
   Scan,
   Gift,
   Coins,
+  LifeBuoy,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -56,6 +57,11 @@ export const mainMenuItems: MenuItem[] = [
     title: 'Terminal Cashback',
     href: '/dashboard/terminal-cashback',
     icon: Scan,
+  },
+  {
+    title: 'Support Tickets',
+    href: '/dashboard/support-tickets',
+    icon: LifeBuoy,
   },
   // { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
   // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },

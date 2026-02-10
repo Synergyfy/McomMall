@@ -8,6 +8,9 @@ import Header from '@/components/Header';
 import AuthInitializer from '@/components/AuthInitializer';
 import ServiceWorkerRegistrar from '@/components/ServiceWorkerRegistrar';
 
+
+import ChatWidgetWrapper from '@/components/ChatWidgetWrapper';
+
 const opensans = Open_Sans({
   variable: '--font-geist-mono',
   subsets: ['latin'],
@@ -75,6 +78,7 @@ export default function RootLayout({
             <ServiceWorkerRegistrar />
             <Header />
             {children}
+            <ChatWidgetWrapper />
           </AuthInitializer>
         </ClientProviders>
         <Toaster />

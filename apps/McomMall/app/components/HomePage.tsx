@@ -25,7 +25,6 @@ const VCardFeaturesSection = dynamic(() => import('@/app/homepage/components/VCa
 const McomSolutions = dynamic(() => import('@/app/homepage/components/McomSolutions'));
 const LoyaltyProgramSection = dynamic(() => import('@/app/homepage/components/LoyaltyProgramSection'));
 const Footer = dynamic(() => import('@/components/Footer'));
-const ChatWidget = dynamic(() => import('@/components/ChatWidget'), { ssr: false });
 
 // --- Helper Components ---
 const ScrollAnimatedSection = ({ children }: { children: React.ReactNode }) => {
@@ -356,7 +355,7 @@ export default function HomePage() {
                             />
                             <div className="absolute top-4 left-4">
                               <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                                {ad.categories[0]?.name || 'Uncategorized'}
+                                {ad.categories?.[0]?.name || 'Uncategorized'}
                               </span>
                             </div>
                           </div>
@@ -507,8 +506,6 @@ export default function HomePage() {
           </motion.button>
         )}
       </AnimatePresence>
-
-      <ChatWidget />
     </div>
   );
 }
