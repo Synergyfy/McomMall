@@ -140,20 +140,6 @@ export class UsersController {
     return this.usersService.getTransactionHistory(id, query);
   }
 
-  @Get('search/owners-with-service-profiles')
-  @ApiOperation({ summary: 'Search for owners with service profiles' })
-  @ApiResponse({
-    status: 200,
-    description: 'A list of owners matching the criteria.',
-    type: [User],
-  })
-  @Public()
-  searchOwnersWithServiceProfiles(
-    @Query() query: SearchOwnerDto,
-  ): Promise<User[]> {
-    return this.usersService.searchOwnersWithServiceProfiles(query);
-  }
-
   @ApiOperation({ summary: 'Update user features by ID' })
   @ApiResponse({ status: 200, description: 'User features updated successfully.' })
   @ApiResponse({ status: 404, description: 'User not found.' })

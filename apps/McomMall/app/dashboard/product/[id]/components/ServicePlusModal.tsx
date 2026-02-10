@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
-import { useCreatePartnershipRequest } from '@/service/partnerships/hooks';
+import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 import { useSendMessage } from '@/service/messaging/hook';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useSearchServices } from '@/service/services/hooks';
@@ -39,7 +39,7 @@ export default function ServicePlusModal({
   const [requestError, setRequestError] = useState<string | null>(null);
 
   const { data: services, mutate: searchServices, isPending: isSearching } = useSearchServices();
-  const { mutateAsync: createPartnership, isPending: isRequesting } = useCreatePartnershipRequest();
+  const { mutateAsync: createPartnership, isPending: isRequesting } = useCreateCompositePartnershipRequest();
   const { mutate: sendMessage } = useSendMessage();
 
   const handleSearch = () => {
@@ -52,8 +52,8 @@ export default function ServicePlusModal({
     if (selectedService) {
       try {
         await createPartnership({
-          productId,
-          serviceId: selectedService.id,
+          baseProductId: productId,
+          plusServiceId: selectedService.id,
         });
 
         if (message.trim()) {

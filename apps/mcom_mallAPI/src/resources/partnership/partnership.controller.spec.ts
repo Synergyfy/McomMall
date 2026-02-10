@@ -1,11 +1,18 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PartnershipController } from './partnership.controller';
 import { PartnershipService } from './partnership.service';
-import { Service } from '../services/entities/service.entity';
-import { NotFoundException } from '@nestjs/common';
+import { User } from '../users/entities/user.entity';
 
 const mockPartnershipService = {
-  getProductPartnerships: jest.fn(),
+  createUserPartnershipRequest: jest.fn(),
+  respondToUserPartnershipRequest: jest.fn(),
+  getReceivedUserRequests: jest.fn(),
+  getSentUserRequests: jest.fn(),
+  getMyPartners: jest.fn(),
+  createItemPartnershipRequest: jest.fn(),
+  respondToItemPartnershipRequest: jest.fn(),
+  getPartnerItems: jest.fn(),
+  getAnalytics: jest.fn(),
 };
 
 describe('PartnershipController', () => {
@@ -25,32 +32,33 @@ describe('PartnershipController', () => {
     controller = module.get<PartnershipController>(PartnershipController);
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
-  });
-
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('getProductPartnerships', () => {
-    it('should return a list of services for a given product', async () => {
-      const productId = 'product1';
-      const mockServices = [new Service(), new Service()];
-      mockPartnershipService.getProductPartnerships.mockResolvedValue(mockServices);
-
-      const result = await controller.getProductPartnerships(productId);
-
-      expect(mockPartnershipService.getProductPartnerships).toHaveBeenCalledWith(productId);
-      expect(result).toEqual(mockServices);
+  describe('createUserPartnershipRequest', () => {
+    it('should call service.createUserPartnershipRequest', async () => {
+      const user = { id: 'user1' } as User;
+      const dto = { targetUserId: 'user2' };
+      await controller.createUserPartnershipRequest(dto, user);
+      expect(mockPartnershipService.createUserPartnershipRequest).toHaveBeenCalledWith(dto, user);
     });
+  });
 
-    it('should throw NotFoundException if product is not found', async () => {
-      const productId = 'non-existent-product';
-      mockPartnershipService.getProductPartnerships.mockRejectedValue(new NotFoundException('Product not found'));
+  describe('getMyPartners', () => {
+      it('should call service.getMyPartners', async () => {
+          const user = { id: 'user1' } as User;
+          await controller.getMyPartners(user);
+          expect(mockPartnershipService.getMyPartners).toHaveBeenCalledWith(user);
+      });
+  });
 
-      await expect(controller.getProductPartnerships(productId)).rejects.toThrow(NotFoundException);
-      expect(mockPartnershipService.getProductPartnerships).toHaveBeenCalledWith(productId);
-    });
+  describe('getAnalytics', () => {
+      it('should return analytics', async () => {
+          const user = { id: 'user1' } as User;
+          mockPartnershipService.getAnalytics.mockResolvedValue({ totalPartners: 5 });
+          const result = await controller.getAnalytics(user);
+          expect(result.totalPartners).toBe(5);
+      });
   });
 });

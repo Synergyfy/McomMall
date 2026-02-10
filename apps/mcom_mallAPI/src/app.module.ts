@@ -50,9 +50,11 @@ import { ShippingAddressModule } from './resources/shipping-address/shipping-add
 import { HelpRequestsModule } from './help-requests/help-requests.module';
 import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-cashback.module';
 import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
+import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 
 @Module({
   imports: [
+    SupportTicketsModule,
     ActivityTimerModule,
     MarketplaceModule,
     MoneyEngineModule,

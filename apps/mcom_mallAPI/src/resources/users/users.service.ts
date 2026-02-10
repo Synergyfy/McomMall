@@ -14,7 +14,7 @@ import { PromotionActivity } from '../promotion/entities/promotion-activity.enti
 import { Offer } from '../offer/entities/offer.entity';
 import { EmailService } from '../email/email.service';
 import { TrialService } from '../trial/trial.service';
-import { UserRole } from 'src/common/role.enum';
+import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
@@ -222,6 +222,27 @@ export class UsersService {
               });
             }
           });
+        }),
+      );
+    }
+
+    return queryBuilder.getMany();
+  }
+
+  async searchOwners(query: string, currentUserId: string): Promise<User[]> {
+    const queryBuilder = this.userRepository.createQueryBuilder('u');
+
+    queryBuilder.where('u.role = :role', { role: UserRole.OWNER });
+    queryBuilder.andWhere('u.id != :currentUserId', { currentUserId });
+    queryBuilder.andWhere('u.isActive = :isActive', { isActive: true });
+
+    if (query && query.trim() !== '') {
+      const searchTerm = `%${query.trim()}%`;
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('u.firstName ILIKE :searchTerm', { searchTerm })
+            .orWhere('u.lastName ILIKE :searchTerm', { searchTerm })
+            .orWhere('u.email ILIKE :searchTerm', { searchTerm });
         }),
       );
     }

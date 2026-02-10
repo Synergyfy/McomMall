@@ -14,6 +14,7 @@ import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
 import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
 import { useGetCategories, useGetSubCategoriesByCategory, useGetCategoriesBySector } from '@/service/taxonomy/hook';
+import { cn } from '@/lib/utils';
 
 import { Step1BasicInfo } from './components/Step1BasicInfo';
 import { Step2ServiceType } from './components/Step2ServiceType';
@@ -22,6 +23,8 @@ import { Step4Availability } from './components/Step4Availability';
 import { Step5Workflow } from './components/Step5Workflow';
 import { Step6FinalReview } from './components/Step6FinalReview';
 import { Step7FinalReview } from './components/Step7FinalReview';
+import Step7Partnership from '../../store/products/components/wizard/Step7Partnership';
+import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 
 type ServiceFormValues = any;
 
@@ -32,7 +35,8 @@ const STEPS = [
   { id: 4, name: 'Availability', label: '4' },
   { id: 5, name: 'Workflow', label: '5' },
   { id: 6, name: 'Media', label: '6' },
-  { id: 7, name: 'Review', label: '7' },
+  { id: 7, name: 'Partnership', label: '7' },
+  { id: 8, name: 'Review', label: '8' },
 ];
 
 export default function AddServicePage() {
@@ -43,6 +47,7 @@ export default function AddServicePage() {
   const [isNavigating, setIsNavigating] = useState(false);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
+  const { mutate: createPartnershipRequest } = useCreateCompositePartnershipRequest();
 
   // Scroll to top on step change
   React.useEffect(() => {
@@ -53,6 +58,7 @@ export default function AddServicePage() {
     mode: 'onChange',
     defaultValues: {
       name: '',
+      plusItem: null,
       shortDescription: '',
       description: '',
       sector: '',
@@ -131,7 +137,8 @@ export default function AddServicePage() {
     4: ['availability.schedule', 'availability.slotDuration', 'availability.bufferTime', 'availability.maxBookingsPerSlot', 'availability.staffPerBooking', 'availability.serviceRadiusKm'],
     5: ['requireApproval', 'bookingRequirements'],
     6: ['media'],
-    7: []
+    7: [],
+    8: []
   };
 
   const validateStep = (stepNumber: number) => {
@@ -168,6 +175,8 @@ export default function AddServicePage() {
       }
     } else if (stepNumber === 6) {
        // media is optional per backend but good to have
+    } else if (stepNumber === 7) {
+        // partnership is optional
     }
 
     return isValid;
@@ -176,7 +185,7 @@ export default function AddServicePage() {
   const onSubmit = async (data: ServiceFormValues) => {
     // Manual final check for all steps
     let allValid = true;
-    for (let i = 1; i <= 6; i++) {
+    for (let i = 1; i <= 7; i++) {
         if (!validateStep(i)) {
             allValid = false;
             setCurrentStep(i);
@@ -273,7 +282,23 @@ export default function AddServicePage() {
 
       setIsUploading(false);
       addService(serviceData, {
-        onSuccess: () => {
+        onSuccess: (data: any) => {
+          if (data.plusItem || form.getValues('plusItem')) {
+              const selectedPlusItem = form.getValues('plusItem');
+              const requestDto: any = {};
+              if (selectedPlusItem.type === 'product') {
+                  requestDto.plusProductId = selectedPlusItem.id;
+              } else {
+                  requestDto.plusServiceId = selectedPlusItem.id;
+              }
+              // Set base service ID (the one we just created)
+              requestDto.baseServiceId = data.id;
+
+              createPartnershipRequest(requestDto, {
+                  onSuccess: () => toast.success('Partnership request sent!'),
+                  onError: (err) => toast.error('Service created, but partnership request failed: ' + err.message)
+              });
+          }
           setShowSuccessDialog(true);
         },
         onError: (err: any) => {
@@ -407,38 +432,48 @@ export default function AddServicePage() {
                 {currentStep === 4 && <Step4Availability />}
                 {currentStep === 5 && <Step5Workflow />}
                 {currentStep === 6 && <Step6FinalReview />}
-                {currentStep === 7 && <Step7FinalReview />}
+                {currentStep === 7 && (
+                    <Step7Partnership 
+                        formData={form.getValues()} 
+                        updateFormData={(data) => Object.entries(data).forEach(([key, val]) => form.setValue(key as any, val))} 
+                        onNext={nextStep} 
+                        onBack={prevStep} 
+                    />
+                )}
+                {currentStep === 8 && <Step7FinalReview />}
               </div>
 
               <div className="flex justify-between pt-8 border-t border-gray-200">
-                <Button
-                  type="button"
-                  variant="outline"
-                  onClick={prevStep}
-                  disabled={currentStep === 1 || isAddingService || isUploading || isNavigating}
-                  className="px-8 h-12 rounded-xl font-bold border-gray-300 hover:bg-gray-50 transition-all"
-                >
-                  <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                </Button>
+                <div className={cn("flex w-full justify-between", currentStep === 7 && "hidden")}>
+                    <Button
+                    type="button"
+                    variant="outline"
+                    onClick={prevStep}
+                    disabled={currentStep === 1 || isAddingService || isUploading || isNavigating}
+                    className="px-8 h-12 rounded-xl font-bold border-gray-300 hover:bg-gray-50 transition-all"
+                    >
+                    <ArrowLeft className="w-4 h-4 mr-2" /> Back
+                    </Button>
 
-                {currentStep < STEPS.length ? (
-                  <Button 
-                    type="button" 
-                    onClick={nextStep} 
-                    disabled={isAddingService || isUploading || isNavigating} 
-                    className="px-10 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
-                  >
-                    Next <ArrowRight className="w-4 h-4 ml-2" />
-                  </Button>
-                ) : (
-                  <Button 
-                    type="submit" 
-                    disabled={isAddingService || isUploading || isNavigating} 
-                    className="px-14 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
-                  >
-                    {isUploading ? 'Uploading Media...' : isAddingService ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Service</>}
-                  </Button>
-                )}
+                    {currentStep < STEPS.length ? (
+                    <Button 
+                        type="button" 
+                        onClick={nextStep} 
+                        disabled={isAddingService || isUploading || isNavigating} 
+                        className="px-10 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+                    >
+                        Next <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
+                    ) : (
+                    <Button 
+                        type="submit" 
+                        disabled={isAddingService || isUploading || isNavigating} 
+                        className="px-14 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
+                    >
+                        {isUploading ? 'Uploading Media...' : isAddingService ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Service</>}
+                    </Button>
+                    )}
+                </div>
               </div>
             </form>
           </Form>
