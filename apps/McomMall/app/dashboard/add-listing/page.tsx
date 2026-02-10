@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { motion, AnimatePresence, Variants, Transition } from 'framer-motion';
 import BusinessTypeSelector from './components/BusinessTypeSelector';
 import MultiStepListingForm from './components/MultiStepListingForm';
+import ListingUsageBar from '@/components/dashboard/ListingUsageBar';
 import {
   Card,
   CardContent,
@@ -55,6 +56,7 @@ const AddListingPage = () => {
               variants={pageVariants}
               transition={pageTransition}
             >
+              <ListingUsageBar />
               <Card>
                 <CardHeader className="text-center">
                   <CardTitle className="text-3xl font-bold">
