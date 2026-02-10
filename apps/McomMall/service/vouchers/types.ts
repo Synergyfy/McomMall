@@ -41,15 +41,16 @@ export interface Voucher {
   amount?: number; // Added to match page usage
   balance: string;
   status:
-    | 'UNREDEEMED'
-    | 'PARTIALLY_REDEEMED'
-    | 'REDEEMED'
-    | 'EXPIRED'
-    | 'DISABLED';
+  | 'UNREDEEMED' | 'unredeemed'
+  | 'PARTIALLY_REDEEMED' | 'partially_redeemed'
+  | 'REDEEMED' | 'redeemed'
+  | 'EXPIRED' | 'expired'
+  | 'DISABLED' | 'disabled';
   expiresAt: string | null;
   createdAt: string;
   updatedAt: string;
   recipientEmail?: string;
+  recipientName?: string;
   voucherProduct?: VoucherProduct;
   media?: string[] | null;
 }

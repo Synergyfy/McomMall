@@ -70,6 +70,7 @@ export const listingMenuItems: MenuItem[] = [
     icon: List,
     subMenu: [
       { title: 'Active', href: '/dashboard/my-listings/active' },
+      { title: 'Drafts', href: '/dashboard/my-listings/drafts' },
       { title: 'Pending', href: '/dashboard/my-listings/pending' },
       { title: 'Expired', href: '/dashboard/my-listings/expired' },
     ],

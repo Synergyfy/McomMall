@@ -12,12 +12,12 @@ import {
 } from './types';
 
 export const getVoucherProducts = async (): Promise<VoucherProduct[]> => {
-  const { data } = await api.get<VoucherProduct[]>('/vouchers/products');
+  const { data } = await api.get<VoucherProduct[]>('/business/vouchers/products');
   return data;
 };
 
 export const getVoucherProduct = async (id: string): Promise<VoucherProduct> => {
-  const { data } = await api.get<VoucherProduct>(`/vouchers/products/${id}`);
+  const { data } = await api.get<VoucherProduct>(`/business/vouchers/products/${id}`);
   return data;
 };
 
@@ -25,7 +25,7 @@ export const addVoucherProduct = async (
   newProduct: CreateVoucherProductDto
 ): Promise<VoucherProduct> => {
   const { data } = await api.post<VoucherProduct>(
-    '/vouchers/products',
+    '/business/vouchers/products',
     newProduct
   );
   return data;
@@ -36,14 +36,14 @@ export const editVoucherProduct = async (
   updatedProduct: UpdateVoucherProductDto
 ): Promise<VoucherProduct> => {
   const { data } = await api.put<VoucherProduct>(
-    `/vouchers/products/${id}`,
+    `/business/vouchers/products/${id}`,
     updatedProduct
   );
   return data;
 };
 
 export const deleteVoucherProduct = async (id: string): Promise<void> => {
-  await api.delete(`/vouchers/products/${id}`);
+  await api.delete(`/business/vouchers/products/${id}`);
 };
 
 export const getMyVouchers = async (): Promise<Voucher[]> => {
@@ -104,11 +104,14 @@ export const getBusinessVoucherProducts = async (
 export const redeemVoucherManual = async (
   redeemDto: RedeemVoucherDto
 ): Promise<Voucher> => {
-  const { data } = await api.post<Voucher>('/vouchers/redeem-manual', redeemDto);
+  const { data } = await api.post<Voucher>('/business/vouchers/redeem-manual', redeemDto);
   return data;
 };
 
 export const getSoldVouchers = async (): Promise<Voucher[]> => {
-  const { data } = await api.get<Voucher[]>('/vouchers/sold');
-  return data;
+  const { data } = await api.get<any>('/business/vouchers/sold');
+  if (data && Array.isArray(data.data)) {
+    return data.data;
+  }
+  return Array.isArray(data) ? data : [];
 };

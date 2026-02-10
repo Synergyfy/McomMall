@@ -233,66 +233,66 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         </>
       )}
 
-        <div>
-            <div className="flex items-center space-x-2">
-                <Label htmlFor="bonusThreshold">Bonus Threshold</Label>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-500" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>If a customer spends at least this much on a single voucher, they will receive a bonus amount.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </div>
-            <Input
-                id="bonusThreshold"
-                type="number"
-                {...register('bonusThreshold', { valueAsNumber: true })}
-                className="mt-1"
-            />
-            {errors.bonusThreshold && (
-                <p className="mt-1 text-red-500">
-                    {errors.bonusThreshold.message}
-                </p>
-            )}
+      <div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="bonusThreshold">Bonus Threshold</Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-gray-500" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>If a customer spends at least this much on a single voucher, they will receive a bonus amount.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
+        <Input
+          id="bonusThreshold"
+          type="number"
+          {...register('bonusThreshold', { valueAsNumber: true })}
+          className="mt-1"
+        />
+        {errors.bonusThreshold && (
+          <p className="mt-1 text-red-500">
+            {errors.bonusThreshold.message}
+          </p>
+        )}
+      </div>
 
-        <div>
-            <div className="flex items-center space-x-2">
-                <Label htmlFor="bonusAmount">Bonus Amount</Label>
-                <TooltipProvider>
-                    <Tooltip>
-                        <TooltipTrigger asChild>
-                            <Info className="h-4 w-4 text-gray-500" />
-                        </TooltipTrigger>
-                        <TooltipContent>
-                            <p>The extra amount to add to the voucher balance when the bonus threshold is met.</p>
-                        </TooltipContent>
-                    </Tooltip>
-                </TooltipProvider>
-            </div>
-            <Input
-                id="bonusAmount"
-                type="number"
-                {...register('bonusAmount', { valueAsNumber: true })}
-                className="mt-1"
-            />
-            {errors.bonusAmount && (
-                <p className="mt-1 text-red-500">
-                    {errors.bonusAmount.message}
-                </p>
-            )}
+      <div>
+        <div className="flex items-center space-x-2">
+          <Label htmlFor="bonusAmount">Bonus Amount</Label>
+          <TooltipProvider>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <Info className="h-4 w-4 text-gray-500" />
+              </TooltipTrigger>
+              <TooltipContent>
+                <p>The extra amount to add to the voucher balance when the bonus threshold is met.</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
         </div>
+        <Input
+          id="bonusAmount"
+          type="number"
+          {...register('bonusAmount', { valueAsNumber: true })}
+          className="mt-1"
+        />
+        {errors.bonusAmount && (
+          <p className="mt-1 text-red-500">
+            {errors.bonusAmount.message}
+          </p>
+        )}
+      </div>
 
       <div>
         <Label htmlFor="expiryDays">Expiry in Days (optional)</Label>
         <Input
           id="expiryDays"
           type="number"
-          {...register('expiryDays')}
+          {...register('expiryDays', { valueAsNumber: true })}
           className="mt-1"
         />
       </div>
@@ -369,8 +369,8 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           {isSubmitting
             ? 'Submitting...'
             : form.getValues('id')
-            ? 'Update Product'
-            : 'Create Product'}
+              ? 'Update Product'
+              : 'Create Product'}
         </Button>
       </div>
     </div>

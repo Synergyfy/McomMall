@@ -23,15 +23,15 @@ export const useGetPromotionSummaryStatistics = (id: string) => {
 };
 
 const getPromotions = async () => {
-    const { data } = await api.get<any[]>('/promotions');
-    return data;
+  const { data } = await api.get<any[]>('/promotions');
+  return data;
 }
 
 export const useGetPromotions = () => {
-    return useQuery({
-        queryKey: ['promotions'],
-        queryFn: getPromotions,
-    });
+  return useQuery({
+    queryKey: ['promotions'],
+    queryFn: getPromotions,
+  });
 }
 
 const getPromotionTransactionHistory = async (
@@ -89,9 +89,12 @@ const getVoucherTransactionHistory = async (params: {
   startDate?: string;
   endDate?: string;
 }) => {
+  const cleanParams = Object.fromEntries(
+    Object.entries(params).filter(([_, v]) => v != null && v !== '')
+  );
   const { data } = await api.get<TVoucherTransactionHistoryPage>(
     '/admin/vouchers/transaction-history',
-    { params }
+    { params: cleanParams }
   );
   return data;
 };
