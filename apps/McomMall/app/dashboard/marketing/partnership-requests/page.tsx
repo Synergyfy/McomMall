@@ -8,7 +8,7 @@ import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast, Toaster } from 'sonner';
 import { ItemPartnershipRequest, PartnershipStatus } from '@/service/partnerships/types';
-import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight } from 'lucide-react';
+import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
 
@@ -128,6 +128,12 @@ const PartnershipRequestCard = ({ request }: { request: ItemPartnershipRequest }
                     <ArrowRight className="h-5 w-5 text-slate-400" />
                     <RequestAsset label="Plus Item" name={plusName} />
                 </div>
+                {request.message && (
+                    <div className="mt-4 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs text-slate-600 font-medium italic relative">
+                        <MessageSquare className="h-4 w-4 text-slate-300 absolute -top-2 left-4 bg-slate-50 px-0.5" />
+                        "{request.message}"
+                    </div>
+                )}
             </CardContent>
             {request.status === 'pending' && (
                 <CardFooter className="flex justify-end gap-3 bg-slate-50/90 p-3 border-t">

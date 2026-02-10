@@ -7,12 +7,16 @@ import {
   ManyToOne,
   OneToMany,
   OneToOne,
+  JoinColumn,
 } from 'typeorm';
 import { BusinessStatus, ListingType } from '../listing.enum';
 import { IsOptional, IsUrl, Length } from 'class-validator';
 import { Location } from './location.entity';
 import { SocialLink } from './social_link.entity';
 import { Category } from './category.entity';
+import { Sector } from '../../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../../taxonomy/entities/taxonomy-subcategory.entity';
 import { BusinessHour } from './business_hour.entity';
 import { SpecialDay } from './special_days.entity';
 import { ProductSellerProfile } from './product_seller_profiles.entity';
@@ -134,15 +138,26 @@ export class Business extends AbstractBaseEntity {
   })
   socialLinks: SocialLink[];
 
-  @ManyToMany(() => Category, (category) => category.businesses, {
-    cascade: true,
-  })
-  @JoinTable({
-    name: 'business_categories',
-    joinColumn: { name: 'businessId', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'categoryId', referencedColumnName: 'id' },
-  })
-  categories: Category[];
+  @ManyToOne(() => Sector, { nullable: true })
+  @JoinColumn({ name: 'sectorId' })
+  sector: Sector;
+
+  @Column({ nullable: true })
+  sectorId: string;
+
+  @ManyToOne(() => TaxonomyCategory, { nullable: true })
+  @JoinColumn({ name: 'categoryId' })
+  category: TaxonomyCategory;
+
+  @Column({ nullable: true })
+  categoryId: string;
+
+  @ManyToOne(() => TaxonomySubcategory, { nullable: true })
+  @JoinColumn({ name: 'subCategoryId' })
+  subCategory: TaxonomySubcategory;
+
+  @Column({ nullable: true })
+  subCategoryId: string;
 
   @OneToMany(() => BusinessHour, (hour) => hour.business, {
     cascade: ['insert', 'update', 'remove'],

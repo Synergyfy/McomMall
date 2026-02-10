@@ -9,6 +9,7 @@ export interface UserPartnershipRequest {
   sender: User;
   receiver: User;
   status: PartnershipStatus;
+  message?: string;
   rejectionMessage?: string;
   sentAt: string;
   acceptedAt?: string;
@@ -36,6 +37,7 @@ export interface ItemPartnershipRequest {
   plusProduct?: Product;
   plusService?: IService;
   status: PartnershipStatus;
+  message?: string;
   rejectionMessage?: string;
   sentAt: string;
   acceptedAt?: string;
@@ -44,6 +46,7 @@ export interface ItemPartnershipRequest {
 
 export interface CreateUserPartnershipRequestDto {
   targetUserId: string;
+  message?: string;
 }
 
 export interface RespondToUserPartnershipRequestDto {
@@ -57,6 +60,7 @@ export interface CreateItemPartnershipRequestDto {
   baseServiceId?: string;
   plusProductId?: string;
   plusServiceId?: string;
+  message?: string;
 }
 
 export interface PartnershipAnalytics {

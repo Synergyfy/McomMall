@@ -8,11 +8,11 @@ export class AdminListingsService {
   constructor(
     @InjectRepository(Business)
     private listingsRepository: Repository<Business>,
-  ) {}
+  ) { }
 
   findAll() {
     return this.listingsRepository.find({
-      relations: ['user', 'products', 'services', 'reviews', 'promotions'],
+      relations: ['user', 'products', 'services', 'reviews', 'promotions', 'sector', 'category', 'subCategory'],
     });
   }
 }

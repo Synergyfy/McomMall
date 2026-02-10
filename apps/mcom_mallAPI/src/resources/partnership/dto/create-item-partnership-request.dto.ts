@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsUUID } from 'class-validator';
+import { IsOptional, IsUUID, IsString } from 'class-validator';
 
 export class CreateItemPartnershipRequestDto {
   @ApiPropertyOptional()
@@ -26,4 +26,9 @@ export class CreateItemPartnershipRequestDto {
   @IsOptional()
   @IsUUID()
   plusServiceId?: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  message?: string;
 }
