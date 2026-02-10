@@ -60,10 +60,14 @@ export default function SupportTicketsPage() {
     };
 
     useEffect(() => {
-        if (selectedTicket) {
-            scrollToBottom();
+        if (selectedTicket && !isTicketLoading) {
+            // Small timeout to ensure DOM is fully rendered before scrolling
+            const timer = setTimeout(() => {
+                scrollToBottom();
+            }, 100);
+            return () => clearTimeout(timer);
         }
-    }, [selectedTicket?.messages]);
+    }, [selectedTicket?.id, selectedTicket?.messages?.length, isTicketLoading]);
 
     const handleCreateTicket = async () => {
         if (!newTicket.subject || !newTicket.description) return;
@@ -87,6 +91,10 @@ export default function SupportTicketsPage() {
         } catch (error) {
             console.error('Failed to send message:', error);
         }
+    };
+
+    const formatStatusLabel = (status: string) => {
+        return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase());
     };
 
     const getStatusConfig = (status: TicketStatus) => {
@@ -218,7 +226,7 @@ export default function SupportTicketsPage() {
                                                     {ticket.subject}
                                                 </h3>
                                                 <Badge className={cn("rounded-full px-2 py-0 text-[10px] font-bold shrink-0 border", config.color)}>
-                                                    {ticket.status}
+                                                    {formatStatusLabel(ticket.status)}
                                                 </Badge>
                                             </div>
                                             <div className="flex items-center justify-between">
@@ -269,7 +277,7 @@ export default function SupportTicketsPage() {
                                                         getStatusConfig(selectedTicket?.status as TicketStatus).color.split(' ')[1]
                                                     )}>
                                                         {getStatusConfig(selectedTicket?.status as TicketStatus).icon}
-                                                        {selectedTicket?.status}
+                                                        {selectedTicket?.status ? formatStatusLabel(selectedTicket.status) : ''}
                                                     </div>
                                                 </div>
                                             </>
@@ -279,8 +287,8 @@ export default function SupportTicketsPage() {
                             </header>
 
                             {/* Chat History */}
-                            <ScrollArea className="flex-1 bg-slate-50/30 p-6">
-                                <div className="flex flex-col gap-6 max-w-4xl mx-auto">
+                            <ScrollArea className="flex-1 bg-slate-50/30 min-h-0">
+                                <div className="flex flex-col gap-6 max-w-4xl mx-auto p-6">
                                     {isTicketLoading ? (
                                         <div className="flex items-center justify-center py-20">
                                             <Loader2 className="h-10 w-10 animate-spin text-orange-500 opacity-20" />

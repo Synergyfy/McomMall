@@ -1,13 +1,16 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import api from '../api';
-import { 
-  CreateTerminalCashbackClaimDto, 
-  GetClaimsParams, 
-  GetClaimsResponse, 
-  TerminalCashbackStats, 
-  TerminalClaimDetails, 
-  TerminalClaim, 
-  UpdateTerminalCashbackStatusDto 
+import { toast } from 'sonner';
+import {
+  CreateTerminalCashbackClaimDto,
+  GetClaimsParams,
+  GetClaimsResponse,
+  TerminalCashbackStats,
+  TerminalClaimDetails,
+  TerminalClaim,
+  UpdateTerminalCashbackStatusDto,
+  TerminalConfig,
+  CreateHelpRequestDto
 } from './types';
 
 export const useGetTerminalClaims = (params: GetClaimsParams = {}) => {
@@ -36,10 +39,10 @@ export const useGetTerminalClaimDetails = (id: string | null) => {
 
 export const useCreateTerminalClaim = () => {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (payload: CreateTerminalCashbackClaimDto) => {
-      const { data } = await api.post<TerminalClaim>('/terminal-cashback/claims', payload);
+      const { data } = await api.post<TerminalClaim>('/terminal-cashback/claim', payload);
       return data;
     },
     onSuccess: () => {
@@ -71,5 +74,49 @@ export const useUpdateClaimStatus = () => {
       queryClient.invalidateQueries({ queryKey: ['terminal-cashback-stats'] });
       queryClient.invalidateQueries({ queryKey: ['terminal-claim-details'] });
     },
+  });
+};
+
+export const useGetTerminalConfig = (terminalId?: string) => {
+  return useQuery({
+    queryKey: ['terminal-config', terminalId],
+    queryFn: async () => {
+      if (!terminalId) return null;
+      try {
+        const { data } = await api.get<TerminalConfig>(`/terminal-cashback/config/${terminalId}`);
+        return data;
+      } catch (error) {
+        return null;
+      }
+    },
+    enabled: !!terminalId,
+    retry: false,
+  });
+};
+
+export const useCreateHelpRequest = () => {
+  return useMutation({
+    mutationFn: async (payload: CreateHelpRequestDto) => {
+      const { data } = await api.post('/help-requests', payload);
+      return data;
+    },
+  });
+};
+
+export const useUpdateTerminalConfig = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ userId, data }: { userId: string, data: Partial<TerminalConfig> }) => {
+      const response = await api.patch<TerminalConfig>(`/terminal-cashback/config/${userId}`, data);
+      return response.data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['terminal-config'] });
+      toast.success("Settings updated successfully");
+    },
+    onError: (error: any) => {
+      toast.error(error?.response?.data?.message || "Failed to update settings");
+    }
   });
 };

@@ -11,7 +11,7 @@ export class GoogleBusinessStrategy extends PassportStrategy(
     super({
       clientID: process.env.GOOGLE_CLIENT_ID,
       clientSecret: process.env.GOOGLE_CLIENT_SECRET,
-      callbackURL: 'http://localhost:3009/auth/google/business-verify',
+      callbackURL: 'http://localhost:3001/auth/google/business-verify',
       scope: [
         'https://www.googleapis.com/auth/business.manage',
         'https://www.googleapis.com/auth/userinfo.email',

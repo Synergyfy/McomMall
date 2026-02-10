@@ -28,13 +28,13 @@ export const getTerminalConfigs = async () => {
     return response.data;
 };
 
-export const getTerminalConfig = async (businessId: string) => {
-    const response = await api.get<TerminalCashbackConfig>(`/terminal-cashback/config/${businessId}`);
+export const getTerminalConfig = async (userId: string) => {
+    const response = await api.get<TerminalCashbackConfig>(`/terminal-cashback/config/${userId}`);
     return response.data;
 };
 
-export const updateTerminalConfig = async (businessId: string, data: UpdateTerminalConfigDto) => {
-    const response = await api.patch<TerminalCashbackConfig>(`/terminal-cashback/config/${businessId}`, data);
+export const updateTerminalConfig = async (userId: string, data: UpdateTerminalConfigDto) => {
+    const response = await api.patch<TerminalCashbackConfig>(`/terminal-cashback/config/${userId}`, data);
     return response.data;
 };
 
