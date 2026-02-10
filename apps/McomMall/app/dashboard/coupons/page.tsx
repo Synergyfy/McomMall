@@ -2,8 +2,9 @@
 
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
-import { Edit, Trash2, PlusCircle, Copy, Download } from 'lucide-react';
+import { Edit, Trash2, PlusCircle, Copy, Download, Sparkles } from 'lucide-react';
 import { useGetCoupons, useDeleteCoupon } from '@/service/coupons/hook';
+import { DashboardCoupon } from '@/app/dashboard/component/DashboardMarketingCards';
 import { toast } from 'sonner';
 import { Coupon } from '@/service/coupons/types';
 import {
@@ -19,90 +20,6 @@ import {
 import { useRouter } from 'next/navigation';
 
 // --- Reusable UI Components ---
-
-const ActionButton: React.FC<{
-  children: React.ReactNode;
-  variant: 'edit' | 'delete';
-  onClick: () => void;
-}> = ({ children, variant, onClick }) => {
-  const baseClasses =
-    'flex items-center justify-center gap-1.5 rounded-md px-3 py-1.5 text-xs font-semibold text-white transition-transform duration-200 ease-in-out hover:scale-105';
-  const variants = {
-    edit: 'bg-green-500 hover:bg-green-600',
-    delete: 'bg-red-500 hover:bg-red-600',
-  };
-  return (
-    <button onClick={onClick} className={`${baseClasses} ${variants[variant]}`}>
-      {children}
-    </button>
-  );
-};
-
-type CouponRowProps = {
-  coupon: Coupon;
-  onEdit: (coupon: Coupon) => void;
-  onDelete: (couponId: string) => void;
-};
-
-const CouponRow: React.FC<CouponRowProps> = ({ coupon, onEdit, onDelete }) => {
-  const rowVariants = {
-    hidden: { opacity: 0, y: -10 },
-    visible: { opacity: 1, y: 0 },
-  };
-
-  const formatLimit = (limit?: number) => (limit === undefined ? '∞' : limit);
-
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code);
-    toast.success('Copied to clipboard!');
-  };
-
-  return (
-    <motion.tr
-      variants={rowVariants}
-      className="border-b border-slate-200 bg-white"
-    >
-      <td className="whitespace-nowrap px-6 py-4">
-        <div className="flex items-center gap-2">
-          <div className="inline-block rounded-md border-2 border-dashed border-green-400 bg-green-50 px-3 py-1.5 font-mono text-sm font-medium text-green-800">
-            {coupon.couponCode}
-          </div>
-          <button
-            onClick={() => handleCopy(coupon.couponCode)}
-            className="p-1.5 text-slate-400 hover:text-slate-600 transition-colors"
-            aria-label="Copy coupon code"
-          >
-            <Copy className="h-4 w-4" />
-          </button>
-        </div>
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.discountType}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.couponAmount}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {coupon.usageCount || 0} / {formatLimit(coupon.usageLimitPerCoupon)}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4 text-sm text-slate-600">
-        {new Date(coupon.expiryDate).toLocaleDateString() || '—'}
-      </td>
-      <td className="whitespace-nowrap px-6 py-4">
-        <div className="flex items-center gap-2">
-          <ActionButton variant="edit" onClick={() => onEdit(coupon)}>
-            <Edit className="h-3 w-3" />
-            <span>Edit</span>
-          </ActionButton>
-          <ActionButton variant="delete" onClick={() => onDelete(coupon.id)}>
-            <Trash2 className="h-3 w-3" />
-            <span>Delete</span>
-          </ActionButton>
-        </div>
-      </td>
-    </motion.tr>
-  );
-};
 
 // --- Main Page Component ---
 
@@ -210,60 +127,32 @@ export default function CouponsPage() {
           </div>
         </header>
 
-        <div className="overflow-hidden rounded-xl border border-slate-200 bg-white shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-slate-200">
-              <thead className="bg-slate-50">
-                <tr>
-                  {[
-                    'Code',
-                    'Coupon Type',
-                    'Coupon Amount',
-                    'Usage/Limit',
-                    'Expiry date',
-                    'Actions',
-                  ].map(header => (
-                    <th
-                      key={header}
-                      scope="col"
-                      className="px-6 py-3 text-left text-xs font-medium uppercase tracking-wider text-slate-500"
-                    >
-                      {header}
-                    </th>
-                  ))}
-                </tr>
-              </thead>
-              <motion.tbody
-                variants={containerVariants}
-                initial="hidden"
-                animate="visible"
-                className="divide-y divide-slate-200"
-              >
-                {isLoading && (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4">
-                      Loading...
-                    </td>
-                  </tr>
-                )}
-                {isError && (
-                  <tr>
-                    <td colSpan={6} className="text-center py-4 text-red-500">
-                      Error loading coupons.
-                    </td>
-                  </tr>
-                )}
-                {coupons?.map(coupon => (
-                  <CouponRow
-                    key={coupon.id}
-                    coupon={coupon}
-                    onEdit={handleEditClick}
-                    onDelete={handleDeleteClick}
-                  />
-                ))}
-              </motion.tbody>
-            </table>
-          </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {isLoading && (
+            <div className="col-span-full py-20 text-center text-slate-500 font-bold">
+              Loading coupons...
+            </div>
+          )}
+          {isError && (
+            <div className="col-span-full py-20 text-center text-red-500 font-bold">
+              Error loading coupons.
+            </div>
+          )}
+          {coupons?.map(coupon => (
+            <DashboardCoupon
+              key={coupon.id}
+              coupon={coupon}
+              onEdit={() => handleEditClick(coupon)}
+              onDelete={handleDeleteClick}
+            />
+          ))}
+          {!isLoading && coupons?.length === 0 && (
+            <div className="col-span-full py-20 text-center text-slate-500 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+              <Sparkles className="mx-auto mb-4 text-gray-300" size={48} />
+              <p className="font-bold text-xl">No active coupons</p>
+              <p className="text-sm mt-1">Create your first coupon to boost your sales.</p>
+            </div>
+          )}
         </div>
 
         <footer className="mt-8 flex justify-start">

@@ -9,6 +9,7 @@ import { ChevronDown, Lock } from 'lucide-react';
 import { RootState } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
 import { useGetTiers } from '@/service/tiers/hook';
+import { useGetTrialStatus } from '@/service/payments/hook';
 import {
   Tooltip,
   TooltipContent,
@@ -34,6 +35,7 @@ interface MenuContentProps {
 export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
   const { data: tiers } = useGetTiers();
+  const { data: trialStatus } = useGetTrialStatus();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
@@ -126,7 +128,12 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               className={`w-5 h-5 ${isActive ? 'text-orange-600' : 'text-orange-500'
                 }`}
             />
-            <span>{item.title}</span>
+            <div className="flex items-center gap-1.5">
+              <span>{item.title}</span>
+              {item.title === 'Activity Timer' && trialStatus?.isActive && (
+                <span className="w-2 h-2 rounded-full bg-orange-600 animate-pulse shadow-[0_0_8px_rgba(234,88,12,0.6)]" />
+              )}
+            </div>
           </div>
         );
 

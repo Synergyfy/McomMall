@@ -41,9 +41,9 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 gap-10">
+    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
       {templates.map((template, index) => (
-        <motion.div 
+        <motion.div
           key={template.id}
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
@@ -56,55 +56,56 @@ export default function GiftCardTabContent({ businessId }: GiftCardTabContentPro
               src={template.backgroundImageUrl || 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80'}
               alt={template.name}
               fill
+              loading="lazy"
               className="object-cover transition-transform duration-1000 group-hover:scale-110"
             />
-            
+
             {/* Gradient Overlays */}
             <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
             <div className="absolute inset-0 bg-orange-600/10 mix-blend-overlay group-hover:bg-orange-600/20 transition-colors" />
 
             {/* Chip/Logo Placeholder */}
-            <div className="absolute top-8 left-8 w-12 h-10 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-80 border border-white/30" />
-            <ShieldCheck className="absolute top-8 right-8 text-white/50" size={24} />
+            <div className="absolute top-6 left-6 w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-80 border border-white/30" />
+            <ShieldCheck className="absolute top-6 right-6 text-white/50" size={20} />
 
             {/* Card Content */}
-            <div className="absolute inset-x-8 bottom-8">
-               <div className="flex justify-between items-end">
-                  <div className="space-y-1">
-                    <h3 className="text-2xl font-black text-white tracking-tight drop-shadow-md">{template.name}</h3>
-                    <p className="text-white/70 text-xs font-bold uppercase tracking-[0.2em]">{template.description || 'Premium Gift Experience'}</p>
+            <div className="absolute inset-x-6 bottom-6">
+              <div className="flex justify-between items-end">
+                <div className="space-y-0.5">
+                  <h3 className="text-xl font-black text-white tracking-tight drop-shadow-md">{template.name}</h3>
+                  <p className="text-white/70 text-[10px] font-bold uppercase tracking-[0.2em]">{template.description || 'Premium Gift Experience'}</p>
+                </div>
+                <div className="text-right">
+                  <span className="text-[9px] font-black text-white/40 uppercase tracking-widest block mb-1">Gift Card</span>
+                  <div className="flex items-center gap-2">
+                    <Gift className="text-[#f58220]" size={18} />
                   </div>
-                  <div className="text-right">
-                    <span className="text-[10px] font-black text-white/40 uppercase tracking-widest block mb-1">Gift Card</span>
-                    <div className="flex items-center gap-2">
-                       <Gift className="text-[#f58220]" size={20} />
-                    </div>
-                  </div>
-               </div>
+                </div>
+              </div>
             </div>
 
             {/* Hover Actions Overlay */}
             <div className="absolute inset-0 bg-black/40 backdrop-blur-[2px] opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex items-center justify-center p-8">
-               <div className="text-center space-y-6 w-full">
-                  <div className="space-y-2">
-                    {template.bonusAmount && (
-                      <span className="inline-block bg-green-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
-                        + £{template.bonusAmount} Bonus
-                      </span>
-                    )}
-                    <div className="flex flex-wrap justify-center gap-2">
-                       {template.fixedAmounts?.slice(0, 3).map(amt => (
-                         <span key={amt} className="bg-white/20 text-white text-sm font-black px-3 py-1 rounded-lg border border-white/20">£{amt}</span>
-                       ))}
-                    </div>
+              <div className="text-center space-y-6 w-full">
+                <div className="space-y-2">
+                  {template.bonusAmount && (
+                    <span className="inline-block bg-green-500 text-white text-[10px] font-black uppercase tracking-widest px-3 py-1 rounded-full">
+                      + £{template.bonusAmount} Bonus
+                    </span>
+                  )}
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {template.fixedAmounts?.slice(0, 3).map(amt => (
+                      <span key={amt} className="bg-white/20 text-white text-sm font-black px-3 py-1 rounded-lg border border-white/20">£{amt}</span>
+                    ))}
                   </div>
-                  <Button 
-                    onClick={() => handleBuyNow(template)}
-                    className="w-full h-14 bg-white text-black hover:bg-[#f58220] hover:text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all"
-                  >
-                    Purchase Card
-                  </Button>
-               </div>
+                </div>
+                <Button
+                  onClick={() => handleBuyNow(template)}
+                  className="w-full h-14 bg-white text-black hover:bg-[#f58220] hover:text-white font-black text-xs uppercase tracking-[0.2em] rounded-2xl transition-all"
+                >
+                  Purchase Card
+                </Button>
+              </div>
             </div>
           </div>
         </motion.div>

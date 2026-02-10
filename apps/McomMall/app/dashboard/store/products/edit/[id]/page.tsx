@@ -80,6 +80,9 @@ export default function EditProductPage() {
     visibility: 'public',
     enableReviews: true,
     purchaseNote: '',
+    fileUrls: [] as string[],
+    downloadLimit: '',
+    downloadExpiry: '',
   });
 
   const { data: subCategories } = useGetSubCategoriesByCategory(formData.category);
@@ -100,8 +103,8 @@ export default function EditProductPage() {
         regular_price: product.price?.toString() || '',
         sale_price: product.salePrice?.toString() || '',
         sku: product.sku || '',
-        images: product.fileUrls?.filter((url: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) || [],
-        videos: product.fileUrls?.filter((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || product.media?.filter((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || [],
+        images: product.media?.filter((url: string) => /\.(jpg|jpeg|png|webp|gif)$/i.test(url)) || (product.imageUrl ? [product.imageUrl] : []),
+        videos: product.media?.filter((url: string) => /\.(mp4|webm|ogg)$/i.test(url)) || [],
         stock_status: (product.stock ?? 0) > 0 ? 'instock' : 'outofstock',
         quantity: product.stock || 0,
         weight: product.weight?.toString() || '',
@@ -128,37 +131,40 @@ export default function EditProductPage() {
         visibility: product.visibility || 'public',
         enableReviews: product.enableReviews ?? true,
         purchaseNote: product.purchaseNote || '',
+        fileUrls: product.fileUrls || [],
+        downloadLimit: product.downloadLimit?.toString() || '',
+        downloadExpiry: product.downloadExpiry?.toString() || '',
       };
       setFormData(initialData);
 
       if (product.fulfillmentType) {
-          setFulfillmentType(product.fulfillmentType as ('shipping' | 'pickup')[]);
+        setFulfillmentType(product.fulfillmentType as ('shipping' | 'pickup')[]);
       }
     }
   }, [product]);
 
   // Resolve category Name to ID
   useEffect(() => {
-      if (categories && formData.category && !formData.categoryName) {
-          const cat = categories.find(c => c.id === formData.category || c.name === formData.category);
-          if (cat && cat.id !== formData.category) {
-              setFormData((prev: any) => ({ ...prev, category: cat.id, categoryName: cat.name }));
-          } else if (cat) {
-              setFormData((prev: any) => ({ ...prev, categoryName: cat.name }));
-          }
+    if (categories && formData.category && !formData.categoryName) {
+      const cat = categories.find(c => c.id === formData.category || c.name === formData.category);
+      if (cat && cat.id !== formData.category) {
+        setFormData((prev: any) => ({ ...prev, category: cat.id, categoryName: cat.name }));
+      } else if (cat) {
+        setFormData((prev: any) => ({ ...prev, categoryName: cat.name }));
       }
+    }
   }, [categories, formData.category]);
 
   // Resolve subcategory Name to ID
   useEffect(() => {
-      if (subCategories && formData.subCategory && !formData.subCategoryName) {
-          const sub = subCategories.find(s => s.id === formData.subCategory || s.name === formData.subCategory);
-          if (sub && sub.id !== formData.subCategory) {
-              setFormData((prev: any) => ({ ...prev, subCategory: sub.id, subCategoryName: sub.name }));
-          } else if (sub) {
-              setFormData((prev: any) => ({ ...prev, subCategoryName: sub.name }));
-          }
+    if (subCategories && formData.subCategory && !formData.subCategoryName) {
+      const sub = subCategories.find(s => s.id === formData.subCategory || s.name === formData.subCategory);
+      if (sub && sub.id !== formData.subCategory) {
+        setFormData((prev: any) => ({ ...prev, subCategory: sub.id, subCategoryName: sub.name }));
+      } else if (sub) {
+        setFormData((prev: any) => ({ ...prev, subCategoryName: sub.name }));
       }
+    }
   }, [subCategories, formData.subCategory]);
 
   const updateFormData = (newData: any) => {
@@ -232,7 +238,7 @@ export default function EditProductPage() {
       quantity: parseInt(formData.quantity.toString()) || 0,
       stock: parseInt(formData.quantity.toString()) || 0,
       media: [...(formData.images || []), ...(formData.videos || [])],
-      fileUrls: [...(formData.images || []), ...(formData.videos || [])],
+      fileUrls: formData.product_type === 'downloadable' ? formData.fileUrls : [],
       variations: finalVariations,
       variantConfig,
       fulfillmentType: fulfillmentType,
@@ -241,6 +247,8 @@ export default function EditProductPage() {
       length: formData.length ? parseFloat(formData.length) : 0,
       width: formData.width ? parseFloat(formData.width) : 0,
       height: formData.height ? parseFloat(formData.height) : 0,
+      downloadLimit: formData.product_type === 'downloadable' && formData.downloadLimit ? parseInt(formData.downloadLimit.toString()) : undefined,
+      downloadExpiry: formData.product_type === 'downloadable' && formData.downloadExpiry ? parseInt(formData.downloadExpiry.toString()) : undefined,
     };
 
     // Clean up payload to avoid backend validation errors
@@ -315,7 +323,7 @@ export default function EditProductPage() {
       case 1:
         return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.back()} userListings={userListings?.data || []} />;
       case 2:
-        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => {}} />;
+        return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:
         return <Step3PricingInventory formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 4:
@@ -345,7 +353,7 @@ export default function EditProductPage() {
       case 7:
         return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
       case 8:
-        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handleUpdate} onSaveDraft={() => {}} isPending={isPending} />;
+        return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handleUpdate} onSaveDraft={() => { }} isPending={isPending} />;
       default:
         return <div>Unknown Step</div>;
     }

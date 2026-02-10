@@ -32,8 +32,8 @@ export const VoucherTransactionHistory = () => {
   const { data, isLoading } = useGetVoucherTransactionHistory({
     page,
     take: 10,
-    startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : '',
-    endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : '',
+    startDate: dateRange?.from ? format(dateRange.from, 'yyyy-MM-dd') : undefined,
+    endDate: dateRange?.to ? format(dateRange.to, 'yyyy-MM-dd') : undefined,
   });
 
   const handlePageChange = (newPage: number) => {

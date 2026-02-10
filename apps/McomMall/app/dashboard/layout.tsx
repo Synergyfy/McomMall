@@ -3,7 +3,7 @@
 'use client';
 
 import { useGetTrialStatus } from '@/service/payments/hook';
-import TrialCountdownTimer from '@/components/TrialCountdownTimer';
+import HeaderTimer from '@/components/HeaderTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { useState } from 'react';
@@ -46,9 +46,6 @@ export default function DashboardLayout({
   return (
     <>
       <AuthRedirect />
-      {trialStatus?.isActive && (
-        <TrialCountdownTimer trialStatus={trialStatus} />
-      )}
       <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className="hidden md:block w-[19rem] p-5">
@@ -119,8 +116,9 @@ export default function DashboardLayout({
               </div>
             </div>
 
-            {/* --- RIGHT SIDE: User Nav --- */}
+            {/* --- RIGHT SIDE: User Nav & Timer --- */}
             <div className="flex items-center gap-4">
+              <HeaderTimer />
               {/* User Nav (Visible on all screens, Right Aligned) */}
               <UserNav align="end" />
             </div>

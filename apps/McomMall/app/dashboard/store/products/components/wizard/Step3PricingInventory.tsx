@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { ArrowLeft, ArrowRight, Package, Download, Terminal, Info, ChevronDown, Layers, HelpCircle } from 'lucide-react';
 import {
-  Tooltip,
-  TooltipContent,
-  TooltipProvider,
-  TooltipTrigger,
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import VariantManager from '../../components/VariantManager';
 import SizeGuideBuilder from '../../components/SizeGuideBuilder';
@@ -94,39 +94,70 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                 </div>
 
                 <form className="flex flex-col gap-8" onSubmit={(e) => { e.preventDefault(); onNext(); }}>
-                    {/* Product Type Section */}
-                    <section className="flex flex-col gap-4 px-2 md:px-0">
-                        <h3 className="text-[#1c140d] dark:text-white text-lg font-bold flex items-center gap-2">
-                            Product Type
-                        </h3>
-                        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            {[
-                                { id: 'physical', label: 'Physical', desc: 'Tangible items', icon: <Package size={20} /> },
-                                { id: 'downloadable', label: 'Digital', desc: 'Files & Media', icon: <Download size={20} /> },
-                                { id: 'virtual', label: 'Service', desc: 'Memberships', icon: <Terminal size={20} /> }
-                            ].map((type) => (
-                                <label key={type.id} className="cursor-pointer relative group">
+                    {/* Digital Product Settings (Conditional) */}
+                    {formData.product_type === 'downloadable' && (
+                        <section className="flex flex-col gap-6 px-2 md:px-0 bg-[#fff8f1] dark:bg-[#f48c25]/5 p-6 rounded-xl border border-[#f48c25]/20 animate-in fade-in slide-in-from-top-4 duration-500">
+                            <div className="flex items-center gap-3 border-b border-[#f48c25]/10 pb-3">
+                                <div className="p-2 bg-[#f48c25] rounded-lg text-white">
+                                    <Download size={20} />
+                                </div>
+                                <div>
+                                    <h3 className="text-[#1c140d] dark:text-white text-lg font-bold">Digital Download Settings</h3>
+                                    <p className="text-[#9c7349] dark:text-[#cba885] text-xs font-medium">Configure how customers access their digital files.</p>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold flex items-center gap-2" htmlFor="downloadLimit">
+                                        Download Limit
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Max number of times a customer can download the file. Leave empty for unlimited.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </label>
                                     <input
-                                        className="peer sr-only"
-                                        name="product_type"
-                                        type="radio"
-                                        value={type.id}
-                                        checked={formData.product_type === type.id}
-                                        onChange={() => handleRadioChange('product_type', type.id)}
+                                        className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25] transition-all"
+                                        id="downloadLimit"
+                                        placeholder="Unlimited"
+                                        type="number"
+                                        value={formData.downloadLimit || ''}
+                                        onChange={handleChange}
                                     />
-                                    <div className="h-full flex flex-row sm:flex-col items-center sm:items-start gap-4 sm:gap-3 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-4 transition-all peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
-                                        <div className="flex-shrink-0 size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25]">
-                                            {type.icon}
-                                        </div>
-                                        <div className="flex flex-col">
-                                            <p className="text-[#1c140d] dark:text-white font-bold text-sm md:text-base">{type.label}</p>
-                                            <p className="text-[#9c7349] dark:text-[#cba885] text-xs">{type.desc}</p>
-                                        </div>
-                                    </div>
-                                </label>
-                            ))}
-                        </div>
-                    </section>
+                                </div>
+
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold flex items-center gap-2" htmlFor="downloadExpiry">
+                                        Download Expiry (Days)
+                                        <TooltipProvider>
+                                            <Tooltip>
+                                                <TooltipTrigger asChild>
+                                                    <HelpCircle className="w-4 h-4 text-gray-400 cursor-help" />
+                                                </TooltipTrigger>
+                                                <TooltipContent>
+                                                    <p>Number of days the download link remains active. Leave empty for no expiry.</p>
+                                                </TooltipContent>
+                                            </Tooltip>
+                                        </TooltipProvider>
+                                    </label>
+                                    <input
+                                        className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25] transition-all"
+                                        id="downloadExpiry"
+                                        placeholder="Never expires"
+                                        type="number"
+                                        value={formData.downloadExpiry || ''}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            </div>
+                        </section>
+                    )}
 
                     {/* Variant Toggle Section */}
                     <section className="flex flex-col gap-4 px-2 md:px-0 bg-orange-50 dark:bg-orange-900/10 p-4 rounded-xl border border-orange-100 dark:border-orange-900/30">
@@ -295,33 +326,37 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                                     onChange={handleChange}
                                 />
                             </div>
-                            <div className="flex flex-col gap-2">
-                                <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity Available</label>
-                                <input
-                                    className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
-                                    id="quantity"
-                                    type="number"
-                                    value={formData.quantity || 100}
-                                    onChange={handleChange}
-                                />
-                            </div>
+                            {formData.product_type === 'physical' && (
+                                <div className="flex flex-col gap-2">
+                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="quantity">Quantity Available</label>
+                                    <input
+                                        className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
+                                        id="quantity"
+                                        type="number"
+                                        value={formData.quantity || 100}
+                                        onChange={handleChange}
+                                    />
+                                </div>
+                            )}
                         </div>
 
-                        <div className="flex flex-col gap-2 mt-4 max-w-xs">
-                            <div className="flex items-center justify-between">
-                                <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="lowStockThreshold">Low Stock Alert Threshold</label>
-                                <Info size={14} className="text-[#9c7349]" />
+                        {formData.product_type === 'physical' && (
+                            <div className="flex flex-col gap-2 mt-4 max-w-xs">
+                                <div className="flex items-center justify-between">
+                                    <label className="text-[#1c140d] dark:text-white text-sm font-bold" htmlFor="lowStockThreshold">Low Stock Alert Threshold</label>
+                                    <Info size={14} className="text-[#9c7349]" />
+                                </div>
+                                <input
+                                    className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
+                                    id="lowStockThreshold"
+                                    type="number"
+                                    placeholder="e.g. 5"
+                                    value={formData.lowStockThreshold || ''}
+                                    onChange={handleChange}
+                                />
+                                <p className="text-[10px] text-[#9c7349]">System will notify you when stock falls below this level.</p>
                             </div>
-                            <input
-                                className="w-full rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] py-3.5 px-4 text-[#1c140d] dark:text-white outline-none focus:border-[#f48c25]"
-                                id="lowStockThreshold"
-                                type="number"
-                                placeholder="e.g. 5"
-                                value={formData.lowStockThreshold || ''}
-                                onChange={handleChange}
-                            />
-                            <p className="text-[10px] text-[#9c7349]">System will notify you when stock falls below this level.</p>
-                        </div>
+                        )}
                     </section>
 
                     {/* Conditional Shipping Section */}
