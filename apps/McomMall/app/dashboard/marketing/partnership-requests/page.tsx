@@ -1,13 +1,13 @@
 'use client';
 
 import React from 'react';
-import { useGetReceivedPartnershipRequests, useRespondToPartnershipRequest } from '@/service/partnerships/hooks';
+import { useGetReceivedItemRequests as useGetReceivedPartnershipRequests, useRespondToItemPartnershipRequest as useRespondToPartnershipRequest } from '@/service/partnerships/hooks';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardFooter, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { toast, Toaster } from 'sonner';
-import { PartnershipRequest, PartnershipRequestStatus } from '@/service/partnerships/types';
+import { ItemPartnershipRequest, PartnershipStatus } from '@/service/partnerships/types';
 import { CheckCircle, XCircle, Info, GitPullRequest, ArrowRight } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { cn } from '@/lib/utils';
@@ -20,7 +20,7 @@ type StatusUI = {
   borderColor: string;
 };
 
-const getStatusUi = (status: PartnershipRequestStatus): StatusUI => {
+const getStatusUi = (status: PartnershipStatus): StatusUI => {
   switch (status) {
     case 'accepted':
       return {
@@ -70,13 +70,24 @@ const RequestAsset = ({ label, name }: { label: string, name: string }) => (
     </div>
 );
 
-const PartnershipRequestCard = ({ request }: { request: PartnershipRequest }) => {
+const PartnershipRequestCard = ({ request }: { request: ItemPartnershipRequest }) => {
   const { mutate: respond, isPending } = useRespondToPartnershipRequest();
   const statusUi = getStatusUi(request.status);
 
+  // Determine items. Assuming base is "Theirs" and plus is "Mine" based on typical flow,
+  // or checking ownership if available. For now, displaying as Base -> Plus.
+  // Note: Adjust logic if business requirements define specific "Base" vs "Plus" ownership directions.
+  const baseItem = request.baseProduct || request.baseService;
+  const plusItem = request.plusProduct || request.plusService;
+  
+  const baseName = (baseItem as any)?.title || (baseItem as any)?.name || 'Unknown Item';
+  const plusName = (plusItem as any)?.title || (plusItem as any)?.name || 'Unknown Item';
+
+  const proposer = (request as any).proposer || { name: 'Unknown User', profilePictureUrl: '' };
+
   const handleResponse = (status: 'accepted' | 'declined') => {
     respond(
-      { id: request.id, dto: { status } },
+      { id: request.id, dto: { status: status as PartnershipStatus } },
       {
         onSuccess: () => {
           toast.success(`Partnership request has been ${status}.`);
@@ -98,11 +109,11 @@ const PartnershipRequestCard = ({ request }: { request: PartnershipRequest }) =>
             <CardHeader className="flex flex-row items-start justify-between bg-slate-50/90 p-4 border-b">
                 <div className="flex items-center gap-4">
                     <Avatar className="h-14 w-14 border-4 border-white shadow-md">
-                        <AvatarImage src={request.requestingUser.profilePictureUrl || ''} alt={request.requestingUser.name} />
-                        <AvatarFallback className="font-bold">{request.requestingUser.name.charAt(0)}</AvatarFallback>
+                        <AvatarImage src={proposer.profilePictureUrl || ''} alt={proposer.name || proposer.firstName} />
+                        <AvatarFallback className="font-bold">{(proposer.name || proposer.firstName || '?').charAt(0)}</AvatarFallback>
                     </Avatar>
                     <div>
-                        <CardTitle className="text-base font-bold text-slate-800">{request.requestingUser.name}</CardTitle>
+                        <CardTitle className="text-base font-bold text-slate-800">{proposer.name || proposer.firstName || 'User'}</CardTitle>
                         <CardDescription className="text-xs font-medium text-slate-500">Wants to partner with you</CardDescription>
                     </div>
                 </div>
@@ -111,11 +122,11 @@ const PartnershipRequestCard = ({ request }: { request: PartnershipRequest }) =>
                 </Badge>
             </CardHeader>
             <CardContent className="p-4 text-sm text-slate-700 space-y-3 flex-grow">
-                <p className="font-medium">They requested a partnership for your service with their product.</p>
+                <p className="font-medium">They requested a partnership between:</p>
                 <div className="flex items-center justify-center gap-2">
-                    <RequestAsset label="Their Product" name={request.product.title} />
+                    <RequestAsset label="Base Item" name={baseName} />
                     <ArrowRight className="h-5 w-5 text-slate-400" />
-                    <RequestAsset label="Your Service" name={request.service.name} />
+                    <RequestAsset label="Plus Item" name={plusName} />
                 </div>
             </CardContent>
             {request.status === 'pending' && (

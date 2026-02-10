@@ -10,6 +10,8 @@ export interface Socials {
 export interface User {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phoneNumber?: string;
   isActive: boolean;

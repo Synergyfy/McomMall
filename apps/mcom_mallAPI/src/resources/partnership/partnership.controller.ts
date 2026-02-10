@@ -1,79 +1,183 @@
-import { Body, Controller, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
+import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { PartnershipService } from './partnership.service';
-import { CreatePartnershipRequestDto } from './dto/create-partnership-request.dto';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import { PartnershipRequest } from './entities/partnership-request.entity';
-import { RespondToPartnershipRequestDto } from './dto/respond-to-partnership-request.dto';
-import { Service } from '../services/entities/service.entity';
+import { CreateUserPartnershipRequestDto } from './dto/create-user-partnership-request.dto';
+import { RespondToUserPartnershipRequestDto } from './dto/respond-to-user-partnership-request.dto';
+import { CreateItemPartnershipRequestDto } from './dto/create-item-partnership-request.dto';
+import { UserPartnershipRequest } from './entities/user-partnership-request.entity';
+import { ItemPartnershipRequest } from './entities/item-partnership-request.entity';
+import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Partnerships')
 @Controller('partnerships')
 export class PartnershipController {
-  constructor(private readonly partnershipService: PartnershipService) {}
+  constructor(private readonly partnershipService: PartnershipService) { }
 
-  @Post()
+  @Get('search-items')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Create a new partnership request' })
-  @ApiResponse({ status: 201, description: 'The partnership request has been successfully created.', type: PartnershipRequest })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Product or Service not found' })
-  createPartnershipRequest(
-    @Body() createPartnershipRequestDto: CreatePartnershipRequestDto,
+  @ApiOperation({ summary: 'Search for potential items (products/services) to partner with' })
+  searchPartnerItems(
+    @Query('q') q: string,
     @CurrentUser() user: User,
-  ): Promise<PartnershipRequest> {
-    return this.partnershipService.createPartnershipRequest(createPartnershipRequestDto, user);
+  ): Promise<any[]> {
+    return this.partnershipService.searchPartnerItems(q, user.id);
   }
 
-  @Get('/requests/received')
+  @Get('/search-owners')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get received partnership requests' })
-  @ApiResponse({ status: 200, description: 'A list of received partnership requests.', type: [PartnershipRequest] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getReceivedPartnershipRequests(@CurrentUser() user: User): Promise<PartnershipRequest[]> {
-    return this.partnershipService.getReceivedPartnershipRequests(user);
-  }
-
-  @Get('/requests/sent')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get sent partnership requests' })
-  @ApiResponse({ status: 200, description: 'A list of sent partnership requests.', type: [PartnershipRequest] })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  getSentPartnershipRequests(@CurrentUser() user: User): Promise<PartnershipRequest[]> {
-    return this.partnershipService.getSentPartnershipRequests(user);
-  }
-
-  @Patch('/requests/:id/respond')
-  @UseGuards(AuthGuard('jwt'))
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Respond to a partnership request' })
-  @ApiResponse({ status: 200, description: 'The partnership request has been successfully updated.', type: PartnershipRequest })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 404, description: 'Partnership request not found' })
-  respondToPartnershipRequest(
-    @Param('id') id: string,
-    @Body() respondToPartnershipRequestDto: RespondToPartnershipRequestDto,
-    @CurrentUser() user: User,
-  ): Promise<PartnershipRequest> {
-    return this.partnershipService.respondToPartnershipRequest(id, respondToPartnershipRequestDto, user);
-  }
-
-  @Get('/product/:productId')
-  @ApiOperation({ summary: 'Get all active partnerships for a product' })
+  @ApiOperation({ summary: 'Search for potential owner partners' })
   @ApiResponse({
     status: 200,
-    description: 'A list of services partnered with the product.',
-    type: [Service],
+    description: 'A list of owners matching the query.',
+    type: [User],
   })
-  @ApiResponse({ status: 404, description: 'Product not found' })
+  searchOwners(
+    @Query('q') q: string,
+    @CurrentUser() user: User,
+  ): Promise<User[]> {
+    return this.partnershipService.searchOwners(q, user.id);
+  }
+
+  @Get('/product/:id/plus-items')
+  @Public()
+  @ApiOperation({ summary: 'Get linked plus items (services/products) for a specific product' })
   getProductPartnerships(
-    @Param('productId') productId: string,
-  ): Promise<Service[]> {
-    return this.partnershipService.getProductPartnerships(productId);
+    @Param('id') id: string,
+  ): Promise<any[]> {
+    return this.partnershipService.getProductPartnerships(id);
+  }
+
+  @Get('/service/:id/plus-items')
+  @Public()
+  @ApiOperation({ summary: 'Get linked plus items (services/products) for a specific service' })
+  getServicePartnerships(
+    @Param('id') id: string,
+  ): Promise<any[]> {
+    return this.partnershipService.getServicePartnerships(id);
+  }
+
+  @Post('/composite-request')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Request partnership with an owner AND a specific item simultaneously' })
+  createCompositePartnershipRequest(
+    @Body() dto: CreateItemPartnershipRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<{ userRequest: UserPartnershipRequest | null, itemRequest: ItemPartnershipRequest }> {
+    return this.partnershipService.createCompositePartnershipRequest(dto, user);
+  }
+
+  // --- User-to-User Endpoints ---
+
+  @Post('/user-request')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Request a partnership with another owner' })
+  createUserPartnershipRequest(
+    @Body() dto: CreateUserPartnershipRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<UserPartnershipRequest> {
+    return this.partnershipService.createUserPartnershipRequest(dto, user);
+  }
+
+  @Patch('/user-request/:id/respond')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Respond to a user partnership request' })
+  respondToUserPartnershipRequest(
+    @Param('id') id: string,
+    @Body() dto: RespondToUserPartnershipRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<UserPartnershipRequest> {
+    return this.partnershipService.respondToUserPartnershipRequest(id, dto, user);
+  }
+
+  @Get('/requests/user/received')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get received user partnership requests' })
+  getReceivedUserRequests(@CurrentUser() user: User): Promise<UserPartnershipRequest[]> {
+    return this.partnershipService.getReceivedUserRequests(user);
+  }
+
+  @Get('/requests/user/sent')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get sent user partnership requests' })
+  getSentUserRequests(@CurrentUser() user: User): Promise<UserPartnershipRequest[]> {
+    return this.partnershipService.getSentUserRequests(user);
+  }
+
+  @Get('/requests/item/received')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get received item partnership requests' })
+  getReceivedItemRequests(@CurrentUser() user: User): Promise<ItemPartnershipRequest[]> {
+    return this.partnershipService.getReceivedItemRequests(user);
+  }
+
+  @Get('/requests/item/sent')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get sent item partnership requests' })
+  getSentItemRequests(@CurrentUser() user: User): Promise<ItemPartnershipRequest[]> {
+    return this.partnershipService.getSentItemRequests(user);
+  }
+
+  @Get('/my-partners')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all active owner partners with their postcodes' })
+  getMyPartners(@CurrentUser() user: User): Promise<any[]> {
+    return this.partnershipService.getMyPartners(user);
+  }
+
+  // --- Item "Plus" Endpoints ---
+
+  @Post('/item-request')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Propose a "plus" item (product/service) link' })
+  createItemPartnershipRequest(
+    @Body() dto: CreateItemPartnershipRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<ItemPartnershipRequest> {
+    return this.partnershipService.createItemPartnershipRequest(dto, user);
+  }
+
+  @Patch('/item-request/:id/respond')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Respond to an item partnership request' })
+  respondToItemPartnershipRequest(
+    @Param('id') id: string,
+    @Body() dto: RespondToUserPartnershipRequestDto,
+    @CurrentUser() user: User,
+  ): Promise<ItemPartnershipRequest> {
+    return this.partnershipService.respondToItemPartnershipRequest(id, dto, user);
+  }
+
+  @Get('/partner-items/:partnershipId')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shared products/services for a specific partnership' })
+  getPartnerItems(
+    @Param('partnershipId') partnershipId: string,
+    @CurrentUser() user: User,
+  ): Promise<any> {
+    return this.partnershipService.getPartnerItems(partnershipId, user);
+  }
+
+  @Get('/analytics')
+  @UseGuards(AuthGuard('jwt'))
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get summary statistics for partnerships' })
+  getAnalytics(@CurrentUser() user: User): Promise<any> {
+    return this.partnershipService.getAnalytics(user);
   }
 }

@@ -5,7 +5,7 @@ import { useGetServiceById } from '@/service/services/hook';
 import { useGetWishlist, useAddToWishlist, useRemoveFromWishlist } from '@/service/wishlist/hook';
 import { Loader, ChevronLeft, Heart } from 'lucide-react';
 import Link from 'next/link';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 
@@ -14,14 +14,21 @@ import ServiceSellerCard from './components/ServiceSellerCard';
 import ServiceSafetyCard from './components/ServiceSafetyCard';
 import ServiceFacts from './components/ServiceFacts';
 import ServiceBookingWidget from './components/ServiceBookingWidget';
+import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
+import { useGetServicePlusItems } from '@/service/partnerships/hooks';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { useRouter } from 'next/navigation';
 
 export default function ServicePage() {
   const params = useParams();
   const id = Array.isArray(params.id) ? params.id[0] : params.id;
+  const router = useRouter();
   const { data: service, isLoading, isError } = useGetServiceById(id || '');
   const { data: wishlist } = useGetWishlist();
   const { mutateAsync: addToWishlist, isPending: isAddingToWishlist } = useAddToWishlist();
   const { mutateAsync: removeFromWishlist, isPending: isRemovingFromWishlist } = useRemoveFromWishlist();
+  const { data: plusItems } = useGetServicePlusItems(id || '');
+  const [plusItemsDialogOpen, setPlusItemsDialogOpen] = useState(false);
 
   const isInWishlist = useMemo(() => {
     return wishlist?.items?.some(item => (item.product?.id === id) || (item.service?.id === id));
@@ -36,6 +43,9 @@ export default function ServicePage() {
       } else {
         await addToWishlist({ productId: id });
         toast.success('Added to wishlist');
+        if (plusItems && plusItems.length > 0) {
+            setPlusItemsDialogOpen(true);
+        }
       }
     } catch (error: any) {
       toast.error(error.message || 'Failed to update wishlist');
@@ -102,6 +112,31 @@ export default function ServicePage() {
             <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
                 <ServiceFacts service={service} />
             </div>
+
+            {/* Plus Items Section */}
+            {plusItems && plusItems.length > 0 && (
+                <div className="bg-white rounded-xl p-6 md:p-8 border border-orange-100 shadow-sm ring-4 ring-orange-50/50">
+                    <PlusItemsSection items={plusItems} />
+                </div>
+            )}
+
+            <Dialog open={plusItemsDialogOpen} onOpenChange={setPlusItemsDialogOpen}>
+                <DialogContent className="max-w-3xl bg-white rounded-3xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-slate-900">Elevate Your Service!</DialogTitle>
+                        <DialogDescription className="text-slate-500 font-medium">
+                            Add these partner products or services to get the most out of your booking.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <PlusItemsSection items={plusItems || []} />
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" onClick={() => setPlusItemsDialogOpen(false)} className="font-bold text-slate-500">Close</Button>
+                        <Button onClick={() => router.push('/cart')} className="bg-slate-900 text-white font-bold rounded-xl px-6">Go to Cart</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
           </div>
 

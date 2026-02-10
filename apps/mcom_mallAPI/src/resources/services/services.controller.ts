@@ -82,6 +82,23 @@ export class ServicesController {
     return this.servicesService.create(createServiceDto, req.user.id);
   }
 
+  @UseGuards(JwtAuthGuard)
+  @Get()
+  @ApiOperation({ summary: 'Get all services owned by the current user' })
+  @ApiResponse({
+    status: 200,
+    description: 'A list of services belonging to the user.',
+  })
+  findAllForUser(@Request() req) {
+    return this.servicesService.findAllForUser(req.user.id);
+  }
+
+  @Get('/user/:userId')
+  @ApiOperation({ summary: 'Get all services for a specific user' })
+  findAllForSpecificUser(@Param('userId') userId: string) {
+    return this.servicesService.findAllForUser(userId);
+  }
+
   @Public()
   @Get(':id')
   @ApiOperation({ summary: 'Get a single service by ID' })
@@ -108,17 +125,6 @@ export class ServicesController {
     @Query() paginationDto: PaginationDto,
   ) {
     return this.servicesService.findAllForBusiness(businessId, paginationDto);
-  }
-
-  @UseGuards(JwtAuthGuard)
-  @Get()
-  @ApiOperation({ summary: 'Get all services owned by the current user' })
-  @ApiResponse({
-    status: 200,
-    description: 'A list of services belonging to the user.',
-  })
-  findAllForUser(@Request() req) {
-    return this.servicesService.findAllForUser(req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
