@@ -10,7 +10,7 @@ import {
   XCircleIcon,
   ChevronsRightLeft,
 } from 'lucide-react';
-import { usePauseOrPlay } from '@/service/payments/hook';
+import { usePauseOrResumeActivityTimer } from '@/service/activity-timer/hook';
 import {
   TrialAction,
 } from '@/service/payments/types';
@@ -44,7 +44,7 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   const remainingPauses = Math.max(0, maxPauses - pausesCount);
   const isPausable = remainingPauses > 0;
 
-  const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
+  const { mutate: pauseOrPlay, isPending } = usePauseOrResumeActivityTimer();
   const [timeLeft, setTimeLeft] = useState(remainingTime);
   const [isExpanded, setIsExpanded] = useState(false);
 

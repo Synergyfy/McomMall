@@ -2,7 +2,7 @@
 
 import { FC, useState, useEffect, useRef } from "react";
 import { ActivityTimer, ActivityTimerTask } from "@/service/activity-timer/types";
-import { usePauseOrPlay } from "@/service/payments/hook";
+import { usePauseOrResumeActivityTimer, useCompleteActivityTask } from "@/service/activity-timer/hook";
 import { TrialAction } from "@/service/payments/types";
 import { motion } from "framer-motion";
 import {
@@ -29,7 +29,8 @@ interface ActivityPageTimerProps {
 }
 
 const ActivityPageTimer: FC<ActivityPageTimerProps> = ({ timer }) => {
-  const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
+  const { mutate: pauseOrPlay, isPending } = usePauseOrResumeActivityTimer();
+  const { mutate: completeTask, isPending: isCompletingTask } = useCompleteActivityTask();
   const [timeLeft, setTimeLeft] = useState(timer.remainingTime);
   const timerInitialized = useRef(false);
 
@@ -162,19 +163,32 @@ const ActivityPageTimer: FC<ActivityPageTimerProps> = ({ timer }) => {
                     </p>
                   </div>
                   <div className="flex items-center justify-center sm:justify-start mt-auto">
-                    {task.isCompleted ? (
-                      <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white w-full sm:w-auto cursor-default">
-                        <CheckCircle2 className="w-4 h-4 mr-2" />
-                        Done
-                      </button>
-                    ) : (
-                      <Link
-                        href={task.url}
-                        className="flex items-center justify-center sm:justify-start text-orange-500 hover:text-orange-400 font-medium text-sm w-full sm:w-auto"
-                      >
-                        Finish this activity
-                      </Link>
-                    )}
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto">
+                      {task.isCompleted ? (
+                        <button className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold transition-colors bg-green-600 text-white w-full sm:w-auto cursor-default">
+                          <CheckCircle2 className="w-4 h-4 mr-2" />
+                          Done
+                        </button>
+                      ) : (
+                        <>
+                          <Link
+                            href={task.url}
+                            className="flex items-center justify-center px-4 py-2 rounded-lg text-sm font-semibold border border-orange-500 text-orange-500 hover:bg-orange-50 transition-colors w-full sm:w-auto"
+                          >
+                            Finish this activity
+                          </Link>
+                          <Button
+                            onClick={() => completeTask(task.key)}
+                            disabled={isCompletingTask}
+                            variant="outline"
+                            size="sm"
+                            className="text-xs border-green-600 text-green-600 hover:bg-green-50"
+                          >
+                            Mark as Done
+                          </Button>
+                        </>
+                      )}
+                    </div>
                   </div>
                 </div>
               </div>
