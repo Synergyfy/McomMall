@@ -43,41 +43,7 @@ interface Claim {
   terminalName?: string; // For customer view
 }
 
-// --- Mock Data ---
-const MOCK_CLAIMS: Claim[] = [
-  {
-    id: "c1",
-    customerName: "Sarah T.",
-    amount: 1.50,
-    spendRange: "£6 - £15",
-    status: 'PENDING',
-    date: "2023-10-27T10:30:00",
-    proofUrl: "/placeholder-receipt.jpg", // Needs a real placeholder or handled gracefully
-    terminalName: "Bean There Coffee"
-  },
-  {
-    id: "c2",
-    customerName: "Mike R.",
-    amount: 0.50,
-    spendRange: "£1 - £5",
-    status: 'APPROVED',
-    date: "2023-10-26T14:15:00",
-    proofUrl: "/placeholder-receipt.jpg",
-    terminalName: "Bean There Coffee"
-  },
-  {
-    id: "c3",
-    customerName: "Jenny L.",
-    amount: 3.00,
-    spendRange: "£16 - £30",
-    status: 'REJECTED',
-    date: "2023-10-25T09:00:00",
-    proofUrl: "/placeholder-receipt.jpg",
-    terminalName: "Bean There Coffee"
-  }
-];
-
-export default function TerminalCashbackPage() {
+export const TerminalCashback = () => {
   const { userRole, userId } = useSelector((state: RootState) => state.auth);
   const [isClient, setIsClient] = useState(false);
   const [showRewardsDialog, setShowRewardsDialog] = useState(false);
@@ -88,14 +54,14 @@ export default function TerminalCashbackPage() {
     setIsClient(true);
   }, []);
 
-  if (!isClient) return <div className="p-8">Loading...</div>;
+  if (!isClient) return <div className="p-8 text-center">Loading Terminal...</div>;
 
   return (
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <div>
-          <h2 className="text-3xl font-bold tracking-tight">Terminal Cashback</h2>
-          <p className="text-muted-foreground">
+          <h3 className="text-xl font-bold tracking-tight">Terminal Cashback Management</h3>
+          <p className="text-muted-foreground text-sm">
             {userRole === UserRole.OWNER
               ? "Manage and approve cashback claims from your terminal."
               : "Track your cashback claims from store visits."}
@@ -103,7 +69,7 @@ export default function TerminalCashbackPage() {
         </div>
         {userRole === UserRole.OWNER && config && (
           <div className="flex items-center gap-2">
-            <Button variant="outline" onClick={() => setShowRewardsDialog(true)}>
+            <Button variant="outline" size="sm" onClick={() => setShowRewardsDialog(true)}>
               <Settings className="h-4 w-4 mr-2" />
               Manage Rewards
             </Button>
@@ -134,54 +100,50 @@ function TerminalOnboarding() {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[60vh] text-center space-y-8 max-w-3xl mx-auto px-4">
+    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-8 max-w-3xl mx-auto px-4 py-8">
       <div className="space-y-4">
-        <div className="w-20 h-20 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
-          <Banknote className="w-10 h-10 text-orange-600" />
+        <div className="w-16 h-16 bg-orange-100 rounded-full flex items-center justify-center mx-auto">
+          <Banknote className="w-8 h-8 text-orange-600" />
         </div>
-        <h2 className="text-3xl font-bold tracking-tight text-gray-900">Unlock the Power of Terminal Cashback</h2>
-        <p className="text-lg text-muted-foreground max-w-xl mx-auto">
-          You don't have access to create a terminal cashback yet. Bridge the gap between offline sales and digital loyalty.
+        <h2 className="text-2xl font-bold tracking-tight text-gray-900">Unlock Terminal Cashback</h2>
+        <p className="text-muted-foreground max-w-xl mx-auto">
+          Bridge the gap between offline sales and digital loyalty. Reward your in-store customers directly.
         </p>
       </div>
 
-      <div className="grid md:grid-cols-3 gap-6 w-full text-left">
+      <div className="grid md:grid-cols-3 gap-4 w-full text-left">
         <Card className="border-orange-100 bg-orange-50/50">
-          <CardHeader>
-            <Store className="w-8 h-8 text-orange-600 mb-2" />
-            <CardTitle className="text-lg">What is it?</CardTitle>
+          <CardHeader className="p-4">
+            <Store className="w-6 h-6 text-orange-600 mb-2" />
+            <CardTitle className="text-base">What is it?</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">
-            Terminal Cashback allows you to reward your in-store customers, whether they pay by cash, card, or POS. No integration required.
+          <CardContent className="p-4 pt-0 text-xs text-gray-600">
+            Reward in-store customers regardless of payment method. No integration required.
           </CardContent>
         </Card>
         <Card className="border-orange-100 bg-orange-50/50">
-          <CardHeader>
-            <ShieldCheck className="w-8 h-8 text-orange-600 mb-2" />
-            <CardTitle className="text-lg">Why use it?</CardTitle>
+          <CardHeader className="p-4">
+            <ShieldCheck className="w-6 h-6 text-orange-600 mb-2" />
+            <CardTitle className="text-base">Why use it?</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">
-            Build loyalty, encourage repeat visits, and collect customer data even for walk-ins. Turn anonymous shoppers into loyal fans.
+          <CardContent className="p-4 pt-0 text-xs text-gray-600">
+            Build loyalty, encourage repeat visits, and collect customer data for walk-ins.
           </CardContent>
         </Card>
         <Card className="border-orange-100 bg-orange-50/50">
-          <CardHeader>
-            <HelpCircle className="w-8 h-8 text-orange-600 mb-2" />
-            <CardTitle className="text-lg">How it works</CardTitle>
+          <CardHeader className="p-4">
+            <HelpCircle className="w-6 h-6 text-orange-600 mb-2" />
+            <CardTitle className="text-base">How it works</CardTitle>
           </CardHeader>
-          <CardContent className="text-sm text-gray-600">
-            1. Customer buys in-store.<br />
-            2. Scans your QR code.<br />
-            3. Uploads receipt.<br />
-            4. You verify & reward.
+          <CardContent className="p-4 pt-0 text-xs text-gray-600">
+            1. Scans QR code.<br />
+            2. Uploads receipt.<br />
+            3. You verify & reward.
           </CardContent>
         </Card>
       </div>
 
       <div className="space-y-4">
-        <p className="text-sm font-medium text-gray-500">
-          Ready to reward your offline customers?
-        </p>
         <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white gap-2" onClick={() => setShowRequestDialog(true)}>
           Request Terminal Access <ArrowRight className="w-4 h-4" />
         </Button>
@@ -247,7 +209,6 @@ function RequestAccessDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
 // --- Business Dashboard Component ---
 function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigLoading: boolean }) {
-  // Queries
   const { data: statsData } = useGetTerminalStats();
   const { data: pendingData, isLoading: isPendingLoading } = useGetTerminalClaims({ status: 'PENDING' });
   const { data: approvedData } = useGetTerminalClaims({ status: 'APPROVED' });
@@ -257,28 +218,20 @@ function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigL
   const [selectedProof, setSelectedProof] = useState<string | null>(null);
 
   if (isConfigLoading) {
-    return <div className="p-8 text-center">Checking terminal configuration...</div>;
+    return <div className="p-8 text-center text-muted-foreground">Checking terminal configuration...</div>;
   }
 
   if (!config) {
     return <TerminalOnboarding />;
   }
 
-  // Stats
   const stats = statsData || { pendingCount: 0, approvedCount: 0, totalEarned: 0 };
-
-  // Pending Claims
   const pendingClaims = (pendingData?.data || []).map(mapTerminalClaimToUI);
-
-  // History Claims - For now let's just fetch APPROVED ones as "History" to be safe with the API, 
-  // or we could try to fetch all and filter. Let's try fetching "APPROVED" for now.
-
   const historyClaims = [
     ...(approvedData?.data || []),
     ...(rejectedData?.data || [])
   ].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
     .map(mapTerminalClaimToUI);
-
 
   const handleAction = (id: string, action: ClaimStatus) => {
     updateStatus({ id, status: action }, {
@@ -305,9 +258,7 @@ function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigL
             <Check className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              {stats.approvedCount}
-            </div>
+            <div className="text-2xl font-bold">{stats.approvedCount}</div>
             <p className="text-xs text-muted-foreground">Lifetime</p>
           </CardContent>
         </Card>
@@ -317,9 +268,7 @@ function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigL
             <div className="h-4 w-4 font-bold text-muted-foreground">£</div>
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">
-              £{stats.totalEarned.toFixed(2)}
-            </div>
+            <div className="text-2xl font-bold">£{stats.totalEarned.toFixed(2)}</div>
             <p className="text-xs text-muted-foreground">Cashback distributed</p>
           </CardContent>
         </Card>
@@ -354,9 +303,7 @@ function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigL
 
         <TabsContent value="history" className="mt-4">
           {historyClaims.length === 0 ? (
-            <Card className="p-8 text-center text-muted-foreground">
-              No history found.
-            </Card>
+            <Card className="p-8 text-center text-muted-foreground">No history found.</Card>
           ) : (
             <div className="grid gap-4">
               {historyClaims.map(claim => (
@@ -384,7 +331,7 @@ function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigL
                 alt="Proof"
                 fill
                 className="object-contain"
-                unoptimized // for placeholder
+                unoptimized
               />
             )}
           </div>
@@ -399,8 +346,8 @@ function CustomerDashboard() {
   const { data, isLoading, error } = useGetTerminalClaims();
   const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
 
-  if (isLoading) return <div>Loading claims...</div>;
-  if (error) return <div>Error loading claims.</div>;
+  if (isLoading) return <div className="p-4 text-center text-muted-foreground">Loading claims...</div>;
+  if (error) return <div className="p-4 text-center text-red-500">Error loading claims.</div>;
 
   const claims = data?.data || [];
 
@@ -408,7 +355,7 @@ function CustomerDashboard() {
     <div className="space-y-6">
       <div className="grid gap-4">
         {claims.length === 0 ? (
-          <p className="text-muted-foreground">No cashback claims found.</p>
+          <p className="text-muted-foreground text-center py-8">No cashback claims found.</p>
         ) : (
           claims.map(claim => (
             <ClaimCard
@@ -486,41 +433,41 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
         <div className="space-y-4 max-h-[60vh] overflow-y-auto py-4">
           {ranges.length === 0 && (
             <div className="text-center py-8 border-2 border-dashed rounded-lg">
-              <p className="text-muted-foreground">No rewards configured yet. Add your first range below.</p>
+              <p className="text-muted-foreground text-sm">No rewards configured yet. Add your first range below.</p>
             </div>
           )}
 
           {ranges.map((range, idx) => (
             <div key={range.id || idx} className="grid grid-cols-12 gap-4 items-end border p-4 rounded-lg bg-gray-50/50">
               <div className="col-span-3">
-                <Label className="text-xs font-semibold mb-1 block">Min Spend (£)</Label>
+                <Label className="text-[10px] font-semibold mb-1 block">Min (£)</Label>
                 <Input
                   type="number"
                   min={0}
                   value={range.minSpend}
                   onChange={(e) => handleChange(idx, 'minSpend', parseFloat(e.target.value))}
-                  className="h-8 bg-white"
+                  className="h-8 bg-white text-sm"
                 />
               </div>
               <div className="col-span-3">
-                <Label className="text-xs font-semibold mb-1 block">Max Spend (£)</Label>
+                <Label className="text-[10px] font-semibold mb-1 block">Max (£)</Label>
                 <Input
                   type="number"
                   min={0}
                   value={range.maxSpend}
                   onChange={(e) => handleChange(idx, 'maxSpend', parseFloat(e.target.value))}
-                  className="h-8 bg-white"
+                  className="h-8 bg-white text-sm"
                 />
               </div>
               <div className="col-span-3">
-                <Label className="text-xs font-semibold mb-1 block">Reward (£)</Label>
+                <Label className="text-[10px] font-semibold mb-1 block">Reward (£)</Label>
                 <Input
                   type="number"
                   min={0}
                   step={0.01}
                   value={range.rewardValue}
                   onChange={(e) => handleChange(idx, 'rewardValue', parseFloat(e.target.value))}
-                  className="h-8 bg-white"
+                  className="h-8 bg-white text-sm"
                 />
               </div>
               <div className="col-span-2 flex items-center justify-center pb-2">
@@ -530,7 +477,7 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
                     checked={range.isActive}
                     onCheckedChange={(checked) => handleChange(idx, 'isActive', !!checked)}
                   />
-                  <Label htmlFor={`active-${range.id || idx}`} className="text-xs cursor-pointer select-none">Active</Label>
+                  <Label htmlFor={`active-${range.id || idx}`} className="text-[10px] cursor-pointer select-none">Active</Label>
                 </div>
               </div>
               <div className="col-span-1 flex justify-end pb-1">
@@ -541,14 +488,14 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
             </div>
           ))}
 
-          <Button variant="outline" className="w-full border-dashed gap-2 py-6 text-muted-foreground hover:text-primary" onClick={handleAdd}>
+          <Button variant="outline" size="sm" className="w-full border-dashed gap-2 py-4 text-muted-foreground hover:text-primary" onClick={handleAdd}>
             <Plus className="w-4 h-4" /> Add Reward Range
           </Button>
         </div>
 
         <div className="flex justify-end gap-2 pt-4 border-t mt-2">
-          <Button variant="ghost" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={handleSave} disabled={isPending} className="bg-orange-600 hover:bg-orange-700">
+          <Button variant="ghost" size="sm" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button size="sm" onClick={handleSave} disabled={isPending} className="bg-orange-600 hover:bg-orange-700">
             {isPending ? "Saving..." : "Save Changes"}
           </Button>
         </div>
@@ -576,31 +523,31 @@ function ClaimCard({
 }) {
   return (
     <Card>
-      <CardContent className="p-6 flex items-center justify-between">
+      <CardContent className="p-4 flex items-center justify-between">
         <div className="flex items-center gap-4">
-          <div className={`w-12 h-12 rounded-full flex items-center justify-center ${claim.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
+          <div className={`w-10 h-10 rounded-full flex items-center justify-center ${claim.status === 'APPROVED' ? 'bg-green-100 text-green-600' :
             claim.status === 'REJECTED' ? 'bg-red-100 text-red-600' :
               'bg-yellow-100 text-yellow-600'
             }`}>
-            {claim.status === 'APPROVED' && <Check className="w-6 h-6" />}
-            {claim.status === 'REJECTED' && <X className="w-6 h-6" />}
-            {claim.status === 'PENDING' && <Clock className="w-6 h-6" />}
+            {claim.status === 'APPROVED' && <Check className="w-5 h-5" />}
+            {claim.status === 'REJECTED' && <X className="w-5 h-5" />}
+            {claim.status === 'PENDING' && <Clock className="w-5 h-5" />}
           </div>
 
           <div>
-            <h4 className="font-semibold">
+            <h4 className="font-semibold text-sm">
               {isBusiness ? claim.customerName : claim.terminalName}
             </h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-[10px] text-muted-foreground">
               {new Date(claim.date).toLocaleDateString()} at {new Date(claim.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
             </p>
             <div className="flex items-center gap-2 mt-1">
-              <Badge variant="outline">{claim.spendRange}</Badge>
-              <Badge className={
+              <Badge variant="outline" className="text-[10px] px-1 py-0 h-4">{claim.spendRange}</Badge>
+              <Badge className={`text-[10px] px-1 py-0 h-4 ${
                 claim.status === 'APPROVED' ? 'bg-green-600' :
                   claim.status === 'REJECTED' ? 'bg-red-600' :
                     'bg-yellow-600'
-              }>
+              }`}>
                 {claim.status}
               </Badge>
             </div>
@@ -608,22 +555,22 @@ function ClaimCard({
         </div>
 
         <div className="flex items-center gap-4">
-          <div className="text-right mr-4">
-            <p className="text-sm text-muted-foreground">Cashback</p>
-            <p className="text-xl font-bold text-green-600">+£{claim.amount.toFixed(2)}</p>
+          <div className="text-right mr-2">
+            <p className="text-[10px] text-muted-foreground">Cashback</p>
+            <p className="text-lg font-bold text-green-600">+£{claim.amount.toFixed(2)}</p>
           </div>
 
           {isBusiness ? (
-            <div className="flex flex-col gap-2">
-              <Button variant="outline" size="sm" onClick={onViewProof}>
-                <Eye className="w-4 h-4 mr-2" /> Proof
+            <div className="flex flex-col gap-1">
+              <Button variant="outline" size="xs" className="h-7 text-[10px]" onClick={onViewProof}>
+                <Eye className="w-3 h-3 mr-1" /> Proof
               </Button>
               {claim.status === 'PENDING' && (
-                <div className="flex gap-2">
-                  <Button size="sm" variant="default" className="bg-green-600 hover:bg-green-700" onClick={onApprove}>
+                <div className="flex gap-1">
+                  <Button size="xs" variant="default" className="h-7 text-[10px] bg-green-600 hover:bg-green-700" onClick={onApprove}>
                     Approve
                   </Button>
-                  <Button size="sm" variant="destructive" onClick={onReject}>
+                  <Button size="xs" variant="destructive" className="h-7 text-[10px]" onClick={onReject}>
                     Reject
                   </Button>
                 </div>
@@ -670,12 +617,12 @@ function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; i
   };
 
   if (isLoading) {
-    return <Button variant="outline" disabled>Loading Terminal...</Button>;
+    return <Button variant="outline" size="sm" disabled>Loading Terminal...</Button>;
   }
 
   if (!terminalId) {
     return (
-      <Button variant="outline" disabled title="No active listing found">
+      <Button variant="outline" size="sm" disabled title="No active listing found">
         <QrCode className="h-4 w-4 mr-2" />
         No Active Terminal
       </Button>
@@ -685,7 +632,7 @@ function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; i
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="outline" className="gap-2">
+        <Button variant="outline" size="sm" className="gap-2">
           <QrCode className="h-4 w-4" />
           Share Terminal
         </Button>
@@ -757,10 +704,10 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
               </Badge>
 
               <span className="text-muted-foreground">Amount:</span>
-              <span className="font-semibold text-green-600">�{claim.amount.toFixed(2)}</span>
+              <span className="font-semibold text-green-600">£{claim.amount.toFixed(2)}</span>
 
               <span className="text-muted-foreground">Spend Amount:</span>
-              <span>�{claim.spendAmount.toFixed(2)}</span>
+              <span>£{claim.spendAmount.toFixed(2)}</span>
 
               <span className="text-muted-foreground">Owner:</span>
               <span>{claim.ownerName || claim.ownerId}</span>
@@ -779,7 +726,7 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
             {claim.proofUrl && (
               <div className="space-y-2">
                 <Label>Proof of Purchase</Label>
-                <div className="relative h-[50vh] w-full bg-gray-100 rounded-md overflow-hidden">
+                <div className="relative h-[40vh] w-full bg-gray-100 rounded-md overflow-hidden">
                   <Image
                     src={claim.proofUrl}
                     alt="Proof"
@@ -788,12 +735,6 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
                     unoptimized
                   />
                 </div>
-              </div>
-            )}
-
-            {claim.meta?.gps && (
-              <div className="text-xs text-muted-foreground">
-                Location: {claim.meta.gps.lat}, {claim.meta.gps.lng}
               </div>
             )}
           </div>
@@ -831,4 +772,3 @@ function mapTerminalClaimToUI(apiClaim: TerminalClaim): Claim {
     terminalName: apiClaim.ownerName || apiClaim.ownerId,
   };
 }
-

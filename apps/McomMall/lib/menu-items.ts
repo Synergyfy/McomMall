@@ -54,11 +54,6 @@ export const mainMenuItems: MenuItem[] = [
     icon: Gift,
   },
   {
-    title: 'Terminal Cashback',
-    href: '/dashboard/terminal-cashback',
-    icon: Scan,
-  },
-  {
     title: 'Support Tickets',
     href: '/dashboard/support-tickets',
     icon: LifeBuoy,
