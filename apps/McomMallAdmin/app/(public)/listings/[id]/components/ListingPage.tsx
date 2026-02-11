@@ -141,7 +141,7 @@ export default function ListingPage({
                 isVerified={(listing as InHouseBusiness).isGoogleVerified ?? false}
                 businessId={placeId}
                 listingType={
-                  isGoogle ? [] : (listing as InHouseBusiness).listingType ?? [] ?? []
+                  isGoogle ? [] : (listing as InHouseBusiness).listingType ?? []
                 }
               />
             </div>

@@ -9,7 +9,7 @@ import { GooglePlaceResult, InHouseBusiness } from '@/service/listings/types';
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'placeId' in listing;
+  return 'place_id' in listing;
 }
 
 // Function to create custom numbered icons using a string with Tailwind classes
@@ -30,15 +30,18 @@ export default function MapComponent({
   listings: (GooglePlaceResult | InHouseBusiness)[];
   center?: [number, number];
 }) {
-  const position =
+  const position: [number, number] =
     center ??
     (listings.length > 0
       ? isGoogleResult(listings[0])
         ? [
-            listings[0].geometry.location.lat,
-            listings[0].geometry.location.lng,
+            listings[0].geometry?.location?.lat || 40.7128,
+            listings[0].geometry?.location?.lng || -74.006,
           ]
-        : [listings[0].location.lat, listings[0].location.lng]
+        : [
+            listings[0].location?.lat || 40.7128,
+            listings[0].location?.lng || -74.006,
+          ]
       : [40.7128, -74.006]); // Default to NYC
 
   return (
@@ -54,14 +57,19 @@ export default function MapComponent({
       />
       {listings.map((listing, index) => {
         const isGoogle = isGoogleResult(listing);
-        const key = isGoogle ? listing.placeId : listing.id;
+        const key = isGoogle ? listing.place_id : listing.id;
         const position: [number, number] = isGoogle
-          ? [listing.geometry.location.lat, listing.geometry.location.lng]
-          : [listing.location.lat, listing.location.lng];
+          ? [
+              listing.geometry?.location?.lat || 0,
+              listing.geometry?.location?.lng || 0,
+            ]
+          : [listing.location?.lat || 0, listing.location?.lng || 0];
         const name = isGoogle ? listing.name : listing.businessName;
         const vicinity = isGoogle
           ? listing.vicinity
-          : `${listing.location.addressLine1}, ${listing.location.city}`;
+          : `${listing.location?.addressLine1 || ''}, ${
+              listing.location?.city || ''
+            }`;
 
         return (
           <Marker
