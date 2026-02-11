@@ -28,28 +28,23 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import UserNav from '@/components/UserNav';
 import { useGetMyMembership } from '@/service/membership/hooks';
 
-export default function DashboardLayout({
-  children,
-}: {
-  children: React.ReactNode;
-}) {
-  const [mounted, setMounted] = useState(false);
-  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
-  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
-  const { data: trialStatus } = useGetTrialStatus();
 
-  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
+function DashboardRedirect({
+  mounted,
+  userRole,
+  membership,
+  isMembershipLoading
+}: {
+  mounted: boolean;
+  userRole: string | null;
+  membership: any;
+  isMembershipLoading: boolean;
+}) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const pathname = usePathname();
-  const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
 
   useEffect(() => {
-    setMounted(true);
-  }, []);
-
-  useEffect(() => {
-    // Only redirect if mounted, membership is not loading, and user is an owner
     if (mounted && !isMembershipLoading && userRole === 'owner') {
       const hasActiveMembership = !!membership?.isActive;
       const normalizedPath = pathname.toLowerCase();
@@ -62,6 +57,26 @@ export default function DashboardLayout({
     }
   }, [mounted, userRole, membership, isMembershipLoading, pathname, router, searchParams]);
 
+  return null;
+}
+
+export default function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
+  const [mounted, setMounted] = useState(false);
+  const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
+  const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const { data: trialStatus } = useGetTrialStatus();
+
+  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
+  const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
+
   if (!mounted) {
     return null; // or a loading spinner
   }
@@ -69,6 +84,12 @@ export default function DashboardLayout({
   return (
     <Suspense fallback={<div className="flex items-center justify-center h-screen"><Zap className="w-8 h-8 text-orange-600 animate-pulse" /></div>}>
       <AuthRedirect />
+      <DashboardRedirect
+        mounted={mounted}
+        userRole={userRole}
+        membership={membership}
+        isMembershipLoading={isMembershipLoading}
+      />
       <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* ... existing section content ... */}
         <div className="hidden md:block w-[19rem] p-5">
