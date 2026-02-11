@@ -30,6 +30,14 @@ export class Membership extends AbstractBaseEntity {
   @Column()
   expiresAt: Date;
 
+  expiresIn?: {
+    days: number;
+    hours: number;
+    minutes: number;
+    seconds: number;
+    totalSeconds: number;
+  };
+
   @OneToOne(() => User, (user) => user.membership)
   @JoinColumn()
   user: User;

@@ -35,6 +35,9 @@ export class ActivityTimer {
   @Column({ type: 'jsonb', default: {} })
   taskStatus: Record<string, boolean>;
 
+  @Column({ type: 'jsonb', default: {} })
+  taskExpirations: Record<string, Date>;
+
   @Column({ type: 'jsonb', default: [] })
   pauses: { pausedAt: Date; resumedAt: Date | null }[];
 

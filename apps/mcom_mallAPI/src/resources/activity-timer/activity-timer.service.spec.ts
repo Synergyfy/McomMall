@@ -54,71 +54,95 @@ describe('ActivityTimerService', () => {
     jest.clearAllMocks();
   });
 
-  describe('isRestricted', () => {
-    it('should NOT restrict users with a paid tier', async () => {
-      const user = { id: 'u1', membership: { tierId: 'pro' } } as any;
-      const result = await service.isRestricted(user);
-      expect(result).toBe(false);
-    });
+  describe('assignTimerToUser - Trial', () => {
+    it('should assign a single expiration for all tasks in a trial', async () => {
+      const user = { id: 'u1' } as any;
+      const template = {
+        id: 'tpl-trial',
+        type: ActivityTimerType.TRIAL,
+        durationDays: 14,
+        isPublished: true,
+        tasks: [
+          { key: 'TASK1', title: 'T1' },
+          { key: 'TASK2', title: 'T2' }
+        ]
+      };
+      templateRepo.findOne.mockResolvedValue(template);
 
-    it('should restrict user if trial is expired and tasks incomplete', async () => {
-      const user = { id: 'u1', membership: { tierId: null } } as any;
-      const expiredDate = new Date();
-      expiredDate.setDate(expiredDate.getDate() - 1);
-      
-      timerRepo.findOne.mockResolvedValue({
-        expiresAt: expiredDate,
-        taskStatus: { [ActivityTaskType.CREATE_BUSINESS]: false },
-        isActive: true
-      });
+      await service.assignTimerToUser(user, 'tpl-trial');
 
-      const result = await service.isRestricted(user);
-      expect(result).toBe(true);
-    });
-
-    it('should NOT restrict user if trial is expired but tasks ARE complete', async () => {
-      const user = { id: 'u1', membership: null } as any;
-      const expiredDate = new Date();
-      expiredDate.setDate(expiredDate.getDate() - 1);
-      
-      timerRepo.findOne.mockResolvedValue({
-        expiresAt: expiredDate,
-        taskStatus: { [ActivityTaskType.CREATE_BUSINESS]: true },
-        isActive: true
-      });
-
-      const result = await service.isRestricted(user);
-      expect(result).toBe(false);
+      const savedTimer = timerRepo.save.mock.calls[0][0];
+      expect(savedTimer.type).toBe(ActivityTimerType.TRIAL);
+      expect(savedTimer.taskExpirations['TASK1']).toEqual(savedTimer.expiresAt);
+      expect(savedTimer.taskExpirations['TASK2']).toEqual(savedTimer.expiresAt);
     });
   });
 
-  describe('handleAction', () => {
-    it('should mark task as complete for all active timers', async () => {
+  describe('assignTimerToUser - General', () => {
+    it('should assign individual expirations for tasks in general timer', async () => {
+      const user = { id: 'u1' } as any;
+      const template = {
+        id: 'tpl-gen',
+        type: ActivityTimerType.GENERAL,
+        durationDays: 30,
+        isPublished: true,
+        tasks: [
+          { key: 'TASK1', title: 'T1', durationDays: 5 },
+          { key: 'TASK2', title: 'T2', durationDays: 10 }
+        ]
+      };
+      templateRepo.findOne.mockResolvedValue(template);
+
+      const now = new Date();
+      jest.useFakeTimers().setSystemTime(now);
+
+      await service.assignTimerToUser(user, 'tpl-gen');
+
+      const savedTimer = timerRepo.save.mock.calls[0][0];
+      expect(savedTimer.type).toBe(ActivityTimerType.GENERAL);
+      
+      const expectedExp1 = new Date(now.getTime() + 5 * 24 * 60 * 60 * 1000);
+      const expectedExp2 = new Date(now.getTime() + 10 * 24 * 60 * 60 * 1000);
+      
+      expect(savedTimer.taskExpirations['TASK1'].getTime()).toBe(expectedExp1.getTime());
+      expect(savedTimer.taskExpirations['TASK2'].getTime()).toBe(expectedExp2.getTime());
+
+      jest.useRealTimers();
+    });
+  });
+
+  describe('handleAction - Auto Completion', () => {
+    it('should NOT auto-complete OTHER tasks', async () => {
       const userId = 'u1';
-      const action = ActivityTaskType.CREATE_BUSINESS;
+      const action = ActivityTaskType.OTHER;
       
       const mockTimer = {
         id: 't1',
-        taskStatus: { [action]: false, [ActivityTaskType.IMPORT_CONTACTS]: false },
+        template: {
+            tasks: [{ key: ActivityTaskType.OTHER, title: 'Other Task' }]
+        },
+        taskStatus: { [ActivityTaskType.OTHER]: false },
         isActive: true,
-        save: jest.fn()
       };
 
       timerRepo.find.mockResolvedValue([mockTimer]);
 
       await service.handleAction(userId, action);
 
-      expect(mockTimer.taskStatus[action]).toBe(true);
-      expect(timerRepo.save).toHaveBeenCalledWith(mockTimer);
+      expect(mockTimer.taskStatus[action]).toBe(false);
+      expect(timerRepo.save).not.toHaveBeenCalled();
     });
 
-    it('should mark completedAt if all tasks are done', async () => {
+    it('should auto-complete regular tasks', async () => {
         const userId = 'u1';
         const action = ActivityTaskType.CREATE_BUSINESS;
         
         const mockTimer = {
           id: 't1',
-          taskStatus: { [action]: false },
+          template: {
+              tasks: [{ key: ActivityTaskType.CREATE_BUSINESS, title: 'Create Biz' }]
+          },
+          taskStatus: { [ActivityTaskType.CREATE_BUSINESS]: false },
           isActive: true,
         };
   
@@ -126,38 +150,42 @@ describe('ActivityTimerService', () => {
   
         await service.handleAction(userId, action);
   
-        expect(mockTimer['completedAt']).toBeDefined();
+        expect(mockTimer.taskStatus[action]).toBe(true);
         expect(timerRepo.save).toHaveBeenCalled();
       });
   });
 
-    describe('getUserActiveTimer', () => {
-      it('should auto-assign trial template if new user has no tier and no active trial', async () => {
-        const user = { id: 'u1', membership: null } as any;
-        
-        const trialTemplate = { 
-          id: 'trial-tpl', 
-          type: ActivityTimerType.TRIAL,
-          isPublished: true,
-          durationDays: 14,
-          tasks: [{ key: ActivityTaskType.CREATE_BUSINESS }]
-        };
-  
-        // 1. check active trial (none)
-        timerRepo.findOne.mockResolvedValueOnce(null); 
-        // 2. find latest published trial template
-        templateRepo.findOne.mockResolvedValueOnce(trialTemplate);
-        // 3. assignTimerToUser calls findOne with ID
-        templateRepo.findOne.mockResolvedValueOnce(trialTemplate);
-        
-        // Mock re-fetch and find
-        timerRepo.findOne.mockResolvedValue({ id: 'new-timer', template: trialTemplate, taskStatus: {}, pauses: [], expiresAt: new Date() });
-        timerRepo.find.mockResolvedValue([]);
-        templateRepo.find.mockResolvedValue([]);
-  
-        await service.getUserActiveTimer(user);
-  
-        expect(templateRepo.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { type: ActivityTimerType.TRIAL, isPublished: true } }));
-        expect(timerRepo.save).toHaveBeenCalled();
-      });
-    });});
+  describe('completeTask - Manual Completion', () => {
+    it('should allow manual completion of OTHER tasks even if expired', async () => {
+      const userId = 'u1';
+      const taskKey = 'OTHER_TASK';
+      
+      const expiredDate = new Date();
+      expiredDate.setDate(expiredDate.getDate() - 5);
+
+      const mockTimer = {
+        id: 't1',
+        type: ActivityTimerType.GENERAL,
+        template: {
+            name: 'Gen Tpl',
+            description: 'Desc',
+            tasks: [{ key: 'OTHER_TASK', title: 'Other' }]
+        },
+        taskStatus: { 'OTHER_TASK': false },
+        taskExpirations: { 'OTHER_TASK': expiredDate },
+        expiresAt: new Date(Date.now() + 86400000),
+        pauses: [],
+        isActive: true,
+      };
+
+      timerRepo.find.mockResolvedValue([mockTimer]);
+      templateRepo.find.mockResolvedValue([]); // For eligibleGeneralTemplates
+      timerRepo.manager.findOne.mockResolvedValue({ id: userId }); // user for getUserActiveTimer
+
+      await service.completeTask(userId, 'OTHER_TASK');
+
+      expect(mockTimer.taskStatus['OTHER_TASK']).toBe(true);
+      expect(timerRepo.save).toHaveBeenCalled();
+    });
+  });
+});

@@ -43,6 +43,7 @@ export class ActivityTimerTemplate {
     title: string;
     description: string;
     url: string;
+    durationDays?: number;
   }[];
 
   @Column({ default: false })
