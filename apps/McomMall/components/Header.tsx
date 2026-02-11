@@ -99,9 +99,8 @@ export default function Header() {
                     >
                       <span>{item.title}</span>
                       <ChevronDown
-                        className={`h-5 w-5 transition-transform ${
-                          isSubMenuOpen ? 'rotate-180' : ''
-                        }`}
+                        className={`h-5 w-5 transition-transform ${isSubMenuOpen ? 'rotate-180' : ''
+                          }`}
                       />
                     </button>
                     <AnimatePresence>
@@ -259,11 +258,15 @@ export default function Header() {
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/getstarted">
-                  <Button variant="outline" size="sm" className="text-orange-600 hover:text-red-400">
+                  <Button size="sm" className="bg-orange-600 hover:bg-orange-700 text-white">
                     Get Started
                   </Button>
                 </Link>
-                
+                <Link href="/signin">
+                  <Button variant="outline" size="sm" className="text-orange-600 hover:text-orange-700 border-orange-200">
+                    Login
+                  </Button>
+                </Link>
               </div>
             )}
 

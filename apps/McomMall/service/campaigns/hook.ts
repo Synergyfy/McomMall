@@ -1,7 +1,7 @@
 import { useMutation, useQuery } from '@tanstack/react-query';
 import { toast } from 'sonner';
 import api from '../api';
-import { CreateCampaignDto } from './types';
+import { CreateCampaignDto, CampaignsResponse } from './types';
 import { ErrorResponse } from '../listings/hook';
 
 export const useAddCampaign = () => {
@@ -13,8 +13,8 @@ export const useAddCampaign = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to create campaign'
+        err.message ||
+        'Failed to create campaign'
       );
     }
   };
@@ -30,7 +30,7 @@ export const useAddCampaign = () => {
 };
 
 export const useGetMyCampaigns = () => {
-  const fetch = async () => {
+  const fetch = async (): Promise<CampaignsResponse> => {
     try {
       const response = await api.get('/campaigns/mine');
       return response.data;
@@ -38,8 +38,8 @@ export const useGetMyCampaigns = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch campaigns'
+        err.message ||
+        'Failed to fetch campaigns'
       );
     }
   };
@@ -47,6 +47,31 @@ export const useGetMyCampaigns = () => {
   const query = useQuery({
     queryFn: fetch,
     queryKey: ['FETCH_MY_CAMPAIGNS'],
+  });
+
+  return query;
+};
+
+export const useGetMyCreatedCampaigns = (page = 1, limit = 10) => {
+  const fetch = async (): Promise<CampaignsResponse> => {
+    try {
+      const response = await api.get('/campaigns/mine', {
+        params: { page, limit },
+      });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to fetch my created campaigns'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_MY_CREATED_CAMPAIGNS', page, limit],
   });
 
   return query;

@@ -1,438 +1,153 @@
+// --- Google Place Types ---
+
+export interface Photo {
+  photo_reference: string;
+  height: number;
+  width: number;
+}
+
 export interface Geometry {
   location: {
     lat: number;
     lng: number;
   };
-  viewport: {
-    northeast: {
-      lat: number;
-      lng: number;
-    };
-    southwest: {
-      lat: number;
-      lng: number;
-    };
-  };
-}
-
-export interface Photo {
-  height: number;
-  width: number;
-  htmlAttributions: string[];
-  photoReference: string;
-}
-
-interface PlusCode {
-  compound_code: string;
-  global_code: string;
-}
-
-interface OpeningHours {
-  openNow: boolean;
 }
 
 export interface GoogleReview {
   author_name: string;
-  author_url: string;
-  language: string;
+  author_url?: string;
+  language?: string;
   profile_photo_url: string;
   rating: number;
   relative_time_description: string;
   text: string;
-  time: number;
+  time?: number;
 }
 
 import { Review as ApiReview } from '../reviews/types';
+import { Product } from '../store/products/types';
 
-export type { ApiReview };
+export type { ApiReview, Product };
 
 export type Review = GoogleReview | ApiReview;
 
 export interface GooglePlaceResult {
-  businessStatus: string;
-  geometry: Geometry;
-  icon: string;
-  iconBackgroundColor: string;
-  iconMaskBaseUri: string;
+  place_id: string;
   name: string;
-  openingHours?: OpeningHours;
+  formatted_address?: string;
+  geometry?: Geometry;
   photos?: Photo[];
   reviews?: Review[];
-  placeId: string;
-  plusCode: PlusCode;
-  priceLevel?: number;
   rating?: number;
-  reference: string;
-  scope: string;
-  types: string[];
-  userRatingsTotal?: number;
-  vicinity: string;
-  formattedAddress?: string;
-  formattedPhoneNumber?: string;
+  user_ratings_total?: number;
+  types?: string[];
+  opening_hours?: {
+    open_now?: boolean;
+  };
+  business_status?: string;
+  priceLevel?: string;
+  vicinity?: string;
+  formatted_phone_number?: string;
+  // ... other fields
 }
 
 export type GooglePlaceResults = GooglePlaceResult[];
 
-export interface UserService {
+// --- In-House Business Types ---
+
+export type ListingType = 'product' | 'service';
+
+export interface Location {
   id: string;
-  created_at: string;
-  updated_at: string;
-  imageUrl: string | null;
-  title: string;
-  description: string;
-  price: string;
-  currency: string;
-  pricingModel: string;
+  addressLine1: string;
+  city: string;
+  lat: number;
+  lng: number;
+  [key: string]: unknown;
 }
 
 export interface User {
   id: string;
-  created_at: string;
-  updated_at: string;
   name: string;
   email: string;
-  phoneNumber: string;
-  isActive: boolean;
-  isEmailVerified: boolean;
-  role: string;
-}
-
-interface Category {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  name: string;
-  description: string | null;
-}
-
-export interface Location {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  postcode: string;
-  addressLine1: string;
-  addressLine2: string | null;
-  city: string;
-  lat: number;
-  lng: number;
-  showPublicly: boolean;
-  deliveryRadiusKm: number | null;
-  servicePostcodes: string[];
-  serviceModel: string | null;
-}
-
-export interface UserListing {
-  id: string;
-  created_at: string;
-  updated_at: string;
-  listingType: string[];
-  businessName: string;
-  legalName: string;
-  companyRegistrationNumber: string;
-  vatNumber: string;
-  shortDescription: string;
-  about: string;
-  website: string;
-  businessPhone: string;
-  businessEmail: string;
-  logoUrl: string | null;
-  bannerUrl: string | null;
-  logoAltText: string;
-  bannerAltText: string;
-  status: string;
-  categories: Category[];
-  location: Location;
-  isGoogleVerified: boolean;
-}
-
-// --- Enums as String Literal Types ---
-export type ListingType = 'product' | 'service';
-export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-export type ServiceModel = 'at_location' | 'travel_to_customer' | 'both';
-export type SellingMode = 'pickup' | 'local_delivery' | 'uk_shipping';
-export type StorefrontPlatform =
-  | 'shopify'
-  | 'amazon'
-  | 'ebay'
-  | 'etsy'
-  | 'woocommerce';
-export type BookingMethod = 'call_to_book' | 'request_a_quote' | 'book_online';
-
-// --- Nested Payload Interfaces ---
-
-export interface LocationPayload {
-  postcode: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  showPublicly: boolean;
-  deliveryRadiusKm?: number;
-  servicePostcodes?: string[];
-  serviceModel?: ServiceModel;
-}
-
-export interface SocialLinkPayload {
-  platform: string;
-  url: string;
-}
-
-export interface BusinessHourPayload {
-  dayOfWeek: DayOfWeek;
-  openTime: string; // "HH:MM"
-  closeTime: string; // "HH:MM"
-  is24h?: boolean;
-}
-
-export interface SpecialDayPayload {
-  date: string; // ISO 8601 Date string, e.g., "2024-12-25"
-  description: string;
-  isOpen: boolean;
-  openTime?: string; // "HH:MM"
-  closeTime?: string; // "HH:MM"
-}
-
-export interface StorefrontLinkPayload {
-  platform: StorefrontPlatform;
-  url: string;
-}
-
-export interface ProductSellerProfilePayload {
-  sellingModes: SellingMode[];
-  fulfilmentNotes?: string;
-  returnsPolicy?: string;
-  hasAgeRestrictedItems: boolean;
-  storefrontLinks?: StorefrontLinkPayload[];
-}
-
-export interface CertificationPayload {
-  name: string;
-  fileUrl: string;
-}
-
-export interface ServiceProviderProfilePayload {
-  bookingMethod?: BookingMethod;
-  bookingUrl?: string;
-  fixedPriceFrom?: number;
-  hourlyRateFrom?: number;
-  quoteOnly: boolean;
-  hasPublicLiabilityInsurance: boolean;
-  insuranceProvider?: string;
-  insuranceExpiryDate?: string; // ISO 8601 Date string
-  certifications?: CertificationPayload[];
-}
-
-// --- Main Payload Interface ---
-
-export interface CreateBusinessPayload {
-  media: string[];
-  listingType: ListingType[];
-  businessName: string;
-  legalName?: string;
-  companyRegistrationNumber?: string;
-  vatNumber?: string;
-  shortDescription: string;
-  about?: string;
-  website?: string;
-  businessPhone: string;
-  businessEmail?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  logoAltText?: string;
-  bannerAltText?: string;
-  location: LocationPayload;
-  socialLinks?: SocialLinkPayload[];
-  categoryIds: string[]; // Array of category UUIDs
-  businessHours?: BusinessHourPayload[];
-  specialDays?: SpecialDayPayload[];
-  productSellerProfile?: ProductSellerProfilePayload;
-  serviceProviderProfile?: ServiceProviderProfilePayload;
-}
-
-export type BusinessStatus = 'DRAFT' | 'PUBLISHED' | 'ARCHIVED';
-
-// --- Detailed In-House Business Types ---
-
-export interface SocialLink {
-  id: string;
-  platform: string;
-  url: string;
-}
-
-export interface BusinessHour {
-  id: string;
-  dayOfWeek: DayOfWeek;
-  openTime: string;
-  closeTime: string;
-  is24h: boolean;
-}
-
-export interface SpecialDay {
-  id: string;
-  date: string;
-  description: string;
-  isOpen: boolean;
-  openTime?: string;
-  closeTime?: string;
-}
-
-export interface StorefrontLink {
-  id: string;
-  platform: StorefrontPlatform;
-  url: string;
-}
-
-export interface ProductSellerProfile {
-  id: string;
-  sellingModes: SellingMode[];
-  fulfilmentNotes?: string;
-  returnsPolicy?: string;
-  hasAgeRestrictedItems: boolean;
-  storefrontLinks: StorefrontLink[];
-}
-
-export interface Certification {
-  id: string;
-  name: string;
-  fileUrl: string;
-}
-
-export interface ServiceProviderProfile {
-  id: string;
-  bookingMethod: BookingMethod;
-  bookingUrl?: string;
-  fixedPriceFrom?: number;
-  hourlyRateFrom?: number;
-  quoteOnly: boolean;
-  hasPublicLiabilityInsurance: boolean;
-  insuranceProvider?: string;
-  insuranceExpiryDate?: string;
-  certifications: Certification[];
-}
-
-import { ProductVariant } from '../store/products/types';
-
-export interface Product {
-  id: string;
-  bussinessId?: string;
-  title: string;
-  category: string;
-  productType: string;
-  price: number;
-  salePrice?: number;
-  shortDescription?: string;
-  description: string;
-  imageUrl?: string;
-  productUrl?: string;
-  fileUrls?: string[];
-  downloadLimit?: number;
-  downloadExpiry?: number;
-  sku?: string;
-  enableStockManagement?: boolean;
-  stock?: number;
-  weight?: number;
-  length?: number;
-  width?: number;
-  height?: number;
-  productStatus: string;
-  visibility: string;
-  purchaseNote?: string;
-  enableReviews?: boolean;
-  tags?: string[];
-  brand?: string;
-  views?: number;
-  createdAt?: string;
-  updatedAt?: string;
-  variants?: ProductVariant[];
-}
-
-export type CampaignType = string;
-export type AdPlacement = string;
-
-export interface Campaign {
-  id: string;
-  type: CampaignType;
-  startDate: string;
-  budget: number;
-  displayOnlyIfCategory?: string;
-  displayOnlyIfRegion?: string;
-  enabledForLoggedInUser: boolean;
-  adPlacement: AdPlacement[];
+  [key: string]: unknown;
 }
 
 export interface InHouseBusiness {
   id: string;
-  created_at: string;
-  updated_at: string;
-  listingType: ListingType[];
-  businessName: string;
-  legalName?: string;
-  companyRegistrationNumber?: string;
-  vatNumber?: string;
-  shortDescription: string;
+  name: string;
+  title?: string;
+  description?: string;
+  categories?: { name: string }[];
+  logoUrl?: string; // Also adding logoUrl as it was used in ListingDetails
+  businessName?: string;
+  location?: Location;
+  businessPhone?: string;
+  user?: User;
+  isGoogleVerified?: boolean;
+  listingType?: ListingType[];
+  isClaimed?: boolean;
+  products?: Product[];
   about?: string;
+  shortDescription?: string;
   website?: string;
-  businessPhone: string;
   businessEmail?: string;
-  logoUrl?: string;
-  bannerUrl?: string;
-  logoAltText?: string;
-  bannerAltText?: string;
-  status: BusinessStatus;
-  googlePlaceId?: string;
-  isGoogleVerified: boolean;
-  isClaimed: boolean;
-  location: Location;
-  categories: Category[];
-  socialLinks: SocialLink[];
-  businessHours: BusinessHour[];
-  specialDays: SpecialDay[];
-  productSellerProfile?: ProductSellerProfile;
-  serviceProviderProfile?: ServiceProviderProfile;
-  products: Product[];
-  campaigns: Campaign[];
-  user: User;
+  businessHours?: any[];
+  productSellerProfile?: any;
+  serviceProviderProfile?: any;
+  [key: string]: unknown;
 }
 
-export type InHouseBusinessResults = InHouseBusiness[];
+export interface InHouseBusinessResults {
+  data: InHouseBusiness[];
+}
+
+export type UserListing = InHouseBusiness;
+
+// --- Listing Types ---
 
 export interface RecentListing {
   id: string;
-  createdAt: string;
-  updatedAt: string;
-  listingType: string[];
   businessName: string;
-  shortDescription: string;
-  businessPhone: string;
-  status: string;
-  categories: {
-    id: string;
-    name: string;
-  }[];
   location: {
-    id: string;
     addressLine1: string;
     city: string;
-    postcode: string;
   };
+  createdAt: string;
+  categories: { name: string }[];
+  [key: string]: unknown;
 }
 
 export type RecentListings = RecentListing[];
+
+export interface CreateBusinessPayload {
+  title: string;
+  description: string;
+  price: number;
+  categoryIds: string[];
+  sectorId?: string;
+  location?: string;
+  images?: string[];
+  [key: string]: unknown;
+}
+
+// --- Admin Listing Types ---
+
 export interface AdminListing {
   id: string;
   title: string;
-  businessName: string;
-  businessId: string;
-  category: string;
-  sector: string;
+  description: string;
   price: number;
   status: 'approved' | 'pending' | 'rejected' | 'draft';
   featured: boolean;
   rating: number;
   reviewCount: number;
+  businessName: string;
+  category: string;
+  sector: string;
   location: string;
-  description: string;
   images: string[];
-  type: 'product' | 'service';
+  createdAt?: string;
 }
 
 export interface AdminListingStats {
@@ -442,10 +157,9 @@ export interface AdminListingStats {
   featured: number;
 }
 
-export type AdminListingsResponse = {
+export interface AdminListingsResponse {
   data: AdminListing[];
-  total: number;
-  page: number;
-  limit: number;
-  totalPages: number;
-};
+  total?: number;
+  page?: number;
+  limit?: number;
+}

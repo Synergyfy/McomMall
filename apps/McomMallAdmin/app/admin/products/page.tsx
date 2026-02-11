@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -52,10 +53,6 @@ import {
     Loader2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useForm, FormProvider } from 'react-hook-form';
-import { VariantManager } from '@/app/admin/components/products/VariantManager';
-import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
 
 // Status Badge
 function ProductStatusBadge({ status }: { status: AdminProduct['status'] }) {
@@ -224,25 +221,6 @@ export default function ProductsPage() {
 
     const [selectedProduct, setSelectedProduct] = useState<AdminProduct | null>(null);
     const [sheetOpen, setSheetOpen] = useState(false);
-    const [createSheetOpen, setCreateSheetOpen] = useState(false);
-
-    // Create Product Form
-    const createMethods = useForm({
-        defaultValues: {
-            title: '',
-            description: '',
-            basePrice: 0,
-            attributes: [],
-            variations: []
-        }
-    });
-
-    const handleCreateProduct = (data: any) => {
-        // In a real app, this would call a mutation
-        console.log('Creating product:', data);
-        setCreateSheetOpen(false);
-        createMethods.reset();
-    };
 
     // Hooks
     const { data: stats, isLoading: statsLoading } = useGetAdminProductStats();
@@ -289,10 +267,12 @@ export default function ProductsPage() {
                     </Button>
                     <Button
                         className="bg-orange-500 hover:bg-orange-600"
-                        onClick={() => setCreateSheetOpen(true)}
+                        asChild
                     >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Product
+                        <Link href="/admin/products/add">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Product
+                        </Link>
                     </Button>
                 </div>
             </div>
@@ -550,60 +530,6 @@ export default function ProductsPage() {
                 isDeleting={deleteMutation.isPending}
             />
 
-            {/* Create Product Sheet */}
-            <Sheet open={createSheetOpen} onOpenChange={setCreateSheetOpen}>
-                <SheetContent className="w-full sm:max-w-2xl overflow-y-auto">
-                    <SheetHeader className="pb-6 border-b">
-                        <SheetTitle>Create New Product</SheetTitle>
-                        <SheetDescription>
-                            Add a new product with multiple variations to the catalog.
-                        </SheetDescription>
-                    </SheetHeader>
-
-                    <div className="py-6">
-                        <FormProvider {...createMethods}>
-                            <form onSubmit={createMethods.handleSubmit(handleCreateProduct)} className="space-y-8">
-                                {/* Basic Info */}
-                                <div className="space-y-4">
-                                    <h3 className="text-lg font-medium">Basic Information</h3>
-                                    <div className="grid gap-4">
-                                        <div className="space-y-2">
-                                            <Label>Product Title</Label>
-                                            <Input {...createMethods.register('title')} placeholder="e.g. Premium Cotton T-Shirt" />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Description</Label>
-                                            <Textarea {...createMethods.register('description')} placeholder="Product description..." />
-                                        </div>
-                                        <div className="space-y-2">
-                                            <Label>Base Price (£)</Label>
-                                            <Input type="number" {...createMethods.register('basePrice')} className="w-32" />
-                                        </div>
-                                    </div>
-                                </div>
-
-                                {/* Variants */}
-                                <div className="space-y-4">
-                                    <div className="flex items-center justify-between">
-                                        <h3 className="text-lg font-medium">Variants & Inventory</h3>
-                                    </div>
-                                    <VariantManager />
-                                </div>
-
-                                {/* Footer Actions */}
-                                <div className="flex justify-end gap-3 pt-6 border-t">
-                                    <Button variant="outline" type="button" onClick={() => setCreateSheetOpen(false)}>
-                                        Cancel
-                                    </Button>
-                                    <Button type="submit" className="bg-orange-500 hover:bg-orange-600">
-                                        Create Product
-                                    </Button>
-                                </div>
-                            </form>
-                        </FormProvider>
-                    </div>
-                </SheetContent>
-            </Sheet>
         </div>
     );
 }

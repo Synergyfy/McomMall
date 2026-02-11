@@ -23,6 +23,29 @@ export interface CreateCampaignDto {
   adPlacement: AdPlacement[];
 }
 
+export interface MyCampaign {
+  id: string;
+  name: string;
+  campaign_message: string;
+  type: CampaignType;
+  startDate: string;
+  budget: number;
+  status: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CampaignsResponse {
+  data: MyCampaign[];
+  meta: {
+    total: number;
+    page: number;
+    lastPage: number;
+    nextPage: number | null;
+    prevPage: number | null;
+  };
+}
+
 export interface Campaign {
   id: string;
   business: UserListing;

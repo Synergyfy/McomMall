@@ -61,11 +61,12 @@ export default function ListingPage({
               </h1>
               <p className="text-md text-gray-500 mt-1">
                 {isGoogle
-                  ? (listing as GooglePlaceResult)?.formattedAddress ||
-                    (listing as GooglePlaceResult)?.vicinity
-                  : `${(listing as InHouseBusiness).location.addressLine1}, ${
-                      (listing as InHouseBusiness).location.city
-                    }`}
+                  ? (listing as GooglePlaceResult)?.formatted_address ||
+                  (listing as GooglePlaceResult)?.vicinity
+                  : (listing as InHouseBusiness).location
+                    ? `${(listing as InHouseBusiness).location?.addressLine1}, ${(listing as InHouseBusiness).location?.city
+                    }`
+                    : ''}
               </p>
               {isGoogle && (
                 <div className="flex items-center space-x-1 mt-2">
@@ -75,7 +76,7 @@ export default function ListingPage({
                   </span>
                   <span className="text-gray-500">
                     (
-                    {(listing as GooglePlaceResult)?.userRatingsTotal} reviews)
+                    {(listing as GooglePlaceResult)?.user_ratings_total} reviews)
                   </span>
                 </div>
               )}
@@ -83,9 +84,8 @@ export default function ListingPage({
             <div className="flex flex-col items-end gap-4">
               <Button variant="outline" onClick={handleWishlistToggle}>
                 <Heart
-                  className={`mr-2 h-4 w-4 ${
-                    isWishlisted ? 'text-red-500 fill-current' : ''
-                  }`}
+                  className={`mr-2 h-4 w-4 ${isWishlisted ? 'text-red-500 fill-current' : ''
+                    }`}
                 />
                 {isWishlisted ? 'Remove from Wishlist' : 'Add to Wishlist'}
               </Button>
@@ -119,8 +119,8 @@ export default function ListingPage({
               <BookingSidebar
                 phoneNumber={
                   isGoogle
-                    ? (listing as GooglePlaceResult).formattedPhoneNumber || ''
-                    : (listing as InHouseBusiness).businessPhone
+                    ? (listing as GooglePlaceResult).formatted_phone_number || ''
+                    : (listing as InHouseBusiness).businessPhone ?? ''
                 }
                 priceDisplay={isGoogle ? String((listing as GooglePlaceResult)?.priceLevel ?? '') : ''}
                 author={{
@@ -130,7 +130,7 @@ export default function ListingPage({
                   name: isGoogle
                     ? (listing as GooglePlaceResult)?.name ?? ''
                     : (listing as InHouseBusiness)?.user?.name ??
-                      (listing as InHouseBusiness).businessName,
+                    (listing as InHouseBusiness).businessName ?? '',
                   email: isGoogle
                     ? ''
                     : (listing as InHouseBusiness)?.user?.email ?? '',
@@ -138,10 +138,10 @@ export default function ListingPage({
                   bio: '', // Provide a default or actual bio if available
                 }}
                 currentUserId={currentUser?.id}
-                isVerified={(listing as InHouseBusiness).isGoogleVerified}
+                isVerified={(listing as InHouseBusiness).isGoogleVerified ?? false}
                 businessId={placeId}
                 listingType={
-                  isGoogle ? [] : (listing as InHouseBusiness).listingType
+                  isGoogle ? [] : (listing as InHouseBusiness).listingType ?? []
                 }
               />
             </div>

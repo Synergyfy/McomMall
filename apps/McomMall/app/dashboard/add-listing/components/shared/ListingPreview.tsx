@@ -26,7 +26,7 @@ const ListingPreview: React.FC<ListingPreviewProps> = ({ formData }) => {
     id: 'preview',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
-    listingType: ['product', 'service'],
+    listingType: ['RETAIL', 'SERVICE'],
     businessName: formData.businessName || 'Business Name',
     legalName: formData.legalName || '',
     companyRegistrationNumber: formData.companyRegNo || '',

@@ -95,9 +95,7 @@ export default function BookingSidebar({
     );
   };
 
-  const isService =
-    listingType?.includes('service') ||
-    listingType?.includes('product-and-service' as ListingType);
+  const isService = listingType?.includes('SERVICE');
 
   return (
     <div className="w-full space-y-6">

@@ -23,6 +23,7 @@ import {
   Gift,
   Coins,
   LifeBuoy,
+  Zap,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -140,11 +141,16 @@ export const marketingMenuItems: MenuItem[] = [
       { title: 'Membership', href: '/dashboard/marketing/membership' },
     ],
   },
+  {
+    title: 'Group Circles',
+    href: '/dashboard/group-circles',
+    icon: Zap,
+  },
 ];
 
 export const historyMenuItems: MenuItem[] = [
   {
-    title: 'Promotion History',
+    title: 'Reward History',
     href: '/dashboard/history/promotion-history',
     icon: History,
   },

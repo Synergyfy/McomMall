@@ -95,8 +95,11 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
   const customerMainMenu = [
     ...mainMenuItems.filter(item =>
-      ['My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'].includes(item.title)
-    ),
+      ['Dashboard', 'My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'].includes(item.title)
+    ).sort((a, b) => {
+      const order = ['Dashboard', 'My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'];
+      return order.indexOf(a.title) - order.indexOf(b.title);
+    }),
     ...(cashbackItem ? [cashbackItem] : []),
   ];
 

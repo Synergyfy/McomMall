@@ -71,6 +71,29 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body className={`${opensans.variable} antialiased overflow-hidden`}>
+        {process.env.NODE_ENV === 'development' && (
+          <script
+            id="sw-cleanup"
+            dangerouslySetInnerHTML={{
+              __html: `
+                if ('serviceWorker' in navigator) {
+                  navigator.serviceWorker.getRegistrations().then((registrations) => {
+                    for (const registration of registrations) {
+                      registration.unregister();
+                    }
+                  });
+                }
+                if ('caches' in window) {
+                  caches.keys().then((names) => {
+                    for (const name of names) {
+                      caches.delete(name);
+                    }
+                  });
+                }
+              `,
+            }}
+          />
+        )}
         <ClientProviders>
           <AuthInitializer>
             <ServiceWorkerRegistrar />

@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import Link from 'next/link';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -247,9 +248,11 @@ export default function ServicesPage() {
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Button className="bg-orange-500 hover:bg-orange-600">
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add Service
+                    <Button className="bg-orange-500 hover:bg-orange-600" asChild>
+                        <Link href="/admin/services/add">
+                            <Plus className="h-4 w-4 mr-2" />
+                            Add Service
+                        </Link>
                     </Button>
                 </div>
             </div>

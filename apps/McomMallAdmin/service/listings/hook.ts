@@ -7,6 +7,7 @@ import {
   GooglePlaceResult,
   GooglePlaceResults,
   InHouseBusinessResults,
+  InHouseBusiness,
   RecentListings,
   AdminListingStats,
   AdminListingsResponse,
@@ -355,4 +356,28 @@ export const useGetUserListings = () => {
     queryKey: ['FETCH_USER_LISTINGS'],
   });
   return query;
+};
+
+export const useGetListingsByUserId = ({ userId }: { userId: string }) => {
+  const fetch = async () => {
+    try {
+      const response = await api.get(`listings/user/${userId}`);
+      // Assuming the API returns the array directly or in a data property
+      // Looking at the usage in page.tsx, it expect an array.
+      return (response.data.data || response.data) as InHouseBusiness[];
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to fetch user listings'
+      );
+    }
+  };
+
+  return useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_USER_LISTINGS_BY_ID', userId],
+    enabled: !!userId,
+  });
 };

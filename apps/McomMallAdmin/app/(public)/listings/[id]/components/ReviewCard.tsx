@@ -93,8 +93,8 @@ export const ReviewCard = ({ review }: { review: Review }) => {
     const toggleExpanded = () => {
       setIsExpanded(!isExpanded);
     };
-    const authorName = review.author ? review.author.name : 'Anonymous';
-    const authorAvatar = review.author ? review.author.avatarUrl : '/default-avatar.png';
+    const authorName = review.user ? review.user.name : 'Anonymous';
+    const authorAvatar = review.user ? review.user.profilePictureUrl || undefined : '/default-avatar.png';
 
     return (
       <div className="border-t py-6">
