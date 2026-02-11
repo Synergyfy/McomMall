@@ -92,20 +92,21 @@ export default function ListingCard({
   const vicinity = isGoogle
     ? listing.formattedAddress || listing.vicinity
     : (listing as InHouseBusiness).location
-    ? `${(listing as InHouseBusiness).location.addressLine1}, ${
-        (listing as InHouseBusiness).location.city
+      ? `${(listing as InHouseBusiness).location.addressLine1}, ${(listing as InHouseBusiness).location.city
       }`
-    : '';
+      : '';
   const shortDescription = isGoogle
     ? `Business Status: ${listing.businessStatus}`
     : (listing as InHouseBusiness).shortDescription;
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
-  const ratingCount = isGoogle ? listing.userRatingsTotal : undefined;
+  const ratingCount = isGoogle ? listing.user_ratings_total : undefined;
   const priceLevel = isGoogle ? listing.priceLevel : undefined;
   const isVerified = isGoogle ? false : listing.isGoogleVerified;
   const altText = isGoogle
     ? listing.name
-    : listing.logoAltText || listing.businessName;
+    : ((listing as InHouseBusiness).logoAltText as string) ||
+    (listing as InHouseBusiness).businessName ||
+    (listing as InHouseBusiness).name;
 
   const listingId = isGoogle ? placeId : listing.id;
   const href = isGoogle

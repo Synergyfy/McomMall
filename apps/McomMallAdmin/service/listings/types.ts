@@ -1,5 +1,11 @@
 // --- Google Place Types ---
 
+export interface Photo {
+  photo_reference: string;
+  height: number;
+  width: number;
+}
+
 export interface GooglePlaceResult {
   place_id: string;
   name: string;
@@ -8,13 +14,10 @@ export interface GooglePlaceResult {
     location: {
       lat: number;
       lng: number;
+      // ... other fields if needed
     };
   };
-  photos?: Array<{
-    photo_reference: string;
-    height: number;
-    width: number;
-  }>;
+  photos?: Photo[];
   rating?: number;
   user_ratings_total?: number;
   types?: string[];
@@ -22,18 +25,44 @@ export interface GooglePlaceResult {
     open_now?: boolean;
   };
   business_status?: string;
+  priceLevel?: string;
+  vicinity?: string;
+  formatted_phone_number?: string;
+  // ... other fields
 }
 
 export type GooglePlaceResults = GooglePlaceResult[];
 
 // --- In-House Business Types ---
 
-export interface InHouseBusinessResults {
-  data: Array<{
+export type ListingType = 'product' | 'service';
+
+export interface InHouseBusiness {
+  id: string;
+  name: string;
+  title?: string;
+  description?: string;
+  categories?: { name: string }[];
+  logoUrl?: string; // Also adding logoUrl as it was used in ListingDetails
+  businessName?: string;
+  location?: {
+    addressLine1: string;
+    city: string;
+  };
+  businessPhone?: string;
+  user?: {
     id: string;
     name: string;
-    [key: string]: unknown;
-  }>;
+    email: string;
+  };
+  isGoogleVerified?: boolean;
+  listingType?: ListingType[];
+  isClaimed?: boolean;
+  [key: string]: unknown;
+}
+
+export interface InHouseBusinessResults {
+  data: InHouseBusiness[];
 }
 
 // --- Listing Types ---
