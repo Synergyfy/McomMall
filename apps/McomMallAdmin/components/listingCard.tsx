@@ -48,7 +48,7 @@ const amenityTooltips: Record<Amenity, string> = {
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'placeId' in listing;
+  return 'place_id' in listing;
 }
 
 export default function ListingCard({
@@ -84,7 +84,7 @@ export default function ListingCard({
   }
 
   const name = isGoogle ? listing.name : listing.businessName;
-  const placeId = isGoogle ? listing.placeId : listing.id;
+  const placeId = isGoogle ? listing.place_id : listing.id;
   const category =
     (isGoogle
       ? listing.types?.[0]
