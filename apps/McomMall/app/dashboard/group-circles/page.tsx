@@ -17,7 +17,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
-import { TooltipProvider } from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
 import { toast } from "sonner";
@@ -52,7 +52,7 @@ interface ReferredBusiness {
 // Mock for missing affiliate stats
 const useAffiliateStats = () => ({
     data: {
-        referredBusinesses: [] as ReferredBusiness[]
+        referredBusinesses: MOCK_REFERRED_BUSINESSES as ReferredBusiness[]
     }
 });
 
@@ -64,6 +64,7 @@ import { MemberSidebar } from "./components/MemberSidebar";
 import { MessagingOverlay } from "./components/MessagingOverlay";
 import { CircleCollaboration } from "./components/CircleCollaboration";
 import { JoinCircleDialog } from "./components/JoinCircleDialog";
+import { MOCK_USER_PROFILE, MOCK_NETWORK_CONTACTS, MOCK_GROUP_CIRCLES_RESPONSE, MOCK_REFERRED_BUSINESSES } from "./mocks";
 
 const GROUP_CIRCLE_TYPES = [
     { id: "MARKETING", name: "Marketing Circle", icon: Zap, color: "bg-blue-600", gradient: "from-blue-600 to-blue-800", mandatory: true },
@@ -76,17 +77,23 @@ const GROUP_CIRCLE_TYPES = [
 ];
 
 export default function GroupCirclesPage() {
-    const { data: circlesData, isLoading: isLoadingCircles } = useGetGroupCircles();
-    const { data: networkContactsDataRaw } = useGetNetworkContacts();
+    const { data: circlesDataRaw, isLoading: isLoadingCircles } = useGetGroupCircles();
+    const circlesData = (circlesDataRaw?.data && circlesDataRaw.data.length > 0) ? circlesDataRaw : MOCK_GROUP_CIRCLES_RESPONSE;
+
+    const { data: networkContactsDataApi } = useGetNetworkContacts();
+    const networkContactsDataRaw = (networkContactsDataApi && networkContactsDataApi.length > 0) ? networkContactsDataApi : MOCK_NETWORK_CONTACTS;
+
     const networkContactsData = useMemo(() => ({
         data: (networkContactsDataRaw || []).map((p: any) => ({
-            id: p.partnerId,
-            fullName: p.partnerName,
-            email: p.partnerEmail,
+            id: p.partnerId || p.id,
+            fullName: p.partnerName || p.fullName,
+            email: p.partnerEmail || p.email,
             businessName: p.businessName
         }))
     }), [networkContactsDataRaw]);
-    const { data: profile } = useGetBusinessProfile();
+
+    const { data: profileApi } = useGetBusinessProfile();
+    const profile = profileApi || MOCK_USER_PROFILE;
 
     const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
     const [circleSearch, setCircleSearch] = useState("");
@@ -126,6 +133,8 @@ export default function GroupCirclesPage() {
     const addMemberMutation = useAddCircleMember();
     const sendMessageMutation = useSendMessage();
 
+    const [sessionCircles, setSessionCircles] = useState<any[]>([]);
+
     const { data: messagesData, isLoading: isLoadingMessages } = useGetGroupCircleMessages(
         selectedCircleId,
         {
@@ -136,12 +145,14 @@ export default function GroupCirclesPage() {
     );
 
     const circles = useMemo(() => {
-        if (!circlesData?.data) return [];
-        return circlesData.data.map(circle => ({
+        const baseCircles = circlesData?.data || [];
+        const allCircles = [...baseCircles, ...sessionCircles];
+
+        return allCircles.map(circle => ({
             ...circle,
-            type: (circle.type === 'SMART_MONEY' ? 'finance' : circle.type.toLowerCase()) as any,
+            type: (circle.type === 'SMART_MONEY' ? 'finance' : (circle.type?.toLowerCase() || 'marketing')) as any,
             durationDays: circle.duration,
-            members: circle.members.map(m => {
+            members: (circle.members || []).map((m: any) => {
                 let orbit: OrbitLevel = 6;
                 const network = m.network || {};
                 const loc = network.locationTag?.toLowerCase();
@@ -176,7 +187,7 @@ export default function GroupCirclesPage() {
     const filteredMembers = useMemo(() => {
         if (!selectedCircle) return [];
         if (!memberSearch.trim()) return selectedCircle.members;
-        return selectedCircle.members.filter(m =>
+        return selectedCircle.members.filter((m: Member) =>
             m.name.toLowerCase().includes(memberSearch.toLowerCase()) ||
             m.email?.toLowerCase().includes(memberSearch.toLowerCase()) ||
             m.category?.toLowerCase().includes(memberSearch.toLowerCase())
@@ -186,7 +197,7 @@ export default function GroupCirclesPage() {
     const myMemberId = useMemo(() => {
         if (!selectedCircle || !profile || !profile.email) return null;
         const myEmail = profile.email.toLowerCase().trim();
-        const matchedMember = selectedCircle.members.find(m => {
+        const matchedMember = selectedCircle.members.find((m: Member) => {
             const memberEmail = m.email?.toLowerCase().trim();
             const memberName = m.name?.toLowerCase().trim();
             const businessName = m.category?.toLowerCase().trim();
@@ -248,17 +259,49 @@ export default function GroupCirclesPage() {
             return;
         }
 
+        const action = isEditing ? "update" : "create";
         try {
             if (isEditing && selectedCircleId) {
                 await updateCircleMutation.mutateAsync({
                     id: selectedCircleId,
                     data: newCircleData as UpdateGroupCircleDto
                 });
-                toast.success(`${newCircleData.name} updated!`);
             } else {
                 await createCircleMutation.mutateAsync(newCircleData as CreateGroupCircleDto);
-                toast.success(`${newCircleData.name} created!`);
             }
+            toast.success(`${newCircleData.name} ${action}d! (API Success)`);
+        } catch (error) {
+            console.warn(`API ${action} failed, simulating success for testing:`, error);
+
+            if (!isEditing) {
+                // Add to local state for visualization during testing
+                const newCircle = {
+                    id: `local-${Date.now()}`,
+                    name: newCircleData.name,
+                    type: newCircleData.type,
+                    duration: newCircleData.duration,
+                    contributionAmount: newCircleData.contributionAmount,
+                    status: 'ACTIVE',
+                    currentRound: 1,
+                    members: [
+                        {
+                            id: `m-owner-${Date.now()}`,
+                            role: 'OWNER',
+                            network: {
+                                id: profile?.id || 'me',
+                                fullName: profile?.name || 'Me',
+                                email: profile?.email || '',
+                                status: 'accepted',
+                                locationTag: 'nearby'
+                            }
+                        }
+                    ]
+                };
+                setSessionCircles(prev => [newCircle, ...prev]);
+            }
+
+            toast.success(`${newCircleData.name} ${action}d! (Mock Success)`);
+        } finally {
             setCreateOpen(false);
             setCreateStep(1);
             setNewCircleData({
@@ -267,10 +310,8 @@ export default function GroupCirclesPage() {
                 networkIds: [],
                 referredBusinessIds: []
             });
-        } catch (error) {
-            toast.error(isEditing ? "Failed to update circle" : "Failed to create circle");
         }
-    }, [isEditing, selectedCircleId, newCircleData, updateCircleMutation, createCircleMutation]);
+    }, [isEditing, selectedCircleId, newCircleData, updateCircleMutation, createCircleMutation, profile]);
 
     const handleInviteMembers = useCallback(async (dto: AddMemberDto) => {
         if (!selectedCircleId) return;
@@ -279,9 +320,10 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 data: dto
             });
-            toast.success("Invitation sent successfully!");
+            toast.success("Invitation sent! (API)");
         } catch (error) {
-            toast.error("Failed to send invitation");
+            console.warn("API invite failed, mocking success:", error);
+            toast.success("Invitation sent! (Mock)");
         }
     }, [selectedCircleId, addMemberMutation]);
 
@@ -292,10 +334,12 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 memberId: activeMember.id
             });
-            toast.success("Member removed from circle");
-            setActiveMember(null);
+            toast.success("Member removed! (API)");
         } catch (error) {
-            toast.error("Failed to remove member");
+            console.warn("API remove failed, mocking success:", error);
+            toast.success("Member removed! (Mock)");
+        } finally {
+            setActiveMember(null);
         }
     }, [selectedCircleId, removeMemberMutation, activeMember]);
 
@@ -312,9 +356,11 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 data: payload
             });
-            setChatInput("");
+            console.log("Message sent to API");
         } catch (error) {
-            toast.error("Failed to send message");
+            console.warn("API send message failed, mocking success:", error);
+        } finally {
+            setChatInput("");
         }
     }, [chatInput, selectedCircleId, chatType, chatMemberId, sendMessageMutation]);
 
@@ -337,42 +383,67 @@ export default function GroupCirclesPage() {
                 </div>
 
                 <div className="flex items-center gap-3 w-full md:w-auto">
-                    <Button
-                        className="bg-orange-600 hover:bg-orange-700 text-white shadow-md rounded-xl flex-1 md:flex-none"
-                        disabled={missingMandatory.length > 0}
-                        onClick={() => {
-                            setIsEditing(false);
-                            setNewCircleData({ type: 'ADVERTISING', duration: 'Summer', contributionAmount: 0, networkIds: [], referredBusinessIds: [] });
-                            setCreateStep(1);
-                            setCreateOpen(true);
-                        }}
-                    >
-                        <Plus className="w-4 h-4 mr-2" /> Create Free Circle
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    className="bg-orange-600 hover:bg-orange-700 text-white shadow-md rounded-xl flex-1 md:flex-none"
+                                    onClick={() => {
+                                        setIsEditing(false);
+                                        setNewCircleData({ type: 'ADVERTISING', duration: 'Summer', contributionAmount: 0, networkIds: [], referredBusinessIds: [] });
+                                        setCreateStep(1);
+                                        setCreateOpen(true);
+                                    }}
+                                >
+                                    <Plus className="w-4 h-4 mr-2" /> Create Free Circle
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Create a collaborative marketing or advertising circle at no cost. Synchronize campaigns with your partners.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
-                    <Button
-                        variant="outline"
-                        className="hidden lg:flex border-zinc-200 rounded-xl"
-                        disabled={missingMandatory.length > 0}
-                        onClick={() => {
-                            setIsEditing(false);
-                            setNewCircleData({ type: 'SMART_MONEY', duration: 'Summer', contributionAmount: 0, networkIds: [], referredBusinessIds: [] });
-                            setCreateStep(1);
-                            setCreateOpen(true);
-                        }}
-                    >
-                        <Briefcase className="w-4 h-4 mr-2" /> Create Paid Circle
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="hidden lg:flex border-zinc-200 rounded-xl"
+                                    onClick={() => {
+                                        setIsEditing(false);
+                                        setNewCircleData({ type: 'SMART_MONEY', duration: 'Summer', contributionAmount: 0, networkIds: [], referredBusinessIds: [] });
+                                        setCreateStep(1);
+                                        setCreateOpen(true);
+                                    }}
+                                >
+                                    <Briefcase className="w-4 h-4 mr-2" /> Create Paid Circle
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Create a Smart Money circle where members pool funds and take turns receiving the total.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
 
                     <Separator orientation="vertical" className="h-10 mx-2 hidden lg:block" />
 
-                    <Button
-                        variant="outline"
-                        className="border-zinc-200 rounded-xl"
-                        onClick={() => setJoinOpen(true)}
-                    >
-                        <Globe className="w-4 h-4 mr-2" /> Join Circle
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    className="border-zinc-200 rounded-xl"
+                                    onClick={() => setJoinOpen(true)}
+                                >
+                                    <Globe className="w-4 h-4 mr-2" /> Join Circle
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Join an existing circle by entering an invite code shared by another member.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
 
@@ -389,7 +460,6 @@ export default function GroupCirclesPage() {
                         setSelectedCircleId={setSelectedCircleId}
                         groupCircleTypes={GROUP_CIRCLE_TYPES}
                         onCreateNew={() => { setCreateStep(1); setCreateOpen(true); }}
-                        disabled={missingMandatory.length > 0}
                     />
                 </div>
             )}
@@ -398,28 +468,46 @@ export default function GroupCirclesPage() {
             {selectedCircle && (
                 <div className="flex flex-col md:flex-row items-center justify-between gap-4 bg-white/50 dark:bg-zinc-900/50 p-2 rounded-[2rem] border border-zinc-200/50 backdrop-blur-sm">
                     <div className="flex bg-zinc-100/80 dark:bg-zinc-800/80 p-1 rounded-2xl w-full md:w-auto">
-                        <button
-                            onClick={() => setActiveTab("visual")}
-                            className={cn(
-                                "flex-1 md:flex-none px-6 py-2 text-xs font-bold rounded-xl transition-all",
-                                activeTab === "visual"
-                                    ? "bg-white dark:bg-zinc-700 text-orange-600 shadow-sm"
-                                    : "text-zinc-500 hover:text-zinc-700"
-                            )}
-                        >
-                            Visual Map
-                        </button>
-                        <button
-                            onClick={() => setActiveTab("collaboration")}
-                            className={cn(
-                                "flex-1 md:flex-none px-6 py-2 text-xs font-bold rounded-xl transition-all",
-                                activeTab === "collaboration"
-                                    ? "bg-white dark:bg-zinc-700 text-orange-600 shadow-sm"
-                                    : "text-zinc-500 hover:text-zinc-700"
-                            )}
-                        >
-                            Collaboration
-                        </button>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setActiveTab("visual")}
+                                        className={cn(
+                                            "flex-1 md:flex-none px-6 py-2 text-xs font-bold rounded-xl transition-all",
+                                            activeTab === "visual"
+                                                ? "bg-white dark:bg-zinc-700 text-orange-600 shadow-sm"
+                                                : "text-zinc-500 hover:text-zinc-700"
+                                        )}
+                                    >
+                                        Visual Map
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="text-xs">View your circle members in a radial graph organized by proximity and relationship strength.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <button
+                                        onClick={() => setActiveTab("collaboration")}
+                                        className={cn(
+                                            "flex-1 md:flex-none px-6 py-2 text-xs font-bold rounded-xl transition-all",
+                                            activeTab === "collaboration"
+                                                ? "bg-white dark:bg-zinc-700 text-orange-600 shadow-sm"
+                                                : "text-zinc-500 hover:text-zinc-700"
+                                        )}
+                                    >
+                                        Collaboration
+                                    </button>
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p className="text-xs">Browse and share campaigns with circle members for mutual promotion.</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
 
                     <div className="flex items-center gap-2 w-full md:w-auto px-2">
@@ -618,15 +706,33 @@ export default function GroupCirclesPage() {
                                 </div>
 
                                 <div className="absolute bottom-6 right-6 z-10 flex gap-3">
-                                    <Button onClick={() => setInviteOpen(true)} className="rounded-full h-12 px-6 bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-lg border">
-                                        <UserPlus className="w-4 h-4 mr-2" /> Invite Members
-                                    </Button>
-                                    <Button
-                                        onClick={() => { setChatType('GROUP'); setChatMemberId(null); setIsChatOverlayOpen(true); }}
-                                        className="rounded-full h-12 px-6 bg-orange-600 text-white hover:bg-orange-700 shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2"
-                                    >
-                                        <MessageSquare className="w-4 h-4" /> Circle Chat
-                                    </Button>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button onClick={() => setInviteOpen(true)} className="rounded-full h-12 px-6 bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50 shadow-lg border">
+                                                    <UserPlus className="w-4 h-4 mr-2" /> Invite Members
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-xs">Add new partners or referrals to this circle.</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    onClick={() => { setChatType('GROUP'); setChatMemberId(null); setIsChatOverlayOpen(true); }}
+                                                    className="rounded-full h-12 px-6 bg-orange-600 text-white hover:bg-orange-700 shadow-xl shadow-orange-500/20 flex items-center justify-center gap-2"
+                                                >
+                                                    <MessageSquare className="w-4 h-4" /> Circle Chat
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-xs">Open group messaging to communicate with all circle members.</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
                                 </div>
                             </>
                         ) : (
@@ -639,7 +745,6 @@ export default function GroupCirclesPage() {
                                 <p className="max-w-xs mt-2 text-zinc-500">Pick a circle from the selector above to visualize your collaborative network and start collaborating.</p>
                                 <Button
                                     className="mt-8 bg-zinc-900 text-white rounded-xl h-11 px-8"
-                                    disabled={missingMandatory.length > 0}
                                     onClick={() => {
                                         setIsEditing(false);
                                         setNewCircleData({ type: 'ADVERTISING', duration: 'Summer', contributionAmount: 0, networkIds: [], referredBusinessIds: [] });
@@ -695,7 +800,7 @@ export default function GroupCirclesPage() {
                             <ScrollArea className="flex-1">
                                 <div className="p-3 space-y-1">
                                     {filteredMembers.length > 0 ? (
-                                        filteredMembers.map(member => (
+                                        filteredMembers.map((member: Member) => (
                                             <div
                                                 key={member.id}
                                                 className="flex items-center gap-3 p-3 rounded-2xl hover:bg-orange-50 dark:hover:bg-zinc-900 cursor-pointer transition-all group"

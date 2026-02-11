@@ -48,6 +48,7 @@ import { UploadSuccessDialog } from '@/components/UploadSuccessDialog';
 import { ErrorDialog } from '@/components/ErrorDialog';
 import { useAddListing, useEditListing } from '@/service/listings/hook';
 import { toast } from 'sonner';
+import ListingUsageBar from '@/components/dashboard/ListingUsageBar';
 
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
@@ -840,6 +841,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
   return (
     <div className="space-y-8">
+      <ListingUsageBar />
       <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
         <div>
           <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">

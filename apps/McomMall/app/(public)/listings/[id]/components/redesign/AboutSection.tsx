@@ -4,13 +4,13 @@ import { motion } from 'framer-motion';
 
 import { InHouseBusiness } from '@/service/listings/types';
 
-import { 
+import {
 
-  Building2, 
+  Building2,
 
-  Users2, 
+  Users2,
 
-  CalendarCheck, 
+  CalendarCheck,
 
   Award,
 
@@ -120,11 +120,33 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
 
 
+  const DAY_MAP: Record<number, string> = {
+
+    0: 'SUNDAY',
+
+    1: 'MONDAY',
+
+    2: 'TUESDAY',
+
+    3: 'WEDNESDAY',
+
+    4: 'THURSDAY',
+
+    5: 'FRIDAY',
+
+    6: 'SATURDAY',
+
+  };
+
+
+
   const today = new Date().getDay();
 
-  const currentDayHours = listing.businessHours?.find(h => h.dayOfWeek === today);
+  const todayString = DAY_MAP[today];
 
-  
+  const currentDayHours = listing.businessHours?.find(h => h.dayOfWeek === todayString);
+
+
 
   const isOpenNow = () => {
 
@@ -132,7 +154,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
     if (currentDayHours.is24h) return true;
 
-    
+
 
     const now = new Date();
 
@@ -142,7 +164,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
     const closeTime = parseInt(currentDayHours.closeTime.replace(':', ''), 10);
 
-    
+
 
     return currentTime >= openTime && currentTime <= closeTime;
 
@@ -150,195 +172,67 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
 
 
-    return (
+  return (
 
 
 
-      <div className="space-y-12">
+    <div className="space-y-12">
 
 
 
-        {/* Quick Highlights Bar */}
+      {/* Quick Highlights Bar */}
 
 
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4 md:gap-6">
 
 
 
-          {stats.map((stat, i) => {
+        {stats.map((stat, i) => {
 
 
 
-            const Icon = stat.icon;
+          const Icon = stat.icon;
 
 
 
-            return (
+          return (
 
 
 
-              <motion.div 
+            <motion.div
 
 
 
-                key={i}
+              key={i}
 
 
 
-                initial={{ opacity: 0, y: 10 }}
+              initial={{ opacity: 0, y: 10 }}
 
 
 
-                animate={{ opacity: 1, y: 0 }}
+              animate={{ opacity: 1, y: 0 }}
 
 
 
-                transition={{ delay: 0.1 * i }}
+              transition={{ delay: 0.1 * i }}
 
 
 
-                className="bg-white p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-orange-200 hover:shadow-md transition-all"
+              className="bg-white p-5 md:p-6 rounded-[2rem] border border-gray-100 shadow-sm flex items-center gap-4 group hover:border-orange-200 hover:shadow-md transition-all"
 
 
 
-              >
+            >
 
 
 
-                <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-orange-50 flex items-center justify-center text-[#f58220] group-hover:bg-[#f58220] group-hover:text-white transition-all shrink-0">
+              <div className="w-10 h-10 md:w-12 md:h-12 rounded-xl md:rounded-2xl bg-orange-50 flex items-center justify-center text-[#f58220] group-hover:bg-[#f58220] group-hover:text-white transition-all shrink-0">
 
 
 
-                  <Icon size={20} className="md:w-6 md:h-6" />
-
-
-
-                </div>
-
-
-
-                <div className="min-w-0">
-
-
-
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{stat.label}</p>
-
-
-
-                  <p className="text-sm md:text-base font-black text-gray-900 capitalize truncate">{stat.value}</p>
-
-
-
-                </div>
-
-
-
-              </motion.div>
-
-
-
-            );
-
-
-
-          })}
-
-
-
-        </div>
-
-
-
-  
-
-
-
-        {/* Story Content */}
-
-
-
-        <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-500/5">
-
-
-
-          <div className="max-w-4xl">
-
-
-
-            <h2 className="text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
-
-
-
-              Our Story & <span className="text-[#f58220]">Mission</span>
-
-
-
-            </h2>
-
-
-
-            <div className="prose prose-lg max-w-none text-gray-500 font-medium leading-relaxed">
-
-
-
-              {listing.about?.split('\n').map((paragraph, i) => (
-
-
-
-                <p key={i} className="mb-4">{paragraph}</p>
-
-
-
-              )) || "Welcome to " + listing.businessName + ". We are dedicated to providing the highest quality products and services to our customers. Our team is committed to excellence and ensuring that every experience with us is exceptional."}
-
-
-
-            </div>
-
-
-
-  
-
-
-
-            {listing.website && (
-
-
-
-              <div className="mt-8 pt-8 border-t border-gray-50">
-
-
-
-                <a 
-
-
-
-                  href={listing.website} 
-
-
-
-                  target="_blank" 
-
-
-
-                  rel="noreferrer"
-
-
-
-                  className="inline-flex items-center gap-3 text-[#f58220] font-black text-lg hover:gap-5 transition-all"
-
-
-
-                >
-
-
-
-                  Visit Our Official Website <ArrowRight size={20} />
-
-
-
-                </a>
+                <Icon size={20} className="md:w-6 md:h-6" />
 
 
 
@@ -346,7 +240,79 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
 
 
-            )}
+              <div className="min-w-0">
+
+
+
+                <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest truncate">{stat.label}</p>
+
+
+
+                <p className="text-sm md:text-base font-black text-gray-900 capitalize truncate">{stat.value}</p>
+
+
+
+              </div>
+
+
+
+            </motion.div>
+
+
+
+          );
+
+
+
+        })}
+
+
+
+      </div>
+
+
+
+
+
+
+
+      {/* Story Content */}
+
+
+
+      <div className="bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-500/5">
+
+
+
+        <div className="max-w-4xl">
+
+
+
+          <h2 className="text-3xl font-black text-gray-900 mb-6 flex items-center gap-3">
+
+
+
+            Our Story & <span className="text-[#f58220]">Mission</span>
+
+
+
+          </h2>
+
+
+
+          <div className="prose prose-lg max-w-none text-gray-500 font-medium leading-relaxed">
+
+
+
+            {listing.about?.split('\n').map((paragraph, i) => (
+
+
+
+              <p key={i} className="mb-4">{paragraph}</p>
+
+
+
+            )) || "Welcome to " + listing.businessName + ". We are dedicated to providing the highest quality products and services to our customers. Our team is committed to excellence and ensuring that every experience with us is exceptional."}
 
 
 
@@ -354,11 +320,67 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
 
 
+
+
+
+
+          {listing.website && (
+
+
+
+            <div className="mt-8 pt-8 border-t border-gray-50">
+
+
+
+              <a
+
+
+
+                href={listing.website}
+
+
+
+                target="_blank"
+
+
+
+                rel="noreferrer"
+
+
+
+                className="inline-flex items-center gap-3 text-[#f58220] font-black text-lg hover:gap-5 transition-all"
+
+
+
+              >
+
+
+
+                Visit Our Official Website <ArrowRight size={20} />
+
+
+
+              </a>
+
+
+
+            </div>
+
+
+
+          )}
+
+
+
         </div>
 
 
 
-  
+      </div>
+
+
+
+
 
 
 
@@ -368,79 +390,83 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
         <div className="lg:col-span-2 bg-white p-10 rounded-[2.5rem] border border-gray-100 shadow-xl shadow-gray-500/5">
 
-           <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-50">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-10 pb-6 border-b border-gray-50">
 
-              <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4">
 
-                <div className="w-14 h-14 rounded-2xl bg-gray-900 flex items-center justify-center text-white shadow-lg shadow-gray-900/20">
+              <div className="w-14 h-14 rounded-2xl bg-gray-900 flex items-center justify-center text-white shadow-lg shadow-gray-900/20">
 
-                  <Clock size={28} />
-
-                </div>
-
-                <div>
-
-                  <h3 className="text-2xl font-black text-gray-900">Operational Hours</h3>
-
-                  <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">When we're available</p>
-
-                </div>
+                <Clock size={28} />
 
               </div>
 
-              
+              <div>
 
-              {currentDayHours && (
+                <h3 className="text-2xl font-black text-gray-900">Operational Hours</h3>
 
-                <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border ${
+                <p className="text-gray-400 font-bold text-xs uppercase tracking-widest">When we're available</p>
 
-                  isOpenNow() 
+              </div>
 
-                    ? 'bg-emerald-50 border-emerald-100 text-emerald-600' 
+            </div>
 
-                    : 'bg-red-50 border-red-100 text-red-600'
+
+
+            {currentDayHours && (
+
+              <div className={`px-6 py-3 rounded-2xl flex items-center gap-3 border ${isOpenNow()
+
+                  ? 'bg-emerald-50 border-emerald-100 text-emerald-600'
+
+                  : 'bg-red-50 border-red-100 text-red-600'
 
                 }`}>
 
-                  <div className={`w-3 h-3 rounded-full animate-pulse ${isOpenNow() ? 'bg-emerald-500' : 'bg-red-500'}`} />
+                <div className={`w-3 h-3 rounded-full animate-pulse ${isOpenNow() ? 'bg-emerald-500' : 'bg-red-500'}`} />
 
-                  <span className="font-black text-sm uppercase tracking-wider">
+                <span className="font-black text-sm uppercase tracking-wider">
 
-                    {isOpenNow() ? 'Open Now' : 'Currently Closed'}
+                  {isOpenNow() ? 'Open Now' : 'Currently Closed'}
 
-                  </span>
+                </span>
 
-                </div>
+              </div>
 
-              )}
+            )}
 
-           </div>
+          </div>
 
 
 
-           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
 
-              {listing.businessHours?.sort((a, b) => a.dayOfWeek - b.dayOfWeek).map((hour) => (
+            {listing.businessHours?.sort((a, b) => {
 
-                <div key={hour.id} className={`flex items-center justify-between p-4 rounded-2xl transition-all ${hour.dayOfWeek === today ? 'bg-orange-50 border border-orange-100' : 'hover:bg-gray-50'}`}>
+              const dayOrder: Record<string, number> = { 'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6 };
 
-                  <span className={`text-sm font-bold ${hour.dayOfWeek === today ? 'text-[#f58220]' : 'text-gray-600'}`}>
+              return dayOrder[a.dayOfWeek] - dayOrder[b.dayOfWeek];
 
-                    {daysOfWeek[hour.dayOfWeek]}
+            }).map((hour) => (
 
-                  </span>
+              <div key={hour.id} className={`flex items-center justify-between p-4 rounded-2xl transition-all ${hour.dayOfWeek === todayString ? 'bg-orange-50 border border-orange-100' : 'hover:bg-gray-50'}`}>
 
-                  <span className={`text-sm font-black ${hour.dayOfWeek === today ? 'text-[#f58220]' : 'text-gray-900'}`}>
+                <span className={`text-sm font-bold ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-600'}`}>
 
-                    {hour.is24h ? '24 Hours' : `${formatTime(hour.openTime)} - ${formatTime(hour.closeTime)}`}
+                  {daysOfWeek[Object.keys(DAY_MAP).find(k => DAY_MAP[Number(k)] === hour.dayOfWeek) as any]}
 
-                  </span>
+                </span>
 
-                </div>
+                <span className={`text-sm font-black ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-900'}`}>
 
-              ))}
+                  {hour.is24h ? '24 Hours' : `${formatTime(hour.openTime)} - ${formatTime(hour.closeTime)}`}
 
-           </div>
+                </span>
+
+              </div>
+
+            ))}
+
+          </div>
 
         </div>
 
@@ -492,7 +518,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
         {productProfile && (
 
-          <motion.div 
+          <motion.div
 
             initial={{ opacity: 0, y: 20 }}
 
@@ -558,13 +584,13 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
                 <div className="space-y-3 bg-gray-50 p-6 rounded-3xl border border-gray-100">
 
-                   <h4 className="text-sm font-black text-gray-900 flex items-center gap-2">
+                  <h4 className="text-sm font-black text-gray-900 flex items-center gap-2">
 
                     <AlertCircle size={18} className="text-orange-400" /> Fulfilment Notes
 
-                   </h4>
+                  </h4>
 
-                   <p className="text-gray-500 text-sm font-medium leading-relaxed">{productProfile.fulfilmentNotes}</p>
+                  <p className="text-gray-500 text-sm font-medium leading-relaxed">{productProfile.fulfilmentNotes}</p>
 
                 </div>
 
@@ -600,7 +626,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
                     {productProfile.storefrontLinks.map((link) => (
 
-                      <a 
+                      <a
 
                         key={link.id}
 
@@ -640,7 +666,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
         {serviceProfile && (
 
-          <motion.div 
+          <motion.div
 
             initial={{ opacity: 0, y: 20 }}
 
@@ -676,57 +702,57 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
               {/* Fixed/Hourly Rate display removed if not needed or can be added back if desired */}
 
-              
 
-                            {serviceProfile.bookingUrl && (
 
-              
+              {serviceProfile.bookingUrl && (
 
-                              <button 
 
-              
 
-                                onClick={() => {
+                <button
 
-              
 
-                                  const contactSection = document.getElementById('contact');
 
-              
+                  onClick={() => {
 
-                                  if (contactSection) {
 
-              
 
-                                    contactSection.scrollIntoView({ behavior: 'smooth' });
+                    const contactSection = document.getElementById('contact');
 
-              
 
-                                  }
 
-              
+                    if (contactSection) {
 
-                                }}
 
-              
 
-                                className="w-full flex items-center justify-center gap-3 bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-[#f58220] transition-all"
+                      contactSection.scrollIntoView({ behavior: 'smooth' });
 
-              
 
-                              >
 
-              
+                    }
 
-                                <MessageSquare size={20} /> Send Message
 
-              
 
-                              </button>
+                  }}
 
-              
 
-                            )}
+
+                  className="w-full flex items-center justify-center gap-3 bg-gray-900 text-white font-black py-4 rounded-2xl hover:bg-[#f58220] transition-all"
+
+
+
+                >
+
+
+
+                  <MessageSquare size={20} /> Send Message
+
+
+
+                </button>
+
+
+
+              )}
 
 
 
@@ -764,7 +790,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
                 <div className="space-y-4">
 
-                   <h4 className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
+                  <h4 className="flex items-center gap-2 text-sm font-black text-gray-900 uppercase tracking-wider">
 
                     <FileCheck size={18} className="text-[#f58220]" /> Accreditations
 
@@ -774,7 +800,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
                     {serviceProfile.certifications.map((cert) => (
 
-                      <div 
+                      <div
 
                         key={cert.id}
 
@@ -788,7 +814,7 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
                           <a href={cert.fileUrl} target="_blank" rel="noreferrer" className="text-blue-500 hover:text-blue-600">
 
-                             <ExternalLink size={16} />
+                            <ExternalLink size={16} />
 
                           </a>
 
@@ -820,81 +846,81 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
         <div className="bg-gray-50 p-10 rounded-[2.5rem] border border-gray-100">
 
-           <div className="flex items-center gap-4 mb-8">
+          <div className="flex items-center gap-4 mb-8">
 
-              <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-gray-400 shadow-sm border border-gray-100">
+            <div className="w-12 h-12 rounded-2xl bg-white flex items-center justify-center text-gray-400 shadow-sm border border-gray-100">
 
-                <Scale size={24} />
+              <Scale size={24} />
+
+            </div>
+
+            <h3 className="text-2xl font-black text-gray-900">Legal Information</h3>
+
+          </div>
+
+
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+
+            {listing.legalName && (
+
+              <div className="space-y-1">
+
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+
+                  <Building2 size={12} /> Registered Legal Name
+
+                </p>
+
+                <p className="text-lg font-black text-gray-800">{listing.legalName}</p>
 
               </div>
 
-              <h3 className="text-2xl font-black text-gray-900">Legal Information</h3>
+            )}
 
-           </div>
+            {listing.companyRegistrationNumber && (
 
-           
+              <div className="space-y-1">
 
-           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
 
-              {listing.legalName && (
+                  <Hash size={12} /> Company Registration
 
-                <div className="space-y-1">
+                </p>
 
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <p className="text-lg font-black text-gray-800">{listing.companyRegistrationNumber}</p>
 
-                    <Building2 size={12} /> Registered Legal Name
+              </div>
 
-                  </p>
+            )}
 
-                  <p className="text-lg font-black text-gray-800">{listing.legalName}</p>
+            {listing.vatNumber && (
 
-                </div>
+              <div className="space-y-1">
 
-              )}
+                <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
 
-              {listing.companyRegistrationNumber && (
+                  <Fingerprint size={12} /> VAT Number
 
-                <div className="space-y-1">
+                </p>
 
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
+                <p className="text-lg font-black text-gray-800">{listing.vatNumber}</p>
 
-                    <Hash size={12} /> Company Registration
+              </div>
 
-                  </p>
+            )}
 
-                  <p className="text-lg font-black text-gray-800">{listing.companyRegistrationNumber}</p>
-
-                </div>
-
-              )}
-
-              {listing.vatNumber && (
-
-                <div className="space-y-1">
-
-                  <p className="text-[10px] font-black text-gray-400 uppercase tracking-widest flex items-center gap-2">
-
-                    <Fingerprint size={12} /> VAT Number
-
-                  </p>
-
-                  <p className="text-lg font-black text-gray-800">{listing.vatNumber}</p>
-
-                </div>
-
-              )}
-
-           </div>
+          </div>
 
 
 
-           <div className="mt-8 pt-8 border-t border-gray-200/50 flex items-center gap-2 text-emerald-600">
+          <div className="mt-8 pt-8 border-t border-gray-200/50 flex items-center gap-2 text-emerald-600">
 
-              <CheckCircle2 size={16} />
+            <CheckCircle2 size={16} />
 
-              <span className="text-xs font-bold uppercase tracking-widest">Verified Business Entity</span>
+            <span className="text-xs font-bold uppercase tracking-widest">Verified Business Entity</span>
 
-           </div>
+          </div>
 
         </div>
 

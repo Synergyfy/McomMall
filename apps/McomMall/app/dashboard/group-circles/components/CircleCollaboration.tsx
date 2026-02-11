@@ -4,7 +4,7 @@ import React, { useState } from "react";
 import { motion } from "framer-motion";
 import {
     Megaphone, Plus, Share2, ArrowUpRight,
-    Calendar, Users, Gift, Loader2, Search
+    Calendar, Users, Gift, Loader2, Search, Info
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
@@ -20,11 +20,25 @@ import { MyCampaign } from "@/service/campaigns/types";
 import { toast } from "sonner";
 import Image from "next/image";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface CircleCollaborationProps {
     circleId: string;
     members: any[];
     myMemberId: string | null;
+}
+
+interface SharedCampaign {
+    id: string;
+    ownerId: string;
+    businessName: string;
+    campaignName: string;
+    description: string;
+    bannerUrl: string;
+    rewards: string[];
+    status: string;
+    participants: number;
+    endsAt: string;
 }
 
 // Mock data for shared campaigns in this circle
@@ -89,19 +103,37 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
                     <p className="text-sm text-muted-foreground">Collaborate with circle members by sharing and promoting campaigns.</p>
                 </div>
                 <div className="flex gap-3">
-                    <Button
-                        variant="outline"
-                        onClick={() => window.location.href = '/dashboard/my-assets/group-circles/partner-offers'}
-                        className="rounded-xl border-zinc-200"
-                    >
-                        <Gift className="w-4 h-4 mr-2 text-orange-500" /> View Partner Offers
-                    </Button>
-                    <Button
-                        onClick={() => setIsShareModalOpen(true)}
-                        className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-500/20"
-                    >
-                        <Plus className="w-4 h-4 mr-2" /> Share My Campaign
-                    </Button>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    variant="outline"
+                                    onClick={() => window.location.href = '/dashboard/group-circles/partner-offers'}
+                                    className="rounded-xl border-zinc-200"
+                                >
+                                    <Gift className="w-4 h-4 mr-2 text-orange-500" /> View Partner Offers
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Browse campaigns you've adopted from circle members.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
+                    <TooltipProvider>
+                        <Tooltip>
+                            <TooltipTrigger asChild>
+                                <Button
+                                    onClick={() => setIsShareModalOpen(true)}
+                                    className="bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-lg shadow-orange-500/20"
+                                >
+                                    <Plus className="w-4 h-4 mr-2" /> Share My Campaign
+                                </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>
+                                <p className="text-xs">Share one of your active campaigns with this circle for collaborative promotion.</p>
+                            </TooltipContent>
+                        </Tooltip>
+                    </TooltipProvider>
                 </div>
             </div>
 
@@ -116,7 +148,7 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {MOCK_SHARED_CAMPAIGNS.map((campaign) => (
+                {MOCK_SHARED_CAMPAIGNS.map((campaign: SharedCampaign) => (
                     <Card key={campaign.id} className="overflow-hidden border-zinc-200/60 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 group flex flex-col">
                         <div className="relative h-44 w-full overflow-hidden">
                             <Image
@@ -163,14 +195,23 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
                                         <Calendar className="w-3 h-3 text-orange-500/70" /> {new Date(campaign.endsAt).toLocaleDateString()}
                                     </div>
                                 </div>
-                                <Button
-                                    size="sm"
-                                    variant="ghost"
-                                    onClick={() => handleAdoptClick(campaign)}
-                                    className="rounded-xl h-9 px-4 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold text-xs"
-                                >
-                                    Adopt
-                                </Button>
+                                <TooltipProvider>
+                                    <Tooltip>
+                                        <TooltipTrigger asChild>
+                                            <Button
+                                                size="sm"
+                                                variant="ghost"
+                                                onClick={() => handleAdoptClick(campaign)}
+                                                className="rounded-xl h-9 px-4 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold text-xs"
+                                            >
+                                                Adopt
+                                            </Button>
+                                        </TooltipTrigger>
+                                        <TooltipContent>
+                                            <p className="text-xs">Add this partner's campaign to your offers and earn rewards for referrals.</p>
+                                        </TooltipContent>
+                                    </Tooltip>
+                                </TooltipProvider>
                             </div>
                         </CardContent>
                     </Card>
@@ -195,7 +236,7 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
                                 </div>
                             ) : myCampaigns?.data && myCampaigns.data.length > 0 ? (
                                 <div className="space-y-3">
-                                    {myCampaigns.data.map((campaign: MyCampaign) => (
+                                    {(myCampaigns?.data || []).map((campaign: MyCampaign) => (
                                         <div
                                             key={campaign.id}
                                             onClick={() => {

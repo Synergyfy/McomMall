@@ -80,38 +80,56 @@ export const MultiLayerRadialGraph = React.memo(({
                             zIndex: 0
                         }}
                     >
-                        <div className="absolute top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] uppercase font-bold tracking-widest text-zinc-400 bg-white/80 dark:bg-zinc-950/80 backdrop-blur px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
-                            {config.label}
-                        </div>
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] uppercase font-bold tracking-widest text-zinc-400 bg-white/80 dark:bg-zinc-950/80 backdrop-blur px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10 pointer-events-auto cursor-default">
+                                        {config.label}
+                                    </div>
+                                </TooltipTrigger>
+                                <TooltipContent side="top">
+                                    <p className="text-xs">{config.description}</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
                     </div>
                 ))}
 
                 {/* --- The Hub (Center) --- */}
-                <div
-                    onClick={() => {
-                        if (me) {
-                            onMemberClick(me);
-                        } else {
-                            toast.error("You are not identified as a member of this circle.");
-                        }
-                    }}
-                    className={cn(
-                        "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex flex-col items-center justify-center text-white shadow-xl shadow-orange-500/30 border-4 border-white dark:border-zinc-900 transition-all hover:scale-105 select-none cursor-pointer hover:shadow-orange-500/50 pointer-events-auto overflow-hidden"
-                    )}
-                >
-                    {profileImage ? (
-                        <img
-                            src={profileImage}
-                            alt="You"
-                            className="w-full h-full object-cover"
-                        />
-                    ) : (
-                        <>
-                            <Zap className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-pulse pointer-events-none" />
-                            <span className="text-[6px] md:text-[8px] font-bold pointer-events-none">YOU</span>
-                        </>
-                    )}
-                </div>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <div
+                                onClick={() => {
+                                    if (me) {
+                                        onMemberClick(me);
+                                    } else {
+                                        toast.error("You are not identified as a member of this circle.");
+                                    }
+                                }}
+                                className={cn(
+                                    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex flex-col items-center justify-center text-white shadow-xl shadow-orange-500/30 border-4 border-white dark:border-zinc-900 transition-all hover:scale-105 select-none cursor-pointer hover:shadow-orange-500/50 pointer-events-auto overflow-hidden"
+                                )}
+                            >
+                                {profileImage ? (
+                                    <img
+                                        src={profileImage}
+                                        alt="You"
+                                        className="w-full h-full object-cover"
+                                    />
+                                ) : (
+                                    <>
+                                        <Zap className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-pulse pointer-events-none" />
+                                        <span className="text-[6px] md:text-[8px] font-bold pointer-events-none">YOU</span>
+                                    </>
+                                )}
+                            </div>
+                        </TooltipTrigger>
+                        <TooltipContent side="bottom">
+                            <p className="text-xs">You are the center of your circle. Click to view your profile details.</p>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
 
                 {/* --- The Particles (Members) --- */}
                 <AnimatePresence>
