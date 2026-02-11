@@ -10,6 +10,7 @@ import { RootState } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
 import { useGetTiers } from '@/service/tiers/hook';
 import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetMyMembership } from '@/service/membership/hooks';
 import {
   Tooltip,
   TooltipContent,
@@ -36,6 +37,7 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
   const { data: tiers } = useGetTiers();
   const { data: trialStatus } = useGetTrialStatus();
+  const { data: membership } = useGetMyMembership();
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
@@ -78,6 +80,19 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
 
   const isAllowed = (title: string) => {
     if (userRole === 'customer') return true;
+
+    // For owners, if no active membership, lock everything except essential account pages
+    if (userRole === 'owner' && !membership?.isActive) {
+      const allowedTitles = [
+        'Dashboard',
+        'My Subscription',
+        'My Profile',
+        'Logout',
+        'Settings',
+      ];
+      return allowedTitles.includes(title);
+    }
+
     if (!currentTier) return true; // Default to true if tier not loaded yet
 
     const quotas = currentTier.configuration?.quotas;
@@ -94,14 +109,38 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const cashbackItem = accountMenuItems.find(item => item.title === 'Cashback');
 
   const customerMainMenu = [
-    ...mainMenuItems.filter(item =>
-      ['Dashboard', 'My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'].includes(item.title)
-    ).sort((a, b) => {
-      const order = ['Dashboard', 'My Bookings', 'Messages', 'Wallet', 'My Wishlist', 'Reward Hub', 'Coupon-Voucher', 'Terminal Cashback', 'Support Tickets'];
-      return order.indexOf(a.title) - order.indexOf(b.title);
-    }),
+    ...mainMenuItems
+      .filter(item =>
+        [
+          'Dashboard',
+          'My Bookings',
+          'Messages',
+          'Wallet',
+          'My Wishlist',
+          'Reward Hub',
+          'Coupon-Voucher',
+          'Terminal Cashback',
+        ].includes(item.title)
+      )
+      .sort((a, b) => {
+        const order = [
+          'Dashboard',
+          'My Bookings',
+          'Messages',
+          'Wallet',
+          'My Wishlist',
+          'Reward Hub',
+          'Coupon-Voucher',
+          'Terminal Cashback',
+        ];
+        return order.indexOf(a.title) - order.indexOf(b.title);
+      }),
     ...(cashbackItem ? [cashbackItem] : []),
   ];
+
+  const customerSupportMenu = mainMenuItems.filter(item =>
+    ['Support Tickets'].includes(item.title)
+  );
 
   const customerProductMenu = productMenuItems.filter(item =>
     ['Orders'].includes(item.title)
@@ -304,6 +343,12 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
               HISTORY
             </h3>
             {renderMenuItems(historyMenuItems)}
+          </nav>
+          <nav className="mt-6">
+            <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
+              Support
+            </h3>
+            {renderMenuItems(customerSupportMenu)}
           </nav>
           <nav className="mt-6">
             <h3 className="text-sm font-semibold text-gray-500 uppercase mb-2 px-2">
