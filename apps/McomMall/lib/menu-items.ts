@@ -190,12 +190,7 @@ export const accountMenuItems: MenuItem[] = [
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Cashback', href: '/dashboard/cashback', icon: Coins },
-  {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
-  },
+
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 

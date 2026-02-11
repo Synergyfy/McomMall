@@ -5,7 +5,7 @@ import { CreateActivityTimerTemplateDto, UpdateActivityTimerTemplateDto } from '
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Request } from 'express';
-import { ActivityTaskType } from './enums/activity-task-type.enum';
+import { ActivityTaskType, ActivityTimerType } from './enums/activity-task-type.enum';
 import { ActivityTimerTemplate } from './entities/activity-timer-template.entity';
 import { ActivityTimer } from './entities/activity-timer.entity';
 

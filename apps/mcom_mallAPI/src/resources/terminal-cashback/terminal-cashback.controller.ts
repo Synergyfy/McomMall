@@ -73,6 +73,9 @@ export class TerminalCashbackController {
   @ApiOperation({ summary: 'Get my cashback stats' })
   @ApiResponse({ status: 200, description: 'User stats', schema: { example: { pendingCount: 2, approvedCount: 15, totalEarned: 45.50 } } })
   async getStats(@CurrentUser() user: any) {
+    if (user.role === UserRole.ADMIN) {
+      return this.service.getStats({}); // Global stats for Admin
+    }
     if (user.role === UserRole.OWNER) {
       return this.service.getStats({ ownerId: user.id });
     }

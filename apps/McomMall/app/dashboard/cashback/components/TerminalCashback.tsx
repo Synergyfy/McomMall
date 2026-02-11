@@ -4,13 +4,13 @@ import { useEffect, useState } from "react";
 import { useSelector } from "react-redux";
 import { RootState } from "@/service/store/store";
 import { UserRole } from "@/service/auth/types";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Check, X, Eye, Clock, ExternalLink, Copy, Download, QrCode } from "lucide-react";
+import { Check, X, Eye, Clock, ExternalLink, Copy, Download, QrCode, Smartphone, ArrowRight, HelpCircle, Store, Banknote, ShieldCheck, Plus, Trash2, Settings, Calendar, UserCheck, Zap, Receipt, Search, User as UserIcon } from "lucide-react";
 import Image from "next/image";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -29,18 +29,20 @@ import {
 } from "@/service/terminal-cashback/hook";
 import { TerminalClaim, ClaimStatus, HelpRequestType, TerminalConfig } from "@/service/terminal-cashback/types";
 import { Textarea } from "@/components/ui/textarea";
-import { ArrowRight, HelpCircle, Store, Banknote, ShieldCheck, Plus, Trash2, Settings, Calendar, User, UserCheck } from "lucide-react";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 
-// --- Types ---
-interface Claim {
+// --- UI Types ---
+interface ClaimUI {
   id: string;
   customerName: string;
+  customerEmail?: string;
+  customerImage?: string;
   amount: number;
-  spendRange: string;
+  spendAmount: number;
   status: ClaimStatus;
   date: string;
   proofUrl: string;
-  terminalName?: string; // For customer view
+  terminalName?: string;
 }
 
 export const TerminalCashback = () => {
@@ -52,38 +54,51 @@ export const TerminalCashback = () => {
 
   useEffect(() => {
     setIsClient(true);
-  }, []);
+    console.log("TerminalCashback Debug - Role:", userRole, "ID:", userId);
+  }, [userRole, userId]);
 
-  if (!isClient) return <div className="p-12 text-center text-muted-foreground animate-pulse">Loading Terminal Module...</div>;
+  const role = userRole?.toLowerCase();
+  const isManagement = role === 'owner' || role === 'admin';
+  console.log("TerminalCashback Debug - Is Management:", isManagement, "Role:", role);
 
   return (
-    <div className="space-y-8">
-      {/* Module Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-slate-50 p-4 rounded-xl border border-slate-100">
-        <div>
-          <h3 className="text-xl font-bold text-slate-900 flex items-center gap-2">
-            <Smartphone className="h-5 w-5 text-orange-600" />
-            Terminal Management
-          </h3>
-          <p className="text-slate-500 text-sm mt-1 font-medium">
-            {userRole === UserRole.OWNER
-              ? "Oversee and validate incoming cashback requests."
-              : "Monitor your store visit cashback progress."}
-          </p>
+    <div className="space-y-6 animate-in fade-in duration-500">
+      {isManagement && (
+        <div className="bg-orange-600 text-white px-4 py-2 rounded-lg text-xs font-bold flex items-center gap-2 shadow-lg animate-pulse">
+          <ShieldCheck className="h-4 w-4" />
+          TERMINAL MANAGEMENT MODE ACTIVE
         </div>
-        {userRole === UserRole.OWNER && config && (
+      )}
+      {/* Header Section */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 py-2">
+        <div className="space-y-1">
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="sm" onClick={() => setShowRewardsDialog(true)} className="shadow-sm bg-white">
-              <Settings className="h-4 w-4 mr-2 text-slate-500" />
-              Rewards
+            <Badge variant="secondary" className="text-orange-600 bg-orange-50 font-bold uppercase tracking-wider text-[10px] px-2 py-0 border-none">
+              Live
+            </Badge>
+            <span className="text-[10px] font-medium text-slate-400 uppercase tracking-widest">Store Terminal Interface</span>
+          </div>
+          <h3 className="text-2xl font-bold tracking-tight text-slate-900">Terminal Cashback</h3>
+        </div>
+        
+        {isManagement && config && (
+          <div className="flex items-center gap-3">
+            <Button 
+              variant="outline" 
+              size="sm"
+              onClick={() => setShowRewardsDialog(true)} 
+              className="rounded-lg border-slate-200 font-medium text-xs h-9 px-4 gap-2"
+            >
+              <Settings className="h-3.5 w-3.5 text-slate-400" />
+              Settings
             </Button>
             <TerminalShareButton terminalId={userId as string} />
           </div>
         )}
       </div>
 
-      {userRole === UserRole.OWNER ? (
-        <BusinessDashboard config={config} isConfigLoading={isConfigLoading} />
+      {isManagement ? (
+        <BusinessDashboard config={config} isConfigLoading={isConfigLoading} isAdmin={role === 'admin'} />
       ) : (
         <CustomerDashboard />
       )}
@@ -99,43 +114,401 @@ export const TerminalCashback = () => {
   );
 }
 
+// --- Business Dashboard Component ---
+function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; isConfigLoading: boolean; isAdmin?: boolean }) {
+  console.log("BusinessDashboard Debug - Config:", !!config, "IsAdmin:", isAdmin);
+  const { data: statsData } = useGetTerminalStats();
+  const { data: pendingData, isLoading: isPendingLoading } = useGetTerminalClaims({ status: 'PENDING' });
+  const { data: approvedData } = useGetTerminalClaims({ status: 'APPROVED' });
+  const { data: rejectedData } = useGetTerminalClaims({ status: 'REJECTED' });
+
+  const { mutate: updateStatus } = useUpdateClaimStatus();
+  const [selectedProof, setSelectedProof] = useState<string | null>(null);
+
+  if (isConfigLoading) {
+    return <div className="p-20 text-center text-slate-400 font-medium">Loading Dashboard...</div>;
+  }
+
+  if (!config && !isAdmin) {
+    return <TerminalOnboarding />;
+  }
+
+  const stats = statsData || { pendingCount: 0, approvedCount: 0, totalEarned: 0 };
+  const pendingClaims = (pendingData?.data || []).map(mapTerminalClaimToUI);
+  const historyClaims = [
+    ...(approvedData?.data || []),
+    ...(rejectedData?.data || [])
+  ].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
+    .map(mapTerminalClaimToUI);
+
+  const handleAction = (id: string, action: ClaimStatus) => {
+    updateStatus({ id, status: action }, {
+      onSuccess: () => toast.success(`Cashback ${action.toLowerCase()}`)
+    });
+  };
+
+  return (
+    <>
+      {/* Stats Summary */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+        {[
+          { label: "Pending", value: stats.pendingCount, color: "text-amber-600", bg: "bg-amber-50" },
+          { label: "Approved", value: stats.approvedCount, color: "text-emerald-600", bg: "bg-emerald-50" },
+          { label: "Distributed", value: `£${Number(stats.totalEarned).toFixed(2)}`, color: "text-blue-600", bg: "bg-blue-50" }
+        ].map((stat, i) => (
+          <div key={i} className="bg-white p-5 rounded-xl border border-slate-100 shadow-sm flex flex-col gap-1">
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">{stat.label}</p>
+            <p className={`text-xl font-bold ${stat.color}`}>{stat.value}</p>
+          </div>
+        ))}
+      </div>
+
+      <Tabs defaultValue="pending" className="w-full">
+        <div className="flex items-center justify-between mb-4 border-b border-slate-100">
+          <TabsList className="bg-transparent h-10 p-0 gap-6">
+            <TabsTrigger value="pending" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:text-orange-600 rounded-none h-10 px-2 text-xs font-semibold">
+              Pending Items
+              {pendingClaims.length > 0 && (
+                <span className="ml-2 bg-orange-100 text-orange-600 h-4 px-1.5 rounded-full text-[9px] font-bold">
+                  {pendingClaims.length}
+                </span>
+              )}
+            </TabsTrigger>
+            <TabsTrigger value="history" className="bg-transparent border-b-2 border-transparent data-[state=active]:border-slate-900 data-[state=active]:text-slate-900 rounded-none h-10 px-2 text-xs font-semibold text-slate-400">
+              History
+            </TabsTrigger>
+          </TabsList>
+        </div>
+
+        <TabsContent value="pending" className="mt-0 outline-none">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            {pendingClaims.length === 0 ? (
+              <div className="p-16 text-center flex flex-col items-center justify-center">
+                <div className="w-12 h-12 bg-slate-50 rounded-full flex items-center justify-center mb-3">
+                  <Check className="h-6 w-6 text-slate-300" />
+                </div>
+                <h4 className="text-sm font-semibold text-slate-900">Queue is empty</h4>
+                <p className="text-xs text-slate-400 mt-1">New customer claims will appear here.</p>
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-6 py-4">Customer Details</th>
+                      <th className="px-6 py-4">Submission</th>
+                      <th className="px-6 py-4 text-center">Receipt Amount</th>
+                      <th className="px-6 py-4 text-center">Cashback</th>
+                      <th className="px-6 py-4 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {pendingClaims.map((claim) => (
+                      <tr key={claim.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-10 w-10 rounded-lg bg-slate-100 border border-slate-100">
+                              <AvatarImage src={claim.customerImage} alt={claim.customerName} />
+                              <AvatarFallback className="bg-slate-200 text-slate-500 font-bold text-[10px] uppercase">
+                                {claim.customerName ? claim.customerName.substring(0, 2).toUpperCase() : 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-slate-900 text-sm truncate">{claim.customerName}</span>
+                              {claim.customerEmail && <span className="text-[11px] text-slate-500 truncate lowercase">{claim.customerEmail}</span>}
+                              <span className="text-[9px] text-slate-300 font-mono mt-0.5">ID: {claim.id.slice(0, 4)}...</span>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4">
+                          <div className="flex flex-col">
+                            <span className="text-xs font-medium text-slate-600">{new Date(claim.date).toLocaleDateString()}</span>
+                            <span className="text-[10px] text-slate-400">{new Date(claim.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                          </div>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-xs font-semibold text-slate-600 bg-slate-50 px-2 py-0.5 rounded border border-slate-100">
+                            £{Number(claim.spendAmount).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className="text-sm font-bold text-emerald-600">
+                            +£{Number(claim.amount).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <div className="flex items-center justify-end gap-3">
+                            <Button 
+                              size="sm" 
+                              variant="ghost" 
+                              onClick={() => setSelectedProof(claim.proofUrl)}
+                              className="h-8 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wider text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                            >
+                              <Eye className="w-3.5 h-3.5 mr-1.5" /> View Proof
+                            </Button>
+                            <div className="flex items-center gap-1.5">
+                              <Button 
+                                size="sm" 
+                                className="h-8 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-sm" 
+                                onClick={() => handleAction(claim.id, 'APPROVED')}
+                              >
+                                Accept
+                              </Button>
+                              <Button 
+                                size="sm" 
+                                variant="destructive"
+                                className="h-8 px-4 rounded-lg text-[11px] font-bold shadow-sm" 
+                                onClick={() => handleAction(claim.id, 'REJECTED')}
+                              >
+                                Reject
+                              </Button>
+                            </div>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+
+        <TabsContent value="history" className="mt-0 outline-none">
+          <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+            {historyClaims.length === 0 ? (
+              <div className="p-16 text-center text-slate-400 text-xs font-medium uppercase tracking-widest">
+                No past transactions
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-sm">
+                  <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                    <tr>
+                      <th className="px-6 py-4">Customer</th>
+                      <th className="px-6 py-4">Date</th>
+                      <th className="px-6 py-4">Status</th>
+                      <th className="px-6 py-4 text-center">Reward</th>
+                      <th className="px-6 py-4 text-right">Receipt</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-50">
+                    {historyClaims.map((claim) => (
+                      <tr key={claim.id} className="hover:bg-slate-50/30 transition-colors">
+                        <td className="px-6 py-4">
+                           <div className="flex items-center gap-3">
+                              <Avatar className="h-8 w-8 rounded-md bg-slate-100 border border-slate-50">
+                                <AvatarImage src={claim.customerImage} alt={claim.customerName} />
+                                <AvatarFallback className="text-slate-400 text-[9px] font-bold uppercase">
+                                  {claim.customerName ? claim.customerName.substring(0, 2).toUpperCase() : 'U'}
+                                </AvatarFallback>
+                              </Avatar>
+                              <div className="flex flex-col min-w-0">
+                                <span className="font-semibold text-slate-700 text-xs truncate">{claim.customerName}</span>
+                                <span className="text-[9px] text-slate-300 font-mono">Ref: {claim.id.slice(0, 4)}...</span>
+                              </div>
+                           </div>
+                        </td>
+                        <td className="px-6 py-4 text-xs text-slate-500">
+                          {new Date(claim.date).toLocaleDateString()}
+                        </td>
+                        <td className="px-6 py-4">
+                          <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
+                            claim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                            claim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
+                            'bg-amber-50 text-amber-600'
+                          }`}>
+                            {claim.status}
+                          </Badge>
+                        </td>
+                        <td className="px-6 py-4 text-center">
+                          <span className={`text-xs font-bold ${claim.status === 'REJECTED' ? 'text-slate-300 line-through' : 'text-slate-900'}`}>
+                            £{Number(claim.amount).toFixed(2)}
+                          </span>
+                        </td>
+                        <td className="px-6 py-4 text-right">
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 rounded-md hover:bg-slate-100" onClick={() => setSelectedProof(claim.proofUrl)}>
+                            <Eye className="w-3.5 h-3.5 text-slate-300 hover:text-slate-500" />
+                          </Button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Proof Dialog */}
+      <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
+        <DialogContent className="max-w-2xl rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
+          <div className="absolute top-4 right-4 z-50">
+             <Button variant="ghost" size="icon" onClick={() => setSelectedProof(null)} className="h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 text-white transition-all backdrop-blur-sm">
+               <X className="h-4 w-4" />
+             </Button>
+          </div>
+          <div className="bg-slate-900 flex items-center justify-center p-6 min-h-[400px]">
+            {selectedProof && (
+              <div className="relative w-full h-[65vh]">
+                <Image
+                  src={selectedProof}
+                  alt="Receipt Analysis"
+                  fill
+                  className="object-contain"
+                  unoptimized
+                />
+              </div>
+            )}
+          </div>
+          <div className="bg-white px-6 py-4 border-t flex justify-between items-center">
+             <div className="flex items-center gap-2">
+                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt Verified</span>
+             </div>
+             <Button onClick={() => setSelectedProof(null)} size="sm" className="rounded-lg font-bold text-xs bg-slate-900 hover:bg-black px-6">Close</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+    </>
+  );
+}
+
+// --- Customer Dashboard Component ---
+function CustomerDashboard() {
+  console.log("CustomerDashboard Rendering");
+  const { data, isLoading, error } = useGetTerminalClaims();
+  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
+
+  if (isLoading) return <div className="p-24 text-center text-slate-400 font-semibold animate-pulse tracking-widest text-sm uppercase">Accessing Rewards...</div>;
+  if (error) return <div className="p-12 text-center text-red-500 font-semibold bg-red-50 rounded-2xl border border-red-100 text-[10px] uppercase">Connection Lost. Please try again.</div>;
+
+  const claims = data?.data || [];
+
+  return (
+    <div className="space-y-6">
+      <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
+        {claims.length === 0 ? (
+          <div className="p-20 text-center flex flex-col items-center">
+             <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-4 border border-dashed border-slate-200">
+               <Receipt className="h-6 w-6 text-slate-300" />
+             </div>
+             <h4 className="text-sm font-semibold text-slate-900">No history found</h4>
+             <p className="text-xs text-slate-400 mt-1 max-w-sm">Scan a terminal QR code to begin earning cashback.</p>
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left text-sm">
+              <thead className="bg-slate-50 border-b border-slate-100 text-slate-400 font-semibold uppercase tracking-wider text-[10px]">
+                <tr>
+                  <th className="px-6 py-4">Customer Details</th>
+                  <th className="px-6 py-4 text-center">Visit Date</th>
+                  <th className="px-6 py-4 text-center">Status</th>
+                  <th className="px-6 py-4 text-center">Reward</th>
+                  <th className="px-6 py-4 text-right">Action</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-50">
+                {claims.map((claim) => {
+                  const uiClaim = mapTerminalClaimToUI(claim);
+                  return (
+                    <tr key={uiClaim.id} className="hover:bg-slate-50/50 transition-colors">
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <Avatar className="h-9 w-9 rounded-lg bg-slate-100 border border-slate-100">
+                            <AvatarImage src={uiClaim.customerImage} alt={uiClaim.customerName} />
+                            <AvatarFallback className="bg-slate-200 text-slate-500 font-bold text-[10px] uppercase">
+                              {uiClaim.customerName ? uiClaim.customerName.substring(0, 2).toUpperCase() : 'U'}
+                            </AvatarFallback>
+                          </Avatar>
+                          <div className="flex flex-col min-w-0">
+                            <span className="font-semibold text-slate-900 text-sm truncate">{uiClaim.customerName}</span>
+                            {uiClaim.customerEmail && <span className="text-[11px] text-slate-500 truncate lowercase">{uiClaim.customerEmail}</span>}
+                            <div className="flex items-center gap-1 text-[9px] text-slate-300 font-mono mt-0.5">
+                              <span>Ref: {uiClaim.id.slice(0, 4)}...</span>
+                              <span className="text-slate-200">|</span>
+                              <span className="truncate max-w-[80px]">{uiClaim.terminalName}</span>
+                            </div>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center text-slate-500 text-xs font-medium">
+                        {new Date(uiClaim.date).toLocaleDateString()}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
+                          uiClaim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                          uiClaim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
+                          'bg-amber-50 text-amber-600'
+                        }`}>
+                          {uiClaim.status}
+                        </Badge>
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span className="text-sm font-bold text-emerald-600 tracking-tight">
+                          +£{Number(uiClaim.amount).toFixed(2)}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-right">
+                        <Button 
+                          size="sm" 
+                          variant="ghost" 
+                          onClick={() => setSelectedClaimId(uiClaim.id)}
+                          className="h-8 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-slate-50 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
+                        >
+                          Details
+                        </Button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      <ClaimDetailsDialog
+        claimId={selectedClaimId}
+        onClose={() => setSelectedClaimId(null)}
+      />
+    </div>
+  );
+}
+
 // --- Terminal Onboarding Component ---
 function TerminalOnboarding() {
   const [showRequestDialog, setShowRequestDialog] = useState(false);
 
   return (
-    <div className="flex flex-col items-center justify-center min-h-[50vh] text-center space-y-10 max-w-4xl mx-auto px-4 py-12">
+    <div className="flex flex-col items-center justify-center min-h-[40vh] text-center space-y-10 max-w-4xl mx-auto px-4 py-8">
       <div className="space-y-4">
-        <div className="w-20 h-20 bg-orange-100 rounded-2xl flex items-center justify-center mx-auto rotate-3 shadow-orange-100 shadow-xl">
-          <Banknote className="w-10 h-10 text-orange-600 -rotate-3" />
-        </div>
-        <h2 className="text-3xl font-black tracking-tight text-slate-900">Activate Your Store Terminal</h2>
-        <p className="text-slate-500 text-lg max-w-xl mx-auto leading-relaxed">
-          Reward your walk-in customers and bridge the gap between offline sales and digital loyalty.
+        <h2 className="text-3xl font-bold tracking-tight text-slate-900 uppercase italic">Enable Store Terminal</h2>
+        <p className="text-slate-500 text-base max-w-2xl mx-auto font-medium">
+          Start rewarding your walk-in customers today. Bridge the gap between physical transactions and digital loyalty.
         </p>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 w-full">
         {[
-          { icon: Store, title: "Universal", text: "Reward in-store customers regardless of how they pay." },
-          { icon: ShieldCheck, title: "Insight", text: "Collect valuable data and build relationships with walk-ins." },
-          { icon: HelpCircle, title: "Simple Flow", text: "Scan, Upload, Verify. A frictionless experience for all." }
+          { icon: Receipt, title: "Receipt Scan", text: "Customers scan your QR code and upload their receipt.", color: "text-blue-600", bg: "bg-blue-50" },
+          { icon: UserCheck, title: "Verify", text: "Review the receipt and approve the reward.", color: "text-green-600", bg: "bg-green-50" },
+          { icon: Banknote, title: "Reward", text: "Cashback is instantly credited to the customer.", color: "text-purple-600", bg: "bg-purple-50" }
         ].map((item, i) => (
-          <Card key={i} className="border-none bg-slate-50 shadow-sm hover:shadow-md transition-shadow">
-            <CardHeader className="p-6">
-              <item.icon className="w-8 h-8 text-orange-600 mb-3" />
-              <CardTitle className="text-lg font-bold">{item.title}</CardTitle>
-              <p className="text-sm text-slate-600 mt-2 leading-relaxed">{item.text}</p>
-            </CardHeader>
-          </Card>
+          <div key={i} className="flex flex-col items-start p-6 rounded-2xl bg-white border border-slate-100 shadow-sm">
+            <div className={`w-10 h-10 ${item.bg} rounded-xl flex items-center justify-center mb-4`}>
+              <item.icon className={`w-5 h-5 ${item.color}`} />
+            </div>
+            <h4 className="text-lg font-bold text-slate-900 mb-2">{item.title}</h4>
+            <p className="text-xs text-slate-500 font-medium leading-relaxed text-left">{item.text}</p>
+          </div>
         ))}
       </div>
 
-      <div className="pt-4">
-        <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white gap-3 px-8 h-14 text-lg font-bold rounded-full shadow-lg shadow-orange-200" onClick={() => setShowRequestDialog(true)}>
-          Request Early Access <ArrowRight className="w-5 h-5" />
-        </Button>
-      </div>
+      <Button size="lg" className="bg-orange-600 hover:bg-orange-700 text-white font-bold uppercase tracking-widest px-8 h-14 rounded-xl shadow-lg transition-all" onClick={() => setShowRequestDialog(true)}>
+        Activate Now <ArrowRight className="ml-2 w-4 h-4" />
+      </Button>
 
       <RequestAccessDialog open={showRequestDialog} onOpenChange={setShowRequestDialog} />
     </div>
@@ -168,211 +541,30 @@ function RequestAccessDialog({ open, onOpenChange }: { open: boolean; onOpenChan
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-md rounded-2xl">
+      <DialogContent className="sm:max-w-md rounded-3xl border-none shadow-2xl p-8">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Request Access</DialogTitle>
+          <DialogTitle className="text-2xl font-bold tracking-tight">Request Terminal</DialogTitle>
         </DialogHeader>
         <form onSubmit={handleSubmit} className="space-y-6 py-4">
-          <div className="space-y-3">
-            <Label className="font-semibold text-slate-700">Tell us about your store</Label>
+          <div className="space-y-2">
+            <Label className="font-bold text-slate-500 text-[10px] uppercase tracking-widest ml-1">Business Details</Label>
             <Textarea
-              placeholder="Example: I run a coffee shop and want to reward my regulars who pay with cash..."
+              placeholder="Tell us about your business and why you'd like to use terminal cashback..."
               value={message}
               onChange={(e) => setMessage(e.target.value)}
-              className="min-h-[120px] rounded-xl resize-none focus:ring-orange-500 border-slate-200"
+              className="min-h-[140px] rounded-2xl bg-slate-50 border-none p-5 focus:ring-2 focus:ring-orange-500 font-medium"
               required
             />
           </div>
-          <div className="flex gap-3 pt-2">
-            <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl" onClick={() => onOpenChange(false)}>Cancel</Button>
-            <Button type="submit" className="flex-[2] h-12 bg-orange-600 hover:bg-orange-700 rounded-xl font-bold" disabled={isSubmitting}>
-              {isSubmitting ? "Sending..." : "Submit Request"}
+          <div className="flex gap-3">
+            <Button type="button" variant="ghost" className="flex-1 h-12 rounded-xl font-bold" onClick={() => onOpenChange(false)}>Cancel</Button>
+            <Button type="submit" className="flex-[2] h-12 bg-orange-600 hover:bg-orange-700 rounded-xl font-bold uppercase tracking-widest shadow-lg shadow-orange-100" disabled={isSubmitting}>
+              {isSubmitting ? "Sending..." : "Submit Application"}
             </Button>
           </div>
         </form>
       </DialogContent>
     </Dialog>
-  );
-}
-
-// --- Business Dashboard Component ---
-function BusinessDashboard({ config, isConfigLoading }: { config: any; isConfigLoading: boolean }) {
-  const { data: statsData } = useGetTerminalStats();
-  const { data: pendingData, isLoading: isPendingLoading } = useGetTerminalClaims({ status: 'PENDING' });
-  const { data: approvedData } = useGetTerminalClaims({ status: 'APPROVED' });
-  const { data: rejectedData } = useGetTerminalClaims({ status: 'REJECTED' });
-
-  const { mutate: updateStatus } = useUpdateClaimStatus();
-  const [selectedProof, setSelectedProof] = useState<string | null>(null);
-
-  if (isConfigLoading) {
-    return <div className="p-12 text-center text-muted-foreground animate-pulse">Syncing configuration...</div>;
-  }
-
-  if (!config) {
-    return <TerminalOnboarding />;
-  }
-
-  const stats = statsData || { pendingCount: 0, approvedCount: 0, totalEarned: 0 };
-  const pendingClaims = (pendingData?.data || []).map(mapTerminalClaimToUI);
-  const historyClaims = [
-    ...(approvedData?.data || []),
-    ...(rejectedData?.data || [])
-  ].sort((a, b) => new Date(b.submittedAt).getTime() - new Date(a.submittedAt).getTime())
-    .map(mapTerminalClaimToUI);
-
-  const handleAction = (id: string, action: ClaimStatus) => {
-    updateStatus({ id, status: action }, {
-      onSuccess: () => toast.success(`Claim ${action === 'APPROVED' ? 'Approved' : 'Rejected'}`)
-    });
-  };
-
-  return (
-    <>
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-        {[
-          { label: "Pending", value: stats.pendingCount, icon: Clock, color: "text-amber-600", bg: "bg-amber-50" },
-          { label: "Approved", value: stats.approvedCount, icon: UserCheck, color: "text-green-600", bg: "bg-green-50" },
-          { label: "Volume", value: `£${stats.totalEarned.toFixed(2)}`, icon: Banknote, color: "text-blue-600", bg: "bg-blue-50" }
-        ].map((stat, i) => (
-          <Card key={i} className="border-none shadow-sm overflow-hidden">
-            <CardContent className="p-6 flex items-center justify-between">
-              <div className="space-y-1">
-                <p className="text-sm font-medium text-slate-500 uppercase tracking-wider">{stat.label}</p>
-                <p className={`text-3xl font-black ${stat.color}`}>{stat.value}</p>
-              </div>
-              <div className={`p-4 rounded-2xl ${stat.bg}`}>
-                <stat.icon className={`h-8 w-8 ${stat.color}`} />
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      <Tabs defaultValue="pending" className="w-full">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
-          <TabsList className="h-11 p-1 bg-slate-100 rounded-lg w-fit">
-            <TabsTrigger value="pending" className="px-6 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">
-              Pending <Badge variant="secondary" className="ml-2 bg-slate-200">{pendingClaims.length}</Badge>
-            </TabsTrigger>
-            <TabsTrigger value="history" className="px-6 rounded-md data-[state=active]:bg-white data-[state=active]:shadow-sm">History</TabsTrigger>
-          </TabsList>
-          
-          <div className="text-xs text-slate-400 font-medium">
-            Last synced: {new Date().toLocaleTimeString()}
-          </div>
-        </div>
-
-        <TabsContent value="pending" className="mt-0">
-          {pendingClaims.length === 0 ? (
-            <Card className="p-12 text-center bg-slate-50/50 border-dashed border-2">
-              <div className="max-w-[200px] mx-auto opacity-40 mb-4">
-                <Smartphone className="h-16 w-16 mx-auto mb-2" />
-              </div>
-              <p className="text-slate-500 font-medium">{isPendingLoading ? "Fetching claims..." : "No claims waiting for review."}</p>
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {pendingClaims.map(claim => (
-                <ClaimCard
-                  key={claim.id}
-                  claim={claim}
-                  isBusiness
-                  onViewProof={() => setSelectedProof(claim.proofUrl)}
-                  onApprove={() => handleAction(claim.id, 'APPROVED')}
-                  onReject={() => handleAction(claim.id, 'REJECTED')}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-
-        <TabsContent value="history" className="mt-0">
-          {historyClaims.length === 0 ? (
-            <Card className="p-12 text-center bg-slate-50/50 border-dashed border-2 text-slate-500 font-medium">
-              No historical claims found.
-            </Card>
-          ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {historyClaims.map(claim => (
-                <ClaimCard
-                  key={claim.id}
-                  claim={claim}
-                  isBusiness
-                  onViewProof={() => setSelectedProof(claim.proofUrl)}
-                />
-              ))}
-            </div>
-          )}
-        </TabsContent>
-      </Tabs>
-
-      <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
-        <DialogContent className="max-w-lg rounded-2xl p-0 overflow-hidden">
-          <DialogHeader className="p-6 bg-slate-50 border-b">
-            <DialogTitle className="font-bold flex items-center gap-2 text-slate-900">
-              <Eye className="h-5 w-5 text-blue-600" />
-              Receipt Verification
-            </DialogTitle>
-          </DialogHeader>
-          <div className="relative h-[65vh] w-full bg-slate-900">
-            {selectedProof && (
-              <Image
-                src={selectedProof}
-                alt="Receipt Proof"
-                fill
-                className="object-contain p-4"
-                unoptimized
-              />
-            )}
-          </div>
-          <div className="p-4 bg-white flex justify-end">
-            <Button onClick={() => setSelectedProof(null)} className="rounded-xl px-8 h-12 font-bold">Done</Button>
-          </div>
-        </DialogContent>
-      </Dialog>
-    </>
-  );
-}
-
-// --- Customer Dashboard Component ---
-function CustomerDashboard() {
-  const { data, isLoading, error } = useGetTerminalClaims();
-  const [selectedClaimId, setSelectedClaimId] = useState<string | null>(null);
-
-  if (isLoading) return <div className="p-12 text-center text-muted-foreground animate-pulse">Fetching your claims...</div>;
-  if (error) return <div className="p-12 text-center text-red-500 font-medium bg-red-50 rounded-xl border border-red-100">Unable to load claims. Please try again.</div>;
-
-  const claims = data?.data || [];
-
-  return (
-    <div className="space-y-6">
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {claims.length === 0 ? (
-          <div className="col-span-full py-20 text-center space-y-4">
-             <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
-               <Smartphone className="h-8 w-8 text-slate-300" />
-             </div>
-             <p className="text-slate-400 font-medium">You haven't made any claims yet.</p>
-             <p className="text-slate-500 text-sm">Scan a store QR code to start earning cashback!</p>
-          </div>
-        ) : (
-          claims.map(claim => (
-            <ClaimCard
-              key={claim.id}
-              claim={mapTerminalClaimToUI(claim)}
-              isBusiness={false}
-              onViewDetails={() => setSelectedClaimId(claim.id)}
-            />
-          ))
-        )}
-      </div>
-
-      <ClaimDetailsDialog
-        claimId={selectedClaimId}
-        onClose={() => setSelectedClaimId(null)}
-      />
-    </div>
   );
 }
 
@@ -423,66 +615,81 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-2xl rounded-2xl p-0 overflow-hidden">
-        <DialogHeader className="p-6 bg-slate-50 border-b">
-          <DialogTitle className="font-bold text-xl">Reward Structure</DialogTitle>
+      <DialogContent className="max-w-2xl rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-8 pb-4 bg-white">
+          <div className="flex items-center gap-3">
+             <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center">
+               <Zap className="h-5 w-5 text-orange-600" />
+             </div>
+             <DialogTitle className="text-2xl font-bold tracking-tight uppercase leading-none">Rewards Config</DialogTitle>
+          </div>
+          <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest ml-14">Set your tier-based cashback rates</p>
         </DialogHeader>
 
-        <div className="p-6 space-y-6 max-h-[60vh] overflow-y-auto">
+        <div className="p-8 space-y-6 max-h-[60vh] overflow-y-auto">
           {ranges.length === 0 ? (
-            <div className="text-center py-12 bg-slate-50 rounded-2xl border border-dashed border-slate-200">
-              <Plus className="h-10 w-10 text-slate-300 mx-auto mb-3" />
-              <p className="text-slate-500 font-medium">Define your first reward tier.</p>
+            <div className="text-center py-12 bg-slate-50 rounded-2xl border-2 border-dashed border-slate-100">
+              <Plus className="h-8 w-8 text-slate-200 mx-auto mb-3" />
+              <p className="text-slate-400 font-semibold italic text-xs">No reward tiers defined</p>
             </div>
           ) : (
-            <div className="space-y-4">
+            <div className="space-y-3">
               {ranges.map((range, idx) => (
-                <div key={range.id || idx} className="grid grid-cols-12 gap-4 items-end bg-white border border-slate-100 p-5 rounded-2xl shadow-sm hover:border-slate-300 transition-colors">
-                  <div className="col-span-3">
-                    <Label className="text-[11px] font-bold text-slate-500 mb-2 block uppercase tracking-tight">Min (£)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={range.minSpend}
-                      onChange={(e) => handleChange(idx, 'minSpend', parseFloat(e.target.value))}
-                      className="h-10 bg-slate-50 border-none rounded-lg focus:ring-orange-500 font-medium"
-                    />
+                <div key={range.id || idx} className="grid grid-cols-12 gap-3 items-end bg-slate-50/50 p-4 rounded-2xl border border-slate-100 group transition-all hover:bg-white hover:shadow-sm">
+                  <div className="col-span-3 space-y-1.5">
+                    <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Min Spend</Label>
+                    <div className="relative">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
+                       <Input
+                         type="number"
+                         min={0}
+                         value={range.minSpend}
+                         onChange={(e) => handleChange(idx, 'minSpend', parseFloat(e.target.value))}
+                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
+                       />
+                    </div>
                   </div>
-                  <div className="col-span-3">
-                    <Label className="text-[11px] font-bold text-slate-500 mb-2 block uppercase tracking-tight">Max (£)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      value={range.maxSpend}
-                      onChange={(e) => handleChange(idx, 'maxSpend', parseFloat(e.target.value))}
-                      className="h-10 bg-slate-50 border-none rounded-lg focus:ring-orange-500 font-medium"
-                    />
+                  <div className="col-span-3 space-y-1.5">
+                    <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Max Spend</Label>
+                    <div className="relative">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
+                       <Input
+                         type="number"
+                         min={0}
+                         value={range.maxSpend}
+                         onChange={(e) => handleChange(idx, 'maxSpend', parseFloat(e.target.value))}
+                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
+                       />
+                    </div>
                   </div>
-                  <div className="col-span-3">
-                    <Label className="text-[11px] font-bold text-slate-500 mb-2 block uppercase tracking-tight">Cashback (£)</Label>
-                    <Input
-                      type="number"
-                      min={0}
-                      step={0.01}
-                      value={range.rewardValue}
-                      onChange={(e) => handleChange(idx, 'rewardValue', parseFloat(e.target.value))}
-                      className="h-10 bg-slate-50 border-none rounded-lg focus:ring-orange-500 font-bold text-green-600"
-                    />
+                  <div className="col-span-3 space-y-1.5">
+                    <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Cashback</Label>
+                    <div className="relative">
+                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-300 font-bold text-xs">£</span>
+                       <Input
+                         type="number"
+                         min={0}
+                         step={0.01}
+                         value={range.rewardValue}
+                         onChange={(e) => handleChange(idx, 'rewardValue', parseFloat(e.target.value))}
+                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs text-green-600"
+                       />
+                    </div>
                   </div>
                   <div className="col-span-2 flex items-center justify-center pb-2">
-                    <div className="flex items-center space-x-2">
+                    <div className="flex flex-col items-center gap-1">
                       <Checkbox
                         id={`active-${range.id || idx}`}
                         checked={range.isActive}
                         onCheckedChange={(checked) => handleChange(idx, 'isActive', !!checked)}
-                        className="rounded-md h-5 w-5 data-[state=checked]:bg-green-600"
+                        className="rounded-md h-5 w-5 data-[state=checked]:bg-emerald-500 border-slate-200"
                       />
-                      <Label htmlFor={`active-${range.id || idx}`} className="text-xs font-bold text-slate-600 cursor-pointer">Live</Label>
+                      <Label htmlFor={`active-${range.id || idx}`} className="text-[8px] font-bold text-slate-400 uppercase tracking-tighter">Live</Label>
                     </div>
                   </div>
-                  <div className="col-span-1 flex justify-end pb-1">
-                    <Button variant="ghost" size="icon" className="h-9 w-9 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg" onClick={() => handleRemove(range.id || '')}>
-                      <Trash2 className="w-4 h-4" />
+                  <div className="col-span-1 flex justify-end pb-1.5">
+                    <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-lg" onClick={() => handleRemove(range.id || '')}>
+                      <Trash2 className="w-3.5 h-3.5" />
                     </Button>
                   </div>
                 </div>
@@ -490,15 +697,15 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
             </div>
           )}
 
-          <Button variant="outline" className="w-full h-14 border-dashed border-2 bg-slate-50 hover:bg-slate-100 hover:border-slate-400 text-slate-600 font-bold gap-2 rounded-2xl" onClick={handleAdd}>
-            <Plus className="w-5 h-5" /> New Reward Range
+          <Button variant="outline" className="w-full h-12 border-2 border-dashed border-slate-100 hover:border-orange-200 hover:bg-orange-50/50 text-slate-300 hover:text-orange-500 font-bold text-sm gap-2 rounded-xl transition-all" onClick={handleAdd}>
+            <Plus className="w-4 h-4" /> ADD NEW TIER
           </Button>
         </div>
 
-        <div className="p-6 bg-slate-50 border-t flex justify-end gap-3">
-          <Button variant="ghost" className="h-12 px-6 rounded-xl font-medium" onClick={() => onOpenChange(false)}>Discard</Button>
-          <Button className="h-12 px-10 rounded-xl font-bold bg-orange-600 hover:bg-orange-700 shadow-lg shadow-orange-100" onClick={handleSave} disabled={isPending}>
-            {isPending ? "Updating..." : "Save Changes"}
+        <div className="p-8 bg-slate-50 flex gap-3">
+          <Button variant="ghost" className="flex-1 h-12 rounded-xl font-bold text-xs uppercase tracking-widest text-slate-400" onClick={() => onOpenChange(false)}>Cancel</Button>
+          <Button className="flex-[2] h-12 bg-slate-900 hover:bg-black rounded-xl font-bold text-sm uppercase tracking-tight shadow-xl shadow-slate-200 text-white" onClick={handleSave} disabled={isPending}>
+            {isPending ? "Syncing..." : "Update Logic"}
           </Button>
         </div>
       </DialogContent>
@@ -508,102 +715,6 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
 
 // --- Shared Components ---
 
-function ClaimCard({
-  claim,
-  isBusiness,
-  onViewProof,
-  onApprove,
-  onReject,
-  onViewDetails
-}: {
-  claim: Claim;
-  isBusiness: boolean;
-  onViewProof?: () => void;
-  onApprove?: () => void;
-  onReject?: () => void;
-  onViewDetails?: () => void;
-}) {
-  const isPending = claim.status === 'PENDING';
-  const isApproved = claim.status === 'APPROVED';
-  const isRejected = claim.status === 'REJECTED';
-
-  return (
-    <Card className="border-none shadow-sm hover:shadow-md transition-all duration-300 overflow-hidden group">
-      <div className={`h-1 w-full ${isApproved ? 'bg-green-500' : isRejected ? 'bg-red-500' : 'bg-amber-500'}`} />
-      <CardContent className="p-5 space-y-4">
-        <div className="flex items-start justify-between gap-4">
-          <div className="flex items-center gap-3">
-             <div className={`h-12 w-12 rounded-2xl flex items-center justify-center shadow-sm ${
-               isApproved ? 'bg-green-50 text-green-600' : 
-               isRejected ? 'bg-red-50 text-red-600' : 
-               'bg-amber-50 text-amber-600'
-             }`}>
-               {isApproved && <Check className="w-6 h-6" />}
-               {isRejected && <X className="w-6 h-6" />}
-               {isPending && <Clock className="w-6 h-6" />}
-             </div>
-             <div className="space-y-0.5">
-               <h4 className="font-bold text-slate-900 group-hover:text-blue-600 transition-colors truncate max-w-[140px] sm:max-w-none">
-                 {isBusiness ? claim.customerName : claim.terminalName}
-               </h4>
-               <div className="flex items-center text-xs text-slate-500 gap-1.5 font-medium">
-                 <Calendar className="h-3 w-3" />
-                 {new Date(claim.date).toLocaleDateString()} at {new Date(claim.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-               </div>
-             </div>
-          </div>
-          <div className="text-right">
-             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rewards</p>
-             <p className={`text-xl font-black ${isRejected ? 'text-slate-300 line-through' : 'text-green-600'}`}>
-               +£{claim.amount.toFixed(2)}
-             </p>
-          </div>
-        </div>
-
-        <div className="flex items-center justify-between gap-3 pt-1">
-          <div className="flex flex-wrap gap-2">
-            <Badge variant="outline" className="bg-slate-50/50 border-slate-200 text-slate-600 rounded-lg px-2 py-0.5 text-[10px] font-bold">
-              Spent {claim.spendRange}
-            </Badge>
-            <Badge className={`rounded-lg px-2 py-0.5 text-[10px] font-black uppercase tracking-tight ${
-              isApproved ? 'bg-green-100 text-green-700 hover:bg-green-100' : 
-              isRejected ? 'bg-red-100 text-red-700 hover:bg-red-100' : 
-              'bg-amber-100 text-amber-700 hover:bg-amber-100'
-            }`}>
-              {claim.status}
-            </Badge>
-          </div>
-          
-          <div className="flex items-center gap-1.5">
-            {isBusiness ? (
-               <>
-                 <Button variant="ghost" size="icon" className="h-8 w-8 rounded-lg text-slate-400 hover:text-blue-600 hover:bg-blue-50" onClick={onViewProof} title="View Proof">
-                   <Eye className="w-4 h-4" />
-                 </Button>
-                 {isPending && (
-                   <div className="flex items-center gap-1 ml-1">
-                      <Button size="icon" className="h-8 w-8 rounded-lg bg-green-600 hover:bg-green-700 shadow-sm" onClick={onApprove} title="Approve">
-                        <Check className="w-4 h-4" />
-                      </Button>
-                      <Button size="icon" variant="destructive" className="h-8 w-8 rounded-lg shadow-sm" onClick={onReject} title="Reject">
-                        <X className="w-4 h-4" />
-                      </Button>
-                   </div>
-                 )}
-               </>
-            ) : (
-               <Button variant="outline" size="sm" className="h-8 rounded-lg text-[11px] font-bold px-3 border-slate-200" onClick={onViewDetails}>
-                 Details
-               </Button>
-            )}
-          </div>
-        </div>
-      </CardContent>
-    </Card>
-  );
-}
-
-// --- Terminal Share Button ---
 function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; isLoading?: boolean }) {
   const [url, setUrl] = useState("");
 
@@ -619,28 +730,27 @@ function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; i
       const pngUrl = canvas.toDataURL("image/png");
       const downloadLink = document.createElement("a");
       downloadLink.href = pngUrl;
-      downloadLink.download = `terminal-${terminalId}-qr.png`;
+      downloadLink.download = `terminal-qr-${terminalId}.png`;
       document.body.appendChild(downloadLink);
       downloadLink.click();
       document.body.removeChild(downloadLink);
-      toast.success("QR Code downloaded");
+      toast.success("Terminal QR Exported");
     }
   };
 
   const copyLink = () => {
     navigator.clipboard.writeText(url);
-    toast.success("Link copied to clipboard");
+    toast.success("Terminal Link Copied");
   };
 
   if (isLoading) {
-    return <Button variant="outline" size="sm" disabled className="animate-pulse">Loading...</Button>;
+    return <Button variant="outline" size="sm" disabled className="animate-pulse h-9 rounded-lg">Loading...</Button>;
   }
 
   if (!terminalId) {
     return (
-      <Button variant="outline" size="sm" disabled title="No active listing found" className="opacity-50">
-        <QrCode className="h-4 w-4 mr-2" />
-        No Terminal
+      <Button variant="outline" size="sm" disabled className="opacity-50 h-9 rounded-lg bg-slate-50 text-slate-400 font-bold border-none px-4">
+        Offline
       </Button>
     );
   }
@@ -648,50 +758,46 @@ function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; i
   return (
     <Popover>
       <PopoverTrigger asChild>
-        <Button variant="default" size="sm" className="gap-2 bg-slate-900 hover:bg-slate-800 shadow-sm rounded-lg font-bold">
-          <QrCode className="h-4 w-4" />
-          Share Terminal
+        <Button variant="default" size="sm" className="gap-2 bg-slate-900 hover:bg-black text-white shadow-sm rounded-lg font-bold h-9 px-4 text-xs uppercase tracking-wider">
+          <QrCode className="h-3.5 w-3.5 text-orange-400" />
+          Share QR
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[300px] sm:w-[340px] rounded-2xl shadow-2xl p-0 overflow-hidden border-none" align="end">
+      <PopoverContent className="w-[300px] rounded-2xl shadow-2xl p-0 overflow-hidden border-none" align="end">
         <Tabs defaultValue="qr" className="w-full">
-          <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 rounded-none">
-            <TabsTrigger value="qr" className="rounded-none font-bold data-[state=active]:bg-white">QR Code</TabsTrigger>
-            <TabsTrigger value="link" className="rounded-none font-bold data-[state=active]:bg-white">Direct Link</TabsTrigger>
+          <TabsList className="grid w-full grid-cols-2 bg-slate-100 p-1 h-12 rounded-none">
+            <TabsTrigger value="qr" className="rounded-xl font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-orange-600">Scan Code</TabsTrigger>
+            <TabsTrigger value="link" className="rounded-xl font-bold text-[10px] uppercase tracking-widest data-[state=active]:bg-white data-[state=active]:text-slate-900">Direct Link</TabsTrigger>
           </TabsList>
-          <TabsContent value="qr" className="flex flex-col items-center gap-6 p-8">
-            <div className="bg-white p-4 rounded-3xl border shadow-inner">
+          <TabsContent value="qr" className="flex flex-col items-center gap-6 p-8 bg-white">
+            <div className="bg-white p-4 rounded-2xl border shadow-inner">
               <QRCode
                 value={url}
-                size={180}
+                size={140}
                 id="terminal-qr-code"
                 logoImage="/favicon.ico"
-                logoWidth={40}
+                logoWidth={36}
                 removeQrCodeBehindLogo
-                eyeRadius={10}
+                eyeRadius={8}
               />
             </div>
-            <div className="space-y-3 w-full">
-               <Button onClick={downloadQRCode} className="w-full h-11 rounded-xl bg-orange-600 hover:bg-orange-700 font-bold" variant="default">
-                 <Download className="mr-2 h-4 w-4" /> Save Image
-               </Button>
-               <p className="text-[10px] text-center text-slate-400 font-medium">Customers can scan this to claim rewards instantly.</p>
-            </div>
+            <Button onClick={downloadQRCode} className="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-700 font-bold text-xs uppercase tracking-widest" variant="default">
+               Save PNG
+            </Button>
           </TabsContent>
-          <TabsContent value="link" className="space-y-6 p-8">
+          <TabsContent value="link" className="space-y-6 p-8 bg-white">
             <div className="space-y-3">
-              <Label className="text-slate-500 font-bold text-xs uppercase tracking-widest">Shareable URL</Label>
+              <Label className="text-slate-400 font-bold text-[9px] uppercase tracking-widest ml-1">Terminal Redirect URL</Label>
               <div className="flex items-center gap-2">
-                <Input value={url} readOnly className="h-12 bg-slate-50 border-none rounded-xl text-xs font-medium text-blue-600" />
-                <Button size="icon" variant="outline" onClick={copyLink} className="h-12 w-12 shrink-0 rounded-xl bg-white border-slate-200">
-                  <Copy className="h-4 w-4" />
+                <Input value={url} readOnly className="h-10 pl-4 bg-slate-50 border-none rounded-xl text-[10px] font-bold text-blue-600" />
+                <Button size="icon" variant="outline" onClick={copyLink} className="h-10 w-10 shrink-0 rounded-xl bg-white border-slate-100 hover:bg-slate-50 shadow-sm">
+                  <Copy className="h-3.5 w-3.5 text-slate-400" />
                 </Button>
               </div>
             </div>
-            <Button variant="secondary" className="w-full h-12 rounded-xl font-bold bg-slate-100 text-slate-900 border-none" asChild>
+            <Button variant="secondary" className="w-full h-10 rounded-xl font-bold text-[10px] uppercase tracking-widest bg-slate-900 hover:bg-black text-white border-none shadow-lg" asChild>
               <Link href={url || "#"} target="_blank">
-                <ExternalLink className="mr-2 h-4 w-4" />
-                Preview Page
+                <ExternalLink className="mr-2 h-3.5 w-3.5" /> Preview
               </Link>
             </Button>
           </TabsContent>
@@ -706,111 +812,104 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
 
   return (
     <Dialog open={!!claimId} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-w-md rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
-        <DialogHeader className="p-6 bg-slate-900 text-white">
-          <DialogTitle className="font-black text-xl flex items-center gap-2">
-            <Info className="h-5 w-5 text-orange-400" />
-            Claim Information
+      <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
+        <DialogHeader className="p-6 bg-slate-900 text-white relative">
+          <div className="absolute top-0 right-0 p-6 opacity-10">
+             <Receipt className="h-16 w-16 rotate-12" />
+          </div>
+          <DialogTitle className="font-bold text-xl tracking-tight flex items-center gap-3 italic">
+            <Zap className="h-5 w-5 text-orange-400" />
+            REWARD LOGISTICS
           </DialogTitle>
         </DialogHeader>
         {isLoading ? (
-          <div className="flex flex-col items-center justify-center p-20 space-y-4">
-             <div className="w-10 h-10 border-4 border-slate-200 border-t-orange-600 rounded-full animate-spin" />
-             <p className="text-slate-500 font-medium">Fetching details...</p>
+          <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-white">
+             <div className="w-10 h-10 border-4 border-slate-100 border-t-orange-600 rounded-full animate-spin" />
+             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Querying database...</p>
           </div>
         ) : claim ? (
-          <div className="p-6 space-y-8">
-            <div className="grid grid-cols-2 gap-y-6 gap-x-4">
+          <div className="p-8 space-y-8 bg-white">
+            <div className="grid grid-cols-2 gap-y-8 gap-x-6">
               <div className="space-y-1">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Status</Label>
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Status</Label>
                 <div className="pt-1">
-                  <Badge className={`rounded-lg px-2.5 py-1 text-[11px] font-black uppercase tracking-tight ${
-                    claim.status === "APPROVED" ? "bg-green-100 text-green-700 hover:bg-green-100" :
-                    claim.status === "REJECTED" ? "bg-red-100 text-red-700 hover:bg-red-100" :
-                    "bg-amber-100 text-amber-700 hover:bg-amber-100"
+                  <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
+                    claim.status === "APPROVED" ? "bg-emerald-50 text-emerald-600" :
+                    claim.status === "REJECTED" ? "bg-rose-50 text-rose-600" :
+                    "bg-amber-50 text-amber-600"
                   }`}>
                     {claim.status}
                   </Badge>
                 </div>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Rewards</Label>
-                <p className="text-xl font-black text-green-600 pt-0.5">£{claim.amount.toFixed(2)}</p>
+              <div className="space-y-1 text-right">
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Cashback</Label>
+                <p className="text-2xl font-bold text-emerald-500 pt-0.5 tracking-tight">£{Number(claim.amount).toFixed(2)}</p>
               </div>
 
               <div className="space-y-1">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Purchase Value</Label>
-                <p className="text-sm font-bold text-slate-900">£{claim.spendAmount.toFixed(2)}</p>
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Spent</Label>
+                <p className="text-base font-bold text-slate-900 tracking-tight">£{Number(claim.spendAmount).toFixed(2)}</p>
               </div>
 
-              <div className="space-y-1">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Merchant/Owner</Label>
-                <div className="flex items-center gap-2 text-sm font-bold text-slate-900 truncate">
-                  <Store className="h-3.5 w-3.5 text-slate-400 shrink-0" />
+              <div className="space-y-1 text-right">
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Merchant</Label>
+                <div className="flex items-center justify-end gap-2 text-xs font-bold text-slate-900 truncate uppercase tracking-tighter">
                   <span className="truncate">{claim.ownerName || claim.ownerId}</span>
-                </div>
-              </div>
-
-              <div className="col-span-2 space-y-1 pt-2 border-t border-slate-50">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Submission Time</Label>
-                <div className="flex items-center gap-2 text-sm font-medium text-slate-600">
-                  <Calendar className="h-3.5 w-3.5 text-slate-400" />
-                  {new Date(claim.submittedAt).toLocaleString()}
+                  <Store className="h-3 w-3 text-slate-200 shrink-0" />
                 </div>
               </div>
             </div>
 
             {claim.proofUrl && (
               <div className="space-y-3 pt-2">
-                <Label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
-                   Receipt Preview
-                   <span className="text-[9px] lowercase bg-slate-100 px-1.5 rounded font-medium text-slate-500 tracking-normal">Verified</span>
-                </Label>
-                <div className="relative h-[240px] w-full bg-slate-50 rounded-2xl overflow-hidden border-2 border-slate-100 p-2">
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic ml-1">Receipt Image</Label>
+                <div className="relative h-[260px] w-full bg-slate-50 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">
                   <Image
                     src={claim.proofUrl}
-                    alt="Receipt Proof"
+                    alt="Receipt Verification"
                     fill
-                    className="object-contain rounded-xl"
+                    className="object-contain p-4"
                     unoptimized
                   />
                 </div>
               </div>
             )}
             
-            <Button onClick={onClose} className="w-full h-12 rounded-xl font-bold bg-slate-100 text-slate-900 hover:bg-slate-200 border-none shadow-none">
-              Close Details
+            <Button onClick={onClose} className="w-full h-14 rounded-2xl font-bold text-sm bg-slate-900 hover:bg-black text-white border-none shadow-none uppercase tracking-widest transition-all">
+              Close Record
             </Button>
           </div>
         ) : (
-          <div className="p-12 text-center text-red-500 font-medium">Failed to load claim details.</div>
+          <div className="p-20 text-center text-rose-500 font-bold bg-white text-xs">ERROR RETRIEVING DATA</div>
         )}
       </DialogContent>
     </Dialog>
   );
 }
 
-function mapTerminalClaimToUI(apiClaim: TerminalClaim): Claim {
+function mapTerminalClaimToUI(apiClaim: TerminalClaim): ClaimUI {
   const spendAmount = Number(apiClaim.spendAmount) || 0;
   const amount = Number(apiClaim.amount) || 0;
 
-  let customerName = apiClaim.userId;
+  let customerName = "Guest User";
+  let customerEmail = undefined;
+  let customerImage = undefined;
+  
   if (apiClaim.user) {
-    const name = apiClaim.user.name || `${apiClaim.user.firstName} ${apiClaim.user.lastName}`.trim();
-    if (name) {
-      customerName = name;
-      if (apiClaim.user.email) customerName += ` (${apiClaim.user.email})`;
-    } else if (apiClaim.user.email) {
-      customerName = apiClaim.user.email;
-    }
+    customerName = apiClaim.user.name || `${apiClaim.user.firstName} ${apiClaim.user.lastName}`.trim() || apiClaim.user.email || "Unknown User";
+    customerEmail = apiClaim.user.email;
+    customerImage = apiClaim.user.profilePictureUrl;
   }
 
   return {
     id: apiClaim.id,
-    customerName: customerName,
-    amount: amount,
-    spendRange: `£${spendAmount.toFixed(2)}`,
+    customerName,
+    customerEmail,
+    customerImage,
+    amount,
+    spendAmount,
     status: apiClaim.status,
     date: apiClaim.submittedAt,
     proofUrl: apiClaim.proofUrl,

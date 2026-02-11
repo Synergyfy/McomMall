@@ -6,7 +6,15 @@ import { Info, Globe, Smartphone, ArrowUpRight } from "lucide-react";
 import { GeneralCashback } from './components/GeneralCashback';
 import { TerminalCashback } from './components/TerminalCashback';
 
+import { useSelector } from "react-redux";
+import { RootState } from "@/service/store/store";
+import { UserRole } from "@/service/auth/types";
+
 const CashbackPage = () => {
+  const { userRole } = useSelector((state: RootState) => state.auth);
+  const role = userRole?.toLowerCase();
+  const defaultTab = (role === 'owner' || role === 'admin') ? 'terminal' : 'general';
+
   return (
     <div className="flex flex-col gap-8 pb-12 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
       {/* Header Section */}
@@ -59,7 +67,7 @@ const CashbackPage = () => {
       </div>
 
       {/* Main Content Tabs */}
-      <Tabs defaultValue="general" className="w-full">
+      <Tabs defaultValue={defaultTab} className="w-full">
         <div className="flex items-center justify-center sm:justify-start border-b mb-6">
           <TabsList className="bg-transparent h-auto p-0 gap-8">
             <TabsTrigger 
@@ -72,7 +80,7 @@ const CashbackPage = () => {
               value="terminal"
               className="px-4 py-3 text-base font-semibold border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:bg-transparent data-[state=active]:text-orange-600 rounded-none shadow-none transition-all"
             >
-              Terminal Claims
+              Terminal Cashback
             </TabsTrigger>
           </TabsList>
         </div>
@@ -82,9 +90,7 @@ const CashbackPage = () => {
         </TabsContent>
         
         <TabsContent value="terminal" className="mt-0 focus-visible:outline-none ring-offset-background">
-          <div className="bg-white rounded-xl border p-2 sm:p-6 shadow-sm">
-            <TerminalCashback />
-          </div>
+          <TerminalCashback />
         </TabsContent>
       </Tabs>
     </div>
