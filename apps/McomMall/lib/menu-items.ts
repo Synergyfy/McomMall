@@ -155,7 +155,7 @@ export const marketingMenuItems: MenuItem[] = [
 
 export const historyMenuItems: MenuItem[] = [
   {
-    title: 'Promotion History',
+    title: 'Reward History',
     href: '/dashboard/history/promotion-history',
     icon: History,
   },
