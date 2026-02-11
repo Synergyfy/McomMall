@@ -20,6 +20,7 @@ import { RootState } from '@/service/store/store';
 import UserNav from './UserNav';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
 import { useLogout } from '@/service/auth/hook';
+import { useGetMyMembership } from '@/service/membership/hooks';
 
 const mobileMenuVariants: Variants = {
   closed: { x: '100%', transition: { duration: 0.3, ease: 'easeInOut' } },
@@ -30,7 +31,7 @@ export default function Header() {
   const { cart } = useSelector((state: RootState) => state.cart);
   const cartItemCount = cart?.items?.reduce((acc, item) => acc + item.quantity, 0) || 0;
   const { wishlistCount } = useWishlist();
-  const { accessToken, userRole, userName } = useSelector(
+  const { accessToken, userRole, userName, packageInfo } = useSelector(
     (state: RootState) => state.auth
   );
   const [isMobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -38,6 +39,7 @@ export default function Header() {
     null
   );
   const logout = useLogout();
+  const { data: membership } = useGetMyMembership();
 
   if (pathname?.startsWith('/dashboard')) {
     return null;
@@ -73,56 +75,61 @@ export default function Header() {
               </button>
             </div>
             <nav className="mt-8 flex flex-col space-y-2">
-              {menuItems.map(item => {
-                const isSubMenuOpen = openMobileSubMenu === item.title;
+              {menuItems
+                .filter(item => {
+                  if (userRole === 'customer' && item.title === 'Pricing') return false;
+                  return true;
+                })
+                .map(item => {
+                  const isSubMenuOpen = openMobileSubMenu === item.title;
 
-                if (item.href) {
+                  if (item.href) {
+                    return (
+                      <Link
+                        key={item.title}
+                        href={item.href}
+                        onClick={() => setMobileMenuOpen(false)}
+                        className="rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                      >
+                        {item.title}
+                      </Link>
+                    );
+                  }
+
                   return (
-                    <Link
-                      key={item.title}
-                      href={item.href}
-                      onClick={() => setMobileMenuOpen(false)}
-                      className="rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                    >
-                      {item.title}
-                    </Link>
-                  );
-                }
-
-                return (
-                  <div key={item.title}>
-                    <button
-                      onClick={() =>
-                        setOpenMobileSubMenu(isSubMenuOpen ? null : item.title)
-                      }
-                      className="flex w-full items-center justify-between rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
-                    >
-                      <span>{item.title}</span>
-                      <ChevronDown
-                        className={`h-5 w-5 transition-transform ${isSubMenuOpen ? 'rotate-180' : ''
-                          }`}
-                      />
-                    </button>
-                    <AnimatePresence>
-                      {isSubMenuOpen && (
-                        <motion.div
-                          initial={{ height: 0, opacity: 0 }}
-                          animate={{ height: 'auto', opacity: 1 }}
-                          exit={{ height: 0, opacity: 0 }}
-                          className="overflow-hidden pl-4"
-                        >
-                          <div
-                            className="mt-2 border-l-2 border-gray-200 pl-4"
-                            onClick={() => setMobileMenuOpen(false)}
+                    <div key={item.title}>
+                      <button
+                        onClick={() =>
+                          setOpenMobileSubMenu(isSubMenuOpen ? null : item.title)
+                        }
+                        className="flex w-full items-center justify-between rounded-md px-4 py-2 text-lg text-gray-900 transition-colors hover:bg-gray-100"
+                      >
+                        <span>{item.title}</span>
+                        <ChevronDown
+                          className={`h-5 w-5 transition-transform ${isSubMenuOpen ? 'rotate-180' : ''
+                            }`}
+                        />
+                      </button>
+                      <AnimatePresence>
+                        {isSubMenuOpen && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: 'auto', opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            className="overflow-hidden pl-4"
                           >
-                            {item.content}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-                  </div>
-                );
-              })}
+                            <div
+                              className="mt-2 border-l-2 border-gray-200 pl-4"
+                              onClick={() => setMobileMenuOpen(false)}
+                            >
+                              {item.content}
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  );
+                })}
               {!accessToken ? (
                 <>
                   <Link
@@ -211,12 +218,21 @@ export default function Header() {
             <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
               <span className="text-white font-bold text-sm">M</span>
             </div>
-            <span className="text-xl font-semibold hidden md:block">McomMall</span>
+            <div className="flex flex-col">
+              <span className="text-xl font-semibold hidden md:block leading-tight">McomMall</span>
+              {userRole === 'owner' && membership?.tier && (
+                <div className="mt-1 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-lg">
+                  <span className="text-xs font-bold text-orange-400 uppercase tracking-widest">
+                    {membership.tier.name} Tier
+                  </span>
+                </div>
+              )}
+            </div>
           </Link>
 
           {/* Desktop Nav - Placed in the middle for better layout */}
           <div className="hidden md:flex flex-1 items-center justify-center">
-            <NavMenu />
+            <NavMenu role={userRole ?? undefined} />
           </div>
 
           {/* Right Side Actions */}

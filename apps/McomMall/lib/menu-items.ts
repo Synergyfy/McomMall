@@ -131,6 +131,7 @@ export const marketingMenuItems: MenuItem[] = [
       },
     ],
   },
+  /*
   {
     title: 'Groups',
     href: '/dashboard/marketing/groups',
@@ -141,6 +142,7 @@ export const marketingMenuItems: MenuItem[] = [
       { title: 'Membership', href: '/dashboard/marketing/membership' },
     ],
   },
+  */
   {
     title: 'Group Circles',
     href: '/dashboard/group-circles',
