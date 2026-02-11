@@ -32,7 +32,7 @@ const isImageUrl = (url: string) => {
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'placeId' in listing;
+  return 'place_id' in listing;
 }
 
 // You would create more detailed components for each tab
@@ -121,7 +121,7 @@ function ProductPage({
                 />
               </Button>
               <ChatIcon
-                receiverId={(listing as InHouseBusiness).user.id}
+                receiverId={(listing as InHouseBusiness).user?.id || ''}
                 listingName={product.title}
                 buttonClassName="absolute top-14 right-2 bg-white/70 hover:bg-white"
                 iconClassName="text-orange-600"
@@ -306,12 +306,12 @@ function OverviewSection({
   ];
 
   const location = isGoogle ? listing.geometry : listing.location;
-  const address = isGoogle
-    ? listing.formattedAddress || listing.vicinity
-    : `${listing.location.addressLine1}, ${listing.location.city}`;
+  const address = (isGoogle
+    ? (listing as GooglePlaceResult).formatted_address || listing.vicinity
+    : `${(listing as InHouseBusiness).location?.addressLine1}, ${(listing as InHouseBusiness).location?.city}`) || '';
   const reviews = isGoogle ? listing.reviews : []; // In-house doesn't have reviews yet
   const businessId = isGoogle
-    ? (listing as GooglePlaceResult).placeId
+    ? (listing as GooglePlaceResult).place_id
     : (listing as InHouseBusiness).id;
 
   if (isGoogle) {
@@ -324,15 +324,15 @@ function OverviewSection({
           </h3>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
             <p>
-              <strong>Status:</strong> {listing.businessStatus}
+              <strong>Status:</strong> {(listing as GooglePlaceResult).business_status}
             </p>
             <p>
               <strong>Types:</strong> {listing.types?.join(', ')}
             </p>
-            {listing.openingHours && (
+            {(listing as GooglePlaceResult).opening_hours && (
               <p>
                 <strong>Availability:</strong>{' '}
-                {listing.openingHours.openNow ? 'Open Now' : 'Closed'}
+                {(listing as GooglePlaceResult).opening_hours?.open_now ? 'Open Now' : 'Closed'}
               </p>
             )}
           </div>

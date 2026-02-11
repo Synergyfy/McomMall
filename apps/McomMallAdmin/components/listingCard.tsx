@@ -62,13 +62,13 @@ export default function ListingCard({
 
   let imgUrl;
   if (isGoogle) {
-    if (listing.photos && listing.photos.length > 0) {
-      const { photoReference } = listing.photos[0];
-      if (photoReference) {
+    if ((listing as GooglePlaceResult).photos && (listing as GooglePlaceResult).photos!.length > 0) {
+      const { photo_reference } = (listing as GooglePlaceResult).photos![0];
+      if (photo_reference) {
         const API_URL =
           process.env.NEXT_PUBLIC_API_URL ||
           'https://mcom-mall-api.vercel.app/api/v1';
-        imgUrl = `${API_URL}/google/google-business/photo/${photoReference}`;
+        imgUrl = `${API_URL}/google/google-business/photo/${photo_reference}`;
       } else {
         imgUrl =
           'https://images.unsplash.com/photo-1543269865-cbf427effbad?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1170&q=80';
@@ -90,13 +90,13 @@ export default function ListingCard({
       ? listing.types?.[0]
       : (listing as InHouseBusiness).categories?.[0]?.name) || 'Business';
   const vicinity = isGoogle
-    ? listing.formattedAddress || listing.vicinity
+    ? (listing as GooglePlaceResult).formatted_address || (listing as GooglePlaceResult).vicinity
     : (listing as InHouseBusiness).location
-      ? `${(listing as InHouseBusiness).location.addressLine1}, ${(listing as InHouseBusiness).location.city
+      ? `${(listing as InHouseBusiness).location?.addressLine1}, ${(listing as InHouseBusiness).location?.city
       }`
       : '';
   const shortDescription = isGoogle
-    ? `Business Status: ${listing.businessStatus}`
+    ? `Business Status: ${(listing as GooglePlaceResult).business_status}`
     : (listing as InHouseBusiness).shortDescription;
   const rating = isGoogle ? listing.rating : undefined; // InHouseBusiness doesn't have rating
   const ratingCount = isGoogle ? listing.user_ratings_total : undefined;

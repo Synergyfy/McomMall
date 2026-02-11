@@ -6,18 +6,38 @@ export interface Photo {
   width: number;
 }
 
+export interface Geometry {
+  location: {
+    lat: number;
+    lng: number;
+  };
+}
+
+export interface GoogleReview {
+  author_name: string;
+  author_url?: string;
+  language?: string;
+  profile_photo_url: string;
+  rating: number;
+  relative_time_description: string;
+  text: string;
+  time?: number;
+}
+
+import { Review as ApiReview } from '../reviews/types';
+import { Product } from '../store/products/types';
+
+export type { ApiReview, Product };
+
+export type Review = GoogleReview | ApiReview;
+
 export interface GooglePlaceResult {
   place_id: string;
   name: string;
   formatted_address?: string;
-  geometry?: {
-    location: {
-      lat: number;
-      lng: number;
-      // ... other fields if needed
-    };
-  };
+  geometry?: Geometry;
   photos?: Photo[];
+  reviews?: Review[];
   rating?: number;
   user_ratings_total?: number;
   types?: string[];
@@ -37,6 +57,22 @@ export type GooglePlaceResults = GooglePlaceResult[];
 
 export type ListingType = 'product' | 'service';
 
+export interface Location {
+  id: string;
+  addressLine1: string;
+  city: string;
+  lat: number;
+  lng: number;
+  [key: string]: unknown;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  email: string;
+  [key: string]: unknown;
+}
+
 export interface InHouseBusiness {
   id: string;
   name: string;
@@ -45,19 +81,20 @@ export interface InHouseBusiness {
   categories?: { name: string }[];
   logoUrl?: string; // Also adding logoUrl as it was used in ListingDetails
   businessName?: string;
-  location?: {
-    addressLine1: string;
-    city: string;
-  };
+  location?: Location;
   businessPhone?: string;
-  user?: {
-    id: string;
-    name: string;
-    email: string;
-  };
+  user?: User;
   isGoogleVerified?: boolean;
   listingType?: ListingType[];
   isClaimed?: boolean;
+  products?: Product[];
+  about?: string;
+  shortDescription?: string;
+  website?: string;
+  businessEmail?: string;
+  businessHours?: any[];
+  productSellerProfile?: any;
+  serviceProviderProfile?: any;
   [key: string]: unknown;
 }
 
@@ -65,15 +102,23 @@ export interface InHouseBusinessResults {
   data: InHouseBusiness[];
 }
 
+export type UserListing = InHouseBusiness;
+
 // --- Listing Types ---
 
-export interface RecentListings {
-  data: Array<{
-    id: string;
-    title: string;
-    [key: string]: unknown;
-  }>;
+export interface RecentListing {
+  id: string;
+  businessName: string;
+  location: {
+    addressLine1: string;
+    city: string;
+  };
+  createdAt: string;
+  categories: { name: string }[];
+  [key: string]: unknown;
 }
+
+export type RecentListings = RecentListing[];
 
 export interface CreateBusinessPayload {
   title: string;
