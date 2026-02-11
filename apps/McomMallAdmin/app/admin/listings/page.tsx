@@ -66,6 +66,8 @@ import {
     Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/export-utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 import { useGetAdminListingStats, useGetAdminListings, useToggleListingFeatured } from '@/service/listings/hook';
 import { AdminListing } from '@/service/listings/types';
 import { toast } from 'sonner';
@@ -320,6 +322,31 @@ export default function ListingsPage() {
         setSheetOpen(false);
     };
 
+    const handleExport = () => {
+        if (!filteredListings || filteredListings.length === 0) {
+            toast.error('No listing data available to export');
+            return;
+        }
+
+        const exportData = filteredListings.map(l => ({
+            ID: l.id,
+            Title: l.title,
+            Business: l.businessName,
+            Category: l.category,
+            Sector: l.sector,
+            Price: l.price.toFixed(2),
+            Status: l.status,
+            Featured: l.featured ? 'Yes' : 'No',
+            Rating: l.rating.toFixed(1),
+            Reviews: l.reviewCount,
+            Location: l.location,
+            Description: l.description,
+        }));
+
+        exportToCSV(exportData, `listings-export-${new Date().toISOString().split('T')[0]}`);
+        toast.success('Listing data exported successfully');
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -329,10 +356,15 @@ export default function ListingsPage() {
                     <p className="text-slate-500">Manage and moderate all platform listings</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleExport}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Export
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download listings as CSV</TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
 

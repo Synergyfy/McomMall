@@ -72,7 +72,7 @@ export default function ClientListingDetail({
         .slice(0, 5)
         .map(
           (photo: Photo) =>
-            `${API_URL}/google/google-business/photo/${photo.photoReference}`
+            `${API_URL}/google/google-business/photo/${photo.photo_reference}`
         );
     } else if (!isGoogle && !isGooglePlaceResult(listing) && listing.logoUrl) {
       imageUrls.push(listing.logoUrl);

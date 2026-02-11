@@ -25,8 +25,8 @@ import {
 import ChatIcon from './ChatIcon';
 
 const isImageUrl = (url: string) => {
-    if (!url) return false;
-    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+  if (!url) return false;
+  return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
 }
 
 function isGoogleResult(
@@ -94,72 +94,72 @@ function ProductPage({
         {(listing as InHouseBusiness).products?.map(product => {
           const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl;
           return (
-          <Link
-            href={`/products/${product.id}`}
-            key={product.id}
-            className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
-          >
-            <div className="relative w-full h-32 mb-2">
-              <Image
-                src={
-                  firstImageUrl ||
-                  'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
-                }
-                alt={product.title}
-                layout="fill"
-                className="object-cover rounded-md"
-              />
-              <Button
-                size="icon"
-                className="absolute top-2 right-2 bg-white/70 hover:bg-white"
-                onClick={e => handleWishlistToggle(e, product)}
-              >
-                <Heart
-                  className={`h-5 w-5 ${
-                    wishlist?.items?.some(item => item.product.id === product.id)
-                      ? 'text-red-500 fill-current'
-                      : 'text-gray-500'
-                  }`}
+            <Link
+              href={`/products/${product.id}`}
+              key={product.id}
+              className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
+            >
+              <div className="relative w-full h-32 mb-2">
+                <Image
+                  src={
+                    firstImageUrl ||
+                    'https://plus.unsplash.com/premium_photo-1664392147011-2a720f214e01?q=80&w=878&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D'
+                  }
+                  alt={product.title}
+                  layout="fill"
+                  className="object-cover rounded-md"
                 />
+                <Button
+                  size="icon"
+                  className="absolute top-2 right-2 bg-white/70 hover:bg-white"
+                  onClick={e => handleWishlistToggle(e, product)}
+                >
+                  <Heart
+                    className={`h-5 w-5 ${wishlist?.items?.some(item => item.product.id === product.id)
+                        ? 'text-red-500 fill-current'
+                        : 'text-gray-500'
+                      }`}
+                  />
+                </Button>
+                <ChatIcon
+                  receiverId={(listing as InHouseBusiness).user.id}
+                  listingName={product.title}
+                  buttonClassName="absolute top-14 right-2 bg-white/70 hover:bg-white"
+                  iconClassName="text-orange-600"
+                />
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold">{product.title}</h4>
+                <p className="text-gray-600">£{product.price.toFixed(2)}</p>
+                {product.points && product.points > 0 && (
+                  <div className="mt-2">
+                    <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
+                      Earn {product.points} points
+                    </span>
+                  </div>
+                )}
+                {product.shortDescription && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    {product.shortDescription}
+                  </p>
+                )}
+              </div>
+              <Button
+                variant="outline"
+                className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
+                onClick={e => handleAddToCart(e, product)}
+              >
+                Add to Cart
               </Button>
-              <ChatIcon
-                receiverId={(listing as InHouseBusiness).user.id}
-                listingName={product.title}
-                buttonClassName="absolute top-14 right-2 bg-white/70 hover:bg-white"
-                iconClassName="text-orange-600"
-              />
-            </div>
-            <div className="flex-grow">
-              <h4 className="font-semibold">{product.title}</h4>
-              <p className="text-gray-600">£{product.price.toFixed(2)}</p>
-              {product.points && product.points > 0 && (
-                <div className="mt-2">
-                  <span className="inline-block bg-green-100 text-green-800 text-xs font-semibold px-2.5 py-0.5 rounded-full">
-                    Earn {product.points} points
-                  </span>
-                </div>
-              )}
-              {product.shortDescription && (
-                <p className="text-sm text-gray-500 mt-1">
-                  {product.shortDescription}
-                </p>
-              )}
-            </div>
-            <Button
-              variant="outline"
-              className="w-full mt-2 border-orange-600 text-orange-600 hover:bg-orange-50 hover:text-orange-700"
-              onClick={e => handleAddToCart(e, product)}
-            >
-              Add to Cart
-            </Button>
-            <Button
-              className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={e => handleOrderNow(e, product)}
-            >
-              Order Now
-            </Button>
-          </Link>
-        )})}
+              <Button
+                className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={e => handleOrderNow(e, product)}
+              >
+                Order Now
+              </Button>
+            </Link>
+          )
+        })}
       </div>
     </div>
   );
@@ -226,41 +226,42 @@ function ServicePage({
       <h3 className="text-xl font-bold border-t pt-6">Services</h3>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 mt-2">
         {servicesData.data.map(service => {
-           const firstImageUrl = service.media?.find(isImageUrl);
+          const firstImageUrl = service.media?.find(isImageUrl);
           return (
-          <Link
-            href={`/services/${service.id}`}
-            key={service.id}
-            className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
-          >
-            <div className="relative w-full h-32 mb-2">
-              <Image
-                src={firstImageUrl || `https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
-                alt={service.name}
-                layout="fill"
-                className="object-cover rounded-md"
-              />
-            </div>
-            <div className="flex-grow">
-              <h4 className="font-semibold">{service.name}</h4>
-              <p className="text-gray-600">{getPriceDisplay(service)}</p>
-              {service.enableGuestPricing && (
-                <p className="text-sm text-gray-500 mt-1">
-                  Guest pricing: £{service.pricePerGuest} per guest
-                </p>
-              )}
-              <p className="text-sm text-gray-500 mt-1">
-                {service.description}
-              </p>
-            </div>
-            <Button
-              className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
-              onClick={e => handleBookNow(e, service)}
+            <Link
+              href={`/services/${service.id}`}
+              key={service.id}
+              className="border rounded-lg p-4 flex flex-col transition-shadow hover:shadow-lg"
             >
-              Book Now
-            </Button>
-          </Link>
-        )})}
+              <div className="relative w-full h-32 mb-2">
+                <Image
+                  src={firstImageUrl || `https://source.unsplash.com/random/400x300?service&sig=${service.id}`}
+                  alt={service.name}
+                  layout="fill"
+                  className="object-cover rounded-md"
+                />
+              </div>
+              <div className="flex-grow">
+                <h4 className="font-semibold">{service.name}</h4>
+                <p className="text-gray-600">{getPriceDisplay(service)}</p>
+                {service.enableGuestPricing && (
+                  <p className="text-sm text-gray-500 mt-1">
+                    Guest pricing: £{service.pricePerGuest} per guest
+                  </p>
+                )}
+                <p className="text-sm text-gray-500 mt-1">
+                  {service.description}
+                </p>
+              </div>
+              <Button
+                className="w-full mt-2 bg-orange-600 hover:bg-orange-700 text-white"
+                onClick={e => handleBookNow(e, service)}
+              >
+                Book Now
+              </Button>
+            </Link>
+          )
+        })}
       </div>
       <div className="flex justify-center mt-6">
         <Button
@@ -343,8 +344,8 @@ export default function ContentTabs({
   if (!isGoogle) {
     const inHouseListing = listing as InHouseBusiness;
     const listingType = inHouseListing.listingType ?? [];
-    const hasProduct = listingType.includes('product');
-    const hasService = listingType.includes('service');
+    const hasProduct = listingType.includes('RETAIL');
+    const hasService = listingType.includes('SERVICE');
 
     if (hasProduct) {
       tabs.push({
@@ -377,8 +378,8 @@ export default function ContentTabs({
     tabs.length === 1
       ? 'grid-cols-1'
       : tabs.length === 2
-      ? 'grid-cols-2'
-      : 'grid-cols-3';
+        ? 'grid-cols-2'
+        : 'grid-cols-3';
 
   return (
     <Tabs defaultValue={tabs[0].value} className="w-full">

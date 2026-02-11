@@ -17,9 +17,9 @@ import {
 } from 'lucide-react';
 
 function isGoogleResult(
-    listing: GooglePlaceResult | InHouseBusiness
+  listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-    return 'placeId' in listing;
+  return 'placeId' in listing;
 }
 
 export default function OverviewSection({
@@ -113,6 +113,16 @@ export default function OverviewSection({
     );
   }
 
+  const DAY_MAP: Record<string, number> = {
+    'SUNDAY': 0,
+    'MONDAY': 1,
+    'TUESDAY': 2,
+    'WEDNESDAY': 3,
+    'THURSDAY': 4,
+    'FRIDAY': 5,
+    'SATURDAY': 6,
+  };
+
   // InHouseBusiness
   return (
     <div className="-mx-6">
@@ -152,29 +162,28 @@ export default function OverviewSection({
           </h3>
           <ul className="space-y-2">
             {(listing as InHouseBusiness).businessHours
-              .sort((a, b) => a.dayOfWeek - b.dayOfWeek)
+              .sort((a, b) => DAY_MAP[a.dayOfWeek] - DAY_MAP[b.dayOfWeek])
               .map(hour => (
                 <li
                   key={hour.id}
-                  className={`flex justify-between p-3 rounded-lg ${
-                    hour.dayOfWeek === today
+                  className={`flex justify-between p-3 rounded-lg ${DAY_MAP[hour.dayOfWeek] === today
                       ? 'bg-red-100 text-red-800'
                       : 'text-gray-700'
-                  }`}
+                    }`}
                 >
                   <span className="font-semibold">
-                    {daysOfWeek[hour.dayOfWeek]}
+                    {daysOfWeek[DAY_MAP[hour.dayOfWeek]]}
                   </span>
                   <span
                     className={
-                      hour.dayOfWeek === today ? 'font-bold' : ''
+                      DAY_MAP[hour.dayOfWeek] === today ? 'font-bold' : ''
                     }
                   >
                     {hour.is24h
                       ? '24 Hours'
                       : `${formatTime(hour.openTime)} - ${formatTime(
-                          hour.closeTime
-                        )}`}
+                        hour.closeTime
+                      )}`}
                   </span>
                 </li>
               ))}

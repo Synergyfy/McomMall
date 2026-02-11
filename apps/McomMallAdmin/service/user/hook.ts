@@ -67,3 +67,14 @@ export const useGetCustomerStats = () => {
     queryFn: getCustomerStats,
   });
 };
+
+export const useGetPublicUserProfile = (id: string) => {
+  return useQuery({
+    queryKey: ['public-user', id],
+    queryFn: async () => {
+      const { data } = await api.get<User>(`/users/${id}`);
+      return data;
+    },
+    enabled: !!id,
+  });
+};

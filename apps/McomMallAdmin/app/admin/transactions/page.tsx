@@ -56,6 +56,8 @@ import {
     Wallet,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/export-utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 // Transaction Status Badge
 function TransactionStatusBadge({ status }: { status: Transaction['status'] }) {
@@ -258,6 +260,27 @@ export default function TransactionsPage() {
         setSheetOpen(true);
     };
 
+    const handleExport = () => {
+        if (!filteredTransactions || filteredTransactions.length === 0) {
+            return;
+        }
+
+        const exportData = filteredTransactions.map(t => ({
+            ID: t.id,
+            Type: t.type,
+            Amount: t.amount.toFixed(2),
+            Fees: t.fees.toFixed(2),
+            Status: t.status,
+            'Payment Method': t.paymentMethod,
+            Payer: t.payerName,
+            Payee: t.payeeName,
+            'Order ID': t.orderId || '',
+            Date: new Date(t.date).toLocaleDateString(),
+        }));
+
+        exportToCSV(exportData, `transactions-export-${new Date().toISOString().split('T')[0]}`);
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -267,10 +290,15 @@ export default function TransactionsPage() {
                     <p className="text-slate-500">Monitor payments, refunds, and payouts</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleExport}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Export
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download transactions as CSV</TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
 
