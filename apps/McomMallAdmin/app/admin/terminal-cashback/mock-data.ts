@@ -2,8 +2,8 @@ import { TerminalCashbackConfig, TerminalCashbackClaim } from '@/service/termina
 
 export const mockTerminalConfigs: TerminalCashbackConfig[] = [
     {
-        businessId: 'biz-1',
-        businessName: 'Urban Eats Restaurant',
+        userId: 'biz-1',
+        userName: 'Urban Eats Restaurant',
         level: 1,
         qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=mcom.app/claim/biz-1',
         claimUrl: 'mcom.app/claim/biz-1',
@@ -23,8 +23,8 @@ export const mockTerminalConfigs: TerminalCashbackConfig[] = [
         }
     },
     {
-        businessId: 'biz-2',
-        businessName: 'TechHub Electronics',
+        userId: 'biz-2',
+        userName: 'TechHub Electronics',
         level: 2,
         qrCodeUrl: 'https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=mcom.app/claim/biz-2',
         claimUrl: 'mcom.app/claim/biz-2',
@@ -47,8 +47,8 @@ export const mockTerminalClaims: TerminalCashbackClaim[] = [
         id: 'claim-1',
         userId: 'user-1',
         userName: 'John Smith',
-        businessId: 'biz-1',
-        businessName: 'Urban Eats Restaurant',
+        ownerId: 'biz-1',
+        ownerName: 'Urban Eats Restaurant',
         amountRange: '£10 - £20',
         amount: 1.00,
         proofUrl: 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?w=400',
@@ -63,8 +63,8 @@ export const mockTerminalClaims: TerminalCashbackClaim[] = [
         id: 'claim-2',
         userId: 'user-5',
         userName: 'David Brown',
-        businessId: 'biz-1',
-        businessName: 'Urban Eats Restaurant',
+        ownerId: 'biz-1',
+        ownerName: 'Urban Eats Restaurant',
         amountRange: '£51 - £100',
         amount: 5.00,
         proofUrl: 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?w=400',

@@ -2,9 +2,19 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { MessageCircle, X, Send, Minus } from 'lucide-react';
+import { MessageCircle, X, Send, Minus, ExternalLink, Loader2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { 
+    useGetSupportTickets, 
+    useGetSupportTicket, 
+    useCreateSupportTicket, 
+    useAddSupportMessage 
+} from '@/service/support-tickets/hook';
+import { TicketStatus } from '@/service/support-tickets/types';
+import Link from 'next/link';
 
 interface Message {
     id: string;
@@ -15,10 +25,23 @@ interface Message {
 export default function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
-    const [messages, setMessages] = useState<Message[]>([
-        { id: '1', text: 'Hi there! 👋 How can we help you today?', sender: 'agent' },
-    ]);
+    
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const { accessToken } = useSelector((state: RootState) => state.auth);
+
+    // Queries
+    const { data: tickets, isLoading: isTicketsLoading } = useGetSupportTickets();
+    
+    // Find latest active ticket
+    const activeTicketBrief = tickets?.find(t => 
+        t.status === TicketStatus.OPEN || t.status === TicketStatus.IN_PROGRESS
+    );
+
+    const { data: activeTicket, isLoading: isTicketLoading } = useGetSupportTicket(activeTicketBrief?.id);
+
+    // Mutations
+    const createTicketMutation = useCreateSupportTicket();
+    const addMessageMutation = useAddSupportMessage();
 
     const toggleChat = () => setIsOpen(!isOpen);
 
@@ -26,35 +49,49 @@ export default function ChatWidget() {
         messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
     };
 
+    // Construct messages from activeTicket
+    const chatMessages: Message[] = activeTicket?.messages?.map(m => ({
+        id: m.id,
+        text: m.content,
+        sender: m.isAdminMessage ? 'agent' : 'user'
+    })) || (activeTicketBrief ? [] : [{
+        id: 'welcome',
+        text: 'Hi there! 👋 How can we help you today?',
+        sender: 'agent'
+    }]);
+
     useEffect(() => {
-        scrollToBottom();
-    }, [messages, isOpen]);
+        if (isOpen) {
+            scrollToBottom();
+        }
+    }, [chatMessages, isOpen]);
 
-    const handleSendMessage = (e?: React.FormEvent) => {
+    const handleSendMessage = async (e?: React.FormEvent) => {
         e?.preventDefault();
-        if (!inputValue.trim()) return;
+        if (!inputValue.trim() || createTicketMutation.isPending || addMessageMutation.isPending) return;
 
-        const newMessage: Message = {
-            id: Date.now().toString(),
-            text: inputValue,
-            sender: 'user',
-        };
-
-        setMessages((prev) => [...prev, newMessage]);
+        const text = inputValue;
         setInputValue('');
 
-        // Simulate response
-        setTimeout(() => {
-            setMessages((prev) => [
-                ...prev,
-                {
-                    id: (Date.now() + 1).toString(),
-                    text: "Thanks for reaching out! One of our agents will be with you shortly.",
-                    sender: 'agent',
-                },
-            ]);
-        }, 1000);
+        try {
+            if (activeTicketBrief) {
+                await addMessageMutation.mutateAsync({ 
+                    id: activeTicketBrief.id, 
+                    data: { content: text } 
+                });
+            } else {
+                await createTicketMutation.mutateAsync({
+                    subject: 'Support Request via Widget',
+                    description: text
+                });
+            }
+        } catch (error) {
+            console.error('Failed to send message:', error);
+        }
     };
+
+    const isLoading = isTicketsLoading || (!!activeTicketBrief && isTicketLoading);
+    const isSending = createTicketMutation.isPending || addMessageMutation.isPending;
 
     return (
         <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end pointer-events-none">
@@ -81,50 +118,74 @@ export default function ChatWidget() {
                                     <p className="text-xs text-white/80">Typically replies in minutes</p>
                                 </div>
                             </div>
-                            <button
-                                onClick={toggleChat}
-                                className="p-1 hover:bg-white/20 rounded-full transition-colors"
-                            >
-                                <Minus size={20} />
-                            </button>
+                            <div className="flex items-center gap-1">
+                                <Link href="/dashboard/support-tickets" passHref>
+                                    <button className="p-1 hover:bg-white/20 rounded-full transition-colors" title="View all tickets">
+                                        <ExternalLink size={18} />
+                                    </button>
+                                </Link>
+                                <button
+                                    onClick={toggleChat}
+                                    className="p-1 hover:bg-white/20 rounded-full transition-colors"
+                                >
+                                    <Minus size={20} />
+                                </button>
+                            </div>
                         </div>
 
                         {/* Messages Area */}
                         <div className="flex-1 overflow-y-auto p-4 bg-slate-50 space-y-4">
-                            {messages.map((msg) => (
-                                <div
-                                    key={msg.id}
-                                    className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
-                                >
-                                    <div
-                                        className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === 'user'
-                                                ? 'bg-[#f58220] text-white rounded-tr-none'
-                                                : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm'
-                                            }`}
-                                    >
-                                        {msg.text}
-                                    </div>
+                            {!accessToken ? (
+                                <div className="flex flex-col items-center justify-center h-full text-center p-4">
+                                    <p className="text-gray-500 mb-4">Please login to chat with support.</p>
+                                    <Link href="/auth/login" className="text-[#f58220] hover:underline">Login</Link>
                                 </div>
-                            ))}
-                            <div ref={messagesEndRef} />
+                            ) : isLoading ? (
+                                <div className="flex items-center justify-center h-full">
+                                    <Loader2 className="animate-spin text-[#f58220]" size={32} />
+                                </div>
+                            ) : (
+                                <>
+                                    {chatMessages.map((msg) => (
+                                        <div
+                                            key={msg.id}
+                                            className={`flex ${msg.sender === 'user' ? 'justify-end' : 'justify-start'}`}
+                                        >
+                                            <div
+                                                className={`max-w-[80%] p-3 rounded-2xl text-sm ${msg.sender === 'user'
+                                                        ? 'bg-[#f58220] text-white rounded-tr-none'
+                                                        : 'bg-white text-gray-800 border border-gray-200 rounded-tl-none shadow-sm'
+                                                    }`}
+                                            >
+                                                {msg.text}
+                                            </div>
+                                        </div>
+                                    ))}
+                                    <div ref={messagesEndRef} />
+                                </>
+                            )}
                         </div>
 
                         {/* Input Area */}
-                        <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
-                            <Input
-                                value={inputValue}
-                                onChange={(e) => setInputValue(e.target.value)}
-                                placeholder="Type a message..."
-                                className="flex-1 focus-visible:ring-[#f58220]"
-                            />
-                            <Button
-                                type="submit"
-                                size="icon"
-                                className="bg-[#f58220] hover:bg-[#e0751a] text-white shrink-0"
-                            >
-                                <Send size={18} />
-                            </Button>
-                        </form>
+                        {accessToken && (
+                            <form onSubmit={handleSendMessage} className="p-3 bg-white border-t border-gray-100 flex gap-2 shrink-0">
+                                <Input
+                                    value={inputValue}
+                                    onChange={(e) => setInputValue(e.target.value)}
+                                    placeholder="Type a message..."
+                                    className="flex-1 focus-visible:ring-[#f58220]"
+                                    disabled={isLoading || isSending}
+                                />
+                                <Button
+                                    type="submit"
+                                    size="icon"
+                                    className="bg-[#f58220] hover:bg-[#e0751a] text-white shrink-0"
+                                    disabled={isLoading || isSending}
+                                >
+                                    {isSending ? <Loader2 className="animate-spin" size={18} /> : <Send size={18} />}
+                                </Button>
+                            </form>
+                        )}
                     </motion.div>
                 )}
             </AnimatePresence>

@@ -59,7 +59,8 @@ type PasswordFields = {
 };
 
 type ProfileErrors = {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   phoneNumber?: string;
   email?: string;
   socials?: { [key in SocialPlatform]?: string };
@@ -252,7 +253,8 @@ const MyProfilePage: NextPage = () => {
   useEffect(() => {
     if (user) {
       const initialProfileData = {
-        name: user.name,
+        firstName: user.firstName,
+        lastName: user.lastName,
         email: user.email,
         phoneNumber: user.phoneNumber,
       };
@@ -339,9 +341,14 @@ const MyProfilePage: NextPage = () => {
     const urlRegex =
       /^(https?:\/\/)?([\da-z.-]+)\.([a-z.]{2,6})([/\w .-]*)*\/?$/;
 
-    if (profile.name !== initialProfile.name) {
-      if (profile.name && profile.name.trim().length < 2) {
-        newErrors.name = 'Full name must be at least 2 characters long.';
+    if (profile.firstName !== initialProfile.firstName) {
+      if (profile.firstName && profile.firstName.trim().length < 2) {
+        newErrors.firstName = 'First name must be at least 2 characters long.';
+      }
+    }
+    if (profile.lastName !== initialProfile.lastName) {
+      if (profile.lastName && profile.lastName.trim().length < 2) {
+        newErrors.lastName = 'Last name must be at least 2 characters long.';
       }
     }
 
@@ -400,7 +407,8 @@ const MyProfilePage: NextPage = () => {
     updateUserMutation.mutate(
       {
         id: user.id,
-        name: profile.name,
+        firstName: profile.firstName,
+        lastName: profile.lastName,
         phoneNumber: profile.phoneNumber,
         socials: socialsToUpdate,
         profilePictureUrl,
@@ -581,6 +589,9 @@ const MyProfilePage: NextPage = () => {
                         accept="image/*"
                         className="hidden"
                       />
+                      <label className="mb-2 block text-sm font-medium text-gray-700 dark:text-gray-300">
+                        Profile Picture
+                      </label>
                       <div
                         className="group relative mb-2 h-36 w-36 cursor-pointer rounded-md border-2 border-dashed border-gray-300 p-2 dark:border-gray-600"
                         onClick={() => fileInputRef.current?.click()}
@@ -621,17 +632,24 @@ const MyProfilePage: NextPage = () => {
                     </div>
                     <div className="space-y-6 md:col-span-2">
                       <InputField
-                        label="Full Name"
-                        id="name"
-                        value={profile.name || ''}
+                        label="First Name"
+                        id="firstName"
+                        value={profile.firstName || ''}
                         onChange={handleProfileChange}
-                        error={profileErrors.name}
+                        error={profileErrors.firstName}
+                      />
+                      <InputField
+                        label="Last Name"
+                        id="lastName"
+                        value={profile.lastName || ''}
+                        onChange={handleProfileChange}
+                        error={profileErrors.lastName}
                       />
                     </div>
                   </div>
                   <div className="mt-6 space-y-6">
                     <InputField
-                      label="Phone"
+                      label="Mobile Number"
                       id="phoneNumber"
                       value={profile.phoneNumber || ''}
                       onChange={handleProfileChange}

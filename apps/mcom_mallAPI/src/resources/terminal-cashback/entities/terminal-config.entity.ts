@@ -10,13 +10,13 @@ export enum TerminalLevel {
 
 @Entity('terminal_configs')
 export class TerminalConfig extends AbstractBaseEntity {
-  @ApiProperty({ example: 'BEANTHERE01', description: 'Unique Business/Terminal ID' })
+  @ApiProperty({ example: 'user-uuid-here', description: 'Unique Owner/User ID' })
   @PrimaryColumn()
-  businessId: string;
+  userId: string;
 
-  @ApiProperty({ example: 'Bean There Coffee', description: 'Display name of the business' })
+  @ApiProperty({ example: 'John Doe', description: 'Display name of the owner' })
   @Column()
-  businessName: string;
+  userName: string;
 
   @ApiProperty({ enum: TerminalLevel, example: TerminalLevel.VERIFIED_L1, description: 'Protocol Level (1=Ranges, 2=Fixed, 3=API)' })
   @Column({ type: 'enum', enum: TerminalLevel, default: TerminalLevel.VERIFIED_L1 })

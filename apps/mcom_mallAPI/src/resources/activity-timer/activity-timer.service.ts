@@ -54,6 +54,14 @@ export class ActivityTimerService {
     });
 
     for (const timer of activeTimers) {
+      // Find the task in the template to check its type
+      const taskInTemplate = timer.template.tasks.find(t => t.key === actionType);
+      
+      // If task is not found or it's OTHER, we don't mark it automatically
+      if (!taskInTemplate || actionType === ActivityTaskType.OTHER) {
+          continue;
+      }
+
       if (timer.taskStatus[actionType] === false) {
         timer.taskStatus[actionType] = true;
 
@@ -150,19 +158,27 @@ export class ActivityTimerService {
     });
 
     return timers.map(timer => {
-      let remainingTime = timer.expiresAt.getTime() - now.getTime();
-      if (remainingTime < 0) remainingTime = 0;
+      let globalRemainingTime = timer.expiresAt.getTime() - now.getTime();
+      if (globalRemainingTime < 0) globalRemainingTime = 0;
 
       return {
         id: timer.id,
         type: timer.type,
         name: timer.template.name,
         description: timer.template.description,
-        remainingTime,
-        tasks: timer.template.tasks.map(t => ({
-          ...t,
-          isCompleted: !!timer.taskStatus[t.key]
-        })),
+        remainingTime: globalRemainingTime,
+        tasks: timer.template.tasks.map(t => {
+          const taskExpiresAt = timer.taskExpirations?.[t.key] ? new Date(timer.taskExpirations[t.key]) : timer.expiresAt;
+          let taskRemainingTime = taskExpiresAt.getTime() - now.getTime();
+          if (taskRemainingTime < 0) taskRemainingTime = 0;
+
+          return {
+            ...t,
+            isCompleted: !!timer.taskStatus[t.key],
+            remainingTime: taskRemainingTime,
+            expiresAt: taskExpiresAt
+          };
+        }),
         isPaused: timer.pauses.some(p => p.resumedAt === null),
         pauses: timer.pauses,
         expiresAt: timer.expiresAt,
@@ -180,11 +196,29 @@ export class ActivityTimerService {
     timer.template = template;
     timer.type = template.type;
     timer.startedAt = new Date();
-    timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
+    
+    // For TRIAL, we have one single timer for all tasks
+    if (template.type === ActivityTimerType.TRIAL) {
+        timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
+    } else {
+        // For GENERAL, we might still have a default expiresAt, but individual tasks have their own
+        timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
+    }
 
     timer.taskStatus = {};
+    timer.taskExpirations = {};
+
     template.tasks.forEach(task => {
       timer.taskStatus[task.key] = false;
+      if (template.type === ActivityTimerType.GENERAL && task.durationDays) {
+          timer.taskExpirations[task.key] = new Date(timer.startedAt.getTime() + task.durationDays * 24 * 60 * 60 * 1000);
+      } else if (template.type === ActivityTimerType.TRIAL) {
+          // All trial tasks share the same timer
+          timer.taskExpirations[task.key] = timer.expiresAt;
+      } else {
+          // Default for general tasks if no specific duration
+          timer.taskExpirations[task.key] = timer.expiresAt;
+      }
     });
 
     return this.timerRepository.save(timer);
@@ -215,8 +249,26 @@ export class ActivityTimerService {
     return this.timerRepository.save(timer);
   }
 
-  async completeTask(userId: string, taskKey: ActivityTaskType): Promise<ActivityTimer[]> {
-    await this.handleAction(userId, taskKey);
+  async completeTask(userId: string, taskKey: string): Promise<ActivityTimer[]> {
+    const activeTimers = await this.timerRepository.find({
+      where: { user: { id: userId }, isActive: true },
+      relations: ['template']
+    });
+
+    for (const timer of activeTimers) {
+      if (timer.taskStatus[taskKey] === false) {
+        timer.taskStatus[taskKey] = true;
+
+        // Check if all tasks are done
+        const allDone = Object.values(timer.taskStatus).every(val => val === true);
+        if (allDone) {
+          timer.completedAt = new Date();
+        }
+
+        await this.timerRepository.save(timer);
+      }
+    }
+
     // Return fresh list after action
     const user = await this.timerRepository.manager.findOne(User, {
       where: { id: userId },

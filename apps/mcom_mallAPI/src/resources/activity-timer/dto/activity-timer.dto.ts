@@ -1,4 +1,4 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
 import { IsString, IsNotEmpty, IsInt, Min, IsArray, ValidateNested, IsBoolean, IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ActivityTaskType, ActivityTimerType } from '../enums/activity-task-type.enum';
@@ -22,6 +22,12 @@ export class ActivityTaskDto {
   @IsString()
   @IsNotEmpty()
   url: string;
+
+  @ApiPropertyOptional({ example: 7, description: 'Duration in days for this specific task (General timers only)' })
+  @IsInt()
+  @Min(1)
+  @IsOptional()
+  durationDays?: number;
 }
 
 export class CreateActivityTimerTemplateDto {
@@ -81,4 +87,4 @@ export class CreateActivityTimerTemplateDto {
   isPublished?: boolean;
 }
 
-export class UpdateActivityTimerTemplateDto extends CreateActivityTimerTemplateDto {}
+export class UpdateActivityTimerTemplateDto extends PartialType(CreateActivityTimerTemplateDto) {}

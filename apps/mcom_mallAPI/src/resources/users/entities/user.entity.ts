@@ -1,4 +1,4 @@
-import { Column, Entity, OneToMany, OneToOne, AfterLoad } from 'typeorm';
+import { Column, Entity, OneToMany, OneToOne, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
 import { Promotion } from '../../promotion/entities/promotion.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
@@ -27,6 +27,9 @@ export class User extends AbstractBaseEntity {
 
   @Column()
   lastName: string;
+
+  @Column({ nullable: true })
+  fullName: string;
 
   @Column({ unique: true })
   email: string;
@@ -58,6 +61,12 @@ export class User extends AbstractBaseEntity {
   @AfterLoad()
   populateName() {
     this.name = `${this.firstName} ${this.lastName}`;
+  }
+
+  @BeforeInsert()
+  @BeforeUpdate()
+  updateFullName() {
+    this.fullName = `${this.firstName} ${this.lastName}`;
   }
 
   @OneToMany(() => Business, (business) => business.user)

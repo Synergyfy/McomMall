@@ -22,23 +22,23 @@ export class TerminalCashbackService {
     private readonly ruleRepository: Repository<TerminalGlobalRule>,
     private readonly walletService: WalletService,
     private readonly centralIntegrationService: CentralIntegrationService,
-  ) {}
+  ) { }
 
   // --- Claims Logic ---
 
   async createClaim(userId: string, dto: CreateTerminalCashbackClaimDto): Promise<TerminalCashbackClaim> {
-    // 1. Verify Business Config
-    const config = await this.configRepository.findOne({ where: { businessId: dto.businessId } });
+    // 1. Verify Owner Config
+    const config = await this.configRepository.findOne({ where: { userId: dto.ownerId } });
     if (!config) {
-        throw new BadRequestException('Terminal not configured for this business.');
+      throw new BadRequestException('Terminal not configured for this owner.');
     }
     if (!config.isEnabled) {
-        throw new BadRequestException('This terminal is currently inactive.');
+      throw new BadRequestException('This terminal is currently inactive.');
     }
 
     // 2. Check Daily Limits (Basic check, could be optimized with SUM query)
     // In a real app, perform a SUM query on claims for today
-    
+
     // 3. Create Claim
     const claim = this.claimRepository.create({
       userId,
@@ -51,11 +51,11 @@ export class TerminalCashbackService {
   }
 
   async getClaims(query: any): Promise<{ data: TerminalCashbackClaim[]; count: number }> {
-    const { page = 1, limit = 10, businessId, status, userId } = query;
+    const { page = 1, limit = 10, ownerId, status, userId } = query;
     const skip = (page - 1) * limit;
 
     const where: any = {};
-    if (businessId) where.businessId = businessId;
+    if (ownerId) where.ownerId = ownerId;
     if (status) where.status = status;
     if (userId) where.userId = userId;
 
@@ -78,9 +78,9 @@ export class TerminalCashbackService {
 
   async updateClaimStatus(id: string, status: TerminalCashbackStatus): Promise<TerminalCashbackClaim> {
     const claim = await this.getClaimById(id);
-    
+
     if (claim.status !== TerminalCashbackStatus.PENDING) {
-        throw new BadRequestException(`Claim is already ${claim.status}`);
+      throw new BadRequestException(`Claim is already ${claim.status}`);
     }
 
     claim.status = status;
@@ -93,7 +93,7 @@ export class TerminalCashbackService {
         userId: claim.userId,
         amount: Number(claim.amount),
         type: WalletTransactionType.EARNING_TERMINAL_CASHBACK,
-        description: `Terminal Cashback from ${claim.businessId}`,
+        description: `Terminal Cashback from ${claim.ownerId}`,
       });
 
       // Sync with Mcom Central
@@ -101,50 +101,54 @@ export class TerminalCashbackService {
         claim.user.email,
         Number(claim.amount),
         CashbackEvent.TERMINAL_CASHBACK_CLAIM,
-        `Terminal Cashback: ${claim.businessId}`,
+        `Terminal Cashback: ${claim.ownerId}`,
       ).catch(err => console.error('Failed to sync terminal cashback with Central:', err.message));
     }
 
     return savedClaim;
   }
 
-  async getStats(userId: string) {
-    const claims = await this.claimRepository.find({ where: { userId } });
+  async getStats(query: { userId?: string; ownerId?: string }) {
+    const where: any = {};
+    if (query.userId) where.userId = query.userId;
+    if (query.ownerId) where.ownerId = query.ownerId;
+
+    const claims = await this.claimRepository.find({ where });
     const pending = claims.filter(c => c.status === TerminalCashbackStatus.PENDING).length;
     const approved = claims.filter(c => c.status === TerminalCashbackStatus.APPROVED || c.status === TerminalCashbackStatus.AUTO_APPROVED);
     const totalEarned = approved.reduce((sum, c) => sum + Number(c.amount), 0);
 
     return {
-        pendingCount: pending,
-        approvedCount: approved.length,
-        totalEarned,
+      pendingCount: pending,
+      approvedCount: approved.length,
+      totalEarned,
     };
   }
 
   // --- Configuration Logic (Admin/Merchant) ---
 
   async createConfig(dto: CreateTerminalConfigDto): Promise<TerminalConfig> {
-    const existing = await this.configRepository.findOne({ where: { businessId: dto.businessId } });
-    if (existing) throw new BadRequestException('Configuration already exists for this business.');
+    const existing = await this.configRepository.findOne({ where: { userId: dto.userId } });
+    if (existing) throw new BadRequestException('Configuration already exists for this owner.');
 
     const config = this.configRepository.create(dto);
     return this.configRepository.save(config);
   }
 
-  async getConfig(businessId: string): Promise<TerminalConfig> {
-    const config = await this.configRepository.findOne({ where: { businessId } });
+  async getConfig(userId: string): Promise<TerminalConfig> {
+    const config = await this.configRepository.findOne({ where: { userId } });
     if (!config) throw new NotFoundException('Configuration not found.');
     return config;
   }
 
   async getAllConfigs(page = 1, limit = 10): Promise<{ data: TerminalConfig[]; count: number }> {
-     const skip = (page - 1) * limit;
-     const [data, count] = await this.configRepository.findAndCount({ skip, take: limit });
-     return { data, count };
+    const skip = (page - 1) * limit;
+    const [data, count] = await this.configRepository.findAndCount({ skip, take: limit });
+    return { data, count };
   }
 
-  async updateConfig(businessId: string, dto: UpdateTerminalConfigDto): Promise<TerminalConfig> {
-    const config = await this.getConfig(businessId);
+  async updateConfig(userId: string, dto: UpdateTerminalConfigDto): Promise<TerminalConfig> {
+    const config = await this.getConfig(userId);
     Object.assign(config, dto);
     return this.configRepository.save(config);
   }
@@ -154,9 +158,9 @@ export class TerminalCashbackService {
   async updateGlobalRule(key: string, value: string): Promise<TerminalGlobalRule> {
     let rule = await this.ruleRepository.findOne({ where: { ruleKey: key } });
     if (!rule) {
-        rule = this.ruleRepository.create({ ruleKey: key, value });
+      rule = this.ruleRepository.create({ ruleKey: key, value });
     } else {
-        rule.value = value;
+      rule.value = value;
     }
     return this.ruleRepository.save(rule);
   }

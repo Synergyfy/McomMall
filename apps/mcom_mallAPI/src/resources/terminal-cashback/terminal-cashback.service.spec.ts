@@ -59,7 +59,7 @@ describe('TerminalCashbackService', () => {
 
   describe('createClaim', () => {
     it('should create and save a new claim if terminal enabled', async () => {
-      const dto = { businessId: 'BIZ1', amount: 10, proofUrl: 'http://url', spendAmount: 100 };
+      const dto = { ownerId: 'OWNER1', amount: 10, proofUrl: 'http://url', spendAmount: 100 };
       const userId = 'user1';
       const expectedClaim = { ...dto, userId, status: TerminalCashbackStatus.PENDING, riskScore: 0 };
       
@@ -80,13 +80,13 @@ describe('TerminalCashbackService', () => {
 
     it('should throw error if terminal not found or disabled', async () => {
         jest.spyOn(configRepository, 'findOne').mockResolvedValue(null);
-        await expect(service.createClaim('u1', { businessId: 'x', amount: 10 })).rejects.toThrow();
+        await expect(service.createClaim('u1', { ownerId: 'x', amount: 10 })).rejects.toThrow();
     });
   });
 
   describe('updateClaimStatus', () => {
     it('should approve claim and credit wallet and sync with central', async () => {
-      const claim = { id: 'c1', userId: 'u1', amount: 10, businessId: 'b1', status: TerminalCashbackStatus.PENDING, user: { email: 'test@test.com' } };
+      const claim = { id: 'c1', userId: 'u1', amount: 10, ownerId: 'o1', status: TerminalCashbackStatus.PENDING, user: { email: 'test@test.com' } };
       jest.spyOn(claimRepository, 'findOne').mockResolvedValue(claim as any);
       jest.spyOn(claimRepository, 'save').mockResolvedValue({ ...claim, status: TerminalCashbackStatus.APPROVED } as any);
 
@@ -96,19 +96,19 @@ describe('TerminalCashbackService', () => {
         userId: 'u1',
         amount: 10,
         type: WalletTransactionType.EARNING_TERMINAL_CASHBACK,
-        description: 'Terminal Cashback from b1',
+        description: 'Terminal Cashback from o1',
       });
 
       expect(centralService.processCashback).toHaveBeenCalledWith(
         'test@test.com',
         10,
         expect.any(String),
-        expect.stringContaining('b1')
+        expect.stringContaining('o1')
       );
     });
 
     it('should not credit wallet if rejected', async () => {
-      const claim = { id: 'c1', userId: 'u1', amount: 10, businessId: 'b1', status: TerminalCashbackStatus.PENDING };
+      const claim = { id: 'c1', userId: 'u1', amount: 10, ownerId: 'o1', status: TerminalCashbackStatus.PENDING };
       jest.spyOn(claimRepository, 'findOne').mockResolvedValue(claim as any);
       jest.spyOn(claimRepository, 'save').mockResolvedValue({ ...claim, status: TerminalCashbackStatus.REJECTED } as any);
 

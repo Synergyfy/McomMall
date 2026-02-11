@@ -20,9 +20,9 @@ export class TerminalCashbackClaim extends AbstractBaseEntity {
   @Column()
   userId: string;
 
-  @ApiProperty({ example: 'BEANTHERE01', description: 'ID of the business terminal' })
+  @ApiProperty({ example: 'owner-uuid-here', description: 'ID of the onboarded owner' })
   @Column()
-  businessId: string;
+  ownerId: string;
 
   @ApiProperty({ example: 3.50, description: 'Cashback amount claimed' })
   @Column('decimal', { precision: 10, scale: 2 })

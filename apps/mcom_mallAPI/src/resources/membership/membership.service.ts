@@ -49,6 +49,20 @@ export class MembershipService {
     if (!membership) {
       throw new NotFoundException('Membership not found.');
     }
+
+    const now = new Date();
+    const expiresAt = new Date(membership.expiresAt);
+    const diffMs = Math.max(0, expiresAt.getTime() - now.getTime());
+    const totalSeconds = Math.floor(diffMs / 1000);
+
+    membership.expiresIn = {
+      days: Math.floor(totalSeconds / (3600 * 24)),
+      hours: Math.floor((totalSeconds % (3600 * 24)) / 3600),
+      minutes: Math.floor((totalSeconds % 3600) / 60),
+      seconds: totalSeconds % 60,
+      totalSeconds
+    };
+
     return membership;
   }
 
