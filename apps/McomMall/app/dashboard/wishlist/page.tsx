@@ -92,7 +92,7 @@ const WishlistPage = () => {
           </p>
         </div>
         <Button asChild variant="outline" className="rounded-2xl h-12 px-6 shadow-sm hover:shadow-md transition-all gap-2 font-bold border-2">
-          <Link href="/">
+          <Link href="/marketplace">
             <ShoppingCart className="h-5 w-5" />
             Continue Shopping
           </Link>

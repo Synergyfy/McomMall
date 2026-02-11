@@ -3,6 +3,7 @@ import {
   getMyMembership,
   initiateMembershipPayment,
   verifyMembershipPayment,
+  joinTrial,
 } from './api';
 import {
   CreateMembershipDto,
@@ -27,8 +28,18 @@ export const useVerifyMembershipPayment = () => {
   const queryClient = useQueryClient();
   return useMutation<Membership, Error, VerifyPaymentDto>({
     mutationFn: verifyMembershipPayment,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['my-membership'] });
+    onSuccess: (data) => {
+      queryClient.setQueryData(['my-membership'], data);
+    },
+  });
+};
+
+export const useJoinTrial = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Membership, Error, string>({
+    mutationFn: joinTrial,
+    onSuccess: (data) => {
+      queryClient.setQueryData(['my-membership'], data);
     },
   });
 };

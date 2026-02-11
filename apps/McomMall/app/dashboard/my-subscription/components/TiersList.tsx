@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Tier } from '@/service/tiers/types';
 
 interface TiersListProps {
-  onSelectTier: (tier: Tier, billingCycle: 'monthly' | 'quarterly' | 'annual') => void;
+  onSelectTier: (tier: Tier, billingCycle: 'monthly' | 'quarterly' | 'annual', isTrial?: boolean) => void;
 }
 
 export default function TiersList({ onSelectTier }: TiersListProps) {
@@ -58,7 +58,8 @@ export default function TiersList({ onSelectTier }: TiersListProps) {
             key={tier.id}
             tier={tier}
             billingCycle={billingCycle}
-            onSelect={(t) => onSelectTier(t, billingCycle)}
+            onSelect={(t) => onSelectTier(t, billingCycle, false)}
+            onStartTrial={(t) => onSelectTier(t, billingCycle, true)}
           />
         ))}
       </div>

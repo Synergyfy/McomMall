@@ -30,3 +30,8 @@ export const verifyMembershipPayment = async (
   const response = await api.post('/membership/verify-payment', dto);
   return response.data;
 };
+
+export const joinTrial = async (tierId: string): Promise<Membership> => {
+  const response = await api.post('/membership/join-trial', { tierId });
+  return response.data;
+};
