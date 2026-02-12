@@ -11,6 +11,7 @@ import {
   Loader,
   TimerOff,
   Clock,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
@@ -36,7 +37,7 @@ const ActivityTimerPage: FC = () => {
   const pauseOrPlay = (data: any) => console.log("Mock pause/play", data);
 
   const trialStatus = {
-    remainingTime: 518400000, // 6 days
+    remainingTime: 43200000, // 12 hours - will definitely show in Expiring Soon
     isPaused: false,
     isActive: true,
     tasks: {
@@ -86,6 +87,19 @@ const ActivityTimerPage: FC = () => {
   };
 
   const formattedTime = formatTime(timeLeft);
+
+  // Check if expiring soon (less than 48 hours)
+  const EXPIRING_SOON_THRESHOLD = 48 * 60 * 60 * 1000; // 48 hours in milliseconds
+  const isExpiringSoon = timeLeft > 0 && timeLeft <= EXPIRING_SOON_THRESHOLD;
+
+  // Debug logging
+  console.log('Timer Debug:', {
+    timeLeft,
+    timeLeftHours: timeLeft / (1000 * 60 * 60),
+    EXPIRING_SOON_THRESHOLD,
+    thresholdHours: EXPIRING_SOON_THRESHOLD / (1000 * 60 * 60),
+    isExpiringSoon
+  });
 
   if (isLoading) {
     return (
@@ -162,6 +176,9 @@ const ActivityTimerPage: FC = () => {
     },
   };
 
+  // Filter incomplete tasks for expiring soon section
+  const incompleteTasks = taskKeys.filter(taskKey => !tasks[taskKey]);
+
   return (
     <div className="min-h-[calc(100vh-8rem)] bg-white text-black p-4 sm:p-6 md:p-8">
       <div className="max-w-6xl mx-auto">
@@ -231,7 +248,63 @@ const ActivityTimerPage: FC = () => {
           )}
         </motion.section>
 
-        {/* New Task Display */}
+        {/* Expiring Soon Section */}
+        {isExpiringSoon && incompleteTasks.length > 0 && (
+          <motion.section
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.4 }}
+            className="mb-8"
+          >
+            <div className="bg-gradient-to-r from-red-100 to-orange-100 border-4 border-red-400 rounded-3xl p-8 shadow-2xl">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 bg-red-600 rounded-full flex items-center justify-center shadow-lg">
+                  <AlertTriangle className="w-10 h-10 text-white animate-pulse" />
+                </div>
+                <div>
+                  <h2 className="text-4xl font-black text-red-900 tracking-tight">
+                    ⚡ EXPIRING SOON
+                  </h2>
+                  <p className="text-base font-bold text-red-800 mt-1">
+                    Less than 48 hours remaining! Complete these tasks urgently.
+                  </p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 gap-5">
+                {incompleteTasks.map((taskKey) => {
+                  const task = taskDetails[taskKey];
+                  return (
+                    <div
+                      key={taskKey}
+                      className="bg-white border-4 border-red-400 shadow-xl rounded-2xl p-6 flex flex-col sm:flex-row items-center sm:items-start gap-4 hover:shadow-2xl hover:border-red-500 transition-all"
+                    >
+                      <div className="flex-1">
+                        <h3 className="text-2xl font-black text-gray-900 mb-2">
+                          {task.title}
+                        </h3>
+                        <p className="text-base font-medium text-gray-700 mb-4">
+                          {task.description}
+                        </p>
+                        <div className="flex items-center gap-2 text-sm font-black text-red-700 bg-red-100 px-4 py-2 rounded-lg border-2 border-red-300 w-fit">
+                          <Clock className="w-5 h-5" />
+                          {formattedTime.days}d : {formattedTime.hours}h : {formattedTime.minutes}m remaining
+                        </div>
+                      </div>
+                      <Link href={task.url} className="flex-shrink-0">
+                        <Button className="bg-red-600 hover:bg-red-700 text-white font-black text-lg px-8 py-6 shadow-lg hover:shadow-xl transition-all">
+                          Complete Now
+                        </Button>
+                      </Link>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </motion.section>
+        )}
+
+        {/* All Tasks Section */}
         <div className="w-full mx-auto">
           <h2 className="text-2xl sm:text-3xl font-bold text-black mb-8 text-center sm:text-left sm:ml-4">
             Get started with Mcommall

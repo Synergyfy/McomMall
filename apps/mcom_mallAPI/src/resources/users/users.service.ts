@@ -75,10 +75,10 @@ export class UsersService {
     // Validate provision code before transaction if present
     let provision = null;
     if (payload.provisionCode) {
-        provision = await this.provisionService.findByCode(payload.provisionCode);
-        if (!provision) throw new BadRequestException('Invalid provision code');
-        if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
-        if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+      provision = await this.provisionService.findByCode(payload.provisionCode);
+      if (!provision) throw new BadRequestException('Invalid provision code');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
     return this.dataSource.transaction(async (manager) => {
@@ -93,10 +93,55 @@ export class UsersService {
       // Redeem provision code inside transaction
       let trialDuration = 14;
       if (provision) {
-          await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
-          if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
-              trialDuration = provision.payload.durationDays;
-          }
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
+          trialDuration = provision.payload.durationDays;
+        }
+      }
+
+      const wallet = manager.create(Wallet, {
+        user: savedUser,
+        balance: 1000, // Starting balance for every new user
+      });
+      await manager.save(wallet);
+
+      if (role === UserRole.OWNER) {
+        await this.trialService.createTrial(savedUser, manager, trialDuration);
+      }
+
+      await this.emailService.sendUserWelcomeEmail(savedUser);
+      delete savedUser.password;
+      return savedUser;
+    });
+  }
+
+  async createByAdmin(payload: CreateUserDto): Promise<User> {
+    // Validate provision code before transaction if present
+    let provision = null;
+    if (payload.provisionCode) {
+      provision = await this.provisionService.findByCode(payload.provisionCode);
+      if (!provision) throw new BadRequestException('Invalid provision code');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const { password, role } = payload;
+      const hashed = await this.hashService.hashPassword(password);
+      const user = manager.create(User, {
+        ...payload,
+        password: hashed,
+        isEmailVerified: true, // Auto-verified by admin
+      });
+      const savedUser = await manager.save(user);
+
+      // Redeem provision code inside transaction
+      let trialDuration = 14;
+      if (provision) {
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
+          trialDuration = provision.payload.durationDays;
+        }
       }
 
       const wallet = manager.create(Wallet, {

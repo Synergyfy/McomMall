@@ -10,6 +10,7 @@ import { HashService } from '../../common/hash/hash.service';
 import { JwtStrategy } from '../../common/strategies/jwt.strategy';
 import { UsersModule } from '../users/users.module';
 import { EmailModule } from '../email/email.module';
+import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -27,6 +28,7 @@ import { EmailModule } from '../email/email.module';
     TypeOrmModule.forFeature([User]),
     UsersModule,
     EmailModule,
+    ActivityTimerModule,
   ],
   controllers: [AuthController],
   providers: [AuthService, HashService, JwtStrategy],
