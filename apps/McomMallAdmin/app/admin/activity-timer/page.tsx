@@ -17,6 +17,9 @@ import {
     useDeleteActivityTemplate,
     useAssignActivityTemplate
 } from '@/service/activity-timer';
+import { useGetTiers } from '@/service/tiers/hook';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -199,6 +202,7 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
     const { data: template, isLoading } = useGetActivityTemplate(id);
     const createMutation = useCreateActivityTemplate();
     const updateMutation = useUpdateActivityTemplate();
+    const { data: tiers } = useGetTiers();
 
     const methods = useForm<CreateTemplateDto>({
         defaultValues: {
@@ -229,6 +233,10 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
                 durationDays: template.durationDays,
                 isPublished: template.isPublished,
                 isForAllTiers: template.isForAllTiers,
+                includedTierIds: template.includedTierIds || [],
+                excludedTierIds: template.excludedTierIds || [],
+                startTime: template.startTime ? format(new Date(template.startTime), "yyyy-MM-dd'T'HH:mm") : '',
+                endTime: template.endTime ? format(new Date(template.endTime), "yyyy-MM-dd'T'HH:mm") : '',
                 tasks: template.tasks
             });
         }
@@ -236,10 +244,17 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
 
     const onSubmit = async (data: CreateTemplateDto) => {
         try {
+            // Convert local datetime strings to ISO strings for the API
+            const formattedData = {
+                ...data,
+                startTime: data.startTime ? new Date(data.startTime).toISOString() : undefined,
+                endTime: data.endTime ? new Date(data.endTime).toISOString() : undefined,
+            };
+
             if (id) {
-                await updateMutation.mutateAsync({ id, data });
+                await updateMutation.mutateAsync({ id, data: formattedData });
             } else {
-                await createMutation.mutateAsync(data);
+                await createMutation.mutateAsync(formattedData);
             }
             onSuccess();
         } catch (error) {
@@ -319,6 +334,71 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
                         </CardContent>
                     </Card>
 
+                    {/* Scheduling & Tiers */}
+                    <Card>
+                        <CardHeader>
+                            <CardTitle>Scheduling & Target Tiers</CardTitle>
+                            <CardDescription>Control when this timer is active and who can see it</CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <div className="space-y-2">
+                                    <Label>Start Date & Time (Optional)</Label>
+                                    <Input
+                                        type="datetime-local"
+                                        {...register('startTime')}
+                                        className="bg-white"
+                                    />
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>End Date & Time (Optional)</Label>
+                                    <Input
+                                        type="datetime-local"
+                                        {...register('endTime')}
+                                        className="bg-white"
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-4 pt-4 border-t">
+                                <div className="flex items-center gap-2">
+                                    <Switch
+                                        checked={watch('isForAllTiers')}
+                                        onCheckedChange={(checked) => setValue('isForAllTiers', checked)}
+                                    />
+                                    <Label className="cursor-pointer">Enable for all membership tiers</Label>
+                                </div>
+
+                                {!watch('isForAllTiers') && (
+                                    <div className="space-y-4 pl-8 pt-2">
+                                        <div className="space-y-3">
+                                            <Label className="text-slate-500 text-xs">Included Tiers (Exclusive list)</Label>
+                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                                {tiers?.map((tier: any) => (
+                                                    <div key={tier.id} className="flex items-center space-x-2">
+                                                        <Checkbox
+                                                            id={`inc-${tier.id}`}
+                                                            checked={(watch('includedTierIds') || []).includes(tier.id)}
+                                                            onCheckedChange={(checked) => {
+                                                                const current = watch('includedTierIds') || [];
+                                                                if (checked) {
+                                                                    setValue('includedTierIds', [...current, tier.id]);
+                                                                } else {
+                                                                    setValue('includedTierIds', current.filter((id) => id !== tier.id));
+                                                                }
+                                                            }}
+                                                        />
+                                                        <Label htmlFor={`inc-${tier.id}`} className="text-sm font-normal cursor-pointer">{tier.name}</Label>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        </CardContent>
+                    </Card>
+
                     {/* Task Builder */}
                     <Card>
                         <CardHeader className="flex flex-row items-center justify-between">
@@ -330,7 +410,8 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
                                 key: ActivityTaskType.CREATE_BUSINESS,
                                 title: '',
                                 description: '',
-                                url: ''
+                                url: '',
+                                durationDays: 1
                             })}>
                                 <Plus className="h-4 w-4 mr-2" />
                                 Add Task
@@ -377,6 +458,32 @@ function TemplateForm({ id, onCancel, onSuccess }: { id: string | null, onCancel
                                         <div className="space-y-2 col-span-2">
                                             <label className="text-xs font-bold uppercase text-slate-500">Action URL <span className="text-red-500">*</span></label>
                                             <Input {...register(`tasks.${index}.url` as const, { required: true })} className="bg-white" placeholder="/dashboard/..." />
+                                        </div>
+                                        <div className="space-y-2 col-span-2">
+                                            <label className="text-xs font-bold uppercase text-slate-500">
+                                                Task Duration (Days)
+                                                <span className="ml-2 text-[10px] text-slate-400 font-normal italic">
+                                                    Max: {watch('durationDays')} days
+                                                </span>
+                                            </label>
+                                            <Input
+                                                type="number"
+                                                {...register(`tasks.${index}.durationDays` as const, {
+                                                    required: true,
+                                                    valueAsNumber: true,
+                                                    min: 1,
+                                                    max: {
+                                                        value: watch('durationDays'),
+                                                        message: `Task duration cannot exceed total duration (${watch('durationDays')} days)`
+                                                    }
+                                                })}
+                                                className="bg-white"
+                                            />
+                                            {methods.formState.errors.tasks?.[index]?.durationDays && (
+                                                <p className="text-[10px] text-red-500 font-medium">
+                                                    {methods.formState.errors.tasks[index].durationDays.message}
+                                                </p>
+                                            )}
                                         </div>
                                     </div>
                                 </div>

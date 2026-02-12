@@ -17,6 +17,20 @@ export const useGetUserProfile = () => {
   });
 };
 
+// Fetch user profile by ID
+const getUserById = async (userId: string): Promise<User> => {
+  const { data } = await api.get<User>(`/users/${userId}`);
+  return data;
+};
+
+export const useGetUserById = (userId: string) => {
+  return useQuery({
+    queryKey: ['user', userId],
+    queryFn: () => getUserById(userId),
+    enabled: !!userId,
+  });
+};
+
 // Update user profile
 const updateUserProfile = async ({
   id,
