@@ -8,7 +8,7 @@ import {
   useRecordPayment,
   useCreateStripeIntent,
   useCreatePayPalOrder,
-} from '@/service/payments/hook';
+} from '@/service/payments/hooks';
 import {
   PaymentGateway,
   PlanType,
