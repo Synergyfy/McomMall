@@ -13,7 +13,7 @@ import { ActivityTimer } from './entities/activity-timer.entity';
 @ApiBearerAuth()
 @Controller('activity-timer')
 export class ActivityTimerController {
-  constructor(private readonly timerService: ActivityTimerService) {}
+  constructor(private readonly timerService: ActivityTimerService) { }
 
   // --- Admin Endpoints ---
 
@@ -53,8 +53,8 @@ export class ActivityTimerController {
 
   @Get('status')
   @ApiOperation({ summary: 'Get current user active timers (TRIAL & GENERAL)' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Returns active timers with task-specific countdowns',
     schema: {
       type: 'array',

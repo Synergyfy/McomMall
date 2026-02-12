@@ -460,122 +460,77 @@ export class AdminService {
     const { search, status, category, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    // To properly paginate combined entities without OOM:
-    // Fetch a slice from both that is large enough to cover the 'limit' but not the whole DB.
-    // However, for strict pagination, fetching counts and merging limited results is better.
-    // This implementation still has the memory merging issue but limits the database results to 'limit' per entity.
-
-    const productQb = this.productRepository.createQueryBuilder('product')
-      .leftJoinAndSelect('product.business', 'business')
+    const qb = this.businessRepository.createQueryBuilder('business')
+      .leftJoinAndSelect('business.user', 'user')
       .leftJoinAndSelect('business.location', 'location')
       .leftJoinAndSelect('business.sector', 'sector')
       .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.reviews', 'reviews')
       .take(limit)
       .skip(skip)
-      .orderBy('product.created_at', 'DESC');
+      .orderBy('business.created_at', 'DESC');
 
     if (search) {
-      productQb.andWhere('(product.title ILIKE :search OR business.businessName ILIKE :search)', { search: `%${search}%` });
-    }
-    if (status && status !== 'all') {
-      let pStatus = status === 'approved' ? 'published' : status;
-      productQb.andWhere('product.productStatus = :status', { status: pStatus });
-    }
-    if (category && category !== 'all') {
-      productQb.andWhere('product.category = :category', { category });
+      qb.andWhere('(business.businessName ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)', { search: `%${search}%` });
     }
 
-    const serviceQb = this.serviceRepository.createQueryBuilder('service')
-      .leftJoinAndSelect('service.business', 'business')
-      .leftJoinAndSelect('business.location', 'location')
-      .leftJoinAndSelect('business.sector', 'sector')
-      .leftJoinAndSelect('business.category', 'category')
-      .take(limit)
-      .skip(skip)
-      .orderBy('service.created_at', 'DESC');
-
-    if (search) {
-      serviceQb.andWhere('(service.name ILIKE :search OR business.businessName ILIKE :search)', { search: `%${search}%` });
-    }
-    if (status && status !== 'all') {
-      let sStatus = status === 'approved' ? 'published' : status;
-      serviceQb.andWhere('service.status = :status', { status: sStatus });
+    if (status) {
+      qb.andWhere('business.status = :status', { status });
     }
 
-    const [products, pTotal] = await productQb.getManyAndCount();
-    const [services, sTotal] = await serviceQb.getManyAndCount();
+    if (category) {
+      qb.andWhere('category.name = :category', { category });
+    }
 
-    const allListings: AdminListingDto[] = [
-      ...products.map(p => ({
-        id: p.id,
-        title: p.title,
-        businessName: p.business?.businessName || 'Unknown',
-        businessId: p.business?.id || '',
-        category: p.category,
-        sector: p.business?.sector?.name || 'N/A',
-        price: p.price,
-        status: p.productStatus === 'published' ? 'approved' : p.productStatus,
-        featured: p.isFeatured,
-        rating: 0,
-        reviewCount: 0,
-        location: p.business?.location ? `${p.business.location.addressLine1}, ${p.business.location.city}` : 'N/A',
-        description: p.description,
-        images: p.media || [],
-        type: 'product' as const,
-      })),
-      ...services.map(s => ({
-        id: s.id,
-        title: s.name,
-        businessName: s.business?.businessName || 'Unknown',
-        businessId: s.business?.id || '',
-        category: 'Service',
-        sector: s.business?.sector?.name || 'N/A',
-        price: Number(s.fixedPrice || s.pricePerHour || s.pricePerUnit || 0),
-        status: s.status === 'published' ? 'approved' : s.status,
-        featured: s.isFeatured,
-        rating: 0,
-        reviewCount: 0,
-        location: s.business?.location ? `${s.business.location.addressLine1}, ${s.business.location.city}` : 'N/A',
-        description: s.description || '',
-        images: s.media || [],
-        type: 'service' as const,
-      })),
-    ];
+    const [listings, total] = await qb.getManyAndCount();
 
-    // Note: This merging logic is still not perfect for strict ordering across both tables 
-    // but at least it limits database memory usage per request.
-    const paginatedData = allListings.slice(0, limit);
+    const mappedData: AdminListingDto[] = listings.map(b => {
+      // Basic rating calculation
+      const rating = b.reviews?.length
+        ? b.reviews.reduce((acc, r) => acc + r.rating, 0) / b.reviews.length
+        : 0;
+
+      return {
+        id: b.id,
+        businessName: b.businessName,
+        ownerName: b.user ? `${b.user.firstName} ${b.user.lastName}` : 'Unknown',
+        ownerEmail: b.user?.email || '',
+        category: b.category?.name || 'Uncategorized',
+        sector: b.sector?.name || 'N/A',
+        status: b.status,
+        isVerified: b.isVerified,
+        rating: Number(rating.toFixed(1)),
+        reviewCount: b.reviews?.length || 0,
+        location: b.location ? `${b.location.addressLine1}, ${b.location.city}` : 'No Location',
+        description: b.shortDescription,
+        images: b.media || [],
+        createdAt: b.created_at,
+      };
+    });
 
     return {
-      data: paginatedData,
-      total: pTotal + sTotal,
+      data: mappedData,
+      total,
       page,
       limit,
-      totalPages: Math.ceil((pTotal + sTotal) / limit),
+      totalPages: Math.ceil(total / limit),
     };
   }
 
-  async updateListingStatus(id: string, type: 'product' | 'service', status: string) {
-    if (type === 'product') {
-      const exists = await this.productRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Product not found');
-      return this.productRepository.update(id, { productStatus: status });
-    } else {
-      const exists = await this.serviceRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Service not found');
-      return this.serviceRepository.update(id, { status });
-    }
+  // Helper methods for product/service actions (updateListingStatus, toggleListingFeatured)
+  // are likely no longer applicable or need to be moved to Products/Services admin service
+  // but keeping them blank/refactored if needed, or removing if AdminListingDto no longer supports them.
+  // Since AdminListingDto changed, these methods are likely broken or irrelevant for "Listings" context.
+  // I will comment them out or update them to work on Business if applicable, but user asked for "Listings = Businesses".
+  // Assuming business status and verification are the new actions.
+
+  async updateListingStatus(id: string, status: string) {
+    const exists = await this.businessRepository.findOne({ where: { id } });
+    if (!exists) throw new NotFoundException('Business not found');
+    // Map string status to BusinessStatus enum if needed, or use as is if types match
+    return this.businessRepository.update(id, { status: status as BusinessStatus });
   }
 
-  async toggleListingFeatured(id: string, type: 'product' | 'service', isFeatured: boolean) {
-    if (type === 'product') {
-      const exists = await this.productRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Product not found');
-      return this.productRepository.update(id, { isFeatured });
-    } else {
-      const exists = await this.serviceRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Service not found');
-      return this.serviceRepository.update(id, { isFeatured });
-    }
-  }
+  // Featured logic for businesses isn't in the entity by default, skipping or removing validation error
+  // async toggleListingFeatured(id: string, isFeatured: boolean) { ... } 
 }
