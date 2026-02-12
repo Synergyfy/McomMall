@@ -3,11 +3,13 @@ import { TrialService } from './trial.service';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { TrialGuard } from './trial.guard';
 import { Request } from 'express';
+import { ApiExcludeController } from '@nestjs/swagger';
 
+@ApiExcludeController()
 @Controller('trial')
 @UseGuards(JwtAuthGuard, TrialGuard)
 export class TrialController {
-  constructor(private readonly trialService: TrialService) {}
+  constructor(private readonly trialService: TrialService) { }
 
   @Get()
   async getTrialStatus(@Req() req: Request) {

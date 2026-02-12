@@ -56,10 +56,10 @@ export class ActivityTimerService {
     for (const timer of activeTimers) {
       // Find the task in the template to check its type
       const taskInTemplate = timer.template.tasks.find(t => t.key === actionType);
-      
+
       // If task is not found or it's OTHER, we don't mark it automatically
       if (!taskInTemplate || actionType === ActivityTaskType.OTHER) {
-          continue;
+        continue;
       }
 
       if (timer.taskStatus[actionType] === false) {
@@ -196,13 +196,13 @@ export class ActivityTimerService {
     timer.template = template;
     timer.type = template.type;
     timer.startedAt = new Date();
-    
+
     // For TRIAL, we have one single timer for all tasks
     if (template.type === ActivityTimerType.TRIAL) {
-        timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
+      timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
     } else {
-        // For GENERAL, we might still have a default expiresAt, but individual tasks have their own
-        timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
+      // For GENERAL, we might still have a default expiresAt, but individual tasks have their own
+      timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
     }
 
     timer.taskStatus = {};
@@ -211,13 +211,13 @@ export class ActivityTimerService {
     template.tasks.forEach(task => {
       timer.taskStatus[task.key] = false;
       if (template.type === ActivityTimerType.GENERAL && task.durationDays) {
-          timer.taskExpirations[task.key] = new Date(timer.startedAt.getTime() + task.durationDays * 24 * 60 * 60 * 1000);
+        timer.taskExpirations[task.key] = new Date(timer.startedAt.getTime() + task.durationDays * 24 * 60 * 60 * 1000);
       } else if (template.type === ActivityTimerType.TRIAL) {
-          // All trial tasks share the same timer
-          timer.taskExpirations[task.key] = timer.expiresAt;
+        // All trial tasks share the same timer
+        timer.taskExpirations[task.key] = timer.expiresAt;
       } else {
-          // Default for general tasks if no specific duration
-          timer.taskExpirations[task.key] = timer.expiresAt;
+        // Default for general tasks if no specific duration
+        timer.taskExpirations[task.key] = timer.expiresAt;
       }
     });
 
@@ -228,8 +228,16 @@ export class ActivityTimerService {
     const timer = await this.timerRepository.findOne({ where: { user: { id: userId }, isActive: true } });
     if (!timer) throw new NotFoundException('Active timer not found');
 
+    if (timer.type !== ActivityTimerType.TRIAL) {
+      throw new BadRequestException('Only Trial timers can be paused.');
+    }
+
     const activePause = timer.pauses.find(p => p.resumedAt === null);
     if (activePause) throw new BadRequestException('Timer is already paused');
+
+    if (timer.pauses.length >= 3) {
+      throw new BadRequestException('You have already used all your allowed pauses (Maximum: 3).');
+    }
 
     timer.pauses.push({ pausedAt: new Date(), resumedAt: null });
     return this.timerRepository.save(timer);

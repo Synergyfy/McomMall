@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Timer, Play, Pause, ChevronRight } from 'lucide-react';
-import { useGetTrialStatus, usePauseOrPlay } from '@/service/payments/hook';
+import { useGetTrialStatus, usePauseOrPlay } from '@/service/payments/hooks';
 import { TrialAction } from '@/service/payments/types';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
