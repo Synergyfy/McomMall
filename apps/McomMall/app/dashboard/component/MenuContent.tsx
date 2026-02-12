@@ -9,7 +9,7 @@ import { ChevronDown, Lock } from 'lucide-react';
 import { RootState } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
 import { useGetTiers } from '@/service/tiers/hook';
-import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hooks';
 import { useGetMyMembership } from '@/service/membership/hooks';
 import {
   Tooltip,

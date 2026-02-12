@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hooks';
 import HeaderTimer from '@/components/HeaderTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';

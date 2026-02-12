@@ -220,13 +220,6 @@ export default function Header() {
             </div>
             <div className="flex flex-col">
               <span className="text-xl font-semibold hidden md:block leading-tight">McomMall</span>
-              {userRole === 'owner' && membership?.tier && (
-                <div className="mt-1 px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-lg">
-                  <span className="text-xs font-bold text-orange-400 uppercase tracking-widest">
-                    {membership.tier.name} Tier
-                  </span>
-                </div>
-              )}
             </div>
           </Link>
 
@@ -237,6 +230,13 @@ export default function Header() {
 
           {/* Right Side Actions */}
           <div className="flex items-center space-x-2 md:space-x-4">
+            {userRole === 'owner' && membership?.tier && (
+              <div className="hidden md:flex items-center px-3 py-1 bg-white/10 backdrop-blur-md border border-white/20 rounded-full shadow-lg">
+                <span className="text-xs font-bold text-orange-400 uppercase tracking-widest">
+                  {membership.tier.name} Tier
+                </span>
+              </div>
+            )}
             <Link href="/cart">
               <Button
                 variant="ghost"
