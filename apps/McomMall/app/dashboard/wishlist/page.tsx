@@ -92,7 +92,7 @@ const WishlistPage = () => {
           </p>
         </div>
         <Button asChild variant="outline" className="rounded-2xl h-12 px-6 shadow-sm hover:shadow-md transition-all gap-2 font-bold border-2">
-          <Link href="/">
+          <Link href="/marketplace">
             <ShoppingCart className="h-5 w-5" />
             Continue Shopping
           </Link>
@@ -104,11 +104,11 @@ const WishlistPage = () => {
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-4">
               <div className="p-3 bg-primary/10 rounded-2xl shadow-inner">
-                  <Heart className="h-7 w-7 text-primary" fill="currentColor" />
+                <Heart className="h-7 w-7 text-primary" fill="currentColor" />
               </div>
               <div>
-                  <CardTitle className="text-2xl sm:text-3xl font-bold">Wishlisted Products</CardTitle>
-                  <p className="text-base text-muted-foreground mt-1">You have {wishlistItems.length} curated item{wishlistItems.length !== 1 ? 's' : ''}.</p>
+                <CardTitle className="text-2xl sm:text-3xl font-bold">Wishlisted Products</CardTitle>
+                <p className="text-base text-muted-foreground mt-1">You have {wishlistItems.length} curated item{wishlistItems.length !== 1 ? 's' : ''}.</p>
               </div>
             </div>
           </div>
@@ -116,19 +116,19 @@ const WishlistPage = () => {
         <CardContent className="p-0">
           {wishlistItems.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-28 px-8 text-center bg-white dark:bg-zinc-950">
-               <div className="relative mb-10">
-                  <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
-                  <div className="relative bg-gradient-to-br from-primary to-primary-foreground p-10 rounded-[2.5rem] shadow-2xl group-hover:scale-105 transition-transform duration-700">
-                      <Heart className="h-20 w-20 text-white" fill="white" />
-                  </div>
-                  <Sparkles className="absolute -top-4 -right-4 h-12 w-12 text-yellow-400 animate-bounce" />
-               </div>
+              <div className="relative mb-10">
+                <div className="absolute inset-0 bg-primary/20 blur-[100px] rounded-full" />
+                <div className="relative bg-gradient-to-br from-primary to-primary-foreground p-10 rounded-[2.5rem] shadow-2xl group-hover:scale-105 transition-transform duration-700">
+                  <Heart className="h-20 w-20 text-white" fill="white" />
+                </div>
+                <Sparkles className="absolute -top-4 -right-4 h-12 w-12 text-yellow-400 animate-bounce" />
+              </div>
               <h3 className="text-3xl sm:text-4xl font-black text-gray-900 dark:text-white mb-4">Your wishlist is empty</h3>
               <p className="text-xl text-muted-foreground mb-12 max-w-md mx-auto leading-relaxed font-medium">
                 Manifest your desires. Start exploring our collections and add products you love to this space.
               </p>
               <Button asChild size="lg" className="rounded-2xl h-16 px-12 shadow-2xl shadow-primary/30 hover:shadow-primary/50 transition-all gap-3 text-xl font-bold">
-                <Link href="/">
+                <Link href="/marketplace">
                   Start Exploring
                   <ChevronRight className="h-6 w-6" />
                 </Link>
@@ -170,44 +170,44 @@ const WishlistPage = () => {
                   {wishlistItems.map(item => {
                     const isService = !!item.service;
                     const displayProduct = isService ? item.service : item.product;
-                    
+
                     if (!displayProduct) return null; // Skip items with no product/service data
 
                     const title = isService ? displayProduct.name : displayProduct.title;
-                    const price = isService 
+                    const price = isService
                       ? (displayProduct.fixedPrice || displayProduct.pricePerHour || displayProduct.pricePerUnit || 0)
                       : displayProduct.price;
                     const status = isService ? displayProduct.status : displayProduct.productStatus;
                     const detailUrl = isService ? `/services/${displayProduct.id}` : `/products/${displayProduct.id}`;
-                    
+
                     return (
                       <TableRow key={item.id} className="group border-b border-gray-50 dark:border-zinc-900 hover:bg-gray-50/50 dark:hover:bg-zinc-900/50 transition-all">
                         <TableCell className="py-8 px-10">
                           <div className="flex items-center gap-6">
                             <div className="relative h-24 w-24 rounded-[1.5rem] overflow-hidden ring-1 ring-gray-100 dark:ring-zinc-800 shadow-xl group-hover:scale-105 transition-transform duration-500">
-                               <Image
-                                  src={displayProduct?.media?.[0] || displayProduct?.imageUrl || '/placeholder.svg'}
-                                  alt={title || 'Product Image'}
-                                  fill
-                                  className="object-cover"
-                               />
-                               <div className="absolute top-0 right-0 bg-white/90 backdrop-blur-sm p-1 rounded-bl-xl shadow-sm">
-                                  {isService ? <Wrench size={12} className="text-blue-500" /> : <Package size={12} className="text-orange-500" />}
-                               </div>
+                              <Image
+                                src={displayProduct?.media?.[0] || displayProduct?.imageUrl || '/placeholder.svg'}
+                                alt={title || 'Product Image'}
+                                fill
+                                className="object-cover"
+                              />
+                              <div className="absolute top-0 right-0 bg-white/90 backdrop-blur-sm p-1 rounded-bl-xl shadow-sm">
+                                {isService ? <Wrench size={12} className="text-blue-500" /> : <Package size={12} className="text-orange-500" />}
+                              </div>
                             </div>
                             <div className="space-y-2">
                               <Link
-                                  href={detailUrl}
-                                  className="font-bold text-xl text-gray-900 dark:text-gray-100 hover:text-primary transition-colors block leading-tight line-clamp-1"
+                                href={detailUrl}
+                                className="font-bold text-xl text-gray-900 dark:text-gray-100 hover:text-primary transition-colors block leading-tight line-clamp-1"
                               >
-                                  {title}
+                                {title}
                               </Link>
                               <div className="flex items-center gap-2">
                                 <Badge variant="secondary" className={`text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md ${isService ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
-                                   {isService ? 'Service' : 'Product'}
+                                  {isService ? 'Service' : 'Product'}
                                 </Badge>
                                 <span className="text-xs text-muted-foreground font-medium hidden sm:block">
-                                    ID: {displayProduct.id.substring(0, 8)}...
+                                  ID: {displayProduct.id.substring(0, 8)}...
                                 </span>
                               </div>
                             </div>
@@ -230,9 +230,9 @@ const WishlistPage = () => {
                         </TableCell>
                         <TableCell className="hidden lg:table-cell text-muted-foreground font-bold text-sm">
                           {new Date(item.createdAt).toLocaleDateString(undefined, {
-                              month: 'long',
-                              day: 'numeric',
-                              year: 'numeric'
+                            month: 'long',
+                            day: 'numeric',
+                            year: 'numeric'
                           })}
                         </TableCell>
                         <TableCell className="py-8 px-10 text-right">

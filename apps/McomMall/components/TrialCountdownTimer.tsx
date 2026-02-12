@@ -10,7 +10,7 @@ import {
   XCircleIcon,
   ChevronsRightLeft,
 } from 'lucide-react';
-import { usePauseOrPlay } from '@/service/payments/hook';
+import { usePauseOrPlay } from '@/service/payments/hooks';
 import {
   TrialStatusResponse,
   TrialAction,

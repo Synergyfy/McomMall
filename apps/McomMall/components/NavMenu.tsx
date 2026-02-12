@@ -134,20 +134,14 @@ export const menuItems = [
   },
 ];
 
-// --- Animation Variants ---
-const dropdownVariants: Variants = {
-  hidden: { opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } },
-  visible: {
-    opacity: 1,
-    y: 0,
-    scale: 1,
-    transition: { duration: 0.2, ease: 'easeOut' },
-  },
-};
-
-export function NavMenu() {
+export function NavMenu({ role }: { role?: string }) {
   const [hoveredItem, setHoveredItem] = useState<string | null>(null);
   const closeTimer = useRef<NodeJS.Timeout | null>(null);
+
+  const filteredMenuItems = menuItems.filter(item => {
+    if (role === 'customer' && item.title === 'Pricing') return false;
+    return true;
+  });
 
   const handleMouseEnter = (title: string) => {
     if (closeTimer.current) clearTimeout(closeTimer.current);
@@ -162,7 +156,7 @@ export function NavMenu() {
 
   return (
     <nav className="hidden items-center space-x-2 md:flex">
-      {menuItems.map((item, index) => (
+      {filteredMenuItems.map((item, index) => (
         <div
           key={item.title}
           className="relative"
@@ -180,9 +174,8 @@ export function NavMenu() {
             <button className="flex items-center gap-1 rounded-md px-3 py-2 text-sm font-medium text-white transition-colors hover:bg-slate-700">
               {item.title}
               <ChevronDown
-                className={`h-4 w-4 transition-transform ${
-                  hoveredItem === item.title ? 'rotate-180' : ''
-                }`}
+                className={`h-4 w-4 transition-transform ${hoveredItem === item.title ? 'rotate-180' : ''
+                  }`}
               />
             </button>
           )}
@@ -195,10 +188,9 @@ export function NavMenu() {
                 animate="visible"
                 exit="hidden"
                 className={`z-50 bg-white text-gray-900 shadow-lg
-                  ${
-                    item.title === 'Business Category'
-                      ? 'fixed left-0 top-16 w-full border-t border-gray-100'
-                      : 'absolute left-0 top-full mt-2 rounded-lg'
+                  ${item.title === 'Business Category'
+                    ? 'fixed left-0 top-16 w-full border-t border-gray-100'
+                    : 'absolute left-0 top-full mt-2 rounded-lg'
                   }`}
               >
                 {item.content}
@@ -210,3 +202,14 @@ export function NavMenu() {
     </nav>
   );
 }
+
+// --- Animation Variants ---
+const dropdownVariants: Variants = {
+  hidden: { opacity: 0, y: -5, scale: 0.98, transition: { duration: 0.2 } },
+  visible: {
+    opacity: 1,
+    y: 0,
+    scale: 1,
+    transition: { duration: 0.2, ease: 'easeOut' },
+  },
+};

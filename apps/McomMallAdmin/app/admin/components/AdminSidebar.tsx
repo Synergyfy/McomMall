@@ -43,6 +43,8 @@ import {
     ShieldAlert,
     Award,
     GraduationCap,
+    Clock,
+    MessageSquare,
 } from 'lucide-react';
 
 interface NavItem {
@@ -67,10 +69,12 @@ const navItems: NavItem[] = [
     { title: 'Marketing', href: '/admin/marketing', icon: Megaphone },
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket },
     { title: 'Templates', href: '/admin/templates/products', icon: LayoutTemplate },
+    { title: 'Activity Timers', href: '/admin/activity-timer', icon: Clock },
     { title: 'Compliance', href: '/admin/compliance', icon: ShieldAlert },
     { title: 'Quality Assurance', href: '/admin/quality', icon: Award },
     { title: 'Training Hub', href: '/admin/training', icon: GraduationCap },
     { title: 'Content', href: '/admin/content', icon: FileText },
+    { title: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
     { title: 'Marketplace', href: '/admin/marketplace', icon: Store },
     { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
     { title: 'Support', href: '/admin/support', icon: HeadphonesIcon },

@@ -10,6 +10,7 @@ interface VisualVariantSelectorProps {
     variations: ProductVariation[];
     selectedVariants: Record<string, string>;
     onChange: (attributeName: string, value: string) => void;
+    ignoreStock?: boolean;
 }
 
 export function VisualVariantSelector({
@@ -17,6 +18,7 @@ export function VisualVariantSelector({
     variations,
     selectedVariants,
     onChange,
+    ignoreStock = false,
 }: VisualVariantSelectorProps) {
 
     // Helper to check availability
@@ -31,9 +33,10 @@ export function VisualVariantSelector({
                 return v.combination[key] === val;
             });
 
-            // 2. Must be available and in stock
+            // 2. Must be available and in stock (unless ignoring stock)
             // Note: If the selection is partial (e.g. only Color selected), we check if *any* Size exists for that Color.
-            return matchesSelection && v.available && v.stock > 0;
+            const stockCheck = ignoreStock ? true : v.stock > 0;
+            return matchesSelection && v.available && stockCheck;
         });
     };
 

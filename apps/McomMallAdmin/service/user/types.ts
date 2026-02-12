@@ -14,9 +14,10 @@ export interface User {
   phoneNumber?: string;
   isActive: boolean;
   isEmailVerified: boolean;
-  role:string;
+  role: string;
   socials: Socials;
   profilePictureUrl?: string;
+  created_at?: string;
 }
 
 export interface UpdateUserDto {

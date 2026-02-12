@@ -30,15 +30,15 @@ const PromotionHistoryPage = () => {
   if (!userId) {
     return (
       <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Promotion History</h1>
-        <p>Please log in to view your promotion history.</p>
+        <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Loyalty and Reward History</h1>
+        <p>Please log in to view your loyalty and reward history.</p>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Promotion History</h1>
+      <h1 className="text-3xl font-bold text-gray-800 dark:text-white mb-6">Loyalty and Reward History</h1>
       <Tabs defaultValue="promotions" className="w-full">
         <TabsList className="grid w-full grid-cols-1 sm:grid-cols-3 h-auto sm:h-10">
           <TabsTrigger value="promotions" className="text-orange-600">Promotions</TabsTrigger>

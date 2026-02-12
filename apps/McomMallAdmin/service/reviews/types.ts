@@ -1,28 +1,37 @@
 export type Review = {
-  id:string;
+  id: string;
   rating: number;
   comment: string;
   createdAt: string;
   updatedAt: string;
   businessId?: string;
-  author?: {
+  user: {
     id: string;
+    firstName: string;
+    lastName: string;
     name: string;
-    avatarUrl: string;
+    email: string;
+    profilePictureUrl: string | null;
   };
-  business?: {
-    name: string;
-    logo: string;
+  business: {
+    id: string;
+    businessName: string;
+    logoUrl: string;
   };
+  status?: 'PENDING' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'; // inferring status types, can be adjusted
+  replies?: any[]; // Placeholder for replies if needed
 };
 
 export type PaginatedReviews = {
   data: Review[];
   meta: {
-    total: number;
-    page: number;
-    limit: number;
+    totalItems: number;
+    itemCount: number;
+    itemsPerPage: number;
     totalPages: number;
+    currentPage: number;
+    hasNextPage: boolean;
+    hasPreviousPage: boolean;
   };
 };
 

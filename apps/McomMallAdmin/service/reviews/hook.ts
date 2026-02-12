@@ -74,3 +74,44 @@ export const useCreateReview = () => {
     },
   });
 };
+
+// Admin: Get all reviews
+export const useGetAdminReviews = (page: number = 1, limit: number = 10, search?: string) => {
+  return useQuery<PaginatedReviews, Error>({
+    queryKey: ['reviews', 'admin', page, limit, search],
+    queryFn: async () => {
+      const { data } = await api.get<PaginatedReviews>('/reviews/admin', {
+        params: { page, limit, search }
+      });
+      return data;
+    },
+  });
+};
+
+// Admin: Publish a review
+export const usePublishReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Review, Error, string>({
+    mutationFn: async (id: string) => {
+      const { data } = await api.patch<Review>(`/reviews/admin/${id}/publish`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'admin'] });
+    },
+  });
+};
+
+// Admin: Unpublish a review
+export const useUnpublishReview = () => {
+  const queryClient = useQueryClient();
+  return useMutation<Review, Error, string>({
+    mutationFn: async (id: string) => {
+      const { data } = await api.patch<Review>(`/reviews/admin/${id}/unpublish`);
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['reviews', 'admin'] });
+    },
+  });
+};

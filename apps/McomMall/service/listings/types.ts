@@ -155,9 +155,16 @@ export interface UserListing {
 }
 
 // --- Enums as String Literal Types ---
-export type ListingType = 'product' | 'service';
-export type DayOfWeek = 0 | 1 | 2 | 3 | 4 | 5 | 6;
-export type ServiceModel = 'at_location' | 'travel_to_customer' | 'both';
+export type ListingType = 'RETAIL' | 'SERVICE';
+export type DayOfWeek =
+  | 'MONDAY'
+  | 'TUESDAY'
+  | 'WEDNESDAY'
+  | 'THURSDAY'
+  | 'FRIDAY'
+  | 'SATURDAY'
+  | 'SUNDAY';
+export type ServiceModel = 'AT_LOCATION' | 'TRAVEL_TO_CUSTOMER' | 'HYBRID';
 export type SellingMode = 'pickup' | 'local_delivery' | 'uk_shipping';
 export type StorefrontPlatform =
   | 'shopify'
@@ -250,7 +257,10 @@ export interface CreateBusinessPayload {
   bannerAltText?: string;
   location: LocationPayload;
   socialLinks?: SocialLinkPayload[];
-  categoryIds: string[]; // Array of category UUIDs
+  sectorId?: string;
+  categoryId?: string;
+  subCategoryId?: string;
+  categoryIds?: string[]; // Array of category UUIDs (Legacy/Backwards Compatibility)
   businessHours?: BusinessHourPayload[];
   specialDays?: SpecialDayPayload[];
   productSellerProfile?: ProductSellerProfilePayload;

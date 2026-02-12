@@ -107,8 +107,8 @@ export default function TierCard({
           </h3>
         </CardHeader>
         <CardContent className="flex-1 space-y-4">
-           {/* Quotas Section */}
-           {quotaItems.length > 0 && (
+          {/* Quotas Section */}
+          {quotaItems.length > 0 && (
             <ul className="space-y-2 mb-4">
               {quotaItems.map((item, index) => (
                 <li key={`quota-${index}`} className="flex items-start text-sm text-gray-700 font-medium">
@@ -125,8 +125,8 @@ export default function TierCard({
           {/* Existing Features Section */}
           {tier.features.length > 0 && (
             <>
-               <hr className="border-gray-100 my-2"/>
-               <ul className="space-y-2">
+              <hr className="border-gray-100 my-2" />
+              <ul className="space-y-2">
                 {tier.features.map((feature, index) => (
                   <li
                     key={index}
@@ -157,7 +157,7 @@ export default function TierCard({
               className="w-full bg-white hover:bg-gray-50 transition-colors border-2"
               style={{ borderColor: themeColor, color: themeColor }}
             >
-              Start Trial
+              Start 7-Day Trial
             </Button>
           )}
         </CardFooter>

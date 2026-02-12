@@ -4,7 +4,7 @@ import { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import { TimerIcon, PlayIcon, PauseIcon } from 'lucide-react';
 import { Subscription } from '@/service/payments/subscription.types';
-import { usePauseOrPlay } from '@/service/payments/hook';
+import { usePauseOrPlay } from '@/service/payments/hooks';
 import { PaygOption, TrialAction } from '@/service/payments/types';
 import { Button } from './ui/button';
 

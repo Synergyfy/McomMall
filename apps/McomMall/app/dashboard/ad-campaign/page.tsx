@@ -35,16 +35,16 @@ const CampaignsPage = () => {
   };
 
   const allCampaigns: TableCampaign[] = useMemo(() => {
-    if (!campaignsData) return [];
-    return campaignsData.map((c: ServiceCampaign) => ({
+    if (!campaignsData?.data) return [];
+    return campaignsData.data.map((c: any) => ({
       id: c.id,
-      listingName: c.business.businessName,
+      listingName: c.business?.businessName || c.name || 'Unknown Business',
       status: 'active', // TODO: Implement status from backend
       type: c.type,
       startDate: new Date(c.startDate),
       budget: c.budget,
       spent: 0, // TODO: Implement spent from backend
-      placements: c.adPlacement,
+      placements: c.adPlacement || [],
     }));
   }, [campaignsData]);
 

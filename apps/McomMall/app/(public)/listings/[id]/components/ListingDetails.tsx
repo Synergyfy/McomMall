@@ -26,19 +26,19 @@ import { motion, AnimatePresence } from 'framer-motion';
 
 import { useSearchParams } from 'next/navigation';
 
-import { 
+import {
 
-  Info, 
+  Info,
 
-  Package, 
+  Package,
 
-  Wrench, 
+  Wrench,
 
-  Tag, 
+  Tag,
 
-  Image as ImageIcon, 
+  Image as ImageIcon,
 
-  MessageSquare, 
+  MessageSquare,
 
   PhoneCall,
 
@@ -108,51 +108,51 @@ export default function ClientListingDetail({
 
 
 
-    // Switch to services tab if bookService is present, or use activeSection param
+  // Switch to services tab if bookService is present, or use activeSection param
 
 
 
-    useEffect(() => {
+  useEffect(() => {
 
 
 
-      const bookServiceId = searchParams.get('bookService');
+    const bookServiceId = searchParams.get('bookService');
 
 
 
-      const sectionParam = searchParams.get('activeSection');
+    const sectionParam = searchParams.get('activeSection');
 
 
 
-  
 
 
 
-      if (bookServiceId) {
+
+    if (bookServiceId) {
 
 
 
-        setActiveSection('services');
+      setActiveSection('services');
 
 
 
-      } else if (sectionParam && NAV_ITEMS.some(item => item.id === sectionParam)) {
+    } else if (sectionParam && NAV_ITEMS.some(item => item.id === sectionParam)) {
 
 
 
-        setActiveSection(sectionParam);
+      setActiveSection(sectionParam);
 
 
 
-      }
+    }
 
 
 
-    }, [searchParams]);
+  }, [searchParams]);
 
 
 
-  
+
 
 
 
@@ -201,7 +201,7 @@ export default function ClientListingDetail({
           </div>
           <h2 className="text-2xl font-black text-gray-900 mb-2">Listing Not Found</h2>
           <p className="text-gray-500 mb-8">The business you are looking for might have moved or been removed from our directory.</p>
-          <button 
+          <button
             onClick={() => window.history.back()}
             className="w-full bg-[#f58220] text-white font-bold py-4 rounded-2xl hover:bg-[#e67a1d] transition-all"
           >
@@ -219,35 +219,33 @@ export default function ClientListingDetail({
       <HeroSection listing={inHouseListing} />
 
       {/* Sub-Navigation */}
-      <div 
+      <div
         ref={navRef}
-        className={`z-40 transition-all duration-300 sticky top-16 border-b ${
-          isNavSticky 
-            ? 'bg-white/80 backdrop-blur-md shadow-md py-2' 
+        className={`z-40 transition-all duration-300 sticky top-16 border-b ${isNavSticky
+            ? 'bg-white/80 backdrop-blur-md shadow-md py-2'
             : 'bg-white py-4'
-        }`}
+          }`}
       >
         <div className="max-w-[1600px] mx-auto px-8">
           <div className="flex items-center justify-center md:justify-start gap-1 md:gap-8 overflow-x-auto hide-scrollbar py-2">
             {NAV_ITEMS.map((item) => {
               const Icon = item.icon;
               const isActive = activeSection === item.id;
-              
+
               // Skip sections that don't have content based on listingType
-              if (item.id === 'products' && !inHouseListing.listingType.includes('product')) return null;
-              if (item.id === 'services' && !inHouseListing.listingType.includes('service')) return null;
+              if (item.id === 'products' && !inHouseListing.listingType.includes('RETAIL')) return null;
+              if (item.id === 'services' && !inHouseListing.listingType.includes('SERVICE')) return null;
               if (item.id === 'media' && (!inHouseListing.media || inHouseListing.media.length === 0)) return null;
-              
+
               return (
                 <button
                   key={item.id}
                   type="button"
                   onClick={() => handleTabChange(item.id)}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${
-                    isActive 
-                      ? 'bg-[#f58220] text-white shadow-lg shadow-orange-500/20' 
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-bold transition-all whitespace-nowrap ${isActive
+                      ? 'bg-[#f58220] text-white shadow-lg shadow-orange-500/20'
                       : 'text-gray-500 hover:text-[#f58220] hover:bg-orange-50'
-                  }`}
+                    }`}
                 >
                   <Icon size={16} />
                   <span>{item.label}</span>

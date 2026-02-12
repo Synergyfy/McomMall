@@ -29,7 +29,7 @@ import { InHouseBusiness, GooglePlaceResult } from '@/service/listings/types';
 function isGoogleResult(
   listing: GooglePlaceResult | InHouseBusiness
 ): listing is GooglePlaceResult {
-  return 'placeId' in listing;
+  return 'place_id' in listing;
 }
 
 const initialFilters: FilterState = {
@@ -136,7 +136,7 @@ function ListingsPageContent() {
   });
 
   const combinedListings = useMemo(() => {
-    const inHouseResults = inHouseData || [];
+    const inHouseResults = inHouseData?.data || [];
     const googleResults = googleData || [];
     return [...inHouseResults, ...googleResults];
   }, [inHouseData, googleData]);
@@ -174,9 +174,15 @@ function ListingsPageContent() {
     if (listingsForMap.length > 0) {
       const first = listingsForMap[0];
       if (isGoogleResult(first)) {
-        return [first.geometry.location.lat, first.geometry.location.lng];
+        return [
+          first.geometry?.location?.lat ?? coords.lat,
+          first.geometry?.location?.lng ?? coords.lng,
+        ];
       }
-      return [first.location.lat, first.location.lng];
+      return [
+        first.location?.lat ?? coords.lat,
+        first.location?.lng ?? coords.lng,
+      ];
     }
     return [coords.lat, coords.lng];
   }, [listingsForMap, coords]);
@@ -341,7 +347,7 @@ function ListingsPageContent() {
                         <ListingCard
                           key={
                             isGoogleResult(listing)
-                              ? listing.placeId
+                              ? listing.place_id
                               : listing.id
                           }
                           listing={listing}

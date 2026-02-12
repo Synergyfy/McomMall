@@ -36,7 +36,10 @@ import {
     DialogDescription,
 } from '@/components/ui/dialog';
 import {
+    Tooltip,
+    TooltipContent,
     TooltipProvider,
+    TooltipTrigger,
 } from '@/components/ui/tooltip';
 import {
     Badge,
@@ -523,201 +526,222 @@ export default function CouponsVouchersPage() {
                                 <Button className="bg-white text-orange-600 border border-orange-100 hover:bg-orange-50 rounded-xl font-bold shadow-sm" onClick={() => setIsTopUpModalOpen(true)}>
                                     <PlusCircle className="w-4 h-4 mr-2" /> Purchase Voucher
                                 </Button>
-                                <Button className="bg-orange-600 text-white hover:bg-orange-700 rounded-xl font-bold shadow-md shadow-orange-200" onClick={() => setIsCustomerSpendModalOpen(true)}>
-                                    <ScanLine className="w-4 h-4 mr-2" /> Spend Voucher
-                                </Button>
-                                <Button variant="outline" className="border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold" onClick={() => setIsTransferModalOpen(true)}>
-                                    <Send className="w-4 h-4 mr-2" /> Transfer Funds
-                                </Button>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button className="bg-orange-600 text-white hover:bg-orange-700 rounded-xl font-bold shadow-md shadow-orange-200" onClick={() => setIsCustomerSpendModalOpen(true)}>
+                                            <ScanLine className="w-4 h-4 mr-2" /> Spend Voucher
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Pay at a merchant using your voucher balance. Scan the merchant's QR code or enter their ID to complete the transaction.</p>
+                                    </TooltipContent>
+                                </Tooltip>
+                                <Tooltip>
+                                    <TooltipTrigger asChild>
+                                        <Button variant="outline" className="border-2 border-slate-200 hover:bg-slate-50 text-slate-600 rounded-xl font-bold" onClick={() => setIsTransferModalOpen(true)}>
+                                            <Send className="w-4 h-4 mr-2" /> Transfer Funds
+                                        </Button>
+                                    </TooltipTrigger>
+                                    <TooltipContent>
+                                        <p>Send funds from your voucher to another user's voucher. Both users must have compatible voucher types.</p>
+                                    </TooltipContent>
+                                </Tooltip>
                             </div>
                         )}
 
-                                                <div className="w-full">
-                                                    <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
-                                                        <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
-                                                        <CardContent className="p-6">
-                                                                                                {isBusiness ? (
-                                                                                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                                                                                        {voucherTypes.map((vt) => (
-                                                                                                            <div key={vt.id} className="flex flex-col gap-4 group">
-                                                                                                                {/* Realistic Pale Card - Business Definition */}
-                                                                                                                <div
-                                                                                                                    id={`voucher-def-card-${vt.id}`}
-                                                                                                                    className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 p-8 flex flex-col justify-between border border-slate-200/50"
-                                                                                                                >
-                                                                                                                    {/* Background decoration */}
-                                                                                                                    <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none"></div>
-                                                                                                                    <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-slate-200/40 rounded-full blur-3xl pointer-events-none"></div>
-                                                            
-                                                                                                                    {/* Header */}
-                                                                                                                    <div className="flex justify-between items-center relative z-10">
-                                                                                                                        <div className="flex items-center gap-3">
-                                                                                                                            <div className="bg-slate-800 p-2 rounded-xl shadow-sm">
-                                                                                                                                <Zap className="w-4 h-4 text-white" />
-                                                                                                                            </div>
-                                                                                                                            <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">Definition</span>
-                                                                                                                        </div>
-                                                                                                                        <div className="flex items-center gap-2">
-                                                                                                                            <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-700 border-gray-200'} border backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold`}>
-                                                                                                                                {vt.status}
-                                                                                                                            </Badge>
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                            
-                                                                                                                    {/* Info Row */}
-                                                                                                                    <div className="relative z-10 mt-8 flex justify-between items-end">
-                                                                                                                        <div>
-                                                                                                                            <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1">Split Ratio</p>
-                                                                                                                            <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 drop-shadow-sm">{vt.split}</h3>
-                                                                                                                        </div>
-                                                                                                                        <div className="text-right">
-                                                                                                                             <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Label</p>
-                                                                                                                             <div className="text-xs font-black bg-white/90 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm backdrop-blur-md truncate max-w-[140px]">
-                                                                                                                                {vt.seasonalLabel}
-                                                                                                                             </div>
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                            
-                                                                                                                    {/* Footer Info */}
-                                                                                                                    <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
-                                                                                                                        <div className="flex-1 min-w-0 mr-6">
-                                                                                                                            <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Definition Name</p>
-                                                                                                                            <p className="font-extrabold tracking-tight truncate text-base uppercase text-slate-700">{vt.name}</p>
-                                                                                                                             <p className="text-[10px] font-mono text-slate-400 mt-1 flex items-center gap-2 group/id">
-                                                                                                                                {vt.id.slice(0, 20)}... 
-                                                                                                                                <Copy 
-                                                                                                                                    className="w-3.5 h-3.5 cursor-pointer hover:text-slate-600 transition-colors" 
-                                                                                                                                    onClick={(e) => { e.stopPropagation(); handleCopy(vt.id); }} 
-                                                                                                                                />
-                                                                                                                             </p>
-                                                                                                                        </div>
-                                                                                                                        <div className="text-right shrink-0">
-                                                                                                                             <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Scope</p>
-                                                                                                                            <p className="text-[10px] font-black bg-slate-800 text-white px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block shadow-sm">
-                                                                                                                                {vt.usageScope}
-                                                                                                                            </p>
-                                                                                                                        </div>
-                                                                                                                    </div>
-                                                                                                                </div>
-                                                                                                            </div>
-                                                                                                        ))}
-                                                                                                    </div>
-                                                                                                ) : (                                                                <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
-                                                                    {myVouchers.map((cv) => (
-                                                                        <div key={cv.id} className="flex flex-col gap-4 group">
-                                                                            {/* Realistic Pale Card - Gift Card Style */}
-                                                                            <div
-                                                                                id={`voucher-card-${cv.id}`}
-                                                                                className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-orange-50 via-white to-orange-100 text-slate-800 p-8 flex flex-col justify-between border border-orange-200/50"
-                                                                            >
-                                                                                {/* Background decoration - Abstract soft shapes */}
-                                                                                <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none"></div>
-                                                                                <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-orange-300/20 rounded-full blur-3xl pointer-events-none"></div>
-                                                                                <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-white/60 rounded-full blur-2xl pointer-events-none"></div>
-                                                                                
-                                                                                {/* Wave pattern overlay */}
-                                                                                <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
-                        
-                                                                                {/* Header */}
-                                                                                <div className="flex justify-between items-center relative z-10">
-                                                                                    <div className="flex items-center gap-3">
-                                                                                        <div className="bg-orange-600 p-2 rounded-xl shadow-sm">
-                                                                                            <Gift className="w-4 h-4 text-white" />
-                                                                                        </div>
-                                                                                        <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">McomMall</span>
-                                                                                    </div>
-                                                                                    <div className="flex items-center gap-2">
-                                                                                         {/* Download Button */}
-                                                                                         <Button
-                                                                                            variant="ghost"
-                                                                                            size="icon"
-                                                                                            className="h-9 w-9 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all"
-                                                                                            onClick={(e) => { e.stopPropagation(); handleDownloadCard(cv.id, cv.name); }}
-                                                                                            title="Download Card"
-                                                                                        >
-                                                                                            <Download className="w-5 h-5" />
-                                                                                        </Button>
-                                                                                        <Badge className="bg-white/80 text-orange-600 border border-orange-200 shadow-sm backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold">
-                                                                                            {cv.status}
-                                                                                        </Badge>
-                                                                                    </div>
-                                                                                </div>
-                        
-                                                                                {/* Chip Replacement: QR Code & Contactless */}
-                                                                                <div className="flex items-center gap-5 mt-4 relative z-10">
-                                                                                    <div className="bg-white p-1.5 rounded-xl border border-slate-100 shadow-sm">
-                                                                                        <QRCode value={cv.id} size={56} className="w-14 h-14" />
-                                                                                    </div>
-                                                                                    <ScanLine className="w-8 h-8 text-slate-300 rotate-90" />
-                                                                                </div>
-                        
-                                                                                {/* Balance Section */}
-                                                                                <div className="relative z-10 mt-4 flex justify-between items-end">
-                                                                                    <div>
-                                                                                        <p className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1.5">Current Balance</p>
-                                                                                        <h3 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
-                                                                                            £{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}
-                                                                                        </h3>
-                                                                                    </div>
-                                                                                    <div className="text-right">
-                                                                                         <p className="text-xs text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Split</p>
-                                                                                         <div className="text-sm font-black bg-white/90 text-orange-600 px-4 py-2 rounded-xl border border-orange-100 shadow-sm backdrop-blur-md">
-                                                                                            {cv.split}
-                                                                                         </div>
-                                                                                    </div>
-                                                                                </div>
-                        
-                                                                                {/* Footer Info */}
-                                                                                <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
-                                                                                    <div className="flex-1 min-w-0 mr-6">
-                                                                                        <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Voucher Name</p>
-                                                                                        <p className="font-extrabold tracking-tight truncate text-lg uppercase text-slate-700">{cv.name}</p>
-                                                                                         <p className="text-[11px] font-mono text-slate-400 mt-1.5 flex items-center gap-2 group/id">
-                                                                                            {cv.id.slice(0, 16)}... 
-                                                                                            <Copy 
-                                                                                                className="w-4 h-4 cursor-pointer hover:text-orange-600 transition-colors" 
-                                                                                                onClick={(e) => { e.stopPropagation(); handleCopy(cv.id); }} 
-                                                                                            />
-                                                                                         </p>
-                                                                                    </div>
-                                                                                    <div className="text-right shrink-0">
-                                                                                         <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Range</p>
-                                                                                        <p className="text-[11px] font-black bg-orange-600/10 text-orange-700 px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block border border-orange-200/50 shadow-sm">
-                                                                                            {cv.scope}
-                                                                                        </p>
-                                                                                    </div>
-                                                                                </div>
-                                                                            </div>
-                        
-                                                                            {/* Actions Below Card */}
-                                                                            <div className="grid grid-cols-2 gap-3 mt-1">
-                                                                                <Button 
-                                                                                    className="h-12 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md hover:shadow-orange-600/30 transition-all font-bold text-base"
-                                                                                    onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
-                                                                                >
-                                                                                    <QrCode className="w-5 h-5 mr-2" /> Pay
-                                                                                </Button>
-                                                                                <Button 
-                                                                                    variant="outline" 
-                                                                                    className="h-12 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-base"
-                                                                                    onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
-                                                                                >
-                                                                                    Details
-                                                                                </Button>
-                                                                            </div>
-                                                                        </div>
-                                                                    ))}
+                        <div className="w-full">
+                            <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+                                <CardHeader className="border-b border-gray-100 bg-gray-50/50"><CardTitle>{isBusiness ? 'Voucher Definitions' : 'My Active Vouchers'}</CardTitle></CardHeader>
+                                <CardContent className="p-6">
+                                    {isBusiness ? (
+                                        <div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                            {voucherTypes.map((vt) => (
+                                                <div key={vt.id} className="flex flex-col gap-4 group">
+                                                    {/* Realistic Pale Card - Business Definition */}
+                                                    <div
+                                                        id={`voucher-def-card-${vt.id}`}
+                                                        className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 p-8 flex flex-col justify-between border border-slate-200/50"
+                                                    >
+                                                        {/* Background decoration */}
+                                                        <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none"></div>
+                                                        <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-slate-200/40 rounded-full blur-3xl pointer-events-none"></div>
+
+                                                        {/* Header */}
+                                                        <div className="flex justify-between items-center relative z-10">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="bg-slate-800 p-2 rounded-xl shadow-sm">
+                                                                    <Zap className="w-4 h-4 text-white" />
                                                                 </div>
-                                                            )}
-                                                        </CardContent>
-                                                    </Card>
-                                                </div>                    </TabsContent>
+                                                                <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">Definition</span>
+                                                            </div>
+                                                            <div className="flex items-center gap-2">
+                                                                <Badge className={`${vt.status === 'Active' ? 'bg-green-100 text-green-700 border-green-200' : 'bg-gray-100 text-gray-700 border-gray-200'} border backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold`}>
+                                                                    {vt.status}
+                                                                </Badge>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Info Row */}
+                                                        <div className="relative z-10 mt-8 flex justify-between items-end">
+                                                            <div>
+                                                                <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1">Split Ratio</p>
+                                                                <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 drop-shadow-sm">{vt.split}</h3>
+                                                            </div>
+                                                            <div className="text-right">
+                                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Label</p>
+                                                                <div className="text-xs font-black bg-white/90 text-slate-700 px-3 py-1.5 rounded-xl border border-slate-100 shadow-sm backdrop-blur-md truncate max-w-[140px]">
+                                                                    {vt.seasonalLabel}
+                                                                </div>
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Footer Info */}
+                                                        <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
+                                                            <div className="flex-1 min-w-0 mr-6">
+                                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Definition Name</p>
+                                                                <p className="font-extrabold tracking-tight truncate text-base uppercase text-slate-700">{vt.name}</p>
+                                                                <p className="text-[10px] font-mono text-slate-400 mt-1 flex items-center gap-2 group/id">
+                                                                    {vt.id.slice(0, 20)}...
+                                                                    <Copy
+                                                                        className="w-3.5 h-3.5 cursor-pointer hover:text-slate-600 transition-colors"
+                                                                        onClick={(e) => { e.stopPropagation(); handleCopy(vt.id); }}
+                                                                    />
+                                                                </p>
+                                                            </div>
+                                                            <div className="text-right shrink-0">
+                                                                <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Scope</p>
+                                                                <p className="text-[10px] font-black bg-slate-800 text-white px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block shadow-sm">
+                                                                    {vt.usageScope}
+                                                                </p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    ) : (<div className="grid grid-cols-1 xl:grid-cols-2 gap-8">
+                                        {myVouchers.map((cv) => (
+                                            <div key={cv.id} className="flex flex-col gap-4 group">
+                                                {/* Realistic Pale Card - Gift Card Style */}
+                                                <div
+                                                    id={`voucher-card-${cv.id}`}
+                                                    className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-orange-50 via-white to-orange-100 text-slate-800 p-8 flex flex-col justify-between border border-orange-200/50"
+                                                >
+                                                    {/* Background decoration - Abstract soft shapes */}
+                                                    <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none"></div>
+                                                    <div className="absolute -bottom-10 -left-10 w-64 h-64 bg-orange-300/20 rounded-full blur-3xl pointer-events-none"></div>
+                                                    <div className="absolute top-1/4 right-1/4 w-48 h-48 bg-white/60 rounded-full blur-2xl pointer-events-none"></div>
+
+                                                    {/* Wave pattern overlay */}
+                                                    <div className="absolute inset-0 opacity-[0.03] pointer-events-none bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]"></div>
+
+                                                    {/* Header */}
+                                                    <div className="flex justify-between items-center relative z-10">
+                                                        <div className="flex items-center gap-3">
+                                                            <div className="bg-orange-600 p-2 rounded-xl shadow-sm">
+                                                                <Gift className="w-4 h-4 text-white" />
+                                                            </div>
+                                                            <span className="font-bold text-xs tracking-[0.2em] uppercase text-slate-500">McomMall</span>
+                                                        </div>
+                                                        <div className="flex items-center gap-2">
+                                                            {/* Download Button */}
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-9 w-9 text-slate-400 hover:text-orange-600 hover:bg-orange-50 rounded-full transition-all"
+                                                                onClick={(e) => { e.stopPropagation(); handleDownloadCard(cv.id, cv.name); }}
+                                                                title="Download Card"
+                                                            >
+                                                                <Download className="w-5 h-5" />
+                                                            </Button>
+                                                            <Badge className="bg-white/80 text-orange-600 border border-orange-200 shadow-sm backdrop-blur-sm text-[10px] px-3 py-1 rounded-full font-bold">
+                                                                {cv.status}
+                                                            </Badge>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Chip Replacement: QR Code & Contactless */}
+                                                    <div className="flex items-center gap-5 mt-4 relative z-10">
+                                                        <div className="bg-white p-1.5 rounded-xl border border-slate-100 shadow-sm">
+                                                            <QRCode value={cv.id} size={56} className="w-14 h-14" />
+                                                        </div>
+                                                        <ScanLine className="w-8 h-8 text-slate-300 rotate-90" />
+                                                    </div>
+
+                                                    {/* Balance Section */}
+                                                    <div className="relative z-10 mt-4 flex justify-between items-end">
+                                                        <div>
+                                                            <p className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1.5">Current Balance</p>
+                                                            <h3 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
+                                                                £{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}
+                                                            </h3>
+                                                        </div>
+                                                        <div className="text-right">
+                                                            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1.5 font-bold">Split</p>
+                                                            <div className="text-sm font-black bg-white/90 text-orange-600 px-4 py-2 rounded-xl border border-orange-100 shadow-sm backdrop-blur-md">
+                                                                {cv.split}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Footer Info */}
+                                                    <div className="flex justify-between items-end relative z-10 mt-auto pt-6 border-t border-slate-200/50">
+                                                        <div className="flex-1 min-w-0 mr-6">
+                                                            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Voucher Name</p>
+                                                            <p className="font-extrabold tracking-tight truncate text-lg uppercase text-slate-700">{cv.name}</p>
+                                                            <p className="text-[11px] font-mono text-slate-400 mt-1.5 flex items-center gap-2 group/id">
+                                                                {cv.id.slice(0, 16)}...
+                                                                <Copy
+                                                                    className="w-4 h-4 cursor-pointer hover:text-orange-600 transition-colors"
+                                                                    onClick={(e) => { e.stopPropagation(); handleCopy(cv.id); }}
+                                                                />
+                                                            </p>
+                                                        </div>
+                                                        <div className="text-right shrink-0">
+                                                            <p className="text-xs text-slate-400 uppercase tracking-widest mb-1 font-bold">Usage Range</p>
+                                                            <p className="text-[11px] font-black bg-orange-600/10 text-orange-700 px-3 py-1.5 rounded-xl backdrop-blur-sm inline-block border border-orange-200/50 shadow-sm">
+                                                                {cv.scope}
+                                                            </p>
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                {/* Actions Below Card */}
+                                                <div className="grid grid-cols-2 gap-3 mt-1">
+                                                    <Button
+                                                        className="h-12 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md hover:shadow-orange-600/30 transition-all font-bold text-base"
+                                                        onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
+                                                    >
+                                                        <QrCode className="w-5 h-5 mr-2" /> Pay
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        className="h-12 border-gray-200 hover:bg-gray-50 hover:border-orange-400 hover:text-orange-600 text-gray-700 rounded-xl shadow-sm transition-all font-bold text-base"
+                                                        onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
+                                                    >
+                                                        Details
+                                                    </Button>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>                    </TabsContent>
                 </Tabs>
 
                 {/* MODALS */}
                 <Dialog open={isTopUpModalOpen} onOpenChange={setIsTopUpModalOpen}>
                     <DialogContent className="sm:max-w-[425px] max-h-[90vh] overflow-y-auto">
-                        <DialogHeader><DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle></DialogHeader>
+                        <DialogHeader>
+                            <DialogTitle>{purchaseStep === 'select' ? 'Purchase Voucher' : 'Complete Payment'}</DialogTitle>
+                            {purchaseStep === 'select' && (
+                                <DialogDescription>
+                                    Buy a new voucher package with real money. Your payment will be converted into voucher balance with bonus matching rewards based on the selected package.
+                                </DialogDescription>
+                            )}
+                        </DialogHeader>
                         {purchaseStep === 'select' ? (
                             <form onSubmit={handlePurchaseVoucher} className="space-y-4 py-4">
                                 <div className="space-y-2">
@@ -855,7 +879,7 @@ export default function CouponsVouchersPage() {
                                     <div className="text-2xl font-black text-slate-900 mt-1">{selectedVoucherForDetails?.split}</div>
                                 </div>
                             </div>
-                            
+
                             <div className="space-y-3">
                                 <div className="p-5 bg-orange-50/50 rounded-3xl flex gap-4 items-center border border-orange-100/50">
                                     <div className="bg-orange-600 p-2.5 rounded-2xl shadow-orange-200 shadow-lg text-white">
@@ -866,7 +890,7 @@ export default function CouponsVouchersPage() {
                                         <div className="text-sm font-bold text-slate-700">Matching Power: {selectedVoucherForDetails?.rewardRatio || '50'}%</div>
                                     </div>
                                 </div>
-                                
+
                                 <div className="p-5 bg-blue-50/50 rounded-3xl flex gap-4 items-start border border-blue-100/50">
                                     <div className="bg-blue-600 p-2.5 rounded-2xl shadow-blue-200 shadow-lg text-white mt-0.5">
                                         <Globe className="w-5 h-5" />
@@ -885,7 +909,7 @@ export default function CouponsVouchersPage() {
                                         )}
                                     </div>
                                 </div>
-                                
+
                                 <div className="p-5 bg-green-50/50 rounded-3xl flex gap-4 items-center border border-green-100/50">
                                     <div className="bg-green-600 p-2.5 rounded-2xl shadow-green-200 shadow-lg text-white">
                                         <Gift className="w-5 h-5" />
