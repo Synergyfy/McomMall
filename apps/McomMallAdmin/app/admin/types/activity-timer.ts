@@ -19,6 +19,7 @@ export interface ActivityTaskDto {
     title: string;
     description: string;
     url: string;
+    durationDays: number;
 }
 
 export interface ActivityTask extends ActivityTaskDto {
