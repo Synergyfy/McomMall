@@ -98,14 +98,16 @@ const BusinessStorefrontPage = () => {
                     <div>
                       <h1 className="text-3xl md:text-4xl font-bold text-gray-900 flex items-center gap-2">
                         {business.businessName}
-                        {business.isVerified && (
-                          <CheckCircle className="w-6 h-6 text-blue-500" title="Verified Business" />
+                        {'isVerified' in business && business.isVerified && (
+                          <span title="Verified Business">
+                            <CheckCircle className="w-6 h-6 text-blue-500" />
+                          </span>
                         )}
                       </h1>
                       {business.legalName && business.legalName !== business.businessName && (
                         <p className="text-gray-500 mt-1">Legal Name: {business.legalName}</p>
                       )}
-                      {business.user && (
+                      {'user' in business && business.user && (
                         <p className="text-sm text-gray-500 mt-2 flex items-center gap-1">
                           <User className="w-4 h-4" />
                           Owner: {business.user.name}
