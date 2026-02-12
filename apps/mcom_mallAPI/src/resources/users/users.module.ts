@@ -16,6 +16,7 @@ import { ServiceProviderProfile } from '../service-provider-profile/entities/ser
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { ProvisionModule } from '../provision/provision.module';
 import { MembershipModule } from '../membership/membership.module';
+import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -33,10 +34,12 @@ import { MembershipModule } from '../membership/membership.module';
     EmailModule,
     TrialModule,
     ProvisionModule,
-    MembershipModule
+    ProvisionModule,
+    MembershipModule,
+    ActivityTimerModule
   ],
   controllers: [UsersController],
   providers: [UsersService, HashService],
   exports: [UsersService],
 })
-export class UsersModule {}
+export class UsersModule { }

@@ -19,6 +19,7 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
 import { ProvisionType } from '../provision/entities/provision.entity';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class UsersService {
@@ -42,6 +43,7 @@ export class UsersService {
     private readonly trialService: TrialService,
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
+    private readonly activityTimerService: ActivityTimerService,
   ) { }
 
   async checkEmailExists(email: string): Promise<boolean> {
@@ -81,7 +83,7 @@ export class UsersService {
       if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const createdUser = await this.dataSource.transaction(async (manager) => {
       const { password, role } = payload;
       const hashed = await this.hashService.hashPassword(password);
       const user = manager.create(User, {
@@ -113,6 +115,17 @@ export class UsersService {
       delete savedUser.password;
       return savedUser;
     });
+
+    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
+    if (createdUser.role === UserRole.OWNER) {
+      try {
+        await this.activityTimerService.getUserActiveTimer(createdUser);
+      } catch (error) {
+        console.error('Failed to auto-assign activity timer:', error);
+      }
+    }
+
+    return createdUser;
   }
 
   async createByAdmin(payload: CreateUserDto): Promise<User> {
@@ -125,7 +138,7 @@ export class UsersService {
       if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const createdUser = await this.dataSource.transaction(async (manager) => {
       const { password, role } = payload;
       const hashed = await this.hashService.hashPassword(password);
       const user = manager.create(User, {
@@ -158,6 +171,19 @@ export class UsersService {
       delete savedUser.password;
       return savedUser;
     });
+
+    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
+    if (createdUser.role === UserRole.OWNER) {
+      // We catch errors here to strictly not block user creation if timer service fails,
+      // though ideally it should succeed.
+      try {
+        await this.activityTimerService.getUserActiveTimer(createdUser);
+      } catch (error) {
+        console.error('Failed to auto-assign activity timer:', error);
+      }
+    }
+
+    return createdUser;
   }
 
   findAll() {
