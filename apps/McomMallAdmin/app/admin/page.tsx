@@ -303,7 +303,7 @@ export default function AdminDashboard() {
                         <QuickAction
                             title="Create Coupon"
                             icon={Plus}
-                            href="/admin/marketing/coupons/new"
+                            href="/admin/coupons-vouchers"
                             variant="default"
                         />
                         <QuickAction
