@@ -73,12 +73,12 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { TerminalCashbackClaim, TerminalCashbackConfig, TerminalCashbackLevel, CreateTerminalConfigDto } from '@/service/terminal-cashback/types';
-import { 
-    useGetTerminalClaims, 
-    useGetTerminalConfigs, 
-    useCreateTerminalConfig, 
-    useUpdateTerminalConfig, 
-    useUpdateClaimStatus, 
+import {
+    useGetTerminalClaims,
+    useGetTerminalConfigs,
+    useCreateTerminalConfig,
+    useUpdateTerminalConfig,
+    useUpdateClaimStatus,
     useGetGlobalRules,
     useGetTerminalStats
 } from '@/service/terminal-cashback/hook';
@@ -94,7 +94,7 @@ function ClaimStatusBadge({ status }: { status: TerminalCashbackClaim['status'] 
         rejected: { label: 'Rejected', className: 'bg-red-50 text-red-600 border-red-100', icon: XCircle },
         auto_approved: { label: 'Auto-Approved', className: 'bg-blue-50 text-blue-600 border-blue-100', icon: CheckCircle2 },
     };
-    const { label, className, icon: Icon } = config[status];
+    const { label, className, icon: Icon } = config[status] || config.pending;
     return (
         <Badge variant="outline" className={cn('font-medium gap-1 px-2 py-0.5', className)}>
             <Icon className="h-3 w-3" />
@@ -116,20 +116,20 @@ function LevelBadge({ level }: { level: number }) {
 export default function TerminalCashbackPage() {
     // --- Data Fetching ---
     const { data: stats, isLoading: isStatsLoading } = useGetTerminalStats();
-    const { 
-        data: claimsData, 
+    const {
+        data: claimsData,
         isLoading: isClaimsLoading,
-        isError: isClaimsError 
+        isError: isClaimsError
     } = useGetTerminalClaims();
-    const { 
-        data: configsData, 
+    const {
+        data: configsData,
         isLoading: isConfigsLoading,
-        isError: isConfigsError 
+        isError: isConfigsError
     } = useGetTerminalConfigs();
-    const { 
-        data: ownersData, 
+    const {
+        data: ownersData,
         isLoading: isOwnersLoading,
-        isError: isOwnersError 
+        isError: isOwnersError
     } = useGetAdminUsers({ type: 'business', limit: 100 });
 
     const claims = claimsData?.data || [];
@@ -143,7 +143,7 @@ export default function TerminalCashbackPage() {
 
     const [selectedClaim, setSelectedClaim] = useState<TerminalCashbackClaim | null>(null);
     const [selectedConfig, setSelectedConfig] = useState<TerminalCashbackConfig | null>(null);
-    
+
     const [isClaimSheetOpen, setIsClaimSheetOpen] = useState(false);
     const [isConfigSheetOpen, setIsConfigSheetOpen] = useState(false);
     const [isAnalysisSheetOpen, setIsAnalysisSheetOpen] = useState(false);
@@ -159,12 +159,12 @@ export default function TerminalCashbackPage() {
     const [onboardUserIds, setOnboardUserIds] = useState<string[]>([]);
     const [userSearch, setOnboardUserSearch] = useState('');
     const [isInitializing, setIsInitializing] = useState(false);
-    
+
     // Cap States
     const [onboardQuotaType, setOnboardQuotaType] = useState<'daily' | 'weekly' | 'monthly'>('monthly');
     const [onboardMaxIssuance, setOnboardMaxIssuance] = useState<number>(100);
 
-    const filteredOwners = owners.filter(u => 
+    const filteredOwners = owners.filter(u =>
         u.name.toLowerCase().includes(userSearch.toLowerCase()) ||
         u.email.toLowerCase().includes(userSearch.toLowerCase()) ||
         u.id.toLowerCase().includes(userSearch.toLowerCase())
@@ -173,13 +173,13 @@ export default function TerminalCashbackPage() {
     // --- Handlers ---
 
     const toggleOnboardLevel = (level: TerminalCashbackLevel) => {
-        setOnboardLevels(prev => 
+        setOnboardLevels(prev =>
             prev.includes(level) ? prev.filter(l => l !== level) : [...prev, level]
         );
     };
 
     const toggleOnboardUser = (id: string) => {
-        setOnboardUserIds(prev => 
+        setOnboardUserIds(prev =>
             prev.includes(id) ? prev.filter(item => item !== id) : [...prev, id]
         );
     };
@@ -195,15 +195,15 @@ export default function TerminalCashbackPage() {
         }
 
         setIsInitializing(true);
-        
+
         try {
-            const targets = onboardScope === 'all' 
-                ? owners 
+            const targets = onboardScope === 'all'
+                ? owners
                 : onboardUserIds.map(id => owners.find(u => u.id === id)).filter(Boolean);
 
             const promises = targets.map(owner => {
                 if (!owner) return Promise.resolve();
-                
+
                 const newConfig: CreateTerminalConfigDto = {
                     userId: owner.id,
                     userName: owner.name,
@@ -329,7 +329,7 @@ export default function TerminalCashbackPage() {
                                     Enable Terminal Cashback systems for businesses.
                                 </DialogDescription>
                             </DialogHeader>
-                            
+
                             <div className="flex-1 overflow-y-auto p-6 space-y-8 custom-scrollbar">
                                 {/* Scope Selection */}
                                 <div className="space-y-2">
@@ -354,12 +354,12 @@ export default function TerminalCashbackPage() {
                                                 {onboardUserIds.length} SELECTED
                                             </Badge>
                                         </div>
-                                        
+
                                         <div className="p-4 bg-slate-50 rounded-2xl border border-slate-200 space-y-4">
                                             <div className="relative">
                                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                                <Input 
-                                                    placeholder="Search name or ID..." 
+                                                <Input
+                                                    placeholder="Search name or ID..."
                                                     value={userSearch}
                                                     onChange={(e) => setOnboardUserSearch(e.target.value)}
                                                     className="pl-9 h-10 bg-white border-slate-200 text-sm rounded-xl"
@@ -399,13 +399,13 @@ export default function TerminalCashbackPage() {
                                                         {filteredOwners.map(owner => {
                                                             const isSelected = onboardUserIds.includes(owner.id);
                                                             return (
-                                                                <div 
+                                                                <div
                                                                     key={owner.id}
                                                                     onClick={() => toggleOnboardUser(owner.id)}
                                                                     className={cn(
                                                                         "flex items-center justify-between p-3 rounded-xl cursor-pointer transition-all border",
-                                                                        isSelected 
-                                                                            ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm" 
+                                                                        isSelected
+                                                                            ? "bg-orange-50 border-orange-200 text-orange-700 shadow-sm"
                                                                             : "bg-white border-slate-100 hover:border-slate-200 text-slate-600"
                                                                     )}
                                                                 >
@@ -452,9 +452,9 @@ export default function TerminalCashbackPage() {
                                                 <p className="text-[10px] font-bold text-slate-500 uppercase ml-1">Max Issuances</p>
                                                 <div className="relative">
                                                     <Target className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-300" />
-                                                    <Input 
-                                                        type="number" 
-                                                        value={onboardMaxIssuance} 
+                                                    <Input
+                                                        type="number"
+                                                        value={onboardMaxIssuance}
                                                         onChange={(e) => setOnboardMaxIssuance(Number(e.target.value))}
                                                         className="h-11 rounded-xl bg-white border-slate-200 pl-9 font-bold text-slate-700 shadow-sm"
                                                     />
@@ -471,9 +471,9 @@ export default function TerminalCashbackPage() {
                                     <Label className="text-xs font-semibold uppercase tracking-wider text-slate-400">Permitted System Capabilities</Label>
                                     <div className="grid grid-cols-3 gap-3">
                                         {([1, 2, 3] as TerminalCashbackLevel[]).map((l) => (
-                                            <Button 
-                                                key={l} 
-                                                variant="outline" 
+                                            <Button
+                                                key={l}
+                                                variant="outline"
                                                 onClick={() => toggleOnboardLevel(l)}
                                                 className={cn(
                                                     "h-14 border rounded-2xl transition-all font-bold group",
@@ -498,7 +498,7 @@ export default function TerminalCashbackPage() {
 
                             <DialogFooter className="p-6 pt-2 bg-slate-50/50 border-t gap-2">
                                 <Button variant="ghost" className="font-medium text-slate-500" onClick={() => setIsOnboardOpen(false)}>Cancel</Button>
-                                <Button 
+                                <Button
                                     className="bg-orange-600 hover:bg-orange-700 text-white font-semibold flex-1 h-12 rounded-xl shadow-none"
                                     onClick={handleInitializeMerchant}
                                     disabled={isInitializing}
@@ -600,22 +600,22 @@ export default function TerminalCashbackPage() {
                                     <TableRow className="hover:bg-transparent border-b border-slate-100">
                                         <TableHead className="w-[120px] text-xs font-semibold text-slate-500 uppercase tracking-wider py-4 pl-6">Claim ID</TableHead>
                                         <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Customer</TableHead>
-                                                                                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Owner</TableHead>
-                                                                                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Value</TableHead>
-                                                                                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</TableHead>
-                                                                                    <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right pr-6">Action</TableHead>
-                                                                                </TableRow>
-                                                                            </TableHeader>
-                                                                            <TableBody>
-                                                                                {claims.map((claim) => (
-                                                                                    <TableRow key={claim.id} className="hover:bg-slate-50/50 cursor-pointer group border-b border-slate-50" onClick={() => { setSelectedClaim(claim); setIsClaimSheetOpen(true); }}>
-                                                                                        <TableCell className="font-mono text-[11px] text-slate-400 pl-6">{claim.id}</TableCell>
-                                                                                        <TableCell className="font-semibold text-slate-700">{claim.userName}</TableCell>
-                                                                                        <TableCell className="text-sm text-slate-600">{claim.ownerName}</TableCell>
-                                        
+                                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Owner</TableHead>
+                                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Value</TableHead>
+                                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Status</TableHead>
+                                        <TableHead className="text-xs font-semibold text-slate-500 uppercase tracking-wider text-right pr-6">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {claims.map((claim) => (
+                                        <TableRow key={claim.id} className="hover:bg-slate-50/50 cursor-pointer group border-b border-slate-50" onClick={() => { setSelectedClaim(claim); setIsClaimSheetOpen(true); }}>
+                                            <TableCell className="font-mono text-[11px] text-slate-400 pl-6">{claim.id}</TableCell>
+                                            <TableCell className="font-semibold text-slate-700">{claim.userName}</TableCell>
+                                            <TableCell className="text-sm text-slate-600">{claim.ownerName}</TableCell>
+
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="text-sm font-bold text-slate-800">£{claim.amount.toFixed(2)}</span>
+                                                    <span className="text-sm font-bold text-slate-800">£{Number(claim.amount || 0).toFixed(2)}</span>
                                                     <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tighter">{claim.amountRange || 'N/A'}</span>
                                                 </div>
                                             </TableCell>
@@ -744,16 +744,16 @@ export default function TerminalCashbackPage() {
                                             <p className="text-sm font-semibold text-slate-700">Pre-Approval Alert</p>
                                             <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">Warn merchant before auto-pay</p>
                                         </div>
-                                        <Switch 
-                                            checked={preApprovalAlertEnabled} 
+                                        <Switch
+                                            checked={preApprovalAlertEnabled}
                                             onCheckedChange={setPreApprovalAlertEnabled}
-                                            className="data-[state=checked]:bg-orange-400" 
+                                            className="data-[state=checked]:bg-orange-400"
                                         />
                                     </div>
                                     {preApprovalAlertEnabled && (
                                         <div className="space-y-2 animate-in fade-in slide-in-from-top-2">
                                             <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Merchant Alert Message</Label>
-                                            <Textarea 
+                                            <Textarea
                                                 value={alertMessage}
                                                 onChange={(e) => setAlertMessage(e.target.value)}
                                                 placeholder="Enter message..."
@@ -881,7 +881,7 @@ export default function TerminalCashbackPage() {
                                 <div className="grid grid-cols-2 gap-4">
                                     <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
                                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1">Cashback Value</p>
-                                        <p className="text-3xl font-bold text-slate-800">£{selectedClaim.amount.toFixed(2)}</p>
+                                        <p className="text-3xl font-bold text-slate-800">£{Number(selectedClaim.amount || 0).toFixed(2)}</p>
                                         <p className="text-[10px] text-orange-500 font-bold uppercase mt-1">{selectedClaim.amountRange || 'N/A'}</p>
                                     </div>
                                     <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
@@ -923,14 +923,14 @@ export default function TerminalCashbackPage() {
                                 {/* Review Actions */}
                                 {selectedClaim.status === 'pending' && (
                                     <div className="flex gap-3 pt-6 sticky bottom-0 bg-white pb-8 mt-4 border-t border-slate-100">
-                                        <Button 
+                                        <Button
                                             className="flex-1 bg-emerald-500 hover:bg-emerald-600 text-white font-semibold h-12 rounded-xl shadow-none"
                                             onClick={() => handleClaimAction('approved')}
                                         >
                                             Approve Cashback
                                         </Button>
-                                        <Button 
-                                            variant="outline" 
+                                        <Button
+                                            variant="outline"
                                             className="flex-1 text-red-500 border-red-100 hover:bg-red-50 font-semibold h-12 rounded-xl"
                                             onClick={() => handleClaimAction('rejected')}
                                         >
@@ -958,10 +958,10 @@ export default function TerminalCashbackPage() {
                                         <LevelBadge level={selectedConfig.level} />
                                         <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-full border border-orange-100 shadow-sm">
                                             <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider">{selectedConfig.isEnabled ? 'System Active' : 'Disabled'}</span>
-                                            <Switch 
-                                                checked={selectedConfig.isEnabled} 
+                                            <Switch
+                                                checked={selectedConfig.isEnabled}
                                                 onCheckedChange={(val) => setSelectedConfig({ ...selectedConfig, isEnabled: val })}
-                                                className="data-[state=checked]:bg-orange-500 h-5 w-9" 
+                                                className="data-[state=checked]:bg-orange-500 h-5 w-9"
                                             />
                                         </div>
                                     </div>
@@ -980,8 +980,8 @@ export default function TerminalCashbackPage() {
                                     </h4>
                                     <div className="grid grid-cols-3 gap-3">
                                         {([1, 2, 3] as TerminalCashbackLevel[]).map((l) => (
-                                            <div 
-                                                key={l} 
+                                            <div
+                                                key={l}
                                                 onClick={() => handleUpdateConfigLevel(l)}
                                                 className={cn(
                                                     "p-4 rounded-2xl border-2 cursor-pointer transition-all text-center relative group",
@@ -1018,10 +1018,10 @@ export default function TerminalCashbackPage() {
                                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Spend Window</p>
                                                             <div className="flex items-center gap-1.5">
                                                                 <span className="text-slate-400 text-xs font-semibold">£</span>
-                                                                <Input 
-                                                                    type="number" 
-                                                                    defaultValue={range.minSpend} 
-                                                                    className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200" 
+                                                                <Input
+                                                                    type="number"
+                                                                    defaultValue={range.minSpend}
+                                                                    className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
                                                                         const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, minSpend: val } : r);
@@ -1030,10 +1030,10 @@ export default function TerminalCashbackPage() {
                                                                 />
                                                                 <span className="text-slate-300">—</span>
                                                                 <span className="text-slate-400 text-xs font-semibold">£</span>
-                                                                <Input 
-                                                                    type="number" 
-                                                                    defaultValue={range.maxSpend} 
-                                                                    className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200" 
+                                                                <Input
+                                                                    type="number"
+                                                                    defaultValue={range.maxSpend}
+                                                                    className="h-8 w-16 p-1 font-bold text-sm bg-slate-50 border-slate-200"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
                                                                         const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, maxSpend: val } : r);
@@ -1046,11 +1046,11 @@ export default function TerminalCashbackPage() {
                                                             <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-1.5">Cashback</p>
                                                             <div className="flex items-center gap-1.5 text-orange-600">
                                                                 <span className="text-xs font-semibold">£</span>
-                                                                <Input 
-                                                                    type="number" 
+                                                                <Input
+                                                                    type="number"
                                                                     step="0.5"
-                                                                    defaultValue={range.rewardValue} 
-                                                                    className="h-8 w-20 p-1 font-bold text-sm bg-orange-50/50 border-orange-100 focus:border-orange-400 text-orange-600" 
+                                                                    defaultValue={range.rewardValue}
+                                                                    className="h-8 w-20 p-1 font-bold text-sm bg-orange-50/50 border-orange-100 focus:border-orange-400 text-orange-600"
                                                                     onBlur={(e) => {
                                                                         const val = Number(e.target.value);
                                                                         const updatedRanges = selectedConfig.ranges.map(r => r.id === range.id ? { ...r, rewardValue: val } : r);
@@ -1070,11 +1070,11 @@ export default function TerminalCashbackPage() {
                                                 <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest mb-1.5">Fixed Visit Reward</p>
                                                 <div className="flex items-center gap-1.5 text-2xl font-bold text-orange-500">
                                                     <span>£</span>
-                                                    <Input 
-                                                        type="number" 
+                                                    <Input
+                                                        type="number"
                                                         step="0.5"
-                                                        defaultValue={selectedConfig.fixedRewardValue || 0} 
-                                                        className="h-10 w-24 p-1 font-bold text-xl border-b-2 border-transparent bg-transparent focus:border-orange-400 text-orange-500" 
+                                                        defaultValue={selectedConfig.fixedRewardValue || 0}
+                                                        className="h-10 w-24 p-1 font-bold text-xl border-b-2 border-transparent bg-transparent focus:border-orange-400 text-orange-500"
                                                         onBlur={(e) => setSelectedConfig({ ...selectedConfig, fixedRewardValue: Number(e.target.value) })}
                                                     />
                                                 </div>
@@ -1086,19 +1086,19 @@ export default function TerminalCashbackPage() {
                                             <div className="p-6 bg-slate-800 rounded-3xl border border-slate-700 text-white space-y-5 shadow-inner">
                                                 <div className="space-y-2">
                                                     <Label className="text-[10px] font-bold uppercase tracking-widest text-slate-400 ml-1">Enterprise API Endpoint</Label>
-                                                    <Input 
-                                                        placeholder="https://api.merchant.com/v1/verify" 
+                                                    <Input
+                                                        placeholder="https://api.merchant.com/v1/verify"
                                                         defaultValue={selectedConfig.apiEndpoint}
                                                         onBlur={(e) => setSelectedConfig({ ...selectedConfig, apiEndpoint: e.target.value })}
                                                         className="bg-white/5 border-white/10 text-white font-mono text-[11px] h-10 rounded-xl"
                                                     />
                                                 </div>
-                                                
+
                                                 <div className="flex items-center justify-between pt-4 border-t border-white/5">
                                                     <div>
                                                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Reward Model</p>
-                                                        <Select 
-                                                            defaultValue={selectedConfig.rewardType || 'fixed'} 
+                                                        <Select
+                                                            defaultValue={selectedConfig.rewardType || 'fixed'}
                                                             onValueChange={(val: 'fixed' | 'percentage') => setSelectedConfig({ ...selectedConfig, rewardType: val })}
                                                         >
                                                             <SelectTrigger className="w-32 bg-white/5 border-white/10 text-white font-semibold h-9 rounded-lg text-xs">
@@ -1116,12 +1116,12 @@ export default function TerminalCashbackPage() {
                                                             <>
                                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Cashback Rate</p>
                                                                 <div className="flex items-center gap-1 text-2xl font-bold text-orange-400">
-                                                                    <Input 
-                                                                        type="number" 
+                                                                    <Input
+                                                                        type="number"
                                                                         step="0.1"
-                                                                        defaultValue={selectedConfig.rewardPercentage || 0} 
+                                                                        defaultValue={selectedConfig.rewardPercentage || 0}
                                                                         onBlur={(e) => setSelectedConfig({ ...selectedConfig, rewardPercentage: Number(e.target.value) })}
-                                                                        className="h-10 w-20 p-1 font-bold text-xl border-transparent bg-transparent text-right focus:border-orange-400 text-orange-400" 
+                                                                        className="h-10 w-20 p-1 font-bold text-xl border-transparent bg-transparent text-right focus:border-orange-400 text-orange-400"
                                                                     />
                                                                     <span className="text-lg">%</span>
                                                                 </div>
@@ -1131,12 +1131,12 @@ export default function TerminalCashbackPage() {
                                                                 <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-1.5">Cashback Value</p>
                                                                 <div className="flex items-center justify-end gap-1 text-2xl font-bold text-orange-400">
                                                                     <span className="text-lg">£</span>
-                                                                    <Input 
-                                                                        type="number" 
+                                                                    <Input
+                                                                        type="number"
                                                                         step="0.5"
-                                                                        defaultValue={selectedConfig.fixedRewardValue || 0} 
+                                                                        defaultValue={selectedConfig.fixedRewardValue || 0}
                                                                         onBlur={(e) => setSelectedConfig({ ...selectedConfig, fixedRewardValue: Number(e.target.value) })}
-                                                                        className="h-10 w-20 p-1 font-bold text-xl border-transparent bg-transparent text-right focus:border-orange-400 text-orange-400" 
+                                                                        className="h-10 w-20 p-1 font-bold text-xl border-transparent bg-transparent text-right focus:border-orange-400 text-orange-400"
                                                                     />
                                                                 </div>
                                                             </>
@@ -1183,14 +1183,14 @@ export default function TerminalCashbackPage() {
 
                                 {/* Final Actions */}
                                 <div className="pt-6 sticky bottom-0 bg-white pb-8 mt-4 border-t border-slate-100 flex flex-col gap-3">
-                                    <Button 
+                                    <Button
                                         className="w-full bg-slate-800 hover:bg-slate-900 text-white font-semibold h-12 rounded-xl shadow-none"
                                         onClick={handleSaveProtocol}
                                     >
                                         Save Protocol Configuration
                                     </Button>
-                                    <Button 
-                                        variant="ghost" 
+                                    <Button
+                                        variant="ghost"
                                         className="w-full text-red-500 hover:text-red-600 font-bold uppercase tracking-[0.1em] text-[10px] hover:bg-red-50"
                                         onClick={() => toast.warning("Suspension requires confirmation.")}
                                     >
@@ -1263,10 +1263,10 @@ export default function TerminalCashbackPage() {
                                         <div className="flex items-end justify-between gap-2 h-32 px-2">
                                             {[40, 65, 45, 90, 55, 80, 70, 85, 95, 60, 75, 50].map((v, i) => (
                                                 <div key={i} className="flex-1 bg-white rounded-t-md relative group overflow-hidden border border-slate-100/50">
-                                                    <div 
+                                                    <div
                                                         className="absolute bottom-0 w-full bg-blue-400/20 group-hover:bg-blue-400 transition-all duration-500 rounded-t-md"
                                                         style={{ height: `${v}%` }}
-                                                      />
+                                                    />
                                                 </div>
                                             ))}
                                         </div>
