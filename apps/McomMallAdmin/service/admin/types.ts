@@ -117,3 +117,15 @@ export interface BusinessDetail {
     status: string;
     listingType: string[];
 }
+
+export interface CreateAdminUserDto {
+    firstName: string;
+    lastName: string;
+    email: string;
+    phoneNumber: string;
+    password?: string;
+    confirm_password?: string;
+    role: string;
+    provisionCode?: string;
+}
+

@@ -1,5 +1,6 @@
 'use client';
 
+import React, { useState } from 'react';
 import Link from 'next/link';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -21,11 +22,12 @@ import {
     ArrowRight,
     Plus,
     Eye,
-    Zap,
     Activity,
     Building2,
     Loader2,
+    UserPlus,
 } from 'lucide-react';
+import { CreateUserDialog } from './users/components/CreateUserDialog';
 import { cn } from '@/lib/utils';
 
 // Stat Card Component
@@ -111,11 +113,13 @@ function QuickAction({
     title,
     icon: Icon,
     href,
+    onClick,
     variant = 'default',
 }: {
     title: string;
     icon: React.ComponentType<{ className?: string }>;
-    href: string;
+    href?: string;
+    onClick?: () => void;
     variant?: 'default' | 'success' | 'warning' | 'danger';
 }) {
     const variants = {
@@ -125,20 +129,24 @@ function QuickAction({
         danger: 'bg-red-100 hover:bg-red-200 text-red-700',
     };
 
-    return (
-        <Link href={href}>
-            <Button
-                variant="ghost"
-                className={cn(
-                    'h-auto py-4 px-6 flex flex-col items-center gap-2 rounded-xl transition-all duration-200',
-                    variants[variant]
-                )}
-            >
-                <Icon className="h-6 w-6" />
-                <span className="text-sm font-medium">{title}</span>
-            </Button>
-        </Link>
+    const button = (
+        <Button
+            variant="ghost"
+            onClick={onClick}
+            className={cn(
+                'h-auto py-4 px-6 flex flex-col items-center gap-2 rounded-xl transition-all duration-200',
+                variants[variant]
+            )}
+        >
+            <Icon className="h-6 w-6" />
+            <span className="text-sm font-medium">{title}</span>
+        </Button>
     );
+
+    if (href) {
+        return <Link href={href}>{button}</Link>;
+    }
+    return button;
 }
 
 // Activity Item Component
@@ -195,6 +203,8 @@ function ActivityItemCard({
 
 export default function AdminDashboard() {
     const { data: dashboard, isLoading } = useGetAdminDashboard();
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
+
 
     const stats = dashboard?.stats;
     const analytics = dashboard?.analytics;
@@ -285,9 +295,15 @@ export default function AdminDashboard() {
                             variant="success"
                         />
                         <QuickAction
+                            title="Create User"
+                            icon={UserPlus}
+                            onClick={() => setIsCreateDialogOpen(true)}
+                            variant="default"
+                        />
+                        <QuickAction
                             title="Create Coupon"
                             icon={Plus}
-                            href="/admin/marketing/coupons/new"
+                            href="/admin/coupons-vouchers"
                             variant="default"
                         />
                         <QuickAction
@@ -419,6 +435,11 @@ export default function AdminDashboard() {
                     </CardContent>
                 </Card>
             </div>
+
+            <CreateUserDialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
+            />
         </div>
     );
 }

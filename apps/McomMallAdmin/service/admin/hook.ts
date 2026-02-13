@@ -9,7 +9,8 @@ import {
     GetAdminBusinessesResponse,
     BusinessListing,
     UpdateBusinessDto,
-    BusinessDetail
+    BusinessDetail,
+    CreateAdminUserDto
 } from './types';
 import { toast } from 'sonner';
 
@@ -52,6 +53,11 @@ const updateBusiness = async ({ id, data }: { id: string; data: UpdateBusinessDt
 
 const verifyBusiness = async (id: string): Promise<any> => {
     const res = await api.post(`/admin/businesses/${id}/verify`);
+    return res.data;
+};
+
+const createAdminUser = async (data: CreateAdminUserDto): Promise<any> => {
+    const res = await api.post('/users/admin/create', data);
     return res.data;
 };
 
@@ -130,3 +136,20 @@ export const useVerifyBusiness = () => {
         }
     });
 };
+
+export const useCreateAdminUser = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createAdminUser,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+            toast.success('User created successfully');
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || 'Failed to create user');
+        }
+    });
+};
+

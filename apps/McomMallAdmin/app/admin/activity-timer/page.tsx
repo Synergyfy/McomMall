@@ -128,7 +128,11 @@ export default function ActivityTimerPage() {
                                     </TableHeader>
                                     <TableBody>
                                         {templatesData.map((template) => (
-                                            <TableRow key={template.id}>
+                                            <TableRow
+                                                key={template.id}
+                                                className="cursor-pointer hover:bg-slate-50 transition-colors"
+                                                onClick={() => handleEdit(template.id)}
+                                            >
                                                 <TableCell className="font-medium">
                                                     <div>{template.name}</div>
                                                     {template.description && (
