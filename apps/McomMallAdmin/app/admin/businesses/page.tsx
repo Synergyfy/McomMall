@@ -433,7 +433,10 @@ function BusinessDetailSheet({
 
     const handleVerifyStatus = async () => {
         try {
-            await verifyMutation.mutateAsync(business.id);
+            await verifyMutation.mutateAsync({
+                id: business.id,
+                isVerified: !business.verified
+            });
         } catch (error) {
             // Error toast handled in hook
         }
@@ -1033,7 +1036,7 @@ export default function BusinessesPage() {
                                                     {!business.verified ? (
                                                         <DropdownMenuItem
                                                             className="text-blue-600"
-                                                            onClick={() => verifyMutation.mutate(business.id)}
+                                                            onClick={() => verifyMutation.mutate({ id: business.id, isVerified: true })}
                                                             disabled={verifyMutation.isPending}
                                                         >
                                                             <Shield className="h-4 w-4 mr-2" />
@@ -1042,7 +1045,7 @@ export default function BusinessesPage() {
                                                     ) : (
                                                         <DropdownMenuItem
                                                             className="text-blue-600"
-                                                            onClick={() => verifyMutation.mutate(business.id)}
+                                                            onClick={() => verifyMutation.mutate({ id: business.id, isVerified: false })}
                                                             disabled={verifyMutation.isPending}
                                                         >
                                                             <Shield className="h-4 w-4 mr-2" />

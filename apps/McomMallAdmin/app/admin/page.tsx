@@ -315,7 +315,7 @@ export default function AdminDashboard() {
                         <QuickAction
                             title="Create Banner"
                             icon={Plus}
-                            href="/admin/content/banners/new"
+                            href="/admin/marketplace"
                             variant="default"
                         />
                         <QuickAction
