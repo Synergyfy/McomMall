@@ -129,3 +129,38 @@ export interface CreateAdminUserDto {
     provisionCode?: string;
 }
 
+
+export interface GetAdminTransactionsParams {
+    page?: number;
+    limit?: number;
+    search?: string;
+    status?: string;
+    type?: string;
+}
+
+export interface AdminTransaction {
+    id: string;
+    reference: string;
+    description: string;
+    amount: number;
+    type: string;
+    status: string;
+    createdAt: string;
+    user?: {
+        name: string;
+        email: string;
+    };
+    business?: {
+        name: string;
+    };
+}
+
+export interface GetAdminTransactionsResponse {
+    items: AdminTransaction[];
+    meta: {
+        totalItems: number;
+        itemsPerPage: number;
+        totalPages: number;
+        currentPage: number;
+    };
+}

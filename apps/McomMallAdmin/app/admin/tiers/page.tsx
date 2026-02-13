@@ -1,6 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect, Suspense } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
+
 import { useGetTiers, useCreateTier, useUpdateTier, useDeleteTier } from '@/service/tiers/hook';
 import { Tier, CreateTierInput, UpdateTierInput } from '@/app/admin/types/tier';
 import { Button } from '@/components/ui/button';
@@ -19,21 +21,55 @@ import {
 } from '@/components/ui/alert-dialog';
 import { Plus, Pencil, Trash2 } from 'lucide-react';
 import { TierForm } from './components/TierForm';
+import { TierTypeModal } from './components/TierTypeModal';
 
-export default function TiersPage() {
+
+function TiersContent() {
+    const searchParams = useSearchParams();
+    const router = useRouter();
     const { data: tiers, isLoading } = useGetTiers();
+
     const createTierMutation = useCreateTier();
     const updateTierMutation = useUpdateTier();
     const deleteTierMutation = useDeleteTier();
 
     const [isDialogOpen, setIsDialogOpen] = useState(false);
+    const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
     const [selectedTier, setSelectedTier] = useState<Tier | undefined>(undefined);
+    const [seasonalTierBase, setSeasonalTierBase] = useState<Partial<Tier> | undefined>(undefined);
     const [tierToDelete, setTierToDelete] = useState<string | null>(null);
 
+    useEffect(() => {
+        const type = searchParams.get('type');
+        const startDate = searchParams.get('startDate');
+        const endDate = searchParams.get('endDate');
+
+        if (type === 'seasonal' && startDate && endDate) {
+            setSeasonalTierBase({
+                startDate,
+                endDate,
+                name: 'Seasonal Tier',
+            });
+            setIsDialogOpen(true);
+            // Clear params from URL without refreshing
+            router.replace('/admin/tiers');
+        }
+    }, [searchParams, router]);
+
+
+
     const handleCreate = () => {
+        setIsTypeModalOpen(true);
+    };
+
+    const handleSelectStandard = () => {
         setSelectedTier(undefined);
+        setSeasonalTierBase(undefined);
+        setIsTypeModalOpen(false);
         setIsDialogOpen(true);
     };
+
+
 
     const handleEdit = (tier: Tier) => {
         setSelectedTier(tier);
@@ -83,9 +119,9 @@ export default function TiersPage() {
                 {tiers?.map((tier) => (
                     <Card key={tier.id} className="flex flex-col relative overflow-hidden group hover:shadow-lg transition-all duration-300">
                         {tier.isActive ? (
-                             <div className="absolute top-0 right-0 p-4">
+                            <div className="absolute top-0 right-0 p-4">
                                 <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">Active</Badge>
-                             </div>
+                            </div>
                         ) : (
                             <div className="absolute top-0 right-0 p-4">
                                 <Badge variant="secondary">Inactive</Badge>
@@ -149,9 +185,10 @@ export default function TiersPage() {
 
                     <TierForm
                         formId={formId}
-                        initialData={selectedTier}
+                        initialData={selectedTier || (seasonalTierBase as Tier)}
                         onSubmit={handleSubmit}
                     />
+
 
                     <DialogFooter className="mt-auto border-t pt-4">
                         <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
@@ -184,6 +221,21 @@ export default function TiersPage() {
                     </AlertDialogFooter>
                 </AlertDialogContent>
             </AlertDialog>
+
+            <TierTypeModal
+                open={isTypeModalOpen}
+                onOpenChange={setIsTypeModalOpen}
+                onSelectStandard={handleSelectStandard}
+            />
         </div>
+
+    );
+}
+
+export default function TiersPage() {
+    return (
+        <Suspense fallback={<div className="p-8 text-center">Loading...</div>}>
+            <TiersContent />
+        </Suspense>
     );
 }
