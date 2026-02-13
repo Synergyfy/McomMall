@@ -96,16 +96,19 @@ export const menuItems = [
     title: 'Seasons',
     content: (
       <div className="w-64 p-4">
-        <ListItem href="/seasons/winter" title="Winter">
+        {/* <ListItem href="/seasons/winter" title="Winter"> */}
+        <ListItem href="https://247gbs-rewards.netlify.app/season/winter" title="winter">
           Seasonal specials and winter collections.
         </ListItem>
-        <ListItem href="/seasons/spring" title="Spring">
+        {/* <ListItem href="/seasons/spring" title="Spring"> */}
+        <ListItem href="https://247gbs-rewards.netlify.app/season/spring" title="spring">
           Fresh arrivals for the spring season.
         </ListItem>
-        <ListItem href="/seasons/summer" title="Summer">
+        {/* <ListItem href="https://247gbs-rewards.netlify.app/season/summer" title="Summer"> */}
+        <ListItem href="https://247gbs-rewards.netlify.app/season/summer" title="summer">
           Explore our summer sales and new items.
         </ListItem>
-        <ListItem href="/seasons/autumn" title="Autumn">
+        <ListItem href="https://247gbs-rewards.netlify.app/season/autumn" title="autumn">
           Explore our autumn sales and new items.
         </ListItem>
       </div>
