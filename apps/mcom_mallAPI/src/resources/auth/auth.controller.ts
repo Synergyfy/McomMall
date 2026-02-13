@@ -63,7 +63,7 @@ export class AuthController {
 
     await this.userService.updateLastLogin(id);
 
-    const activeTimers = await this.activityTimerService.getUserActiveTimer(user);
+    const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
 
     return { auth, name, role, packageInfo: trial, userId: id, tasks: activeTimers };
   }
@@ -82,7 +82,7 @@ export class AuthController {
       const user = await this.userService.findCurrentUser(authData.email);
       await this.userService.updateLastLogin(user.id);
 
-      const activeTimers = await this.activityTimerService.getUserActiveTimer(user);
+      const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
 
       return {
         auth: {

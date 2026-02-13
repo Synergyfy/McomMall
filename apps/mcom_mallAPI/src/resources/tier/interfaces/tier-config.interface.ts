@@ -22,4 +22,5 @@ export interface TierFeatureFlags {
 export interface TierConfig {
   quotas: TierQuotas;
   featureFlags: TierFeatureFlags;
+  trialDurationDays?: number; // Optional override for trial duration (default 30)
 }

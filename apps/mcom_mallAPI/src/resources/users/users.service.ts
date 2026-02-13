@@ -119,7 +119,7 @@ export class UsersService {
     // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
     if (createdUser.role === UserRole.OWNER) {
       try {
-        await this.activityTimerService.getUserActiveTimer(createdUser);
+        await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
         console.error('Failed to auto-assign activity timer:', error);
       }
@@ -177,7 +177,7 @@ export class UsersService {
       // We catch errors here to strictly not block user creation if timer service fails,
       // though ideally it should succeed.
       try {
-        await this.activityTimerService.getUserActiveTimer(createdUser);
+        await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
         console.error('Failed to auto-assign activity timer:', error);
       }

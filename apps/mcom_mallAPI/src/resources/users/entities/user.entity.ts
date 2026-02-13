@@ -150,4 +150,7 @@ export class User extends AbstractBaseEntity {
 
   @Column({ type: 'int', default: 100 })
   trustScore: number;
+
+  @Column({ type: 'jsonb', default: [] })
+  trialPauses: { pausedAt: Date; resumedAt: Date | null }[];
 }
