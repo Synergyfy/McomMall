@@ -39,6 +39,7 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { useGetUserStats, useGetAdminUsers } from '@/service/admin/hook';
 import { AdminUser } from '@/service/admin/types';
+import { CreateUserDialog } from './components/CreateUserDialog';
 import {
     Search,
     Filter,
@@ -287,6 +288,7 @@ export default function UsersPage() {
     const [searchQuery, setSearchQuery] = useState('');
     const [statusFilter, setStatusFilter] = useState<string>('all');
     const [typeFilter, setTypeFilter] = useState<string>('all');
+    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
     const [page, setPage] = useState(1);
     const [limit, setLimit] = useState(10);
     const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
@@ -323,7 +325,11 @@ export default function UsersPage() {
                         <Download className="h-4 w-4 mr-2" />
                         Export
                     </Button>
-                    <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
+                    <Button
+                        size="sm"
+                        className="bg-orange-500 hover:bg-orange-600"
+                        onClick={() => setIsCreateDialogOpen(true)}
+                    >
                         <Plus className="h-4 w-4 mr-2" />
                         Add User
                     </Button>
@@ -620,6 +626,12 @@ export default function UsersPage() {
                 user={selectedUser}
                 open={sheetOpen}
                 onOpenChange={setSheetOpen}
+            />
+
+            {/* Create User Dialog */}
+            <CreateUserDialog
+                open={isCreateDialogOpen}
+                onOpenChange={setIsCreateDialogOpen}
             />
         </div>
     );

@@ -147,6 +147,7 @@ export interface AdminListing {
   sector: string;
   location: string;
   images: string[];
+  type: 'product' | 'service';
   createdAt?: string;
 }
 
