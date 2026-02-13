@@ -9,7 +9,10 @@ import {
     GetAdminBusinessesResponse,
     BusinessListing,
     UpdateBusinessDto,
-    BusinessDetail
+    BusinessDetail,
+    CreateAdminUserDto,
+    GetAdminTransactionsParams,
+    GetAdminTransactionsResponse
 } from './types';
 import { toast } from 'sonner';
 
@@ -50,9 +53,19 @@ const updateBusiness = async ({ id, data }: { id: string; data: UpdateBusinessDt
     return res.data;
 };
 
-const verifyBusiness = async (id: string): Promise<any> => {
-    const res = await api.post(`/admin/businesses/${id}/verify`);
+const verifyBusiness = async ({ id, isVerified }: { id: string; isVerified: boolean }): Promise<any> => {
+    const res = await api.patch(`/admin/businesses/${id}/verify`, { isVerified });
     return res.data;
+};
+
+const createAdminUser = async (data: CreateAdminUserDto): Promise<any> => {
+    const res = await api.post('/users/admin/create', data);
+    return res.data;
+};
+
+const getAdminTransactions = async (params: GetAdminTransactionsParams): Promise<GetAdminTransactionsResponse> => {
+    const { data } = await api.get('/admin/transactions', { params });
+    return data;
 };
 
 // --- Hooks ---
@@ -130,3 +143,27 @@ export const useVerifyBusiness = () => {
         }
     });
 };
+
+export const useCreateAdminUser = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: createAdminUser,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['admin-users'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-user-stats'] });
+            queryClient.invalidateQueries({ queryKey: ['admin-dashboard'] });
+            toast.success('User created successfully');
+        },
+        onError: (error: any) => {
+            toast.error(error?.response?.data?.message || 'Failed to create user');
+        }
+    });
+};
+
+export const useGetAdminTransactions = (params: GetAdminTransactionsParams) => {
+    return useQuery({
+        queryKey: ['admin-transactions', params],
+        queryFn: () => getAdminTransactions(params),
+    });
+};
+

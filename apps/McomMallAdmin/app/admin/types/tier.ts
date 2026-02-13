@@ -40,6 +40,8 @@ export interface Tier {
     features?: string[];
     configuration: TierConfiguration;
     isActive: boolean;
+    startDate?: string;
+    endDate?: string;
     createdAt?: string;
     updatedAt?: string;
 }

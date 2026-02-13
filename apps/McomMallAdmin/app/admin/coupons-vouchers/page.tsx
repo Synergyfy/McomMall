@@ -169,8 +169,8 @@ export default function CouponVoucherControl() {
     const selectedShopIds = form.watch('validShopIds') || [];
 
     const filteredShops = listings.filter(shop =>
-        (shop.title.toLowerCase().includes(shopSearch.toLowerCase()) ||
-            shop.businessName.toLowerCase().includes(shopSearch.toLowerCase())) &&
+        (shop.title?.toLowerCase().includes(shopSearch.toLowerCase()) ||
+            shop.businessName?.toLowerCase().includes(shopSearch.toLowerCase())) &&
         !selectedShopIds.includes(shop.id)
     );
 

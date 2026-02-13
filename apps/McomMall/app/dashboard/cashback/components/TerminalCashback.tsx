@@ -80,13 +80,13 @@ export const TerminalCashback = () => {
           </div>
           <h3 className="text-2xl font-bold tracking-tight text-slate-900">Terminal Cashback</h3>
         </div>
-        
+
         {isManagement && config && (
           <div className="flex items-center gap-3">
-            <Button 
-              variant="outline" 
+            <Button
+              variant="outline"
               size="sm"
-              onClick={() => setShowRewardsDialog(true)} 
+              onClick={() => setShowRewardsDialog(true)}
               className="rounded-lg border-slate-200 font-medium text-xs h-9 px-4 gap-2"
             >
               <Settings className="h-3.5 w-3.5 text-slate-400" />
@@ -238,26 +238,26 @@ function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; 
                         </td>
                         <td className="px-6 py-4 text-right">
                           <div className="flex items-center justify-end gap-3">
-                            <Button 
-                              size="sm" 
-                              variant="ghost" 
+                            <Button
+                              size="sm"
+                              variant="ghost"
                               onClick={() => setSelectedProof(claim.proofUrl)}
                               className="h-8 px-3 rounded-lg font-bold text-[10px] uppercase tracking-wider text-slate-400 hover:text-blue-600 hover:bg-blue-50"
                             >
                               <Eye className="w-3.5 h-3.5 mr-1.5" /> View Proof
                             </Button>
                             <div className="flex items-center gap-1.5">
-                              <Button 
-                                size="sm" 
-                                className="h-8 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-sm" 
+                              <Button
+                                size="sm"
+                                className="h-8 px-4 rounded-lg bg-emerald-500 hover:bg-emerald-600 text-white text-[11px] font-bold shadow-sm"
                                 onClick={() => handleAction(claim.id, 'APPROVED')}
                               >
                                 Accept
                               </Button>
-                              <Button 
-                                size="sm" 
+                              <Button
+                                size="sm"
                                 variant="destructive"
-                                className="h-8 px-4 rounded-lg text-[11px] font-bold shadow-sm" 
+                                className="h-8 px-4 rounded-lg text-[11px] font-bold shadow-sm"
                                 onClick={() => handleAction(claim.id, 'REJECTED')}
                               >
                                 Reject
@@ -296,28 +296,27 @@ function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; 
                     {historyClaims.map((claim) => (
                       <tr key={claim.id} className="hover:bg-slate-50/30 transition-colors">
                         <td className="px-6 py-4">
-                           <div className="flex items-center gap-3">
-                              <Avatar className="h-8 w-8 rounded-md bg-slate-100 border border-slate-50">
-                                <AvatarImage src={claim.customerImage} alt={claim.customerName} />
-                                <AvatarFallback className="text-slate-400 text-[9px] font-bold uppercase">
-                                  {claim.customerName ? claim.customerName.substring(0, 2).toUpperCase() : 'U'}
-                                </AvatarFallback>
-                              </Avatar>
-                              <div className="flex flex-col min-w-0">
-                                <span className="font-semibold text-slate-700 text-xs truncate">{claim.customerName}</span>
-                                <span className="text-[9px] text-slate-300 font-mono">Ref: {claim.id.slice(0, 4)}...</span>
-                              </div>
-                           </div>
+                          <div className="flex items-center gap-3">
+                            <Avatar className="h-8 w-8 rounded-md bg-slate-100 border border-slate-50">
+                              <AvatarImage src={claim.customerImage} alt={claim.customerName} />
+                              <AvatarFallback className="text-slate-400 text-[9px] font-bold uppercase">
+                                {claim.customerName ? claim.customerName.substring(0, 2).toUpperCase() : 'U'}
+                              </AvatarFallback>
+                            </Avatar>
+                            <div className="flex flex-col min-w-0">
+                              <span className="font-semibold text-slate-700 text-xs truncate">{claim.customerName}</span>
+                              <span className="text-[9px] text-slate-300 font-mono">Ref: {claim.id.slice(0, 4)}...</span>
+                            </div>
+                          </div>
                         </td>
                         <td className="px-6 py-4 text-xs text-slate-500">
                           {new Date(claim.date).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4">
-                          <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
-                            claim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
-                            claim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
-                            'bg-amber-50 text-amber-600'
-                          }`}>
+                          <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${claim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                              claim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
+                                'bg-amber-50 text-amber-600'
+                            }`}>
                             {claim.status}
                           </Badge>
                         </td>
@@ -345,9 +344,9 @@ function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; 
       <Dialog open={!!selectedProof} onOpenChange={(open) => !open && setSelectedProof(null)}>
         <DialogContent className="max-w-2xl rounded-2xl p-0 overflow-hidden border-none shadow-2xl">
           <div className="absolute top-4 right-4 z-50">
-             <Button variant="ghost" size="icon" onClick={() => setSelectedProof(null)} className="h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 text-white transition-all backdrop-blur-sm">
-               <X className="h-4 w-4" />
-             </Button>
+            <Button variant="ghost" size="icon" onClick={() => setSelectedProof(null)} className="h-8 w-8 rounded-full bg-black/10 hover:bg-black/20 text-white transition-all backdrop-blur-sm">
+              <X className="h-4 w-4" />
+            </Button>
           </div>
           <div className="bg-slate-900 flex items-center justify-center p-6 min-h-[400px]">
             {selectedProof && (
@@ -363,11 +362,11 @@ function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; 
             )}
           </div>
           <div className="bg-white px-6 py-4 border-t flex justify-between items-center">
-             <div className="flex items-center gap-2">
-                <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt Verified</span>
-             </div>
-             <Button onClick={() => setSelectedProof(null)} size="sm" className="rounded-lg font-bold text-xs bg-slate-900 hover:bg-black px-6">Close</Button>
+            <div className="flex items-center gap-2">
+              <div className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
+              <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Receipt Verified</span>
+            </div>
+            <Button onClick={() => setSelectedProof(null)} size="sm" className="rounded-lg font-bold text-xs bg-slate-900 hover:bg-black px-6">Close</Button>
           </div>
         </DialogContent>
       </Dialog>
@@ -391,11 +390,11 @@ function CustomerDashboard() {
       <div className="bg-white rounded-xl border border-slate-100 shadow-sm overflow-hidden">
         {claims.length === 0 ? (
           <div className="p-20 text-center flex flex-col items-center">
-             <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-4 border border-dashed border-slate-200">
-               <Receipt className="h-6 w-6 text-slate-300" />
-             </div>
-             <h4 className="text-sm font-semibold text-slate-900">No history found</h4>
-             <p className="text-xs text-slate-400 mt-1 max-w-sm">Scan a terminal QR code to begin earning cashback.</p>
+            <div className="w-14 h-14 bg-slate-50 rounded-xl flex items-center justify-center mb-4 border border-dashed border-slate-200">
+              <Receipt className="h-6 w-6 text-slate-300" />
+            </div>
+            <h4 className="text-sm font-semibold text-slate-900">No history found</h4>
+            <p className="text-xs text-slate-400 mt-1 max-w-sm">Scan a terminal QR code to begin earning cashback.</p>
           </div>
         ) : (
           <div className="overflow-x-auto">
@@ -437,11 +436,10 @@ function CustomerDashboard() {
                         {new Date(uiClaim.date).toLocaleDateString()}
                       </td>
                       <td className="px-6 py-4 text-center">
-                        <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
-                          uiClaim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
-                          uiClaim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
-                          'bg-amber-50 text-amber-600'
-                        }`}>
+                        <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${uiClaim.status === 'APPROVED' ? 'bg-emerald-50 text-emerald-600' :
+                            uiClaim.status === 'REJECTED' ? 'bg-rose-50 text-rose-600' :
+                              'bg-amber-50 text-amber-600'
+                          }`}>
                           {uiClaim.status}
                         </Badge>
                       </td>
@@ -451,9 +449,9 @@ function CustomerDashboard() {
                         </span>
                       </td>
                       <td className="px-6 py-4 text-right">
-                        <Button 
-                          size="sm" 
-                          variant="ghost" 
+                        <Button
+                          size="sm"
+                          variant="ghost"
                           onClick={() => setSelectedClaimId(uiClaim.id)}
                           className="h-8 px-4 rounded-lg font-bold text-[10px] uppercase tracking-wider bg-slate-50 hover:bg-slate-900 hover:text-white transition-all shadow-sm"
                         >
@@ -618,10 +616,10 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
       <DialogContent className="max-w-2xl rounded-3xl p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-8 pb-4 bg-white">
           <div className="flex items-center gap-3">
-             <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center">
-               <Zap className="h-5 w-5 text-orange-600" />
-             </div>
-             <DialogTitle className="text-2xl font-bold tracking-tight uppercase leading-none">Rewards Config</DialogTitle>
+            <div className="h-10 w-10 bg-orange-50 rounded-xl flex items-center justify-center">
+              <Zap className="h-5 w-5 text-orange-600" />
+            </div>
+            <DialogTitle className="text-2xl font-bold tracking-tight uppercase leading-none">Rewards Config</DialogTitle>
           </div>
           <p className="text-[10px] text-slate-400 font-bold uppercase tracking-widest ml-14">Set your tier-based cashback rates</p>
         </DialogHeader>
@@ -639,41 +637,41 @@ function ManageRewardsDialog({ config, open, onOpenChange }: { config: TerminalC
                   <div className="col-span-3 space-y-1.5">
                     <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Min Spend</Label>
                     <div className="relative">
-                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
-                       <Input
-                         type="number"
-                         min={0}
-                         value={range.minSpend}
-                         onChange={(e) => handleChange(idx, 'minSpend', parseFloat(e.target.value))}
-                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
-                       />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={range.minSpend}
+                        onChange={(e) => handleChange(idx, 'minSpend', parseFloat(e.target.value))}
+                        className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
+                      />
                     </div>
                   </div>
                   <div className="col-span-3 space-y-1.5">
                     <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Max Spend</Label>
                     <div className="relative">
-                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
-                       <Input
-                         type="number"
-                         min={0}
-                         value={range.maxSpend}
-                         onChange={(e) => handleChange(idx, 'maxSpend', parseFloat(e.target.value))}
-                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
-                       />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-300 font-bold text-xs">£</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        value={range.maxSpend}
+                        onChange={(e) => handleChange(idx, 'maxSpend', parseFloat(e.target.value))}
+                        className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs"
+                      />
                     </div>
                   </div>
                   <div className="col-span-3 space-y-1.5">
                     <Label className="text-[9px] font-bold text-slate-400 uppercase tracking-widest ml-1">Cashback</Label>
                     <div className="relative">
-                       <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-300 font-bold text-xs">£</span>
-                       <Input
-                         type="number"
-                         min={0}
-                         step={0.01}
-                         value={range.rewardValue}
-                         onChange={(e) => handleChange(idx, 'rewardValue', parseFloat(e.target.value))}
-                         className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs text-green-600"
-                       />
+                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-green-300 font-bold text-xs">£</span>
+                      <Input
+                        type="number"
+                        min={0}
+                        step={0.01}
+                        value={range.rewardValue}
+                        onChange={(e) => handleChange(idx, 'rewardValue', parseFloat(e.target.value))}
+                        className="bg-white border-slate-100 rounded-xl h-9 pl-7 font-bold text-xs text-green-600"
+                      />
                     </div>
                   </div>
                   <div className="col-span-2 flex items-center justify-center pb-2">
@@ -782,7 +780,7 @@ function TerminalShareButton({ terminalId, isLoading }: { terminalId?: string; i
               />
             </div>
             <Button onClick={downloadQRCode} className="w-full h-10 rounded-xl bg-orange-600 hover:bg-orange-700 font-bold text-xs uppercase tracking-widest" variant="default">
-               Save PNG
+              Save PNG
             </Button>
           </TabsContent>
           <TabsContent value="link" className="space-y-6 p-8 bg-white">
@@ -815,17 +813,22 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
       <DialogContent className="max-w-md rounded-[2.5rem] p-0 overflow-hidden border-none shadow-2xl">
         <DialogHeader className="p-6 bg-slate-900 text-white relative">
           <div className="absolute top-0 right-0 p-6 opacity-10">
-             <Receipt className="h-16 w-16 rotate-12" />
+            <Receipt className="h-16 w-16 rotate-12" />
           </div>
-          <DialogTitle className="font-bold text-xl tracking-tight flex items-center gap-3 italic">
-            <Zap className="h-5 w-5 text-orange-400" />
-            REWARD LOGISTICS
-          </DialogTitle>
+          <div className="space-y-1">
+            <div className="flex items-center gap-2 mb-1">
+              <Store className="h-4 w-4 text-orange-400" />
+              <span className="text-[9px] font-bold text-orange-400 uppercase tracking-widest">Merchant</span>
+            </div>
+            <DialogTitle className="font-bold text-xl tracking-tight">
+              {claim?.ownerName || claim?.ownerId || 'Business Name'}
+            </DialogTitle>
+          </div>
         </DialogHeader>
         {isLoading ? (
           <div className="flex flex-col items-center justify-center p-20 space-y-4 bg-white">
-             <div className="w-10 h-10 border-4 border-slate-100 border-t-orange-600 rounded-full animate-spin" />
-             <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Querying database...</p>
+            <div className="w-10 h-10 border-4 border-slate-100 border-t-orange-600 rounded-full animate-spin" />
+            <p className="text-slate-400 font-bold text-[10px] uppercase tracking-widest">Querying database...</p>
           </div>
         ) : claim ? (
           <div className="p-8 space-y-8 bg-white">
@@ -833,11 +836,10 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
               <div className="space-y-1">
                 <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Status</Label>
                 <div className="pt-1">
-                  <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${
-                    claim.status === "APPROVED" ? "bg-emerald-50 text-emerald-600" :
-                    claim.status === "REJECTED" ? "bg-rose-50 text-rose-600" :
-                    "bg-amber-50 text-amber-600"
-                  }`}>
+                  <Badge variant="secondary" className={`rounded-md px-2 py-0 h-5 text-[9px] font-bold uppercase tracking-wider border-none ${claim.status === "APPROVED" ? "bg-emerald-50 text-emerald-600" :
+                      claim.status === "REJECTED" ? "bg-rose-50 text-rose-600" :
+                        "bg-amber-50 text-amber-600"
+                    }`}>
                     {claim.status}
                   </Badge>
                 </div>
@@ -854,11 +856,8 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
               </div>
 
               <div className="space-y-1 text-right">
-                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Merchant</Label>
-                <div className="flex items-center justify-end gap-2 text-xs font-bold text-slate-900 truncate uppercase tracking-tighter">
-                  <span className="truncate">{claim.ownerName || claim.ownerId}</span>
-                  <Store className="h-3 w-3 text-slate-200 shrink-0" />
-                </div>
+                <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">Submitted</Label>
+                <p className="text-xs font-medium text-slate-600 pt-1">{new Date(claim.submittedAt).toLocaleDateString()}</p>
               </div>
             </div>
 
@@ -876,7 +875,7 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
                 </div>
               </div>
             )}
-            
+
             <Button onClick={onClose} className="w-full h-14 rounded-2xl font-bold text-sm bg-slate-900 hover:bg-black text-white border-none shadow-none uppercase tracking-widest transition-all">
               Close Record
             </Button>
@@ -896,7 +895,7 @@ function mapTerminalClaimToUI(apiClaim: TerminalClaim): ClaimUI {
   let customerName = "Guest User";
   let customerEmail = undefined;
   let customerImage = undefined;
-  
+
   if (apiClaim.user) {
     customerName = apiClaim.user.name || `${apiClaim.user.firstName} ${apiClaim.user.lastName}`.trim() || apiClaim.user.email || "Unknown User";
     customerEmail = apiClaim.user.email;

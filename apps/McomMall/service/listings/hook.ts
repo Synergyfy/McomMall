@@ -174,7 +174,7 @@ export const useGetInHouseBusiness = ({
       const response = await api.get('listings/search', {
         params: { queryText },
       });
-      return response.data as InHouseBusinessResults;
+      return response.data.data as InHouseBusinessResults;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
       throw new Error(
