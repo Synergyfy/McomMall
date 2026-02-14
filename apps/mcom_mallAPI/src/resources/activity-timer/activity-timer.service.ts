@@ -2,6 +2,7 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In, LessThanOrEqual, MoreThanOrEqual, Raw } from 'typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
+import { ActivityTimerDefinition } from './entities/activity-timer-definition.entity';
 import { User } from '../users/entities/user.entity';
 import { ActivityTaskType, ActivityTimerType } from './enums/activity-task-type.enum';
 
@@ -10,25 +11,90 @@ export class ActivityTimerService {
   constructor(
     @InjectRepository(ActivityTimer)
     private readonly timerRepository: Repository<ActivityTimer>,
+    @InjectRepository(ActivityTimerDefinition)
+    private readonly definitionRepository: Repository<ActivityTimerDefinition>,
   ) { }
 
   // --- Admin: Publish a Task ---
 
-  async createTaskForTiers(dto: any, TierClass: any, UserClass: any): Promise<void> {
-    // This method would normally take a DTO with title, description, key, actionUrl, type, durationDays, and targetTierIds.
-    // Since we don't have the DTO defined in this file context, I'll assume 'dto' has these fields.
-    // This logic replaces "assignTimerToUser" for mass creation.
+  async createTaskForTiers(dto: any): Promise<{ count: number }> {
+    const { title, description, key, actionUrl, type, durationDays, targetTierIds, expiresAt } = dto;
 
-    // 1. Find all eligible users
-    // In a real app, this might be a heavy query or processed via queue. 
-    // For now, we'll implement the basic structure.
+    // 0. Save Task Definition (Log)
+    const definition = this.definitionRepository.create({
+      title,
+      description,
+      key,
+      actionUrl,
+      type,
+      durationDays,
+      targetTierIds,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+    });
+    await this.definitionRepository.save(definition);
 
-    // const eligibleUsers = await this.userRepository.find({ ... }); 
-    // for (const user of eligibleUsers) { ... create ActivityTimer ... }
+    // 1. Find eligible users
+    let query = this.timerRepository.manager.createQueryBuilder(User, 'user')
+      .leftJoinAndSelect('user.membership', 'membership');
 
-    // NOTE: The user asked to "Implement createTask (Admin publishes a task -> creates rows for users)"
-    // I will implement a simplified version that can be called by the controller.
-    return;
+    if (targetTierIds && targetTierIds.length > 0) {
+      query = query.where('membership.tierId IN (:...tierIds)', { tierIds: targetTierIds });
+    }
+
+    // Optional: Filter only active members? specific roles? 
+    // For now, target all matching users.
+    const users = await query.getMany();
+
+    if (!users.length) return;
+
+    // 2. Prepare Task Data
+    const tasksToCreate = [];
+    const now = new Date();
+
+    // For GENERAL tasks, if durationDays is provided, calculate expiresAt relative to NOW
+    let calculatedExpiresAt: Date | null = null;
+    if (type === ActivityTimerType.GENERAL) {
+      if (expiresAt) {
+        calculatedExpiresAt = new Date(expiresAt);
+      } else if (durationDays) {
+        calculatedExpiresAt = new Date(now.getTime() + durationDays * 24 * 60 * 60 * 1000);
+      } else {
+        // Default fallback if neither provided? 
+        // Let's assume 7 days default for now or throw error.
+        calculatedExpiresAt = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
+      }
+    }
+
+    // 3. Create Tasks
+    // Bulk insert might be more efficient, but let's loop for safety with TypeORM entities first.
+    // For very large user bases, this should be a batch job.
+
+    for (const user of users) {
+      const task = new ActivityTimer();
+      task.user = user;
+      task.type = type;
+      task.title = title;
+      task.description = description;
+      task.key = key;
+      task.actionUrl = actionUrl;
+      task.isActive = true;
+      task.isCompleted = false;
+
+      if (type === ActivityTimerType.GENERAL) {
+        task.expiresAt = calculatedExpiresAt;
+      }
+
+      tasksToCreate.push(task);
+    }
+
+    await this.timerRepository.save(tasksToCreate);
+    return { count: tasksToCreate.length };
+  }
+
+  async findAllDefinitions(): Promise<ActivityTimerDefinition[]> {
+    return this.definitionRepository.find({
+      order: { createdAt: 'DESC' },
+    });
   }
 
   // --- Core Logic ---

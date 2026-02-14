@@ -1,6 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { ActivityTimerService } from './activity-timer.service';
+import { PublishTaskDto } from './dto/activity-timer.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Request } from 'express';
@@ -12,6 +13,24 @@ import { ActivityTimer } from './entities/activity-timer.entity';
 @Controller('activity-timer')
 export class ActivityTimerController {
   constructor(private readonly timerService: ActivityTimerService) { }
+
+  // --- Admin Endpoints ---
+
+  @Post('admin/publish')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Publish a new Activity Task to users (Admin)' })
+  @ApiResponse({ status: 201, description: 'Task published successfully' })
+  publishTask(@Body() dto: PublishTaskDto) {
+    return this.timerService.createTaskForTiers(dto);
+  }
+
+  @Get('admin/definitions')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Get all published task definitions (Admin)' })
+  @ApiResponse({ status: 200, description: 'List of definitions' })
+  getDefinitions() {
+    return this.timerService.findAllDefinitions();
+  }
 
   // --- User Endpoints ---
 

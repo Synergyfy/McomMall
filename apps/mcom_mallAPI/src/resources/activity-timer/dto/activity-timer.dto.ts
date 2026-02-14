@@ -32,3 +32,14 @@ export class CreateActivityTaskDto {
   @IsDateString()
   expiresAt?: Date;
 }
+
+export class PublishTaskDto extends CreateActivityTaskDto {
+  @ApiProperty({ type: [String], description: 'List of Tier IDs to target. Empty means all tiers.' })
+  @IsOptional()
+  targetTierIds?: string[];
+
+  @ApiProperty({ description: 'Duration in days for GENERAL tasks (alternative to fixed expiry)', required: false })
+  @IsOptional()
+  @IsNumber()
+  durationDays?: number;
+}
