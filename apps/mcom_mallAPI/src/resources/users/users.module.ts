@@ -17,6 +17,7 @@ import { Wallet } from '../wallet/entities/wallet.entity';
 import { ProvisionModule } from '../provision/provision.module';
 import { MembershipModule } from '../membership/membership.module';
 import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
+import { TierModule } from '../tier/tier.module';
 
 @Module({
   imports: [
@@ -36,7 +37,9 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
     ProvisionModule,
     ProvisionModule,
     MembershipModule,
-    ActivityTimerModule
+    MembershipModule,
+    ActivityTimerModule,
+    TierModule
   ],
   controllers: [UsersController],
   providers: [UsersService, HashService],

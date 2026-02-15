@@ -4,7 +4,7 @@ import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
 import { useGetTiers, useCreateTier, useUpdateTier, useDeleteTier } from '@/service/tiers/hook';
-import { Tier, CreateTierInput, UpdateTierInput } from '@/app/admin/types/tier';
+import { Tier, CreateTierInput, UpdateTierInput, TierType } from '@/app/admin/types/tier';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -36,7 +36,7 @@ function TiersContent() {
     const [isDialogOpen, setIsDialogOpen] = useState(false);
     const [isTypeModalOpen, setIsTypeModalOpen] = useState(false);
     const [selectedTier, setSelectedTier] = useState<Tier | undefined>(undefined);
-    const [seasonalTierBase, setSeasonalTierBase] = useState<Partial<Tier> | undefined>(undefined);
+    const [creationDefaults, setCreationDefaults] = useState<Partial<Tier> | undefined>(undefined);
     const [tierToDelete, setTierToDelete] = useState<string | null>(null);
 
     useEffect(() => {
@@ -45,10 +45,11 @@ function TiersContent() {
         const endDate = searchParams.get('endDate');
 
         if (type === 'seasonal' && startDate && endDate) {
-            setSeasonalTierBase({
+            setCreationDefaults({
                 startDate,
                 endDate,
                 name: 'Seasonal Tier',
+                type: TierType.SEASONAL,
             });
             setIsDialogOpen(true);
             // Clear params from URL without refreshing
@@ -64,7 +65,22 @@ function TiersContent() {
 
     const handleSelectStandard = () => {
         setSelectedTier(undefined);
-        setSeasonalTierBase(undefined);
+        setCreationDefaults({ type: TierType.STANDARD });
+        setIsTypeModalOpen(false);
+        setIsDialogOpen(true);
+    };
+
+    const handleSelectTrial = () => {
+        setSelectedTier(undefined);
+        setCreationDefaults({
+            type: TierType.TRIAL,
+            name: 'Free Trial',
+            trialDuration: 14,
+            monthlyPrice: 0,
+            quarterlyPrice: 0,
+            annualPrice: 0,
+            isActive: true,
+        });
         setIsTypeModalOpen(false);
         setIsDialogOpen(true);
     };
@@ -129,7 +145,11 @@ function TiersContent() {
                         )}
 
                         <CardHeader>
-                            <CardTitle className="text-xl">{tier.name}</CardTitle>
+                            <CardTitle className="text-xl flex items-center gap-2">
+                                {tier.name}
+                                {tier.type === TierType.TRIAL && <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Trial</Badge>}
+                                {tier.type === TierType.SEASONAL && <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Seasonal</Badge>}
+                            </CardTitle>
                             <CardDescription className="line-clamp-2 min-h-[40px]">
                                 {tier.description}
                             </CardDescription>
@@ -185,7 +205,7 @@ function TiersContent() {
 
                     <TierForm
                         formId={formId}
-                        initialData={selectedTier || (seasonalTierBase as Tier)}
+                        initialData={selectedTier || (creationDefaults as Tier)}
                         onSubmit={handleSubmit}
                     />
 
@@ -226,6 +246,7 @@ function TiersContent() {
                 open={isTypeModalOpen}
                 onOpenChange={setIsTypeModalOpen}
                 onSelectStandard={handleSelectStandard}
+                onSelectTrial={handleSelectTrial}
             />
         </div>
 

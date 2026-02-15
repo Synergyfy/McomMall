@@ -18,18 +18,18 @@ export class ActivityTimerController {
 
   @Post('admin/publish')
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Publish a new Activity Task to users (Admin)' })
-  @ApiResponse({ status: 201, description: 'Task published successfully' })
+  @ApiOperation({ summary: 'Publish a new Activity Timer Definition (Admin)' })
+  @ApiResponse({ status: 201, description: 'Task published successfully', type: ActivityTimer })
   publishTask(@Body() dto: PublishTaskDto) {
-    return this.timerService.createTaskForTiers(dto);
+    return this.timerService.createActivity(dto);
   }
 
   @Get('admin/definitions')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all published task definitions (Admin)' })
-  @ApiResponse({ status: 200, description: 'List of definitions' })
+  @ApiResponse({ status: 200, description: 'List of definitions', type: [ActivityTimer] })
   getDefinitions() {
-    return this.timerService.findAllDefinitions();
+    return this.timerService.findAllActivities();
   }
 
   // --- User Endpoints ---

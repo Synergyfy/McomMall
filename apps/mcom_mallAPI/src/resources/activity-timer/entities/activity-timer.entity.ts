@@ -9,10 +9,6 @@ export class ActivityTimer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
   @ApiProperty({ enum: ActivityTimerType, example: ActivityTimerType.GENERAL })
   @Column({
     type: 'enum',
@@ -37,9 +33,13 @@ export class ActivityTimer {
   @Column({ nullable: true })
   actionUrl: string;
 
-  @ApiProperty({ example: false })
-  @Column({ default: false })
-  isCompleted: boolean;
+  @ApiProperty({ nullable: true })
+  @Column({ type: 'simple-array', nullable: true }) // Store tier IDs as comma-separated string
+  targetTierIds: string[];
+
+  @ApiProperty({ nullable: true })
+  @Column({ nullable: true })
+  durationDays: number;
 
   @ApiProperty({ example: '2026-02-11T10:00:00Z' })
   @CreateDateColumn()
@@ -47,11 +47,7 @@ export class ActivityTimer {
 
   @ApiProperty({ example: '2026-02-25T10:00:00Z', nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  expiresAt: Date; // For GENERAL tasks. Trial tasks calculate expiry dynamically.
-
-  @ApiProperty({ example: '2026-02-15T10:00:00Z', nullable: true })
-  @Column({ type: 'timestamp', nullable: true })
-  completedAt: Date;
+  expiresAt: Date; // For GENERAL tasks with fixed expiry.
 
   @ApiProperty({ example: true })
   @Column({ default: true })

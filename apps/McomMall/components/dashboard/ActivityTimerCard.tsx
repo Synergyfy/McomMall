@@ -70,8 +70,9 @@ export const ActivityTimerCard: FC<ActivityTimerCardProps> = ({
     };
 
     const formattedTime = formatTime(timeLeft);
-    const completedTasks = timer.tasks.filter(t => t.isCompleted).length;
-    const progress = (completedTasks / timer.tasks.length) * 100;
+    const tasks = timer.tasks || [];
+    const completedTasks = tasks.filter(t => t.isCompleted).length;
+    const progress = tasks.length > 0 ? (completedTasks / tasks.length) * 100 : 0;
     const isExpired = timeLeft <= 0;
 
     return (
@@ -184,11 +185,11 @@ export const ActivityTimerCard: FC<ActivityTimerCardProps> = ({
                             <div className="flex justify-between items-end mb-4">
                                 <div>
                                     <h4 className="font-bold text-slate-900 text-lg tracking-tight">Milestones</h4>
-                                    <p className="text-xs text-slate-500 font-medium">{timer.tasks.length} tasks identified for your business</p>
+                                    <p className="text-xs text-slate-500 font-medium">{tasks.length} tasks identified for your business</p>
                                 </div>
                                 <div className="text-right">
                                     <span className="text-2xl font-black text-orange-600 leading-none">{completedTasks}</span>
-                                    <span className="text-sm font-bold text-slate-400">/{timer.tasks.length}</span>
+                                    <span className="text-sm font-bold text-slate-400">/{tasks.length}</span>
                                 </div>
                             </div>
 
@@ -202,7 +203,7 @@ export const ActivityTimerCard: FC<ActivityTimerCardProps> = ({
                             </div>
 
                             <div className="grid gap-3">
-                                {timer.tasks.map((task, idx) => (
+                                {tasks.map((task, idx) => (
                                     <motion.div
                                         key={task.key}
                                         initial={{ opacity: 0, x: 20 }}

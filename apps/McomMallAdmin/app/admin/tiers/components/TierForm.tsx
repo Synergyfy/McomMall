@@ -16,13 +16,15 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tier, CreateTierInput, UpdateTierInput } from '@/app/admin/types/tier';
+import { Tier, CreateTierInput, UpdateTierInput, TierType } from '@/app/admin/types/tier';
 import { useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 const tierSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     description: z.string().min(1, 'Description is required'),
+    type: z.nativeEnum(TierType).optional(),
+    trialDuration: z.coerce.number().min(0).optional(),
     monthlyPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
     quarterlyPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
     annualPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
@@ -57,14 +59,44 @@ const tierSchema = z.object({
     isActive: z.boolean(),
     startDate: z.string().optional(),
     endDate: z.string().optional(),
+}).refine(data => {
+    if (data.type === TierType.TRIAL) {
+        return !!data.trialDuration && data.trialDuration > 0;
+    }
+    return true;
+}, {
+    message: "Trial duration is required and must be greater than 0 for Trial tiers",
+    path: ["trialDuration"],
 });
 
+
+const DEFAULT_CONFIGURATION = {
+    quotas: {
+        maxListings: 10,
+        allowProductListing: true,
+        allowServiceListing: true,
+        maxProducts: 5,
+        maxServices: 5,
+        maxGiftCardTemplates: 1,
+        maxCouponTemplates: 1,
+        maxLoyaltyPrograms: 0,
+        maxImagesPerListing: 3,
+        featuredListingAllowance: 0,
+    },
+    featureFlags: {
+        priorityInSearch: false,
+        advancedAnalytics: false,
+        dedicatedSupport: false,
+        allowCustomBranding: false,
+        allowGroupCreation: false,
+    },
+};
 
 type TierFormValues = z.infer<typeof tierSchema>;
 
 interface TierFormProps {
     formId: string;
-    initialData?: Tier;
+    initialData?: Partial<Tier>;
     onSubmit: (data: CreateTierInput | UpdateTierInput) => void;
 }
 
@@ -74,6 +106,8 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
         defaultValues: {
             name: '',
             description: '',
+            type: TierType.STANDARD,
+            trialDuration: 14,
             monthlyPrice: 0,
             quarterlyPrice: 0,
             annualPrice: 0,
@@ -84,27 +118,7 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
             paypalQuarterlyPlanId: '',
             paypalAnnualPlanId: '',
             features: [],
-            configuration: {
-                quotas: {
-                    maxListings: 10,
-                    allowProductListing: true,
-                    allowServiceListing: true,
-                    maxProducts: 5,
-                    maxServices: 5,
-                    maxGiftCardTemplates: 1,
-                    maxCouponTemplates: 1,
-                    maxLoyaltyPrograms: 0,
-                    maxImagesPerListing: 3,
-                    featuredListingAllowance: 0,
-                },
-                featureFlags: {
-                    priorityInSearch: false,
-                    advancedAnalytics: false,
-                    dedicatedSupport: false,
-                    allowCustomBranding: false,
-                    allowGroupCreation: false,
-                },
-            },
+            configuration: DEFAULT_CONFIGURATION,
             isActive: true,
             startDate: '',
             endDate: '',
@@ -119,8 +133,24 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
 
     useEffect(() => {
         if (initialData) {
+            const initialConfig = initialData.configuration || DEFAULT_CONFIGURATION;
+            const mergedConfig = {
+                quotas: {
+                    ...DEFAULT_CONFIGURATION.quotas,
+                    ...(initialConfig.quotas || {}),
+                },
+                featureFlags: {
+                    ...DEFAULT_CONFIGURATION.featureFlags,
+                    ...(initialConfig.featureFlags || {}),
+                },
+            };
+
+            console.log('Resetting form with config:', mergedConfig); // Debugging
+
             form.reset({
                 ...initialData,
+                type: initialData.type || TierType.STANDARD,
+                trialDuration: initialData.trialDuration || 14,
                 stripeMonthlyPriceId: initialData.stripeMonthlyPriceId || '',
                 stripeQuarterlyPriceId: initialData.stripeQuarterlyPriceId || '',
                 stripeAnnualPriceId: initialData.stripeAnnualPriceId || '',
@@ -128,15 +158,24 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                 paypalQuarterlyPlanId: initialData.paypalQuarterlyPlanId || '',
                 paypalAnnualPlanId: initialData.paypalAnnualPlanId || '',
                 features: initialData.features || [],
+                configuration: mergedConfig,
                 quarterlyPrice: initialData.quarterlyPrice || 0,
                 startDate: initialData.startDate || '',
                 endDate: initialData.endDate || '',
-            });
+            } as TierFormValues);
 
         }
     }, [initialData, form]);
 
     const handleSubmit = (values: TierFormValues) => {
+        // Ensure configuration is complete on submit if something went wrong
+        const config = values.configuration || DEFAULT_CONFIGURATION;
+        const mergedConfig = {
+            quotas: { ...DEFAULT_CONFIGURATION.quotas, ...(config.quotas || {}) },
+            featureFlags: { ...DEFAULT_CONFIGURATION.featureFlags, ...(config.featureFlags || {}) },
+        };
+        values.configuration = mergedConfig;
+
         onSubmit(values);
     };
 
@@ -145,9 +184,9 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
             <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto min-h-0 p-1">
                 <div className="pb-4">
                     <Tabs defaultValue="general" className="w-full">
-                        <TabsList className="grid w-full grid-cols-4 mb-4">
+                        <TabsList className={`grid w-full mb-4 ${form.watch('type') === TierType.TRIAL ? 'grid-cols-3' : 'grid-cols-4'}`}>
                             <TabsTrigger value="general">General</TabsTrigger>
-                            <TabsTrigger value="pricing">Pricing</TabsTrigger>
+                            {form.watch('type') !== TierType.TRIAL && <TabsTrigger value="pricing">Pricing</TabsTrigger>}
                             <TabsTrigger value="quotas">Quotas</TabsTrigger>
                             <TabsTrigger value="features">Features</TabsTrigger>
                         </TabsList>
@@ -202,6 +241,24 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                                     </FormItem>
                                 )}
                             />
+                            {form.watch('type') === TierType.TRIAL && (
+                                <FormField
+                                    control={form.control}
+                                    name="trialDuration"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Trial Duration (Days)</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                            <FormDescription>
+                                                Number of days the free trial lasts.
+                                            </FormDescription>
+                                            <FormMessage />
+                                        </FormItem>
+                                    )}
+                                />
+                            )}
                             {form.watch('startDate') && (
                                 <div className="grid grid-cols-2 gap-4 pt-4 border-t">
                                     <FormField
@@ -236,149 +293,151 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
 
 
                         {/* Pricing Tab */}
-                        <TabsContent value="pricing" className="space-y-4">
-                            <div className="grid grid-cols-3 gap-4">
-                                <FormField
-                                    control={form.control}
-                                    name="monthlyPrice"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Monthly Price</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
-                                                    <Input type="number" step="0.01" className="pl-7" {...field} />
-                                                </div>
-                                            </FormControl>
-                                            <FormDescription>Price billed every month.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="quarterlyPrice"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Quarterly Price</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
-                                                    <Input type="number" step="0.01" className="pl-7" {...field} />
-                                                </div>
-                                            </FormControl>
-                                            <FormDescription>Price billed every 3 months.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="annualPrice"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Annual Price</FormLabel>
-                                            <FormControl>
-                                                <div className="relative">
-                                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
-                                                    <Input type="number" step="0.01" className="pl-7" {...field} />
-                                                </div>
-                                            </FormControl>
-                                            <FormDescription>Price billed every year.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                            </div>
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-medium text-sm text-muted-foreground">Stripe IDs</h3>
+                        {form.watch('type') !== TierType.TRIAL && (
+                            <TabsContent value="pricing" className="space-y-4">
                                 <div className="grid grid-cols-3 gap-4">
                                     <FormField
                                         control={form.control}
-                                        name="stripeMonthlyPriceId"
+                                        name="monthlyPrice"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Monthly Price ID</FormLabel>
+                                                <FormLabel>Monthly Price</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="price_..." {...field} />
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
+                                                        <Input type="number" step="0.01" className="pl-7" {...field} />
+                                                    </div>
                                                 </FormControl>
+                                                <FormDescription>Price billed every month.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                     <FormField
                                         control={form.control}
-                                        name="stripeQuarterlyPriceId"
+                                        name="quarterlyPrice"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Quarterly Price ID</FormLabel>
+                                                <FormLabel>Quarterly Price</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="price_..." {...field} />
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
+                                                        <Input type="number" step="0.01" className="pl-7" {...field} />
+                                                    </div>
                                                 </FormControl>
+                                                <FormDescription>Price billed every 3 months.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                     <FormField
                                         control={form.control}
-                                        name="stripeAnnualPriceId"
+                                        name="annualPrice"
                                         render={({ field }) => (
                                             <FormItem>
-                                                <FormLabel>Annual Price ID</FormLabel>
+                                                <FormLabel>Annual Price</FormLabel>
                                                 <FormControl>
-                                                    <Input placeholder="price_..." {...field} />
+                                                    <div className="relative">
+                                                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500">£</span>
+                                                        <Input type="number" step="0.01" className="pl-7" {...field} />
+                                                    </div>
                                                 </FormControl>
+                                                <FormDescription>Price billed every year.</FormDescription>
                                                 <FormMessage />
                                             </FormItem>
                                         )}
                                     />
                                 </div>
-                            </div>
-                            <div className="space-y-4 pt-4 border-t">
-                                <h3 className="font-medium text-sm text-muted-foreground">PayPal IDs</h3>
-                                <div className="grid grid-cols-3 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="paypalMonthlyPlanId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Monthly Plan ID</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="P-..." {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="paypalQuarterlyPlanId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Quarterly Plan ID</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="P-..." {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="paypalAnnualPlanId"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Annual Plan ID</FormLabel>
-                                                <FormControl>
-                                                    <Input placeholder="P-..." {...field} />
-                                                </FormControl>
-                                                <FormMessage />
-                                            </FormItem>
-                                        )}
-                                    />
+                                <div className="space-y-4 pt-4 border-t">
+                                    <h3 className="font-medium text-sm text-muted-foreground">Stripe IDs</h3>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="stripeMonthlyPriceId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Monthly Price ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="price_..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="stripeQuarterlyPriceId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Quarterly Price ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="price_..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="stripeAnnualPriceId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Annual Price ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="price_..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
                                 </div>
-                            </div>
-                        </TabsContent>
+                                <div className="space-y-4 pt-4 border-t">
+                                    <h3 className="font-medium text-sm text-muted-foreground">PayPal IDs</h3>
+                                    <div className="grid grid-cols-3 gap-4">
+                                        <FormField
+                                            control={form.control}
+                                            name="paypalMonthlyPlanId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Monthly Plan ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="P-..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="paypalQuarterlyPlanId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Quarterly Plan ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="P-..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                        <FormField
+                                            control={form.control}
+                                            name="paypalAnnualPlanId"
+                                            render={({ field }) => (
+                                                <FormItem>
+                                                    <FormLabel>Annual Plan ID</FormLabel>
+                                                    <FormControl>
+                                                        <Input placeholder="P-..." {...field} />
+                                                    </FormControl>
+                                                    <FormMessage />
+                                                </FormItem>
+                                            )}
+                                        />
+                                    </div>
+                                </div>
+                            </TabsContent>
+                        )}
 
                         {/* Quotas Tab */}
                         <TabsContent value="quotas" className="space-y-4">
