@@ -45,19 +45,6 @@ export class ActivityTimerController {
     return this.timerService.getUserActiveTasks(req.user as any);
   }
 
-  @Post('pause')
-  @ApiOperation({ summary: 'Pause Trial Timer (Trial users only)' })
-  @ApiResponse({ status: 201, description: 'Trial paused' })
-  pause(@Req() req: Request) {
-    return this.timerService.pauseTrial(req.user['id']);
-  }
-
-  @Post('resume')
-  @ApiOperation({ summary: 'Resume Trial Timer (Trial users only)' })
-  @ApiResponse({ status: 201, description: 'Trial resumed' })
-  resume(@Req() req: Request) {
-    return this.timerService.resumeTrial(req.user['id']);
-  }
 
   @Post('complete-task/:key')
   @ApiOperation({ summary: 'Mark a task as completed by Key' })

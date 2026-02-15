@@ -8,7 +8,6 @@ import { ServicesController } from './services.controller';
 import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
 import { ActivitiesModule } from '../activities/activities.module';
-import { TrialModule } from '../trial/trial.module';
 import { CapabilityModule } from '../capability/capability.module';
 
 @Module({
@@ -22,7 +21,6 @@ import { CapabilityModule } from '../capability/capability.module';
       User,
     ]),
     ActivitiesModule,
-    TrialModule,
   ],
   controllers: [ServicesController],
   providers: [ServicesService],

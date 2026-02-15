@@ -4,7 +4,6 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { HashService } from '../../common/hash/hash.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { Social } from './entities/social.entity';
 import { UpdateUserDto } from './dto/update-user.dto';
 
@@ -32,10 +31,6 @@ describe('UsersController', () => {
         },
         {
           provide: getRepositoryToken(User),
-          useValue: {},
-        },
-        {
-          provide: getRepositoryToken(Trial),
           useValue: {},
         },
         {

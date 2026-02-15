@@ -7,10 +7,12 @@ import {
   PauseResumeTrialDto,
   RecordPaymentRequest,
   SubscriptionStatusResponse,
+  SubscriptionStatusEnum,
   TrialAction,
   TrialStatusResponse,
 } from './types';
 import { ErrorResponse } from '../listings/hook';
+import { Membership } from '../membership/types';
 
 export const useGetSubscriptionStatus = () => {
   const fetch = async (): Promise<SubscriptionStatusResponse> => {
@@ -21,8 +23,8 @@ export const useGetSubscriptionStatus = () => {
       const err = error as ErrorResponse;
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch subscription status'
+        err.message ||
+        'Failed to fetch subscription status'
       );
     }
   };
@@ -39,27 +41,45 @@ export const useGetSubscriptionStatus = () => {
 export const useGetTrialStatus = () => {
   const fetchAndTransform = async (): Promise<TrialStatusResponse | null> => {
     try {
-      const response = await api.get<TrialStatusResponse>('/trial');
-      const data = response.data;
+      const [statusRes, membershipRes] = await Promise.all([
+        api.get<SubscriptionStatusResponse>('/payments/status'),
+        api.get<Membership>('/membership/my').catch(() => ({ data: null })), 
+      ]);
 
-      if (!data) {
+      const statusData = statusRes.data;
+      const membership = membershipRes.data;
+
+      if (statusData.status !== SubscriptionStatusEnum.TRIAL_ACTIVE && statusData.status !== SubscriptionStatusEnum.TRIAL_EXPIRED) {
         return null;
       }
 
-      // Derive UI-related fields from the core API response
-      const maxPauses = 2;
-      const pausesCount = data.pauses?.length || 0;
-      const lastPause = pausesCount > 0 ? data.pauses[pausesCount - 1] : null;
+      // Calculate expiresAt from membership creation date + duration
+      let expiresAt = statusData.trialEndDate || undefined;
+      if (membership && membership.created_at && membership.trialDuration) {
+        const createdAt = new Date(membership.created_at);
+        const durationMs = membership.trialDuration * 24 * 60 * 60 * 1000;
+        expiresAt = new Date(createdAt.getTime() + durationMs).toISOString();
+      }
 
-      const isPaused = !!lastPause && lastPause.resumedAt === null;
-      const remainingPauses = maxPauses - pausesCount;
-      const isTrialPausable = remainingPauses > 0;
+      const now = new Date().getTime();
+      const end = expiresAt ? new Date(expiresAt).getTime() : now;
+      const remainingTime = Math.max(0, end - now);
 
       return {
-        ...data,
-        isPaused,
-        remainingPauses,
-        isTrialPausable,
+        isActive: statusData.status === SubscriptionStatusEnum.TRIAL_ACTIVE,
+        remainingTime,
+        expiresAt,
+        tasks: statusData.tasks || {
+            createdBusiness: false,
+            createdProductOrService: false,
+            createdPromotion: false,
+            createdOffer: false,
+            createdCoupon: false,
+        },
+        pauses: [],
+        isPaused: false,
+        remainingPauses: 0,
+        isTrialPausable: false,
       };
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -69,8 +89,8 @@ export const useGetTrialStatus = () => {
       }
       throw new Error(
         err.response?.data?.message ||
-          err.message ||
-          'Failed to fetch trial status'
+        err.message ||
+        'Failed to fetch trial status'
       );
     }
   };
@@ -134,7 +154,7 @@ export const useRecordPayment = () => {
   const create = async (payload: RecordPaymentRequest) => {
     try {
       const amount = payload.amount.toFixed(2);
-      const response = await api.post('/payments/record', {...payload, amount: parseFloat(amount) });
+      const response = await api.post('/payments/record', { ...payload, amount: parseFloat(amount) });
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;

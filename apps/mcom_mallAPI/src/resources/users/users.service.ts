@@ -13,7 +13,6 @@ import { PromotionParticipant } from '../promotion/entities/promotion-participan
 import { PromotionActivity } from '../promotion/entities/promotion-activity.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { EmailService } from '../email/email.service';
-import { TrialService } from '../trial/trial.service';
 import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
@@ -42,7 +41,6 @@ export class UsersService {
     private offerRepository: Repository<Offer>,
     private readonly hashService: HashService,
     private readonly emailService: EmailService,
-    private readonly trialService: TrialService,
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
     private readonly activityTimerService: ActivityTimerService,
@@ -111,10 +109,6 @@ export class UsersService {
       });
       await manager.save(wallet);
 
-      if (role === UserRole.OWNER) {
-        await this.trialService.createTrial(savedUser, manager, trialDuration);
-      }
-
       await this.emailService.sendUserWelcomeEmail(savedUser);
       delete savedUser.password;
       return savedUser;
@@ -178,10 +172,6 @@ export class UsersService {
       });
       await manager.save(wallet);
 
-      if (role === UserRole.OWNER) {
-        await this.trialService.createTrial(savedUser, manager, trialDuration);
-      }
-
       await this.emailService.sendUserWelcomeEmail(savedUser);
       delete savedUser.password;
       return savedUser;
@@ -222,7 +212,6 @@ export class UsersService {
   async findCurrentUser(email: string) {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.trial', 'trial')
       .where('user.email = :email', { email })
       .getOne();
 

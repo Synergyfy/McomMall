@@ -1,11 +1,10 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In } from 'typeorm';
+import { Repository } from 'typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
 import { UserActivity } from './entities/user-activity.entity';
 import { User } from '../users/entities/user.entity';
 import { ActivityTimerType } from './enums/activity-task-type.enum';
-import { TierType } from '../tier/enums/tier-type.enum';
 
 @Injectable()
 export class ActivityTimerService {
@@ -19,7 +18,7 @@ export class ActivityTimerService {
   // --- Admin: Publish a Task (Create Definition) ---
 
   async createActivity(dto: any): Promise<ActivityTimer> {
-    const { title, description, key, actionUrl, type, durationDays, targetTierIds, expiresAt } = dto;
+    const { title, description, key, actionUrl, type, durationDays, includedTierIds, excludedTierIds, expiresAt } = dto;
 
     const activity = this.activityRepository.create({
       title,
@@ -28,7 +27,8 @@ export class ActivityTimerService {
       actionUrl,
       type,
       durationDays,
-      targetTierIds,
+      includedTierIds,
+      excludedTierIds,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
       isActive: true
     });
@@ -39,9 +39,23 @@ export class ActivityTimerService {
   // --- Admin: List Definitions ---
 
   async findAllActivities(): Promise<ActivityTimer[]> {
-    return this.activityRepository.find({
-      order: { createdAt: 'DESC' },
-    });
+    return this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select([
+        'ActivityTimer.id',
+        'ActivityTimer.type',
+        'ActivityTimer.title',
+        'ActivityTimer.description',
+        'ActivityTimer.key',
+        'ActivityTimer.actionUrl',
+        'ActivityTimer.includedTierIds',
+        'ActivityTimer.excludedTierIds',
+        'ActivityTimer.durationDays',
+        'ActivityTimer.createdAt',
+        'ActivityTimer.expiresAt',
+        'ActivityTimer.isActive'
+      ])
+      .orderBy('ActivityTimer.createdAt', 'DESC')
+      .getMany();
   }
 
   // --- Core Logic ---
@@ -49,71 +63,71 @@ export class ActivityTimerService {
   async getUserActiveTasks(user: User): Promise<any[]> {
     const userId = user.id;
 
-    // 1. Fetch user with membership and trialPauses
+    // 1. Fetch user with membership
     const fullUser = await this.activityRepository.manager.findOne(User, {
       where: { id: userId },
       relations: ['membership', 'membership.tier'],
     });
 
     // 2. Fetch all relevant Activities
-    // Logic: Active AND (targetTierIds is Empty OR targetTierIds includes User's TierId)
-    const allActivities = await this.activityRepository.find({
-      where: { isActive: true },
-      order: { createdAt: 'DESC' }
-    });
+    const allActivities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select([
+        'ActivityTimer.id',
+        'ActivityTimer.type',
+        'ActivityTimer.title',
+        'ActivityTimer.description',
+        'ActivityTimer.key',
+        'ActivityTimer.actionUrl',
+        'ActivityTimer.includedTierIds',
+        'ActivityTimer.excludedTierIds',
+        'ActivityTimer.durationDays',
+        'ActivityTimer.createdAt',
+        'ActivityTimer.expiresAt',
+        'ActivityTimer.isActive'
+      ])
+      .where('ActivityTimer.isActive = :isActive', { isActive: true })
+      .orderBy('ActivityTimer.createdAt', 'DESC')
+      .getMany();
 
     const userTierId = fullUser?.membership?.tierId;
 
     const eligibleActivities = allActivities.filter(activity => {
-      if (!activity.targetTierIds || activity.targetTierIds.length === 0) return true;
-      if (!userTierId) return false; // No tier, but specific tier required
-      return activity.targetTierIds.includes(userTierId);
+      // 1. Inclusion Check
+      let isIncluded = false;
+      // If no specific tiers included, it applies to all (unless excluded)
+      if (!activity.includedTierIds || activity.includedTierIds.length === 0) {
+        isIncluded = true;
+      } else if (userTierId && activity.includedTierIds.includes(userTierId)) {
+        isIncluded = true;
+      }
+
+      // 2. Exclusion Check
+      let isExcluded = false;
+      if (userTierId && activity.excludedTierIds && activity.excludedTierIds.includes(userTierId)) {
+        isExcluded = true;
+      }
+
+      return isIncluded && !isExcluded;
     });
 
     // 3. Fetch User's Completions
-    const userCompletions = await this.userActivityRepository.find({
-      where: { user: { id: userId } },
-      relations: ['activity']
-    });
+    const userCompletions = await this.userActivityRepository.createQueryBuilder('UserActivity')
+      .leftJoinAndSelect('UserActivity.activity', 'activity')
+      .where('UserActivity.userId = :userId', { userId })
+      .select([
+        'UserActivity.id',
+        'UserActivity.completedAt',
+        'activity.id',
+        'activity.key'
+      ])
+      .getMany();
 
     const completedActivityIds = new Set(userCompletions.map(ua => ua.activity.id));
     const completionMap = new Map<string, Date>();
     userCompletions.forEach(ua => completionMap.set(ua.activity.id, ua.completedAt));
 
     const now = new Date();
-
-    // --- TRIAL LOGIC PRE-CALCULATION ---
-    let trialRecursivePauseDuration = 0;
-    let isTrialPaused = false;
-
-    if (fullUser?.trialPauses?.length) {
-      fullUser.trialPauses.forEach(p => {
-        if (p.resumedAt) {
-          trialRecursivePauseDuration += new Date(p.resumedAt).getTime() - new Date(p.pausedAt).getTime();
-        } else {
-          // Currently paused
-          isTrialPaused = true;
-          trialRecursivePauseDuration += now.getTime() - new Date(p.pausedAt).getTime();
-        }
-      });
-    }
-
-    const tier = fullUser?.membership?.tier;
-    const tierConfig = tier?.configuration;
-
-    // Determine Trial Duration:
-    // 1. If Tier is specifically TRIAL type, use its trialDuration column.
-    // 2. Fallback to configuration.trialDurationDays (legacy) or default 30.
-    let trialDurationDays = 30;
-    if (tier?.type === TierType.TRIAL && tier.trialDuration) {
-      trialDurationDays = tier.trialDuration;
-    } else if (tierConfig?.trialDurationDays) {
-      trialDurationDays = tierConfig.trialDurationDays;
-    }
-
-    const trialBaseStart = fullUser ? fullUser.created_at : now;
-    // Calculate expiry based on duration and pauses
-    const trialBaseExpiry = new Date(trialBaseStart.getTime() + trialDurationDays * 24 * 60 * 60 * 1000 + trialRecursivePauseDuration);
+    const membership = fullUser?.membership;
 
     const response = [];
     const activitiesByType = new Map<ActivityTimerType, ActivityTimer[]>();
@@ -123,107 +137,109 @@ export class ActivityTimerService {
       activitiesByType.get(activity.type).push(activity);
     }
 
-    // Handle TRIAL
-    if (activitiesByType.has(ActivityTimerType.TRIAL)) {
-      const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL);
-      const remainingTime = Math.max(0, trialBaseExpiry.getTime() - now.getTime());
-
-      response.push({
-        id: `trial-timer-${userId}`,
-        type: ActivityTimerType.TRIAL,
-        name: 'Trial Checklist',
-        description: 'Complete these tasks to activate your full membership.',
-        remainingTime: remainingTime,
-        expiresAt: trialBaseExpiry,
-        completedAt: null, // Composite timer doesn't have single completion date
-        isPaused: isTrialPaused,
-        tasks: trialActivities.map(t => ({
-          key: t.key,
-          title: t.title,
-          description: t.description,
-          url: t.actionUrl,
-          isCompleted: completedActivityIds.has(t.id)
-        }))
-      });
-    }
-
-    // Handle GENERAL
-    if (activitiesByType.has(ActivityTimerType.GENERAL)) {
-      const generalActivities = activitiesByType.get(ActivityTimerType.GENERAL);
-      for (const t of generalActivities) {
-        const isCompleted = completedActivityIds.has(t.id);
-
-        let expiresAt = t.expiresAt;
-        // If durationDays is set instead of fixed expiry, calculate relative to creation?
-        // Or relative to when user sees it? For simplification, let's assume global fixed expiry for General tasks usually.
-        // If durationDays is present, let's assume it means "expires X days after creation".
-        if (!expiresAt && t.durationDays) {
-          expiresAt = new Date(t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000);
-        }
-
-        const remaining = expiresAt ? Math.max(0, expiresAt.getTime() - now.getTime()) : 0;
+    // Handle TRIAL Users
+    if (membership && membership.isTrial && membership.isActive) {
+      if (activitiesByType.has(ActivityTimerType.TRIAL)) {
+        const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL);
+        const trialExpiry = new Date(membership.expiresAt);
+        const remainingTime = Math.max(0, trialExpiry.getTime() - now.getTime());
 
         response.push({
-          id: t.id,
-          type: ActivityTimerType.GENERAL,
-          name: t.title,
-          description: t.description,
-          remainingTime: remaining,
-          expiresAt: expiresAt,
-          completedAt: completionMap.get(t.id) || null,
+          id: `trial-timer-${userId}`,
+          type: ActivityTimerType.TRIAL,
+          name: 'Trial Checklist',
+          description: 'Complete these tasks to activate your full membership.',
+          remainingTime: remainingTime,
+          expiresAt: trialExpiry,
+          completedAt: null,
           isPaused: false,
-          tasks: [{
+          tasks: trialActivities.map(t => ({
+            id: t.id, // Include ID for manual completion
             key: t.key,
             title: t.title,
             description: t.description,
             url: t.actionUrl,
-            isCompleted: isCompleted
-          }]
+            isCompleted: completedActivityIds.has(t.id)
+          }))
         });
+      }
+    } else {
+      // Handle PAID / Non-Trial Users (Show all eligible activities as individual timers)
+      // This includes GENERAL and any other types applicable to the tier
+
+      for (const [type, activities] of activitiesByType.entries()) {
+        // Skip TRIAL tasks for paid users unless we want to show them? 
+        // Usually Trial tasks are only for trial. 
+        // But if filtering Logic included them, maybe we show them?
+        // User said "if a user is trial tier member... fetch only trial activity timer".
+        // "if a user has a paid membership... each row... has a timer".
+
+        // I will process all eligible activities.
+        for (const t of activities) {
+          // Skip if it's strictly a TRIAL type and user is not trial? 
+          // The filter above should handle it if 'includedTierIds' is set correctly by admin.
+          // But as a safeguard/convention:
+          if (type === ActivityTimerType.TRIAL) continue;
+
+          const isCompleted = completedActivityIds.has(t.id);
+
+          let expiresAt = t.expiresAt;
+          // Dynamic expiry based on durationDays relative to... something.
+          // Defaulting to "expires X days after creation" for fixed definitions?
+          // Or maybe relative to membership start? 
+          // For now, sticking to logic: Fixed Date OR Duration from Creation.
+          if (!expiresAt && t.durationDays) {
+            expiresAt = new Date(t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000);
+          }
+
+          const remaining = expiresAt ? Math.max(0, expiresAt.getTime() - now.getTime()) : null; // null if no expiry
+
+          response.push({
+            id: t.id,
+            type: t.type,
+            name: t.title,
+            description: t.description,
+            remainingTime: remaining,
+            expiresAt: expiresAt,
+            completedAt: completionMap.get(t.id) || null,
+            isPaused: false,
+            key: t.key, // Add key to top level for easy access
+            tasks: [{ // Keep nested structure for consistency if frontend expects it, or flatten?
+              id: t.id,
+              key: t.key,
+              title: t.title,
+              description: t.description,
+              url: t.actionUrl,
+              isCompleted: isCompleted
+            }]
+          });
+        }
       }
     }
 
     return response;
   }
 
-  async pauseTrial(userId: string): Promise<User> {
-    const user = await this.activityRepository.manager.findOne(User, { where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-
-    const activePause = user.trialPauses?.find(p => p.resumedAt === null);
-    if (activePause) throw new BadRequestException('Trial is already paused');
-
-    if (!user.trialPauses) user.trialPauses = [];
-    user.trialPauses.push({ pausedAt: new Date(), resumedAt: null });
-
-    return this.activityRepository.manager.save(user);
-  }
-
-  async resumeTrial(userId: string): Promise<User> {
-    const user = await this.activityRepository.manager.findOne(User, { where: { id: userId } });
-    if (!user) throw new NotFoundException('User not found');
-
-    const activePause = user.trialPauses?.find(p => p.resumedAt === null);
-    if (!activePause) throw new BadRequestException('Trial is not paused');
-
-    activePause.resumedAt = new Date();
-
-    return this.activityRepository.manager.save(user);
-  }
-
   /**
    * Complete activity by KEY
    */
   async completeTaskByKey(userId: string, key: string): Promise<void> {
+    // Only allow manual completion for "OTHER" tasks as per requirement
+    if (key !== 'OTHER') {
+      throw new BadRequestException('This task type is handled automatically by the system and cannot be marked manually.');
+    }
+
     const user = await this.activityRepository.manager.findOne(User, { where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 
     // Find ALL active activities with this key that are NOT yet completed by this user
     // Since we don't have a direct "pending" list, we query Definitions + UserActivities
 
-    const activities = await this.activityRepository.find({
-      where: { key: key, isActive: true }
-    });
+    const activities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select(['ActivityTimer.id', 'ActivityTimer.key'])
+      .where('ActivityTimer.key = :key', { key })
+      .andWhere('ActivityTimer.isActive = :isActive', { isActive: true })
+      .getMany();
 
     if (!activities.length) return; // No such task definition
 
@@ -244,29 +260,23 @@ export class ActivityTimerService {
   }
 
   async isRestricted(user: User): Promise<boolean> {
-    if (user.membership && user.membership.tierId) {
-      // Logic might need to be more complex if "paid tier" implies NO restrictions, 
-      // but usually trial restrictions only apply to trial users.
-      // If user has a Tier that is NOT a Trial tier, they are safe.
-      // Assuming existence of tierId implies paid/valid tier for now.
-      return false;
+    const fullUser = await this.activityRepository.manager.findOne(User, {
+      where: { id: user.id },
+      relations: ['membership'],
+    });
+
+    if (fullUser?.membership) {
+      if (!fullUser.membership.isActive) return true;
+
+      if (fullUser.membership.isTrial) {
+        const now = new Date();
+        if (new Date(fullUser.membership.expiresAt) < now) {
+          return true; // Trial expired
+        }
+      }
+      return false; // Active paid or active trial
     }
 
-    // ... (Trial logic similar to getUserActiveTasks, simplified) ...
-    // For brevity, using the same pause check logic
-
-    let fullUser = user;
-    if (!fullUser.trialPauses) {
-      fullUser = await this.activityRepository.manager.findOne(User, { where: { id: user.id } });
-    }
-
-    if (fullUser.trialPauses?.some(p => p.resumedAt === null)) return true;
-
-    // Check Expiry
-    const now = new Date();
-    // (Recalculate trialBaseExpiry - omitted for brevity, safe to implement fully if needed)
-    // ...
-
-    return false; // Placeholder if not implementing full check here yet
+    return false;
   }
 }

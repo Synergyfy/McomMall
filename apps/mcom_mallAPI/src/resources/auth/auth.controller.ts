@@ -50,7 +50,7 @@ export class AuthController {
     );
     if (!validPassword) throw ErrorFactory.invalidCredentials();
 
-    const { id, role, firstName, lastName, trial } = user;
+    const { id, role, firstName, lastName } = user;
     const name = `${firstName} ${lastName}`;
 
     const auth = await this.authService.createLogin({
@@ -65,7 +65,7 @@ export class AuthController {
 
     const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
 
-    return { auth, name, role, packageInfo: trial, userId: id, tasks: activeTimers };
+    return { auth, name, role, packageInfo: null, userId: id, tasks: activeTimers };
   }
 
   @ApiOperation({ summary: 'Login via SSO' })
@@ -91,7 +91,7 @@ export class AuthController {
         },
         name: `${user.firstName} ${user.lastName}`,
         role: user.role,
-        packageInfo: user.trial,
+        packageInfo: null,
         userId: user.id,
         tasks: activeTimers,
       };

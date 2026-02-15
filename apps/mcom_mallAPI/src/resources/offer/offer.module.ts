@@ -10,7 +10,7 @@ import { User } from '../users/entities/user.entity';
 import { TransactionModule } from '../transaction/transaction.module';
 import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { ActivitiesModule } from '../activities/activities.module';
-import { TrialModule } from '../trial/trial.module';
+import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -24,7 +24,7 @@ import { TrialModule } from '../trial/trial.module';
     ]),
     TransactionModule,
     ActivitiesModule,
-    TrialModule,
+    ActivityTimerModule,
   ],
   controllers: [OfferController],
   providers: [OfferService],

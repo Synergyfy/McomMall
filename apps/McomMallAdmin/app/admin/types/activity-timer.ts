@@ -17,7 +17,8 @@ export enum ActivityTimerType {
 export interface PublishTaskDto extends ActivityTaskDto {
     type: ActivityTimerType;
     isForAllTiers?: boolean;
-    targetTierIds?: string[];
+    includedTierIds?: string[];
+    excludedTierIds?: string[];
     expiresAt?: string; // ISO Date
     actionUrl?: string;
 }
@@ -26,8 +27,7 @@ export interface ActivityTaskDto {
     key: ActivityTaskType;
     title: string;
     description: string;
-    actionUrl: string; // Renamed from url to match backend
-    actionUrl: string; // Renamed from url to match backend
+    actionUrl?: string; // Renamed from url to match backend
     durationDays?: number;
 }
 
@@ -38,7 +38,8 @@ export interface ActivityTimerDefinition {
     type: ActivityTimerType;
     key: string;
     actionUrl?: string;
-    targetTierIds?: string[]; // stored as string[] or join string depending on backend response, assuming array here
+    includedTierIds?: string[];
+    excludedTierIds?: string[];
     durationDays?: number;
     expiresAt?: string;
     createdAt: string;
@@ -49,4 +50,4 @@ export interface TemplateFilters {
     isPublished?: boolean;
 }
 
-export type TemplateResponse = ActivityTimerTemplate[];
+export type TemplateResponse = ActivityTimerDefinition[];

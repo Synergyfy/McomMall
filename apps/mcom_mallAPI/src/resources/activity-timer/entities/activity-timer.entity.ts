@@ -34,8 +34,12 @@ export class ActivityTimer {
   actionUrl: string;
 
   @ApiProperty({ nullable: true })
-  @Column({ type: 'simple-array', nullable: true }) // Store tier IDs as comma-separated string
-  targetTierIds: string[];
+  @Column({ type: 'simple-array', nullable: true })
+  includedTierIds: string[];
+
+  @ApiProperty({ nullable: true })
+  @Column({ type: 'simple-array', nullable: true })
+  excludedTierIds: string[];
 
   @ApiProperty({ nullable: true })
   @Column({ nullable: true })

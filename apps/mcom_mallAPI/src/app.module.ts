@@ -30,7 +30,6 @@ import { CheckoutModule } from './resources/checkout/checkout.module';
 import { ActivitiesModule } from './resources/activities/activities.module';
 import { WalletModule } from './resources/wallet/wallet.module';
 import { StatsModule } from './resources/stats/stats.module';
-import { TrialModule } from './resources/trial/trial.module';
 import { GiftCardModule } from './resources/gift-card/gift-card.module';
 import { AdminModule } from './resources/admin/admin.module';
 import { VoucherModule } from './resources/voucher/voucher.module';
@@ -68,7 +67,6 @@ import { SupportTicketsModule } from './resources/support-tickets/support-ticket
     ServiceProviderProfileModule,
     PartnershipModule,
     AdminModule,
-    TrialModule,
     ProvisionModule,
     ShippingAddressModule,
     HelpRequestsModule,

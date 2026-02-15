@@ -40,12 +40,14 @@ export default function ActivityTimerAddPage() {
             type: ActivityTimerType.GENERAL,
             actionUrl: '/dashboard',
             durationDays: 7,
-            targetTierIds: [],
+            includedTierIds: [],
+            excludedTierIds: [],
         }
     });
 
     const watchedType = watch('type');
-    const targetTierIds = watch('targetTierIds') || [];
+    const includedTierIds = watch('includedTierIds') || [];
+    const excludedTierIds = watch('excludedTierIds') || [];
 
     const onSubmit = async (data: PublishTaskDto) => {
         try {
@@ -199,54 +201,73 @@ export default function ActivityTimerAddPage() {
                     </CardContent>
                 </Card>
 
-                {/* Target Audience (Only for General Tasks) */}
-                {watchedType === ActivityTimerType.GENERAL && (
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Target Audience</CardTitle>
-                            <CardDescription>Who should receive this task?</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
+                {/* Tier Visibility (Replaces Target Audience) */}
+                <Card>
+                    <CardHeader>
+                        <CardTitle>Tier Visibility</CardTitle>
+                        <CardDescription>Control which membership tiers can see this task.</CardDescription>
+                    </CardHeader>
+                    <CardContent className="space-y-6">
+                        {/* Included Tiers */}
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="text-base font-semibold">Included Tiers</Label>
                                 <div className="flex items-center space-x-2">
                                     <Checkbox
-                                        id="all-tiers"
-                                        checked={targetTierIds.length === 0}
+                                        id="all-tiers-included"
+                                        checked={includedTierIds.length === 0}
                                         onCheckedChange={(checked) => {
-                                            if (checked) setValue('targetTierIds', []);
+                                            if (checked) setValue('includedTierIds', []);
                                         }}
                                     />
-                                    <Label htmlFor="all-tiers" className="font-semibold">All Membership Tiers</Label>
+                                    <Label htmlFor="all-tiers-included" className="text-sm text-slate-600">Include All (Default)</Label>
                                 </div>
-
-                                <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-6 pt-2 border-l-2 ml-1">
-                                    {tiers?.map((tier: any) => (
-                                        <div key={tier.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`tier-${tier.id}`}
-                                                checked={targetTierIds.includes(tier.id)}
-                                                onCheckedChange={(checked) => {
-                                                    if (checked) {
-                                                        setValue('targetTierIds', [...targetTierIds, tier.id]);
-                                                    } else {
-                                                        setValue('targetTierIds', targetTierIds.filter(id => id !== tier.id));
-                                                    }
-                                                }}
-                                            />
-                                            <Label htmlFor={`tier-${tier.id}`}>{tier.name}</Label>
-                                        </div>
-                                    ))}
-                                </div>
-
-                                {targetTierIds.length > 0 && (
-                                    <p className="text-sm text-orange-600 bg-orange-50 p-2 rounded">
-                                        Only users in <strong>{targetTierIds.length}</strong> selected tier(s) will receive this task.
-                                    </p>
-                                )}
                             </div>
-                        </CardContent>
-                    </Card>
-                )}
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4 border-l-2 border-green-200">
+                                {tiers?.map((tier: any) => (
+                                    <div key={`inc-${tier.id}`} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`inc-tier-${tier.id}`}
+                                            checked={includedTierIds.includes(tier.id)}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setValue('includedTierIds', [...includedTierIds, tier.id]);
+                                                } else {
+                                                    setValue('includedTierIds', includedTierIds.filter(id => id !== tier.id));
+                                                }
+                                            }}
+                                        />
+                                        <Label htmlFor={`inc-tier-${tier.id}`}>{tier.name}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* Excluded Tiers */}
+                        <div className="space-y-3 pt-4 border-t">
+                            <Label className="text-base font-semibold">Excluded Tiers</Label>
+                            <p className="text-xs text-slate-500">Users in these tiers will NOT see this task, even if included above.</p>
+                            <div className="grid grid-cols-2 md:grid-cols-3 gap-4 pl-4 border-l-2 border-red-200">
+                                {tiers?.map((tier: any) => (
+                                    <div key={`exc-${tier.id}`} className="flex items-center space-x-2">
+                                        <Checkbox
+                                            id={`exc-tier-${tier.id}`}
+                                            checked={excludedTierIds.includes(tier.id)}
+                                            onCheckedChange={(checked) => {
+                                                if (checked) {
+                                                    setValue('excludedTierIds', [...excludedTierIds, tier.id]);
+                                                } else {
+                                                    setValue('excludedTierIds', excludedTierIds.filter(id => id !== tier.id));
+                                                }
+                                            }}
+                                        />
+                                        <Label htmlFor={`exc-tier-${tier.id}`}>{tier.name}</Label>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    </CardContent>
+                </Card>
 
                 <div className="flex justify-end">
                     <Button

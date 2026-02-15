@@ -44,3 +44,19 @@ export const useResumeActivityTimer = () => {
         }
     });
 };
+
+export const useCompleteTask = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: async (key: string) => {
+            await api.post(`/activity-timer/complete-task/${key}`);
+        },
+        onSuccess: () => {
+            toast.success('Task marked as completed');
+            queryClient.invalidateQueries({ queryKey: ['FETCH_ACTIVITY_TIMER_STATUS'] });
+        },
+        onError: (error: any) => {
+            toast.error(error.response?.data?.message || 'Failed to complete task');
+        }
+    });
+};

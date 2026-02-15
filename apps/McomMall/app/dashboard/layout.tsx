@@ -47,11 +47,25 @@ function DashboardRedirect({
   useEffect(() => {
     if (mounted && !isMembershipLoading && userRole === 'owner') {
       const hasActiveMembership = !!membership?.isActive;
+      // Check explicitly if tier is TRIAL
+      // Note: membership.tier might be populated, check type or name
+      const isTrial = membership?.tier?.type === 'TRIAL' || membership?.tier?.name?.toLowerCase().includes('trial');
+
       const normalizedPath = pathname.toLowerCase();
       const isSubscriptionFlow = normalizedPath.includes('/my-subscription');
       const isSuccessRedirect = searchParams.get('success') === 'true';
 
+      // 1. If NO active membership (and not in subscription flow), redirect to buy one.
       if (!hasActiveMembership && !isSubscriptionFlow && !isSuccessRedirect) {
+        router.push('/dashboard/my-subscription');
+        return;
+      }
+
+      // 2. If User is on TRIAL, and they land on the main dashboard, redirect them to see subscription options
+      // BUT they can navigate back to use the dashboard (so only redirect from root /dashboard)
+      if (isTrial && normalizedPath === '/dashboard' && !isSubscriptionFlow) {
+        // Verify if we should force this. The user said "take them... if they don't pay... make timer show".
+        // This implies a soft push.
         router.push('/dashboard/my-subscription');
       }
     }

@@ -10,9 +10,9 @@ import { User } from '../users/entities/user.entity';
 import { PromotionEngineService } from './promotion-engine.service';
 import { PromotionActivity } from './entities/promotion-activity.entity';
 import { ActivitiesModule } from '../activities/activities.module';
-import { TrialModule } from '../trial/trial.module';
 import { TransactionModule } from '../transaction/transaction.module';
 import { CapabilityModule } from '../capability/capability.module';
+import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -26,7 +26,7 @@ import { CapabilityModule } from '../capability/capability.module';
       PromotionActivity,
     ]),
     ActivitiesModule,
-    TrialModule,
+    ActivityTimerModule,
     TransactionModule,
   ],
   controllers: [PromotionController],

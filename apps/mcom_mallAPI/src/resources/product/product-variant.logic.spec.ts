@@ -5,11 +5,10 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../users/entities/user.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
-import { Trial } from '../payments/entities/trial.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
 import { PromotionService } from '../promotion/promotion.service';
 import { CapabilityService } from '../capability/capability.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 describe('ProductService - Variant Logic', () => {
   let service: ProductService;
@@ -22,9 +21,8 @@ describe('ProductService - Variant Logic', () => {
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: getRepositoryToken(Partnership), useValue: {} },
         { provide: getRepositoryToken(PartnershipRequest), useValue: {} },
-        { provide: getRepositoryToken(Trial), useValue: {} },
         { provide: ActivitiesService, useValue: {} },
-        { provide: TrialService, useValue: {} },
+        { provide: ActivityTimerService, useValue: {} },
         { provide: PromotionService, useValue: {} },
         { provide: CapabilityService, useValue: {} },
       ],

@@ -34,9 +34,13 @@ export class CreateActivityTaskDto {
 }
 
 export class PublishTaskDto extends CreateActivityTaskDto {
-  @ApiProperty({ type: [String], description: 'List of Tier IDs to target. Empty means all tiers.' })
+  @ApiProperty({ type: [String], description: 'List of Tier IDs to include. Empty means all tiers.' })
   @IsOptional()
-  targetTierIds?: string[];
+  includedTierIds?: string[];
+
+  @ApiProperty({ type: [String], description: 'List of Tier IDs to exclude.' })
+  @IsOptional()
+  excludedTierIds?: string[];
 
   @ApiProperty({ description: 'Duration in days for GENERAL tasks (alternative to fixed expiry)', required: false })
   @IsOptional()

@@ -18,8 +18,6 @@ import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
 import { PartnershipRequestStatus } from '../partnership/partnership.enum';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PromotionService } from '../promotion/promotion.service';
 import { CapabilityService, ActionType } from '../capability/capability.service';
@@ -27,6 +25,7 @@ import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { v4 as uuidv4 } from 'uuid';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class ProductService {
@@ -39,10 +38,8 @@ export class ProductService {
     private partnershipRepository: Repository<Partnership>,
     @InjectRepository(PartnershipRequest)
     private partnershipRequestRepository: Repository<PartnershipRequest>,
-    @InjectRepository(Trial)
-    private readonly trialRepository: Repository<Trial>,
     private readonly activitiesService: ActivitiesService,
-    private readonly trialService: TrialService,
+    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => PromotionService))
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => CapabilityService))
@@ -142,15 +139,12 @@ export class ProductService {
       'product',
       savedProduct.title,
     );
-    const trial = await this.trialRepository.findOne({
-      where: { user: { id: business.user.id } },
-    });
-    if (trial) {
-      await this.trialService.markTaskAsCompleted(
+    
+    await this.activityTimerService.completeTaskByKey(
         business.user.id,
         'createdProductOrService',
-      );
-    }
+    );
+
     return savedProduct;
   }
 

@@ -87,33 +87,59 @@ export default function ActivityTimerListPage() {
                                             {def.key.replace(/_/g, ' ')}
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-1 text-xs text-slate-600">
-                                                <Target className="h-3 w-3" />
-                                                {def.type === ActivityTimerType.TRIAL
-                                                    ? 'Trial Tier'
-                                                    : (def.targetTierIds && def.targetTierIds.length > 0
-                                                        ? (
-                                                            <TooltipProvider>
-                                                                <Tooltip>
-                                                                    <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-2">
-                                                                        {def.targetTierIds.length} Tier(s)
-                                                                    </TooltipTrigger>
-                                                                    <TooltipContent>
-                                                                        <div className="text-xs">
-                                                                            <p className="font-semibold mb-1">Target Tiers:</p>
-                                                                            <ul className="list-disc pl-3">
-                                                                                {def.targetTierIds.map(id => {
-                                                                                    const tier = tiers?.find((t: any) => t.id === id);
-                                                                                    return <li key={id}>{tier?.name || 'Unknown Tier'}</li>
-                                                                                })}
-                                                                            </ul>
-                                                                        </div>
-                                                                    </TooltipContent>
-                                                                </Tooltip>
-                                                            </TooltipProvider>
+                                            <div className="flex flex-col gap-1 text-xs text-slate-600">
+                                                <div className="flex items-center gap-1">
+                                                    <Target className="h-3 w-3 text-green-600" />
+                                                    {def.type === ActivityTimerType.TRIAL
+                                                        ? 'Trial Tier'
+                                                        : (!def.includedTierIds || def.includedTierIds.length === 0
+                                                            ? 'All Tiers'
+                                                            : (
+                                                                <TooltipProvider>
+                                                                    <Tooltip>
+                                                                        <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-2">
+                                                                            {def.includedTierIds.length} Tier(s)
+                                                                        </TooltipTrigger>
+                                                                        <TooltipContent>
+                                                                            <div className="text-xs">
+                                                                                <p className="font-semibold mb-1">Included Tiers:</p>
+                                                                                <ul className="list-disc pl-3">
+                                                                                    {def.includedTierIds.map(id => {
+                                                                                        const tier = tiers?.find((t: any) => t.id === id);
+                                                                                        return <li key={id}>{tier?.name || 'Unknown Tier'}</li>
+                                                                                    })}
+                                                                                </ul>
+                                                                            </div>
+                                                                        </TooltipContent>
+                                                                    </Tooltip>
+                                                                </TooltipProvider>
+                                                            )
                                                         )
-                                                        : 'All Tiers')
-                                                }
+                                                    }
+                                                </div>
+                                                {def.excludedTierIds && def.excludedTierIds.length > 0 && (
+                                                    <div className="flex items-center gap-1 text-red-500">
+                                                        <span className="font-semibold">Excl:</span>
+                                                        <TooltipProvider>
+                                                            <Tooltip>
+                                                                <TooltipTrigger className="cursor-help underline decoration-dotted underline-offset-2">
+                                                                    {def.excludedTierIds.length} Tier(s)
+                                                                </TooltipTrigger>
+                                                                <TooltipContent>
+                                                                    <div className="text-xs">
+                                                                        <p className="font-semibold mb-1">Excluded Tiers:</p>
+                                                                        <ul className="list-disc pl-3">
+                                                                            {def.excludedTierIds.map(id => {
+                                                                                const tier = tiers?.find((t: any) => t.id === id);
+                                                                                return <li key={id}>{tier?.name || 'Unknown Tier'}</li>
+                                                                            })}
+                                                                        </ul>
+                                                                    </div>
+                                                                </TooltipContent>
+                                                            </Tooltip>
+                                                        </TooltipProvider>
+                                                    </div>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell className="text-slate-500 text-xs">
