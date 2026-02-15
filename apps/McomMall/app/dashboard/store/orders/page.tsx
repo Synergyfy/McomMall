@@ -127,20 +127,26 @@ export default function OrdersDashboard() {
 
   const orders = useMemo(() => {
     if (!apiOrders) return [];
-    return apiOrders.map((order: ApiOrder) => ({
-      id: order.id,
-      userId: order.user?.id || '',
-      customerName: order.user?.name || 'N/A',
-      customerEmail: order.user?.email || 'N/A',
-      // TODO: The API does not provide an order status. Defaulting to 'Processing'.
-      status: 'Processing' as ActualOrderStatus,
-      itemCount: order.quantity,
-      total: order.payment?.amount || 0,
-      date: order.created_at,
-      // TODO: The API does not provide product details in the order response.
-      // Defaulting to 'N/A'. A backend change is required to include this.
-      productName: 'N/A',
-    }));
+    return apiOrders.map((order: ApiOrder) => {
+      // Map API status to UI status
+      const rawStatus = (order.status || 'PENDING').toUpperCase();
+      let status: ActualOrderStatus = 'Processing';
+      if (rawStatus === 'SHIPPED') status = 'Shipped';
+      else if (rawStatus === 'DELIVERED') status = 'Delivered';
+      else if (rawStatus === 'CANCELLED') status = 'Cancelled';
+
+      return {
+        id: order.id,
+        userId: order.user?.id || '',
+        customerName: order.user?.name || 'N/A',
+        customerEmail: order.user?.email || 'N/A',
+        status,
+        itemCount: order.items?.reduce((acc, item) => acc + (item.quantity || 0), 0) || 0,
+        total: parseFloat(order.total || '0'),
+        date: order.createdAt,
+        productName: order.items?.[0]?.product?.title || 'N/A',
+      };
+    });
   }, [apiOrders]);
 
   const filteredOrders = React.useMemo(() => {

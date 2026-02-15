@@ -3,116 +3,74 @@
 import { useState } from "react";
 import { useGetMyPurchases } from "@/service/gift-card/hook";
 import { MyPurchase } from "@/service/gift-card/types";
-import { format } from "date-fns";
-import { Copy, Check, Share2 } from "lucide-react";
-import { toast } from "sonner";
-import GiftCard from "./components/GiftCard";
+import { Gift, Loader2, Terminal } from "lucide-react";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import dynamic from "next/dynamic";
+const HistoryGiftCard = dynamic(() => import("@/app/dashboard/component/HistoryMarketingCards").then(mod => mod.HistoryGiftCard), {
+  loading: () => <div className="aspect-[1.58/1] w-full bg-slate-100 animate-pulse rounded-[2rem]" />,
+  ssr: false
+});
 import ReloadModal from "./components/ReloadModal";
 import { useShareLink } from "@/lib/hooks/useShareLink";
 
 const GiftCardHistoryPage = () => {
   const { data: purchases, isPending, isError } = useGetMyPurchases();
-  const [copiedCode, setCopiedCode] = useState<string | null>(null);
   const [selectedPurchase, setSelectedPurchase] = useState<MyPurchase | null>(
     null
   );
   const { copiedLink, handleShare } = useShareLink();
 
-  const handleCopy = (code: string) => {
-    navigator.clipboard.writeText(code).then(() => {
-      setCopiedCode(code);
-      toast.success("Copied to clipboard!");
-      setTimeout(() => setCopiedCode(null), 2000);
-    });
-  };
-
   if (isPending) {
     return (
-      <div className="flex justify-center items-center h-64">
-        <div className="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+      <div className="flex justify-center items-center h-96">
+        <Loader2 className="animate-spin text-orange-500" size={48} />
       </div>
     );
   }
 
   if (isError) {
     return (
-      <div className="text-center text-red-500 py-10">
-        <p>Failed to load purchase history. Please try again later.</p>
+      <div className="container mx-auto px-4 py-8">
+        <Alert variant="destructive">
+          <Terminal className="h-4 w-4" />
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>Failed to load gift card history. Please try again later.</AlertDescription>
+        </Alert>
       </div>
     );
   }
 
   return (
-    <div className="container mx-auto p-4 sm:p-6 lg:p-8">
-      <header className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-800">Gift Card History</h1>
-        <p className="text-lg text-gray-600 mt-2">
-          Browse your gift card purchase history below.
-        </p>
-      </header>
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <main className="container mx-auto px-4 py-8">
+        <header className="mb-12">
+          <h1 className="text-4xl font-black text-slate-800 tracking-tight">Gift Card History</h1>
+          <p className="text-slate-500 font-bold text-sm mt-2 uppercase tracking-widest">
+            Home &gt; Dashboard &gt; History
+          </p>
+        </header>
 
-      <div className="grid gap-8 md:grid-cols-2 lg:grid-cols-2">
         {purchases && purchases.length > 0 ? (
-          purchases.map((purchase: MyPurchase) => (
-            <div key={purchase.id} className="rounded-lg overflow-hidden">
-              <GiftCard purchase={purchase} />
-              <div className="p-6 bg-gray-50">
-                <div className="flex items-center gap-2 text-gray-700 mb-4">
-                  <span className="font-semibold">Code:</span>
-                  <span className="font-mono">{purchase.code}</span>
-                  {copiedCode === purchase.code ? (
-                    <Check className="text-green-500" size={16} />
-                  ) : (
-                    <Copy
-                      className="cursor-pointer text-gray-500 hover:text-orange-600"
-                      size={16}
-                      onClick={() => handleCopy(purchase.code)}
-                    />
-                  )}
-                </div>
-
-                <div className="mt-4 pt-4 border-t border-gray-200">
-                  <div className="flex justify-between items-center text-sm text-gray-600">
-                    <span>
-                      Initial: £{Number(purchase.initialBalance).toFixed(2)}
-                    </span>
-                    <span>
-                      Purchased: {format(new Date(purchase.createdAt), "PPP")}
-                    </span>
-                  </div>
-                </div>
-
-                {purchase.isReloadable && (
-                  <div className="mt-4 flex items-center gap-2">
-                    <button
-                      onClick={() => setSelectedPurchase(purchase)}
-                      className="w-full bg-green-500 text-white py-2 rounded-md hover:bg-green-600 transition-colors"
-                    >
-                      Reload Gift Card
-                    </button>
-                    <button
-                      onClick={() => handleShare('giftcard', purchase.id)}
-                      className="p-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 transition-colors"
-                    >
-                      {copiedLink === purchase.id ? (
-                        <Check size={16} />
-                      ) : (
-                        <Share2 size={16} />
-                      )}
-                    </button>
-                  </div>
-                )}
-              </div>
-            </div>
-          ))
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+            {purchases.map((purchase: MyPurchase) => (
+              <HistoryGiftCard
+                key={purchase.id}
+                purchase={purchase}
+                onShare={(id) => handleShare('giftcard', id)}
+                onReload={setSelectedPurchase}
+                isShared={copiedLink === purchase.id}
+              />
+            ))}
+          </div>
         ) : (
-          <div className="md:col-span-2 lg:col-span-3 text-center py-10">
-            <p className="text-xl text-gray-500">
-              You haven&apos;t purchased any gift cards yet.
-            </p>
+          <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+            <Gift className="mx-auto text-gray-200 mb-6" size={64} />
+            <h3 className="text-2xl font-black text-gray-900">No Gift Cards Yet</h3>
+            <p className="text-gray-500 font-bold mt-2">You haven't purchased any gift cards.</p>
           </div>
         )}
-      </div>
+      </main>
+
       {selectedPurchase && (
         <ReloadModal
           purchase={selectedPurchase}

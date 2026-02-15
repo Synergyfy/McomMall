@@ -2,13 +2,12 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityTimerController } from './activity-timer.controller';
 import { ActivityTimerService } from './activity-timer.service';
-import { ActivityTimerTemplate } from './entities/activity-timer-template.entity';
 import { ActivityTimer } from './entities/activity-timer.entity';
-
+import { UserActivity } from './entities/user-activity.entity';
 @Module({
-  imports: [TypeOrmModule.forFeature([ActivityTimerTemplate, ActivityTimer])],
+  imports: [TypeOrmModule.forFeature([ActivityTimer, UserActivity])],
   controllers: [ActivityTimerController],
   providers: [ActivityTimerService],
   exports: [ActivityTimerService],
 })
-export class ActivityTimerModule {}
+export class ActivityTimerModule { }

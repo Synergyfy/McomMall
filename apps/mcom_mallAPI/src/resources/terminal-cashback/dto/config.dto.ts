@@ -1,5 +1,5 @@
-import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { TerminalLevel } from '../entities/terminal-config.entity';
 
@@ -53,15 +53,15 @@ class LimitsDto {
 }
 
 export class CreateTerminalConfigDto {
-  @ApiProperty({ example: 'BEANTHERE01', description: 'Unique Business ID' })
+  @ApiProperty({ example: 'user-uuid-here', description: 'Unique Owner ID' })
   @IsString()
   @IsNotEmpty()
-  businessId: string;
+  userId: string;
 
-  @ApiProperty({ example: 'Bean There Coffee', description: 'Business Display Name' })
+  @ApiProperty({ example: 'John Doe', description: 'Owner Display Name' })
   @IsString()
   @IsNotEmpty()
-  businessName: string;
+  userName: string;
 
   @ApiProperty({ enum: TerminalLevel, example: TerminalLevel.VERIFIED_L1 })
   @IsEnum(TerminalLevel)
@@ -72,6 +72,16 @@ export class CreateTerminalConfigDto {
   @ValidateNested({ each: true })
   @Type(() => RangeDto)
   ranges?: RangeDto[];
+
+  @ApiPropertyOptional({ example: 1.50, description: 'Fixed reward amount for Level 2' })
+  @IsNumber()
+  @IsOptional()
+  fixedRewardValue?: number;
+
+  @ApiPropertyOptional({ example: 'https://api.merchant.com/verify', description: 'External POS endpoint for Level 3' })
+  @IsUrl()
+  @IsOptional()
+  apiEndpoint?: string;
 
   @ApiProperty({ type: LimitsDto, description: 'Spending limits and guardrails', required: false })
   @IsOptional()
@@ -99,6 +109,16 @@ export class UpdateTerminalConfigDto {
     @ApiProperty({ type: [RangeDto], required: false })
     @IsOptional()
     ranges?: RangeDto[];
+
+    @ApiPropertyOptional({ example: 1.50 })
+    @IsNumber()
+    @IsOptional()
+    fixedRewardValue?: number;
+
+    @ApiPropertyOptional({ example: 'https://api.merchant.com/verify' })
+    @IsUrl()
+    @IsOptional()
+    apiEndpoint?: string;
 
     @ApiProperty({ type: LimitsDto, required: false })
     @IsOptional()

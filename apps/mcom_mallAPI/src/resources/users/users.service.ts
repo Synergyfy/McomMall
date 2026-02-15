@@ -13,12 +13,14 @@ import { PromotionParticipant } from '../promotion/entities/promotion-participan
 import { PromotionActivity } from '../promotion/entities/promotion-activity.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { EmailService } from '../email/email.service';
-import { TrialService } from '../trial/trial.service';
-import { UserRole } from 'src/common/role.enum';
+import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
 import { ProvisionType } from '../provision/entities/provision.entity';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { TierService } from '../tier/tier.service';
+import { MembershipService } from '../membership/membership.service';
 
 @Injectable()
 export class UsersService {
@@ -39,9 +41,11 @@ export class UsersService {
     private offerRepository: Repository<Offer>,
     private readonly hashService: HashService,
     private readonly emailService: EmailService,
-    private readonly trialService: TrialService,
     private readonly dataSource: DataSource,
     private readonly provisionService: ProvisionService,
+    private readonly activityTimerService: ActivityTimerService,
+    private readonly tierService: TierService,
+    private readonly membershipService: MembershipService,
   ) { }
 
   async checkEmailExists(email: string): Promise<boolean> {
@@ -75,13 +79,13 @@ export class UsersService {
     // Validate provision code before transaction if present
     let provision = null;
     if (payload.provisionCode) {
-        provision = await this.provisionService.findByCode(payload.provisionCode);
-        if (!provision) throw new BadRequestException('Invalid provision code');
-        if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
-        if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+      provision = await this.provisionService.findByCode(payload.provisionCode);
+      if (!provision) throw new BadRequestException('Invalid provision code');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
-    return this.dataSource.transaction(async (manager) => {
+    const createdUser = await this.dataSource.transaction(async (manager) => {
       const { password, role } = payload;
       const hashed = await this.hashService.hashPassword(password);
       const user = manager.create(User, {
@@ -93,10 +97,10 @@ export class UsersService {
       // Redeem provision code inside transaction
       let trialDuration = 14;
       if (provision) {
-          await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
-          if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
-              trialDuration = provision.payload.durationDays;
-          }
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
+          trialDuration = provision.payload.durationDays;
+        }
       }
 
       const wallet = manager.create(Wallet, {
@@ -105,14 +109,93 @@ export class UsersService {
       });
       await manager.save(wallet);
 
-      if (role === UserRole.OWNER) {
-        await this.trialService.createTrial(savedUser, manager, trialDuration);
+      await this.emailService.sendUserWelcomeEmail(savedUser);
+      delete savedUser.password;
+      return savedUser;
+    });
+
+    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
+    if (createdUser.role === UserRole.OWNER) {
+      try {
+        // Automatic Trial Assignment
+        const trialTier = await this.tierService.findTrialTier();
+        if (trialTier) {
+          // Join the trial membership
+          // Note: joinTrial handles creating the membership entity
+          await this.membershipService.joinTrial(trialTier.id, createdUser);
+          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`);
+        } else {
+          console.log(`[UsersService] No active Trial Tier found for auto-assignment.`);
+        }
+
+        await this.activityTimerService.getUserActiveTasks(createdUser);
+      } catch (error) {
+        console.error('Failed to auto-assign activity timer or trial membership:', error);
       }
+    }
+
+    return createdUser;
+  }
+
+  async createByAdmin(payload: CreateUserDto): Promise<User> {
+    // Validate provision code before transaction if present
+    let provision = null;
+    if (payload.provisionCode) {
+      provision = await this.provisionService.findByCode(payload.provisionCode);
+      if (!provision) throw new BadRequestException('Invalid provision code');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+    }
+
+    const createdUser = await this.dataSource.transaction(async (manager) => {
+      const { password, role } = payload;
+      const hashed = await this.hashService.hashPassword(password);
+      const user = manager.create(User, {
+        ...payload,
+        password: hashed,
+        isEmailVerified: true, // Auto-verified by admin
+      });
+      const savedUser = await manager.save(user);
+
+      // Redeem provision code inside transaction
+      let trialDuration = 14;
+      if (provision) {
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
+          trialDuration = provision.payload.durationDays;
+        }
+      }
+
+      const wallet = manager.create(Wallet, {
+        user: savedUser,
+        balance: 1000, // Starting balance for every new user
+      });
+      await manager.save(wallet);
 
       await this.emailService.sendUserWelcomeEmail(savedUser);
       delete savedUser.password;
       return savedUser;
     });
+
+    // Trigger Activity Timer assignment for Owners (post-transaction to ensure user exists)
+    if (createdUser.role === UserRole.OWNER) {
+      // We catch errors here to strictly not block user creation if timer service fails,
+      // though ideally it should succeed.
+      try {
+        // Automatic Trial Assignment
+        const trialTier = await this.tierService.findTrialTier();
+        if (trialTier) {
+          await this.membershipService.joinTrial(trialTier.id, createdUser);
+          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`);
+        }
+
+        await this.activityTimerService.getUserActiveTasks(createdUser);
+      } catch (error) {
+        console.error('Failed to auto-assign activity timer or trial membership:', error);
+      }
+    }
+
+    return createdUser;
   }
 
   findAll() {
@@ -129,7 +212,6 @@ export class UsersService {
   async findCurrentUser(email: string) {
     const user = await this.userRepository
       .createQueryBuilder('user')
-      .leftJoinAndSelect('user.trial', 'trial')
       .where('user.email = :email', { email })
       .getOne();
 
@@ -222,6 +304,27 @@ export class UsersService {
               });
             }
           });
+        }),
+      );
+    }
+
+    return queryBuilder.getMany();
+  }
+
+  async searchOwners(query: string, currentUserId: string): Promise<User[]> {
+    const queryBuilder = this.userRepository.createQueryBuilder('u');
+
+    queryBuilder.where('u.role = :role', { role: UserRole.OWNER });
+    queryBuilder.andWhere('u.id != :currentUserId', { currentUserId });
+    queryBuilder.andWhere('u.isActive = :isActive', { isActive: true });
+
+    if (query && query.trim() !== '') {
+      const searchTerm = `%${query.trim()}%`;
+      queryBuilder.andWhere(
+        new Brackets((qb) => {
+          qb.where('u.firstName ILIKE :searchTerm', { searchTerm })
+            .orWhere('u.lastName ILIKE :searchTerm', { searchTerm })
+            .orWhere('u.email ILIKE :searchTerm', { searchTerm });
         }),
       );
     }

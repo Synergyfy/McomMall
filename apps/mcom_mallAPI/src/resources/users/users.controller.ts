@@ -14,6 +14,8 @@ import { UsersService } from './users.service';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { ErrorFactory } from '../../common/errors/error.factory';
 import { Public } from '../../common/decorators/public.decorator';
+import { Roles } from '../../common/decorators/roles.decorator';
+import { UserRole } from '../../common/role.enum';
 import {
   ApiTags,
   ApiOperation,
@@ -32,7 +34,7 @@ import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @ApiOperation({ summary: 'Check if email exists' })
   @ApiResponse({ status: 200, description: 'Returns true if email exists, false otherwise.' })
@@ -63,6 +65,28 @@ export class UsersController {
       throw ErrorFactory.passwordsFieldMismatch();
 
     return this.usersService.create(payload);
+  }
+
+  @ApiOperation({ summary: 'Create a user (Admin)' })
+  @ApiResponse({
+    status: 201,
+    description: 'User created successfully (Auto-verified).',
+  })
+  @ApiResponse({ status: 400, description: 'Bad Request.' })
+  @Roles(UserRole.ADMIN)
+  @Post('admin/create')
+  async createByAdmin(@Body() payload: CreateUserDto) {
+    const { email, password, confirm_password, phoneNumber } = payload;
+    const emailExists = await this.usersService.checkEmailExists(email);
+    if (emailExists) throw ErrorFactory.existingEmail();
+
+    const numberExists =
+      await this.usersService.checkPhoneNumberExists(phoneNumber);
+    if (numberExists) throw ErrorFactory.existingPhoneNumber();
+    if (password !== confirm_password)
+      throw ErrorFactory.passwordsFieldMismatch();
+
+    return this.usersService.createByAdmin(payload);
   }
 
   @ApiOperation({ summary: 'Get current user info' })
@@ -138,20 +162,6 @@ export class UsersController {
       throw new ForbiddenException();
     }
     return this.usersService.getTransactionHistory(id, query);
-  }
-
-  @Get('search/owners-with-service-profiles')
-  @ApiOperation({ summary: 'Search for owners with service profiles' })
-  @ApiResponse({
-    status: 200,
-    description: 'A list of owners matching the criteria.',
-    type: [User],
-  })
-  @Public()
-  searchOwnersWithServiceProfiles(
-    @Query() query: SearchOwnerDto,
-  ): Promise<User[]> {
-    return this.usersService.searchOwnersWithServiceProfiles(query);
   }
 
   @ApiOperation({ summary: 'Update user features by ID' })

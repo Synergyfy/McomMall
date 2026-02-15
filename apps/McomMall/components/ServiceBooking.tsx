@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useCallback } from 'react';
-import { PartnershipService } from '@/service/partnerships/types';
+import { IService } from '@/service/services/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
 import Image from 'next/image';
@@ -10,7 +10,7 @@ import { DateTimePicker } from './ui/date-time-picker';
 import { ServiceBookingDetailsDto } from '@/hooks/useCheckout';
 
 interface ServiceBookingProps {
-  service: PartnershipService;
+  service: IService;
   onBookingConfirmation?: (bookingDetails: ServiceBookingDetailsDto) => void;
 }
 
@@ -29,7 +29,7 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
         startTime: selectedDateTime.start.toISOString(),
         endTime: selectedDateTime.end.toISOString(),
         name: service.name,
-        price: service.fixedPrice || 0,
+        price: Number(service.fixedPrice) || 0,
       };
       onBookingConfirmation(bookingDetails);
       setIsBooking(false);
@@ -68,22 +68,22 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
             <div className="bg-orange-50 border border-orange-200 p-4 rounded-lg space-y-3">
               <h4 className="text-lg font-semibold text-orange-800 mb-2">Pricing Details</h4>
               <div className="space-y-2">
-                {service.pricingModel === 'fixed' && typeof service.fixedPrice === 'number' && (
+                {service.pricingModel === 'fixed' && service.fixedPrice && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700 flex items-center"><Tag className="mr-2 h-5 w-5 text-orange-500"/>Standard Price:</span>
-                    <span className="font-bold text-2xl text-gray-900">${service.fixedPrice.toFixed(2)}</span>
+                    <span className="font-bold text-2xl text-gray-900">${Number(service.fixedPrice).toFixed(2)}</span>
                   </div>
                 )}
-                {service.pricingModel === 'hourly' && typeof service.hourlyRate === 'number' && (
+                {service.pricingModel === 'perHour' && service.pricePerHour && (
                   <div className="flex justify-between items-center">
                     <span className="text-gray-700 flex items-center"><Clock className="mr-2 h-5 w-5 text-orange-500"/>Hourly Rate:</span>
-                    <span className="font-bold text-2xl text-gray-900">${service.hourlyRate.toFixed(2)}/hour</span>
+                    <span className="font-bold text-2xl text-gray-900">${Number(service.pricePerHour).toFixed(2)}/hour</span>
                   </div>
                 )}
-                {service.enableGuestPricing && typeof service.guestPrice === 'number' && (
+                {service.enableGuestPricing && service.pricePerGuest && (
                   <div className="flex justify-between items-center text-green-700">
                     <span className="font-semibold flex items-center"><Users className="mr-2 h-5 w-5 text-green-500"/>Guest Price:</span>
-                    <span className="font-bold text-2xl">${service.guestPrice.toFixed(2)}</span>
+                    <span className="font-bold text-2xl">${Number(service.pricePerGuest).toFixed(2)}</span>
                   </div>
                 )}
               </div>

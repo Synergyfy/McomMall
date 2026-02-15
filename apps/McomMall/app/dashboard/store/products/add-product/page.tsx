@@ -12,11 +12,13 @@ import Step5aPickupConfiguration from '../components/wizard/shipping/Step5aPicku
 import Step5bConnectShipStation from '../components/wizard/shipping/Step5bConnectShipStation';
 import Step6ShipStationConfig from '../components/wizard/shipping/Step6ShipStationConfig';
 import Step7ServiceMapping from '../components/wizard/shipping/Step7ServiceMapping';
+import Step7Partnership from '../components/wizard/Step7Partnership';
 import Step8Finalize from '../components/wizard/Step8Finalize';
 import { ProductStatusModal } from '../components/wizard/lib/ProductStatusModal';
 import { useAuth } from '@/service/auth/hook';
 import { useGetUserListings } from '@/service/listings/hook';
 import { useAddProduct } from '@/service/store/products/hook';
+import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
@@ -26,6 +28,7 @@ export default function AddProductPage() {
   const { user } = useAuth();
   const { data: userListings } = useGetUserListings();
   const { mutate: addProduct, isPending } = useAddProduct();
+  const { mutate: createPartnershipRequest } = useCreateCompositePartnershipRequest();
 
   const [step, setStep] = useState(1);
   const [isPublished, setIsPublished] = useState(false);
@@ -35,6 +38,7 @@ export default function AddProductPage() {
 
   const [formData, setFormData] = useState({
     productName: '',
+    plusItem: null as any,
     category: '',
     categoryName: '',
     subCategory: '',
@@ -84,6 +88,9 @@ export default function AddProductPage() {
     deliveryOriginPostalCode: '',
     deliveryOriginLat: '',
     deliveryOriginLng: '',
+    fileUrls: [] as string[],
+    downloadLimit: '',
+    downloadExpiry: '',
   });
 
   const updateFormData = (newData: any) => {
@@ -179,6 +186,9 @@ export default function AddProductPage() {
       width: formData.width ? parseFloat(formData.width) : 0,
       height: formData.height ? parseFloat(formData.height) : 0,
       lowStockThreshold: formData.lowStockThreshold ? parseInt(formData.lowStockThreshold.toString()) : 0,
+      fileUrls: formData.product_type === 'downloadable' ? formData.fileUrls : [],
+      downloadLimit: formData.product_type === 'downloadable' && formData.downloadLimit ? parseInt(formData.downloadLimit.toString()) : undefined,
+      downloadExpiry: formData.product_type === 'downloadable' && formData.downloadExpiry ? parseInt(formData.downloadExpiry.toString()) : undefined,
     };
 
     // Clean up payload to avoid backend validation errors
@@ -193,6 +203,23 @@ export default function AddProductPage() {
     addProduct(payload, {
       onSuccess: (data: any) => {
         setCreatedProductId(data.id);
+
+        if (formData.plusItem) {
+            const requestDto: any = {};
+            if (formData.plusItem.type === 'product') {
+                requestDto.plusProductId = formData.plusItem.id;
+            } else {
+                requestDto.plusServiceId = formData.plusItem.id;
+            }
+            // Set base product ID (the one we just created)
+            requestDto.baseProductId = data.id;
+
+            createPartnershipRequest(requestDto, {
+                onSuccess: () => toast.success('Partnership request sent!'),
+                onError: (err) => toast.error('Product created, but partnership request failed: ' + err.message)
+            });
+        }
+
         setIsPublished(true);
         toast.success('Product created successfully!');
       },
@@ -207,7 +234,7 @@ export default function AddProductPage() {
     // Branching from Step 3
     if (step === 3) {
       if (formData.product_type !== 'physical') {
-        setStep(8);
+        setStep(7.5);
       } else {
         setStep(4);
       }
@@ -220,7 +247,7 @@ export default function AddProductPage() {
       } else if (fulfillmentType.includes('pickup')) {
         setStep(5.1);
       } else {
-        setStep(8);
+        setStep(7.5);
       }
       return;
     }
@@ -254,12 +281,17 @@ export default function AddProductPage() {
       if (fulfillmentType.includes('pickup')) {
         setStep(5.1);
       } else {
-        setStep(8);
+        setStep(7.5);
       }
       return;
     }
 
     if (step === 5.1) {
+      setStep(7.5);
+      return;
+    }
+
+    if (step === 7.5) {
       setStep(8);
       return;
     }
@@ -269,6 +301,11 @@ export default function AddProductPage() {
 
   const prevStep = () => {
     if (step === 8) {
+      setStep(7.5);
+      return;
+    }
+
+    if (step === 7.5) {
       if (formData.product_type !== 'physical') return setStep(3);
       if (fulfillmentType.includes('pickup')) return setStep(5.1);
       if (fulfillmentType.includes('shipping')) {
@@ -314,7 +351,7 @@ export default function AddProductPage() {
               } else if (types.includes('pickup')) {
                 setStep(5.1);
               } else {
-                setStep(8);
+                setStep(7.5);
               }
             }}
             onBack={prevStep}
@@ -341,7 +378,9 @@ export default function AddProductPage() {
       case 6:
         return <Step6ShipStationConfig onBack={prevStep} onNext={nextStep} />;
       case 7:
-        return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(8)} />;
+        return <Step7ServiceMapping onBack={prevStep} onFinish={() => setStep(7.5)} />;
+      case 7.5:
+        return <Step7Partnership formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} />;
       case 8:
         return <Step8Finalize formData={formData} updateFormData={updateFormData} onBack={prevStep} onPublish={handlePublish} onSaveDraft={() => { }} isPending={isPending} />;
       default:
@@ -354,8 +393,8 @@ export default function AddProductPage() {
       <ProductStatusModal
         isOpen={true}
         onClose={() => {
-            setIsPublished(false);
-            router.push('/dashboard/store/products');
+          setIsPublished(false);
+          router.push('/dashboard/store/products');
         }}
         type="success"
         title="Product Added Successfully!"
@@ -364,7 +403,7 @@ export default function AddProductPage() {
           label: "View Product",
           onClick: () => {
             if (createdProductId) {
-                router.push(`/dashboard/product/${createdProductId}`);
+              router.push(`/dashboard/product/${createdProductId}`);
             }
           }
         }}

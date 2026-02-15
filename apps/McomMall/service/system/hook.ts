@@ -42,3 +42,15 @@ export const useGetPublicVoucherProducts = (limit = 10) => {
     queryKey: ['GET_PUBLIC_VOUCHER_PRODUCTS', limit],
   });
 };
+
+export const useGetCapabilityUsage = () => {
+  const fetcher = async () => {
+    const response = await api.get('capability/usage');
+    return response.data;
+  };
+
+  return useQuery({
+    queryFn: fetcher,
+    queryKey: ['GET_CAPABILITY_USAGE'],
+  });
+};

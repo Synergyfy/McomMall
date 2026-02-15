@@ -24,6 +24,12 @@ export interface TierConfiguration {
     featureFlags: TierFeatureFlags;
 }
 
+export enum TierType {
+    STANDARD = 'STANDARD',
+    SEASONAL = 'SEASONAL',
+    TRIAL = 'TRIAL',
+}
+
 export interface Tier {
     id: string;
     name: string;
@@ -40,8 +46,12 @@ export interface Tier {
     features?: string[];
     configuration: TierConfiguration;
     isActive: boolean;
+    startDate?: string;
+    endDate?: string;
     createdAt?: string;
     updatedAt?: string;
+    type?: TierType;
+    trialDuration?: number;
 }
 
 export type CreateTierInput = Omit<Tier, 'id' | 'createdAt' | 'updatedAt'>;

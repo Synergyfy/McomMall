@@ -10,7 +10,7 @@ import { PromotionParticipant } from '../promotion/entities/promotion-participan
 import { Repository } from 'typeorm';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 const mockOfferRepository = {
   findOne: jest.fn(),
@@ -57,9 +57,9 @@ describe('OfferService', () => {
           },
         },
         {
-          provide: TrialService,
+          provide: ActivityTimerService,
           useValue: {
-            markTaskAsCompleted: jest.fn(),
+            completeTaskByKey: jest.fn(),
           },
         },
       ],

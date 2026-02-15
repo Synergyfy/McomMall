@@ -107,4 +107,30 @@ export class EmailService {
 
     return { message: 'Password reset successfully' };
   }
+
+  async sendPartnershipRequestEmail(
+    receiver: User,
+    sender: User,
+    itemDetails?: { baseItemName: string; plusItemName: string }
+  ) {
+    const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:4200'}/dashboard/marketing/my-partners`;
+    const senderInitials = (sender.firstName?.[0] || 'U') + (sender.lastName?.[0] || '');
+
+    await this.mailerService.sendMail({
+      to: receiver.email,
+      subject: itemDetails ? `Proposal: Connect ${itemDetails.baseItemName} + ${itemDetails.plusItemName}` : `New Partnership Request from ${sender.firstName}`,
+      template: './partnership-request',
+      context: {
+        receiverName: receiver.firstName,
+        senderName: `${sender.firstName} ${sender.lastName}`,
+        senderEmail: sender.email,
+        senderInitials: senderInitials.toUpperCase(),
+        isItemRequest: !!itemDetails,
+        baseItemName: itemDetails?.baseItemName,
+        plusItemName: itemDetails?.plusItemName,
+        actionUrl,
+        year: new Date().getFullYear(),
+      },
+    });
+  }
 }

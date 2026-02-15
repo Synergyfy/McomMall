@@ -4,7 +4,7 @@ import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class ActivityTimerGuard implements CanActivate {
-  constructor(private readonly timerService: ActivityTimerService) {}
+  constructor(private readonly timerService: ActivityTimerService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
@@ -19,7 +19,7 @@ export class ActivityTimerGuard implements CanActivate {
       const isRestricted = await this.timerService.isRestricted(user);
       if (isRestricted) {
         throw new ForbiddenException(
-          'Your trial period has expired and tasks are incomplete. Please subscribe to a tier to continue using the platform.',
+          'Your trial period has expired or is paused. Please resume your trial or subscribe to a tier to continue.',
         );
       }
     }

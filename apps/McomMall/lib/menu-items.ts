@@ -22,6 +22,8 @@ import {
   Scan,
   Gift,
   Coins,
+  LifeBuoy,
+  Zap,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -53,9 +55,9 @@ export const mainMenuItems: MenuItem[] = [
     icon: Gift,
   },
   {
-    title: 'Terminal Cashback',
-    href: '/dashboard/terminal-cashback',
-    icon: Scan,
+    title: 'Support Tickets',
+    href: '/dashboard/support-tickets',
+    icon: LifeBuoy,
   },
   // { title: 'QR Scanner', href: '/dashboard/bookings/qr-scanner', icon: QrCode },
   // { title: 'Store', href: '/dashboard/store', icon: LayoutDashboard },
@@ -70,6 +72,7 @@ export const listingMenuItems: MenuItem[] = [
     icon: List,
     subMenu: [
       { title: 'Active', href: '/dashboard/my-listings/active' },
+      { title: 'Drafts', href: '/dashboard/my-listings/drafts' },
       { title: 'Pending', href: '/dashboard/my-listings/pending' },
       { title: 'Expired', href: '/dashboard/my-listings/expired' },
     ],
@@ -128,6 +131,7 @@ export const marketingMenuItems: MenuItem[] = [
       },
     ],
   },
+  /*
   {
     title: 'Groups',
     href: '/dashboard/marketing/groups',
@@ -138,11 +142,17 @@ export const marketingMenuItems: MenuItem[] = [
       { title: 'Membership', href: '/dashboard/marketing/membership' },
     ],
   },
+  */
+  {
+    title: 'Group Circles',
+    href: '/dashboard/group-circles',
+    icon: Zap,
+  },
 ];
 
 export const historyMenuItems: MenuItem[] = [
   {
-    title: 'Promotion History',
+    title: 'Reward History',
     href: '/dashboard/history/promotion-history',
     icon: History,
   },
@@ -188,12 +198,7 @@ export const accountMenuItems: MenuItem[] = [
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Cashback', href: '/dashboard/cashback', icon: Coins },
-  {
-    title: 'Settings',
-    href: '/dashboard/settings',
-    icon: Settings,
-    subMenu: [{ title: 'Payment', href: '/dashboard/settings/payment' }],
-  },
+
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 

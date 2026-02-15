@@ -10,6 +10,12 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
+console.log('Cloudinary Config:', {
+  cloud_name: process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+  api_key: process.env.CLOUDINARY_API_KEY ? '******' + process.env.CLOUDINARY_API_KEY.slice(-4) : 'MISSING',
+  api_secret: process.env.CLOUDINARY_API_SECRET ? '******' : 'MISSING',
+});
+
 // Configure Multer for memory storage (keeps parity with existing route)
 const storage = multer.memoryStorage();
 multer({ storage });

@@ -9,7 +9,9 @@ import {
   X,
   ArrowRight,
   Layers,
-  HelpCircle
+  HelpCircle,
+  Package,
+  Download
 } from 'lucide-react';
 import {
   Tooltip,
@@ -73,6 +75,39 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </div>
 
           <form className="flex flex-col gap-6 max-w-3xl">
+            {/* Product Type Section */}
+            <div className="flex flex-col gap-4">
+              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2">
+                Product Type <span className="text-red-500">*</span>
+              </label>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {[
+                  { id: 'physical', label: 'Physical', desc: 'Tangible items', icon: <Package size={20} /> },
+                  { id: 'downloadable', label: 'Digital', desc: 'Files & Media', icon: <Download size={20} /> }
+                ].map((type) => (
+                  <label key={type.id} className="cursor-pointer relative group">
+                    <input
+                      className="peer sr-only"
+                      name="product_type"
+                      type="radio"
+                      value={type.id}
+                      checked={formData.product_type === type.id}
+                      onChange={() => updateFormData({ product_type: type.id })}
+                    />
+                    <div className="h-full flex items-center gap-4 rounded-xl border-2 border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] p-4 transition-all peer-checked:border-[#f48c25] peer-checked:bg-[#fff8f1] dark:peer-checked:bg-[#f48c25]/10">
+                      <div className="flex-shrink-0 size-10 rounded-full bg-[#f4ede7] dark:bg-[#3a2e26] flex items-center justify-center text-[#1c140d] dark:text-white peer-checked:text-[#f48c25]">
+                        {type.icon}
+                      </div>
+                      <div className="flex flex-col">
+                        <p className="text-[#1c140d] dark:text-white font-bold text-sm">{type.label}</p>
+                        <p className="text-[#9c7349] dark:text-[#cba885] text-xs">{type.desc}</p>
+                      </div>
+                    </div>
+                  </label>
+                ))}
+              </div>
+            </div>
+
             {/* Business Selection */}
             <div className="flex flex-col gap-2">
               <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="bussinessId">

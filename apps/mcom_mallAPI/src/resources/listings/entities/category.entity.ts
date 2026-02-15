@@ -18,6 +18,6 @@ export class Category extends AbstractBaseEntity {
   @OneToMany(() => Category, (category) => category.parent)
   children: Category[];
 
-  @ManyToMany(() => Business, (business) => business.categories)
-  businesses: Business[];
+  // @ManyToMany(() => Business, (business) => business.categories)
+  // businesses: Business[];
 }

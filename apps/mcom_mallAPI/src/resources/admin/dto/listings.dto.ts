@@ -36,13 +36,13 @@ export class AdminListingDto {
   id: string;
 
   @ApiProperty()
-  title: string;
-
-  @ApiProperty()
   businessName: string;
 
   @ApiProperty()
-  businessId: string;
+  ownerName: string;
+
+  @ApiProperty()
+  ownerEmail: string;
 
   @ApiProperty()
   category: string;
@@ -51,13 +51,10 @@ export class AdminListingDto {
   sector: string;
 
   @ApiProperty()
-  price: number;
-
-  @ApiProperty()
   status: string;
 
   @ApiProperty()
-  featured: boolean;
+  isVerified: boolean;
 
   @ApiProperty()
   rating: number;
@@ -75,7 +72,7 @@ export class AdminListingDto {
   images: string[];
 
   @ApiProperty()
-  type: 'product' | 'service';
+  createdAt: Date;
 }
 
 export class PaginatedListingsDto {

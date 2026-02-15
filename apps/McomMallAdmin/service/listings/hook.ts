@@ -7,9 +7,11 @@ import {
   GooglePlaceResult,
   GooglePlaceResults,
   InHouseBusinessResults,
+  InHouseBusiness,
   RecentListings,
   AdminListingStats,
   AdminListingsResponse,
+  AdminListing,
 } from './types';
 
 export interface ErrorResponse {
@@ -310,9 +312,9 @@ export const useGetAdminListings = (params?: { page?: number; limit?: number }) 
 
 export const useToggleListingFeatured = () => {
   const queryClient = useQueryClient();
-  const toggle = async (id: string) => {
+  const toggle = async ({ id, type, isFeatured }: { id: string, type: 'product' | 'service', isFeatured: boolean }) => {
     try {
-      const response = await api.patch(`admin/listings/${id}/featured`);
+      const response = await api.patch(`admin/listings/${id}/featured`, { type, isFeatured });
       return response.data;
     } catch (error: unknown) {
       const err = error as ErrorResponse;
@@ -355,4 +357,56 @@ export const useGetUserListings = () => {
     queryKey: ['FETCH_USER_LISTINGS'],
   });
   return query;
+};
+
+export const useGetListingsByUserId = ({ userId }: { userId: string }) => {
+  const fetch = async () => {
+    try {
+      const response = await api.get(`listings/user/${userId}`);
+      // Assuming the API returns the array directly or in a data property
+      // Looking at the usage in page.tsx, it expect an array.
+      return (response.data.data || response.data) as InHouseBusiness[];
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to fetch user listings'
+      );
+    }
+  };
+
+  return useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_USER_LISTINGS_BY_ID', userId],
+  });
+};
+
+export const useUpdateListingStatus = () => {
+  const queryClient = useQueryClient();
+  const update = async ({ id, status, type, reason }: { id: string, status: string, type: 'product' | 'service', reason?: string }) => {
+    try {
+      // Map frontend 'approved' to backend 'published'
+      const backendStatus = status === 'approved' ? 'published' : status;
+      const response = await api.patch(`admin/listings/${id}/status`, { status: backendStatus, type, reason });
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message || err.message || 'Failed to update listing status'
+      );
+    }
+  };
+
+  return useMutation({
+    mutationFn: update,
+    onSuccess: (data) => {
+      toast.success(data.message || 'Listing status updated successfully');
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ALL_ADMIN_LISTINGS'] });
+      queryClient.invalidateQueries({ queryKey: ['FETCH_ADMIN_LISTING_STATS'] });
+    },
+    onError: (error: Error) => {
+      toast.error(error.message);
+    },
+  });
 };

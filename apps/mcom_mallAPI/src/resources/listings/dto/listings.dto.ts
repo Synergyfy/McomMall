@@ -127,7 +127,9 @@ export class CreateBusinessDto {
   @ValidateNested({ each: true })
   @Type(() => CreateSocialLinkDto)
   socialLinks?: CreateSocialLinkDto[];
-  @IsNotEmpty() @IsArray() @IsString({ each: true }) categoryIds: string[];
+  @IsNotEmpty() @IsString() sectorId: string;
+  @IsNotEmpty() @IsString() categoryId: string;
+  @IsNotEmpty() @IsString() subCategoryId: string;
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -148,7 +150,7 @@ export class CreateBusinessDto {
   serviceProviderProfile?: CreateServiceProviderProfileDto;
 }
 
-export class UpdateBusinessDto extends PartialType(CreateBusinessDto) {}
+export class UpdateBusinessDto extends PartialType(CreateBusinessDto) { }
 
 export class SearchBusinessDto {
   @IsString()

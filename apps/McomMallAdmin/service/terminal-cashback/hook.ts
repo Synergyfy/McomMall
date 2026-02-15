@@ -39,11 +39,11 @@ export const useGetTerminalConfigs = () => {
     });
 };
 
-export const useGetTerminalConfig = (businessId: string) => {
+export const useGetTerminalConfig = (userId: string) => {
     return useQuery({
-        queryKey: terminalKeys.config(businessId),
-        queryFn: () => getTerminalConfig(businessId),
-        enabled: !!businessId,
+        queryKey: terminalKeys.config(userId),
+        queryFn: () => getTerminalConfig(userId),
+        enabled: !!userId,
     });
 };
 
@@ -60,10 +60,10 @@ export const useCreateTerminalConfig = () => {
 export const useUpdateTerminalConfig = () => {
     const queryClient = useQueryClient();
     return useMutation({
-        mutationFn: ({ businessId, data }: { businessId: string; data: UpdateTerminalConfigDto }) =>
-            updateTerminalConfig(businessId, data),
+        mutationFn: ({ userId, data }: { userId: string; data: UpdateTerminalConfigDto }) =>
+            updateTerminalConfig(userId, data),
         onSuccess: (data, variables) => {
-            queryClient.invalidateQueries({ queryKey: terminalKeys.config(variables.businessId) });
+            queryClient.invalidateQueries({ queryKey: terminalKeys.config(variables.userId) });
             queryClient.invalidateQueries({ queryKey: terminalKeys.configs() });
         },
     });

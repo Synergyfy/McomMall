@@ -35,7 +35,7 @@ export class AdminService {
     private readonly hashService: HashService,
     private readonly authService: AuthService,
     private readonly userService: UsersService,
-  ) {}
+  ) { }
 
   async create(createAdminDto: CreateAdminDto) {
     const { email, password, name, phoneNumber } = createAdminDto;
@@ -111,21 +111,21 @@ export class AdminService {
     // 1. Stats
     const activeUsers = await this.userRepository.count({ where: { isActive: true } });
     const totalBusinesses = await this.businessRepository.count();
-    
+
     // Assuming 'pending' status for products/services. If not used, these might return 0.
     const pendingProducts = await this.productRepository.count({ where: { productStatus: 'pending' } });
-    const pendingListings = pendingProducts; 
+    const pendingListings = pendingProducts;
 
     const newSignups24h = await this.userRepository.count({
       where: { created_at: MoreThan(twentyFourHoursAgo) },
     });
 
     const ordersTodayQuery = await this.orderRepository
-        .createQueryBuilder('order')
-        .select('COUNT(order.id)', 'count')
-        .addSelect('SUM(order.total)', 'sum')
-        .where('order.created_at > :startOfDay', { startOfDay })
-        .getRawOne();
+      .createQueryBuilder('order')
+      .select('COUNT(order.id)', 'count')
+      .addSelect('SUM(order.total)', 'sum')
+      .where('order.created_at > :startOfDay', { startOfDay })
+      .getRawOne();
 
     const transactionsToday = Number(ordersTodayQuery?.count || 0);
     const revenueToday = Number(ordersTodayQuery?.sum || 0);
@@ -133,40 +133,40 @@ export class AdminService {
     // 2. Analytics (Last 7 Days)
     const dateMap = new Map<string, number>();
     for (let i = 0; i < 7; i++) {
-        const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        dateMap.set(d.toISOString().split('T')[0], 0);
+      const d = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+      dateMap.set(d.toISOString().split('T')[0], 0);
     }
 
     // Signups Chart
     const recentSignups = await this.userRepository
-        .createQueryBuilder('user')
-        .select("DATE(user.created_at) as date, COUNT(user.id) as count")
-        .where("user.created_at > :sevenDaysAgo", { sevenDaysAgo })
-        .groupBy("DATE(user.created_at)")
-        .getRawMany();
-    
+      .createQueryBuilder('user')
+      .select("DATE(user.created_at) as date, COUNT(user.id) as count")
+      .where("user.created_at > :sevenDaysAgo", { sevenDaysAgo })
+      .groupBy("DATE(user.created_at)")
+      .getRawMany();
+
     const signupsChart = Array.from(dateMap.keys()).map(date => {
-        const found = recentSignups.find(s => {
-             const d = s.date instanceof Date ? s.date.toISOString().split('T')[0] : String(s.date).split('T')[0];
-             return d === date;
-        });
-        return { date, value: found ? Number(found.count) : 0 };
+      const found = recentSignups.find(s => {
+        const d = s.date instanceof Date ? s.date.toISOString().split('T')[0] : String(s.date).split('T')[0];
+        return d === date;
+      });
+      return { date, value: found ? Number(found.count) : 0 };
     }).reverse();
 
     // Revenue Chart
     const recentRevenue = await this.orderRepository
-        .createQueryBuilder('order')
-        .select("DATE(order.created_at) as date, SUM(order.total) as total")
-        .where("order.created_at > :sevenDaysAgo", { sevenDaysAgo })
-        .groupBy("DATE(order.created_at)")
-        .getRawMany();
+      .createQueryBuilder('order')
+      .select("DATE(order.created_at) as date, SUM(order.total) as total")
+      .where("order.created_at > :sevenDaysAgo", { sevenDaysAgo })
+      .groupBy("DATE(order.created_at)")
+      .getRawMany();
 
     const revenueChart = Array.from(dateMap.keys()).map(date => {
-        const found = recentRevenue.find(r => {
-            const d = r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0];
-            return d === date;
-        });
-        return { date, value: found ? Number(found.total) : 0 };
+      const found = recentRevenue.find(r => {
+        const d = r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0];
+        return d === date;
+      });
+      return { date, value: found ? Number(found.total) : 0 };
     }).reverse();
 
     // Weekly totals
@@ -175,27 +175,27 @@ export class AdminService {
 
     // 3. Recent Activity (Mix of Users joined and Orders placed)
     const recentUsers = await this.userRepository.find({
-        order: { created_at: 'DESC' },
-        take: 5
+      order: { created_at: 'DESC' },
+      take: 5
     });
-    
+
     const recentOrders = await this.orderRepository.find({
-        relations: ['user'],
-        order: { created_at: 'DESC' },
-        take: 5
+      relations: ['user'],
+      order: { created_at: 'DESC' },
+      take: 5
     });
 
     const activities = [
-        ...recentUsers.map(u => ({
-            type: 'user',
-            message: `New user joined: ${u.name || u.email}`,
-            timestamp: u.created_at
-        })),
-        ...recentOrders.map(o => ({
-            type: 'order',
-            message: `New order #${o.id} by ${o.user?.name || 'Unknown'} for $${o.total}`,
-            timestamp: o.created_at
-        }))
+      ...recentUsers.map(u => ({
+        type: 'user',
+        message: `New user joined: ${u.name || u.email}`,
+        timestamp: u.created_at
+      })),
+      ...recentOrders.map(o => ({
+        type: 'order',
+        message: `New order #${o.id} by ${o.user?.name || 'Unknown'} for $${o.total}`,
+        timestamp: o.created_at
+      }))
     ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 10);
 
     return {
@@ -259,7 +259,7 @@ export class AdminService {
       let role = UserRole.CUSTOMER;
       if (type === 'business') role = UserRole.OWNER;
       if (type === 'admin') role = UserRole.ADMIN;
-      
+
       qb.andWhere('user.role = :role', { role });
     }
 
@@ -272,7 +272,7 @@ export class AdminService {
 
       let accountType: string = user.role;
       if (user.role === UserRole.OWNER) {
-          accountType = 'business';
+        accountType = 'business';
       }
 
       return {
@@ -321,7 +321,9 @@ export class AdminService {
     const qb = this.businessRepository.createQueryBuilder('business')
       .leftJoinAndSelect('business.user', 'user')
       .leftJoinAndSelect('business.location', 'location')
-      .leftJoinAndSelect('business.categories', 'category')
+      .leftJoinAndSelect('business.sector', 'sector')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.subCategory', 'subCategory')
       .leftJoinAndSelect('business.reviews', 'review')
       .loadRelationCountAndMap('business.productCount', 'business.products')
       .loadRelationCountAndMap('business.serviceCount', 'business.services')
@@ -341,7 +343,7 @@ export class AdminService {
     }
 
     if (sector && sector !== 'all') {
-       qb.andWhere('category.name = :sector', { sector });
+      qb.andWhere('sector.name = :sector', { sector });
     }
 
     const [businesses, total] = await qb.getManyAndCount();
@@ -355,8 +357,8 @@ export class AdminService {
       const totalRating = b.reviews?.reduce((acc, r) => acc + r.rating, 0) || 0;
       const rating = reviewCount > 0 ? totalRating / reviewCount : 0;
 
-      const sectorName = b.categories?.find(c => !c.parent)?.name || b.categories?.[0]?.name || 'N/A';
-      const categoryName = b.categories?.find(c => c.parent)?.name || b.categories?.[1]?.name || sectorName;
+      const sectorName = b.sector?.name || 'N/A';
+      const categoryName = b.category?.name || 'N/A';
 
       return {
         id: b.id,
@@ -458,120 +460,77 @@ export class AdminService {
     const { search, status, category, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    // To properly paginate combined entities without OOM:
-    // Fetch a slice from both that is large enough to cover the 'limit' but not the whole DB.
-    // However, for strict pagination, fetching counts and merging limited results is better.
-    // This implementation still has the memory merging issue but limits the database results to 'limit' per entity.
-    
-    const productQb = this.productRepository.createQueryBuilder('product')
-      .leftJoinAndSelect('product.business', 'business')
+    const qb = this.businessRepository.createQueryBuilder('business')
+      .leftJoinAndSelect('business.user', 'user')
       .leftJoinAndSelect('business.location', 'location')
-      .leftJoinAndSelect('business.categories', 'category')
+      .leftJoinAndSelect('business.sector', 'sector')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.reviews', 'reviews')
       .take(limit)
       .skip(skip)
-      .orderBy('product.created_at', 'DESC');
+      .orderBy('business.created_at', 'DESC');
 
     if (search) {
-      productQb.andWhere('(product.title ILIKE :search OR business.businessName ILIKE :search)', { search: `%${search}%` });
-    }
-    if (status && status !== 'all') {
-        let pStatus = status === 'approved' ? 'published' : status;
-        productQb.andWhere('product.productStatus = :status', { status: pStatus });
-    }
-    if (category && category !== 'all') {
-        productQb.andWhere('product.category = :category', { category });
+      qb.andWhere('(business.businessName ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)', { search: `%${search}%` });
     }
 
-    const serviceQb = this.serviceRepository.createQueryBuilder('service')
-      .leftJoinAndSelect('service.business', 'business')
-      .leftJoinAndSelect('business.location', 'location')
-      .leftJoinAndSelect('business.categories', 'category')
-      .take(limit)
-      .skip(skip)
-      .orderBy('service.created_at', 'DESC');
-
-    if (search) {
-      serviceQb.andWhere('(service.name ILIKE :search OR business.businessName ILIKE :search)', { search: `%${search}%` });
-    }
-    if (status && status !== 'all') {
-        let sStatus = status === 'approved' ? 'published' : status;
-        serviceQb.andWhere('service.status = :status', { status: sStatus });
+    if (status) {
+      qb.andWhere('business.status = :status', { status });
     }
 
-    const [products, pTotal] = await productQb.getManyAndCount();
-    const [services, sTotal] = await serviceQb.getManyAndCount();
+    if (category) {
+      qb.andWhere('category.name = :category', { category });
+    }
 
-    const allListings: AdminListingDto[] = [
-      ...products.map(p => ({
-        id: p.id,
-        title: p.title,
-        businessName: p.business?.businessName || 'Unknown',
-        businessId: p.business?.id || '',
-        category: p.category,
-        sector: p.business?.categories?.find(c => !c.parent)?.name || p.business?.categories?.[0]?.name || 'N/A',
-        price: p.price,
-        status: p.productStatus === 'published' ? 'approved' : p.productStatus,
-        featured: p.isFeatured,
-        rating: 0,
-        reviewCount: 0,
-        location: p.business?.location ? `${p.business.location.addressLine1}, ${p.business.location.city}` : 'N/A',
-        description: p.description,
-        images: p.media || [],
-        type: 'product' as const,
-      })),
-      ...services.map(s => ({
-        id: s.id,
-        title: s.name,
-        businessName: s.business?.businessName || 'Unknown',
-        businessId: s.business?.id || '',
-        category: 'Service',
-        sector: s.business?.categories?.find(c => !c.parent)?.name || s.business?.categories?.[0]?.name || 'N/A',
-        price: Number(s.fixedPrice || s.pricePerHour || s.pricePerUnit || 0),
-        status: s.status === 'published' ? 'approved' : s.status,
-        featured: s.isFeatured,
-        rating: 0,
-        reviewCount: 0,
-        location: s.business?.location ? `${s.business.location.addressLine1}, ${s.business.location.city}` : 'N/A',
-        description: s.description || '',
-        images: s.media || [],
-        type: 'service' as const,
-      })),
-    ];
+    const [listings, total] = await qb.getManyAndCount();
 
-    // Note: This merging logic is still not perfect for strict ordering across both tables 
-    // but at least it limits database memory usage per request.
-    const paginatedData = allListings.slice(0, limit);
+    const mappedData: AdminListingDto[] = listings.map(b => {
+      // Basic rating calculation
+      const rating = b.reviews?.length
+        ? b.reviews.reduce((acc, r) => acc + r.rating, 0) / b.reviews.length
+        : 0;
+
+      return {
+        id: b.id,
+        businessName: b.businessName,
+        ownerName: b.user ? `${b.user.firstName} ${b.user.lastName}` : 'Unknown',
+        ownerEmail: b.user?.email || '',
+        category: b.category?.name || 'Uncategorized',
+        sector: b.sector?.name || 'N/A',
+        status: b.status,
+        isVerified: b.isVerified,
+        rating: Number(rating.toFixed(1)),
+        reviewCount: b.reviews?.length || 0,
+        location: b.location ? `${b.location.addressLine1}, ${b.location.city}` : 'No Location',
+        description: b.shortDescription,
+        images: b.media || [],
+        createdAt: b.created_at,
+      };
+    });
 
     return {
-      data: paginatedData,
-      total: pTotal + sTotal,
+      data: mappedData,
+      total,
       page,
       limit,
-      totalPages: Math.ceil((pTotal + sTotal) / limit),
+      totalPages: Math.ceil(total / limit),
     };
   }
 
-  async updateListingStatus(id: string, type: 'product' | 'service', status: string) {
-    if (type === 'product') {
-      const exists = await this.productRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Product not found');
-      return this.productRepository.update(id, { productStatus: status });
-    } else {
-      const exists = await this.serviceRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Service not found');
-      return this.serviceRepository.update(id, { status });
-    }
+  // Helper methods for product/service actions (updateListingStatus, toggleListingFeatured)
+  // are likely no longer applicable or need to be moved to Products/Services admin service
+  // but keeping them blank/refactored if needed, or removing if AdminListingDto no longer supports them.
+  // Since AdminListingDto changed, these methods are likely broken or irrelevant for "Listings" context.
+  // I will comment them out or update them to work on Business if applicable, but user asked for "Listings = Businesses".
+  // Assuming business status and verification are the new actions.
+
+  async updateListingStatus(id: string, status: string) {
+    const exists = await this.businessRepository.findOne({ where: { id } });
+    if (!exists) throw new NotFoundException('Business not found');
+    // Map string status to BusinessStatus enum if needed, or use as is if types match
+    return this.businessRepository.update(id, { status: status as BusinessStatus });
   }
 
-  async toggleListingFeatured(id: string, type: 'product' | 'service', isFeatured: boolean) {
-    if (type === 'product') {
-      const exists = await this.productRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Product not found');
-      return this.productRepository.update(id, { isFeatured });
-    } else {
-      const exists = await this.serviceRepository.findOne({ where: { id } });
-      if (!exists) throw new NotFoundException('Service not found');
-      return this.serviceRepository.update(id, { isFeatured });
-    }
-  }
+  // Featured logic for businesses isn't in the entity by default, skipping or removing validation error
+  // async toggleListingFeatured(id: string, isFeatured: boolean) { ... } 
 }

@@ -2,33 +2,39 @@
 
 import { useState } from 'react';
 import { useSearchParams } from 'next/navigation';
-import { useGetMyMembership } from '@/service/membership/hook';
+import { useGetMyMembership } from '@/service/membership/hooks';
 import CurrentPlanCard from './CurrentPlanCard';
 import TiersList from './TiersList';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
 import { Tier } from '@/service/tiers/types';
 import { PlanType } from '@/service/payments/types';
+import { useRouter } from 'next/navigation';
 
 export default function MySubscriptionPageClient() {
+  const router = useRouter();
   const { data: subscriptionStatus, isLoading } = useGetMyMembership();
-  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual'; isTrial: boolean } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handleSelectTier = (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
-    setSelectedTier({ tier, cycle });
+  const handleSelectTier = async (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual', isTrial: boolean = false) => {
+    if (isTrial) {
+      router.push(`/dashboard/my-subscription/trial-confirmation?tierId=${tier.id}&tierName=${encodeURIComponent(tier.name)}`);
+    } else {
+      setSelectedTier({ tier, cycle, isTrial });
+    }
   };
 
   const mapCycleToPlanType = (cycle: string): PlanType => {
-      switch(cycle) {
-        case 'monthly': return PlanType.MONTHLY;
-        case 'quarterly': return PlanType.QUARTERLY;
-        case 'annual': return PlanType.ANNUAL;
-        default: return PlanType.MONTHLY;
-      }
+    switch (cycle) {
+      case 'monthly': return PlanType.MONTHLY;
+      case 'quarterly': return PlanType.QUARTERLY;
+      case 'annual': return PlanType.ANNUAL;
+      default: return PlanType.MONTHLY;
+    }
   };
 
-  if (selectedTier) {
+  if (selectedTier && !selectedTier.isTrial) {
     let price: number = 0;
     switch (selectedTier.cycle) {
       case 'monthly':
@@ -74,13 +80,13 @@ export default function MySubscriptionPageClient() {
 
       {subscriptionStatus && (
         <div className="mb-10 w-full max-w-4xl">
-           <CurrentPlanCard subscription={subscriptionStatus} />
+          <CurrentPlanCard subscription={subscriptionStatus} />
         </div>
       )}
 
       <section className="w-full flex flex-col items-center">
         <h3 className="text-xl md:text-2xl font-medium text-center mb-6">
-            Select your plan
+          Select your plan
         </h3>
         <TiersList onSelectTier={handleSelectTier} />
       </section>

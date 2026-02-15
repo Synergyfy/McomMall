@@ -8,20 +8,20 @@ import { Business } from '../listings/entities/listing.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
 import { PromotionService } from '../promotion/promotion.service';
-import { Trial } from '../payments/entities/trial.entity';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { CapabilityService } from '../capability/capability.service';
 
 describe('ProductService', () => {
   let service: ProductService;
-  let trialRepository: Repository<Trial>;
-  let trialService: TrialService;
+  let activityTimerService: ActivityTimerService;
 
   const mockProductRepository = {
     create: jest.fn(),
     save: jest.fn(),
     findAndCount: jest.fn(),
     findOne: jest.fn(),
+    count: jest.fn().mockResolvedValue(0),
   };
 
   const mockUserRepository = {
@@ -36,21 +36,21 @@ describe('ProductService', () => {
     findOne: jest.fn(),
   };
 
-  const mockTrialRepository = {
-    findOne: jest.fn(),
-  };
-
   const mockActivitiesService = {
     create: jest.fn(),
   };
 
-  const mockTrialService = {
-    markTaskAsCompleted: jest.fn(),
+  const mockActivityTimerService = {
+    completeTaskByKey: jest.fn(),
   };
 
   const mockPromotionService = {
     findUserPromotions: jest.fn(),
     isProductQualified: jest.fn(),
+  };
+
+  const mockCapabilityService = {
+    checkPermission: jest.fn().mockResolvedValue(true),
   };
 
   beforeEach(async () => {
@@ -74,27 +74,26 @@ describe('ProductService', () => {
           useValue: mockPartnershipRequestRepository,
         },
         {
-          provide: getRepositoryToken(Trial),
-          useValue: mockTrialRepository,
-        },
-        {
           provide: ActivitiesService,
           useValue: mockActivitiesService,
         },
         {
-          provide: TrialService,
-          useValue: mockTrialService,
+          provide: ActivityTimerService,
+          useValue: mockActivityTimerService,
         },
         {
           provide: PromotionService,
           useValue: mockPromotionService,
         },
+        {
+          provide: CapabilityService,
+          useValue: mockCapabilityService,
+        },
       ],
     }).compile();
 
     service = module.get<ProductService>(ProductService);
-    trialRepository = module.get<Repository<Trial>>(getRepositoryToken(Trial));
-    trialService = module.get<TrialService>(TrialService);
+    activityTimerService = module.get<ActivityTimerService>(ActivityTimerService);
   });
 
   afterEach(() => {
@@ -106,7 +105,7 @@ describe('ProductService', () => {
   });
 
   describe('create', () => {
-    it('should create a product and mark trial task as completed if user has a trial', async () => {
+    it('should create a product and complete activity task', async () => {
       const createProductDto = {
         title: 'Test Product',
         productType: 'physical',
@@ -118,43 +117,18 @@ describe('ProductService', () => {
         media: ['http://example.com/image.jpg'],
       };
       const business = new Business();
-      business.user = { id: 'user-with-trial' } as User;
+      business.user = { id: 'user-id' } as User;
       mockProductRepository.create.mockReturnValue(createProductDto);
       mockProductRepository.save.mockResolvedValue({ ...createProductDto, title: 'Test Product' });
-      mockTrialRepository.findOne.mockResolvedValue(new Trial());
       mockActivitiesService.create.mockResolvedValue(undefined);
 
       await service.create(createProductDto, business);
 
       expect(mockProductRepository.save).toHaveBeenCalledWith(createProductDto);
-      expect(trialService.markTaskAsCompleted).toHaveBeenCalledWith(
-        'user-with-trial',
+      expect(activityTimerService.completeTaskByKey).toHaveBeenCalledWith(
+        'user-id',
         'createdProductOrService',
       );
-    });
-
-    it('should create a product and not mark trial task as completed if user has no trial', async () => {
-      const createProductDto = {
-        title: 'Test Product',
-        productType: 'physical',
-        price: 100,
-        description: 'Test Description',
-        sku: 'TEST-SKU',
-        category: 'Test Category',
-        bussinessId: 'test-business-id',
-        media: ['http://example.com/image.jpg'],
-      };
-      const business = new Business();
-      business.user = { id: 'user-without-trial' } as User;
-      mockProductRepository.create.mockReturnValue(createProductDto);
-      mockProductRepository.save.mockResolvedValue({ ...createProductDto, title: 'Test Product' });
-      mockTrialRepository.findOne.mockResolvedValue(null);
-      mockActivitiesService.create.mockResolvedValue(undefined);
-
-      await service.create(createProductDto, business);
-
-      expect(mockProductRepository.save).toHaveBeenCalledWith(createProductDto);
-      expect(trialService.markTaskAsCompleted).not.toHaveBeenCalled();
     });
   });
 

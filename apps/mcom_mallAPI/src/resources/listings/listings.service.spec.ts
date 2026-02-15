@@ -6,25 +6,18 @@ import { Category } from './entities/category.entity';
 import { User } from '../users/entities/user.entity';
 import { DataSource, Repository } from 'typeorm';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
 import { PromotionService } from '../promotion/promotion.service';
-import { Trial } from '../payments/entities/trial.entity';
+import { CapabilityService } from '../capability/capability.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 
 describe('ListingsService', () => {
   let service: ListingsService;
-  let trialRepository: Repository<Trial>;
-  let trialService: TrialService;
   let userRepository: Repository<User>;
   let businessRepository: Repository<Business>;
   let dataSource: DataSource;
-
-  const mockTrialRepository = {
-    findOne: jest.fn(),
-  };
-
-  const mockTrialService = {
-    markTaskAsCompleted: jest.fn(),
-  };
 
   const mockUserRepository = {
     findOneBy: jest.fn(),
@@ -55,15 +48,23 @@ describe('ListingsService', () => {
           useValue: mockBusinessRepository,
         },
         {
+          provide: getRepositoryToken(Sector),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomyCategory),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomySubcategory),
+          useValue: {},
+        },
+        {
           provide: getRepositoryToken(Category),
           useValue: {},
         },
         {
           provide: getRepositoryToken(User),
-          useValue: {},
-        },
-        {
-          provide: getRepositoryToken(Trial),
           useValue: {},
         },
         {
@@ -88,15 +89,21 @@ describe('ListingsService', () => {
           },
         },
         {
-          provide: TrialService,
+          provide: ActivityTimerService,
           useValue: {
-            markTaskAsCompleted: jest.fn(),
+            completeTaskByKey: jest.fn(),
           },
         },
         {
           provide: PromotionService,
           useValue: {
             findUserPromotions: jest.fn(),
+          },
+        },
+        {
+          provide: CapabilityService,
+          useValue: {
+            checkPermission: jest.fn(),
           },
         },
       ],

@@ -16,13 +16,15 @@ import { Input } from '@/components/ui/input';
 import { Switch } from '@/components/ui/switch';
 import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Tier, CreateTierInput, UpdateTierInput } from '@/app/admin/types/tier';
+import { Tier, CreateTierInput, UpdateTierInput, TierType } from '@/app/admin/types/tier';
 import { useEffect } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
 
 const tierSchema = z.object({
     name: z.string().min(1, 'Name is required'),
     description: z.string().min(1, 'Description is required'),
+    type: z.nativeEnum(TierType).optional(),
+    trialDuration: z.coerce.number().min(0).optional(),
     monthlyPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
     quarterlyPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
     annualPrice: z.coerce.number().min(0, 'Must be 0 or greater'),
@@ -55,13 +57,46 @@ const tierSchema = z.object({
         }),
     }),
     isActive: z.boolean(),
+    startDate: z.string().optional(),
+    endDate: z.string().optional(),
+}).refine(data => {
+    if (data.type === TierType.TRIAL) {
+        return !!data.trialDuration && data.trialDuration > 0;
+    }
+    return true;
+}, {
+    message: "Trial duration is required and must be greater than 0 for Trial tiers",
+    path: ["trialDuration"],
 });
+
+
+const DEFAULT_CONFIGURATION = {
+    quotas: {
+        maxListings: 10,
+        allowProductListing: true,
+        allowServiceListing: true,
+        maxProducts: 5,
+        maxServices: 5,
+        maxGiftCardTemplates: 1,
+        maxCouponTemplates: 1,
+        maxLoyaltyPrograms: 0,
+        maxImagesPerListing: 3,
+        featuredListingAllowance: 0,
+    },
+    featureFlags: {
+        priorityInSearch: false,
+        advancedAnalytics: false,
+        dedicatedSupport: false,
+        allowCustomBranding: false,
+        allowGroupCreation: false,
+    },
+};
 
 type TierFormValues = z.infer<typeof tierSchema>;
 
 interface TierFormProps {
     formId: string;
-    initialData?: Tier;
+    initialData?: Partial<Tier>;
     onSubmit: (data: CreateTierInput | UpdateTierInput) => void;
 }
 
@@ -71,6 +106,8 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
         defaultValues: {
             name: '',
             description: '',
+            type: TierType.STANDARD,
+            trialDuration: 14,
             monthlyPrice: 0,
             quarterlyPrice: 0,
             annualPrice: 0,
@@ -81,29 +118,12 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
             paypalQuarterlyPlanId: '',
             paypalAnnualPlanId: '',
             features: [],
-            configuration: {
-                quotas: {
-                    maxListings: 10,
-                    allowProductListing: true,
-                    allowServiceListing: true,
-                    maxProducts: 5,
-                    maxServices: 5,
-                    maxGiftCardTemplates: 1,
-                    maxCouponTemplates: 1,
-                    maxLoyaltyPrograms: 0,
-                    maxImagesPerListing: 3,
-                    featuredListingAllowance: 0,
-                },
-                featureFlags: {
-                    priorityInSearch: false,
-                    advancedAnalytics: false,
-                    dedicatedSupport: false,
-                    allowCustomBranding: false,
-                    allowGroupCreation: false,
-                },
-            },
+            configuration: DEFAULT_CONFIGURATION,
             isActive: true,
+            startDate: '',
+            endDate: '',
         },
+
     });
 
     const { fields, append, remove } = useFieldArray({
@@ -113,8 +133,24 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
 
     useEffect(() => {
         if (initialData) {
+            const initialConfig = initialData.configuration || DEFAULT_CONFIGURATION;
+            const mergedConfig = {
+                quotas: {
+                    ...DEFAULT_CONFIGURATION.quotas,
+                    ...(initialConfig.quotas || {}),
+                },
+                featureFlags: {
+                    ...DEFAULT_CONFIGURATION.featureFlags,
+                    ...(initialConfig.featureFlags || {}),
+                },
+            };
+
+            console.log('Resetting form with config:', mergedConfig); // Debugging
+
             form.reset({
                 ...initialData,
+                type: initialData.type || TierType.STANDARD,
+                trialDuration: initialData.trialDuration || 14,
                 stripeMonthlyPriceId: initialData.stripeMonthlyPriceId || '',
                 stripeQuarterlyPriceId: initialData.stripeQuarterlyPriceId || '',
                 stripeAnnualPriceId: initialData.stripeAnnualPriceId || '',
@@ -122,12 +158,24 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                 paypalQuarterlyPlanId: initialData.paypalQuarterlyPlanId || '',
                 paypalAnnualPlanId: initialData.paypalAnnualPlanId || '',
                 features: initialData.features || [],
+                configuration: mergedConfig,
                 quarterlyPrice: initialData.quarterlyPrice || 0,
-            });
+                startDate: initialData.startDate || '',
+                endDate: initialData.endDate || '',
+            } as TierFormValues);
+
         }
     }, [initialData, form]);
 
     const handleSubmit = (values: TierFormValues) => {
+        // Ensure configuration is complete on submit if something went wrong
+        const config = values.configuration || DEFAULT_CONFIGURATION;
+        const mergedConfig = {
+            quotas: { ...DEFAULT_CONFIGURATION.quotas, ...(config.quotas || {}) },
+            featureFlags: { ...DEFAULT_CONFIGURATION.featureFlags, ...(config.featureFlags || {}) },
+        };
+        values.configuration = mergedConfig;
+
         onSubmit(values);
     };
 
@@ -136,66 +184,116 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
             <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto min-h-0 p-1">
                 <div className="pb-4">
                     <Tabs defaultValue="general" className="w-full">
-                            <TabsList className="grid w-full grid-cols-4 mb-4">
-                                <TabsTrigger value="general">General</TabsTrigger>
-                                <TabsTrigger value="pricing">Pricing</TabsTrigger>
-                                <TabsTrigger value="quotas">Quotas</TabsTrigger>
-                                <TabsTrigger value="features">Features</TabsTrigger>
-                            </TabsList>
+                        <TabsList className={`grid w-full mb-4 ${form.watch('type') === TierType.TRIAL ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                            <TabsTrigger value="general">General</TabsTrigger>
+                            {form.watch('type') !== TierType.TRIAL && <TabsTrigger value="pricing">Pricing</TabsTrigger>}
+                            <TabsTrigger value="quotas">Quotas</TabsTrigger>
+                            <TabsTrigger value="features">Features</TabsTrigger>
+                        </TabsList>
 
-                            {/* General Tab */}
-                            <TabsContent value="general" className="space-y-4">
+                        {/* General Tab */}
+                        <TabsContent value="general" className="space-y-4">
+                            <FormField
+                                control={form.control}
+                                name="name"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Tier Name</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="e.g. Gold Plan" {...field} />
+                                        </FormControl>
+                                        <FormDescription>This name will be displayed to users during checkout.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="description"
+                                render={({ field }) => (
+                                    <FormItem>
+                                        <FormLabel>Description</FormLabel>
+                                        <FormControl>
+                                            <Input placeholder="Description of the tier" {...field} />
+                                        </FormControl>
+                                        <FormDescription>A brief description of the tier's benefits.</FormDescription>
+                                        <FormMessage />
+                                    </FormItem>
+                                )}
+                            />
+                            <FormField
+                                control={form.control}
+                                name="isActive"
+                                render={({ field }) => (
+                                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
+                                        <div className="space-y-0.5">
+                                            <FormLabel className="text-base">Active</FormLabel>
+                                            <FormDescription>
+                                                Enable or disable this tier for new subscriptions.
+                                            </FormDescription>
+                                        </div>
+                                        <FormControl>
+                                            <Switch
+                                                checked={field.value}
+                                                onCheckedChange={field.onChange}
+                                            />
+                                        </FormControl>
+                                    </FormItem>
+                                )}
+                            />
+                            {form.watch('type') === TierType.TRIAL && (
                                 <FormField
                                     control={form.control}
-                                    name="name"
+                                    name="trialDuration"
                                     render={({ field }) => (
                                         <FormItem>
-                                            <FormLabel>Tier Name</FormLabel>
+                                            <FormLabel>Trial Duration (Days)</FormLabel>
                                             <FormControl>
-                                                <Input placeholder="e.g. Gold Plan" {...field} />
+                                                <Input type="number" {...field} />
                                             </FormControl>
-                                            <FormDescription>This name will be displayed to users during checkout.</FormDescription>
+                                            <FormDescription>
+                                                Number of days the free trial lasts.
+                                            </FormDescription>
                                             <FormMessage />
                                         </FormItem>
                                     )}
                                 />
-                                <FormField
-                                    control={form.control}
-                                    name="description"
-                                    render={({ field }) => (
-                                        <FormItem>
-                                            <FormLabel>Description</FormLabel>
-                                            <FormControl>
-                                                <Input placeholder="Description of the tier" {...field} />
-                                            </FormControl>
-                                            <FormDescription>A brief description of the tier's benefits.</FormDescription>
-                                            <FormMessage />
-                                        </FormItem>
-                                    )}
-                                />
-                                <FormField
-                                    control={form.control}
-                                    name="isActive"
-                                    render={({ field }) => (
-                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                                            <div className="space-y-0.5">
-                                                <FormLabel className="text-base">Active</FormLabel>
-                                                <FormDescription>
-                                                    Enable or disable this tier for new subscriptions.
-                                                </FormDescription>
-                                            </div>
-                                            <FormControl>
-                                                <Switch
-                                                    checked={field.value}
-                                                    onCheckedChange={field.onChange}
-                                                />
-                                            </FormControl>
-                                        </FormItem>
-                                    )}
-                                />
-                            </TabsContent>
+                            )}
+                            {form.watch('startDate') && (
+                                <div className="grid grid-cols-2 gap-4 pt-4 border-t">
+                                    <FormField
+                                        control={form.control}
+                                        name="startDate"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>Start Date (Seasonal)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="date" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                    <FormField
+                                        control={form.control}
+                                        name="endDate"
+                                        render={({ field }) => (
+                                            <FormItem>
+                                                <FormLabel>End Date (Seasonal)</FormLabel>
+                                                <FormControl>
+                                                    <Input type="date" {...field} />
+                                                </FormControl>
+                                                <FormMessage />
+                                            </FormItem>
+                                        )}
+                                    />
+                                </div>
+                            )}
+                        </TabsContent>
 
-                            {/* Pricing Tab */}
+
+                        {/* Pricing Tab */}
+                        {form.watch('type') !== TierType.TRIAL && (
                             <TabsContent value="pricing" className="space-y-4">
                                 <div className="grid grid-cols-3 gap-4">
                                     <FormField
@@ -339,253 +437,254 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                                     </div>
                                 </div>
                             </TabsContent>
+                        )}
 
-                            {/* Quotas Tab */}
-                            <TabsContent value="quotas" className="space-y-4">
-                                <div className="grid grid-cols-2 gap-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxListings"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Listings</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxProducts"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Products</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxServices"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Services</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxImagesPerListing"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Images per Listing</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxGiftCardTemplates"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Gift Card Templates</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxCouponTemplates"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Coupon Templates</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.maxLoyaltyPrograms"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Max Loyalty Programs</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.featuredListingAllowance"
-                                        render={({ field }) => (
-                                            <FormItem>
-                                                <FormLabel>Featured Listing Allowance</FormLabel>
-                                                <FormControl>
-                                                    <Input type="number" {...field} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                                <div className="flex gap-6 pt-4">
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.allowProductListing"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                                <FormLabel>Allow Products</FormLabel>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.quotas.allowServiceListing"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-start space-x-3 space-y-0">
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                                <FormLabel>Allow Services</FormLabel>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </TabsContent>
+                        {/* Quotas Tab */}
+                        <TabsContent value="quotas" className="space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxListings"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Listings</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxProducts"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Products</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxServices"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Services</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxImagesPerListing"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Images per Listing</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxGiftCardTemplates"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Gift Card Templates</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxCouponTemplates"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Coupon Templates</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.maxLoyaltyPrograms"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Max Loyalty Programs</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.featuredListingAllowance"
+                                    render={({ field }) => (
+                                        <FormItem>
+                                            <FormLabel>Featured Listing Allowance</FormLabel>
+                                            <FormControl>
+                                                <Input type="number" {...field} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                            <div className="flex gap-6 pt-4">
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.allowProductListing"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <FormLabel>Allow Products</FormLabel>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.quotas.allowServiceListing"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-start space-x-3 space-y-0">
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                            <FormLabel>Allow Services</FormLabel>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </TabsContent>
 
-                            {/* Features Tab */}
-                            <TabsContent value="features" className="space-y-4">
-                                <div className="space-y-4 border rounded-lg p-4">
-                                    <div className="flex items-center justify-between">
-                                        <div>
-                                            <FormLabel className="text-base">Features (Display Only)</FormLabel>
-                                            <FormDescription>
-                                                Add features that will be displayed in the pricing card.
-                                            </FormDescription>
+                        {/* Features Tab */}
+                        <TabsContent value="features" className="space-y-4">
+                            <div className="space-y-4 border rounded-lg p-4">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <FormLabel className="text-base">Features (Display Only)</FormLabel>
+                                        <FormDescription>
+                                            Add features that will be displayed in the pricing card.
+                                        </FormDescription>
+                                    </div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => append("")}
+                                        className="gap-2"
+                                    >
+                                        <Plus className="h-4 w-4" /> Add Feature
+                                    </Button>
+                                </div>
+                                <div className="space-y-2">
+                                    {fields.map((field, index) => (
+                                        <div key={field.id} className="flex gap-2">
+                                            <FormField
+                                                control={form.control}
+                                                name={`features.${index}`}
+                                                render={({ field }) => (
+                                                    <FormItem className="flex-1 space-y-0">
+                                                        <FormControl>
+                                                            <Input {...field} placeholder="e.g. Advanced Analytics" />
+                                                        </FormControl>
+                                                        <FormMessage />
+                                                    </FormItem>
+                                                )}
+                                            />
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="icon"
+                                                className="shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50"
+                                                onClick={() => remove(index)}
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </Button>
                                         </div>
-                                        <Button
-                                            type="button"
-                                            variant="outline"
-                                            size="sm"
-                                            onClick={() => append("")}
-                                            className="gap-2"
-                                        >
-                                            <Plus className="h-4 w-4" /> Add Feature
-                                        </Button>
-                                    </div>
-                                    <div className="space-y-2">
-                                        {fields.map((field, index) => (
-                                            <div key={field.id} className="flex gap-2">
-                                                <FormField
-                                                    control={form.control}
-                                                    name={`features.${index}`}
-                                                    render={({ field }) => (
-                                                        <FormItem className="flex-1 space-y-0">
-                                                            <FormControl>
-                                                                <Input {...field} placeholder="e.g. Advanced Analytics" />
-                                                            </FormControl>
-                                                            <FormMessage />
-                                                        </FormItem>
-                                                    )}
-                                                />
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="shrink-0 text-red-500 hover:text-red-600 hover:bg-red-50"
-                                                    onClick={() => remove(index)}
-                                                >
-                                                    <Trash2 className="h-4 w-4" />
-                                                </Button>
-                                            </div>
-                                        ))}
-                                        {fields.length === 0 && (
-                                            <div className="text-sm text-slate-500 italic text-center py-4">
-                                                No display features added yet.
-                                            </div>
-                                        )}
-                                    </div>
+                                    ))}
+                                    {fields.length === 0 && (
+                                        <div className="text-sm text-slate-500 italic text-center py-4">
+                                            No display features added yet.
+                                        </div>
+                                    )}
                                 </div>
+                            </div>
 
-                                <div className="space-y-4 pt-4">
-                                    <h3 className="font-medium text-sm text-muted-foreground">Feature Flags</h3>
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.featureFlags.priorityInSearch"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <FormLabel className="text-base">Priority In Search</FormLabel>
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.featureFlags.advancedAnalytics"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <FormLabel className="text-base">Advanced Analytics</FormLabel>
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.featureFlags.dedicatedSupport"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <FormLabel className="text-base">Dedicated Support</FormLabel>
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.featureFlags.allowCustomBranding"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <FormLabel className="text-base">Custom Branding</FormLabel>
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                    <FormField
-                                        control={form.control}
-                                        name="configuration.featureFlags.allowGroupCreation"
-                                        render={({ field }) => (
-                                            <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-                                                <FormLabel className="text-base">Group Creation</FormLabel>
-                                                <FormControl>
-                                                    <Switch checked={field.value} onCheckedChange={field.onChange} />
-                                                </FormControl>
-                                            </FormItem>
-                                        )}
-                                    />
-                                </div>
-                            </TabsContent>
+                            <div className="space-y-4 pt-4">
+                                <h3 className="font-medium text-sm text-muted-foreground">Feature Flags</h3>
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.featureFlags.priorityInSearch"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <FormLabel className="text-base">Priority In Search</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.featureFlags.advancedAnalytics"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <FormLabel className="text-base">Advanced Analytics</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.featureFlags.dedicatedSupport"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <FormLabel className="text-base">Dedicated Support</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.featureFlags.allowCustomBranding"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <FormLabel className="text-base">Custom Branding</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                                <FormField
+                                    control={form.control}
+                                    name="configuration.featureFlags.allowGroupCreation"
+                                    render={({ field }) => (
+                                        <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+                                            <FormLabel className="text-base">Group Creation</FormLabel>
+                                            <FormControl>
+                                                <Switch checked={field.value} onCheckedChange={field.onChange} />
+                                            </FormControl>
+                                        </FormItem>
+                                    )}
+                                />
+                            </div>
+                        </TabsContent>
                     </Tabs>
                 </div>
             </form>

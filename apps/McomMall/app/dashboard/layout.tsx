@@ -2,13 +2,17 @@
 
 'use client';
 
-import { useGetTrialStatus } from '@/service/payments/hook';
-import TrialCountdownTimer from '@/components/TrialCountdownTimer';
+import { useGetTrialStatus } from '@/service/payments/hooks';
+import HeaderTimer from '@/components/HeaderTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import ProtectedRoute from '@/components/ProtectedRoute';
-import { useState } from 'react';
+import AuthRedirect from '../../components/AuthRedirect';
+import { useState, useEffect, Suspense } from 'react';
 import Link from 'next/link';
-import { Menu, ChevronDown } from 'lucide-react';
+import { Menu, ChevronDown, Zap } from 'lucide-react';
+import { useSelector } from 'react-redux';
+import { RootState } from '@/service/store/store';
+import { useRouter, usePathname, useSearchParams } from 'next/navigation';
 
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
@@ -22,8 +26,53 @@ import { NavMenuContent } from './component/NavMenuContent';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import UserNav from '@/components/UserNav';
-import AuthRedirect from '@/components/AuthRedirect';
-import { useEffect } from 'react';
+import { useGetMyMembership } from '@/service/membership/hooks';
+
+
+function DashboardRedirect({
+  mounted,
+  userRole,
+  membership,
+  isMembershipLoading
+}: {
+  mounted: boolean;
+  userRole: string | null;
+  membership: any;
+  isMembershipLoading: boolean;
+}) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const pathname = usePathname();
+
+  useEffect(() => {
+    if (mounted && !isMembershipLoading && userRole === 'owner') {
+      const hasActiveMembership = !!membership?.isActive;
+      // Check explicitly if tier is TRIAL
+      // Note: membership.tier might be populated, check type or name
+      const isTrial = membership?.tier?.type === 'TRIAL' || membership?.tier?.name?.toLowerCase().includes('trial');
+
+      const normalizedPath = pathname.toLowerCase();
+      const isSubscriptionFlow = normalizedPath.includes('/my-subscription');
+      const isSuccessRedirect = searchParams.get('success') === 'true';
+
+      // 1. If NO active membership (and not in subscription flow), redirect to buy one.
+      if (!hasActiveMembership && !isSubscriptionFlow && !isSuccessRedirect) {
+        router.push('/dashboard/my-subscription');
+        return;
+      }
+
+      // 2. If User is on TRIAL, and they land on the main dashboard, redirect them to see subscription options
+      // BUT they can navigate back to use the dashboard (so only redirect from root /dashboard)
+      if (isTrial && normalizedPath === '/dashboard' && !isSubscriptionFlow) {
+        // Verify if we should force this. The user said "take them... if they don't pay... make timer show".
+        // This implies a soft push.
+        router.push('/dashboard/my-subscription');
+      }
+    }
+  }, [mounted, userRole, membership, isMembershipLoading, pathname, router, searchParams]);
+
+  return null;
+}
 
 export default function DashboardLayout({
   children,
@@ -35,6 +84,9 @@ export default function DashboardLayout({
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
   const { data: trialStatus } = useGetTrialStatus();
 
+  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
+  const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -44,13 +96,16 @@ export default function DashboardLayout({
   }
 
   return (
-    <>
+    <Suspense fallback={<div className="flex items-center justify-center h-screen"><Zap className="w-8 h-8 text-orange-600 animate-pulse" /></div>}>
       <AuthRedirect />
-      {trialStatus?.isActive && (
-        <TrialCountdownTimer trialStatus={trialStatus} />
-      )}
+      <DashboardRedirect
+        mounted={mounted}
+        userRole={userRole}
+        membership={membership}
+        isMembershipLoading={isMembershipLoading}
+      />
       <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
-        {/* --- DESKTOP SIDEBAR (Left) --- */}
+        {/* ... existing section content ... */}
         <div className="hidden md:block w-[19rem] p-5">
           <div className="flex flex-col h-full">
             <Link
@@ -60,7 +115,9 @@ export default function DashboardLayout({
               <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">M</span>
               </div>
-              <span className="text-3xl font-semibold">McomMall</span>
+              <div className="flex flex-col">
+                <span className="text-3xl font-semibold leading-tight">McomMall</span>
+              </div>
             </Link>
             <div className="flex-grow min-h-0 overflow-y-auto">
               <SideMenu />
@@ -119,8 +176,20 @@ export default function DashboardLayout({
               </div>
             </div>
 
-            {/* --- RIGHT SIDE: User Nav --- */}
+            {/* --- RIGHT SIDE: User Nav & Timer --- */}
             <div className="flex items-center gap-4">
+              {userRole === 'owner' && membership?.tier && (
+                <div className="hidden sm:flex items-center px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl mr-2 group hover:border-orange-500/30 transition-all">
+                  <div className="flex flex-col items-end">
+                    <span className="text-[12px] text-gray-400 uppercase font-black tracking-[0.2em] group-hover:text-orange-400 transition-colors">Current Membership</span>
+                    <span className="text-xl font-bold text-white group-hover:text-orange-500 transition-colors">{membership.tier.name}</span>
+                  </div>
+                  <div className="ml-3 p-1.5 bg-orange-500/20 rounded-lg group-hover:bg-orange-500/30 transition-colors">
+                    <Zap className="w-4 h-4 text-orange-500" />
+                  </div>
+                </div>
+              )}
+              <HeaderTimer />
               {/* User Nav (Visible on all screens, Right Aligned) */}
               <UserNav align="end" />
             </div>
@@ -132,6 +201,6 @@ export default function DashboardLayout({
           </div>
         </main>
       </section>
-    </>
+    </Suspense>
   );
 }

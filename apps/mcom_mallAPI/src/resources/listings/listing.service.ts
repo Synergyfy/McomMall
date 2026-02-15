@@ -6,40 +6,42 @@ import {
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Business } from './entities/listing.entity';
-import { Category } from './entities/category.entity';
-import { DataSource, EntityManager, In, Repository } from 'typeorm';
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
+import { DataSource, EntityManager, Repository } from 'typeorm';
 import { BusinessStatus, ListingType } from './listing.enum';
 import { CreateBusinessDto, UpdateBusinessDto } from './dto/listings.dto';
 import { User } from '../users/entities/user.entity';
-import { isUUID } from 'class-validator';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { PromotionService } from '../promotion/promotion.service';
 import { Promotion } from '../promotion/entities/promotion.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class ListingsService {
   constructor(
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
-    @InjectRepository(Category)
-    private readonly categoryRepository: Repository<Category>,
+    @InjectRepository(Sector)
+    private readonly sectorRepository: Repository<Sector>,
+    @InjectRepository(TaxonomyCategory)
+    private readonly taxonomyCategoryRepository: Repository<TaxonomyCategory>,
+    @InjectRepository(TaxonomySubcategory)
+    private readonly taxonomySubcategoryRepository: Repository<TaxonomySubcategory>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Trial)
-    private readonly trialRepository: Repository<Trial>,
     private readonly dataSource: DataSource,
     private readonly activitiesService: ActivitiesService,
-    private readonly trialService: TrialService,
     private readonly promotionService: PromotionService,
     private readonly capabilityService: CapabilityService,
-  ) {}
+    private readonly activityTimerService: ActivityTimerService,
+  ) { }
 
   async create(
     createBusinessDto: CreateBusinessDto,
@@ -55,11 +57,11 @@ export class ListingsService {
     // await this.capabilityService.checkPermission(userId, ActionType.CREATE_LISTING, { currentCount: currentListingCount });
 
     if (createBusinessDto.listingType.includes(ListingType.PRODUCT)) {
-         await this.capabilityService.checkPermission(userId, ActionType.CAN_SELL_PRODUCTS);
+      await this.capabilityService.checkPermission(userId, ActionType.CAN_SELL_PRODUCTS);
     }
 
     if (createBusinessDto.listingType.includes(ListingType.SERVICE)) {
-         await this.capabilityService.checkPermission(userId, ActionType.CAN_SELL_SERVICES);
+      await this.capabilityService.checkPermission(userId, ActionType.CAN_SELL_SERVICES);
     }
 
     if (
@@ -93,19 +95,39 @@ export class ListingsService {
     await queryRunner.startTransaction();
 
     try {
-      const { categoryIds, ...businessData } = createBusinessDto;
+      const { sectorId, categoryId, subCategoryId, ...businessData } = createBusinessDto;
+
+      // Validate Taxonomy Hierarchy
+      const sector = await this.sectorRepository.findOne({ where: { id: sectorId } });
+      if (!sector) {
+        throw new BadRequestException('Invalid Sector ID');
+      }
+
+      const category = await this.taxonomyCategoryRepository.findOne({ where: { id: categoryId } });
+      if (!category) {
+        throw new BadRequestException('Invalid Category ID');
+      }
+      if (category.sectorId !== sectorId) {
+        throw new BadRequestException('Selected Category does not belong to the selected Sector');
+      }
+
+      const subCategory = await this.taxonomySubcategoryRepository.findOne({ where: { id: subCategoryId } });
+      if (!subCategory) {
+        throw new BadRequestException('Invalid SubCategory ID');
+      }
+      if (subCategory.categoryId !== categoryId) {
+        throw new BadRequestException('Selected SubCategory does not belong to the selected Category');
+      }
 
       const business = this.businessRepository.create({
         ...businessData,
         isClaimed: true, // New businesses are claimed by default
         user,
         status: BusinessStatus.DRAFT,
+        sector,
+        category,
+        subCategory,
       });
-
-      business.categories = await this.resolveCategories(
-        categoryIds,
-        queryRunner.manager,
-      );
 
       const savedBusiness = await queryRunner.manager.save(business);
       await this.activitiesService.create(
@@ -114,17 +136,14 @@ export class ListingsService {
         'listing',
         savedBusiness.businessName,
       );
-      const trial = await this.trialRepository.findOne({
-        where: { user: { id: userId } },
-      });
-      if (trial) {
-        await this.trialService.markTaskAsCompleted(userId, 'createdBusiness');
-      }
+      
+      await this.activityTimerService.completeTaskByKey(userId, 'createdBusiness');
+
       await queryRunner.commitTransaction();
       return savedBusiness;
     } catch (err) {
       await queryRunner.rollbackTransaction();
-      throw new BadRequestException(`Failed to create listing: ${err.message}`);
+      throw err instanceof BadRequestException ? err : new BadRequestException(`Failed to create listing: ${err.message}`);
     } finally {
       await queryRunner.release();
     }
@@ -134,7 +153,7 @@ export class ListingsService {
     const skip = (page - 1) * limit;
     const [data, total] = await this.businessRepository.findAndCount({
       where: { user: { id: userId } },
-      relations: ['categories', 'location'],
+      relations: ['sector', 'category', 'subCategory', 'location'],
       order: { created_at: 'DESC' },
       take: limit,
       skip: skip,
@@ -154,7 +173,7 @@ export class ListingsService {
     return this.businessRepository.find({
       take: limit,
       order: { created_at: 'DESC' },
-      relations: ['categories', 'location'],
+      relations: ['sector', 'category', 'subCategory', 'location'],
     });
   }
 
@@ -165,7 +184,9 @@ export class ListingsService {
         'user',
         'location',
         'socialLinks',
-        'categories',
+        'sector',
+        'category',
+        'subCategory',
         'businessHours',
         'specialDays',
         'productSellerProfile',
@@ -193,7 +214,9 @@ export class ListingsService {
         'user',
         'location',
         'socialLinks',
-        'categories',
+        'sector',
+        'category',
+        'subCategory',
         'businessHours',
         'specialDays',
         'products',
@@ -289,7 +312,9 @@ export class ListingsService {
           'user',
           'location',
           'socialLinks',
-          'categories',
+          'sector',
+          'category',
+          'subCategory',
           'businessHours',
           'specialDays',
           'productSellerProfile',
@@ -311,11 +336,38 @@ export class ListingsService {
       this.businessRepository.merge(business, restOfDto);
 
       // Handle category updates separately if categoryIds are provided
-      if (updateBusinessDto.categoryIds) {
-        business.categories = await this.resolveCategories(
-          updateBusinessDto.categoryIds,
-          queryRunner.manager,
-        );
+      // Handle Taxonomy updates
+      if (updateBusinessDto.sectorId) {
+        const sector = await this.sectorRepository.findOne({ where: { id: updateBusinessDto.sectorId } });
+        if (!sector) throw new BadRequestException('Invalid Sector ID');
+        business.sector = sector;
+      }
+
+      if (updateBusinessDto.categoryId) {
+        const category = await this.taxonomyCategoryRepository.findOne({ where: { id: updateBusinessDto.categoryId } });
+        if (!category) throw new BadRequestException('Invalid Category ID');
+
+        // If a new sector was set, validate against it. Otherwise validate against existing sector.
+        const sectorIdToCheck = business.sector?.id || (await business.sector)?.id; // Accessing existing value might need await if lazy, but here it is eager loaded? No, relations are loaded in findOne above.
+
+        // Wait, verify if we loaded relations in update transaction?
+        // Yes, lines 286-300 load relations.
+
+        if (category.sectorId !== (business.sector?.id)) {
+          // If the user changed the category but the new category doesn't match the current sector (and they didn't change the sector OR they changed the sector and it still doesn't match)
+          throw new BadRequestException('Selected Category does not belong to the selected Sector');
+        }
+        business.category = category;
+      }
+
+      if (updateBusinessDto.subCategoryId) {
+        const subCategory = await this.taxonomySubcategoryRepository.findOne({ where: { id: updateBusinessDto.subCategoryId } });
+        if (!subCategory) throw new BadRequestException('Invalid SubCategory ID');
+
+        if (subCategory.categoryId !== (business.category?.id)) {
+          throw new BadRequestException('Selected SubCategory does not belong to the selected Category');
+        }
+        business.subCategory = subCategory;
       }
 
       // Business logic check: prevent removing location if the business sells products
@@ -434,51 +486,7 @@ export class ListingsService {
     }
   }
 
-  private async resolveCategories(
-    categoryIdsAndNames: string[],
-    manager: EntityManager,
-  ): Promise<Category[]> {
-    const uuids = categoryIdsAndNames.filter((id) => isUUID(id));
-    const names = categoryIdsAndNames.filter((id) => !isUUID(id));
-
-    const foundCategories: Category[] = [];
-
-    if (uuids.length > 0) {
-      const fromUuids = await manager.find(Category, {
-        where: { id: In(uuids) },
-      });
-      if (fromUuids.length !== uuids.length) {
-        const foundUuids = fromUuids.map((c) => c.id);
-        const notFoundUuids = uuids.filter((id) => !foundUuids.includes(id));
-        throw new BadRequestException(
-          `Categories with these UUIDs not found: ${notFoundUuids.join(', ')}`,
-        );
-      }
-      foundCategories.push(...fromUuids);
-    }
-
-    if (names.length > 0) {
-      const fromNames = await manager.find(Category, {
-        where: { name: In(names) },
-      });
-      foundCategories.push(...fromNames);
-
-      const existingNames = fromNames.map((c) => c.name);
-      const namesToCreate = names.filter(
-        (name) => !existingNames.includes(name),
-      );
-
-      if (namesToCreate.length > 0) {
-        const newCategoryEntities = namesToCreate.map((name) =>
-          manager.create(Category, { name }),
-        );
-        const savedNewCategories = await manager.save(newCategoryEntities);
-        foundCategories.push(...savedNewCategories);
-      }
-    }
-
-    return foundCategories;
-  }
+  // resolveCategories method removed
 
   async search(searchQuery: SearchBusinessDto) {
     const { queryText, category, location: locationQuery, page = 1, limit = 10, sortBy } = searchQuery;
@@ -487,7 +495,9 @@ export class ListingsService {
     const queryBuilder = this.businessRepository
       .createQueryBuilder('business')
       .leftJoinAndSelect('business.location', 'location')
-      .leftJoinAndSelect('business.categories', 'category');
+      .leftJoinAndSelect('business.sector', 'sector')
+      .leftJoinAndSelect('business.category', 'category')
+      .leftJoinAndSelect('business.subCategory', 'subCategory');
 
     if (queryText) {
       queryBuilder.where(

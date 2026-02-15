@@ -2,17 +2,75 @@ import { Product } from '../listings/types';
 import { IService } from '../services/types';
 import { User } from '../user/types';
 
-export type PartnershipRequestStatus = 'pending' | 'accepted' | 'declined';
+export type PartnershipStatus = 'pending' | 'accepted' | 'declined';
 
-export interface CreatePartnershipRequestDto {
-  productId: string;
-  serviceId: string;
+export interface UserPartnershipRequest {
+  id: string;
+  sender: User;
+  receiver: User;
+  status: PartnershipStatus;
+  message?: string;
+  rejectionMessage?: string;
+  sentAt: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
 }
 
-export interface RespondToPartnershipRequestDto {
-  status: 'accepted' | 'declined';
+export interface UserPartner {
+  partnershipId: string;
+  partnerId: string;
+  partnerName: string;
+  partnerEmail: string;
+  partnerProfilePicture?: string;
+  postcodes: string[];
+  acceptedAt?: string;
 }
 
+export interface ItemPartnershipRequest {
+  id: string;
+  partnershipId: string;
+  proposerId: string;
+  proposer?: User;
+  receiver?: User;
+  baseProduct?: Product;
+  baseService?: IService;
+  plusProduct?: Product;
+  plusService?: IService;
+  status: PartnershipStatus;
+  message?: string;
+  rejectionMessage?: string;
+  sentAt: string;
+  acceptedAt?: string;
+  rejectedAt?: string;
+}
+
+export interface CreateUserPartnershipRequestDto {
+  targetUserId: string;
+  message?: string;
+}
+
+export interface RespondToUserPartnershipRequestDto {
+  status: PartnershipStatus;
+  rejectionMessage?: string;
+}
+
+export interface CreateItemPartnershipRequestDto {
+  userPartnershipId?: string;
+  baseProductId?: string;
+  baseServiceId?: string;
+  plusProductId?: string;
+  plusServiceId?: string;
+  message?: string;
+}
+
+export interface PartnershipAnalytics {
+  totalPartners: number;
+  pendingUserRequests: number;
+  pendingItemRequests: number;
+}
+
+// Deprecated (keeping for compatibility during transition)
+export type PartnershipRequestStatus = PartnershipStatus;
 export interface PartnershipRequest {
   id: string;
   status: PartnershipRequestStatus;
@@ -20,23 +78,6 @@ export interface PartnershipRequest {
   service: IService;
   requestingUser: User;
   serviceOwner: User;
-  created_at: string;
-  updated_at: string;
-}
-
-export interface PartnershipService {
-  id: string;
-  name: string;
-  description: string;
-  businessId: string;
-  pricingModel: 'fixed' | 'hourly' | 'quote';
-  fixedPrice?: number;
-  hourlyRate?: number;
-  enableGuestPricing: boolean;
-  guestPrice?: number;
-  media: string[];
-  isQuoteModel: boolean;
-  duration?: number; // Duration in minutes
   created_at: string;
   updated_at: string;
 }

@@ -2,10 +2,10 @@ import { IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl } from 'class-validat
 import { ApiProperty } from '@nestjs/swagger';
 
 export class CreateTerminalCashbackClaimDto {
-  @ApiProperty({ example: 'BEANTHERE01', description: 'The unique ID of the terminal/business' })
+  @ApiProperty({ example: 'owner-uuid-here', description: 'The unique ID of the onboarded owner' })
   @IsString()
   @IsNotEmpty()
-  businessId: string;
+  ownerId: string;
 
   @ApiProperty({ example: 3.00, description: 'Cashback amount to be claimed' })
   @IsNumber()

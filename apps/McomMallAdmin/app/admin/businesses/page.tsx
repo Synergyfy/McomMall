@@ -87,6 +87,8 @@ import {
     ChevronRight,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { exportToCSV } from '@/lib/export-utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
 
 // Status Badge Component
 function BusinessStatusBadge({ status }: { status: AdminBusiness['status'] }) {
@@ -431,7 +433,10 @@ function BusinessDetailSheet({
 
     const handleVerifyStatus = async () => {
         try {
-            await verifyMutation.mutateAsync(business.id);
+            await verifyMutation.mutateAsync({
+                id: business.id,
+                isVerified: !business.verified
+            });
         } catch (error) {
             // Error toast handled in hook
         }
@@ -750,6 +755,33 @@ export default function BusinessesPage() {
         setSheetOpen(true);
     };
 
+    const handleExport = () => {
+        if (!businesses || businesses.length === 0) {
+            toast.error('No business data available to export');
+            return;
+        }
+
+        const exportData = businesses.map(b => ({
+            ID: b.id,
+            Name: b.name,
+            Owner: b.owner,
+            Status: b.status,
+            Verified: b.verified ? 'Yes' : 'No',
+            Rating: b.rating.toFixed(1),
+            Reviews: b.reviewCount,
+            Listings: b.listingCount,
+            Sector: b.sector,
+            Category: b.category,
+            Email: b.email,
+            Phone: b.phone,
+            Address: b.address,
+            Joined: new Date(b.createdAt).toLocaleDateString(),
+        }));
+
+        exportToCSV(exportData, `businesses-export-${new Date().toISOString().split('T')[0]}`);
+        toast.success('Business data exported successfully');
+    };
+
     return (
         <div className="space-y-6">
             {/* Header */}
@@ -759,10 +791,15 @@ export default function BusinessesPage() {
                     <p className="text-slate-500">Manage business accounts and listings</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleExport}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Export
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download businesses as CSV</TooltipContent>
+                    </Tooltip>
                     <Button size="sm" className="bg-orange-500 hover:bg-orange-600">
                         <Plus className="h-4 w-4 mr-2" />
                         Add Business
@@ -999,7 +1036,7 @@ export default function BusinessesPage() {
                                                     {!business.verified ? (
                                                         <DropdownMenuItem
                                                             className="text-blue-600"
-                                                            onClick={() => verifyMutation.mutate(business.id)}
+                                                            onClick={() => verifyMutation.mutate({ id: business.id, isVerified: true })}
                                                             disabled={verifyMutation.isPending}
                                                         >
                                                             <Shield className="h-4 w-4 mr-2" />
@@ -1008,7 +1045,7 @@ export default function BusinessesPage() {
                                                     ) : (
                                                         <DropdownMenuItem
                                                             className="text-blue-600"
-                                                            onClick={() => verifyMutation.mutate(business.id)}
+                                                            onClick={() => verifyMutation.mutate({ id: business.id, isVerified: false })}
                                                             disabled={verifyMutation.isPending}
                                                         >
                                                             <Shield className="h-4 w-4 mr-2" />

@@ -23,8 +23,8 @@ export interface TerminalCashbackLimits {
 }
 
 export interface TerminalCashbackConfig {
-    businessId: string;
-    businessName: string;
+    userId: string;
+    userName: string;
     level: TerminalCashbackLevel;
     isEnabled: boolean;
     autoApprovalHours: number;
@@ -40,8 +40,8 @@ export interface TerminalCashbackConfig {
 }
 
 export interface CreateTerminalConfigDto {
-    businessId: string;
-    businessName: string;
+    userId: string;
+    userName: string;
     level: TerminalCashbackLevel;
     ranges: TerminalCashbackRange[]; 
     limits: TerminalCashbackLimits;
@@ -77,8 +77,8 @@ export interface TerminalCashbackClaim {
     id: string;
     userId: string;
     userName?: string; 
-    businessId: string;
-    businessName?: string;
+    ownerId: string;
+    ownerName?: string;
     amount: number; // Reward value
     spendAmount?: number;
     amountRange?: string; // UI helper
@@ -104,7 +104,7 @@ export interface UpdateClaimStatusDto {
 }
 
 export interface GetClaimsParams {
-    businessId?: string;
+    ownerId?: string;
     status?: string;
     limit?: number;
     page?: number;

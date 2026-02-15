@@ -2,6 +2,7 @@ import { Controller, Get, Query, Req, UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { CapabilityService, ActionType } from './capability.service';
 import { Request } from 'express';
+import { CapabilityUsageDto } from './dto/capability-usage.dto';
 
 @ApiTags('Capability')
 @ApiBearerAuth()
@@ -28,18 +29,26 @@ export class CapabilityController {
   @ApiOperation({ summary: 'Get the effective tier configuration for the current user (paid membership or active trial)' })
   @ApiResponse({
     status: 200,
-    description: 'The merged/effective configuration',
+    description: 'The merged/effective configuration of quotas and feature flags.',
     schema: {
         example: {
             quotas: {
                 maxListings: 100,
                 allowProductListing: true,
                 maxProducts: 50,
-                maxGiftCardTemplates: 5
+                maxServices: 50,
+                maxGiftCardTemplates: 5,
+                maxCouponTemplates: 10,
+                maxLoyaltyPrograms: 1,
+                maxImagesPerListing: 5,
+                featuredListingAllowance: 2
             },
             featureFlags: {
+                priorityInSearch: true,
                 advancedAnalytics: true,
-                allowCustomBranding: false
+                dedicatedSupport: true,
+                allowCustomBranding: false,
+                allowGroupCreation: true
             }
         }
     }
@@ -52,24 +61,8 @@ export class CapabilityController {
   @ApiOperation({ summary: 'Get a summary of what the owner has used out of their tier capability' })
   @ApiResponse({
     status: 200,
-    description: 'Usage summary including used, limit, and remaining quotas',
-    schema: {
-        example: {
-            hasAccess: true,
-            quotas: {
-                listings: { used: 1, limit: 3, remaining: 2 },
-                products: { used: 0, limit: 5, remaining: 5, allowed: true },
-                giftCardTemplates: { used: 1, limit: 1, remaining: 0 },
-                couponTemplates: { used: 2, limit: 5, remaining: 3 },
-                loyaltyPrograms: { used: 0, limit: 1, remaining: 1 }
-            },
-            features: {
-                advancedAnalytics: false,
-                allowCustomBranding: false,
-                allowGroupCreation: false
-            }
-        }
-    }
+    description: 'Detailed usage summary including used, limit, and remaining quotas per resource.',
+    type: CapabilityUsageDto
   })
   async getUsage(@Req() req: Request) {
     return this.capabilityService.getUsageSummary(req.user['id']);

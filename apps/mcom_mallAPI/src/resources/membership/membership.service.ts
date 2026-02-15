@@ -39,7 +39,7 @@ export class MembershipService {
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async findOne(userId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
@@ -49,6 +49,20 @@ export class MembershipService {
     if (!membership) {
       throw new NotFoundException('Membership not found.');
     }
+
+    const now = new Date();
+    const expiresAt = new Date(membership.expiresAt);
+    const diffMs = Math.max(0, expiresAt.getTime() - now.getTime());
+    const totalSeconds = Math.floor(diffMs / 1000);
+
+    membership.expiresIn = {
+      days: Math.floor(totalSeconds / (3600 * 24)),
+      hours: Math.floor((totalSeconds % (3600 * 24)) / 3600),
+      minutes: Math.floor((totalSeconds % 3600) / 60),
+      seconds: totalSeconds % 60,
+      totalSeconds
+    };
+
     return membership;
   }
 
@@ -60,7 +74,7 @@ export class MembershipService {
 
     if (membership && !membership.tier && membership.tierType) {
       console.log(`[MembershipService] Self-healing initiated for user ${userId} with tierType ${membership.tierType}`);
-      
+
       const legacyTierMap: Record<string, string> = {
         'basic': 'Basic',
         'extended': 'Extended',
@@ -68,7 +82,7 @@ export class MembershipService {
       };
 
       const targetName = legacyTierMap[membership.tierType] || membership.tierType;
-      
+
       const tier = await this.tierRepository.findOne({
         where: { name: targetName },
       });
@@ -80,7 +94,7 @@ export class MembershipService {
         await this.membershipRepository.save(membership);
         console.log(`[MembershipService] Membership updated with tier link.`);
       } else {
-         console.warn(`[MembershipService] Could not find tier with name: ${targetName}`);
+        console.warn(`[MembershipService] Could not find tier with name: ${targetName}`);
       }
     }
 
@@ -115,25 +129,25 @@ export class MembershipService {
     if (initiateDto.tierId) {
       const tier = await this.tierRepository.findOne({ where: { id: initiateDto.tierId } });
       if (!tier) throw new NotFoundException('Tier not found');
-      
+
       const planType = initiateDto.planType || PlanType.MONTHLY;
       if (planType === PlanType.ANNUAL) {
-          price = tier.annualPrice;
+        price = tier.annualPrice;
       } else if (planType === PlanType.QUARTERLY) {
-          price = tier.quarterlyPrice;
+        price = tier.quarterlyPrice;
       } else {
-          price = tier.monthlyPrice;
+        price = tier.monthlyPrice;
       }
-      
+
       // If using PayPal subscriptions or similar, fetch plan ID
       if (initiateDto.paymentProvider === PaymentMethod.PAYPAL) {
-          if (planType === PlanType.ANNUAL) {
-              planId = tier.paypalAnnualPlanId;
-          } else if (planType === PlanType.QUARTERLY) {
-              planId = tier.paypalQuarterlyPlanId;
-          } else {
-              planId = tier.paypalMonthlyPlanId;
-          }
+        if (planType === PlanType.ANNUAL) {
+          planId = tier.paypalAnnualPlanId;
+        } else if (planType === PlanType.QUARTERLY) {
+          planId = tier.paypalQuarterlyPlanId;
+        } else {
+          planId = tier.paypalMonthlyPlanId;
+        }
       }
     } else {
       // Legacy Enum Support
@@ -182,18 +196,18 @@ export class MembershipService {
     const currency = 'GBP';
 
     if (tierId) {
-        tierEntity = await this.tierRepository.findOne({ where: { id: tierId } });
-        if (!tierEntity) throw new NotFoundException('Tier not found');
-        
-        if (planType === PlanType.ANNUAL) {
-            price = tierEntity.annualPrice;
-        } else if (planType === PlanType.QUARTERLY) {
-            price = tierEntity.quarterlyPrice;
-        } else {
-            price = tierEntity.monthlyPrice;
-        }
+      tierEntity = await this.tierRepository.findOne({ where: { id: tierId } });
+      if (!tierEntity) throw new NotFoundException('Tier not found');
+
+      if (planType === PlanType.ANNUAL) {
+        price = tierEntity.annualPrice;
+      } else if (planType === PlanType.QUARTERLY) {
+        price = tierEntity.quarterlyPrice;
+      } else {
+        price = tierEntity.monthlyPrice;
+      }
     } else {
-        price = this.getMembershipPrice(tierEnum);
+      price = this.getMembershipPrice(tierEnum);
     }
 
     let verificationResult;
@@ -270,91 +284,96 @@ export class MembershipService {
       return savedMembership;
     });
   }
+  // ... (omitting unchanged methods) ...
 
   async joinTrial(tierId: string, user: User): Promise<Membership> {
-      const existingMembership = await this.membershipRepository.findOne({
-          where: { user: { id: user.id } },
-          order: { created_at: 'DESC' } // Check mostly recent
+    const existingMembership = await this.membershipRepository.findOne({
+      where: { user: { id: user.id } },
+      order: { created_at: 'DESC' } // Check mostly recent
+    });
+
+    // Simple check: if they ever had a membership (trial or paid), deny?
+    // Or checking specifically for isTrial usage if we had history.
+    // For now, if they have an *active* membership, deny.
+    if (existingMembership && existingMembership.isActive) {
+      throw new ConflictException('User already has an active membership.');
+    }
+
+    // If we want strict "one trial per user ever", we'd check if any previous membership had isTrial=true
+    const trialUsage = await this.membershipRepository.findOne({
+      where: { user: { id: user.id }, isTrial: true }
+    });
+    if (trialUsage) {
+      throw new ForbiddenException('User has already used their trial period.');
+    }
+
+    const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+    if (!tier) throw new NotFoundException('Tier not found');
+
+    return this.dataSource.transaction(async (manager) => {
+      const membershipRepo = manager.getRepository(Membership);
+      const userRepo = manager.getRepository(User);
+
+      // Use the tier's trial duration, default to 14 days if not set
+      const trialDurationDays = tier.trialDuration || 14;
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
+
+      const membership = membershipRepo.create({
+        tier,
+        user,
+        expiresAt,
+        isActive: true,
+        isTrial: true,
+        trialDuration: trialDurationDays,
+        planType: PlanType.MONTHLY // Default to monthly after trial usually
       });
 
-      // Simple check: if they ever had a membership (trial or paid), deny?
-      // Or checking specifically for isTrial usage if we had history.
-      // For now, if they have an *active* membership, deny.
-      if (existingMembership && existingMembership.isActive) {
-          throw new ConflictException('User already has an active membership.');
-      }
+      const savedMembership = await membershipRepo.save(membership);
+      user.membership = savedMembership;
+      await userRepo.save(user);
 
-      // If we want strict "one trial per user ever", we'd check if any previous membership had isTrial=true
-      const trialUsage = await this.membershipRepository.findOne({
-          where: { user: { id: user.id }, isTrial: true }
-      });
-      if (trialUsage) {
-          throw new ForbiddenException('User has already used their trial period.');
-      }
-
-      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
-      if (!tier) throw new NotFoundException('Tier not found');
-
-      return this.dataSource.transaction(async (manager) => {
-          const membershipRepo = manager.getRepository(Membership);
-          const userRepo = manager.getRepository(User);
-
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + 7); // 7 Days Trial
-
-          const membership = membershipRepo.create({
-              tier,
-              user,
-              expiresAt,
-              isActive: true,
-              isTrial: true,
-              planType: PlanType.MONTHLY // Default to monthly after trial usually
-          });
-
-          const savedMembership = await membershipRepo.save(membership);
-          user.membership = savedMembership;
-          await userRepo.save(user);
-
-          return savedMembership;
-      });
+      return savedMembership;
+    });
   }
 
   async grantAccess(user: User, tierId: string, durationDays: number, source: string): Promise<Membership> {
-      const tier = await this.tierRepository.findOne({ where: { id: tierId } });
-      if (!tier) throw new NotFoundException('Tier not found');
+    const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+    if (!tier) throw new NotFoundException('Tier not found');
 
-      // Check for existing active membership
-      const existingMembership = await this.membershipRepository.findOne({
-          where: { user: { id: user.id }, isActive: true }
+    // Check for existing active membership
+    const existingMembership = await this.membershipRepository.findOne({
+      where: { user: { id: user.id }, isActive: true }
+    });
+    if (existingMembership) {
+      // In a real scenario we might extend it, or upgrade it.
+      // For now, we will expire the old one and create new one (Upgrade/Replace behavior).
+      existingMembership.isActive = false;
+      await this.membershipRepository.save(existingMembership);
+    }
+
+    return this.dataSource.transaction(async (manager) => {
+      const membershipRepo = manager.getRepository(Membership);
+      const userRepo = manager.getRepository(User);
+
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + durationDays);
+
+      const membership = membershipRepo.create({
+        tier,
+        user,
+        expiresAt,
+        isActive: true,
+        planType: PlanType.MONTHLY, // Default
+        // We could add a note or flag about source if entity supported it
       });
-      if (existingMembership) {
-          // In a real scenario we might extend it, or upgrade it.
-          // For now, we will expire the old one and create new one (Upgrade/Replace behavior).
-          existingMembership.isActive = false;
-          await this.membershipRepository.save(existingMembership);
-      }
 
-      return this.dataSource.transaction(async (manager) => {
-          const membershipRepo = manager.getRepository(Membership);
-          const userRepo = manager.getRepository(User);
+      const savedMembership = await membershipRepo.save(membership);
+      user.membership = savedMembership;
+      await userRepo.save(user);
 
-          const expiresAt = new Date();
-          expiresAt.setDate(expiresAt.getDate() + durationDays);
-
-          const membership = membershipRepo.create({
-              tier,
-              user,
-              expiresAt,
-              isActive: true,
-              planType: PlanType.MONTHLY, // Default
-              // We could add a note or flag about source if entity supported it
-          });
-
-          const savedMembership = await membershipRepo.save(membership);
-          user.membership = savedMembership;
-          await userRepo.save(user);
-
-          return savedMembership;
-      });
+      return savedMembership;
+    });
   }
 }

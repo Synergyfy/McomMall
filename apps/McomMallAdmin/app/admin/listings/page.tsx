@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Switch } from '@/components/ui/switch';
 import { Badge } from '@/components/ui/badge';
 import {
     Table,
@@ -66,7 +67,9 @@ import {
     Loader2,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useGetAdminListingStats, useGetAdminListings, useToggleListingFeatured } from '@/service/listings/hook';
+import { exportToCSV } from '@/lib/export-utils';
+import { Tooltip, TooltipTrigger, TooltipContent } from '@/components/ui/tooltip';
+import { useGetAdminListingStats, useGetAdminListings, useUpdateListingStatus } from '@/service/listings/hook';
 import { AdminListing } from '@/service/listings/types';
 import { toast } from 'sonner';
 
@@ -79,7 +82,11 @@ function ListingStatusBadge({ status }: { status: AdminListing['status'] }) {
         draft: { label: 'Draft', className: 'bg-slate-100 text-slate-700 border-slate-200', icon: Edit },
     };
 
-    const config = statusConfig[status];
+    const config = statusConfig[status] || {
+        label: status || 'Unknown',
+        className: 'bg-slate-100 text-slate-700 border-slate-200',
+        icon: Clock,
+    };
     const Icon = config.icon;
 
     return (
@@ -97,12 +104,14 @@ function ListingDetailSheet({
     onOpenChange,
     onApprove,
     onReject,
+    updateStatusMutation,
 }: {
     listing: AdminListing | null;
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onApprove: () => void;
     onReject: () => void;
+    updateStatusMutation: any;
 }) {
     if (!listing) return null;
 
@@ -141,18 +150,18 @@ function ListingDetailSheet({
                     {/* Price & Stats */}
                     <div className="grid grid-cols-3 gap-3">
                         <div className="text-center p-3 rounded-lg bg-slate-50">
-                            <p className="font-bold text-lg text-slate-900">£{listing.price.toFixed(2)}</p>
+                            <p className="font-bold text-lg text-slate-900">£{(listing.price ?? 0).toFixed(2)}</p>
                             <p className="text-xs text-slate-500">Price</p>
                         </div>
                         <div className="text-center p-3 rounded-lg bg-slate-50">
                             <div className="flex items-center justify-center gap-1 text-amber-500 mb-1">
                                 <Star className="h-4 w-4 fill-amber-500" />
-                                <span className="font-bold">{listing.rating.toFixed(1)}</span>
+                                <span className="font-bold">{(listing.rating ?? 0).toFixed(1)}</span>
                             </div>
                             <p className="text-xs text-slate-500">Rating</p>
                         </div>
                         <div className="text-center p-3 rounded-lg bg-slate-50">
-                            <p className="font-bold text-slate-900">{listing.reviewCount}</p>
+                            <p className="font-bold text-slate-900">{listing.reviewCount ?? 0}</p>
                             <p className="text-xs text-slate-500">Reviews</p>
                         </div>
                     </div>
@@ -181,6 +190,39 @@ function ListingDetailSheet({
                                     <p className="text-sm font-medium">{listing.sector} → {listing.category}</p>
                                 </div>
                             </div>
+                            <div className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
+                                <div className="flex items-center gap-3">
+                                    <ListChecks className="h-4 w-4 text-slate-500" />
+                                    <div>
+                                        <p className="text-xs text-slate-500">Update Status</p>
+                                        <p className="text-sm font-medium capitalise">{listing.status}</p>
+                                    </div>
+                                </div>
+                                <div className="flex gap-2">
+                                    {listing.status !== 'approved' && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 text-emerald-600 border-emerald-200"
+                                            onClick={onApprove}
+                                            disabled={updateStatusMutation.isPending}
+                                        >
+                                            Approve
+                                        </Button>
+                                    )}
+                                    {listing.status !== 'rejected' && (
+                                        <Button
+                                            size="sm"
+                                            variant="outline"
+                                            className="h-8 text-red-600 border-red-200"
+                                            onClick={onReject}
+                                            disabled={updateStatusMutation.isPending}
+                                        >
+                                            Reject
+                                        </Button>
+                                    )}
+                                </div>
+                            </div>
                             <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
                                 <MapPin className="h-4 w-4 text-slate-500" />
                                 <div>
@@ -190,30 +232,30 @@ function ListingDetailSheet({
                             </div>
                         </div>
                     </div>
-
-                    {/* Actions */}
-                    {listing.status === 'pending' && (
-                        <div className="flex gap-3 pt-4 border-t">
-                            <Button
-                                className="flex-1 bg-emerald-500 hover:bg-emerald-600"
-                                onClick={onApprove}
-                            >
-                                <CheckCircle className="h-4 w-4 mr-2" />
-                                Approve
-                            </Button>
-                            <Button
-                                variant="outline"
-                                className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
-                                onClick={onReject}
-                            >
-                                <XCircle className="h-4 w-4 mr-2" />
-                                Reject
-                            </Button>
-                        </div>
-                    )}
                 </div>
+
+                {/* Actions */}
+                {listing.status === 'pending' && (
+                    <div className="flex gap-3 pt-4 border-t">
+                        <Button
+                            className="flex-1 bg-emerald-500 hover:bg-emerald-600"
+                            onClick={onApprove}
+                        >
+                            <CheckCircle className="h-4 w-4 mr-2" />
+                            Approve
+                        </Button>
+                        <Button
+                            variant="outline"
+                            className="flex-1 text-red-600 hover:text-red-700 border-red-200 hover:border-red-300"
+                            onClick={onReject}
+                        >
+                            <XCircle className="h-4 w-4 mr-2" />
+                            Reject
+                        </Button>
+                    </div>
+                )}
             </SheetContent>
-        </Sheet>
+        </Sheet >
     );
 }
 
@@ -275,15 +317,15 @@ export default function ListingsPage() {
     // Fetch stats and listings
     const { data: statsData, isLoading: statsLoading } = useGetAdminListingStats();
     const { data: listingsData, isLoading: listingsLoading, error: listingsError } = useGetAdminListings();
-    const toggleFeaturedMutation = useToggleListingFeatured();
+    const updateStatusMutation = useUpdateListingStatus();
 
     const listings = listingsData?.data || [];
 
     // Filter listings
     const filteredListings = listings.filter((listing) => {
         const matchesSearch =
-            listing.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            listing.businessName.toLowerCase().includes(searchQuery.toLowerCase());
+            listing.title?.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            listing.businessName?.toLowerCase().includes(searchQuery.toLowerCase());
         const matchesStatus = statusFilter === 'all' || listing.status === statusFilter;
         const matchesCategory = categoryFilter === 'all' || listing.category === categoryFilter;
         return matchesSearch && matchesStatus && matchesCategory;
@@ -306,7 +348,12 @@ export default function ListingsPage() {
     };
 
     const handleApprove = () => {
-        // In real app, would call API to approve
+        if (!selectedListing) return;
+        updateStatusMutation.mutate({
+            id: selectedListing.id,
+            status: 'approved',
+            type: selectedListing.type as 'product' | 'service'
+        });
         setSheetOpen(false);
     };
 
@@ -315,9 +362,40 @@ export default function ListingsPage() {
     };
 
     const handleConfirmReject = (reason: string) => {
-        // In real app, would call API to reject with reason
+        if (!selectedListing) return;
+        updateStatusMutation.mutate({
+            id: selectedListing.id,
+            status: 'rejected',
+            type: selectedListing.type as 'product' | 'service',
+            reason
+        });
         setRejectDialogOpen(false);
         setSheetOpen(false);
+    };
+
+    const handleExport = () => {
+        if (!filteredListings || filteredListings.length === 0) {
+            toast.error('No listing data available to export');
+            return;
+        }
+
+        const exportData = filteredListings.map(l => ({
+            ID: l.id,
+            Title: l.title,
+            Business: l.businessName,
+            Category: l.category,
+            Sector: l.sector,
+            Price: (l.price ?? 0).toFixed(2),
+            Status: l.status,
+            Featured: l.featured ? 'Yes' : 'No',
+            Rating: (l.rating ?? 0).toFixed(1),
+            Reviews: l.reviewCount ?? 0,
+            Location: l.location,
+            Description: l.description,
+        }));
+
+        exportToCSV(exportData, `listings-export-${new Date().toISOString().split('T')[0]}`);
+        toast.success('Listing data exported successfully');
     };
 
     return (
@@ -329,10 +407,15 @@ export default function ListingsPage() {
                     <p className="text-slate-500">Manage and moderate all platform listings</p>
                 </div>
                 <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <Button variant="outline" size="sm" onClick={handleExport}>
+                                <Download className="h-4 w-4 mr-2" />
+                                Export
+                            </Button>
+                        </TooltipTrigger>
+                        <TooltipContent>Download listings as CSV</TooltipContent>
+                    </Tooltip>
                 </div>
             </div>
 
@@ -482,7 +565,7 @@ export default function ListingsPage() {
                                         <span className="text-sm">{listing.category}</span>
                                     </TableCell>
                                     <TableCell>
-                                        <span className="font-medium">£{listing.price.toFixed(2)}</span>
+                                        <span className="font-medium">£{(listing.price ?? 0).toFixed(2)}</span>
                                     </TableCell>
                                     <TableCell>
                                         <ListingStatusBadge status={listing.status} />
@@ -508,11 +591,26 @@ export default function ListingsPage() {
                                                 {listing.status === 'pending' && (
                                                     <>
                                                         <DropdownMenuSeparator />
-                                                        <DropdownMenuItem className="text-emerald-600">
+                                                        <DropdownMenuItem
+                                                            className="text-emerald-600"
+                                                            onClick={() => updateStatusMutation.mutate({
+                                                                id: listing.id,
+                                                                status: 'approved',
+                                                                type: listing.type as 'product' | 'service'
+                                                            })}
+                                                            disabled={updateStatusMutation.isPending}
+                                                        >
                                                             <CheckCircle className="h-4 w-4 mr-2" />
                                                             Approve
                                                         </DropdownMenuItem>
-                                                        <DropdownMenuItem className="text-red-600">
+                                                        <DropdownMenuItem
+                                                            className="text-red-600"
+                                                            onClick={() => {
+                                                                setSelectedListing(listing);
+                                                                setRejectDialogOpen(true);
+                                                            }}
+                                                            disabled={updateStatusMutation.isPending}
+                                                        >
                                                             <XCircle className="h-4 w-4 mr-2" />
                                                             Reject
                                                         </DropdownMenuItem>
@@ -520,15 +618,20 @@ export default function ListingsPage() {
                                                 )}
                                                 <DropdownMenuSeparator />
                                                 <DropdownMenuItem
-                                                    onClick={() => toggleFeaturedMutation.mutate(listing.id)}
-                                                    disabled={toggleFeaturedMutation.isPending}
+                                                    onClick={() => updateStatusMutation.mutate({
+                                                        id: listing.id,
+                                                        status: listing.status === 'approved' ? 'pending' : 'approved',
+                                                        type: listing.type as 'product' | 'service'
+                                                    })}
+                                                    disabled={updateStatusMutation.isPending}
                                                 >
-                                                    {toggleFeaturedMutation.isPending && toggleFeaturedMutation.variables === listing.id ? (
+                                                    {updateStatusMutation.isPending &&
+                                                        updateStatusMutation.variables?.id === listing.id ? (
                                                         <Loader2 className="h-4 w-4 mr-2 animate-spin" />
                                                     ) : (
-                                                        <Pin className="h-4 w-4 mr-2" />
+                                                        <Clock className="h-4 w-4 mr-2" />
                                                     )}
-                                                    {listing.featured ? 'Remove Featured' : 'Set Featured'}
+                                                    {listing.status === 'approved' ? 'Mark as Pending' : 'Approve Quick'}
                                                 </DropdownMenuItem>
                                                 <DropdownMenuItem className="text-red-600">
                                                     <Trash2 className="h-4 w-4 mr-2" />
@@ -559,6 +662,7 @@ export default function ListingsPage() {
                 onOpenChange={setSheetOpen}
                 onApprove={handleApprove}
                 onReject={handleReject}
+                updateStatusMutation={updateStatusMutation}
             />
 
             {/* Reject Dialog */}

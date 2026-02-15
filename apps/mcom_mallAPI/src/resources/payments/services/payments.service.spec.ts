@@ -4,15 +4,16 @@ import { Repository } from 'typeorm';
 import { PaymentsService } from './payments.service';
 import { User } from '../../users/entities/user.entity';
 import { PaymentHistory } from '../entities/payment-history.entity';
-import { Trial } from '../entities/trial.entity';
 import { PlanType } from '../enums/plan-type.enum';
 import { SubscriptionStatusEnum } from '../dto/subscription-status.dto';
-import { TrialService } from '../../trial/trial.service';
 import { PaymentProviderService } from './payment-provider.service';
+import { MembershipService } from 'src/resources/membership/membership.service';
+import { Tier } from '../../tier/entities/tier.entity';
+import { CentralIntegrationService } from './central-integration.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
-  let trialService: TrialService;
+  let membershipService: MembershipService;
   let paymentHistoryRepository: Repository<PaymentHistory>;
 
   const mockUser = {
@@ -28,7 +29,6 @@ describe('PaymentsService', () => {
     created_at: new Date(),
     updated_at: new Date(),
     businesses: [],
-    trial: null,
     coupons: [],
     promotionParticipations: [],
     reviews: [],
@@ -49,13 +49,28 @@ describe('PaymentsService', () => {
     promotion: true,
   } as unknown as User;
 
-  const mockTrialService = {
-    getTrialStatus: jest.fn(),
-    calculateTrialEndDate: jest.fn(),
+  const mockMembershipService = {
+    findOne: jest.fn(),
+    verifyAndCreateMembership: jest.fn(),
+  };
+
+  const mockTierRepository = {
+    findOne: jest.fn(),
+  };
+
+  const mockCentralIntegrationService = {
+    processCashback: jest.fn(),
   };
 
   const mockPaymentHistoryRepository = {
     findOne: jest.fn(),
+    create: jest.fn().mockImplementation(dto => dto),
+    save: jest.fn().mockImplementation(dto => Promise.resolve({ id: 'ph-id', ...dto })),
+  };
+
+  const mockPaymentProviderService = {
+    verifyStripePaymentIntent: jest.fn().mockResolvedValue({ ok: true }),
+    captureAndVerifyPaypalOrder: jest.fn().mockResolvedValue({ ok: true }),
   };
 
   beforeEach(async () => {
@@ -64,25 +79,33 @@ describe('PaymentsService', () => {
         PaymentsService,
         {
           provide: getRepositoryToken(User),
-          useValue: {},
+          useValue: { findOne: jest.fn().mockResolvedValue(mockUser) },
         },
         {
           provide: getRepositoryToken(PaymentHistory),
           useValue: mockPaymentHistoryRepository,
         },
         {
-          provide: TrialService,
-          useValue: mockTrialService,
+          provide: getRepositoryToken(Tier),
+          useValue: mockTierRepository,
+        },
+        {
+          provide: MembershipService,
+          useValue: mockMembershipService,
         },
         {
           provide: PaymentProviderService,
-          useValue: {},
+          useValue: mockPaymentProviderService,
+        },
+        {
+          provide: CentralIntegrationService,
+          useValue: mockCentralIntegrationService,
         }
       ],
     }).compile();
 
     service = module.get<PaymentsService>(PaymentsService);
-    trialService = module.get<TrialService>(TrialService);
+    membershipService = module.get<MembershipService>(MembershipService);
     paymentHistoryRepository = module.get<Repository<PaymentHistory>>(
       getRepositoryToken(PaymentHistory),
     );
@@ -93,112 +116,44 @@ describe('PaymentsService', () => {
   });
 
   describe('getSubscriptionStatus', () => {
-    it('should return an active trial status if the trial has not expired', async () => {
+    it('should return an active trial status if the membership is active trial', async () => {
       const now = new Date();
-      const startedAt = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
-      const trial = {
+      const expiresAt = new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000); // 4 days left
+      const membership = {
         id: '1',
-        user: mockUser,
-        planType: PlanType.CO_BRANDED,
-        startedAt,
-        totalPausedDuration: 0,
+        isTrial: true,
         isActive: true,
-        isPaused: false,
-        expiresAt: new Date(),
-        pauses: [],
-        tasks: {
-          createdBusiness: false,
-          createdProductOrService: false,
-          createdPromotion: false,
-          createdOffer: false,
-          createdCoupon: false,
-        },
-        created_at: new Date(),
-        updated_at: new Date(),
-        deleted_at: null,
-      } as Trial;
-      mockTrialService.getTrialStatus.mockResolvedValue(trial);
-      mockTrialService.calculateTrialEndDate.mockReturnValue(
-        new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000),
-      ); // 4 days left
+        expiresAt: expiresAt,
+        user: mockUser,
+      };
+      
+      mockMembershipService.findOne.mockResolvedValue(membership);
 
       const result = await service.getSubscriptionStatus('1');
 
       expect(result.status).toBe(SubscriptionStatusEnum.TRIAL_ACTIVE);
       expect(result.isPaused).toBe(false);
+      expect(result.trialEndDate).toEqual(expiresAt);
     });
 
-    it('should return an expired trial status if the trial has expired', async () => {
-      const now = new Date();
-      const startedAt = new Date(now.getTime() - 15 * 24 * 60 * 60 * 1000); // 15 days ago
-      const trial = {
+    it('should return an expired trial status if the membership is trial but inactive', async () => {
+      const membership = {
         id: '1',
-        user: mockUser,
-        planType: PlanType.CO_BRANDED,
-        startedAt,
-        totalPausedDuration: 0,
-        isActive: false, // The service should have marked it as inactive
-        isPaused: false,
+        isTrial: true,
+        isActive: false, // Inactive
         expiresAt: new Date(),
-        pauses: [],
-        tasks: {
-          createdBusiness: false,
-          createdProductOrService: false,
-          createdPromotion: false,
-          createdOffer: false,
-          createdCoupon: false,
-        },
-        created_at: new Date(),
-        updated_at: new Date(),
-        deleted_at: null,
-      } as Trial;
-      mockTrialService.getTrialStatus.mockResolvedValue(trial);
-      mockTrialService.calculateTrialEndDate.mockReturnValue(
-        new Date(now.getTime() - 1 * 24 * 60 * 60 * 1000),
-      ); // expired 1 day ago
+        user: mockUser,
+      };
+      
+      mockMembershipService.findOne.mockResolvedValue(membership);
 
       const result = await service.getSubscriptionStatus('1');
 
       expect(result.status).toBe(SubscriptionStatusEnum.TRIAL_EXPIRED);
     });
 
-    it('should return an active trial status and isPaused true if the trial is paused', async () => {
-      const now = new Date();
-      const startedAt = new Date(now.getTime() - 10 * 24 * 60 * 60 * 1000); // 10 days ago
-      const trial = {
-        id: '1',
-        user: mockUser,
-        planType: PlanType.CO_BRANDED,
-        startedAt,
-        totalPausedDuration: 0,
-        isActive: true,
-        isPaused: true,
-        expiresAt: new Date(),
-        pauses: [{ pausedAt: new Date(), resumedAt: null }],
-        tasks: {
-          createdBusiness: false,
-          createdProductOrService: false,
-          createdPromotion: false,
-          createdOffer: false,
-          createdCoupon: false,
-        },
-        created_at: new Date(),
-        updated_at: new Date(),
-        deleted_at: null,
-      } as Trial;
-      mockTrialService.getTrialStatus.mockResolvedValue(trial);
-      mockTrialService.calculateTrialEndDate.mockReturnValue(
-        new Date(now.getTime() + 4 * 24 * 60 * 60 * 1000),
-      ); // 4 days left
-
-      const result = await service.getSubscriptionStatus('1');
-
-      expect(result.status).toBe(SubscriptionStatusEnum.TRIAL_ACTIVE);
-      expect(result.isPaused).toBe(true);
-    });
-
-    it('should return a paid status if the user has a payment history and no trial', async () => {
-      mockTrialService.getTrialStatus.mockResolvedValue(null);
+    it('should return a paid status if the user has a payment history and no trial membership', async () => {
+      mockMembershipService.findOne.mockResolvedValue(null);
       const paymentHistory = {
         id: '1',
         user: { id: '1' },
@@ -213,8 +168,8 @@ describe('PaymentsService', () => {
       expect(result.status).toBe(SubscriptionStatusEnum.PAID);
     });
 
-    it('should return an inactive status if the user has no trial or payment history', async () => {
-      mockTrialService.getTrialStatus.mockResolvedValue(null);
+    it('should return an inactive status if the user has no trial membership or payment history', async () => {
+      mockMembershipService.findOne.mockResolvedValue(null);
       mockPaymentHistoryRepository.findOne.mockResolvedValue(null);
 
       const result = await service.getSubscriptionStatus('1');

@@ -15,14 +15,14 @@ const transformApiDataToFormData = (
     )?.url;
 
   const mapWeeklyHours = (hours: BusinessHour[]) => {
-    const dayMap: Record<number, keyof WeeklyHours> = {
-      1: 'Monday',
-      2: 'Tuesday',
-      3: 'Wednesday',
-      4: 'Thursday',
-      5: 'Friday',
-      6: 'Saturday',
-      0: 'Sunday',
+    const dayMap: Record<string, keyof WeeklyHours> = {
+      'MONDAY': 'Monday',
+      'TUESDAY': 'Tuesday',
+      'WEDNESDAY': 'Wednesday',
+      'THURSDAY': 'Thursday',
+      'FRIDAY': 'Friday',
+      'SATURDAY': 'Saturday',
+      'SUNDAY': 'Sunday',
     };
     return hours.reduce((acc, curr) => {
       const day = dayMap[curr.dayOfWeek];
@@ -71,7 +71,10 @@ const transformApiDataToFormData = (
     })),
   };
 
-  if (apiData.listingType.includes('product')) {
+  const hasProduct = apiData.listingType.includes('RETAIL');
+  const hasService = apiData.listingType.includes('SERVICE');
+
+  if (hasProduct) {
     formData.productData = {
       primaryCategory: apiData.categories[0]?.id || '',
       subCategory: apiData.categories[1]?.id || '',
@@ -105,7 +108,7 @@ const transformApiDataToFormData = (
     };
   }
 
-  if (apiData.listingType.includes('service')) {
+  if (hasService) {
     formData.serviceData = {
       primaryCategory: apiData.categories[0]?.id || '',
       tradeCategory: apiData.categories[1]?.id || apiData.categories[0]?.id || '',

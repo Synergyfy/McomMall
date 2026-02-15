@@ -1,37 +1,21 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
+import Link from 'next/link';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import {
-  Card,
-  CardContent,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from '@/components/ui/card';
-import { useAddListing, useEditListing } from '@/service/listings/hook';
-import {
-  type BusinessHourPayload,
-  type CreateBusinessPayload,
-  type DayOfWeek,
-  type ListingType,
-  type ProductSellerProfilePayload,
-  type SellingMode,
-  type ServiceProviderProfilePayload,
-  type SocialLinkPayload,
-  type SpecialDayPayload,
-  type StorefrontLinkPayload,
-} from '@/service/listings/types';
-import { Separator } from '@/components/ui/separator';
-import {
+  ChevronRight,
+  Save,
+  ArrowLeft,
+  ArrowRight,
+  Store,
   Check,
   Loader2,
   Building2,
   LayoutGrid,
   MapPin,
   Clock,
-  Store,
   Wrench,
   Map,
   CalendarDays,
@@ -45,11 +29,26 @@ import {
   isValidPhone,
   isValidUrl,
 } from '@/lib/validation';
+import {
+  CreateBusinessPayload,
+  ListingType,
+  SocialLinkPayload,
+  DayOfWeek,
+  BusinessHourPayload,
+  SpecialDayPayload,
+  ProductSellerProfilePayload,
+  ServiceProviderProfilePayload,
+  SellingMode,
+  StorefrontLinkPayload,
+} from '@/service/listings/types';
 import { ListingFormData } from '../types';
 import { uploadFile } from '@/lib/upload';
 import { InProgressDialog } from '@/components/InProgressDialog';
 import { UploadSuccessDialog } from '@/components/UploadSuccessDialog';
 import { ErrorDialog } from '@/components/ErrorDialog';
+import { useAddListing, useEditListing } from '@/service/listings/hook';
+import { toast } from 'sonner';
+import ListingUsageBar from '@/components/dashboard/ListingUsageBar';
 
 // Import all step components
 import BusinessInfoStep from './steps/shared/BusinessInfoStep';
@@ -145,6 +144,14 @@ const validationRules = {
       validate: isNotEmpty,
       message: 'Primary category is required.',
     },
+    'productData.subCategory': {
+      validate: isNotEmpty,
+      message: 'Category is required.',
+    },
+    'productData.subCategories': {
+      validate: (v: string[]) => v.length > 0,
+      message: 'Sub-category is required.',
+    },
   },
   productLocation: {},
   sellingModes: {
@@ -155,67 +162,23 @@ const validationRules = {
     },
   },
   serviceCategory: {
+    'serviceData.primaryCategory': {
+      validate: isNotEmpty,
+      message: 'Sector is required.',
+    },
     'serviceData.tradeCategory': {
       validate: isNotEmpty,
       message: 'Trade category is required.',
+    },
+    'serviceData.subCategories': {
+      validate: (v: string[]) => (v?.length || 0) > 0,
+      message: 'Sub-category is required.',
     },
   },
   booking: {},
 };
 
-const StepIndicator = ({
-  currentStep,
-  steps,
-  onStepClick,
-}: {
-  currentStep: number;
-  steps: {
-    title: string;
-    component: React.ElementType;
-    icon: React.ElementType;
-  }[];
-  onStepClick: (stepIndex: number) => void;
-}) => (
-  <div className="flex justify-center items-center mb-8 overflow-x-auto py-2">
-    {steps.map((step, index) => (
-      <div key={step.title} className="flex items-center flex-shrink-0">
-        <div
-          className="flex flex-col items-center w-24 cursor-pointer group"
-          onClick={() => onStepClick(index + 1)}
-        >
-          <div
-            className={`w-10 h-10 rounded-full flex items-center justify-center text-lg font-semibold transition-colors duration-300 ${currentStep > index + 1
-              ? 'bg-blue-600 text-white'
-              : currentStep === index + 1
-                ? 'bg-orange-700 text-white'
-                : 'bg-muted text-muted-foreground'
-              } group-hover:ring-2 group-hover:ring-orange-400 group-hover:ring-offset-2`}
-          >
-            {currentStep > index + 1 ? (
-              <Check />
-            ) : (
-              <step.icon className="w-5 h-5" />
-            )}
-          </div>
-          <p
-            className={`mt-2 text-xs text-center font-medium transition-colors duration-300 ${currentStep >= index + 1
-              ? 'text-primary'
-              : 'text-muted-foreground'
-              } group-hover:text-orange-600`}
-          >
-            {step.title}
-          </p>
-        </div>
-        {index < steps.length - 1 && (
-          <div
-            className={`w-16 h-1 mx-4 transition-colors duration-300 ${currentStep > index + 1 ? 'bg-blue-600' : 'bg-muted'
-              }`}
-          />
-        )}
-      </div>
-    ))}
-  </div>
-);
+// StepIndicator component removed as it is now inlined
 
 const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   businessTypes,
@@ -224,6 +187,11 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   initialData: propInitialData,
 }) => {
   const [currentStep, setCurrentStep] = useState(1);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
   const [formData, setFormData] = useState<ListingFormData>(() => {
     const initialData: ListingFormData = {
       status: 'draft',
@@ -284,6 +252,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Building2,
         component: BusinessInfoStep,
         validationRules: validationRules.businessInfo,
+        section: 'Business Info',
       },
     ];
     const productSteps = [
@@ -292,24 +261,28 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: LayoutGrid,
         component: ProductCategoryStep,
         validationRules: validationRules.productCategory,
+        section: 'Product Details',
       },
       {
         title: 'Location',
         icon: MapPin,
         component: ProductLocationStep,
         validationRules: validationRules.productLocation,
+        section: 'Product Details',
       },
       {
         title: 'Hours',
         icon: Clock,
         component: ProductHoursStep,
         validationRules: {},
+        section: 'Product Details',
       },
       {
         title: 'Selling Modes',
         icon: Store,
         component: SellingModesStep,
         validationRules: validationRules.sellingModes,
+        section: 'Product Details',
       },
     ];
     const serviceSteps = [
@@ -318,25 +291,28 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Wrench,
         component: ServiceCategoryStep,
         validationRules: validationRules.serviceCategory,
+        section: 'Service Details',
       },
       {
         title: 'Service Area',
         icon: Map,
         component: ServiceAreaStep,
         validationRules: {},
+        section: 'Service Details',
       },
       {
         title: 'Availability',
         icon: CalendarDays,
         component: ServiceHoursStep,
         validationRules: {},
+        section: 'Service Details',
       },
-      // Booking step removed per new service creation requirements
       {
         title: 'Credentials',
         icon: Award,
         component: CredentialsStep,
         validationRules: {},
+        section: 'Service Details',
       },
     ];
     const sharedFinal = [
@@ -345,6 +321,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         icon: Camera,
         component: MediaStep,
         validationRules: validationRules.media,
+        section: 'Media & Finalize',
       },
     ];
 
@@ -353,6 +330,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       icon: React.ElementType;
       component: React.ElementType;
       validationRules: object;
+      section: string;
     }[] = [];
 
     if (
@@ -367,10 +345,10 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     }
 
     return [...sharedInitial, ...flowSteps, ...sharedFinal];
-  }, [businessTypes]);
+  }, [businessTypes, businessTypes]);
 
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
-  const get = (obj: any, path: string) => {
+  const getValueByPath = (obj: any, path: string) => {
     const keys = path.split('.');
     let result = obj;
     for (const key of keys) {
@@ -395,7 +373,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     for (const fieldName in currentRules) {
       const rule = currentRules[fieldName];
-      const value = get(formData, fieldName);
+      const value = getValueByPath(formData, fieldName);
 
 
       // Conditional validation for booking URL
@@ -439,32 +417,52 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   };
 
   const handleStepClick = (stepIndex: number) => {
-    // Only allow jumping back or to steps already validated
-    if (stepIndex < currentStep) {
-      setCurrentStep(stepIndex);
-    } else if (stepIndex > currentStep) {
-      // If jumping forward, validate current step first
-      if (validateStep()) {
-        setCurrentStep(stepIndex);
-      }
-    }
+    // Allow jumping to any step without immediate validation
+    setCurrentStep(stepIndex);
   };
 
   const nextStep = () => {
     if (validateStep()) {
-      setCurrentStep(prev => Math.min(prev + 1, steps.length));
+      const nextIdx = currentStep; // 1-indexed, so currentStep is the index of the next step
+      if (nextIdx < steps.length) {
+        const currentSection = steps[currentStep - 1].section;
+        const nextSection = steps[nextIdx].section;
+
+        if (currentSection === 'Product Details' && nextSection === 'Service Details') {
+          toast.success('Product details completed! Now moving to Service details.', {
+            description: 'You are now in the service section.',
+            duration: 4000,
+          });
+        }
+
+        setCurrentStep(prev => prev + 1);
+      }
     }
   };
 
-  const prevStep = () => setCurrentStep(prev => Math.max(prev - 1, 1));
+  const prevStep = () => {
+    if (currentStep === 1) {
+      onBack();
+    } else {
+      setCurrentStep(prev => prev - 1);
+    }
+  };
 
   const transformFormDataToPayload = (
     data: ListingFormData,
-    status: 'published' | 'draft' = 'published'
+    statusOverride: 'published' | 'draft' = 'published'
   ): CreateBusinessPayload => {
-    const listingType = data.businessTypes.map(
-      t => t.toLowerCase() as ListingType
-    );
+    console.log('--- START transformFormDataToPayload ---');
+    console.log('Input data.businessTypes:', data.businessTypes);
+
+    const mappedListingTypes: ListingType[] = data.businessTypes.map(t => {
+      const typeStr = String(t).toLowerCase();
+      if (typeStr === 'product' || typeStr === 'retail') return 'RETAIL';
+      if (typeStr === 'service') return 'SERVICE';
+      return 'RETAIL';
+    });
+
+    console.log('Mapped listingType:', mappedListingTypes);
 
     const formatUrl = (url?: string): string | undefined => {
       if (!url) return undefined;
@@ -505,11 +503,11 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       serviceModel:
         data.serviceData?.serviceLocation?.atBusinessLocation &&
           data.serviceData?.serviceLocation?.customerTravels
-          ? 'both'
+          ? 'HYBRID'
           : data.serviceData?.serviceLocation?.atBusinessLocation
-            ? 'at_location'
+            ? 'AT_LOCATION'
             : data.serviceData?.serviceLocation?.customerTravels
-              ? 'travel_to_customer'
+              ? 'TRAVEL_TO_CUSTOMER'
               : undefined,
     });
 
@@ -523,13 +521,13 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     // --- Business Hours ---
     const dayMapping: { [key: string]: DayOfWeek } = {
-      Monday: 1,
-      Tuesday: 2,
-      Wednesday: 3,
-      Thursday: 4,
-      Friday: 5,
-      Saturday: 6,
-      Sunday: 0,
+      Monday: 'MONDAY',
+      Tuesday: 'TUESDAY',
+      Wednesday: 'WEDNESDAY',
+      Thursday: 'THURSDAY',
+      Friday: 'FRIDAY',
+      Saturday: 'SATURDAY',
+      Sunday: 'SUNDAY',
     };
     const businessHours: BusinessHourPayload[] = [];
     if (data.productData?.weeklyHours) {
@@ -613,7 +611,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
 
     const payload: CreateBusinessPayload = stripEmpty({
       media: [],
-      listingType,
+      listingType: mappedListingTypes,
       businessName: data.businessName,
       legalName: data.legalName,
       companyRegistrationNumber: data.companyRegNo,
@@ -625,13 +623,25 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       businessEmail: data.email,
       location,
       socialLinks: socialLinks.length > 0 ? socialLinks : undefined,
-      status: status as any,
+      sectorId: (data.productData?.primaryCategory || data.serviceData?.primaryCategory || ''),
+      categoryId: (data.productData?.subCategory || data.serviceData?.tradeCategory || ''),
+      subCategoryId: (data.productData?.subCategories?.[0] || data.serviceData?.subCategories?.[0] || ''),
+      status: statusOverride as any,
       categoryIds: [
-        data.productData?.primaryCategory,
-        data.productData?.subCategory,
-        ...(data.productData?.subCategories || []),
-        data.serviceData?.primaryCategory,
-        data.serviceData?.tradeCategory,
+        ...(mappedListingTypes.includes('RETAIL')
+          ? [
+            data.productData?.primaryCategory,
+            data.productData?.subCategory,
+            data.productData?.subCategories?.[0],
+          ]
+          : []),
+        ...(mappedListingTypes.includes('SERVICE')
+          ? [
+            data.serviceData?.primaryCategory,
+            data.serviceData?.tradeCategory,
+            data.serviceData?.subCategories?.[0],
+          ]
+          : []),
       ]
         .filter((id): id is string => !!id)
         .filter((id, index, self) => self.indexOf(id) === index),
@@ -641,6 +651,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
       serviceProviderProfile,
     });
 
+    console.log('TRANSFORMED PAYLOAD:', payload);
     return payload;
   };
 
@@ -662,7 +673,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
         if (newErrors[fieldName]) continue;
 
         const rule = rules[fieldName];
-        const value = get(formData, fieldName);
+        const value = getValueByPath(formData, fieldName);
 
         if (
           fieldName === 'serviceData.bookingURL' &&
@@ -692,8 +703,10 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
   };
 
   const handleSubmit = async (status: 'published' | 'draft' = 'published') => {
+    console.log('--- START handleSubmit ---');
     const { isValid, firstErrorStep } = validateAllSteps();
     if (!isValid && status === 'published') {
+      console.log('Validation FAILED at step:', firstErrorStep);
       if (firstErrorStep !== null) {
         setCurrentStep(firstErrorStep);
       }
@@ -754,10 +767,12 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
           if (logoResult) fullPayload.logoUrl = logoResult.secure_url;
           if (bannerResult) fullPayload.bannerUrl = bannerResult.secure_url;
 
-          let finalPayload = fullPayload;
+          let finalPayload: any = fullPayload;
+          console.log('Final Prepared Payload:', JSON.stringify(finalPayload, null, 2));
 
           // Partial update logic if editing
           if (listingId && propInitialData) {
+            console.log('Calculating diff for editing...');
             const initialPayload = transformFormDataToPayload(propInitialData as any);
             const diffPayload = deepDiff(fullPayload, initialPayload);
 
@@ -767,6 +782,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
             diffPayload.status = status; // Ensure status reflects draft/published
 
             finalPayload = diffPayload;
+            console.log('Diff Payload:', JSON.stringify(finalPayload, null, 2));
           }
 
           if (listingId) {
@@ -775,7 +791,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: (err) => {
+              onError: (err: any) => {
                 setErrorMessage(err.message || 'An error occurred during update.');
                 setUploadError(true);
                 reject(err);
@@ -787,7 +803,7 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
                 setUploadSuccess(true);
                 resolve();
               },
-              onError: (err) => {
+              onError: (err: any) => {
                 setErrorMessage(err.message || 'An error occurred during submission.');
                 setUploadError(true);
                 reject(err);
@@ -814,112 +830,203 @@ const MultiStepListingForm: React.FC<MultiStepListingFormProps> = ({
     }
   };
 
-  const CurrentStepComponent = steps[currentStep - 1].component;
-
-  const formVariants = {
-    hidden: { opacity: 0, x: 50 },
-    visible: { opacity: 1, x: 0 },
-    exit: { opacity: 0, x: -50 },
-  };
+  if (!mounted) return null;
 
   const getTitle = () => {
     if (businessTypes.length > 1) return 'Product & Service';
     return businessTypes[0];
   };
 
+  const CurrentStepComponent = steps[currentStep - 1].component;
+
   return (
-    <>
-      <InProgressDialog isOpen={isUploading} message="Publishing your listing, please wait..." />
-      <UploadSuccessDialog
-        isOpen={uploadSuccess}
-        onClose={() => setUploadSuccess(false)}
-        message={listingId ? "Listing updated successfully!" : "Listing published successfully!"}
-      />
-      <ErrorDialog
-        isOpen={uploadError}
-        onClose={() => setUploadError(false)}
-        message={errorMessage}
-      />
-      <Card>
-        <CardHeader>
-          <div className="flex justify-between items-center">
-            <CardTitle className="text-2xl font-bold">
-              {listingId ? 'Edit' : 'Add a New'} <span className="text-orange-700">{getTitle()}</span>{' '}
-              Listing
-            </CardTitle>
-            <Button
-              variant="ghost"
-              onClick={onBack}
-              className="text-blue-600 hover:text-blue-700"
-            >
-              &larr; Back to selection
-            </Button>
+    <div className="space-y-8">
+      <ListingUsageBar />
+      <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
+        <div>
+          <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">
+            {listingId ? 'EDIT MODE' : 'ADD NEW MODE'} <span className="text-[#f48c25]">{getTitle()}</span> Listing
+          </h1>
+          <p className="text-sm text-gray-500 mt-1 font-medium">
+            Launch your next storefront in just a few steps. [Debug Active]
+          </p>
+        </div>
+        <div className="flex items-center text-sm font-bold bg-[#f48c25]/10 px-4 py-2 rounded-full text-[#f48c25]">
+          <Link href="/dashboard" className="hover:underline transition-all">Home</Link>
+          <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+          <Link href="/dashboard/my-listings" className="hover:underline transition-all">My Listings</Link>
+          <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+          {!listingId ? (
+            <button onClick={onBack} className="hover:underline transition-all">
+              Change Type
+            </button>
+          ) : (
+            <span className="text-gray-900">Edit</span>
+          )}
+          {!listingId && (
+            <>
+              <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+              <span className="text-gray-900">Add</span>
+            </>
+          )}
+        </div>
+      </header>
+
+      {/* Progress Section */}
+      <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#f48c25] flex items-center justify-center text-white shadow-lg shadow-[#f48c25]/20">
+              {React.createElement(steps[currentStep - 1].icon, { size: 20 })}
+            </div>
+            <div>
+              <h2 className="text-lg font-bold text-gray-900">{steps[currentStep - 1].title}</h2>
+              <p className="text-xs text-gray-500 font-medium">Step {currentStep} of {steps.length} • {steps[currentStep - 1].section}</p>
+            </div>
           </div>
-        </CardHeader>
-        <Separator />
-        <CardContent className="pt-6">
-          <StepIndicator currentStep={currentStep} steps={steps} onStepClick={handleStepClick} />
+          <div className="text-right hidden sm:block">
+            <span className="text-2xl font-black text-[#f48c25]">{Math.round((currentStep / steps.length) * 100)}%</span>
+            <p className="text-[10px] uppercase tracking-wider text-gray-400 font-bold">Completed</p>
+          </div>
+        </div>
+
+        {/* Progress Bar */}
+        <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden mb-8">
+          <motion.div
+            initial={{ width: 0 }}
+            animate={{ width: `${(currentStep / steps.length) * 100}%` }}
+            className="h-full bg-gradient-to-r from-[#f48c25] to-[#ffab5a]"
+          />
+        </div>
+
+        {/* Steps Navigation Desktop */}
+        <div className="hidden lg:flex justify-between relative mb-12 px-2">
+          {/* Connecting Line */}
+          <div className="absolute top-5 left-0 w-full h-0.5 bg-gray-100 -z-0" />
+
+          {steps.map((step, idx) => {
+            const stepNum = idx + 1;
+            const isActive = currentStep === stepNum;
+            const isCompleted = currentStep > stepNum;
+
+            return (
+              <button
+                key={idx}
+                onClick={() => handleStepClick(stepNum)}
+                className="flex flex-col items-center gap-2 z-10 group"
+              >
+                <div className={`
+                  w-10 h-10 rounded-full flex items-center justify-center transition-all duration-300 border-4
+                  ${isActive ? 'bg-[#f48c25] border-white shadow-md scale-110' :
+                    isCompleted ? 'bg-green-500 border-white' : 'bg-white border-gray-100'}
+                `}>
+                  {isCompleted ? (
+                    <Check className="text-white" size={18} strokeWidth={3} />
+                  ) : (
+                    <span className={`text-sm font-bold ${isActive ? 'text-white' : 'text-gray-400'}`}>
+                      {stepNum}
+                    </span>
+                  )}
+                </div>
+                <span className={`text-[10px] font-bold uppercase tracking-tight transition-colors
+                  ${isActive ? 'text-[#f48c25]' : 'text-gray-400 group-hover:text-gray-600'}
+                `}>
+                  {step.title}
+                </span>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* Step Content */}
+        <div className="min-h-[400px] py-4">
           <AnimatePresence mode="wait">
             <motion.div
               key={currentStep}
-              variants={formVariants}
-              initial="hidden"
-              animate="visible"
-              exit="exit"
-              transition={{ type: 'tween', ease: 'easeInOut', duration: 0.4 }}
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -10 }}
+              transition={{ duration: 0.3 }}
             >
               <CurrentStepComponent
                 formData={formData}
                 setFormData={setFormData}
                 errors={errors}
-                validationRules={steps[currentStep - 1].validationRules}
               />
             </motion.div>
           </AnimatePresence>
-        </CardContent>
-        <Separator />
-        <CardFooter className="flex justify-between py-6">
+        </div>
+
+        {/* Navigation Buttons */}
+        <div className="flex justify-between items-center mt-12 pt-8 border-t border-gray-100">
           <Button
-            variant="outline"
+            variant="ghost"
             onClick={prevStep}
-            disabled={currentStep === 1 || isPending}
-            className="w-32"
+            className="font-bold text-gray-500 hover:text-gray-900 group"
           >
-            Previous
+            <ArrowLeft className="mr-2 h-4 w-4 transition-transform group-hover:-translate-x-1" />
+            {currentStep === 1 ? 'Cancel' : 'Previous'}
           </Button>
-          <div className="flex gap-4">
+
+          <div className="flex gap-3">
             <Button
               variant="outline"
               onClick={() => handleSubmit('draft')}
               disabled={isPending}
-              className="w-32 border-orange-200 text-orange-700 hover:bg-orange-50"
+              className="border-gray-200 font-bold text-gray-600 hover:bg-gray-50"
             >
-              Save as Draft
+              {isPending ? (
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+              ) : (
+                <Save className="mr-2 h-4 w-4" />
+              )}
+              Save Draft
             </Button>
+
             {currentStep < steps.length ? (
-              <Button onClick={nextStep} disabled={isPending} className="w-32 bg-orange-600 hover:bg-orange-700">
-                Next
+              <Button
+                onClick={nextStep}
+                className="bg-[#f48c25] hover:bg-[#d6761c] text-white font-bold shadow-lg shadow-[#f48c25]/20 group"
+              >
+                Next Step
+                <ArrowRight className="ml-2 h-4 w-4 transition-transform group-hover:translate-x-1" />
               </Button>
             ) : (
               <Button
                 onClick={() => handleSubmit('published')}
                 disabled={isPending}
-                className="w-32 bg-green-600 hover:bg-green-700"
+                className="bg-green-600 hover:bg-green-700 text-white font-bold shadow-lg shadow-green-600/20"
               >
                 {isPending ? (
-                  <>
-                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Publishing...
-                  </>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                 ) : (
-                  listingId ? 'Update' : 'Publish'
+                  <Check className="mr-2 h-4 w-4" />
                 )}
+                {listingId ? 'Update Listing' : 'Publish Listing'}
               </Button>
             )}
           </div>
-        </CardFooter>
-      </Card>
-    </>
+        </div>
+      </div>
+
+      <InProgressDialog
+        isOpen={isUploading && !uploadSuccess && !uploadError}
+        message="Uploading your listing..."
+      />
+      <UploadSuccessDialog
+        isOpen={uploadSuccess}
+        onClose={() => {
+          setUploadSuccess(false);
+          // router.push is handled in hook onSuccess
+        }}
+        message={listingId ? "Your listing has been updated successfully!" : "Your listing has been published successfully!"}
+      />
+      <ErrorDialog
+        isOpen={uploadError}
+        message={errorMessage}
+        onClose={() => setUploadError(false)}
+      />
+    </div>
   );
 };
 

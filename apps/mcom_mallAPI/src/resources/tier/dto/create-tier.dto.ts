@@ -1,6 +1,7 @@
 import { IsBoolean, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TierConfig } from '../interfaces/tier-config.interface';
+import { TierType } from '../enums/tier-type.enum';
 
 export class CreateTierDto {
   @ApiProperty({
@@ -151,4 +152,23 @@ export class CreateTierDto {
   @IsBoolean()
   @IsOptional()
   isDefault?: boolean;
+
+  @ApiProperty({
+    enum: TierType,
+    example: TierType.STANDARD,
+    description: 'Type of the tier',
+    required: false,
+    default: TierType.STANDARD,
+  })
+  @IsOptional()
+  type?: TierType;
+
+  @ApiProperty({
+    example: 14,
+    description: 'Duration of trial in days (required for TRIAL type)',
+    required: false,
+  })
+  @IsNumber()
+  @IsOptional()
+  trialDuration?: number;
 }

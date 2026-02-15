@@ -1,4 +1,4 @@
-import { Controller, Post, Body, UseGuards, Get, Query, Param, Patch } from '@nestjs/common';
+import { Controller, Post, Body, UseGuards, Get, Query, Param, Patch, BadRequestException } from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateAdminDto, LoginAdminDto } from './dto/admin.dto';
 import { AdminDashboardResponseDto } from './dto/dashboard.dto';
@@ -18,7 +18,7 @@ import { BusinessStatus } from '../listings/listing.enum';
 @Controller('admin')
 @UseGuards(RolesGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(private readonly adminService: AdminService) { }
 
   @ApiOperation({ summary: 'Create a new super admin' })
   @ApiResponse({ status: 201, description: 'Super admin created successfully.' })
@@ -132,12 +132,12 @@ export class AdminController {
   @Patch('listings/:id/status')
   async updateListingStatus(
     @Param('id') id: string,
-    @Body('type') type: 'product' | 'service',
     @Body('status') status: string,
   ) {
-    return this.adminService.updateListingStatus(id, type, status);
+    return this.adminService.updateListingStatus(id, status);
   }
 
+  /*
   @ApiOperation({ summary: 'Toggle listing featured status' })
   @ApiResponse({ status: 200, description: 'Listing featured status updated successfully.' })
   @Roles(UserRole.ADMIN)
@@ -147,6 +147,9 @@ export class AdminController {
     @Body('type') type: 'product' | 'service',
     @Body('isFeatured') isFeatured: boolean,
   ) {
-    return this.adminService.toggleListingFeatured(id, type, isFeatured);
+    // Feature not currently supported for Business Listings
+    throw new BadRequestException('Featured status not supported for listings');
+    // return this.adminService.toggleListingFeatured(id, type, isFeatured);
   }
+  */
 }

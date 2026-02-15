@@ -1,227 +1,282 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, In, LessThanOrEqual, MoreThanOrEqual, Raw } from 'typeorm';
-import { ActivityTimerTemplate } from './entities/activity-timer-template.entity';
+import { Repository } from 'typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
-import { CreateActivityTimerTemplateDto, UpdateActivityTimerTemplateDto } from './dto/activity-timer.dto';
+import { UserActivity } from './entities/user-activity.entity';
 import { User } from '../users/entities/user.entity';
-import { ActivityTaskType, ActivityTimerType } from './enums/activity-task-type.enum';
+import { ActivityTimerType } from './enums/activity-task-type.enum';
 
 @Injectable()
 export class ActivityTimerService {
   constructor(
-    @InjectRepository(ActivityTimerTemplate)
-    private readonly templateRepository: Repository<ActivityTimerTemplate>,
     @InjectRepository(ActivityTimer)
-    private readonly timerRepository: Repository<ActivityTimer>,
+    private readonly activityRepository: Repository<ActivityTimer>,
+    @InjectRepository(UserActivity)
+    private readonly userActivityRepository: Repository<UserActivity>,
   ) { }
 
-  // --- Template Management (Admin) ---
+  // --- Admin: Publish a Task (Create Definition) ---
 
-  async createTemplate(dto: CreateActivityTimerTemplateDto): Promise<ActivityTimerTemplate> {
-    const template = this.templateRepository.create(dto);
-    return this.templateRepository.save(template);
+  async createActivity(dto: any): Promise<ActivityTimer> {
+    const { title, description, key, actionUrl, type, durationDays, includedTierIds, excludedTierIds, expiresAt } = dto;
+
+    const activity = this.activityRepository.create({
+      title,
+      description,
+      key,
+      actionUrl,
+      type,
+      durationDays,
+      includedTierIds,
+      excludedTierIds,
+      expiresAt: expiresAt ? new Date(expiresAt) : null,
+      isActive: true
+    });
+
+    return this.activityRepository.save(activity);
   }
 
-  async updateTemplate(id: string, dto: UpdateActivityTimerTemplateDto): Promise<ActivityTimerTemplate> {
-    const template = await this.templateRepository.findOne({ where: { id } });
-    if (!template) throw new NotFoundException('Template not found');
-    Object.assign(template, dto);
-    return this.templateRepository.save(template);
-  }
+  // --- Admin: List Definitions ---
 
-  async findAllTemplates(): Promise<ActivityTimerTemplate[]> {
-    return this.templateRepository.find({ order: { createdAt: 'DESC' } });
-  }
-
-  async deleteTemplate(id: string): Promise<void> {
-    const template = await this.templateRepository.findOne({ where: { id } });
-    if (!template) throw new NotFoundException('Template not found');
-    await this.timerRepository.delete({ template: { id } });
-    await this.templateRepository.remove(template);
+  async findAllActivities(): Promise<ActivityTimer[]> {
+    return this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select([
+        'ActivityTimer.id',
+        'ActivityTimer.type',
+        'ActivityTimer.title',
+        'ActivityTimer.description',
+        'ActivityTimer.key',
+        'ActivityTimer.actionUrl',
+        'ActivityTimer.includedTierIds',
+        'ActivityTimer.excludedTierIds',
+        'ActivityTimer.durationDays',
+        'ActivityTimer.createdAt',
+        'ActivityTimer.expiresAt',
+        'ActivityTimer.isActive'
+      ])
+      .orderBy('ActivityTimer.createdAt', 'DESC')
+      .getMany();
   }
 
   // --- Core Logic ---
 
-  /**
-   * Called by various services when a user performs an action.
-   * Marks matching tasks as done for all active timers.
-   */
-  async handleAction(userId: string, actionType: ActivityTaskType): Promise<void> {
-    const activeTimers = await this.timerRepository.find({
-      where: { user: { id: userId }, isActive: true },
-      relations: ['template']
-    });
-
-    for (const timer of activeTimers) {
-      if (timer.taskStatus[actionType] === false) {
-        timer.taskStatus[actionType] = true;
-
-        // Check if all tasks are done
-        const allDone = Object.values(timer.taskStatus).every(val => val === true);
-        if (allDone) {
-          timer.completedAt = new Date();
-        }
-
-        await this.timerRepository.save(timer);
-      }
-    }
-  }
-
-  /**
-   * Check if a user's access should be restricted due to expired trial with incomplete tasks.
-   */
-  async isRestricted(user: User): Promise<boolean> {
-    // If user has a paid tier, they are not restricted by trial
-    if (user.membership && user.membership.tierId) {
-      return false;
-    }
-
-    const trialTimer = await this.timerRepository.findOne({
-      where: { user: { id: user.id }, type: ActivityTimerType.TRIAL, isActive: true },
-      order: { createdAt: 'DESC' }
-    });
-
-    if (!trialTimer) return false;
-
-    const now = new Date();
-    const isExpired = now > trialTimer.expiresAt;
-    const allTasksDone = Object.values(trialTimer.taskStatus).every(val => val === true);
-
-    return isExpired && !allTasksDone;
-  }
-
-  async getUserActiveTimer(user: User): Promise<any[]> {
+  async getUserActiveTasks(user: User): Promise<any[]> {
     const userId = user.id;
-    const userTierId = user.membership?.tierId;
 
-    // 1. Sync Trial Timer for new users without tier
-    if (!userTierId) {
-      const activeTrial = await this.timerRepository.findOne({
-        where: { user: { id: userId }, type: ActivityTimerType.TRIAL, isActive: true }
-      });
+    // 1. Fetch user with membership
+    const fullUser = await this.activityRepository.manager.findOne(User, {
+      where: { id: userId },
+      relations: ['membership', 'membership.tier'],
+    });
 
-      if (!activeTrial) {
-        const latestTrialTemplate = await this.templateRepository.findOne({
-          where: { type: ActivityTimerType.TRIAL, isPublished: true },
-          order: { createdAt: 'DESC' }
+    // 2. Fetch all relevant Activities
+    const allActivities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select([
+        'ActivityTimer.id',
+        'ActivityTimer.type',
+        'ActivityTimer.title',
+        'ActivityTimer.description',
+        'ActivityTimer.key',
+        'ActivityTimer.actionUrl',
+        'ActivityTimer.includedTierIds',
+        'ActivityTimer.excludedTierIds',
+        'ActivityTimer.durationDays',
+        'ActivityTimer.createdAt',
+        'ActivityTimer.expiresAt',
+        'ActivityTimer.isActive'
+      ])
+      .where('ActivityTimer.isActive = :isActive', { isActive: true })
+      .orderBy('ActivityTimer.createdAt', 'DESC')
+      .getMany();
+
+    const userTierId = fullUser?.membership?.tierId;
+
+    const eligibleActivities = allActivities.filter(activity => {
+      // 1. Inclusion Check
+      let isIncluded = false;
+      // If no specific tiers included, it applies to all (unless excluded)
+      if (!activity.includedTierIds || activity.includedTierIds.length === 0) {
+        isIncluded = true;
+      } else if (userTierId && activity.includedTierIds.includes(userTierId)) {
+        isIncluded = true;
+      }
+
+      // 2. Exclusion Check
+      let isExcluded = false;
+      if (userTierId && activity.excludedTierIds && activity.excludedTierIds.includes(userTierId)) {
+        isExcluded = true;
+      }
+
+      return isIncluded && !isExcluded;
+    });
+
+    // 3. Fetch User's Completions
+    const userCompletions = await this.userActivityRepository.createQueryBuilder('UserActivity')
+      .leftJoinAndSelect('UserActivity.activity', 'activity')
+      .where('UserActivity.userId = :userId', { userId })
+      .select([
+        'UserActivity.id',
+        'UserActivity.completedAt',
+        'activity.id',
+        'activity.key'
+      ])
+      .getMany();
+
+    const completedActivityIds = new Set(userCompletions.map(ua => ua.activity.id));
+    const completionMap = new Map<string, Date>();
+    userCompletions.forEach(ua => completionMap.set(ua.activity.id, ua.completedAt));
+
+    const now = new Date();
+    const membership = fullUser?.membership;
+
+    const response = [];
+    const activitiesByType = new Map<ActivityTimerType, ActivityTimer[]>();
+
+    for (const activity of eligibleActivities) {
+      if (!activitiesByType.has(activity.type)) activitiesByType.set(activity.type, []);
+      activitiesByType.get(activity.type).push(activity);
+    }
+
+    // Handle TRIAL Users
+    if (membership && membership.isTrial && membership.isActive) {
+      if (activitiesByType.has(ActivityTimerType.TRIAL)) {
+        const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL);
+        const trialExpiry = new Date(membership.expiresAt);
+        const remainingTime = Math.max(0, trialExpiry.getTime() - now.getTime());
+
+        response.push({
+          id: `trial-timer-${userId}`,
+          type: ActivityTimerType.TRIAL,
+          name: 'Trial Checklist',
+          description: 'Complete these tasks to activate your full membership.',
+          remainingTime: remainingTime,
+          expiresAt: trialExpiry,
+          completedAt: null,
+          isPaused: false,
+          tasks: trialActivities.map(t => ({
+            id: t.id, // Include ID for manual completion
+            key: t.key,
+            title: t.title,
+            description: t.description,
+            url: t.actionUrl,
+            isCompleted: completedActivityIds.has(t.id)
+          }))
         });
+      }
+    } else {
+      // Handle PAID / Non-Trial Users (Show all eligible activities as individual timers)
+      // This includes GENERAL and any other types applicable to the tier
 
-        if (latestTrialTemplate) {
-          await this.assignTimerToUser(user, latestTrialTemplate.id);
+      for (const [type, activities] of activitiesByType.entries()) {
+        // Skip TRIAL tasks for paid users unless we want to show them? 
+        // Usually Trial tasks are only for trial. 
+        // But if filtering Logic included them, maybe we show them?
+        // User said "if a user is trial tier member... fetch only trial activity timer".
+        // "if a user has a paid membership... each row... has a timer".
+
+        // I will process all eligible activities.
+        for (const t of activities) {
+          // Skip if it's strictly a TRIAL type and user is not trial? 
+          // The filter above should handle it if 'includedTierIds' is set correctly by admin.
+          // But as a safeguard/convention:
+          if (type === ActivityTimerType.TRIAL) continue;
+
+          const isCompleted = completedActivityIds.has(t.id);
+
+          let expiresAt = t.expiresAt;
+          // Dynamic expiry based on durationDays relative to... something.
+          // Defaulting to "expires X days after creation" for fixed definitions?
+          // Or maybe relative to membership start? 
+          // For now, sticking to logic: Fixed Date OR Duration from Creation.
+          if (!expiresAt && t.durationDays) {
+            expiresAt = new Date(t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000);
+          }
+
+          const remaining = expiresAt ? Math.max(0, expiresAt.getTime() - now.getTime()) : null; // null if no expiry
+
+          response.push({
+            id: t.id,
+            type: t.type,
+            name: t.title,
+            description: t.description,
+            remainingTime: remaining,
+            expiresAt: expiresAt,
+            completedAt: completionMap.get(t.id) || null,
+            isPaused: false,
+            key: t.key, // Add key to top level for easy access
+            tasks: [{ // Keep nested structure for consistency if frontend expects it, or flatten?
+              id: t.id,
+              key: t.key,
+              title: t.title,
+              description: t.description,
+              url: t.actionUrl,
+              isCompleted: isCompleted
+            }]
+          });
         }
       }
     }
 
-    // 2. Sync General Timers based on Tier
-    const now = new Date();
-    const eligibleGeneralTemplates = await this.templateRepository.find({
-      where: [
-        { type: ActivityTimerType.GENERAL, isPublished: true, isForAllTiers: true },
-        {
-          type: ActivityTimerType.GENERAL,
-          isPublished: true,
-          includedTierIds: Raw((alias) => `${alias} @> :tiers`, {
-            tiers: JSON.stringify([userTierId || 'none']),
-          }),
-        },
-      ],
-    });
+    return response;
+  }
 
-    for (const template of eligibleGeneralTemplates) {
-      // Check if within time window
-      if (template.startTime && now < template.startTime) continue;
-      if (template.endTime && now > template.endTime) continue;
+  /**
+   * Complete activity by KEY
+   */
+  async completeTaskByKey(userId: string, key: string): Promise<void> {
+    // Only allow manual completion for "OTHER" tasks as per requirement
+    if (key !== 'OTHER') {
+      throw new BadRequestException('This task type is handled automatically by the system and cannot be marked manually.');
+    }
 
-      const existing = await this.timerRepository.findOne({
-        where: { user: { id: userId }, template: { id: template.id } }
+    const user = await this.activityRepository.manager.findOne(User, { where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
+    // Find ALL active activities with this key that are NOT yet completed by this user
+    // Since we don't have a direct "pending" list, we query Definitions + UserActivities
+
+    const activities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+      .select(['ActivityTimer.id', 'ActivityTimer.key'])
+      .where('ActivityTimer.key = :key', { key })
+      .andWhere('ActivityTimer.isActive = :isActive', { isActive: true })
+      .getMany();
+
+    if (!activities.length) return; // No such task definition
+
+    for (const activity of activities) {
+      // Check if already completed
+      const existing = await this.userActivityRepository.findOne({
+        where: { user: { id: userId }, activity: { id: activity.id } }
       });
 
       if (!existing) {
-        await this.assignTimerToUser(user, template.id);
+        const completion = this.userActivityRepository.create({
+          user,
+          activity,
+        });
+        await this.userActivityRepository.save(completion);
       }
     }
-
-    // 3. Fetch all active timers
-    const timers = await this.timerRepository.find({
-      where: { user: { id: userId }, isActive: true },
-      relations: ['template'],
-      order: { type: 'ASC', createdAt: 'DESC' }
-    });
-
-    return timers.map(timer => {
-      let remainingTime = timer.expiresAt.getTime() - now.getTime();
-      if (remainingTime < 0) remainingTime = 0;
-
-      return {
-        id: timer.id,
-        type: timer.type,
-        name: timer.template.name,
-        description: timer.template.description,
-        remainingTime,
-        tasks: timer.template.tasks.map(t => ({
-          ...t,
-          isCompleted: !!timer.taskStatus[t.key]
-        })),
-        isPaused: timer.pauses.some(p => p.resumedAt === null),
-        pauses: timer.pauses,
-        expiresAt: timer.expiresAt,
-        completedAt: timer.completedAt
-      };
-    });
   }
 
-  async assignTimerToUser(user: User, templateId: string): Promise<ActivityTimer> {
-    const template = await this.templateRepository.findOne({ where: { id: templateId, isPublished: true } });
-    if (!template) throw new NotFoundException('Published template not found');
-
-    const timer = new ActivityTimer();
-    timer.user = user;
-    timer.template = template;
-    timer.type = template.type;
-    timer.startedAt = new Date();
-    timer.expiresAt = new Date(timer.startedAt.getTime() + template.durationDays * 24 * 60 * 60 * 1000);
-
-    timer.taskStatus = {};
-    template.tasks.forEach(task => {
-      timer.taskStatus[task.key] = false;
+  async isRestricted(user: User): Promise<boolean> {
+    const fullUser = await this.activityRepository.manager.findOne(User, {
+      where: { id: user.id },
+      relations: ['membership'],
     });
 
-    return this.timerRepository.save(timer);
-  }
+    if (fullUser?.membership) {
+      if (!fullUser.membership.isActive) return true;
 
-  async pauseTimer(userId: string): Promise<ActivityTimer> {
-    const timer = await this.timerRepository.findOne({ where: { user: { id: userId }, isActive: true } });
-    if (!timer) throw new NotFoundException('Active timer not found');
+      if (fullUser.membership.isTrial) {
+        const now = new Date();
+        if (new Date(fullUser.membership.expiresAt) < now) {
+          return true; // Trial expired
+        }
+      }
+      return false; // Active paid or active trial
+    }
 
-    const activePause = timer.pauses.find(p => p.resumedAt === null);
-    if (activePause) throw new BadRequestException('Timer is already paused');
-
-    timer.pauses.push({ pausedAt: new Date(), resumedAt: null });
-    return this.timerRepository.save(timer);
-  }
-
-  async resumeTimer(userId: string): Promise<ActivityTimer> {
-    const timer = await this.timerRepository.findOne({ where: { user: { id: userId }, isActive: true } });
-    if (!timer) throw new NotFoundException('Active timer not found');
-
-    const activePause = timer.pauses.find(p => p.resumedAt === null);
-    if (!activePause) throw new BadRequestException('Timer is not paused');
-
-    activePause.resumedAt = new Date();
-    const pauseDuration = activePause.resumedAt.getTime() - new Date(activePause.pausedAt).getTime();
-    timer.expiresAt = new Date(timer.expiresAt.getTime() + pauseDuration);
-
-    return this.timerRepository.save(timer);
-  }
-
-  async completeTask(userId: string, taskKey: ActivityTaskType): Promise<ActivityTimer[]> {
-    await this.handleAction(userId, taskKey);
-    // Return fresh list after action
-    const user = await this.timerRepository.manager.findOne(User, {
-      where: { id: userId },
-      relations: ['membership']
-    });
-    return this.getUserActiveTimer(user);
+    return false;
   }
 }

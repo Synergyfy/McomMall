@@ -10,11 +10,13 @@ export interface Socials {
 export interface User {
   id: string;
   name: string;
+  firstName?: string;
+  lastName?: string;
   email: string;
   phoneNumber?: string;
   isActive: boolean;
   isEmailVerified: boolean;
-  role:string;
+  role: string;
   socials: Socials;
   profilePictureUrl?: string;
   giftCard: boolean;
@@ -23,7 +25,8 @@ export interface User {
 }
 
 export interface UpdateUserDto {
-  name?: string;
+  firstName?: string;
+  lastName?: string;
   phoneNumber?: string;
   socials?: Partial<Omit<Socials, 'id'>>;
   profilePictureUrl?: string;

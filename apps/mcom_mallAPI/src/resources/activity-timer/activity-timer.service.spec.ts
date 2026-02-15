@@ -1,163 +1,166 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { getRepositoryToken } from '@nestjs/typeorm';
 import { ActivityTimerService } from './activity-timer.service';
-import { ActivityTimerTemplate } from './entities/activity-timer-template.entity';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
-import { ActivityTimerType, ActivityTaskType } from './enums/activity-task-type.enum';
+import { User } from '../users/entities/user.entity';
+import { ActivityTimerType } from './enums/activity-task-type.enum';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
+
+// Define MockRepository type locally
+type MockRepository<T = any> = Partial<Record<keyof any, jest.Mock>>;
 
 describe('ActivityTimerService', () => {
   let service: ActivityTimerService;
-  let templateRepo: any;
-  let timerRepo: any;
-
-  const mockTemplateRepo = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(template => Promise.resolve({ id: 'template-id', ...template })),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    remove: jest.fn(),
-  };
-
-  const mockTimerRepo = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(timer => Promise.resolve({ id: 'timer-id', ...timer })),
-    find: jest.fn(),
-    findOne: jest.fn(),
-    delete: jest.fn(),
-    manager: {
-      findOne: jest.fn(),
-    },
-  };
+  let timerRepository: MockRepository;
+  let managerMock: any;
 
   beforeEach(async () => {
+    managerMock = {
+      findOne: jest.fn(),
+      save: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ActivityTimerService,
         {
-          provide: getRepositoryToken(ActivityTimerTemplate),
-          useValue: mockTemplateRepo,
-        },
-        {
           provide: getRepositoryToken(ActivityTimer),
-          useValue: mockTimerRepo,
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+            save: jest.fn(),
+            count: jest.fn(),
+            manager: managerMock,
+          },
         },
       ],
     }).compile();
 
     service = module.get<ActivityTimerService>(ActivityTimerService);
-    templateRepo = module.get(getRepositoryToken(ActivityTimerTemplate));
-    timerRepo = module.get(getRepositoryToken(ActivityTimer));
+    timerRepository = module.get(getRepositoryToken(ActivityTimer));
   });
 
-  afterEach(() => {
-    jest.clearAllMocks();
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
+  describe('getUserActiveTasks', () => {
+    it('should return trial tasks with dynamic expiry', async () => {
+      const user = { id: 'user-1', created_at: new Date('2026-01-01T00:00:00Z') } as User;
+      const tasks = [
+        {
+          id: 'task-1',
+          type: ActivityTimerType.TRIAL,
+          isActive: true,
+          expiresAt: null
+        }
+      ] as ActivityTimer[];
+
+      managerMock.findOne.mockResolvedValue({
+        ...user,
+        membership: { tier: { configuration: { trialDurationDays: 10 } } },
+        trialPauses: []
+      });
+      timerRepository.find.mockResolvedValue(tasks);
+
+      const result = await service.getUserActiveTasks(user);
+
+      // Trial Expiry = Jan 1 + 10 days = Jan 11
+      expect(result[0].expiresAt).toEqual(new Date('2026-01-11T00:00:00.000Z'));
+      expect(result[0].remainingTime).not.toBeNaN();
+    });
+
+    it('should return general tasks with fixed expiry', async () => {
+      const user = { id: 'user-1', created_at: new Date() } as User;
+      const fixedExpiry = new Date(Date.now() + 100000);
+      const tasks = [
+        {
+          id: 'task-2',
+          type: ActivityTimerType.GENERAL,
+          isActive: true,
+          expiresAt: fixedExpiry
+        }
+      ] as ActivityTimer[];
+
+      managerMock.findOne.mockResolvedValue(user);
+      timerRepository.find.mockResolvedValue(tasks);
+
+      const result = await service.getUserActiveTasks(user);
+
+      expect(result[0].expiresAt).toEqual(fixedExpiry);
+    });
+  });
+
+  describe('pauseTrial', () => {
+    it('should pause trial if not already paused', async () => {
+      const user = { id: 'user-1', trialPauses: [] } as User;
+      managerMock.findOne.mockResolvedValue(user);
+      managerMock.save.mockImplementation((u) => u);
+
+      await service.pauseTrial(user.id);
+
+      expect(user.trialPauses).toHaveLength(1);
+      expect(user.trialPauses[0].resumedAt).toBeNull();
+      expect(managerMock.save).toHaveBeenCalledWith(user);
+    });
+
+    it('should throw BadRequestException if already paused', async () => {
+      const user = {
+        id: 'user-1',
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
+      } as User;
+      managerMock.findOne.mockResolvedValue(user);
+
+      await expect(service.pauseTrial(user.id)).rejects.toThrow(BadRequestException);
+    });
+  });
+
+  describe('resumeTrial', () => {
+    it('should resume trial if currently paused', async () => {
+      const user = {
+        id: 'user-1',
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
+      } as User;
+      managerMock.findOne.mockResolvedValue(user);
+      managerMock.save.mockImplementation((u) => u);
+
+      await service.resumeTrial(user.id);
+
+      expect(user.trialPauses[0].resumedAt).toBeInstanceOf(Date);
+      expect(managerMock.save).toHaveBeenCalledWith(user);
+    });
+
+    it('should throw BadRequestException if not paused', async () => {
+      const user = { id: 'user-1', trialPauses: [] } as User;
+      managerMock.findOne.mockResolvedValue(user);
+
+      await expect(service.resumeTrial(user.id)).rejects.toThrow(BadRequestException);
+    });
   });
 
   describe('isRestricted', () => {
-    it('should NOT restrict users with a paid tier', async () => {
-      const user = { id: 'u1', membership: { tierId: 'pro' } } as any;
-      const result = await service.isRestricted(user);
-      expect(result).toBe(false);
-    });
+    it('should return true if trial is paused', async () => {
+      const user = { id: 'user-1' } as User;
+      const fullUser = {
+        ...user,
+        created_at: new Date(),
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
+      };
 
-    it('should restrict user if trial is expired and tasks incomplete', async () => {
-      const user = { id: 'u1', membership: { tierId: null } } as any;
-      const expiredDate = new Date();
-      expiredDate.setDate(expiredDate.getDate() - 1);
-      
-      timerRepo.findOne.mockResolvedValue({
-        expiresAt: expiredDate,
-        taskStatus: { [ActivityTaskType.CREATE_BUSINESS]: false },
-        isActive: true
-      });
+      managerMock.findOne.mockResolvedValue(fullUser);
 
       const result = await service.isRestricted(user);
       expect(result).toBe(true);
     });
 
-    it('should NOT restrict user if trial is expired but tasks ARE complete', async () => {
-      const user = { id: 'u1', membership: null } as any;
-      const expiredDate = new Date();
-      expiredDate.setDate(expiredDate.getDate() - 1);
-      
-      timerRepo.findOne.mockResolvedValue({
-        expiresAt: expiredDate,
-        taskStatus: { [ActivityTaskType.CREATE_BUSINESS]: true },
-        isActive: true
-      });
+    it('should return false for paid users', async () => {
+      const user = {
+        id: 'user-1',
+        membership: { tierId: 'paid-tier' }
+      } as User;
 
       const result = await service.isRestricted(user);
       expect(result).toBe(false);
     });
   });
-
-  describe('handleAction', () => {
-    it('should mark task as complete for all active timers', async () => {
-      const userId = 'u1';
-      const action = ActivityTaskType.CREATE_BUSINESS;
-      
-      const mockTimer = {
-        id: 't1',
-        taskStatus: { [action]: false, [ActivityTaskType.IMPORT_CONTACTS]: false },
-        isActive: true,
-        save: jest.fn()
-      };
-
-      timerRepo.find.mockResolvedValue([mockTimer]);
-
-      await service.handleAction(userId, action);
-
-      expect(mockTimer.taskStatus[action]).toBe(true);
-      expect(timerRepo.save).toHaveBeenCalledWith(mockTimer);
-    });
-
-    it('should mark completedAt if all tasks are done', async () => {
-        const userId = 'u1';
-        const action = ActivityTaskType.CREATE_BUSINESS;
-        
-        const mockTimer = {
-          id: 't1',
-          taskStatus: { [action]: false },
-          isActive: true,
-        };
-  
-        timerRepo.find.mockResolvedValue([mockTimer]);
-  
-        await service.handleAction(userId, action);
-  
-        expect(mockTimer['completedAt']).toBeDefined();
-        expect(timerRepo.save).toHaveBeenCalled();
-      });
-  });
-
-    describe('getUserActiveTimer', () => {
-      it('should auto-assign trial template if new user has no tier and no active trial', async () => {
-        const user = { id: 'u1', membership: null } as any;
-        
-        const trialTemplate = { 
-          id: 'trial-tpl', 
-          type: ActivityTimerType.TRIAL,
-          isPublished: true,
-          durationDays: 14,
-          tasks: [{ key: ActivityTaskType.CREATE_BUSINESS }]
-        };
-  
-        // 1. check active trial (none)
-        timerRepo.findOne.mockResolvedValueOnce(null); 
-        // 2. find latest published trial template
-        templateRepo.findOne.mockResolvedValueOnce(trialTemplate);
-        // 3. assignTimerToUser calls findOne with ID
-        templateRepo.findOne.mockResolvedValueOnce(trialTemplate);
-        
-        // Mock re-fetch and find
-        timerRepo.findOne.mockResolvedValue({ id: 'new-timer', template: trialTemplate, taskStatus: {}, pauses: [], expiresAt: new Date() });
-        timerRepo.find.mockResolvedValue([]);
-        templateRepo.find.mockResolvedValue([]);
-  
-        await service.getUserActiveTimer(user);
-  
-        expect(templateRepo.findOne).toHaveBeenCalledWith(expect.objectContaining({ where: { type: ActivityTimerType.TRIAL, isPublished: true } }));
-        expect(timerRepo.save).toHaveBeenCalled();
-      });
-    });});
+});

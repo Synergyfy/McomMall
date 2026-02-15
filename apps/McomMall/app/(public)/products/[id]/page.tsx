@@ -19,6 +19,9 @@ import SellerCard from './components/SellerCard';
 import ProductFacts from './components/ProductFacts';
 import SafetyCard from './components/SafetyCard';
 import VisualVariantSelector from './components/VisualVariantSelector';
+import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
+import { useGetProductPlusItems } from '@/service/partnerships/hooks';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
 export default function ProductPage() {
   const params = useParams();
@@ -28,6 +31,8 @@ export default function ProductPage() {
   const { data: wishlist } = useGetWishlist();
   const { mutateAsync: addToWishlist, isPending: isAddingToWishlist } = useAddToWishlist();
   const { mutateAsync: removeFromWishlist, isPending: isRemovingFromWishlist } = useRemoveFromWishlist();
+  const { data: plusItems } = useGetProductPlusItems(id || '');
+  const [plusItemsDialogOpen, setPlusItemsDialogOpen] = useState(false);
 
   const isInWishlist = useMemo(() => {
     return wishlist?.items?.some(item => item.product?.id === id);
@@ -301,6 +306,10 @@ export default function ProductPage() {
     });
 
     toast.success(`Added ${addedCount} item${addedCount !== 1 ? 's' : ''} to cart`);
+    
+    if (plusItems && plusItems.length > 0) {
+        setPlusItemsDialogOpen(true);
+    }
   };
 
   const handleBuyNow = () => {
@@ -404,6 +413,31 @@ export default function ProductPage() {
             <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
               <ProductFacts product={product} variation={displayVariation || undefined} />
             </div>
+
+            {/* Plus Items Section */}
+            {plusItems && plusItems.length > 0 && (
+                <div className="bg-white rounded-xl p-6 md:p-8 border border-orange-100 shadow-sm ring-4 ring-orange-50/50">
+                    <PlusItemsSection items={plusItems} />
+                </div>
+            )}
+
+            <Dialog open={plusItemsDialogOpen} onOpenChange={setPlusItemsDialogOpen}>
+                <DialogContent className="max-w-3xl bg-white rounded-3xl p-6">
+                    <DialogHeader>
+                        <DialogTitle className="text-2xl font-black text-slate-900">Great Choice! Want to add these?</DialogTitle>
+                        <DialogDescription className="text-slate-500 font-medium">
+                            Customers who bought this also checked out these partner items.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="py-4">
+                        <PlusItemsSection items={plusItems || []} />
+                    </div>
+                    <DialogFooter className="gap-2">
+                        <Button variant="ghost" onClick={() => setPlusItemsDialogOpen(false)} className="font-bold text-slate-500">Continue Shopping</Button>
+                        <Button onClick={() => router.push('/cart')} className="bg-slate-900 text-white font-bold rounded-xl px-6">Go to Cart</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
 
           </div>
 

@@ -8,7 +8,7 @@ import {
   useRecordPayment,
   useCreateStripeIntent,
   useCreatePayPalOrder,
-} from '@/service/payments/hook';
+} from '@/service/payments/hooks';
 import {
   PaymentGateway,
   PlanType,
@@ -77,38 +77,38 @@ export default function PricingCheckoutClient({
     // Note: Membership trial might be 0 or small amount, but backend logic handles it.
     if (!stripeRedirect) {
       if (paymentMethod === PaymentMethod.STRIPE) {
-          const payload: CreateStripeIntentRequest = {};
-          if (isPayg) {
-              payload.purpose = PaymentPurpose.PAYG_TOPUP;
-              payload.amount = Math.round(totalPrice * 100);
-          } else if (tierId && planType) {
-              payload.purpose = PaymentPurpose.MEMBERSHIP;
-              payload.tierId = tierId;
-              payload.planType = planType;
-              // Backend fetches amount for membership, but we might want to send it just in case or if backend logic relies on it for validation
-              // Guide says: "You do not need to calculate the price manually."
-              // But for trial logic (isTrial=true), amount is 1.0 (100 cents) in current code.
-              // If isTrial is handled by backend via tierId/planType?
-              // The guide doesn't mention trial in create-intent payload, but record-payment has isTrial.
-              // I'll stick to guide for Membership.
-          } else {
-              // Fallback or incomplete data, maybe just return
-              return;
-          }
-          createStripeIntent(payload);
+        const payload: CreateStripeIntentRequest = {};
+        if (isPayg) {
+          payload.purpose = PaymentPurpose.PAYG_TOPUP;
+          payload.amount = Math.round(totalPrice * 100);
+        } else if (tierId && planType) {
+          payload.purpose = PaymentPurpose.MEMBERSHIP;
+          payload.tierId = tierId;
+          payload.planType = planType;
+          // Backend fetches amount for membership, but we might want to send it just in case or if backend logic relies on it for validation
+          // Guide says: "You do not need to calculate the price manually."
+          // But for trial logic (isTrial=true), amount is 1.0 (100 cents) in current code.
+          // If isTrial is handled by backend via tierId/planType?
+          // The guide doesn't mention trial in create-intent payload, but record-payment has isTrial.
+          // I'll stick to guide for Membership.
+        } else {
+          // Fallback or incomplete data, maybe just return
+          return;
+        }
+        createStripeIntent(payload);
       } else {
-          const payload: CreatePaypalOrderRequest = {};
-          if (isPayg) {
-              payload.purpose = PaymentPurpose.PAYG_TOPUP;
-              payload.amount = totalPrice;
-          } else if (tierId && planType) {
-              payload.purpose = PaymentPurpose.MEMBERSHIP;
-              payload.tierId = tierId;
-              payload.planType = planType;
-          } else {
-              return;
-          }
-          createPayPalOrder(payload);
+        const payload: CreatePaypalOrderRequest = {};
+        if (isPayg) {
+          payload.purpose = PaymentPurpose.PAYG_TOPUP;
+          payload.amount = totalPrice;
+        } else if (tierId && planType) {
+          payload.purpose = PaymentPurpose.MEMBERSHIP;
+          payload.tierId = tierId;
+          payload.planType = planType;
+        } else {
+          return;
+        }
+        createPayPalOrder(payload);
       }
     }
   }, [
@@ -218,7 +218,7 @@ export default function PricingCheckoutClient({
         isOpen={isSuccessModalOpen}
         onClose={() => {
           setSuccessModalOpen(false);
-          router.push('/dashboard/my-subscription');
+          router.push('/dashboard');
         }}
       />
     </>
