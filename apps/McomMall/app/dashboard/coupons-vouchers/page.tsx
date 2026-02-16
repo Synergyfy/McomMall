@@ -219,37 +219,46 @@ export default function CouponsVouchersPage() {
     };
 
     useEffect(() => {
+        let scanner: Html5QrcodeScanner | null = null;
+
         if (isScannerOpen) {
-            const scanner = new Html5QrcodeScanner(
-                "reward-hub-scanner",
-                { fps: 10, qrbox: { width: 250, height: 250 } },
-                false
-            );
-            scannerRef.current = scanner;
+            // Use a slight delay to ensure the DOM element with ID is rendered
+            const timer = setTimeout(() => {
+                const element = document.getElementById("reward-hub-scanner");
+                if (!element) return;
 
-            const onScanSuccess = (decodedText: string) => {
-                if (scannerTarget === 'CASHBACK') {
-                    setSelectedUserVoucher(decodedText);
-                    toast.success('Voucher ID scanned successfully');
-                } else if (scannerTarget === 'SPEND') {
-                    setSpendVoucherId(decodedText);
-                    toast.success('Voucher ID scanned successfully');
-                } else if (scannerTarget === 'MERCHANT') {
-                    setShopIdInput(decodedText);
-                    toast.success('Shop ID scanned successfully');
-                }
-                setIsScannerOpen(false);
-                setScannerTarget(null);
-            };
+                scanner = new Html5QrcodeScanner(
+                    "reward-hub-scanner",
+                    { fps: 10, qrbox: { width: 250, height: 250 } },
+                    false
+                );
+                scannerRef.current = scanner;
 
-            scanner.render(onScanSuccess, () => { });
+                const onScanSuccess = (decodedText: string) => {
+                    if (scannerTarget === 'CASHBACK') {
+                        setSelectedUserVoucher(decodedText);
+                        toast.success('Voucher ID scanned successfully');
+                    } else if (scannerTarget === 'SPEND') {
+                        setSpendVoucherId(decodedText);
+                        toast.success('Voucher ID scanned successfully');
+                    } else if (scannerTarget === 'MERCHANT') {
+                        setShopIdInput(decodedText);
+                        toast.success('Shop ID scanned successfully');
+                    }
+                    setIsScannerOpen(false);
+                    setScannerTarget(null);
+                };
+
+                scanner.render(onScanSuccess, () => { });
+            }, 100);
+
+            return () => clearTimeout(timer);
         } else {
             if (scannerRef.current) {
                 scannerRef.current.clear().catch(e => console.error(e));
                 scannerRef.current = null;
             }
         }
-        return () => { if (scannerRef.current) scannerRef.current.clear().catch(() => { }); };
     }, [isScannerOpen, scannerTarget]);
 
     const myVouchers = useMemo(() => {
@@ -560,7 +569,7 @@ export default function CouponsVouchersPage() {
                                                     {/* Realistic Pale Card - Business Definition */}
                                                     <div
                                                         id={`voucher-def-card-${vt.id}`}
-                                                        className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 p-8 flex flex-col justify-between border border-slate-200/50"
+                                                        className="relative w-full aspect-[1.8/1] min-h-[220px] rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-slate-50 via-white to-slate-100 text-slate-800 p-6 flex flex-col justify-between border border-slate-200/50"
                                                     >
                                                         {/* Background decoration */}
                                                         <div className="absolute -top-10 -right-10 w-64 h-64 bg-blue-100/30 rounded-full blur-3xl pointer-events-none"></div>
@@ -585,7 +594,7 @@ export default function CouponsVouchersPage() {
                                                         <div className="relative z-10 mt-8 flex justify-between items-end">
                                                             <div>
                                                                 <p className="text-[10px] text-slate-400 font-bold tracking-widest uppercase mb-1">Split Ratio</p>
-                                                                <h3 className="text-2xl sm:text-3xl font-black tracking-tight text-slate-900 drop-shadow-sm">{vt.split}</h3>
+                                                                <h3 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 drop-shadow-sm">{vt.split}</h3>
                                                             </div>
                                                             <div className="text-right">
                                                                 <p className="text-[10px] text-slate-400 uppercase tracking-widest mb-1 font-bold">Label</p>
@@ -625,7 +634,7 @@ export default function CouponsVouchersPage() {
                                                 {/* Realistic Pale Card - Gift Card Style */}
                                                 <div
                                                     id={`voucher-card-${cv.id}`}
-                                                    className="relative w-full aspect-[1.6/1] min-h-[280px] rounded-3xl overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-orange-50 via-white to-orange-100 text-slate-800 p-8 flex flex-col justify-between border border-orange-200/50"
+                                                    className="relative w-full aspect-[1.8/1] min-h-[220px] rounded-[2rem] overflow-hidden shadow-lg hover:shadow-xl transition-all duration-500 transform hover:-translate-y-1 bg-gradient-to-br from-orange-50 via-white to-orange-100 text-slate-800 p-6 flex flex-col justify-between border border-orange-200/50"
                                                 >
                                                     {/* Background decoration - Abstract soft shapes */}
                                                     <div className="absolute -top-10 -right-10 w-64 h-64 bg-orange-200/30 rounded-full blur-3xl pointer-events-none"></div>
@@ -672,7 +681,7 @@ export default function CouponsVouchersPage() {
                                                     <div className="relative z-10 mt-4 flex justify-between items-end">
                                                         <div>
                                                             <p className="text-xs text-slate-400 font-bold tracking-widest uppercase mb-1.5">Current Balance</p>
-                                                            <h3 className="text-4xl sm:text-5xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
+                                                            <h3 className="text-3xl sm:text-4xl font-black tracking-tighter text-slate-900 drop-shadow-sm">
                                                                 £{typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}
                                                             </h3>
                                                         </div>
