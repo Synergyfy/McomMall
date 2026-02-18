@@ -1,17 +1,16 @@
-'use client';
-
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 import { Button } from '@/components/ui/button';
-import { Calendar, LayoutList } from 'lucide-react';
+import { Calendar, LayoutList, Timer } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
 interface TierTypeModalProps {
     open: boolean;
     onOpenChange: (open: boolean) => void;
     onSelectStandard: () => void;
+    onSelectTrial: () => void;
 }
 
-export function TierTypeModal({ open, onOpenChange, onSelectStandard }: TierTypeModalProps) {
+export function TierTypeModal({ open, onOpenChange, onSelectStandard, onSelectTrial }: TierTypeModalProps) {
     const router = useRouter();
 
     const handleSeasonal = () => {
@@ -23,9 +22,13 @@ export function TierTypeModal({ open, onOpenChange, onSelectStandard }: TierType
         onSelectStandard();
     };
 
+    const handleTrial = () => {
+        onSelectTrial();
+    };
+
     return (
         <Dialog open={open} onOpenChange={onOpenChange}>
-            <DialogContent className="sm:max-w-[500px]">
+            <DialogContent className="sm:max-w-[700px]">
                 <DialogHeader>
                     <DialogTitle className="text-2xl text-center">Select Tier Type</DialogTitle>
                     <DialogDescription className="text-center text-slate-500">
@@ -33,7 +36,7 @@ export function TierTypeModal({ open, onOpenChange, onSelectStandard }: TierType
                     </DialogDescription>
                 </DialogHeader>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-6">
                     <Button
                         variant="outline"
                         className="h-auto py-8 flex flex-col items-center gap-4 hover:border-orange-500 hover:bg-orange-50 transition-all group"
@@ -61,8 +64,23 @@ export function TierTypeModal({ open, onOpenChange, onSelectStandard }: TierType
                             <div className="text-xs text-slate-500 mt-1">Time-bounded promotional pricing</div>
                         </div>
                     </Button>
+
+                    <Button
+                        variant="outline"
+                        className="h-auto py-8 flex flex-col items-center gap-4 hover:border-purple-500 hover:bg-purple-50 transition-all group"
+                        onClick={handleTrial}
+                    >
+                        <div className="p-3 rounded-full bg-purple-100 group-hover:bg-purple-200 transition-colors">
+                            <Timer className="h-6 w-6 text-purple-600" />
+                        </div>
+                        <div className="text-center">
+                            <div className="font-bold text-lg">Trial</div>
+                            <div className="text-xs text-slate-500 mt-1">Free trial with limited duration</div>
+                        </div>
+                    </Button>
                 </div>
             </DialogContent>
         </Dialog>
     );
 }
+

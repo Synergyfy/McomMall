@@ -17,7 +17,7 @@ import { RewardCouponType, OfferScope } from './offer.enum';
 import { Transaction } from '../transaction/entities/transaction.entity';
 import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 @Injectable()
 export class OfferService {
   constructor(
@@ -33,7 +33,7 @@ export class OfferService {
     @InjectRepository(PromotionParticipant)
     private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
     private readonly activitiesService: ActivitiesService,
-    private readonly trialService: TrialService,
+    private readonly activityTimerService: ActivityTimerService,
   ) {}
 
   async create(user: User, createOfferDto: CreateOfferDto): Promise<Offer> {
@@ -104,7 +104,7 @@ export class OfferService {
       'offer',
       savedOffer.name,
     );
-    await this.trialService.markTaskAsCompleted(user.id, 'createdOffer');
+    await this.activityTimerService.completeTaskByKey(user.id, 'createdOffer');
     return savedOffer;
   }
 

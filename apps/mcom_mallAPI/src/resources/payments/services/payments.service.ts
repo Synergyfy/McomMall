@@ -12,7 +12,6 @@ import { PaymentHistory } from '../entities/payment-history.entity';
 import { RecordPaymentDto } from '../dto/record-payment.dto';
 import { PaymentProviderService } from './payment-provider.service';
 import { PaymentGateway } from '../enums/payment-gateway.enum';
-import { TrialService } from 'src/resources/trial/trial.service';
 import { SubscriptionStatusDto, SubscriptionStatusEnum } from '../dto/subscription-status.dto';
 import { CentralIntegrationService } from './central-integration.service';
 import { CashbackEvent } from '../../../common/enums/cashback-event.enum';
@@ -24,6 +23,8 @@ import { Tier } from '../../tier/entities/tier.entity';
 import { CreatePaymentIntentDto } from '../dto/create-payment-intent.dto';
 import { CreatePaypalOrderDto } from '../dto/create-paypal-order.dto';
 import { PlanType } from '../enums/plan-type.enum';
+import { ActivityTimerService } from 'src/resources/activity-timer/activity-timer.service';
+import { ActivityTimerType } from 'src/resources/activity-timer/enums/activity-task-type.enum';
 
 @Injectable()
 export class PaymentsService {
@@ -35,10 +36,10 @@ export class PaymentsService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly paymentProviderService: PaymentProviderService,
-    private readonly trialService: TrialService,
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => MembershipService))
     private readonly membershipService: MembershipService,
+    private readonly activityTimerService: ActivityTimerService,
   ) {}
 
   async createStripePaymentIntent(dto: CreatePaymentIntentDto) {
@@ -183,22 +184,57 @@ export class PaymentsService {
   }
 
   async getSubscriptionStatus(userId: string): Promise<SubscriptionStatusDto> {
-    const trial = await this.trialService.getTrialStatus(userId);
+    try {
+      const membership = await this.membershipService.findOne(userId);
+      
+      if (membership && membership.isTrial) {
+        // Populate tasks
+        const tasksMap = {
+            createdBusiness: false,
+            createdProductOrService: false,
+            createdPromotion: false,
+            createdOffer: false,
+            createdCoupon: false,
+        };
 
-    if (trial) {
-      return {
-        status: trial.isActive
-          ? SubscriptionStatusEnum.TRIAL_ACTIVE
-          : SubscriptionStatusEnum.TRIAL_EXPIRED,
-        trialEndDate: new Date(Date.now() + trial.remainingTime),
-        isPaused: trial.pauses.some((p) => p.resumedAt === null),
-        remainingPauses: 2 - trial.pauses.length,
-        isTrialPausable: trial.pauses.length < 2,
-      };
+        try {
+            // Need user object for activityTimerService
+            const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['membership', 'membership.tier'] });
+            if (user) {
+                const activityTasks = await this.activityTimerService.getUserActiveTasks(user);
+                
+                // Find TRIAL composite task or just check all tasks
+                for (const group of activityTasks) {
+                    if (group.type === ActivityTimerType.TRIAL && group.tasks) {
+                        for (const t of group.tasks) {
+                            if (tasksMap.hasOwnProperty(t.key)) {
+                                tasksMap[t.key] = t.isCompleted;
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (e) {
+            console.error('Failed to fetch activity tasks for trial status', e);
+        }
+
+        return {
+          status: membership.isActive
+            ? SubscriptionStatusEnum.TRIAL_ACTIVE
+            : SubscriptionStatusEnum.TRIAL_EXPIRED,
+          trialEndDate: membership.expiresAt,
+          isPaused: false,
+          remainingPauses: 0,
+          isTrialPausable: false,
+          tasks: tasksMap,
+        };
+      }
+    } catch (e) {
+      // Membership not found, ignore
     }
 
     const lastPayment = await this.paymentHistoryRepository.findOne({
-      where: { user: { id: userId }, trial: null },
+      where: { user: { id: userId } },
       order: { created_at: 'DESC' },
     });
 

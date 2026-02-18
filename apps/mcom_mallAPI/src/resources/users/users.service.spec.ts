@@ -3,7 +3,6 @@ import { UsersService } from './users.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from './entities/user.entity';
 import { HashService } from '../../common/hash/hash.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { Social } from './entities/social.entity';
 import { Transaction } from '../transaction/entities/transaction.entity';
 import { Repository, DataSource } from 'typeorm';
@@ -14,8 +13,11 @@ import { PromotionParticipant } from '../promotion/entities/promotion-participan
 import { PromotionActivity } from '../promotion/entities/promotion-activity.entity';
 import { Offer } from '../offer/entities/offer.entity';
 import { ServiceProviderProfile } from '../service-provider-profile/entities/service-provider-profile.entity';
-import { TrialService } from '../trial/trial.service';
 import { ProvisionService } from '../provision/provision.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { TierService } from '../tier/tier.service';
+import { MembershipService } from '../membership/membership.service';
+import { Wallet } from '../wallet/entities/wallet.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
@@ -61,10 +63,6 @@ describe('UsersService', () => {
           },
         },
         {
-          provide: getRepositoryToken(Trial),
-          useValue: {},
-        },
-        {
           provide: getRepositoryToken(Transaction),
           useValue: {
             find: jest.fn(),
@@ -99,14 +97,28 @@ describe('UsersService', () => {
           useValue: {},
         },
         {
-          provide: TrialService,
-          useValue: {},
-        },
-        {
           provide: ProvisionService,
           useValue: {
               findByCode: jest.fn(),
               validateAndMarkRedeemed: jest.fn(),
+          },
+        },
+        {
+          provide: ActivityTimerService,
+          useValue: {
+            getUserActiveTasks: jest.fn(),
+          },
+        },
+        {
+          provide: TierService,
+          useValue: {
+            findTrialTier: jest.fn().mockResolvedValue({ id: 'tier-1', name: 'Trial' }),
+          },
+        },
+        {
+          provide: MembershipService,
+          useValue: {
+            joinTrial: jest.fn(),
           },
         },
         {

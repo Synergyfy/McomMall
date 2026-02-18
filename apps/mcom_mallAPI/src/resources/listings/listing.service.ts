@@ -15,14 +15,13 @@ import { CreateBusinessDto, UpdateBusinessDto } from './dto/listings.dto';
 import { User } from '../users/entities/user.entity';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { PromotionService } from '../promotion/promotion.service';
 import { Promotion } from '../promotion/entities/promotion.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class ListingsService {
@@ -37,13 +36,11 @@ export class ListingsService {
     private readonly taxonomySubcategoryRepository: Repository<TaxonomySubcategory>,
     @InjectRepository(User)
     private readonly userRepository: Repository<User>,
-    @InjectRepository(Trial)
-    private readonly trialRepository: Repository<Trial>,
     private readonly dataSource: DataSource,
     private readonly activitiesService: ActivitiesService,
-    private readonly trialService: TrialService,
     private readonly promotionService: PromotionService,
     private readonly capabilityService: CapabilityService,
+    private readonly activityTimerService: ActivityTimerService,
   ) { }
 
   async create(
@@ -139,12 +136,9 @@ export class ListingsService {
         'listing',
         savedBusiness.businessName,
       );
-      const trial = await this.trialRepository.findOne({
-        where: { user: { id: userId } },
-      });
-      if (trial) {
-        await this.trialService.markTaskAsCompleted(userId, 'createdBusiness');
-      }
+      
+      await this.activityTimerService.completeTaskByKey(userId, 'createdBusiness');
+
       await queryRunner.commitTransaction();
       return savedBusiness;
     } catch (err) {

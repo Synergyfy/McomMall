@@ -19,7 +19,6 @@ import { PromotionParticipant } from './entities/promotion-participant.entity';
 import { User } from '../users/entities/user.entity';
 import { PromotionActivity } from './entities/promotion-activity.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
 import {
   PointTransaction,
   PointTransactionType,
@@ -30,6 +29,7 @@ import { PageDto } from 'src/common/dto/page.dto';
 import { PromotionTransactionHistoryDto } from './dto/promotion-transaction-history.dto';
 import { PageMetaDto } from 'src/common/dto/page-meta.dto';
 import { CapabilityService, ActionType } from '../capability/capability.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
 export class PromotionService {
@@ -49,7 +49,7 @@ export class PromotionService {
     @InjectRepository(PointTransaction)
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     private readonly activitiesService: ActivitiesService,
-    private readonly trialService: TrialService,
+    private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
   ) { }
@@ -125,7 +125,7 @@ export class PromotionService {
       'promotion',
       savedPromotion.name,
     );
-    await this.trialService.markTaskAsCompleted(userId, 'createdPromotion');
+    await this.activityTimerService.completeTaskByKey(userId, 'createdPromotion');
     return savedPromotion;
   }
 

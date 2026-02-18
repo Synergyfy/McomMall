@@ -1,5 +1,5 @@
 import { Module, NestModule, MiddlewareConsumer } from '@nestjs/common';
-import { APP_INTERCEPTOR } from '@nestjs/core';
+import { APP_INTERCEPTOR, APP_GUARD } from '@nestjs/core';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { UsersModule } from './resources/users/users.module';
@@ -30,7 +30,6 @@ import { CheckoutModule } from './resources/checkout/checkout.module';
 import { ActivitiesModule } from './resources/activities/activities.module';
 import { WalletModule } from './resources/wallet/wallet.module';
 import { StatsModule } from './resources/stats/stats.module';
-import { TrialModule } from './resources/trial/trial.module';
 import { GiftCardModule } from './resources/gift-card/gift-card.module';
 import { AdminModule } from './resources/admin/admin.module';
 import { VoucherModule } from './resources/voucher/voucher.module';
@@ -50,6 +49,7 @@ import { ShippingAddressModule } from './resources/shipping-address/shipping-add
 import { HelpRequestsModule } from './help-requests/help-requests.module';
 import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-cashback.module';
 import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
+import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 
 @Module({
@@ -67,7 +67,6 @@ import { SupportTicketsModule } from './resources/support-tickets/support-ticket
     ServiceProviderProfileModule,
     PartnershipModule,
     AdminModule,
-    TrialModule,
     ProvisionModule,
     ShippingAddressModule,
     HelpRequestsModule,
@@ -116,6 +115,10 @@ import { SupportTicketsModule } from './resources/support-tickets/support-ticket
     {
       provide: APP_INTERCEPTOR,
       useClass: LoggingInterceptor,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: ActivityTimerGuard,
     },
   ],
 })

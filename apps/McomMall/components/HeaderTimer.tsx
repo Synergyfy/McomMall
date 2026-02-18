@@ -15,20 +15,22 @@ export const HeaderTimer = () => {
     const [timeLeft, setTimeLeft] = useState(0);
 
     useEffect(() => {
-        if (trialStatus?.remainingTime) {
-            setTimeLeft(trialStatus.remainingTime);
-        }
-    }, [trialStatus?.remainingTime]);
+        if (!trialStatus || !trialStatus.expiresAt || trialStatus.isPaused) return;
 
-    useEffect(() => {
-        if (!trialStatus || trialStatus.isPaused || timeLeft <= 0) return;
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const end = new Date(trialStatus.expiresAt!).getTime();
+            const remaining = Math.max(0, end - now);
+            setTimeLeft(remaining);
+        };
 
-        const interval = setInterval(() => {
-            setTimeLeft((prev) => Math.max(0, prev - 1000));
-        }, 1000);
+        // Initial update
+        updateTimer();
+
+        const interval = setInterval(updateTimer, 1000);
 
         return () => clearInterval(interval);
-    }, [trialStatus?.isPaused, timeLeft]);
+    }, [trialStatus?.expiresAt, trialStatus?.isPaused]);
 
     if (!trialStatus?.isActive) return null;
 

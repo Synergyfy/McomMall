@@ -6,13 +6,13 @@ import { Category } from './entities/category.entity';
 import { User } from '../users/entities/user.entity';
 import { DataSource } from 'typeorm';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { PromotionService } from '../promotion/promotion.service';
 import { Promotion } from '../promotion/entities/promotion.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingType, BusinessStatus } from './listing.enum';
 import { Product } from '../product/entities/product.entity';
-import { Trial } from '../payments/entities/trial.entity';
+import { CapabilityService } from '../capability/capability.service';
 
 describe('ListingsService - Points Calculation', () => {
   let service: ListingsService;
@@ -95,10 +95,9 @@ describe('ListingsService - Points Calculation', () => {
         },
         { provide: getRepositoryToken(Category), useValue: {} },
         { provide: getRepositoryToken(User), useValue: {} },
-        { provide: getRepositoryToken(Trial), useValue: {} },
         { provide: DataSource, useValue: { createQueryRunner: jest.fn() } },
         { provide: ActivitiesService, useValue: { create: jest.fn() } },
-        { provide: TrialService, useValue: { markTaskAsCompleted: jest.fn() } },
+        { provide: ActivityTimerService, useValue: { completeTaskByKey: jest.fn() } },
         {
           provide: PromotionService,
           useValue: {
@@ -106,6 +105,7 @@ describe('ListingsService - Points Calculation', () => {
             isProductQualified: jest.fn(),
           },
         },
+        { provide: CapabilityService, useValue: {} },
       ],
     }).compile();
 

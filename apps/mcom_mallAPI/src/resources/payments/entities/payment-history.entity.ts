@@ -3,7 +3,6 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { PlanType } from '../enums/plan-type.enum';
 import { PaygOption } from '../enums/payg-option.enum';
-import { Trial } from './trial.entity';
 import { PaymentGateway } from '../enums/payment-gateway.enum';
 import { PaymentPurpose } from '../enums/payment-purpose.enum';
 
@@ -35,7 +34,4 @@ export class PaymentHistory extends AbstractBaseEntity {
 
   @Column({ type: 'enum', enum: PaymentGateway })
   paymentGateway: PaymentGateway;
-
-  @OneToOne(() => Trial, { nullable: true })
-  trial: Trial;
 }

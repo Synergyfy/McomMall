@@ -16,7 +16,8 @@ import { PromotionParticipant } from './entities/promotion-participant.entity';
 import { PromotionActivity } from './entities/promotion-activity.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+import { CapabilityService } from '../capability/capability.service';
 
 const mockPromotionRepository = () => ({
   create: jest.fn(),
@@ -83,8 +84,12 @@ const mockActivitiesService = () => ({
   create: jest.fn(),
 });
 
-const mockTrialService = () => ({
-  markTaskAsCompleted: jest.fn(),
+const mockActivityTimerService = () => ({
+  completeTaskByKey: jest.fn(),
+});
+
+const mockCapabilityService = () => ({
+  checkPermission: jest.fn(),
 });
 
 describe('PromotionService', () => {
@@ -137,8 +142,12 @@ describe('PromotionService', () => {
           useFactory: mockActivitiesService,
         },
         {
-          provide: TrialService,
-          useFactory: mockTrialService,
+          provide: ActivityTimerService,
+          useFactory: mockActivityTimerService,
+        },
+        {
+          provide: CapabilityService,
+          useFactory: mockCapabilityService,
         },
       ],
     }).compile();
@@ -204,8 +213,12 @@ describe('PromotionService', () => {
           useFactory: mockActivitiesService,
         },
         {
-          provide: TrialService,
-          useFactory: mockTrialService,
+          provide: ActivityTimerService,
+          useFactory: mockActivityTimerService,
+        },
+        {
+          provide: CapabilityService,
+          useFactory: mockCapabilityService,
         },
       ],
     }).compile();

@@ -21,10 +21,9 @@ import { ListingsGoogleController } from './listings-google.controller';
 import { GooglePlacesService } from './google-places.service';
 import { ServicesModule } from '../services/services.module';
 import { ActivitiesModule } from '../activities/activities.module';
-import { TrialModule } from '../trial/trial.module';
 import { PromotionModule } from '../promotion/promotion.module';
-import { Trial } from '../payments/entities/trial.entity';
 import { CapabilityModule } from '../capability/capability.module';
+import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
 
 @Module({
   imports: [
@@ -43,7 +42,6 @@ import { CapabilityModule } from '../capability/capability.module';
       ServiceProviderProfile,
       Certification,
       User, // Add User repository
-      Trial,
     ]),
     HttpModule.register({
       timeout: 5000,
@@ -51,7 +49,7 @@ import { CapabilityModule } from '../capability/capability.module';
     }),
     ServicesModule,
     ActivitiesModule,
-    TrialModule,
+    ActivityTimerModule,
     forwardRef(() => PromotionModule),
   ],
   controllers: [ListingsController, ListingsGoogleController],

@@ -44,6 +44,10 @@ import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
 import { Progress } from '@/components/ui/progress';
 import { useGetTiers } from '@/service/tiers/hook';
+import { ActivityTimerCard } from '@/components/dashboard/ActivityTimerCard';
+import { useGetActivityTimerStatus, usePauseActivityTimer, useResumeActivityTimer } from '@/service/activity-timer/hook';
+import { FloatingTrialTimer } from '@/components/dashboard/FloatingTrialTimer';
+import { ActivityTimerType } from '@/service/activity-timer/types';
 
 
 // --- TYPE DEFINITIONS ---
@@ -112,6 +116,10 @@ const DashboardPage: FC = () => {
     useRecentActivities();
   const { data: tiers } = useGetTiers();
 
+  const { data: timers, isLoading: isLoadingTimers } = useGetActivityTimerStatus();
+  const pauseTimerMutation = usePauseActivityTimer();
+  const resumeTimerMutation = useResumeActivityTimer();
+
   const currentTier = tiers?.find(
     t => t.name.toLowerCase() === packageInfo?.planType?.toLowerCase()
   );
@@ -121,6 +129,9 @@ const DashboardPage: FC = () => {
     userRole === UserRole.OWNER
       ? (stats as OwnerStatsDto)?.totalAmountOfListing || 0
       : 0;
+
+  const isTrial = packageInfo?.planType?.toLowerCase() === 'trial';
+  const trialTimer = timers?.find(t => t.type === ActivityTimerType.TRIAL);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
@@ -143,6 +154,48 @@ const DashboardPage: FC = () => {
       </header>
 
       <main className="space-y-8">
+        {/* Floating Trial Timer for Trial Users Only */}
+        {isTrial && trialTimer && (
+          <FloatingTrialTimer timer={trialTimer} />
+        )}
+
+        {/* Activity Timers - Hidden for everyone (or specifically Trial users if logic dictates) */}
+        {/*
+          // COMMENTED OUT AS PER REQUEST to hide the checklist component
+          // Logic: We might want to show allowed timers for non-trial users if any exist?
+          // But for now, specifically hiding the Trial Checklist for users with membership tier (non-trial).
+          // And generally commenting out the component showing their currently active timer/checklist.
+        */}
+        {/* {timers && timers.length > 0 && !isTrial && (
+           <div className="space-y-6">
+             {timers.map((timer) => (
+               <ActivityTimerCard
+                 key={timer.id}
+                 timer={timer}
+                 onPause={() => pauseTimerMutation.mutate()}
+                 onResume={() => resumeTimerMutation.mutate()}
+                 isActionPending={pauseTimerMutation.isPending || resumeTimerMutation.isPending}
+               />
+             ))}
+           </div>
+        )} */}
+        {/* Completely commented out for now as requested "commnet our the component showing their currently" */}
+        {/* 
+        {timers && timers.length > 0 && (
+          <div className="space-y-6">
+            {timers.map((timer) => (
+              <ActivityTimerCard
+                key={timer.id}
+                timer={timer}
+                onPause={() => pauseTimerMutation.mutate()}
+                onResume={() => resumeTimerMutation.mutate()}
+                isActionPending={pauseTimerMutation.isPending || resumeTimerMutation.isPending}
+              />
+            ))}
+          </div>
+        )} 
+        */}
+
         {isLoadingStats ? (
           <p>Loading statistics...</p>
         ) : stats && userRole ? (

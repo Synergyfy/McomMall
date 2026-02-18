@@ -30,6 +30,10 @@ export class Membership extends AbstractBaseEntity {
   @Column({ default: false })
   isTrial: boolean;
 
+  @ApiProperty({ example: 14, nullable: true })
+  @Column({ nullable: true, default: 0 })
+  trialDuration: number;
+
   @ApiProperty({ enum: PlanType, example: PlanType.MONTHLY })
   @Column({ type: 'enum', enum: PlanType, default: PlanType.MONTHLY })
   planType: PlanType;

@@ -8,11 +8,10 @@ import { Business } from '../listings/entities/listing.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
 import { ActivitiesService } from '../activities/activities.service';
-import { TrialService } from '../trial/trial.service';
 import { PromotionService } from '../promotion/promotion.service';
-import { Trial } from '../payments/entities/trial.entity';
 import { CapabilityService } from '../capability/capability.service';
 import { CreateProductDto } from './dto/create-product.dto';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 describe('ProductService - Variants', () => {
   let service: ProductService;
@@ -36,16 +35,12 @@ describe('ProductService - Variants', () => {
     findOne: jest.fn(),
   };
 
-  const mockTrialRepository = {
-    findOne: jest.fn(),
-  };
-
   const mockActivitiesService = {
     create: jest.fn(),
   };
 
-  const mockTrialService = {
-    markTaskAsCompleted: jest.fn(),
+  const mockActivityTimerService = {
+    completeTaskByKey: jest.fn(),
   };
 
   const mockPromotionService = {
@@ -78,16 +73,12 @@ describe('ProductService - Variants', () => {
           useValue: mockPartnershipRequestRepository,
         },
         {
-          provide: getRepositoryToken(Trial),
-          useValue: mockTrialRepository,
-        },
-        {
           provide: ActivitiesService,
           useValue: mockActivitiesService,
         },
         {
-          provide: TrialService,
-          useValue: mockTrialService,
+          provide: ActivityTimerService,
+          useValue: mockActivityTimerService,
         },
         {
           provide: PromotionService,

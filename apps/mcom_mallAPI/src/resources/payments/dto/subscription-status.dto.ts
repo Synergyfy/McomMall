@@ -16,4 +16,5 @@ export class SubscriptionStatusDto {
   isPaused?: boolean;
   remainingPauses?: number;
   isTrialPausable?: boolean;
+  tasks?: any;
 }

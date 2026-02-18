@@ -65,7 +65,7 @@ export class AuthService {
         throw new Error('User not found');
       }
 
-      const { id, role, firstName, lastName, trial, email } = user;
+      const { id, role, firstName, lastName, email } = user;
       const name = `${firstName} ${lastName}`;
 
       // Create new token payload
@@ -87,7 +87,7 @@ export class AuthService {
       return {
         accessToken: newAccessToken,
         refreshToken: newRefreshToken,
-        package: trial,
+        package: null,
         userId: id,
       };
     } catch (error) {
@@ -105,13 +105,13 @@ export class AuthService {
       }
 
       const email = payload.email;
-      let user = await this.userRepository.findOne({ where: { email }, relations: ['trial'] });
+      let user = await this.userRepository.findOne({ where: { email } });
 
       if (!user) {
         // Create User using transaction to ensure wallet and trial are created
         const role = payload.role?.toLowerCase();
         const password = Math.random().toString(36).slice(-10) + "Aa1!";
-        
+
         const fullName = payload.name || "Loyalty User";
         const nameParts = fullName.split(' ');
         const firstName = nameParts[0];

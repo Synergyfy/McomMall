@@ -16,6 +16,8 @@ import {
 } from '@nestjs/swagger';
 import { UserRole } from '../../common/role.enum';
 
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
+
 @ApiTags('auth')
 @ApiBearerAuth()
 @Controller('auth')
@@ -25,6 +27,7 @@ export class AuthController {
     private readonly authService: AuthService,
     private readonly userService: UsersService,
     private readonly emailService: EmailService,
+    private readonly activityTimerService: ActivityTimerService,
   ) { }
 
   @ApiOperation({ summary: 'Authenticate as user' })
@@ -47,7 +50,7 @@ export class AuthController {
     );
     if (!validPassword) throw ErrorFactory.invalidCredentials();
 
-    const { id, role, firstName, lastName, trial } = user;
+    const { id, role, firstName, lastName } = user;
     const name = `${firstName} ${lastName}`;
 
     const auth = await this.authService.createLogin({
@@ -60,7 +63,9 @@ export class AuthController {
 
     await this.userService.updateLastLogin(id);
 
-    return { auth, name, role, packageInfo: trial, userId: id };
+    const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
+
+    return { auth, name, role, packageInfo: null, userId: id, tasks: activeTimers };
   }
 
   @ApiOperation({ summary: 'Login via SSO' })
@@ -76,6 +81,9 @@ export class AuthController {
       const authData = await this.authService.loginWithSso(token);
       const user = await this.userService.findCurrentUser(authData.email);
       await this.userService.updateLastLogin(user.id);
+
+      const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
+
       return {
         auth: {
           accessToken: authData.accessToken,
@@ -83,8 +91,9 @@ export class AuthController {
         },
         name: `${user.firstName} ${user.lastName}`,
         role: user.role,
-        packageInfo: user.trial,
+        packageInfo: null,
         userId: user.id,
+        tasks: activeTimers,
       };
     } catch (error) {
       throw ErrorFactory.invalidCredentials();

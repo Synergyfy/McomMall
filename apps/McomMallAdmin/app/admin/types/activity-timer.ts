@@ -14,49 +14,35 @@ export enum ActivityTimerType {
     GENERAL = 'GENERAL',
 }
 
+export interface PublishTaskDto extends ActivityTaskDto {
+    type: ActivityTimerType;
+    isForAllTiers?: boolean;
+    includedTierIds?: string[];
+    excludedTierIds?: string[];
+    expiresAt?: string; // ISO Date
+    actionUrl?: string;
+}
+
 export interface ActivityTaskDto {
     key: ActivityTaskType;
     title: string;
     description: string;
-    url: string;
-    durationDays: number;
+    actionUrl?: string; // Renamed from url to match backend
+    durationDays?: number;
 }
 
-export interface ActivityTask extends ActivityTaskDto {
-    isCompleted?: boolean;
-}
-
-export interface CreateTemplateDto {
-    name: string;
+export interface ActivityTimerDefinition {
+    id: string;
+    title: string;
     description?: string;
     type: ActivityTimerType;
-    durationDays: number;
-    isPublished?: boolean;
-    isForAllTiers?: boolean;
+    key: string;
+    actionUrl?: string;
     includedTierIds?: string[];
     excludedTierIds?: string[];
-    startTime?: string; // ISO Date
-    endTime?: string;   // ISO Date
-    tasks: ActivityTaskDto[];
-}
-
-export interface UpdateTemplateDto extends Partial<CreateTemplateDto> { }
-
-export interface ActivityTimerTemplate {
-    id: string;
-    name: string;
-    description?: string;
-    type: ActivityTimerType;
-    durationDays: number;
-    isPublished: boolean;
-    isForAllTiers: boolean;
-    includedTierIds: string[];
-    excludedTierIds: string[];
-    startTime?: string;
-    endTime?: string;
-    tasks: ActivityTaskDto[];
+    durationDays?: number;
+    expiresAt?: string;
     createdAt: string;
-    updatedAt: string;
 }
 
 export interface TemplateFilters {
@@ -64,4 +50,4 @@ export interface TemplateFilters {
     isPublished?: boolean;
 }
 
-export type TemplateResponse = ActivityTimerTemplate[];
+export type TemplateResponse = ActivityTimerDefinition[];

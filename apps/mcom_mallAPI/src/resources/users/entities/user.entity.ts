@@ -4,7 +4,6 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
 import { UserRole } from '../../../common/role.enum';
 import { Business } from '../../listings/entities/listing.entity';
-import { Trial } from '../../payments/entities/trial.entity';
 import { Coupon } from '../../coupon/entities/coupon.entity';
 import { CouponProduct } from '../../coupon/entities/coupon-product.entity';
 import { PromotionParticipant } from '../../promotion/entities/promotion-participant.entity';
@@ -71,9 +70,6 @@ export class User extends AbstractBaseEntity {
 
   @OneToMany(() => Business, (business) => business.user)
   businesses: Business[];
-
-  @OneToOne(() => Trial, (trial) => trial.user, { eager: true, cascade: true })
-  trial: Trial;
 
   @OneToMany(() => Coupon, (coupon) => coupon.owner)
   coupons: Coupon[];

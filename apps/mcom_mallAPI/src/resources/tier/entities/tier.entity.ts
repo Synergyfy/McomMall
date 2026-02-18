@@ -2,6 +2,7 @@ import { Column, Entity } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { TierConfig } from '../interfaces/tier-config.interface';
+import { TierType } from '../enums/tier-type.enum';
 
 @Entity('tiers')
 export class Tier extends AbstractBaseEntity {
@@ -90,4 +91,16 @@ export class Tier extends AbstractBaseEntity {
   @ApiProperty({ example: false, description: 'Is this the default/free tier' })
   @Column({ default: false })
   isDefault: boolean;
+
+  @ApiProperty({ enum: TierType, example: TierType.STANDARD, description: 'Type of the tier' })
+  @Column({
+    type: 'enum',
+    enum: TierType,
+    default: TierType.STANDARD
+  })
+  type: TierType;
+
+  @ApiProperty({ example: 14, description: 'Duration of trial in days (only for TRIAL type)', nullable: true })
+  @Column({ nullable: true })
+  trialDuration: number;
 }

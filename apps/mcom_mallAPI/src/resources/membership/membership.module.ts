@@ -18,4 +18,4 @@ import { Tier } from '../tier/entities/tier.entity';
   providers: [MembershipService],
   exports: [MembershipService],
 })
-export class MembershipModule {}
+export class MembershipModule { }

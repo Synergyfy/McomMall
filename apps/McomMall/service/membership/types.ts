@@ -20,6 +20,7 @@ export interface Membership {
   currency?: string;
   created_at?: string;
   updated_at?: string;
+  trialDuration?: number;
 }
 
 export interface CreateMembershipDto {

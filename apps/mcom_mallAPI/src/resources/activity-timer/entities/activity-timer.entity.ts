@@ -1,6 +1,5 @@
 import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
-import { ActivityTimerTemplate } from './activity-timer-template.entity';
 import { ActivityTimerType } from '../enums/activity-task-type.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -10,15 +9,6 @@ export class ActivityTimer {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => User)
-  @JoinColumn({ name: 'userId' })
-  user: User;
-
-  @ApiProperty({ type: () => ActivityTimerTemplate })
-  @ManyToOne(() => ActivityTimerTemplate)
-  @JoinColumn({ name: 'templateId' })
-  template: ActivityTimerTemplate;
-
   @ApiProperty({ enum: ActivityTimerType, example: ActivityTimerType.GENERAL })
   @Column({
     type: 'enum',
@@ -27,37 +17,45 @@ export class ActivityTimer {
   })
   type: ActivityTimerType;
 
+  @ApiProperty({ example: 'Create Business' })
+  @Column()
+  title: string;
+
+  @ApiProperty({ example: 'Create a new business listing', nullable: true })
+  @Column({ type: 'text', nullable: true })
+  description: string;
+
+  @ApiProperty({ example: 'CREATE_BUSINESS' })
+  @Column()
+  key: string;
+
+  @ApiProperty({ example: '/dashboard/business/create', nullable: true })
+  @Column({ nullable: true })
+  actionUrl: string;
+
+  @ApiProperty({ nullable: true })
+  @Column({ type: 'simple-array', nullable: true })
+  includedTierIds: string[];
+
+  @ApiProperty({ nullable: true })
+  @Column({ type: 'simple-array', nullable: true })
+  excludedTierIds: string[];
+
+  @ApiProperty({ nullable: true })
+  @Column({ nullable: true })
+  durationDays: number;
+
   @ApiProperty({ example: '2026-02-11T10:00:00Z' })
-  @Column({ type: 'timestamp' })
-  startedAt: Date;
+  @CreateDateColumn()
+  createdAt: Date;
 
-  @ApiProperty({ example: '2026-02-25T10:00:00Z' })
-  @Column({ type: 'timestamp' })
-  expiresAt: Date;
-
-  @ApiProperty({ example: '2026-02-15T10:00:00Z', nullable: true })
+  @ApiProperty({ example: '2026-02-25T10:00:00Z', nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  completedAt: Date;
-
-  @ApiProperty({ example: { CREATE_BUSINESS: true, IMPORT_CONTACTS: false } })
-  @Column({ type: 'jsonb', default: {} })
-  taskStatus: Record<string, boolean>;
-
-  @ApiProperty({ example: { CREATE_BUSINESS: '2026-02-18T10:00:00Z' } })
-  @Column({ type: 'jsonb', default: {} })
-  taskExpirations: Record<string, Date>;
-
-  @ApiProperty({ example: [{ pausedAt: '2026-02-12T10:00:00Z', resumedAt: '2026-02-12T11:00:00Z' }] })
-  @Column({ type: 'jsonb', default: [] })
-  pauses: { pausedAt: Date; resumedAt: Date | null }[];
+  expiresAt: Date; // For GENERAL tasks with fixed expiry.
 
   @ApiProperty({ example: true })
   @Column({ default: true })
   isActive: boolean;
-
-  @ApiProperty()
-  @CreateDateColumn()
-  createdAt: Date;
 
   @ApiProperty()
   @UpdateDateColumn()

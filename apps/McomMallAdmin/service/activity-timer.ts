@@ -2,14 +2,12 @@ import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
 import { toast } from 'sonner';
 import {
-    ActivityTimerTemplate,
-    CreateTemplateDto,
-    UpdateTemplateDto,
-    TemplateResponse,
-    TemplateFilters
+    ActivityTimerType,
+    PublishTaskDto,
+    ActivityTimerDefinition
 } from '@/app/admin/types/activity-timer';
 
-const ACTIVITY_TIMER_API = '/activity-timer/templates';
+const ACTIVITY_TIMER_API = '/activity-timer';
 
 interface ErrorResponse {
     response?: {
@@ -20,23 +18,25 @@ interface ErrorResponse {
     message?: string;
 }
 
-// --- Create Template ---
-export const useCreateActivityTemplate = () => {
-    const queryClient = useQueryClient();
-
+// --- Publish Task (Admin) ---
+export const usePublishActivityTask = () => {
     return useMutation({
-        mutationFn: async (data: CreateTemplateDto) => {
+        mutationFn: async (data: any) => {
             try {
-                const response = await api.post(ACTIVITY_TIMER_API, data);
+                const response = await api.post(`${ACTIVITY_TIMER_API}/admin/publish`, data);
                 return response.data;
             } catch (error: any) {
                 const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to create template');
+                throw new Error(err.response?.data?.message || err.message || 'Failed to publish task');
             }
         },
         onSuccess: (data) => {
-            toast.success('Template created successfully');
-            queryClient.invalidateQueries({ queryKey: ['FETCH_ACTIVITY_TEMPLATES'] });
+            const count = data?.count || 0;
+            const message = count > 0
+                ? `Task published successfully to ${count} user${count === 1 ? '' : 's'}`
+                : 'Task published successfully (No users matched criteria)';
+
+            toast.success(message);
         },
         onError: (error: Error) => {
             toast.error(error.message);
@@ -44,109 +44,18 @@ export const useCreateActivityTemplate = () => {
     });
 };
 
-// --- Get All Templates ---
-export const useGetActivityTemplates = (filters: TemplateFilters = {}) => {
+// --- Get Published Definitions (Admin) ---
+export const useGetActivityTimerDefinitions = () => {
     return useQuery({
-        queryKey: ['FETCH_ACTIVITY_TEMPLATES', filters],
+        queryKey: ['FETCH_ACTIVITY_DEFINITIONS'],
         queryFn: async () => {
             try {
-                const response = await api.get<TemplateResponse>(ACTIVITY_TIMER_API, {
-                    params: filters,
-                });
+                const response = await api.get<ActivityTimerDefinition[]>(`${ACTIVITY_TIMER_API}/admin/definitions`);
                 return response.data;
             } catch (error: any) {
                 const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to fetch templates');
+                throw new Error(err.response?.data?.message || err.message || 'Failed to fetch definitions');
             }
-        },
-    });
-};
-
-// --- Get Single Template ---
-export const useGetActivityTemplate = (id: string | null) => {
-    return useQuery({
-        queryKey: ['FETCH_ACTIVITY_TEMPLATE', id],
-        queryFn: async () => {
-            if (!id) return null;
-            try {
-                const response = await api.get<ActivityTimerTemplate>(`${ACTIVITY_TIMER_API}/${id}`);
-                return response.data;
-            } catch (error: any) {
-                const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to fetch template details');
-            }
-        },
-        enabled: !!id,
-    });
-};
-
-// --- Update Template ---
-export const useUpdateActivityTemplate = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async ({ id, data }: { id: string; data: UpdateTemplateDto }) => {
-            try {
-                const response = await api.patch(`${ACTIVITY_TIMER_API}/${id}`, data);
-                return response.data;
-            } catch (error: any) {
-                const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to update template');
-            }
-        },
-        onSuccess: (_, variables) => {
-            toast.success('Template updated successfully');
-            queryClient.invalidateQueries({ queryKey: ['FETCH_ACTIVITY_TEMPLATES'] });
-            queryClient.invalidateQueries({ queryKey: ['FETCH_ACTIVITY_TEMPLATE', variables.id] });
-        },
-        onError: (error: Error) => {
-            toast.error(error.message);
-        },
-    });
-};
-
-// --- Delete Template ---
-export const useDeleteActivityTemplate = () => {
-    const queryClient = useQueryClient();
-
-    return useMutation({
-        mutationFn: async (id: string) => {
-            try {
-                await api.delete(`${ACTIVITY_TIMER_API}/${id}`);
-                return id;
-            } catch (error: any) {
-                const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to delete template');
-            }
-        },
-        onSuccess: () => {
-            toast.success('Template deleted successfully');
-            queryClient.invalidateQueries({ queryKey: ['FETCH_ACTIVITY_TEMPLATES'] });
-        },
-        onError: (error: Error) => {
-            toast.error(error.message);
-        },
-    });
-};
-// --- Assign Template (Admin/Self) ---
-export const useAssignActivityTemplate = () => {
-    return useMutation({
-        mutationFn: async (templateId: string) => {
-            try {
-                // Construct URL correctly with /api/v1 prefix
-                const url = `/activity-timer/assign/${templateId}`;
-                const response = await api.post(url);
-                return response.data;
-            } catch (error: any) {
-                const err = error as ErrorResponse;
-                throw new Error(err.response?.data?.message || err.message || 'Failed to assign template');
-            }
-        },
-        onSuccess: () => {
-            toast.success('Template assigned to your account successfully');
-        },
-        onError: (error: Error) => {
-            toast.error(error.message);
         },
     });
 };
