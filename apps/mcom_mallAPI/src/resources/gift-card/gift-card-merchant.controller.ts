@@ -26,13 +26,17 @@ import { BulkImportGiftCardsDto } from './dto/bulk-import-gift-cards.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { GiftCard } from './entities/gift-card.entity';
+import { GiftCardStatsDto } from './dto/gift-card-stats.dto';
+import { GiftCardChartDataDto } from './dto/gift-card-chart-data.dto';
+import { SummaryStatisticsDto } from './dto/summary-statistics.dto';
+import { GiftCardTransactionHistoryDto } from './dto/gift-card-transaction-history.dto';
 
 @ApiTags('Gift Cards (Merchant)')
 @ApiBearerAuth()
 @UseGuards(JwtAuthGuard)
 @Controller('merchant/gift-cards')
 export class GiftCardMerchantController {
-  constructor(private readonly giftCardService: GiftCardService) {}
+  constructor(private readonly giftCardService: GiftCardService) { }
 
   // --- Settings Management ---
   @Get('settings')
@@ -52,7 +56,7 @@ export class GiftCardMerchantController {
 
   // --- Template Management ---
   @Post('templates')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a new gift card template',
     description: 'Creates a new template for gift cards. This action is subject to tier-based capability checks (quota limits on the number of templates). Requires an active membership.'
   })
@@ -160,18 +164,30 @@ export class GiftCardMerchantController {
 
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard stats for gift cards' })
+  @ApiOkResponse({
+    description: 'Dashboard statistics for the merchant\'s gift cards',
+    type: GiftCardStatsDto,
+  })
   getStats(@CurrentUser() user: User) {
     return this.giftCardService.getOwnerStats(user.id);
   }
 
   @Get('chart-data')
   @ApiOperation({ summary: 'Get monthly sales vs redemptions data for charts' })
+  @ApiOkResponse({
+    description: 'Monthly chart data showing sales and redemptions',
+    type: GiftCardChartDataDto,
+  })
   getChartData(@CurrentUser() user: User) {
     return this.giftCardService.getSalesVsRedemptionsChartData(user.id);
   }
 
   @Get('summary-statistics')
   @ApiOperation({ summary: 'Get summary statistics for gift cards' })
+  @ApiOkResponse({
+    description: 'Summary statistics including liability and chart data',
+    type: SummaryStatisticsDto,
+  })
   getSummaryStatistics(@CurrentUser() user: User) {
     return this.giftCardService.getSummaryStatistics(user.id);
   }
@@ -179,6 +195,10 @@ export class GiftCardMerchantController {
   @Get('sales-and-redemptions')
   @ApiOperation({
     summary: 'Get a detailed transaction history for a given time range',
+  })
+  @ApiOkResponse({
+    description: 'List of gift card transactions (sales, redemptions, etc.)',
+    type: [GiftCardTransactionHistoryDto],
   })
   getTransactions(
     @CurrentUser() user: User,

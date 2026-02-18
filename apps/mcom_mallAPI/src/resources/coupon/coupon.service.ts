@@ -6,7 +6,7 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { Repository, DataSource, Between, MoreThanOrEqual } from 'typeorm';
 import * as crypto from 'crypto';
 
 import { Coupon } from './entities/coupon.entity';
@@ -30,6 +30,9 @@ import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { CouponTransactionService } from './coupon-transaction.service';
 import { TransactionType } from './coupon.enum';
+import { CouponStatsDto } from './dto/coupon-stats.dto';
+import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
+import { CouponTransactionHistoryDto } from './dto/coupon-transaction-history.dto';
 
 @Injectable()
 export class CouponService {
@@ -46,7 +49,7 @@ export class CouponService {
     private readonly walletService: WalletService,
     private readonly couponTransactionService: CouponTransactionService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   // --- System Integration Methods ---
 
@@ -67,26 +70,26 @@ export class CouponService {
 
     // Find User to link (Owner)
     const owner = await this.userRepository.findOne({ where: { email: recipientEmail } });
-    
+
     // Auto-create user if missing (see GiftCardService for logic)
     let finalOwner = owner;
     if (!finalOwner) {
-       const nameStr = recipientName || "Loyalty Recipient";
-       const nameParts = nameStr.split(' ');
-       const firstName = nameParts[0];
-       const lastName = nameParts.slice(1).join(' ') || '';
+      const nameStr = recipientName || "Loyalty Recipient";
+      const nameParts = nameStr.split(' ');
+      const firstName = nameParts[0];
+      const lastName = nameParts.slice(1).join(' ') || '';
 
-       const newUser = this.userRepository.create({
-          email: recipientEmail,
-          firstName,
-          lastName,
-          password: await crypto.randomBytes(16).toString('hex'),
-          phoneNumber: `0000000000${Math.floor(Math.random()*1000)}`,
-          isActive: true,
-          isEmailVerified: true,
-          role: 'customer' as any, 
-       });
-       finalOwner = await this.userRepository.save(newUser);
+      const newUser = this.userRepository.create({
+        email: recipientEmail,
+        firstName,
+        lastName,
+        password: await crypto.randomBytes(16).toString('hex'),
+        phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`,
+        isActive: true,
+        isEmailVerified: true,
+        role: 'customer' as any,
+      });
+      finalOwner = await this.userRepository.save(newUser);
     }
 
     const newCoupon = this.couponRepository.create({
@@ -658,5 +661,161 @@ export class CouponService {
       await couponRepo.save(coupon);
       throw new BadRequestException('This coupon has expired.');
     }
+  }
+  async getOwnerStats(
+    ownerId: string,
+  ): Promise<CouponStatsDto> {
+    const liabilityResult = await this.couponRepository
+      .createQueryBuilder('coupon')
+      .select('SUM(coupon.balance)', 'sum')
+      .where('coupon.ownerId = :ownerId', { ownerId })
+      .andWhere('coupon.status IN (:...statuses)', { statuses: [CouponStatus.UNREDEEMED, CouponStatus.PARTIALLY_REDEEMED] })
+      .getRawOne();
+
+    const transactionsResult = await this.couponTransactionService
+      .createQueryBuilder('transaction')
+      .leftJoin('transaction.coupon', 'coupon')
+      .select('transaction.type', 'type')
+      .addSelect('SUM(transaction.amount)', 'sum')
+      .where('coupon.ownerId = :ownerId', { ownerId })
+      .groupBy('transaction.type')
+      .getRawMany();
+
+    const activeCoupons = await this.couponRepository.count({
+      where: [
+        { owner: { id: ownerId }, status: CouponStatus.UNREDEEMED },
+        { owner: { id: ownerId }, status: CouponStatus.PARTIALLY_REDEEMED }
+      ],
+    });
+
+    let totalSold = 0;
+    let totalRedeemed = 0;
+
+    for (const t of transactionsResult) {
+      if (t.type === TransactionType.PURCHASE || t.type === TransactionType.RELOAD) {
+        totalSold += parseFloat(t.sum);
+      }
+      if (t.type === TransactionType.REDEMPTION) {
+        // Redemption amounts are positive in our DB logic (subtracted from balance)
+        totalRedeemed += parseFloat(t.sum);
+      }
+    }
+
+    return {
+      totalSold,
+      totalRedeemed,
+      outstandingLiability: parseFloat(liabilityResult.sum) || 0,
+      activeCoupons,
+    };
+  }
+
+  async getSalesVsRedemptionsChartData(
+    ownerId: string,
+  ): Promise<CouponChartDataDto> {
+    const rawData = await this.couponTransactionService
+      .createQueryBuilder('transaction')
+      .leftJoin('transaction.coupon', 'coupon')
+      .select(`to_char(transaction.createdAt, 'YYYY-MM')`, 'month')
+      .addSelect('transaction.type', 'type')
+      .addSelect('SUM(transaction.amount)', 'amount')
+      .where('coupon.ownerId = :ownerId', { ownerId })
+      .andWhere(`transaction.type IN (:...types)`, {
+        types: [
+          TransactionType.PURCHASE,
+          TransactionType.RELOAD,
+          TransactionType.REDEMPTION,
+        ],
+      })
+      .groupBy(`month, transaction.type`)
+      .orderBy('month', 'ASC')
+      .getRawMany();
+
+    const aggregatedData: {
+      [month: string]: { sales: number; redemptions: number };
+    } = {};
+
+    for (const item of rawData) {
+      const month = item.month;
+      if (!aggregatedData[month]) {
+        aggregatedData[month] = { sales: 0, redemptions: 0 };
+      }
+
+      if (
+        item.type === TransactionType.PURCHASE ||
+        item.type === TransactionType.RELOAD
+      ) {
+        aggregatedData[month].sales += parseFloat(item.amount);
+      } else if (item.type === TransactionType.REDEMPTION) {
+        aggregatedData[month].redemptions += parseFloat(item.amount);
+      }
+    }
+
+    const data = Object.entries(aggregatedData).map(([month, values]) => ({
+      month,
+      ...values,
+    }));
+
+    return { data };
+  }
+
+  async getTransactionHistoryForOwner(
+    ownerId: string,
+    startDate?: string,
+    endDate?: string,
+  ): Promise<CouponTransactionHistoryDto[]> {
+    const query = this.couponTransactionService
+      .createQueryBuilder('transaction')
+      .leftJoinAndSelect('transaction.coupon', 'coupon')
+      .leftJoinAndSelect('coupon.buyer', 'buyer')
+      .leftJoinAndSelect('transaction.order', 'order')
+      .leftJoinAndSelect('order.user', 'orderUser')
+      .where('coupon.ownerId = :ownerId', { ownerId })
+      .orderBy('transaction.createdAt', 'DESC');
+
+    if (startDate && endDate) {
+      query.andWhere({
+        createdAt: Between(new Date(startDate), new Date(endDate)),
+      });
+    } else if (startDate) {
+      query.andWhere({
+        createdAt: MoreThanOrEqual(new Date(startDate)),
+      });
+    }
+
+    const transactions = await query.getMany();
+
+    return transactions.map((t) => {
+      let customerName = 'N/A';
+      let customerEmail = 'N/A';
+      const coupon: any = t.coupon;
+
+      if (t.type === TransactionType.REDEMPTION || t.type === TransactionType.RELOAD) {
+        if (t.order?.user) {
+          customerName = t.order.user.name || `${t.order.user.firstName} ${t.order.user.lastName}`;
+          customerEmail = t.order.user.email;
+        } else if (coupon.buyer) {
+          customerName = coupon.buyer.name || `${coupon.buyer.firstName} ${coupon.buyer.lastName}`;
+          customerEmail = coupon.buyer.email;
+        }
+      } else if (t.type === TransactionType.PURCHASE) {
+        if (coupon.buyer) {
+          customerName = coupon.buyer.name || `${coupon.buyer.firstName} ${coupon.buyer.lastName}`;
+          customerEmail = coupon.buyer.email;
+        } else {
+          customerName = coupon.recipientName;
+          customerEmail = coupon.recipientEmail;
+        }
+      }
+
+      return {
+        id: t.id,
+        type: t.type,
+        amount: t.amount,
+        createdAt: t.createdAt,
+        customerName,
+        customerEmail,
+        couponCode: coupon.code,
+      };
+    });
   }
 }
