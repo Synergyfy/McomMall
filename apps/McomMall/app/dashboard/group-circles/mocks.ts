@@ -14,7 +14,8 @@ export const MOCK_USER_PROFILE: User = {
     socials: { id: "soc-1" },
     giftCard: false,
     voucher: false,
-    promotion: false
+    promotion: false,
+    coupons: false
 };
 
 export const MOCK_REFERRED_BUSINESSES = [

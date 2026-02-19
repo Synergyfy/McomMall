@@ -12,30 +12,30 @@ import {
 } from './types';
 
 export const getVoucherProducts = async (): Promise<VoucherProduct[]> => {
-  const { data } = await api.get<VoucherProduct[]>('/business/vouchers/products');
-  return data;
+  const { data } = await api.get<any>('/business/vouchers/products');
+  return data.data || data;
 };
 
 export const getVoucherProduct = async (id: string): Promise<VoucherProduct> => {
-  const { data } = await api.get<VoucherProduct>(`/business/vouchers/products/${id}`);
-  return data;
+  const { data } = await api.get<any>(`/business/vouchers/products/${id}`);
+  return data.data || data;
 };
 
 export const addVoucherProduct = async (
   newProduct: CreateVoucherProductDto
 ): Promise<VoucherProduct> => {
-  const { data } = await api.post<VoucherProduct>(
+  const { data } = await api.post<any>(
     '/business/vouchers/products',
     newProduct
   );
-  return data;
+  return data.data || data;
 };
 
 export const editVoucherProduct = async (
   id: string,
   updatedProduct: UpdateVoucherProductDto
 ): Promise<VoucherProduct> => {
-  const { data } = await api.put<VoucherProduct>(
+  const { data } = await api.patch<VoucherProduct>(
     `/business/vouchers/products/${id}`,
     updatedProduct
   );

@@ -18,7 +18,7 @@ import { SuccessDialog } from '@/components/SuccessDialog';
 import { ErrorDialog } from '@/components/ErrorDialog';
 
 interface FeatureToggleProps {
-  featureName: 'giftCard' | 'voucher' | 'promotion';
+  featureName: 'giftCard' | 'voucher' | 'promotion' | 'coupons';
 }
 
 export function FeatureToggle({ featureName }: FeatureToggleProps) {

@@ -3,7 +3,6 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { BookingService } from './booking.service';
 import { ServiceBooking } from './entities/service-booking.entity';
-import { ServiceBookingRepository } from './service-booking.repository';
 import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServicePayment } from './entities/service-payment.entity';
@@ -24,7 +23,7 @@ import { PaymentMethod } from '../order/entities/order-payment.entity';
 
 describe('BookingService', () => {
   let service: BookingService;
-  let bookingRepository: ServiceBookingRepository;
+  let bookingRepository: Repository<ServiceBooking>;
   let blockedSlotRepository: Repository<BlockedSlot>;
   let priceModifierRepository: Repository<PriceModifier>;
   let servicePaymentRepository: Repository<ServicePayment>;
@@ -61,7 +60,10 @@ describe('BookingService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         BookingService,
-        { provide: ServiceBookingRepository, useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(ServiceBooking),
+          useFactory: mockRepository,
+        },
         {
           provide: getRepositoryToken(BlockedSlot),
           useFactory: mockRepository,
@@ -98,8 +100,8 @@ describe('BookingService', () => {
     }).compile();
 
     service = module.get<BookingService>(BookingService);
-    bookingRepository = module.get<ServiceBookingRepository>(
-      ServiceBookingRepository,
+    bookingRepository = module.get<Repository<ServiceBooking>>(
+      getRepositoryToken(ServiceBooking),
     );
     blockedSlotRepository = module.get<Repository<BlockedSlot>>(
       getRepositoryToken(BlockedSlot),

@@ -13,16 +13,12 @@ import { useRouter } from 'next/navigation';
 export default function MySubscriptionPageClient() {
   const router = useRouter();
   const { data: subscriptionStatus, isLoading } = useGetMyMembership();
-  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual'; isTrial: boolean } | null>(null);
+  const [selectedTier, setSelectedTier] = useState<{ tier: Tier; cycle: 'monthly' | 'quarterly' | 'annual' } | null>(null);
   const searchParams = useSearchParams();
   const listingId = searchParams.get('listing_id');
 
-  const handleSelectTier = async (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual', isTrial: boolean = false) => {
-    if (isTrial) {
-      router.push(`/dashboard/my-subscription/trial-confirmation?tierId=${tier.id}&tierName=${encodeURIComponent(tier.name)}`);
-    } else {
-      setSelectedTier({ tier, cycle, isTrial });
-    }
+  const handleSelectTier = async (tier: Tier, cycle: 'monthly' | 'quarterly' | 'annual') => {
+    setSelectedTier({ tier, cycle });
   };
 
   const mapCycleToPlanType = (cycle: string): PlanType => {
@@ -34,7 +30,7 @@ export default function MySubscriptionPageClient() {
     }
   };
 
-  if (selectedTier && !selectedTier.isTrial) {
+  if (selectedTier) {
     let price: number = 0;
     switch (selectedTier.cycle) {
       case 'monthly':

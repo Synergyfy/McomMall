@@ -1,22 +1,22 @@
 export interface GiftCardTemplate {
-    id: string; // UUID
-    name: string;
-    description?: string;
-    backgroundImageUrl?: string | null;
-    imageUrl?: string | null; // Added to match previous usage
-    backgroundColor?: string;
-    textColor?: string;
-    fixedAmounts?: number[];
-    allowCustomAmount: boolean;
-    minCustomAmount?: number;
-    maxCustomAmount?: number;
-    expiryPeriodDays?: number;
-    isActive: boolean;
-    ownerId: string; // User UUID
-    allowReloading?: boolean;
-    bonusThreshold?: number;
-    bonusAmount?: number;
-    media?: string[] | null;
+  id: string; // UUID
+  name: string;
+  description?: string;
+  backgroundImageUrl?: string | null;
+  imageUrl?: string | null; // Added to match previous usage
+  backgroundColor?: string;
+  textColor?: string;
+  fixedAmounts?: number[];
+  allowCustomAmount: boolean;
+  minCustomAmount?: number;
+  maxCustomAmount?: number;
+  expiryPeriodDays?: number;
+  isActive: boolean;
+  ownerId: string; // User UUID
+  allowReloading?: boolean;
+  bonusThreshold?: number;
+  bonusAmount?: number;
+  media?: string[] | null;
 }
 
 export interface CreateGiftCardTemplateDto {
@@ -45,6 +45,40 @@ export interface InitiatePurchaseDto {
   paymentProvider: 'stripe' | 'paypal';
 }
 
+export interface MyPurchase {
+  id: string;
+  code: string;
+  initialBalance: number;
+  currentBalance: number;
+  currency: string;
+  recipientEmail: string;
+  recipientName: string;
+  senderName: string;
+  personalMessage?: string;
+  purchaseBusiness?: {
+    id: string;
+    businessName: string;
+    legalName: string;
+    businessEmail: string;
+    businessPhone: string;
+    user: {
+      firstName: string;
+      lastName: string;
+      email: string;
+    };
+  };
+  createdAt: string;
+  isReloadable?: boolean;
+  template?: {
+    id: string;
+    name: string;
+    description?: string;
+    backgroundImageUrl?: string;
+    backgroundColor?: string;
+    textColor?: string;
+  };
+}
+
 export interface VerifyPurchaseDto {
   paymentProvider: 'stripe' | 'paypal';
   transactionId: string;
@@ -71,24 +105,6 @@ export interface GiftCard {
   allowReloading?: boolean;
 }
 
-export interface MyPurchase {
-  id: string;
-  code: string;
-  initialBalance: number;
-  currentBalance: number;
-  currency: string;
-  recipientEmail: string;
-  purchaseBusiness: {
-    businessName: string;
-  };
-  createdAt: string;
-  isReloadable: boolean;
-  template: {
-    backgroundImageUrl?: string;
-    backgroundColor?: string;
-    textColor?: string;
-  };
-}
 
 export interface GiftCardBalanceResponse {
   initialBalance: string;

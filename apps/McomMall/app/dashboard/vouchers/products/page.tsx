@@ -69,13 +69,19 @@ export default function VoucherProductsPage() {
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <h1 className="text-4xl font-bold text-slate-800">
-            Voucher Products
-          </h1>
-          <p className="text-sm text-slate-500">
-            Home &gt; Dashboard &gt; Vouchers
-          </p>
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-slate-800 tracking-tight">Voucher Products</h1>
+            <p className="text-slate-500 font-bold text-sm mt-2 uppercase tracking-widest">
+              Home &gt; Dashboard &gt; Vouchers &gt; Management
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push('/dashboard/vouchers/products/new')}
+            className="rounded-full px-8 py-6 bg-pink-600 hover:bg-pink-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.05] active:scale-[0.98]"
+          >
+            <PlusCircle className="mr-2" size={18} /> Add New Voucher
+          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -106,32 +112,23 @@ export default function VoucherProductsPage() {
           )}
         </div>
 
-        <footer className="mt-8 flex justify-start">
-          <Link href="/dashboard/vouchers/products/new">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
-            >
-              <PlusCircle className="h-5 w-5" />
-              <span>Add New Product</span>
-            </motion.div>
-          </Link>
-        </footer>
+
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
-        <AlertDialogContent>
+        <AlertDialogContent className="rounded-[2.5rem] p-10 border-none shadow-2xl">
           <AlertDialogHeader>
-            <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-            <AlertDialogDescription>
-              This action cannot be undone. This will permanently delete the
-              voucher product.
+            <AlertDialogTitle className="text-2xl font-black tracking-tight">Confirm Deletion</AlertDialogTitle>
+            <AlertDialogDescription className="text-slate-500 font-medium">
+              This voucher template will be permanently removed. This action cannot be undone.
             </AlertDialogDescription>
           </AlertDialogHeader>
-          <AlertDialogFooter>
-            <AlertDialogCancel>Cancel</AlertDialogCancel>
-            <AlertDialogAction onClick={handleConfirmDelete}>
-              Delete
+          <AlertDialogFooter className="mt-8 gap-3">
+            <AlertDialogCancel className="rounded-2xl border-gray-100 font-black uppercase text-[10px] tracking-widest h-12">Cancel Operation</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleConfirmDelete}
+              className="rounded-2xl bg-red-600 hover:bg-red-700 font-black uppercase text-[10px] tracking-widest h-12"
+            >
+              Permanently Delete
             </AlertDialogAction>
           </AlertDialogFooter>
         </AlertDialogContent>

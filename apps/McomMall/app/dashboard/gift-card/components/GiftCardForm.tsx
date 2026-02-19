@@ -196,21 +196,24 @@ export function GiftCardForm({
                 key={design.id}
                 onClick={() => onDesignChange(design)}
                 className={cn(
-                  'p-2 rounded-lg border-2 transition-all',
+                  'p-2 rounded-[1.5rem] border-2 transition-all relative overflow-hidden',
                   selectedDesign.id === design.id
-                    ? 'border-orange-500 ring-2 ring-orange-200'
+                    ? 'border-yellow-500 ring-4 ring-yellow-100'
                     : 'border-gray-200 hover:border-gray-300'
                 )}
               >
                 <div
-                  className="h-12 w-full rounded flex items-center justify-center"
+                  className="h-16 w-full rounded-xl flex items-center justify-center relative overflow-hidden"
                   style={{
                     background: `linear-gradient(135deg, ${design.primaryColor}, ${design.secondaryColor})`,
                   }}
                 >
-                  <design.icon className="h-6 w-6 text-white/80" />
+                  <div className="absolute bottom-[20%] left-0 w-full h-1 bg-gradient-to-b from-amber-300 via-yellow-500 to-amber-600 z-10" />
+                  <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 -translate-y-[calc(50%-2px)] w-4 h-4 rounded-full bg-yellow-500 border border-yellow-200 z-20 shadow-sm" />
+
+                  <design.icon className="h-6 w-6 text-yellow-400 opacity-60 drop-shadow-md z-30" />
                 </div>
-                <p className="text-xs text-center mt-2 text-gray-600">
+                <p className="text-[10px] font-bold text-center mt-2 text-gray-700 uppercase tracking-widest">
                   {design.name}
                 </p>
               </button>
