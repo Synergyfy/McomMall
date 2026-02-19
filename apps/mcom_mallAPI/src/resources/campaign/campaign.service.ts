@@ -25,6 +25,8 @@ export class CampaignService {
     private readonly marketingCampaignRepository: Repository<MarketingCampaign>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @InjectRepository(Season)
+    private readonly seasonRepository: Repository<Season>,
   ) {}
 
   // --- Old Ad Campaigns ---
@@ -132,7 +134,22 @@ export class CampaignService {
   // --- New Marketing Campaigns (Coupon System) ---
 
   async createMarketingCampaign(dto: CreateMarketingCampaignDto): Promise<MarketingCampaign> {
-      const campaign = this.marketingCampaignRepository.create(dto);
+      let { startDate, endDate, seasonId, ...rest } = dto;
+      let season: Season | null = null;
+
+      if (seasonId) {
+          season = await this.seasonRepository.findOne({ where: { id: seasonId } });
+          if (!season) throw new NotFoundException('Season not found');
+          startDate = season.startDate;
+          endDate = season.endDate;
+      }
+
+      const campaign = this.marketingCampaignRepository.create({
+          ...rest,
+          startDate,
+          endDate,
+          season,
+      });
       return this.marketingCampaignRepository.save(campaign);
   }
 
@@ -143,6 +160,7 @@ export class CampaignService {
       const [items, total] = await this.marketingCampaignRepository.findAndCount({
           skip,
           take: limit,
+          relations: ['season'],
           order: { created_at: 'DESC' }
       });
 
@@ -158,7 +176,7 @@ export class CampaignService {
   async findOneMarketingCampaign(id: string): Promise<MarketingCampaign> {
       const campaign = await this.marketingCampaignRepository.findOne({
           where: { id },
-          relations: ['coupons']
+          relations: ['coupons', 'season']
       });
       if (!campaign) throw new NotFoundException('Marketing Campaign not found');
       return campaign;
@@ -166,7 +184,24 @@ export class CampaignService {
 
   async updateMarketingCampaign(id: string, dto: UpdateMarketingCampaignDto): Promise<MarketingCampaign> {
       const campaign = await this.findOneMarketingCampaign(id);
-      Object.assign(campaign, dto);
+      let { seasonId, startDate, endDate, ...rest } = dto;
+
+      if (seasonId) {
+          const season = await this.seasonRepository.findOne({ where: { id: seasonId } });
+          if (!season) throw new NotFoundException('Season not found');
+          campaign.season = season;
+          campaign.startDate = season.startDate;
+          campaign.endDate = season.endDate;
+      } else if (dto.hasOwnProperty('seasonId') && seasonId === null) {
+          campaign.season = null;
+      }
+
+      if (!seasonId) {
+          if (startDate) campaign.startDate = startDate;
+          if (endDate) campaign.endDate = endDate;
+      }
+
+      Object.assign(campaign, rest);
       return this.marketingCampaignRepository.save(campaign);
   }
 

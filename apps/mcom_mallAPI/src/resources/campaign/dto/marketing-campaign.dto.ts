@@ -36,6 +36,11 @@ export class CreateMarketingCampaignDto {
   @IsOptional()
   status?: MarketingCampaignStatus;
 
+  @ApiPropertyOptional({ description: 'Season ID to link this campaign to', format: 'uuid' })
+  @IsString()
+  @IsOptional()
+  seasonId?: string;
+
   @ApiPropertyOptional({ 
     description: 'Target postal code prefixes for hyperlocal campaigns (UK format)', 
     example: ['SW1A', 'W1B'],
