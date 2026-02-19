@@ -13,4 +13,5 @@ export enum ActivityTaskType {
 export enum ActivityTimerType {
   TRIAL = 'TRIAL',
   GENERAL = 'GENERAL',
+  BOTH = 'BOTH',
 }

@@ -51,7 +51,7 @@ export class ActivityTimer {
 
   @ApiProperty({ example: '2026-02-25T10:00:00Z', nullable: true })
   @Column({ type: 'timestamp', nullable: true })
-  expiresAt: Date; // For GENERAL tasks with fixed expiry.
+  expiresAt: Date; // For GENERAL, TRIAL and BOTH tasks with fixed expiry.
 
   @ApiProperty({ example: true })
   @Column({ default: true })

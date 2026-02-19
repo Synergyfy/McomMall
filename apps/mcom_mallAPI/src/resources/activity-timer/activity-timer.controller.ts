@@ -35,7 +35,7 @@ export class ActivityTimerController {
   // --- User Endpoints ---
 
   @Get('status')
-  @ApiOperation({ summary: 'Get current user active tasks (TRIAL & GENERAL)' })
+  @ApiOperation({ summary: 'Get current user active tasks (TRIAL, GENERAL & BOTH)' })
   @ApiResponse({
     status: 200,
     description: 'Returns active tasks with detailed status',

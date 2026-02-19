@@ -139,8 +139,11 @@ export class ActivityTimerService {
 
     // Handle TRIAL Users
     if (membership && membership.isTrial && membership.isActive) {
-      if (activitiesByType.has(ActivityTimerType.TRIAL)) {
-        const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL);
+      const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL) || [];
+      const bothActivities = activitiesByType.get(ActivityTimerType.BOTH) || [];
+      const allTrialActivities = [...trialActivities, ...bothActivities];
+
+      if (allTrialActivities.length > 0) {
         const trialExpiry = new Date(membership.expiresAt);
         const remainingTime = Math.max(0, trialExpiry.getTime() - now.getTime());
 
@@ -153,19 +156,20 @@ export class ActivityTimerService {
           expiresAt: trialExpiry,
           completedAt: null,
           isPaused: false,
-          tasks: trialActivities.map(t => ({
+          tasks: allTrialActivities.map(t => ({
             id: t.id, // Include ID for manual completion
             key: t.key,
             title: t.title,
             description: t.description,
             url: t.actionUrl,
+            expiresAt: t.expiresAt,
             isCompleted: completedActivityIds.has(t.id)
           }))
         });
       }
     } else {
       // Handle PAID / Non-Trial Users (Show all eligible activities as individual timers)
-      // This includes GENERAL and any other types applicable to the tier
+      // This includes GENERAL and BOTH types applicable to the tier
 
       for (const [type, activities] of activitiesByType.entries()) {
         // Skip TRIAL tasks for paid users unless we want to show them? 

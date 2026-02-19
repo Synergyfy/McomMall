@@ -27,7 +27,7 @@ export class CreateActivityTaskDto {
   @IsString()
   actionUrl?: string;
 
-  @ApiProperty({ required: false, description: 'Required for GENERAL tasks' })
+  @ApiProperty({ required: false, description: 'Required for tasks with fixed expiry' })
   @IsOptional()
   @IsDateString()
   expiresAt?: Date;
@@ -42,7 +42,7 @@ export class PublishTaskDto extends CreateActivityTaskDto {
   @IsOptional()
   excludedTierIds?: string[];
 
-  @ApiProperty({ description: 'Duration in days for GENERAL tasks (alternative to fixed expiry)', required: false })
+  @ApiProperty({ description: 'Duration in days for tasks (alternative to fixed expiry)', required: false })
   @IsOptional()
   @IsNumber()
   durationDays?: number;
