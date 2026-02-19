@@ -6,6 +6,7 @@ import {
   OneToMany,
   CreateDateColumn,
   UpdateDateColumn,
+  DeleteDateColumn,
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Expose } from 'class-transformer';
@@ -70,6 +71,10 @@ export class CouponProduct {
   @Expose()
   @UpdateDateColumn()
   updatedAt: Date;
+
+  @Expose()
+  @DeleteDateColumn()
+  deletedAt: Date;
 
   @Expose()
   @ManyToOne(() => User, (user) => user.couponProducts)
