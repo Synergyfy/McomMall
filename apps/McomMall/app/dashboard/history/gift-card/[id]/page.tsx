@@ -141,7 +141,7 @@ export default function GiftCardDetailPage() {
                                 <div className="absolute top-8 inset-x-8 flex justify-between items-start">
                                     <div className="space-y-1">
                                         <h3 className="text-white font-black text-xl tracking-tight drop-shadow-2xl uppercase italic">
-                                            {purchase.purchaseBusiness.businessName}
+                                            {purchase.purchaseBusiness?.businessName}
                                         </h3>
                                         <p className="text-white/50 text-[8px] font-bold uppercase tracking-[0.4em]">Official Digital Asset</p>
                                     </div>
@@ -227,7 +227,7 @@ export default function GiftCardDetailPage() {
                                 </div>
                                 <div>
                                     <p className="text-[#9c7349] text-[10px] font-black uppercase tracking-widest">Issuing Business</p>
-                                    <h2 className="text-2xl font-black text-[#1c140d] dark:text-white tracking-tight">{purchase.purchaseBusiness.businessName}</h2>
+                                    <h2 className="text-2xl font-black text-[#1c140d] dark:text-white tracking-tight">{purchase.purchaseBusiness?.businessName}</h2>
                                 </div>
                             </div>
 
@@ -238,7 +238,7 @@ export default function GiftCardDetailPage() {
                                         <span className="text-[10px] font-black uppercase tracking-widest">Business Owner</span>
                                     </div>
                                     <p className="text-[#1c140d] dark:text-white font-bold text-lg">
-                                        {purchase.purchaseBusiness.user.firstName} {purchase.purchaseBusiness.user.lastName}
+                                        {purchase.purchaseBusiness?.user.firstName} {purchase.purchaseBusiness?.user.lastName}
                                     </p>
                                 </div>
 
@@ -247,7 +247,7 @@ export default function GiftCardDetailPage() {
                                         <Building2 size={14} />
                                         <span className="text-[10px] font-black uppercase tracking-widest">Legal Name</span>
                                     </div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold text-lg">{purchase.purchaseBusiness.legalName}</p>
+                                    <p className="text-[#1c140d] dark:text-white font-bold text-lg">{purchase.purchaseBusiness?.legalName}</p>
                                 </div>
 
                                 <div className="space-y-1">
@@ -255,7 +255,7 @@ export default function GiftCardDetailPage() {
                                         <Mail size={14} />
                                         <span className="text-[10px] font-black uppercase tracking-widest">Email Contact</span>
                                     </div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold">{purchase.purchaseBusiness.businessEmail}</p>
+                                    <p className="text-[#1c140d] dark:text-white font-bold">{purchase.purchaseBusiness?.businessEmail}</p>
                                 </div>
 
                                 <div className="space-y-1">
@@ -263,7 +263,7 @@ export default function GiftCardDetailPage() {
                                         <Phone size={14} />
                                         <span className="text-[10px] font-black uppercase tracking-widest">Support Phone</span>
                                     </div>
-                                    <p className="text-[#1c140d] dark:text-white font-bold">{purchase.purchaseBusiness.businessPhone}</p>
+                                    <p className="text-[#1c140d] dark:text-white font-bold">{purchase.purchaseBusiness?.businessPhone}</p>
                                 </div>
                             </div>
 

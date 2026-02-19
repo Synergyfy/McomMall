@@ -127,7 +127,7 @@ const GiftCard = ({ purchase }: GiftCardProps) => {
             GIFT <span className="text-yellow-400">CARD</span>
           </h3>
           <p className="text-[10px] text-white/60 font-bold uppercase tracking-widest leading-none">
-            {purchase.purchaseBusiness.businessName}
+            {purchase.purchaseBusiness?.businessName}
           </p>
         </div>
         <div className="bg-white/95 p-1 rounded-xl shadow-lg">

@@ -22,6 +22,7 @@ export interface User {
   giftCard: boolean;
   voucher: boolean;
   promotion: boolean;
+  coupons: boolean;
 }
 
 export interface UpdateUserDto {
@@ -33,6 +34,7 @@ export interface UpdateUserDto {
   giftCard?: boolean;
   voucher?: boolean;
   promotion?: boolean;
+  coupons?: boolean;
 }
 
 export interface CustomerStats {

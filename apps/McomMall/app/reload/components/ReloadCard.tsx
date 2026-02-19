@@ -50,23 +50,23 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
   const currentCard =
     type === 'giftcard' && giftCard
       ? {
-          title: 'Gift Card',
-          balance: giftCard.currentBalance,
-          image: giftCard.template.backgroundImageUrl ?? '',
-        }
+        title: 'Gift Card',
+        balance: giftCard.currentBalance,
+        image: giftCard.template?.backgroundImageUrl ?? '',
+      }
       : type === 'voucher' && myVoucher
-      ? {
+        ? {
           title: 'Voucher',
           balance: parseFloat(myVoucher.balance),
           image: myVoucher.voucherProduct?.backgroundImage ?? '',
         }
-      : type === 'coupon' && coupon
-      ? {
-          title: 'Coupon',
-          balance: parseFloat(coupon.couponAmount),
-          image: coupon.widgetBackgroundUrl ?? '',
-        }
-      : null;
+        : type === 'coupon' && coupon
+          ? {
+            title: 'Coupon',
+            balance: parseFloat(coupon.couponAmount),
+            image: coupon.widgetBackgroundUrl ?? '',
+          }
+          : null;
 
   const isLoading = {
     giftcard: isLoadingGiftCard,
@@ -136,9 +136,8 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
     ({
       title: `${type.charAt(0).toUpperCase() + type.slice(1)}`,
       balance: 0.0,
-      image: `https://via.placeholder.com/400x250.png/FF7F50/FFFFFF?text=Dummy+${
-        type.charAt(0).toUpperCase() + type.slice(1)
-      }`,
+      image: `https://via.placeholder.com/400x250.png/FF7F50/FFFFFF?text=Dummy+${type.charAt(0).toUpperCase() + type.slice(1)
+        }`,
     } as { title: string; balance: number; image: string });
 
   return (
