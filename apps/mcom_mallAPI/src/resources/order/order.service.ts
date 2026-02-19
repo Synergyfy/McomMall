@@ -38,6 +38,9 @@ import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ProductService } from '../product/product.service';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PageDto } from '../../common/dto/page.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
 @Injectable()
 export class OrderService {
@@ -386,15 +389,32 @@ export class OrderService {
   }
 
   // ... (other methods remain the same)
-  async getOrdersForCustomer(customerId: string): Promise<Order[]> {
-    return this.orderRepository.find({
+  async getOrdersForCustomer(customerId: string, pagination: PaginationQueryDto): Promise<PageDto<Order>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.orderRepository.findAndCount({
       where: { user: { id: customerId } },
       relations: ['items', 'items.product'],
+      skip,
+      take: limit,
+      order: { created_at: 'DESC' }
     });
+
+    const pageMetaDto = new PageMetaDto({
+        itemCount: items.length,
+        totalItems: total,
+        pageOptionsDto: pagination as any,
+    });
+
+    return new PageDto(items, pageMetaDto);
   }
 
-  async getOrdersForOwner(ownerId: string): Promise<Order[]> {
-    return this.orderRepository
+  async getOrdersForOwner(ownerId: string, pagination: PaginationQueryDto): Promise<PageDto<Order>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const queryBuilder = this.orderRepository
       .createQueryBuilder('order')
       .leftJoinAndSelect('order.user', 'customer')
       .leftJoinAndSelect('order.items', 'item')
@@ -402,7 +422,19 @@ export class OrderService {
       .leftJoin('product.business', 'business')
       .leftJoin('business.user', 'user')
       .where('user.id = :ownerId', { ownerId })
-      .getMany();
+      .orderBy('order.created_at', 'DESC')
+      .skip(skip)
+      .take(limit);
+
+    const [items, total] = await queryBuilder.getManyAndCount();
+
+    const pageMetaDto = new PageMetaDto({
+        itemCount: items.length,
+        totalItems: total,
+        pageOptionsDto: pagination as any,
+    });
+
+    return new PageDto(items, pageMetaDto);
   }
 
   async getSalesStatsForOwner(ownerId: string): Promise<SalesStatsDto> {

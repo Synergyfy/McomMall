@@ -10,15 +10,24 @@ import { CreateCampaignDto } from './dto/create-campaign.dto';
 import { UpdateCampaignDto } from './dto/update-campaign.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
+import { MarketingCampaign } from './entities/marketing-campaign.entity';
+import { CreateMarketingCampaignDto, UpdateMarketingCampaignDto } from './dto/marketing-campaign.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PageDto } from '../../common/dto/page.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
 @Injectable()
 export class CampaignService {
   constructor(
     @InjectRepository(Campaign)
     private readonly campaignRepository: Repository<Campaign>,
+    @InjectRepository(MarketingCampaign)
+    private readonly marketingCampaignRepository: Repository<MarketingCampaign>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
   ) {}
+
+  // --- Old Ad Campaigns ---
 
   async create(createCampaignDto: CreateCampaignDto): Promise<Campaign> {
     const { businessId, startDate, endDate, ...campaignData } =
@@ -118,5 +127,51 @@ export class CampaignService {
       },
       relations: ['business'],
     });
+  }
+
+  // --- New Marketing Campaigns (Coupon System) ---
+
+  async createMarketingCampaign(dto: CreateMarketingCampaignDto): Promise<MarketingCampaign> {
+      const campaign = this.marketingCampaignRepository.create(dto);
+      return this.marketingCampaignRepository.save(campaign);
+  }
+
+  async findAllMarketingCampaigns(pagination: PaginationQueryDto): Promise<PageDto<MarketingCampaign>> {
+      const { page, limit } = pagination;
+      const skip = (page - 1) * limit;
+
+      const [items, total] = await this.marketingCampaignRepository.findAndCount({
+          skip,
+          take: limit,
+          order: { created_at: 'DESC' }
+      });
+
+      const pageMetaDto = new PageMetaDto({
+          itemCount: items.length,
+          totalItems: total,
+          pageOptionsDto: pagination as any,
+      });
+
+      return new PageDto(items, pageMetaDto);
+  }
+
+  async findOneMarketingCampaign(id: string): Promise<MarketingCampaign> {
+      const campaign = await this.marketingCampaignRepository.findOne({
+          where: { id },
+          relations: ['coupons']
+      });
+      if (!campaign) throw new NotFoundException('Marketing Campaign not found');
+      return campaign;
+  }
+
+  async updateMarketingCampaign(id: string, dto: UpdateMarketingCampaignDto): Promise<MarketingCampaign> {
+      const campaign = await this.findOneMarketingCampaign(id);
+      Object.assign(campaign, dto);
+      return this.marketingCampaignRepository.save(campaign);
+  }
+
+  async removeMarketingCampaign(id: string): Promise<void> {
+      const campaign = await this.findOneMarketingCampaign(id);
+      await this.marketingCampaignRepository.softRemove(campaign);
   }
 }
