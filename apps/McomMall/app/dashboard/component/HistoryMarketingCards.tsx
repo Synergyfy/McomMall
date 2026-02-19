@@ -20,14 +20,15 @@ import {
     Sparkles
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
+import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { CURRENCY } from '@/lib/utils';
 import { toast } from 'sonner';
-import QRCode from 'react-qr-code';
-import * as htmlToImage from 'html-to-image';
 import { MyPurchase } from '@/service/gift-card/types';
 import { Voucher } from '@/service/vouchers/types';
 import { Coupon } from '@/service/my-coupons/types';
+import QRCode from 'react-qr-code';
+import * as htmlToImage from 'html-to-image';
 
 // --- GIFT CARD HISTORY COMPONENT ---
 
@@ -71,86 +72,88 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
 
     return (
         <div className="space-y-4">
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="group relative aspect-[1.58/1] w-full"
-            >
-                <div
-                    ref={cardRef}
-                    className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 bg-black"
+            <Link href={`/dashboard/history/gift-card/${purchase.id}`}>
+                <motion.div
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="group relative aspect-[1.58/1] w-full cursor-pointer transition-transform hover:scale-[1.02]"
                 >
-                    {purchase.template?.backgroundImageUrl ? (
-                        <Image
-                            src={purchase.template.backgroundImageUrl}
-                            alt="Gift Card"
-                            fill
-                            className="object-cover opacity-80"
-                        />
-                    ) : (
-                        <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
-                    )}
+                    <div
+                        ref={cardRef}
+                        className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 bg-black"
+                    >
+                        {purchase.template?.backgroundImageUrl ? (
+                            <Image
+                                src={purchase.template.backgroundImageUrl}
+                                alt="Gift Card"
+                                fill
+                                className="object-cover opacity-80"
+                            />
+                        ) : (
+                            <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
+                        )}
 
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
 
-                    {/* Header */}
-                    <div className="absolute top-4 inset-x-6 flex justify-between items-start">
-                        <div className="space-y-0.5">
-                            <h3 className="text-white font-black text-lg tracking-tight drop-shadow-lg uppercase italic">
-                                {purchase.purchaseBusiness.businessName}
-                            </h3>
-                            <p className="text-white/60 text-[7px] font-bold uppercase tracking-[0.2em]">Premium Gift Experience</p>
+                        {/* Header */}
+                        <div className="absolute top-4 inset-x-6 flex justify-between items-start">
+                            <div className="space-y-0.5">
+                                <h3 className="text-white font-black text-lg tracking-tight drop-shadow-lg uppercase italic">
+                                    {purchase.purchaseBusiness.businessName}
+                                </h3>
+                                <p className="text-white/60 text-[7px] font-bold uppercase tracking-[0.2em]">Premium Gift Experience</p>
+                            </div>
+                            <ShieldCheck className="text-white/40" size={16} />
                         </div>
-                        <ShieldCheck className="text-white/40" size={16} />
-                    </div>
 
-                    {/* Chip visual */}
-                    <div className="absolute top-14 left-6 w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-90 border border-white/30" />
+                        {/* Chip visual */}
+                        <div className="absolute top-14 left-6 w-10 h-8 bg-gradient-to-br from-yellow-300 to-yellow-600 rounded-lg opacity-90 border border-white/30" />
 
-                    {/* Balance & Code */}
-                    <div className="absolute inset-x-6 bottom-6 flex justify-between items-end">
-                        <div className="space-y-0.5">
-                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block">Current Balance</span>
-                            <p className="text-3xl font-black text-white leading-none tracking-tighter">
-                                {CURRENCY}{Number(purchase.currentBalance).toFixed(2)}
-                            </p>
-                            <div className="flex items-center gap-2 mt-3 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
-                                <span className="text-white/90 font-mono text-[10px] tracking-[0.2em]">{purchase.code}</span>
-                                <button onClick={handleCopy} className="text-white/60 hover:text-white transition-colors">
-                                    {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
-                                </button>
+                        {/* Balance & Code */}
+                        <div className="absolute inset-x-6 bottom-6 flex justify-between items-end">
+                            <div className="space-y-0.5">
+                                <span className="text-[7px] font-black text-white/40 uppercase tracking-widest block">Current Balance</span>
+                                <p className="text-3xl font-black text-white leading-none tracking-tighter">
+                                    {CURRENCY}{Number(purchase.currentBalance).toFixed(2)}
+                                </p>
+                                <div className="flex items-center gap-2 mt-3 bg-white/10 backdrop-blur-md px-2.5 py-1 rounded-full border border-white/10">
+                                    <span className="text-white/90 font-mono text-[10px] tracking-[0.2em]">{purchase.code}</span>
+                                    <button onClick={handleCopy} className="text-white/60 hover:text-white transition-colors">
+                                        {copied ? <Check size={12} className="text-green-400" /> : <Copy size={12} />}
+                                    </button>
+                                </div>
+                            </div>
+                            <div className="text-right">
+                                <Gift className="text-[#f58220] ml-auto mb-1.5" size={20} />
+                                <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">Official Card</span>
                             </div>
                         </div>
-                        <div className="text-right">
-                            <Gift className="text-[#f58220] ml-auto mb-1.5" size={20} />
-                            <span className="text-[7px] font-black text-white/40 uppercase tracking-widest">Official Card</span>
-                        </div>
-                    </div>
 
-                    {/* QR Overlay */}
-                    <AnimatePresence>
-                        {showQR && (
-                            <motion.div
-                                initial={{ opacity: 0, scale: 0.9 }}
-                                animate={{ opacity: 1, scale: 1 }}
-                                exit={{ opacity: 0, scale: 0.9 }}
-                                className="absolute inset-0 bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 z-10"
-                            >
-                                <div className="bg-white p-4 rounded-3xl shadow-2xl">
-                                    <QRCode value={purchase.code} size={160} />
-                                </div>
-                                <p className="text-white font-mono text-sm tracking-widest mt-6">{purchase.code}</p>
-                                <button
-                                    onClick={() => setShowQR(false)}
-                                    className="mt-6 text-white/60 hover:text-white uppercase text-[10px] font-black tracking-widest border-b border-white/20 pb-1"
+                        {/* QR Overlay */}
+                        <AnimatePresence>
+                            {showQR && (
+                                <motion.div
+                                    initial={{ opacity: 0, scale: 0.9 }}
+                                    animate={{ opacity: 1, scale: 1 }}
+                                    exit={{ opacity: 0, scale: 0.9 }}
+                                    className="absolute inset-0 bg-black/95 backdrop-blur-sm flex flex-col items-center justify-center p-8 z-10"
                                 >
-                                    Close Scanner
-                                </button>
-                            </motion.div>
-                        )}
-                    </AnimatePresence>
-                </div>
-            </motion.div>
+                                    <div className="bg-white p-4 rounded-3xl shadow-2xl">
+                                        <QRCode value={purchase.code} size={160} />
+                                    </div>
+                                    <p className="text-white font-mono text-sm tracking-widest mt-6">{purchase.code}</p>
+                                    <button
+                                        onClick={() => setShowQR(false)}
+                                        className="mt-6 text-white/60 hover:text-white uppercase text-[10px] font-black tracking-widest border-b border-white/20 pb-1"
+                                    >
+                                        Close Scanner
+                                    </button>
+                                </motion.div>
+                            )}
+                        </AnimatePresence>
+                    </div>
+                </motion.div>
+            </Link>
 
             {/* Action Buttons */}
             <div className="flex gap-3">

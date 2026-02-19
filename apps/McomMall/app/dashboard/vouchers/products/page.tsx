@@ -70,12 +70,24 @@ export default function VoucherProductsPage() {
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
         <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
-          <h1 className="text-4xl font-bold text-slate-800">
-            Voucher Products
-          </h1>
-          <p className="text-sm text-slate-500">
-            Home &gt; Dashboard &gt; Vouchers
-          </p>
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800">
+              Voucher Products
+            </h1>
+            <p className="text-sm text-slate-500">
+              Home &gt; Dashboard &gt; Vouchers
+            </p>
+          </div>
+          <Link href="/dashboard/vouchers/products/new">
+            <motion.div
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
+            >
+              <PlusCircle className="h-5 w-5" />
+              <span>Add New Product</span>
+            </motion.div>
+          </Link>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -106,18 +118,7 @@ export default function VoucherProductsPage() {
           )}
         </div>
 
-        <footer className="mt-8 flex justify-start">
-          <Link href="/dashboard/vouchers/products/new">
-            <motion.div
-              whileHover={{ scale: 1.05 }}
-              whileTap={{ scale: 0.95 }}
-              className="flex items-center gap-2 rounded-full bg-pink-600 px-6 py-3 font-semibold text-white shadow-lg transition-colors hover:bg-pink-700 focus:outline-none focus:ring-2 focus:ring-pink-400 focus:ring-offset-2"
-            >
-              <PlusCircle className="h-5 w-5" />
-              <span>Add New Product</span>
-            </motion.div>
-          </Link>
-        </footer>
+
       </main>
       <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
         <AlertDialogContent>
