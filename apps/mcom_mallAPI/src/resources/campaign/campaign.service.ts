@@ -15,6 +15,7 @@ import { CreateMarketingCampaignDto, UpdateMarketingCampaignDto } from './dto/ma
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { Season } from '../seasons/entities/season.entity';
 
 @Injectable()
 export class CampaignService {
