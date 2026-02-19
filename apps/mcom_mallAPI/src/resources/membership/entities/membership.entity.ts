@@ -38,9 +38,17 @@ export class Membership extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: PlanType, default: PlanType.MONTHLY })
   planType: PlanType;
 
+  @ApiProperty({ example: '2026-02-18T10:00:00Z' })
+  @Column({ nullable: true })
+  startDate: Date;
+
   @ApiProperty({ example: '2026-03-11T10:00:00Z' })
   @Column()
   expiresAt: Date;
+
+  @ApiProperty({ example: '2026-03-11T10:00:00Z' })
+  @Column({ nullable: true })
+  endDate: Date;
 
   @ApiProperty({
     example: {

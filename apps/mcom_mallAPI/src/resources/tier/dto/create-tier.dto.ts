@@ -171,4 +171,13 @@ export class CreateTierDto {
   @IsNumber()
   @IsOptional()
   trialDuration?: number;
+
+  @ApiProperty({
+    example: 'uuid',
+    description: 'Season ID if this is a seasonal tier',
+    required: false,
+  })
+  @IsString()
+  @IsOptional()
+  seasonId?: string;
 }

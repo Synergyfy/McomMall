@@ -5,16 +5,25 @@ import { Tier } from './entities/tier.entity';
 import { TierType } from './enums/tier-type.enum';
 import { CreateTierDto } from './dto/create-tier.dto';
 import { UpdateTierDto } from './dto/update-tier.dto';
+import { SeasonsService } from '../seasons/seasons.service';
 
 @Injectable()
 export class TierService {
   constructor(
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
+    private readonly seasonsService: SeasonsService,
   ) { }
 
   async create(createTierDto: CreateTierDto): Promise<Tier> {
     try {
+      if (createTierDto.type === TierType.SEASONAL) {
+        if (!createTierDto.seasonId) {
+          throw new BadRequestException('Seasonal tiers must have a seasonId');
+        }
+        await this.seasonsService.findOne(createTierDto.seasonId);
+      }
+
       // Validation: Trial tiers must have duration
       if (createTierDto.type === TierType.TRIAL) {
         if (!createTierDto.trialDuration || createTierDto.trialDuration <= 0) {
@@ -80,6 +89,14 @@ export class TierService {
 
   async update(id: string, updateTierDto: UpdateTierDto): Promise<Tier> {
     const tier = await this.findOne(id);
+
+    if (updateTierDto.type === TierType.SEASONAL || (tier.type === TierType.SEASONAL && updateTierDto.seasonId)) {
+      const seasonId = updateTierDto.seasonId || tier.seasonId;
+      if (!seasonId) {
+        throw new BadRequestException('Seasonal tiers must have a seasonId');
+      }
+      await this.seasonsService.findOne(seasonId);
+    }
 
     // Ensure prices are numbers and rounded if provided
     const updateData = { ...updateTierDto };

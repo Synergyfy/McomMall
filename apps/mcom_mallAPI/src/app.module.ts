@@ -51,6 +51,7 @@ import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-c
 import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
 import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
+import { SeasonsModule } from './resources/seasons/seasons.module';
 
 @Module({
   imports: [
@@ -108,6 +109,7 @@ import { SupportTicketsModule } from './resources/support-tickets/support-ticket
     VoucherModule,
     ExchangeModule,
     TerminalCashbackModule,
+    SeasonsModule,
   ],
   controllers: [AppController],
   providers: [

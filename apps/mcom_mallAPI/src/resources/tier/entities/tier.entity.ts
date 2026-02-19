@@ -1,8 +1,9 @@
-import { Column, Entity } from 'typeorm';
+import { Column, Entity, ManyToOne, JoinColumn } from 'typeorm';
 import { ApiProperty } from '@nestjs/swagger';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { TierConfig } from '../interfaces/tier-config.interface';
 import { TierType } from '../enums/tier-type.enum';
+import { Season } from '../../seasons/entities/season.entity';
 
 @Entity('tiers')
 export class Tier extends AbstractBaseEntity {
@@ -103,4 +104,13 @@ export class Tier extends AbstractBaseEntity {
   @ApiProperty({ example: 14, description: 'Duration of trial in days (only for TRIAL type)', nullable: true })
   @Column({ nullable: true })
   trialDuration: number;
+
+  @ApiProperty({ type: () => Season, nullable: true })
+  @ManyToOne(() => Season, { nullable: true })
+  @JoinColumn({ name: 'season_id' })
+  season: Season;
+
+  @ApiProperty({ example: 'uuid', description: 'Season ID if this is a seasonal tier', nullable: true })
+  @Column({ name: 'season_id', nullable: true })
+  seasonId: string;
 }

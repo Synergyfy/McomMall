@@ -18,6 +18,7 @@ import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto'
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { Tier } from '../tier/entities/tier.entity';
+import { TierType } from '../tier/enums/tier-type.enum';
 
 @Injectable()
 export class MembershipService {
@@ -44,11 +45,13 @@ export class MembershipService {
   async findOne(userId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
       where: { user: { id: userId } },
-      relations: ['tier'],
+      relations: ['tier', 'tier.season'],
     });
     if (!membership) {
       throw new NotFoundException('Membership not found.');
     }
+
+    await this.ensureDates(membership);
 
     const now = new Date();
     const expiresAt = new Date(membership.expiresAt);
@@ -66,10 +69,30 @@ export class MembershipService {
     return membership;
   }
 
+  private async ensureDates(membership: Membership): Promise<void> {
+    let changed = false;
+    if (!membership.startDate) {
+      membership.startDate = membership.created_at || new Date();
+      changed = true;
+    }
+    if (!membership.endDate) {
+      if (membership.tier?.type === TierType.SEASONAL && membership.tier.season) {
+        membership.endDate = membership.tier.season.endDate;
+      } else {
+        membership.endDate = membership.expiresAt;
+      }
+      changed = true;
+    }
+
+    if (changed) {
+      await this.membershipRepository.save(membership);
+    }
+  }
+
   async findActiveWithTier(userId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
       where: { user: { id: userId }, isActive: true },
-      relations: ['tier'],
+      relations: ['tier', 'tier.season'],
     });
 
     if (membership && !membership.tier && membership.tierType) {
@@ -91,11 +114,16 @@ export class MembershipService {
         console.log(`[MembershipService] Found matching tier: ${tier.name} (${tier.id})`);
         membership.tier = tier;
         membership.tierId = tier.id;
+        await this.ensureDates(membership);
         await this.membershipRepository.save(membership);
         console.log(`[MembershipService] Membership updated with tier link.`);
       } else {
         console.warn(`[MembershipService] Could not find tier with name: ${targetName}`);
       }
+    }
+
+    if (membership) {
+      await this.ensureDates(membership);
     }
 
     return membership;
@@ -196,7 +224,10 @@ export class MembershipService {
     const currency = 'GBP';
 
     if (tierId) {
-      tierEntity = await this.tierRepository.findOne({ where: { id: tierId } });
+      tierEntity = await this.tierRepository.findOne({ 
+        where: { id: tierId },
+        relations: ['season']
+      });
       if (!tierEntity) throw new NotFoundException('Tier not found');
 
       if (planType === PlanType.ANNUAL) {
@@ -248,19 +279,28 @@ export class MembershipService {
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
-      const expiresAt = new Date();
-      // Add 1 month or 1 year
-      if (planType === PlanType.ANNUAL) {
-        expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+      let startDate = new Date();
+      let expiresAt = new Date();
+
+      if (tierEntity?.type === TierType.SEASONAL && tierEntity.season) {
+        startDate = new Date(tierEntity.season.startDate);
+        expiresAt = new Date(tierEntity.season.endDate);
       } else {
-        expiresAt.setMonth(expiresAt.getMonth() + 1);
+        // Add 1 month or 1 year
+        if (planType === PlanType.ANNUAL) {
+          expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+        } else {
+          expiresAt.setMonth(expiresAt.getMonth() + 1);
+        }
       }
 
       const membership = membershipRepo.create({
         tierType: tierEnum, // keep legacy if present
         tier: tierEntity,
         user,
+        startDate,
         expiresAt,
+        endDate: expiresAt,
         isActive: true,
         planType,
         payment: savedPayment,
@@ -307,7 +347,10 @@ export class MembershipService {
       throw new ForbiddenException('User has already used their trial period.');
     }
 
-    const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+    const tier = await this.tierRepository.findOne({ 
+      where: { id: tierId },
+      relations: ['season']
+    });
     if (!tier) throw new NotFoundException('Tier not found');
 
     return this.dataSource.transaction(async (manager) => {
@@ -317,13 +360,22 @@ export class MembershipService {
       // Use the tier's trial duration, default to 14 days if not set
       const trialDurationDays = tier.trialDuration || 14;
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
+      let startDate = new Date();
+      let expiresAt = new Date();
+
+      if (tier.type === TierType.SEASONAL && tier.season) {
+        startDate = new Date(tier.season.startDate);
+        expiresAt = new Date(tier.season.endDate);
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + trialDurationDays);
+      }
 
       const membership = membershipRepo.create({
         tier,
         user,
+        startDate,
         expiresAt,
+        endDate: expiresAt,
         isActive: true,
         isTrial: true,
         trialDuration: trialDurationDays,
@@ -339,7 +391,10 @@ export class MembershipService {
   }
 
   async grantAccess(user: User, tierId: string, durationDays: number, source: string): Promise<Membership> {
-    const tier = await this.tierRepository.findOne({ where: { id: tierId } });
+    const tier = await this.tierRepository.findOne({ 
+      where: { id: tierId },
+      relations: ['season']
+    });
     if (!tier) throw new NotFoundException('Tier not found');
 
     // Check for existing active membership
@@ -357,13 +412,22 @@ export class MembershipService {
       const membershipRepo = manager.getRepository(Membership);
       const userRepo = manager.getRepository(User);
 
-      const expiresAt = new Date();
-      expiresAt.setDate(expiresAt.getDate() + durationDays);
+      let startDate = new Date();
+      let expiresAt = new Date();
+
+      if (tier.type === TierType.SEASONAL && tier.season) {
+        startDate = new Date(tier.season.startDate);
+        expiresAt = new Date(tier.season.endDate);
+      } else {
+        expiresAt.setDate(expiresAt.getDate() + durationDays);
+      }
 
       const membership = membershipRepo.create({
         tier,
         user,
+        startDate,
         expiresAt,
+        endDate: expiresAt,
         isActive: true,
         planType: PlanType.MONTHLY, // Default
         // We could add a note or flag about source if entity supported it
