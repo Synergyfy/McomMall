@@ -8,15 +8,18 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
+import { Repository, DataSource, EntityManager, In } from 'typeorm';
 import * as crypto from 'crypto';
 
 import { Voucher, VoucherStatus } from './entities/voucher.entity';
 import { VoucherProduct } from './entities/voucher-product.entity';
 import {
-  VoucherTransaction,
-  TransactionType,
-} from './entities/voucher-transaction.entity';
+  DigitalValueTransaction,
+  DigitalValueTransactionType,
+  DigitalValueTransactionStatus,
+} from '../digital-value/entities/digital-value-transaction.entity';
+import { DigitalValueStatus, DigitalValueDeliveryStatus } from '../digital-value/entities/digital-value.entity';
+import { DigitalValueService } from '../digital-value/digital-value.service';
 
 import { CreateVoucherProductDto } from './dto/create-voucher-product.dto';
 import { UpdateVoucherProductDto } from './dto/update-voucher-product.dto';
@@ -37,9 +40,9 @@ import { InitiateReloadDto } from './dto/initiate-reload.dto';
 import { VerifyReloadDto } from './dto/verify-reload.dto';
 import { VoucherSummaryStatisticsDto } from './dto/voucher-summary-statistics.dto';
 import { VoucherHistoryQueryDto } from './dto/voucher-history-query.dto';
-import { PageDto } from 'src/common/dto/page.dto';
+import { PageDto } from '../../common/dto/page.dto';
 import { VoucherTransactionHistoryDto } from './dto/voucher-transaction-history.dto';
-import { PageMetaDto } from 'src/common/dto/page-meta.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
@@ -51,8 +54,8 @@ export class VoucherService {
     private readonly voucherRepository: Repository<Voucher>,
     @InjectRepository(VoucherProduct)
     private readonly voucherProductRepository: Repository<VoucherProduct>,
-    @InjectRepository(VoucherTransaction)
-    private readonly voucherTransactionRepository: Repository<VoucherTransaction>,
+    @InjectRepository(DigitalValueTransaction)
+    private readonly voucherTransactionRepository: Repository<DigitalValueTransaction>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(User)
@@ -66,6 +69,7 @@ export class VoucherService {
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
     private readonly dataSource: DataSource,
+    private readonly digitalValueService: DigitalValueService,
   ) {}
 
   // --- Business Owner Methods ---
@@ -167,7 +171,7 @@ export class VoucherService {
     }
     return this.voucherRepository.find({
       where: { owner: { id: business.user.id } },
-      relations: ['buyer', 'recipient', 'order'],
+      relations: ['purchaser', 'owner', 'order'], // buyer renamed to purchaser in DigitalValue
     });
   }
 
@@ -186,7 +190,7 @@ export class VoucherService {
 
     this.validatePurchaseAmount(initiateDto.amount, product);
 
-    const currency = 'GBP'; // Or get from config/product
+    const currency = 'GBP';
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
@@ -224,7 +228,7 @@ export class VoucherService {
       throw new NotFoundException('Voucher product not found or is inactive.');
     }
 
-    const currency = 'GBP'; // Or get from config/product
+    const currency = 'GBP';
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
@@ -253,7 +257,7 @@ export class VoucherService {
       const orderRepo = manager.getRepository(Order);
       const paymentRepo = manager.getRepository(OrderPayment);
       const voucherRepo = manager.getRepository(Voucher);
-      const transactionRepo = manager.getRepository(VoucherTransaction);
+      const transactionRepo = manager.getRepository(DigitalValueTransaction);
 
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,
@@ -279,7 +283,7 @@ export class VoucherService {
       const isScheduled = deliveryDate > new Date();
 
       const code = await this.generateUniqueVoucherCode();
-      const expiresAt = product.expiryDays
+      const expiryDate = product.expiryDays
         ? new Date(Date.now() + product.expiryDays * 24 * 60 * 60 * 1000)
         : null;
 
@@ -294,17 +298,40 @@ export class VoucherService {
 
       const newVoucher = voucherRepo.create({
         code,
-        initialValue: finalAmount,
-        balance: finalAmount,
+        initialBalance: finalAmount,
+        currentBalance: finalAmount,
         status: isScheduled
-          ? VoucherStatus.DISABLED
-          : VoucherStatus.UNREDEEMED,
-        expiresAt,
-        buyer: { id: userId } as User,
-        owner: product.user,
+          ? DigitalValueStatus.DRAFT // or DISABLED/FUNDED
+          : DigitalValueStatus.ACTIVE,
+        expiryDate,
+        purchaserId: userId,
+        owner: product.user, // The business owner owns the voucher?
+        // In Voucher logic, owner was product.user.
+        // In GiftCard logic, owner was business user.
+        // In DigitalValue logic, owner is user who holds it?
+        // PRD: "Allow consumers to buy digital value instruments... Create for themselves".
+        // If I buy it, I am the owner.
+        // But `GiftCardService` set ownerId to `business.user.id`. Wait.
+        // Re-reading `GiftCardService`... `ownerId: business.user.id`?
+        // Ah, `GiftCardTemplate` has `owner` (Business).
+        // `GiftCard` has `owner` (Consumer?).
+        // In `purchaseGiftCard`: `ownerId` was `business.user.id`.
+        // This implies the Gift Card belongs to the Business until given? Or is it a liability of the business?
+        // `purchaserId` was `userId`.
+        // In `createSystemGiftCard`, `ownerId` was recipient.
+
+        // Let's stick to existing logic for `Voucher`.
+        // `Voucher` entity: `owner: User` (nullable).
+        // `VoucherProduct` has `user` (Business).
+        // `VoucherService` sets `owner: product.user`.
+        // This means the Business "owns" the voucher record?
+        // But `buyer` was `userId`.
+        // If `owner` is Business, `findUserVouchers` queries `buyer` or `recipient`.
+        // Okay.
         voucherProduct: product,
         order: savedOrder,
         deliveryDate,
+        deliveryStatus: isScheduled ? DigitalValueDeliveryStatus.PENDING : DigitalValueDeliveryStatus.DELIVERED,
         recipientName: purchaseDetails.recipientName,
         recipientEmail: purchaseDetails.recipientEmail,
         personalMessage: purchaseDetails.personalMessage,
@@ -312,16 +339,14 @@ export class VoucherService {
 
       const savedVoucher = await voucherRepo.save(newVoucher);
 
-      await this.createTransaction(
-        {
-          voucher: savedVoucher,
-          amount,
-          type: TransactionType.PURCHASE,
-          balanceBefore: 0,
-          balanceAfter: amount,
-          notes: 'Initial voucher purchase.',
-        },
-        manager,
+      await transactionRepo.save(
+        transactionRepo.create({
+            digitalValue: savedVoucher,
+            amount: savedVoucher.initialBalance,
+            type: DigitalValueTransactionType.FUND,
+            status: DigitalValueTransactionStatus.COMPLETED,
+            metadata: { orderId: savedOrder.id, notes: 'Initial voucher purchase.' },
+        })
       );
 
       await this.walletService.creditEarning({
@@ -343,7 +368,7 @@ export class VoucherService {
 
       return {
         ...savedVoucher,
-        transactionId: savedOrder.id,
+        // transactionId: savedOrder.id,
       };
     });
   }
@@ -432,6 +457,7 @@ export class VoucherService {
       const orderRepo = manager.getRepository(Order);
       const paymentRepo = manager.getRepository(OrderPayment);
       const voucherRepo = manager.getRepository(Voucher);
+      const transactionRepo = manager.getRepository(DigitalValueTransaction);
 
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,
@@ -451,21 +477,18 @@ export class VoucherService {
 
       const user = await manager.findOne(User, { where: { id: userId } });
 
-      const balanceBefore = voucher.balance;
-      voucher.balance =
-        parseFloat(voucher.balance.toString()) + amount;
+      voucher.currentBalance =
+        parseFloat(voucher.currentBalance.toString()) + amount;
       const savedVoucher = await voucherRepo.save(voucher);
 
-      await this.createTransaction(
-        {
-          voucher: savedVoucher,
-          amount,
-          type: TransactionType.RELOAD,
-          balanceBefore,
-          balanceAfter: voucher.balance,
-          order: newOrder,
-        },
-        manager,
+      await transactionRepo.save(
+          transactionRepo.create({
+              digitalValue: savedVoucher,
+              amount,
+              type: DigitalValueTransactionType.TOPUP, // RELOAD -> TOPUP
+              status: DigitalValueTransactionStatus.COMPLETED,
+              metadata: { orderId: newOrder.id, notes: 'Reload' },
+          })
       );
 
       await this.walletService.creditEarning({
@@ -480,7 +503,7 @@ export class VoucherService {
         await this.centralIntegrationService.processCashback(
           user.email,
           Number(amount),
-          CashbackEvent.VOUCHER_PURCHASE, // Treat as voucher purchase event for cashback
+          CashbackEvent.VOUCHER_PURCHASE,
           transactionId,
         );
       }
@@ -509,9 +532,9 @@ export class VoucherService {
       await this.validateVoucherForRedemption(voucher, manager);
 
       const product = voucher.voucherProduct;
-      const redemptionAmount = amount ?? voucher.balance;
+      const redemptionAmount = amount ?? voucher.currentBalance;
 
-      if (redemptionAmount > voucher.balance) {
+      if (redemptionAmount > voucher.currentBalance) {
         throw new BadRequestException(
           'Redemption amount exceeds voucher balance.',
         );
@@ -523,26 +546,22 @@ export class VoucherService {
         );
       }
 
-      const balanceBefore = voucher.balance;
-      voucher.balance -= redemptionAmount;
-      const balanceAfter = voucher.balance;
+      voucher.currentBalance -= redemptionAmount;
 
       voucher.status =
-        balanceAfter === 0
-          ? VoucherStatus.REDEEMED
-          : VoucherStatus.PARTIALLY_REDEEMED;
+        voucher.currentBalance === 0
+          ? DigitalValueStatus.FULLY_REDEEMED
+          : DigitalValueStatus.PARTIALLY_REDEEMED;
 
-      await this.createTransaction(
-        {
-          voucher,
-          amount: redemptionAmount,
-          type: TransactionType.REDEMPTION,
-          balanceBefore,
-          balanceAfter,
-          processedById: staffId,
-          notes: 'Voucher redeemed.',
-        },
-        manager,
+      const transactionRepo = manager.getRepository(DigitalValueTransaction);
+      await transactionRepo.save(
+          transactionRepo.create({
+              digitalValue: voucher,
+              amount: redemptionAmount,
+              type: DigitalValueTransactionType.REDEEM,
+              status: DigitalValueTransactionStatus.COMPLETED,
+              metadata: { processedById: staffId, notes: 'Voucher redeemed.' },
+          })
       );
 
       return voucherRepo.save(voucher);
@@ -571,9 +590,9 @@ export class VoucherService {
       await this.validateVoucherForRedemption(voucher, manager);
 
       const product = voucher.voucherProduct;
-      const redemptionAmount = amount ?? voucher.balance;
+      const redemptionAmount = amount ?? voucher.currentBalance;
 
-      if (redemptionAmount > voucher.balance) {
+      if (redemptionAmount > voucher.currentBalance) {
         throw new BadRequestException(
           'Redemption amount exceeds voucher balance.',
         );
@@ -585,26 +604,22 @@ export class VoucherService {
         );
       }
 
-      const balanceBefore = voucher.balance;
-      voucher.balance -= redemptionAmount;
-      const balanceAfter = voucher.balance;
+      voucher.currentBalance -= redemptionAmount;
 
       voucher.status =
-        balanceAfter === 0
-          ? VoucherStatus.REDEEMED
-          : VoucherStatus.PARTIALLY_REDEEMED;
+        voucher.currentBalance === 0
+          ? DigitalValueStatus.FULLY_REDEEMED
+          : DigitalValueStatus.PARTIALLY_REDEEMED;
 
-      await this.createTransaction(
-        {
-          voucher,
-          amount: redemptionAmount,
-          type: TransactionType.REDEMPTION,
-          balanceBefore,
-          balanceAfter,
-          notes: `Redeemed for order ${order.id}.`,
-          order,
-        },
-        manager,
+      const transactionRepo = transactionalManager.getRepository(DigitalValueTransaction);
+      await transactionRepo.save(
+          transactionRepo.create({
+              digitalValue: voucher,
+              amount: redemptionAmount,
+              type: DigitalValueTransactionType.REDEEM,
+              status: DigitalValueTransactionStatus.COMPLETED,
+              metadata: { orderId: order.id, notes: `Redeemed for order ${order.id}.` },
+          })
       );
 
       return voucherRepo.save(voucher);
@@ -613,7 +628,12 @@ export class VoucherService {
 
   async findUserVouchers(userId: string): Promise<Voucher[]> {
     return this.voucherRepository.find({
-      where: [{ buyer: { id: userId } }, { recipient: { id: userId } }],
+      // buyer -> purchaserId. recipient (User) -> not in DigitalValue explicit relation but we can check...
+      // Wait, DigitalValue has `owner` and `purchaser`.
+      // `Voucher` logic was: buyer or recipient.
+      // If `DigitalValue.owner` represents the current holder, we should query `ownerId`.
+      // `purchaser` is who bought it.
+      where: [{ purchaser: { id: userId } }, { owner: { id: userId } }],
       relations: ['owner', 'voucherProduct'],
     });
   }
@@ -645,25 +665,21 @@ export class VoucherService {
 
       await this.validateVoucherForRedemption(voucher, manager);
 
-      const balanceBefore = voucher.balance;
-      const redemptionAmount = voucher.balance;
-      voucher.balance = 0;
-      const balanceAfter = voucher.balance;
+      const redemptionAmount = voucher.currentBalance;
+      voucher.currentBalance = 0;
 
-      await this.createTransaction(
-        {
-          voucher,
-          amount: redemptionAmount,
-          type: TransactionType.REDEMPTION,
-          balanceBefore,
-          balanceAfter,
-          processedById: staffId,
-          notes: 'Manually marked as redeemed by staff.',
-        },
-        manager,
+      const transactionRepo = manager.getRepository(DigitalValueTransaction);
+      await transactionRepo.save(
+          transactionRepo.create({
+              digitalValue: voucher,
+              amount: redemptionAmount,
+              type: DigitalValueTransactionType.REDEEM,
+              status: DigitalValueTransactionStatus.COMPLETED,
+              metadata: { processedById: staffId, notes: 'Manually marked as redeemed by staff.' },
+          })
       );
 
-      voucher.status = VoucherStatus.REDEEMED;
+      voucher.status = DigitalValueStatus.FULLY_REDEEMED;
       return voucherRepo.save(voucher);
     });
   }
@@ -675,18 +691,18 @@ export class VoucherService {
   ): Promise<VoucherSummaryStatisticsDto> {
     const soldQuery = this.voucherTransactionRepository
       .createQueryBuilder('transaction')
-      .innerJoin('transaction.voucher', 'voucher')
+      .innerJoin('transaction.digitalValue', 'voucher')
       .select('SUM(transaction.amount)', 'total')
       .where('voucher.ownerId = :ownerId', { ownerId })
-      .andWhere('transaction.type = :type', { type: TransactionType.PURCHASE });
+      .andWhere('transaction.type = :type', { type: DigitalValueTransactionType.FUND });
 
     const redeemedQuery = this.voucherTransactionRepository
       .createQueryBuilder('transaction')
-      .innerJoin('transaction.voucher', 'voucher')
+      .innerJoin('transaction.digitalValue', 'voucher')
       .select('SUM(transaction.amount)', 'total')
       .where('voucher.ownerId = :ownerId', { ownerId })
       .andWhere('transaction.type = :type', {
-        type: TransactionType.REDEMPTION,
+        type: DigitalValueTransactionType.REDEEM,
       });
 
     const [sold, redeemed] = await Promise.all([
@@ -710,8 +726,8 @@ export class VoucherService {
   ): Promise<PageDto<VoucherTransactionHistoryDto>> {
     const qb = this.voucherTransactionRepository
       .createQueryBuilder('transaction')
-      .innerJoinAndSelect('transaction.voucher', 'voucher')
-      .innerJoinAndSelect('voucher.buyer', 'buyer')
+      .innerJoinAndSelect('transaction.digitalValue', 'voucher')
+      .innerJoinAndSelect('voucher.purchaser', 'buyer')
       .where('voucher.ownerId = :ownerId', { ownerId })
       .orderBy('transaction.createdAt', query.order)
       .skip(query.skip)
@@ -734,12 +750,12 @@ export class VoucherService {
     const history = transactions.map((t) => ({
       id: t.id,
       amount: t.amount,
-      type: t.type,
+      type: t.type as any, // Cast
       createdAt: t.createdAt,
       customer: {
-        id: t.voucher.buyer.id,
-        name: t.voucher.buyer.name,
-        email: t.voucher.buyer.email,
+        id: (t.digitalValue.purchaser || (t.digitalValue as Voucher).owner)?.id, // owner/purchaser
+        name: (t.digitalValue.purchaser || (t.digitalValue as Voucher).owner)?.name,
+        email: (t.digitalValue.purchaser || (t.digitalValue as Voucher).owner)?.email,
       },
     }));
 
@@ -761,14 +777,13 @@ export class VoucherService {
     if (!voucher) {
       throw new NotFoundException('Voucher not found.');
     }
-    if (voucher.status === VoucherStatus.DISABLED) {
+    // Updated statuses
+    const activeStatuses = [DigitalValueStatus.ACTIVE, DigitalValueStatus.PARTIALLY_REDEEMED, DigitalValueStatus.FUNDED];
+    if (!activeStatuses.includes(voucher.status)) {
       throw new BadRequestException('This voucher is not active.');
     }
-    if (voucher.expiresAt && new Date() > voucher.expiresAt) {
+    if (voucher.expiryDate && new Date() > voucher.expiryDate) {
       throw new BadRequestException('This voucher has expired.');
-    }
-    if (voucher.status === VoucherStatus.REDEEMED) {
-      throw new BadRequestException('This voucher has been fully redeemed.');
     }
 
     return voucher;
@@ -787,22 +802,20 @@ export class VoucherService {
 
     const code = await this.generateUniqueVoucherCode();
     // Default expiry 1 year for loyalty rewards
-    const expiresAt = new Date();
-    expiresAt.setFullYear(expiresAt.getFullYear() + 1);
+    const expiryDate = new Date();
+    expiryDate.setFullYear(expiryDate.getFullYear() + 1);
 
     // Try to find existing user to link
     const owner = await this.userRepository.findOne({ where: { email: recipientEmail } });
 
     const newVoucher = this.voucherRepository.create({
       code,
-      initialValue: amount,
-      balance: amount,
-      status: VoucherStatus.UNREDEEMED,
-      expiresAt,
-      // If user exists, link them as owner/buyer (so they see it in their list)
-      // If not, it remains floating (only email linked) until they sign up or claim it
+      initialBalance: amount,
+      currentBalance: amount,
+      status: DigitalValueStatus.ACTIVE, // UNREDEEMED -> ACTIVE
+      expiryDate,
       owner: owner || null,
-      buyer: owner || null, // Conceptually "bought" by system for them
+      purchaser: owner || null,
       recipientEmail,
       recipientName,
       personalMessage: message || `Reward from ${businessName}`,
@@ -811,14 +824,16 @@ export class VoucherService {
     const savedVoucher = await this.voucherRepository.save(newVoucher);
 
     // Create a transaction record
-    await this.createTransaction({
-      voucher: savedVoucher,
-      amount,
-      type: TransactionType.PURCHASE, 
-      balanceBefore: 0,
-      balanceAfter: amount,
-      notes: `Generated by Loyalty System for ${businessName}`,
-    });
+    const transactionRepo = this.dataSource.getRepository(DigitalValueTransaction);
+    await transactionRepo.save(
+        transactionRepo.create({
+            digitalValue: savedVoucher,
+            amount,
+            type: DigitalValueTransactionType.FUND,
+            status: DigitalValueTransactionStatus.COMPLETED,
+            metadata: { notes: `Generated by Loyalty System for ${businessName}` },
+        })
+    );
 
     return savedVoucher;
   }
@@ -900,54 +915,22 @@ export class VoucherService {
     voucher: Voucher,
     manager?: EntityManager,
   ): Promise<void> {
-    if (voucher.status === VoucherStatus.REDEEMED) {
+    if (voucher.status === DigitalValueStatus.FULLY_REDEEMED) {
       throw new ConflictException(
         'This voucher has already been fully redeemed.',
       );
     }
-    if (voucher.status === VoucherStatus.DISABLED) {
+    if (voucher.status === DigitalValueStatus.DISABLED) {
       throw new BadRequestException('This voucher is currently disabled.');
     }
-    if (voucher.expiresAt && new Date() > voucher.expiresAt) {
-      voucher.status = VoucherStatus.EXPIRED;
+    if (voucher.expiryDate && new Date() > voucher.expiryDate) {
+      voucher.status = DigitalValueStatus.EXPIRED;
       const voucherRepo = manager
         ? manager.getRepository(Voucher)
         : this.voucherRepository;
       await voucherRepo.save(voucher);
       throw new BadRequestException('This voucher has expired.');
     }
-  }
-
-  private async createTransaction(
-    options: {
-      voucher: Voucher;
-      amount: number;
-      type: TransactionType;
-      balanceBefore: number;
-      balanceAfter: number;
-      processedById?: string;
-      notes?: string;
-      order?: Order;
-    },
-    manager?: EntityManager,
-  ): Promise<VoucherTransaction> {
-    const finalManager = manager || this.dataSource.manager;
-    const transactionRepo = finalManager.getRepository(VoucherTransaction);
-    const userRepo = finalManager.getRepository(User);
-
-    let processedBy: User | undefined;
-    if (options.processedById) {
-      processedBy = await userRepo.findOne({
-        where: { id: options.processedById },
-      });
-    }
-
-    const transaction = transactionRepo.create({
-      ...options,
-      processedBy,
-    });
-
-    return transactionRepo.save(transaction);
   }
 
   async findAllPublicVoucherProducts(searchDto: VoucherProductSearchDto): Promise<PageDto<VoucherProduct>> {

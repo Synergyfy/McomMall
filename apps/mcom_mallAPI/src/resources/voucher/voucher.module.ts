@@ -14,6 +14,8 @@ import { OrderPayment } from '../order/entities/order-payment.entity';
 import { VoucherService } from './voucher.service';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { DigitalValueModule } from '../digital-value/digital-value.module';
+import { DigitalValueTransaction } from '../digital-value/entities/digital-value-transaction.entity';
 
 @Module({
   imports: [
@@ -25,9 +27,11 @@ import { PaymentsModule } from '../payments/payments.module';
       User,
       Order,
       OrderPayment,
+      DigitalValueTransaction,
     ]),
     forwardRef(() => WalletModule),
     PaymentsModule,
+    DigitalValueModule,
   ],
   controllers: [
     VoucherConsumerController,
