@@ -13,19 +13,24 @@ import { Business } from '../../listings/entities/listing.entity';
 import { BrandingAssociation } from './branding-association.entity';
 import { RedemptionLog } from './redemption-log.entity';
 import { Order } from '../../order/entities/order.entity';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('coupons')
 export class Coupon extends AbstractBaseEntity {
+  @ApiProperty({ example: 'SAVE20' })
   @Index({ unique: true })
   @Column({ length: 20 })
   code: string;
 
+  @ApiPropertyOptional({ example: '20% Off Winter Sale' })
   @Column({ nullable: true })
   title: string;
 
+  @ApiPropertyOptional()
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @ApiProperty({ enum: CouponSourceType, example: CouponSourceType.PLATFORM })
   @Index()
   @Column({
     type: 'enum',
@@ -34,9 +39,11 @@ export class Coupon extends AbstractBaseEntity {
   })
   sourceType: CouponSourceType;
 
+  @ApiProperty({ example: 20 })
   @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
   discountValue: number;
 
+  @ApiProperty({ enum: DiscountType, example: DiscountType.PERCENTAGE })
   @Column({
     type: 'enum',
     enum: DiscountType,
@@ -44,12 +51,15 @@ export class Coupon extends AbstractBaseEntity {
   })
   discountType: DiscountType;
 
+  @ApiProperty({ description: 'Total redemptions allowed. 0 for unlimited.', example: 100 })
   @Column({ default: 0 })
   usageLimit: number; // 0 = unlimited
 
+  @ApiProperty({ description: 'Redemptions allowed per user.', example: 1 })
   @Column({ default: 1 })
   perUserLimit: number;
 
+  @ApiProperty({ enum: CouponStatus, example: CouponStatus.ACTIVE })
   @Index()
   @Column({
     type: 'enum',
@@ -58,13 +68,16 @@ export class Coupon extends AbstractBaseEntity {
   })
   status: CouponStatus;
 
+  @ApiPropertyOptional()
   @Column({ type: 'timestamp', nullable: true })
   expiresAt: Date | null;
 
+  @ApiPropertyOptional({ type: () => Business })
   @Index()
   @ManyToOne(() => Business, { nullable: true })
   business: Business;
 
+  @ApiPropertyOptional({ type: () => MarketingCampaign })
   @Index()
   @ManyToOne(() => MarketingCampaign, (campaign) => campaign.coupons, { nullable: true })
   campaign: MarketingCampaign;

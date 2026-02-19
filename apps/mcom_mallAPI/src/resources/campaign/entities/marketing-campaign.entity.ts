@@ -2,24 +2,30 @@ import { Column, Entity, Index, OneToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { MarketingCampaignType, MarketingCampaignStatus } from '../marketing-campaign.enum';
 import { Coupon } from '../../coupon/entities/coupon.entity';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 @Entity('marketing_campaigns')
 export class MarketingCampaign extends AbstractBaseEntity {
+  @ApiProperty({ example: 'Winter Promo 2026' })
   @Column()
   name: string;
 
+  @ApiProperty({ enum: MarketingCampaignType, example: MarketingCampaignType.SEASONAL })
   @Column({
     type: 'enum',
     enum: MarketingCampaignType,
   })
   type: MarketingCampaignType;
 
+  @ApiProperty()
   @Column({ type: 'timestamp' })
   startDate: Date;
 
+  @ApiProperty()
   @Column({ type: 'timestamp' })
   endDate: Date;
 
+  @ApiProperty({ enum: MarketingCampaignStatus, example: MarketingCampaignStatus.ACTIVE })
   @Index()
   @Column({
     type: 'enum',
@@ -28,6 +34,7 @@ export class MarketingCampaign extends AbstractBaseEntity {
   })
   status: MarketingCampaignStatus;
 
+  @ApiPropertyOptional({ type: [String], example: ['SW1A'] })
   @Column({ type: 'simple-array', nullable: true })
   targetPostalCodes: string[];
 

@@ -62,8 +62,8 @@ export class WalletService {
     }
 
     if (user.wallet) {
-      const orders = await this.orderService.getOrdersForOwner(userId);
-      user.wallet.totalOrders = orders.length;
+      const orders = await this.orderService.getOrdersForOwner(userId, { page: 1, limit: 1000 });
+      user.wallet.totalOrders = orders.meta.totalItems;
       await this.walletRepository.save(user.wallet);
       return user.wallet;
     }
@@ -71,13 +71,13 @@ export class WalletService {
     return this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
 
-      const orders = await this.orderService.getOrdersForOwner(userId);
+      const orders = await this.orderService.getOrdersForOwner(userId, { page: 1, limit: 1000 });
       const giftCardStats = await this.giftCardService.getOwnerStats(userId);
       const voucherStats = await this.voucherService.getSummaryStatistics(userId);
       const couponStats = await this.couponService.getSummaryStatistics(userId);
       const completedBookings = await this.bookingService.getCompletedBookingsForOwner(userId);
 
-      const earningsFromOrders = orders.reduce((sum, order) => sum + Number(order.total), 0);
+      const earningsFromOrders = orders.data.reduce((sum, order) => sum + Number(order.total), 0);
       const earningsFromGiftCard = giftCardStats.totalSold;
       const earningsFromVoucher = voucherStats.totalSold;
       const earningsFromCoupons = couponStats.totalSold;
@@ -88,7 +88,7 @@ export class WalletService {
         balance: 0,
         earningsBalance: earningsFromOrders + earningsFromGiftCard + earningsFromVoucher + earningsFromCoupons + earningsFromBookings,
         spendableBalance: 0,
-        totalOrders: orders.length,
+        totalOrders: orders.meta.totalItems,
         earningsFromOrders,
         earningsFromGiftCard,
         earningsFromVoucher,
