@@ -104,7 +104,7 @@ export class User extends AbstractBaseEntity {
   @OneToOne(() => Wallet, (wallet) => wallet.user, { cascade: true })
   wallet: Wallet;
 
-  @OneToMany(() => Voucher, (voucher) => voucher.buyer)
+  @OneToMany(() => Voucher, (voucher) => voucher.purchaser)
   purchasedVouchers: Voucher[];
 
   @OneToMany(() => VoucherProduct, (voucherProduct) => voucherProduct.user)

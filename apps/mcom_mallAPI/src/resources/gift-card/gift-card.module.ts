@@ -22,6 +22,8 @@ import { GiftCardAssetService } from './gift-card-asset.service';
 import { AssetCategoryService } from './asset-category.service';
 import { User } from '../users/entities/user.entity';
 import { CapabilityModule } from '../capability/capability.module';
+import { DigitalValueModule } from '../digital-value/digital-value.module';
+import { DigitalValueTransaction } from '../digital-value/entities/digital-value-transaction.entity';
 
 @Module({
   imports: [
@@ -37,9 +39,11 @@ import { CapabilityModule } from '../capability/capability.module';
       GiftCardAsset,
       AssetCategory,
       User,
+      DigitalValueTransaction,
     ]),
     forwardRef(() => WalletModule),
     PaymentsModule,
+    DigitalValueModule,
   ],
   controllers: [
     GiftCardConsumerController,
