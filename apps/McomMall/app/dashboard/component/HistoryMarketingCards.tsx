@@ -99,7 +99,7 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
                         <div className="absolute top-4 inset-x-6 flex justify-between items-start">
                             <div className="space-y-0.5">
                                 <h3 className="text-white font-black text-lg tracking-tight drop-shadow-lg uppercase italic">
-                                    {purchase.purchaseBusiness.businessName}
+                                    {purchase.purchaseBusiness?.businessName || 'McomMall Gift Card'}
                                 </h3>
                                 <p className="text-white/60 text-[7px] font-bold uppercase tracking-[0.2em]">Premium Gift Experience</p>
                             </div>

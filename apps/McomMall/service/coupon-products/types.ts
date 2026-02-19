@@ -35,3 +35,31 @@ export interface CreateCouponProductDto {
 }
 
 export type UpdateCouponProductDto = Partial<CreateCouponProductDto>;
+
+export interface CouponStats {
+  totalSold: number;
+  totalRedeemed: number;
+  outstandingLiability: number;
+  activeCoupons: number;
+}
+
+export interface CouponChartDataItem {
+  month: string;
+  sales: number;
+  redemptions: number;
+}
+
+export interface CouponChartData {
+  data: CouponChartDataItem[];
+}
+
+export interface CouponTransaction {
+  id: string;
+  type: 'PURCHASE' | 'REDEEM' | 'REFUND';
+  amount: number;
+  createdAt: string;
+  customerName: string;
+  customerEmail: string;
+  couponCode: string;
+  notes?: string;
+}
