@@ -4,11 +4,18 @@ export enum DiscountType {
 }
 
 export enum CouponStatus {
-  UNREDEEMED = 'unredeemed',
+  DRAFT = 'draft',
+  SCHEDULED = 'scheduled',
+  ACTIVE = 'active',
   REDEEMED = 'redeemed',
-  PARTIALLY_REDEEMED = 'partially_redeemed',
   EXPIRED = 'expired',
-  DISABLED = 'disabled',
+  ARCHIVED = 'archived',
+  DISABLED = 'disabled', // Keeping for legacy/admin override
+}
+
+export enum CouponSourceType {
+  PLATFORM = 'platform',
+  BUSINESS = 'business',
 }
 
 export enum TransactionType {

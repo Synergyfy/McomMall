@@ -57,6 +57,12 @@ export class Order extends AbstractBaseEntity {
   @Column({ nullable: true })
   giftCardCode?: string;
 
+  @Column({ type: 'decimal', precision: 10, scale: 2, nullable: true })
+  couponDiscountApplied?: number;
+
+  @Column({ nullable: true })
+  couponCode?: string;
+
   @OneToMany(() => Coupon, (coupon) => coupon.order)
   coupons: Coupon[];
 

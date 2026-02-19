@@ -71,14 +71,14 @@ export class User extends AbstractBaseEntity {
   @OneToMany(() => Business, (business) => business.user)
   businesses: Business[];
 
-  @OneToMany(() => Coupon, (coupon) => coupon.owner)
-  coupons: Coupon[];
+  // @OneToMany(() => Coupon, (coupon) => coupon.owner)
+  // coupons: Coupon[];
 
-  @OneToMany(() => Coupon, (coupon) => coupon.buyer)
-  purchasedCoupons: Coupon[];
+  // @OneToMany(() => Coupon, (coupon) => coupon.buyer)
+  // purchasedCoupons: Coupon[];
 
-  @OneToMany(() => CouponProduct, (couponProduct) => couponProduct.user)
-  couponProducts: CouponProduct[];
+  // @OneToMany(() => CouponProduct, (couponProduct) => couponProduct.user)
+  // couponProducts: CouponProduct[];
 
   @OneToMany(
     () => PromotionParticipant,

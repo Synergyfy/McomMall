@@ -1,37 +1,50 @@
-import {
-  IsString,
-  IsNotEmpty,
-  IsOptional,
-  IsNumber,
-  Min,
-  IsEmail,
-  IsDate,
-} from 'class-validator';
-import { Type } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, Min } from 'class-validator';
+import { CouponSourceType, DiscountType } from '../coupon.enum';
 
 export class CreateCouponDto {
   @IsString()
-  @IsNotEmpty()
-  couponProductId: string;
+  title: string;
+
+  @IsString()
+  @IsOptional()
+  description?: string;
+
+  @IsString()
+  code: string;
+
+  @IsEnum(CouponSourceType)
+  sourceType: CouponSourceType;
 
   @IsNumber()
   @Min(0)
-  amount: number;
+  discountValue: number;
+
+  @IsEnum(DiscountType)
+  discountType: DiscountType;
+
+  @IsNumber()
+  @IsOptional()
+  usageLimit?: number;
+
+  @IsNumber()
+  @IsOptional()
+  perUserLimit?: number;
+
+  @IsOptional()
+  startDate?: Date;
+
+  @IsOptional()
+  expiresAt?: Date;
+
+  @IsUUID()
+  @IsOptional()
+  campaignId?: string;
+
+  @IsUUID()
+  @IsOptional()
+  businessId?: string;
 
   @IsString()
   @IsOptional()
-  recipientName?: string;
-
-  @IsEmail()
-  @IsOptional()
-  recipientEmail?: string;
-
-  @IsString()
-  @IsOptional()
-  personalMessage?: string;
-
-  @IsDate()
-  @Type(() => Date)
-  @IsOptional()
-  deliveryDate?: Date;
+  brandingBusinessId?: string;
 }

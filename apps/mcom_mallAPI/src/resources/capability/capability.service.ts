@@ -12,7 +12,7 @@ import { ProductService } from '../product/product.service';
 import { ServicesService } from '../services/services.service';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { GiftCardService } from '../gift-card/gift-card.service';
-import { CouponProductService } from '../coupon/coupon-product.service';
+import { CouponService } from '../coupon/coupon.service';
 import { PromotionService } from '../promotion/promotion.service';
 import { TierService } from '../tier/tier.service';
 
@@ -48,8 +48,8 @@ export class CapabilityService {
     private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => GiftCardService))
     private readonly giftCardService: GiftCardService,
-    @Inject(forwardRef(() => CouponProductService))
-    private readonly couponProductService: CouponProductService,
+    @Inject(forwardRef(() => CouponService))
+    private readonly couponService: CouponService,
     @Inject(forwardRef(() => PromotionService))
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => TierService))
@@ -116,7 +116,7 @@ export class CapabilityService {
         this.checkQuota(gcCount, config.quotas.maxGiftCardTemplates, 'gift card templates');
         break;
       case ActionType.CREATE_COUPON_TEMPLATE:
-        const couponCount = context?.currentCount ?? await this.couponProductService.countForUser(userId);
+        const couponCount = context?.currentCount ?? await this.couponService.countForUser(userId);
         this.checkQuota(couponCount, config.quotas.maxCouponTemplates, 'coupon templates');
         break;
       case ActionType.CREATE_LOYALTY_PROGRAM:
@@ -164,7 +164,7 @@ export class CapabilityService {
         this.productService.countForUser(userId),
         this.servicesService.countForUser(userId),
         this.giftCardService.countTemplatesForOwner(userId),
-        this.couponProductService.countForUser(userId),
+        this.couponService.countForUser(userId),
         this.promotionService.countForUser(userId)
     ]);
 

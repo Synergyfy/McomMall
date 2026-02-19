@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
 import { ActivityTimerService } from './activity-timer.service';
-import { PublishTaskDto } from './dto/activity-timer.dto';
+import { PublishTaskDto, UpdateTaskDto } from './dto/activity-timer.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Request } from 'express';
@@ -30,6 +30,22 @@ export class ActivityTimerController {
   @ApiResponse({ status: 200, description: 'List of definitions', type: [ActivityTimer] })
   getDefinitions() {
     return this.timerService.findAllActivities();
+  }
+
+  @Patch('admin/:id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Update an Activity Timer Definition (Admin)' })
+  @ApiResponse({ status: 200, description: 'Task updated successfully', type: ActivityTimer })
+  updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
+    return this.timerService.updateActivity(id, dto);
+  }
+
+  @Delete('admin/:id')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({ summary: 'Delete an Activity Timer Definition (Admin)' })
+  @ApiResponse({ status: 200, description: 'Task deleted successfully' })
+  deleteTask(@Param('id') id: string) {
+    return this.timerService.deleteActivity(id);
   }
 
   // --- User Endpoints ---

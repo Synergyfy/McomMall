@@ -47,3 +47,7 @@ export class PublishTaskDto extends CreateActivityTaskDto {
   @IsNumber()
   durationDays?: number;
 }
+
+import { PartialType } from '@nestjs/swagger';
+
+export class UpdateTaskDto extends PartialType(PublishTaskDto) { }

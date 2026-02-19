@@ -15,7 +15,7 @@ export class CouponTransaction {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Coupon, (coupon) => coupon.transactions, {
+  @ManyToOne(() => Coupon, {
     onDelete: 'CASCADE',
   })
   coupon: Coupon;

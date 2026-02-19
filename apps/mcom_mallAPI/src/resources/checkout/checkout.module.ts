@@ -13,6 +13,7 @@ import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { CouponModule } from '../coupon/coupon.module';
 
 @Module({
   imports: [
@@ -29,6 +30,7 @@ import { PaymentsModule } from '../payments/payments.module';
     ProductModule,
     GiftCardModule,
     PaymentsModule,
+    CouponModule,
   ],
   controllers: [CheckoutController],
   providers: [CheckoutService],

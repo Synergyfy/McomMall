@@ -58,6 +58,32 @@ export class ActivityTimerService {
       .getMany();
   }
 
+  async updateActivity(id: string, dto: any): Promise<ActivityTimer> {
+    const activity = await this.activityRepository.findOne({ where: { id } });
+    if (!activity) {
+      throw new NotFoundException(`Activity timer with ID ${id} not found`);
+    }
+
+    const { expiresAt, ...rest } = dto;
+
+    // Explicitly handle expiresAt if present, otherwise merge others
+    if (expiresAt !== undefined) {
+      activity.expiresAt = expiresAt ? new Date(expiresAt) : null;
+    }
+
+    Object.assign(activity, rest);
+
+    return this.activityRepository.save(activity);
+  }
+
+  async deleteActivity(id: string): Promise<void> {
+    const activity = await this.activityRepository.findOne({ where: { id } });
+    if (!activity) {
+      throw new NotFoundException(`Activity timer with ID ${id} not found`);
+    }
+    await this.activityRepository.remove(activity);
+  }
+
   // --- Core Logic ---
 
   async getUserActiveTasks(user: User): Promise<any[]> {

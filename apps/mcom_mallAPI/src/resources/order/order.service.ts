@@ -184,11 +184,14 @@ export class OrderService {
     let couponAmountToApply = 0;
     if (createCheckoutDto.couponCode) {
       try {
-        const coupon = await this.couponService.findCouponByCode(createCheckoutDto.couponCode);
-        if (coupon.status === CouponStatus.REDEEMED || coupon.status === CouponStatus.DISABLED || (coupon.expiresAt && new Date() > coupon.expiresAt)) {
-          throw new BadRequestException('Coupon is invalid or expired.');
+        const user = await this.userRepository.findOne({ where: { id: userId } });
+        const coupon = await this.couponService.validateCoupon(createCheckoutDto.couponCode, user);
+        
+        if (coupon.discountType === 'fixed' as any) { // Type check if needed
+            couponAmountToApply = Math.min(totalBeforeRedemption, Number(coupon.discountValue));
+        } else {
+            couponAmountToApply = totalBeforeRedemption * (Number(coupon.discountValue) / 100);
         }
-        couponAmountToApply = Math.min(totalBeforeRedemption, coupon.balance);
       } catch (error) {
         throw new BadRequestException(`Invalid coupon: ${error.message}`);
       }

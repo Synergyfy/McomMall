@@ -20,6 +20,8 @@ import { PaymentProviderService } from '../payments/services/payment-provider.se
 import { OrderStatus } from '../order/enums/order-status.enum';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
+import { CouponService } from '../coupon/coupon.service';
+import { DiscountType } from '../coupon/coupon.enum';
 
 @Injectable()
 export class CheckoutService {
@@ -40,10 +42,14 @@ export class CheckoutService {
     private readonly paymentProviderService: PaymentProviderService,
     private readonly dataSource: DataSource,
     private readonly productService: ProductService,
+    private readonly couponService: CouponService,
   ) {}
 
   async initiateCheckout(userId: string, createCheckoutDto: CreateCheckoutDto) {
-    const { items, giftCardCode } = createCheckoutDto;
+    const { items, giftCardCode, couponCode } = createCheckoutDto;
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+    if (!user) throw new NotFoundException('User not found');
+
     const productIds = items.map((item) => item.productId);
     const products = await this.productRepository.find({
       where: { id: In(productIds) },
@@ -75,16 +81,29 @@ export class CheckoutService {
       );
     }
 
+    // Apply Coupon if provided
+    let couponDiscount = 0;
+    if (couponCode) {
+        const coupon = await this.couponService.validateCoupon(couponCode, user);
+        if (coupon.discountType === DiscountType.FIXED) {
+            couponDiscount = Math.min(subtotal, Number(coupon.discountValue));
+        } else {
+            couponDiscount = subtotal * (Number(coupon.discountValue) / 100);
+        }
+    }
+
+    const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
+
     // Apply gift card if provided
     let giftCardAmountToApply = 0;
     if (giftCardCode) {
       const balanceResponse = await this.giftCardService.checkBalance(
         giftCardCode,
       );
-      giftCardAmountToApply = Math.min(subtotal, balanceResponse.currentBalance);
+      giftCardAmountToApply = Math.min(totalAfterCoupon, balanceResponse.currentBalance);
     }
 
-    const remainingTotal = subtotal - giftCardAmountToApply;
+    const remainingTotal = totalAfterCoupon - giftCardAmountToApply;
 
     // Create pending order in a transaction
     const newOrder = await this.dataSource.transaction(async (manager) => {
@@ -98,6 +117,8 @@ export class CheckoutService {
         status: OrderStatus.PENDING,
         giftCardAmountApplied: giftCardAmountToApply,
         giftCardCode: giftCardAmountToApply > 0 ? giftCardCode : null,
+        couponCode: couponDiscount > 0 ? couponCode : null,
+        couponDiscountApplied: couponDiscount,
       });
       const savedOrder = await orderRepo.save(order);
 
@@ -144,7 +165,7 @@ export class CheckoutService {
       throw new NotFoundException('Pending order not found.');
     }
 
-    const remainingTotal = order.total - (order.giftCardAmountApplied || 0);
+    const remainingTotal = order.total - (order.giftCardAmountApplied || 0) - (order.couponDiscountApplied || 0);
 
     // Verify payment if one was made
     if (remainingTotal > 0) {
@@ -168,6 +189,8 @@ export class CheckoutService {
       }
     }
 
+    const user = await this.userRepository.findOne({ where: { id: userId } });
+
     return this.dataSource.transaction(async (manager) => {
       const orderRepo = manager.getRepository(Order);
 
@@ -186,6 +209,11 @@ export class CheckoutService {
         
         const businessId = orderWithItems.items?.length > 0 ? orderWithItems.items[0].product.business.id : undefined;
         await this.giftCardService.redeem(redeemDto, order, businessId, manager);
+      }
+
+      // Redeem Coupon
+      if (order.couponCode && order.couponDiscountApplied > 0) {
+          await this.couponService.redeem(order.couponCode, user, order);
       }
 
       order.status = OrderStatus.COMPLETED;

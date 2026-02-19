@@ -77,11 +77,11 @@ export class CouponProduct {
   deletedAt: Date;
 
   @Expose()
-  @ManyToOne(() => User, (user) => user.couponProducts)
+  @ManyToOne(() => User)
   user: User;
 
-  @OneToMany(() => Coupon, (coupon) => coupon.couponProduct)
-  coupons: Coupon[];
+  // @OneToMany(() => Coupon, (coupon) => coupon.couponProduct)
+  // coupons: Coupon[];
 
   @Expose()
   @Column({ default: false })

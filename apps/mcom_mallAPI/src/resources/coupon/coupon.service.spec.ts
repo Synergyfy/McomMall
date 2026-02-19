@@ -1,43 +1,41 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { CouponService } from './coupon.service';
 import { Coupon } from './entities/coupon.entity';
-import { CouponProduct } from './entities/coupon-product.entity';
+import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entity';
+import { Business } from '../listings/entities/listing.entity';
+import { BrandingAssociation } from './entities/branding-association.entity';
+import { RedemptionLog, RedemptionStatus } from './entities/redemption-log.entity';
+import { CouponStatus, CouponSourceType, DiscountType } from './coupon.enum';
+import { MarketingCampaignStatus, MarketingCampaignType } from '../campaign/marketing-campaign.enum';
 import { User } from '../users/entities/user.entity';
-import { PaymentProviderService } from '../payments/services/payment-provider.service';
-import { WalletService } from '../wallet/wallet.service';
-import { CouponTransactionService } from './coupon-transaction.service';
-import { InitiateCouponPurchaseDto } from './dto/initiate-coupon-purchase.dto';
-import { PaymentMethod } from '../order/entities/order-payment.entity';
-import { VerifyCouponPurchaseDto } from './dto/verify-coupon-purchase.dto';
-import { CreateCouponDto } from './dto/create-coupon.dto';
+import { BadRequestException, NotFoundException, ForbiddenException } from '@nestjs/common';
+import { CapabilityService } from '../capability/capability.service';
+import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 
 describe('CouponService', () => {
   let service: CouponService;
-  let couponRepository: Repository<Coupon>;
-  let couponProductRepository: Repository<CouponProduct>;
-  let paymentProviderService: PaymentProviderService;
-  let walletService: WalletService;
-  let couponTransactionService: CouponTransactionService;
-  let dataSource: DataSource;
+  let couponRepo: Repository<Coupon>;
+  let campaignRepo: Repository<MarketingCampaign>;
+  let redemptionLogRepo: Repository<RedemptionLog>;
+  let addressRepo: Repository<ShippingAddress>;
+  let capabilityService: CapabilityService;
 
-  const mockUser = new User();
-  mockUser.id = '1';
-
-  const mockCouponProduct = new CouponProduct();
-  mockCouponProduct.id = '1';
-  mockCouponProduct.name = 'Test Coupon Product';
-  mockCouponProduct.user = mockUser;
-  mockCouponProduct.isEnabled = true;
-  mockCouponProduct.fixedAmounts = [10, 20];
-
-  const mockCoupon = new Coupon();
-  mockCoupon.id = '1';
-  mockCoupon.code = 'TESTCODE';
-  mockCoupon.couponProduct = mockCouponProduct;
-  mockCoupon.owner = mockUser;
-  mockCoupon.buyer = mockUser;
+  const mockUser = { id: 'user-1' } as User;
+  const mockCoupon = {
+    id: 'coupon-1',
+    code: 'SAVE10',
+    status: CouponStatus.ACTIVE,
+    sourceType: CouponSourceType.PLATFORM,
+    discountValue: 10,
+    discountType: DiscountType.FIXED,
+    usageLimit: 0,
+    perUserLimit: 1,
+    expiresAt: null,
+    campaign: null,
+    business: null,
+  } as Coupon;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -46,170 +44,153 @@ describe('CouponService', () => {
         {
           provide: getRepositoryToken(Coupon),
           useValue: {
-            create: jest.fn().mockReturnValue(mockCoupon),
-            save: jest.fn().mockResolvedValue(mockCoupon),
-            findOne: jest.fn().mockResolvedValue(null),
-            find: jest.fn(),
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            count: jest.fn(),
           },
         },
         {
-          provide: getRepositoryToken(CouponProduct),
-          useClass: Repository,
-        },
-        {
-          provide: getRepositoryToken(User),
-          useClass: Repository,
-        },
-        {
-          provide: PaymentProviderService,
+          provide: getRepositoryToken(MarketingCampaign),
           useValue: {
-            createStripePaymentIntent: jest.fn(),
-            createPaypalOrder: jest.fn(),
-            verifyStripePaymentIntent: jest.fn(),
-            verifyPaypalOrder: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
-          provide: WalletService,
+          provide: getRepositoryToken(Business),
           useValue: {
-            creditEarning: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
-          provide: CouponTransactionService,
+          provide: getRepositoryToken(BrandingAssociation),
           useValue: {
-            createTransaction: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(RedemptionLog),
+          useValue: {
+            count: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
+        {
+          provide: getRepositoryToken(ShippingAddress),
+          useValue: {
+            findOne: jest.fn(),
+          },
+        },
+        {
+          provide: CapabilityService,
+          useValue: {
+            checkPermission: jest.fn(),
           },
         },
         {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn().mockImplementation(async (cb) => {
-              const manager = {
-                getRepository: jest.fn().mockImplementation((entity) => {
-                  if (entity === Coupon) {
-                    return couponRepository;
-                  }
-                  return {
-                    create: jest.fn(),
-                    save: jest.fn(),
-                  };
-                }),
-              };
-              return cb(manager);
-            }),
+            transaction: jest.fn(),
           },
         },
       ],
     }).compile();
 
     service = module.get<CouponService>(CouponService);
-    couponRepository = module.get<Repository<Coupon>>(getRepositoryToken(Coupon));
-    couponProductRepository = module.get<Repository<CouponProduct>>(
-      getRepositoryToken(CouponProduct),
-    );
-    paymentProviderService = module.get<PaymentProviderService>(
-      PaymentProviderService,
-    );
-    walletService = module.get<WalletService>(WalletService);
-    couponTransactionService = module.get<CouponTransactionService>(
-      CouponTransactionService,
-    );
-    dataSource = module.get<DataSource>(DataSource);
+    couponRepo = module.get<Repository<Coupon>>(getRepositoryToken(Coupon));
+    campaignRepo = module.get<Repository<MarketingCampaign>>(getRepositoryToken(MarketingCampaign));
+    redemptionLogRepo = module.get<Repository<RedemptionLog>>(getRepositoryToken(RedemptionLog));
+    addressRepo = module.get<Repository<ShippingAddress>>(getRepositoryToken(ShippingAddress));
+    capabilityService = module.get<CapabilityService>(CapabilityService);
   });
 
-  it('should be defined', () => {
-    expect(service).toBeDefined();
-  });
-
-  describe('initiateCouponPurchase', () => {
-    it('should initiate a stripe payment', async () => {
-      const initiateDto: InitiateCouponPurchaseDto = {
-        couponProductId: '1',
-        amount: 10,
-        paymentMethod: 'stripe',
-      };
-      jest.spyOn(couponProductRepository, 'findOneBy').mockResolvedValue(mockCouponProduct);
-      jest.spyOn(paymentProviderService, 'createStripePaymentIntent').mockResolvedValue({
-        client_secret: 'client_secret',
-      } as any);
-
-      const result = await service.initiateCouponPurchase(initiateDto);
-
-      expect(result.provider).toEqual(PaymentMethod.STRIPE);
-      expect(result.clientSecret).toEqual('client_secret');
-      expect(couponProductRepository.findOneBy).toHaveBeenCalledWith({
-        id: '1',
-        isEnabled: true,
-      });
-      expect(paymentProviderService.createStripePaymentIntent).toHaveBeenCalledWith(
-        10,
-        'GBP',
-      );
+  describe('validateCoupon', () => {
+    it('should throw NotFoundException if coupon does not exist', async () => {
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(null);
+      await expect(service.validateCoupon('NONEXISTENT', mockUser)).rejects.toThrow(NotFoundException);
     });
-  });
 
-  describe('findUserCoupons', () => {
-    it('should return an array of coupons', async () => {
-      const mockCoupons = [mockCoupon];
-      jest.spyOn(couponRepository, 'find').mockResolvedValue(mockCoupons);
-
-      const result = await service.findUserCoupons(mockUser.id);
-
-      expect(result).toEqual(mockCoupons);
-      expect(couponRepository.find).toHaveBeenCalledWith({
-        where: [{ buyer: { id: mockUser.id } }, { recipient: { id: mockUser.id } }],
-        relations: ['owner', 'couponProduct'],
-      });
+    it('should throw BadRequestException if stacking is attempted', async () => {
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(mockCoupon);
+      await expect(service.validateCoupon('SAVE10', mockUser, 'OTHERCODE')).rejects.toThrow(BadRequestException);
     });
-  });
 
-  describe('findCouponByCode', () => {
-    it('should return a coupon', async () => {
-      jest.spyOn(couponRepository, 'findOne').mockResolvedValue(mockCoupon);
+    it('should throw BadRequestException if coupon is expired', async () => {
+      const expiredCoupon = { ...mockCoupon, expiresAt: new Date(Date.now() - 10000) };
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(expiredCoupon as Coupon);
+      await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
+    });
 
-      const result = await service.findCouponByCode('TESTCODE');
+    it('should throw BadRequestException if campaign is not active', async () => {
+      const campaign = { status: MarketingCampaignStatus.DRAFT } as MarketingCampaign;
+      const couponWithCampaign = { ...mockCoupon, campaign };
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(couponWithCampaign as Coupon);
+      await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
+    });
 
+    it('should throw BadRequestException if usage limit is reached', async () => {
+      const limitedCoupon = { ...mockCoupon, usageLimit: 5 };
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(limitedCoupon as Coupon);
+      jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(5);
+      await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should throw BadRequestException if per-user limit is reached', async () => {
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(mockCoupon);
+      jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(1); // Already used once
+      await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
+    });
+
+    it('should return coupon if valid', async () => {
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(mockCoupon);
+      jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
+      const result = await service.validateCoupon('SAVE10', mockUser);
       expect(result).toEqual(mockCoupon);
-      expect(couponRepository.findOne).toHaveBeenCalledWith({
-        where: { code: 'TESTCODE' },
-        relations: ['couponProduct', 'transactions', 'owner'],
-      });
     });
-  });
 
-  describe('verifyAndCompletePurchase', () => {
-    it('should verify a stripe payment and create a new coupon', async () => {
-      const createCouponDto: CreateCouponDto = {
-        couponProductId: '1',
-        amount: 10,
-      };
-      const verifyDto: VerifyCouponPurchaseDto = {
-        purchaseDetails: createCouponDto,
-        paymentProvider: PaymentMethod.STRIPE,
-        transactionId: 'pi_123',
-      };
-      jest.spyOn(couponProductRepository, 'findOne').mockResolvedValue(mockCouponProduct);
-      jest.spyOn(paymentProviderService, 'verifyStripePaymentIntent').mockResolvedValue({
-        ok: true,
-      } as any);
+    it('should throw BadRequestException if Hyperlocal campaign postal code does not match', async () => {
+      const campaign = {
+        type: MarketingCampaignType.HYPERLOCAL,
+        status: MarketingCampaignStatus.ACTIVE,
+        targetPostalCodes: ['SW1A', 'W1B'],
+      } as MarketingCampaign;
+      const coupon = { ...mockCoupon, campaign };
+      
+      jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
+      jest.spyOn(addressRepo, 'findOne').mockResolvedValue({ postalCode: 'E1 6AN' } as ShippingAddress);
+      jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
 
-      const result = await service.verifyAndCompletePurchase(verifyDto, mockUser.id);
+      await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
+    });
 
-      expect(result).toEqual(mockCoupon);
-      expect(couponProductRepository.findOne).toHaveBeenCalledWith({
-        where: { id: '1', isEnabled: true },
-        relations: ['user'],
-      });
-      expect(paymentProviderService.verifyStripePaymentIntent).toHaveBeenCalledWith(
-        'pi_123',
-        10,
-        'GBP',
-      );
-      expect(couponRepository.create).toHaveBeenCalled();
-      expect(couponRepository.save).toHaveBeenCalledWith(mockCoupon);
-      expect(walletService.creditEarning).toHaveBeenCalled();
-      expect(couponTransactionService.createTransaction).toHaveBeenCalled();
+    it('should succeed if Hyperlocal campaign postal code matches (prefix)', async () => {
+        const campaign = {
+          type: MarketingCampaignType.HYPERLOCAL,
+          status: MarketingCampaignStatus.ACTIVE,
+          targetPostalCodes: ['SW1A'],
+        } as MarketingCampaign;
+        const coupon = { ...mockCoupon, campaign };
+        
+        jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
+        jest.spyOn(addressRepo, 'findOne').mockResolvedValue({ postalCode: 'SW1A 1AA' } as ShippingAddress);
+        jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
+  
+        const result = await service.validateCoupon('SAVE10', mockUser);
+        expect(result).toEqual(coupon);
+    });
+
+    it('should throw BadRequestException if Business coupon creator lacks capability', async () => {
+        const businessUser = { id: 'bus-user-1' } as User;
+        const business = { user: businessUser } as Business;
+        const coupon = { ...mockCoupon, sourceType: CouponSourceType.BUSINESS, business };
+        
+        jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
+        jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
+        jest.spyOn(capabilityService, 'checkPermission').mockRejectedValue(new ForbiddenException());
+
+        await expect(service.validateCoupon('SAVE10', mockUser)).rejects.toThrow(BadRequestException);
     });
   });
 });
