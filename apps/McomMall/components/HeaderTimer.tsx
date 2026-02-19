@@ -20,16 +20,20 @@ export const HeaderTimer = () => {
     const activeTimer = useMemo(() => {
         if (!allTimers || allTimers.length === 0) return null;
 
-        // 1. Check for Active Trial Timer
-        const trialTimer = allTimers.find(t => t.type === ActivityTimerType.TRIAL && !t.completedAt);
-        if (trialTimer) return trialTimer;
+        const now = new Date().getTime();
 
-        // 2. Find the earliest expiring General Timer
-        const generalTimers = allTimers
-            .filter(t => t.type === ActivityTimerType.GENERAL && !t.completedAt)
+        // 1. For Trial Accounts: Prioritize the Global Trial (latest expiring TRIAL timer)
+        const trialTimers = allTimers.filter(t => t.type === ActivityTimerType.TRIAL && !t.completedAt);
+        if (trialTimers.length > 0) {
+            return [...trialTimers].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime())[0];
+        }
+
+        // 2. Otherwise: Find the absolute earliest expiring timer that hasn't passed yet
+        const expiringSoon = allTimers
+            .filter(t => t.expiresAt && new Date(t.expiresAt).getTime() > now && !t.completedAt)
             .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
 
-        return generalTimers[0] || null;
+        return expiringSoon[0] || allTimers[0];
     }, [allTimers]);
 
     useEffect(() => {
@@ -59,7 +63,7 @@ export const HeaderTimer = () => {
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
 
-        if (days > 0) return `${days}d ${hours}h`;
+        if (days > 0) return `${days}d ${hours}h ${minutes}m`;
         return `${hours}h ${minutes}m ${seconds}s`;
     };
 
@@ -80,10 +84,13 @@ export const HeaderTimer = () => {
                 </div>
                 <div className="flex flex-col">
                     <span className={cn(
-                        "text-[10px] uppercase font-black leading-none tracking-wider",
+                        "text-[10px] uppercase font-black leading-none tracking-wider truncate max-w-[120px]",
                         isExpiringSoon ? "text-red-300" : "text-orange-300"
                     )}>
-                        {isTrial ? "Trial Ends In" : "Task Due In"}
+                        {isTrial && timeLeft === 0
+                            ? "Trial has ended"
+                            : ((activeTimer as any).name || activeTimer.tasks[0]?.title || (isTrial ? "Trial Ends In" : "Task Due In"))
+                        }
                     </span>
                     <span className="text-sm font-mono font-bold leading-none mt-0.5 whitespace-nowrap">
                         {formatTime(timeLeft)}

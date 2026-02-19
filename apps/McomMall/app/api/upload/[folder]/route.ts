@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary, UploadApiResponse } from 'cloudinary';
-import multer from 'multer';
-import { Readable } from 'stream';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -16,9 +14,7 @@ console.log('Cloudinary Config:', {
   api_secret: process.env.CLOUDINARY_API_SECRET ? '******' : 'MISSING',
 });
 
-// Configure Multer for memory storage (keeps parity with existing route)
-const storage = multer.memoryStorage();
-multer({ storage });
+
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ folder: string }> }) {
   try {

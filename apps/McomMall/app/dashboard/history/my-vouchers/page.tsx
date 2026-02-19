@@ -22,60 +22,50 @@ export default function MyVouchersPage() {
     },
   };
 
-  if (isLoading) {
-    return (
-      <div className="flex justify-center items-center h-96">
-        <Loader2 className="animate-spin text-orange-500" size={48} />
-      </div>
-    );
-  }
-
-  if (isError) {
-    return (
-      <div className="container mx-auto px-4 py-8">
-        <Alert variant="destructive">
-          <Terminal className="h-4 w-4" />
-          <AlertTitle>Error</AlertTitle>
-          <AlertDescription>Error loading your vouchers. Please try again later.</AlertDescription>
-        </Alert>
-      </div>
-    );
-  }
-
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
       <main className="container mx-auto px-4 py-8">
-        <header className="mb-12">
-          <h1 className="text-4xl font-black text-slate-800 tracking-tight">My Vouchers</h1>
-          <p className="text-slate-500 font-bold text-sm mt-2 uppercase tracking-widest">
-            Home &gt; Dashboard &gt; History
-          </p>
+        <header className="mb-8 flex flex-col items-start justify-between gap-4 md:flex-row md:items-center">
+          <div>
+            <h1 className="text-4xl font-bold text-slate-800">
+              My Vouchers
+            </h1>
+            <p className="text-sm text-slate-500">
+              Home &gt; Dashboard &gt; History &gt; Vouchers
+            </p>
+          </div>
         </header>
 
-        <div>
-          {myVouchers && myVouchers.length === 0 && (
-            <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
-              <Ticket className="mx-auto text-gray-200 mb-6" size={64} />
-              <h3 className="text-2xl font-black text-gray-900">No Vouchers Yet</h3>
-              <p className="text-gray-500 font-bold mt-2">You haven't purchased any vouchers.</p>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {isLoading && (
+            <div className="col-span-full py-20 text-center text-slate-500 font-bold">
+              <Loader2 className="animate-spin text-orange-500 mx-auto mb-4" size={48} />
+              Loading your vouchers...
             </div>
           )}
-          {myVouchers && myVouchers.length > 0 && (
-            <motion.div
-              variants={containerVariants}
-              initial="hidden"
-              animate="visible"
-              className="grid grid-cols-1 md:grid-cols-2 gap-12"
-            >
-              {myVouchers.map(voucher => (
-                <HistoryVoucher
-                  key={voucher.id}
-                  voucher={voucher}
-                  onShare={(id) => handleShare('voucher', id)}
-                  isShared={copiedLink === voucher.id}
-                />
-              ))}
-            </motion.div>
+          {isError && (
+            <div className="col-span-full py-20">
+              <Alert variant="destructive">
+                <Terminal className="h-4 w-4" />
+                <AlertTitle>Error</AlertTitle>
+                <AlertDescription>Error loading your vouchers. Please try again later.</AlertDescription>
+              </Alert>
+            </div>
+          )}
+          {myVouchers?.map(voucher => (
+            <HistoryVoucher
+              key={voucher.id}
+              voucher={voucher}
+              onShare={(id) => handleShare('voucher', id)}
+              isShared={copiedLink === voucher.id}
+            />
+          ))}
+          {!isLoading && myVouchers?.length === 0 && (
+            <div className="col-span-full py-20 text-center text-slate-500 bg-white rounded-3xl border-2 border-dashed border-gray-200">
+              <Ticket className="mx-auto mb-4 text-gray-300" size={48} />
+              <p className="font-bold">No vouchers found.</p>
+              <p className="text-xs mt-1">You haven't purchased any vouchers yet.</p>
+            </div>
           )}
         </div>
       </main>

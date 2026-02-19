@@ -72,6 +72,7 @@ export interface MyPurchase {
   template?: {
     id: string;
     name: string;
+    description?: string;
     backgroundImageUrl?: string;
     backgroundColor?: string;
     textColor?: string;

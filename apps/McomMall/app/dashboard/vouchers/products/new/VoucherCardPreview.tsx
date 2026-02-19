@@ -101,7 +101,7 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
                 <div className="w-1 h-1 bg-white" />
               </div>
               <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-900">
-                YOUR COMPANY NAME
+                {name || 'Voucher Name'}
               </span>
             </div>
             <p className="text-[7px] text-gray-400 font-bold tracking-widest pl-5 uppercase">Digital Marketing</p>
@@ -126,7 +126,7 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
 
         <div className="relative z-10 pl-4 mt-auto flex items-center justify-between pointer-events-none">
           <div className="px-4 py-1.5 border border-gray-900 rounded-full">
-            <span className="text-[8px] font-black uppercase tracking-widest text-gray-900">YOUR COMPANY NAME</span>
+            <span className="text-[8px] font-black uppercase tracking-widest text-gray-900">{name || 'Voucher Name'}</span>
           </div>
           <div className="p-2 rounded-xl bg-gray-50 text-gray-300">
             <Tag size={16} />

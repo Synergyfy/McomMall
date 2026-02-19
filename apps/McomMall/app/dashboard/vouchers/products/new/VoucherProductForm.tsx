@@ -62,6 +62,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     formState: { errors, isSubmitting: formIsSubmitting },
   } = form;
 
+  const id = watch('id');
   const fixedAmounts = watch('fixedAmounts') || [];
   const allowCustomAmount = watch('allowCustomAmount');
 
@@ -93,6 +94,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
     <div
       className="grid grid-cols-1 gap-6 sm:grid-cols-2"
     >
+      <input type="hidden" {...register('id')} />
       <div className="sm:col-span-2">
         <div className="flex items-center space-x-2">
           <Label htmlFor="name">Name</Label>
@@ -303,7 +305,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
           name="usage"
           control={control}
           render={({ field }) => (
-            <Select onValueChange={field.onChange} defaultValue={field.value}>
+            <Select onValueChange={field.onChange} value={field.value}>
               <SelectTrigger className="mt-1">
                 <SelectValue placeholder="Select usage type" />
               </SelectTrigger>
@@ -368,8 +370,8 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Button type="submit" disabled={isSubmitting || formIsSubmitting} className="w-full">
           {isSubmitting
             ? 'Submitting...'
-            : form.getValues('id')
-              ? 'Update Product'
+            : id
+              ? 'Edit Product'
               : 'Create Product'}
         </Button>
       </div>

@@ -2,7 +2,7 @@
 
 import React, { useRef, useState } from 'react';
 import { useParams, useRouter } from 'next/navigation';
-import { useGetMyPurchaseById } from '@/service/gift-card/hook';
+import { useGetMyPurchases } from '@/service/gift-card/hook';
 import {
     ChevronLeft,
     Copy,
@@ -18,26 +18,63 @@ import {
     Phone,
     ArrowRight,
     Sparkles,
-    Info
+    Info,
+    Share2
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { CURRENCY } from '@/lib/utils';
 import { toast } from 'sonner';
 import QRCode from 'react-qr-code';
 import * as htmlToImage from 'html-to-image';
 import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const PinstripePattern = () => (
+    <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg" className="absolute inset-0 opacity-10 pointer-events-none">
+        <defs>
+            <pattern id="pinstripe-dash" patternUnits="userSpaceOnUse" width="100%" height="4">
+                <line x1="0" y1="0" x2="100%" y2="0" stroke="rgba(255,255,255,0.2)" strokeWidth="1" />
+            </pattern>
+        </defs>
+        <rect width="100%" height="100%" fill="url(#pinstripe-dash)" />
+    </svg>
+);
+
+const GoldenHistoryRibbon = () => (
+    <div className="absolute bottom-[28%] left-0 w-full h-8 z-10 pointer-events-none">
+        <div className="w-full h-full bg-gradient-to-b from-amber-300 via-yellow-500 to-amber-600 shadow-[0_4px_12px_rgba(0,0,0,0.3)] opacity-90" />
+    </div>
+);
+
+const GoldenHistoryBow = () => (
+    <div className="absolute bottom-[28%] left-1/2 -translate-x-1/2 -translate-y-[calc(50%-4px)] z-20 scale-[0.6] pointer-events-none">
+        <div className="relative">
+            {/* Bow Tails */}
+            <div className="absolute top-8 -left-8 w-10 h-16 bg-gradient-to-b from-yellow-600 to-yellow-800 shadow-xl skew-x-[-15deg]" style={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 50% 85%, 0% 100%)' }} />
+            <div className="absolute top-8 -right-8 w-10 h-16 bg-gradient-to-b from-yellow-600 to-yellow-800 shadow-xl skew-x-[15deg]" style={{ clipPath: 'polygon(0% 0%, 100% 0%, 100% 100%, 50% 85%, 0% 100%)' }} />
+
+            {/* Main Bow Loops */}
+            <div className="absolute -left-12 top-0 w-24 h-16 border-[5px] border-yellow-500/30 rounded-[2.5rem] bg-gradient-to-br from-yellow-300 via-yellow-500 to-yellow-700 rotate-[-15deg] shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
+            <div className="absolute -right-12 top-0 w-24 h-16 border-[5px] border-yellow-500/30 rounded-[2.5rem] bg-gradient-to-bl from-yellow-300 via-yellow-500 to-yellow-700 rotate-[15deg] shadow-[0_10px_20px_rgba(0,0,0,0.3)]" />
+
+            {/* Center Knot */}
+            <div className="relative w-12 h-12 bg-gradient-to-br from-yellow-200 via-yellow-500 to-yellow-700 rounded-full shadow-2xl z-10 border-2 border-yellow-400" />
+        </div>
+    </div>
+);
+
 export default function GiftCardDetailPage() {
     const params = useParams();
     const id = Array.isArray(params.id) ? params.id[0] : params.id;
     const router = useRouter();
-    const { data: purchase, isLoading, isError } = useGetMyPurchaseById(id as string);
+    const { data: purchases, isLoading, isError } = useGetMyPurchases();
+    const purchase = purchases?.find(p => p.id === id);
+
 
     const cardRef = useRef<HTMLDivElement>(null);
     const [showQR, setShowQR] = useState(false);
     const [copied, setCopied] = useState(false);
+    const [isShared, setIsShared] = useState(false);
 
     const handleCopy = () => {
         if (!purchase) return;
@@ -45,6 +82,28 @@ export default function GiftCardDetailPage() {
         setCopied(true);
         toast.success('Code copied to clipboard!');
         setTimeout(() => setCopied(false), 2000);
+    };
+
+    const handleShare = async () => {
+        if (!purchase) return;
+        try {
+            if (navigator.share) {
+                await navigator.share({
+                    title: 'Mcom Gift Card',
+                    text: `Check out this gift card from ${purchase.purchaseBusiness?.businessName}`,
+                    url: window.location.href,
+                });
+                setIsShared(true);
+                setTimeout(() => setIsShared(false), 3000);
+            } else {
+                throw new Error('Web Share API not supported');
+            }
+        } catch (err) {
+            navigator.clipboard.writeText(window.location.href);
+            toast.success('Link copied to clipboard!');
+            setIsShared(true);
+            setTimeout(() => setIsShared(false), 2000);
+        }
     };
 
     const handleExport = () => {
@@ -71,7 +130,24 @@ export default function GiftCardDetailPage() {
         );
     }
 
-    if (isError || !purchase) {
+    if (isError) {
+        return (
+            <div className="min-h-screen flex flex-col items-center justify-center bg-[#fcfaf8] p-4 text-center">
+                <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 max-w-md w-full shadow-2xl shadow-red-500/5">
+                    <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6 text-red-500">
+                        <Info size={32} />
+                    </div>
+                    <h2 className="text-2xl font-black text-gray-900 mb-2">Failed to Load</h2>
+                    <p className="text-gray-500 mb-8 font-medium">We couldn't retrieve your gift cards. Please try again later.</p>
+                    <Button onClick={() => router.push('/dashboard/history/gift-card')} className="w-full h-14 bg-black hover:bg-gray-800 text-white rounded-2xl font-black uppercase tracking-widest text-xs">
+                        Return to History
+                    </Button>
+                </div>
+            </div>
+        );
+    }
+
+    if (!purchase) {
         return (
             <div className="min-h-screen flex flex-col items-center justify-center bg-[#fcfaf8] p-4 text-center">
                 <div className="bg-red-50 p-8 rounded-[2.5rem] border border-red-100 max-w-md w-full shadow-2xl shadow-red-500/5">
@@ -116,7 +192,7 @@ export default function GiftCardDetailPage() {
 
                     {/* Card Visual Column */}
                     <div className="space-y-8 lg:sticky lg:top-32 text-center lg:text-left">
-                        <div className="relative inline-block w-full max-w-[450px]">
+                        <div className="relative inline-block w-full max-w-[380px]">
                             {/* Premium Glow Background */}
                             <div className="absolute -inset-4 bg-gradient-to-tr from-[#f48c25]/30 via-transparent to-[#f48c25]/10 blur-3xl opacity-50" />
 
@@ -129,36 +205,50 @@ export default function GiftCardDetailPage() {
                                         src={purchase.template.backgroundImageUrl}
                                         alt="Gift Card"
                                         fill
-                                        className="object-cover opacity-85 group-hover:scale-110 transition-transform duration-700"
+                                        className="object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
                                     />
                                 ) : (
-                                    <div className="absolute inset-0 bg-gradient-to-br from-gray-900 to-black" />
+                                    <div className="absolute inset-0 bg-gradient-to-br from-[#800000] to-[#4a0000]" />
                                 )}
 
-                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/20" />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-black/20" />
+                                <PinstripePattern />
+
+                                <GoldenHistoryRibbon />
+                                <GoldenHistoryBow />
 
                                 {/* Card Branding */}
-                                <div className="absolute top-8 inset-x-8 flex justify-between items-start">
-                                    <div className="space-y-1">
-                                        <h3 className="text-white font-black text-xl tracking-tight drop-shadow-2xl uppercase italic">
-                                            {purchase.purchaseBusiness?.businessName}
-                                        </h3>
-                                        <p className="text-white/50 text-[8px] font-bold uppercase tracking-[0.4em]">Official Digital Asset</p>
+                                <div className="absolute top-8 inset-x-8 z-30 text-left">
+                                    <div className="space-y-1 flex justify-between items-start">
+                                        <div className="space-y-1">
+                                            <h3 className="text-yellow-400 font-black text-4xl tracking-tighter drop-shadow-2xl uppercase italic leading-[0.8]">
+                                                GIFT CARD
+                                            </h3>
+                                            <p className="text-white font-bold text-[11px] max-w-[240px] leading-tight mt-2 opacity-90">
+                                                {purchase.template?.description || 'This premium gift card provides access to exclusive mall services and products.'}
+                                            </p>
+                                            <p className="text-white/40 text-[8px] font-black uppercase tracking-[0.4em] mt-3">
+                                                Verified • {purchase.purchaseBusiness?.businessName}
+                                            </p>
+                                        </div>
+
+                                        {/* Integrated QR Code */}
+                                        <div className="bg-white/10 backdrop-blur-2xl p-2 rounded-[1.5rem] border border-white/20 shadow-2xl">
+                                            <div className="bg-white p-1 rounded-xl">
+                                                <QRCode value={purchase.code} size={56} />
+                                            </div>
+                                        </div>
                                     </div>
-                                    <ShieldCheck className="text-white/30" size={20} />
                                 </div>
 
-                                {/* Chip Meta */}
-                                <div className="absolute top-24 left-8 w-12 h-9 bg-gradient-to-br from-[#ffd700] via-[#f48c25] to-[#b8860b] rounded-xl opacity-90 border border-white/40 shadow-xl" />
-
                                 {/* Main Value & Identifier */}
-                                <div className="absolute inset-x-8 bottom-8 flex justify-between items-end">
+                                <div className="absolute inset-x-8 bottom-8 flex justify-between items-end z-30 text-left">
                                     <div className="space-y-1">
                                         <span className="text-[8px] font-black text-white/40 uppercase tracking-[0.3em] block">Stored Value</span>
-                                        <p className="text-4xl font-black text-white leading-none tracking-tighter drop-shadow-md">
+                                        <p className="text-5xl font-black text-white leading-none tracking-tighter drop-shadow-md">
                                             {purchase.currency}{Number(purchase.currentBalance).toFixed(2)}
                                         </p>
-                                        <div className="flex items-center gap-3 mt-5 bg-white/10 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
+                                        <div className="flex items-center gap-3 mt-6 bg-white/10 backdrop-blur-xl px-4 py-1.5 rounded-full border border-white/10 shadow-lg">
                                             <span className="text-white font-mono text-xs tracking-[0.3em] font-bold">{purchase.code}</span>
                                             <button onClick={handleCopy} className="text-white/60 hover:text-white transition-all transform active:scale-90">
                                                 {copied ? <Check size={14} className="text-green-400" /> : <Copy size={14} />}
@@ -166,53 +256,28 @@ export default function GiftCardDetailPage() {
                                         </div>
                                     </div>
                                     <div className="text-right">
-                                        <div className="w-12 h-12 bg-white/10 backdrop-blur-md rounded-2xl flex items-center justify-center border border-white/10 ml-auto mb-3">
-                                            <Gift className="text-[#f48c25]" size={24} />
-                                        </div>
+                                        <Sparkles className="text-yellow-400 mb-3 ml-auto drop-shadow-[0_0_12px_rgba(250,204,21,0.5)]" size={32} />
                                         <span className="text-[7px] font-black text-white/30 uppercase tracking-[0.3em]">Verified Product</span>
                                     </div>
                                 </div>
-
-                                {/* QR Modal Overlay */}
-                                <AnimatePresence>
-                                    {showQR && (
-                                        <motion.div
-                                            initial={{ opacity: 0, scale: 0.95 }}
-                                            animate={{ opacity: 1, scale: 1 }}
-                                            exit={{ opacity: 0, scale: 0.95 }}
-                                            className="absolute inset-0 bg-black/98 backdrop-blur-2xl flex flex-col items-center justify-center p-8 z-10"
-                                        >
-                                            <div className="bg-white p-6 rounded-[2.5rem] shadow-[0_0_80px_rgba(255,255,255,0.1)]">
-                                                <QRCode value={purchase.code} size={180} />
-                                            </div>
-                                            <p className="text-white font-mono text-lg tracking-[0.5em] mt-8 font-black">{purchase.code}</p>
-                                            <button
-                                                onClick={() => setShowQR(false)}
-                                                className="mt-8 px-8 py-3 bg-white/5 hover:bg-white/10 rounded-full text-white/60 hover:text-white uppercase text-[9px] font-black tracking-[0.3em] transition-all border border-white/10"
-                                            >
-                                                Deactivate Scanner
-                                            </button>
-                                        </motion.div>
-                                    )}
-                                </AnimatePresence>
                             </div>
                         </div>
 
                         {/* Visual Action Buttons */}
-                        <div className="flex flex-wrap gap-4 pt-4 justify-center lg:justify-start">
-                            <Button
-                                onClick={() => setShowQR(true)}
-                                variant="outline"
-                                className="h-16 px-8 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] text-[#1c140d] dark:text-white hover:bg-[#1c140d] hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm"
-                            >
-                                <QrCode size={20} className="mr-3" /> Display QR Code
-                            </Button>
+                        <div className="flex flex-wrap gap-4 pt-10 justify-center lg:justify-start">
                             <Button
                                 onClick={handleExport}
                                 variant="outline"
-                                className="h-16 w-16 p-0 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] hover:text-[#f48c25] transition-all"
+                                className="h-16 flex-1 min-w-[200px] rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] hover:bg-black hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm flex items-center justify-center"
                             >
-                                <Download size={22} />
+                                <Download size={22} className="mr-3" /> Download Voucher
+                            </Button>
+                            <Button
+                                onClick={handleShare}
+                                variant="outline"
+                                className={`h-16 w-16 p-0 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'hover:border-blue-500 hover:text-blue-500'}`}
+                            >
+                                {isShared ? <Check size={22} /> : <Share2 size={22} />}
                             </Button>
                         </div>
                     </div>
@@ -238,7 +303,7 @@ export default function GiftCardDetailPage() {
                                         <span className="text-[10px] font-black uppercase tracking-widest">Business Owner</span>
                                     </div>
                                     <p className="text-[#1c140d] dark:text-white font-bold text-lg">
-                                        {purchase.purchaseBusiness?.user.firstName} {purchase.purchaseBusiness?.user.lastName}
+                                        {purchase.purchaseBusiness?.legalName || purchase.purchaseBusiness?.businessName || '—'}
                                     </p>
                                 </div>
 
@@ -268,7 +333,7 @@ export default function GiftCardDetailPage() {
                             </div>
 
                             <div className="mt-10 pt-10 border-t border-[#e8dbce]/50 dark:border-[#4a3b2f]/50">
-                                <Button className="w-full h-14 bg-[#1c140d] dark:bg-[#f48c25] hover:opacity-90 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-[#1c140d]/20 transition-all">
+                                <Button onClick={() => router.push('/marketplace')} className="w-full h-14 bg-[#1c140d] dark:bg-[#f48c25] hover:opacity-90 rounded-2xl flex items-center justify-center gap-3 font-black uppercase tracking-widest text-[10px] shadow-lg shadow-[#1c140d]/20 transition-all">
                                     Visit Store Marketplace <ArrowRight size={18} />
                                 </Button>
                             </div>

@@ -14,14 +14,12 @@ interface TierCardProps {
   tier: Tier;
   billingCycle?: 'monthly' | 'quarterly' | 'annual';
   onSelect: (tier: Tier) => void;
-  onStartTrial?: (tier: Tier) => void;
 }
 
 export default function TierCard({
   tier,
   billingCycle = 'monthly', // Default to monthly if not provided
   onSelect,
-  onStartTrial,
 }: TierCardProps) {
   let price = 0;
   let cycleLabel = '';
@@ -149,17 +147,8 @@ export default function TierCard({
             className="w-full text-white hover:opacity-90 transition-opacity"
             style={{ backgroundColor: themeColor }}
           >
-            {onStartTrial ? 'Pay Now' : 'Choose Plan'}
+            Choose Plan
           </Button>
-          {onStartTrial && (
-            <Button
-              onClick={() => onStartTrial(tier)}
-              className="w-full bg-white hover:bg-gray-50 transition-colors border-2"
-              style={{ borderColor: themeColor, color: themeColor }}
-            >
-              Start 7-Day Trial
-            </Button>
-          )}
         </CardFooter>
       </Card>
     </motion.div>

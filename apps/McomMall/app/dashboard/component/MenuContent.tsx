@@ -2,15 +2,16 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useDispatch, useSelector } from 'react-redux';
+import { useDispatch } from 'react-redux';
 import { useRouter, usePathname } from 'next/navigation';
 import { motion, AnimatePresence } from 'framer-motion';
 import { ChevronDown, Lock } from 'lucide-react';
-import { RootState } from '@/service/store/store';
+import { useAppSelector } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
 import { useGetTiers } from '@/service/tiers/hook';
 import { useGetTrialStatus } from '@/service/payments/hooks';
 import { useGetMyMembership } from '@/service/membership/hooks';
+import { useGetCapabilityEffectiveConfig, useGetCapabilityUsage } from '@/service/system/hook';
 import {
   Tooltip,
   TooltipContent,
@@ -34,19 +35,22 @@ interface MenuContentProps {
 }
 
 export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
-  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
+  const { userRole, packageInfo } = useAppSelector((state) => state.auth);
   const { data: tiers } = useGetTiers();
   const { data: trialStatus } = useGetTrialStatus();
   const { data: membership } = useGetMyMembership();
+  const { data: capConfig } = useGetCapabilityEffectiveConfig();
+  const { data: usage } = useGetCapabilityUsage();
+
+  const currentTier = tiers?.find(
+    t => t.name.toLowerCase() === packageInfo?.planType?.toLowerCase()
+  );
+
   const dispatch = useDispatch();
   const router = useRouter();
   const pathname = usePathname();
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
-  );
-
-  const currentTier = tiers?.find(
-    t => t.name.toLowerCase() === packageInfo?.planType?.toLowerCase()
   );
 
   useEffect(() => {
@@ -78,10 +82,10 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
     }
   };
 
-  const isAllowed = (title: string) => {
-    if (userRole === 'customer') return true;
+  const getLockInfo = (title: string) => {
+    if (userRole === 'customer') return { allowed: true };
 
-    // For owners, if no active membership, lock everything except essential account pages
+    // 1. Basic Membership Check
     if (userRole === 'owner' && !membership?.isActive) {
       const allowedTitles = [
         'Dashboard',
@@ -90,17 +94,44 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
         'Logout',
         'Settings',
       ];
-      return allowedTitles.includes(title);
+      if (!allowedTitles.includes(title)) {
+        return { allowed: false, reason: 'Active membership required' };
+      }
     }
 
-    if (!currentTier) return true; // Default to true if tier not loaded yet
+    // 2. Capability Quota Check
+    if (capConfig?.quotas && usage) {
+      const q = capConfig.quotas;
+      const u = usage;
 
-    const quotas = currentTier.configuration?.quotas;
-    if (title === 'Product' && !quotas?.allowProductListing) return false;
-    if (title === 'Service' && !quotas?.allowServiceListing) return false;
-    // Add more restrictions as needed
-    return true;
+      if ((title === 'Add listing' || title === 'My listings' || title === 'Listing') && u.currentListings >= q.maxListings) {
+        return { allowed: false, reason: "You've maxed out, upgrade to a higher tier", isMaxed: true };
+      }
+      if ((title === 'Product' || title === 'Add Product') && u.currentProducts >= q.maxProducts) {
+        return { allowed: false, reason: "You've maxed out, upgrade to a higher tier", isMaxed: true };
+      }
+      if ((title === 'Service' || title === 'Add Service') && u.currentServices >= q.maxServices) {
+        return { allowed: false, reason: "You've maxed out, upgrade to a higher tier", isMaxed: true };
+      }
+      if ((title === 'Coupons' || title === 'Coupon Products' || title === 'Voucher' || title === 'Coupon-Voucher') && u.currentCoupons >= q.maxCouponTemplates) {
+        return { allowed: false, reason: "You've maxed out, upgrade to a higher tier", isMaxed: true };
+      }
+      if ((title === 'Gift Card' || title === 'Templates') && u.currentGiftCards >= q.maxGiftCardTemplates) {
+        return { allowed: false, reason: "You've maxed out, upgrade to a higher tier", isMaxed: true };
+      }
+    }
+
+    // 3. Fallback to current tier configuration
+    if (currentTier) {
+      const quotas = currentTier.configuration?.quotas;
+      if (title === 'Product' && quotas && !quotas.allowProductListing) return { allowed: false, reason: 'Feature not included in your tier' };
+      if (title === 'Service' && quotas && !quotas.allowServiceListing) return { allowed: false, reason: 'Feature not included in your tier' };
+    }
+
+    return { allowed: true };
   };
+
+  const isAllowed = (title: string) => getLockInfo(title).allowed;
 
   const customerListingMenu = listingMenuItems.filter(item =>
     ['Reviews', 'Bookmarks'].includes(item.title)
@@ -158,7 +189,8 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
   const renderMenuItems = (items: MenuItem[]) => (
     <ul className="space-y-1">
       {items.map((item, i) => {
-        const allowed = isAllowed(item.title);
+        const lockInfo = getLockInfo(item.title);
+        const allowed = lockInfo.allowed;
         const isParentActive =
           item.subMenu?.some(subItem => pathname.startsWith(subItem.href)) ??
           false;
@@ -241,8 +273,21 @@ export const MenuContent = ({ onLinkClick }: MenuContentProps) => {
                 <TooltipTrigger asChild>
                   {content}
                 </TooltipTrigger>
-                <TooltipContent side="right">
-                  <p>Upgrade to unlock {item.title} listings</p>
+                <TooltipContent side="right" className="bg-slate-900 text-white border-slate-800 p-3 shadow-xl max-w-[200px]">
+                  <div className="flex flex-col gap-2">
+                    <p className="text-sm font-medium leading-tight">
+                      {lockInfo.reason || `Upgrade to unlock ${item.title}`}
+                    </p>
+                    {lockInfo.isMaxed && (
+                      <Link
+                        href="/dashboard/my-subscription"
+                        className="text-orange-400 text-xs font-bold hover:text-orange-300 transition-colors uppercase tracking-wider flex items-center gap-1"
+                        onClick={onLinkClick}
+                      >
+                        Upgrade Now <ChevronDown className="w-3 h-3 rotate-270" />
+                      </Link>
+                    )}
+                  </div>
                 </TooltipContent>
               </Tooltip>
             </TooltipProvider>

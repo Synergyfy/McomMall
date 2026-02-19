@@ -1,7 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { v2 as cloudinary } from 'cloudinary';
-import multer from 'multer';
-import { Readable } from 'stream';
 
 // Configure Cloudinary
 cloudinary.config({
@@ -10,9 +8,7 @@ cloudinary.config({
   api_secret: process.env.CLOUDINARY_API_SECRET,
 });
 
-// Configure Multer for memory storage
-const storage = multer.memoryStorage();
-multer({ storage });
+
 
 export async function POST(req: NextRequest) {
   try {
