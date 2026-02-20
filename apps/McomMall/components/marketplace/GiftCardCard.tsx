@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PromotionalItem } from '@/lib/listing-data';
+import { useState, useEffect } from 'react';
 
 interface GiftCardCardProps {
     giftCard: PromotionalItem;
     viewMode?: 'grid' | 'list';
+    hidePrice?: boolean;
 }
 
 const gradientThemes = [
@@ -36,7 +38,18 @@ const GoldenBow = () => (
     </div>
 );
 
-export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCardProps) {
+export default function GiftCardCard({ giftCard, viewMode = 'grid', hidePrice = false }: GiftCardCardProps) {
+    const [localLogo, setLocalLogo] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (giftCard.id) {
+            const storedLogo = localStorage.getItem(`gift-card-logo-${giftCard.id}`);
+            if (storedLogo) {
+                setLocalLogo(storedLogo);
+            }
+        }
+    }, [giftCard.id]);
+
     // Select gradient based on ID
     const idNum = typeof giftCard.id === 'number'
         ? giftCard.id
@@ -79,7 +92,13 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                 <div className="relative z-30 h-full flex flex-col justify-between text-white">
                                     <div className="flex justify-between items-start">
                                         <h4 className="text-2xl font-black text-yellow-400 italic">GIFT CARD</h4>
-                                        <Sparkles className="w-5 h-5 text-yellow-300" />
+                                        {localLogo ? (
+                                            <div className="w-10 h-10 bg-white shadow-sm rounded-md p-1 flex items-center justify-center">
+                                                <img src={localLogo} alt="Logo" className="max-w-full max-h-full object-contain mix-blend-multiply" />
+                                            </div>
+                                        ) : (
+                                            <Sparkles className="w-5 h-5 text-yellow-300" />
+                                        )}
                                     </div>
 
                                     <div>
@@ -96,14 +115,16 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                 Premium Gift Card
                             </Badge>
 
-                            <div className="flex items-baseline gap-2">
-                                {hasMultipleAmounts && (
-                                    <span className="text-sm text-gray-500">From</span>
-                                )}
-                                <span className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
-                                    £{Number(minPrice).toFixed(2)}
-                                </span>
-                            </div>
+                            {!hidePrice && (
+                                <div className="flex items-baseline gap-2">
+                                    {hasMultipleAmounts && (
+                                        <span className="text-sm text-gray-500">From</span>
+                                    )}
+                                    <span className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                                        £{Number(minPrice).toFixed(2)}
+                                    </span>
+                                </div>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -139,7 +160,13 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                         <div className="relative z-30 h-full flex flex-col justify-between text-white">
                             <div className="flex justify-between items-start">
                                 <h4 className="text-xl font-black text-yellow-400 italic">GIFT <span className="text-yellow-300">CARD</span></h4>
-                                <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                                {localLogo ? (
+                                    <div className="w-10 h-10 bg-white shadow-sm rounded-md p-1 flex items-center justify-center">
+                                        <img src={localLogo} alt="Logo" className="max-w-full max-h-full object-contain mix-blend-multiply" />
+                                    </div>
+                                ) : (
+                                    <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                                )}
                             </div>
 
                             <div>
@@ -163,14 +190,16 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                 {/* Details Section */}
                 <div className="p-4 mt-auto">
                     {/* Price */}
-                    <div className="flex items-baseline gap-1 justify-center">
-                        {hasMultipleAmounts && (
-                            <span className="text-xs text-gray-500">From</span>
-                        )}
-                        <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                            £{Number(minPrice).toFixed(2)}
-                        </span>
-                    </div>
+                    {!hidePrice && (
+                        <div className="flex items-baseline gap-1 justify-center">
+                            {hasMultipleAmounts && (
+                                <span className="text-xs text-gray-500">From</span>
+                            )}
+                            <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                                £{Number(minPrice).toFixed(2)}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Decorative corner accent */}

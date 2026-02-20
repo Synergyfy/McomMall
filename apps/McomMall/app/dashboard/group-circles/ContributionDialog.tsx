@@ -21,7 +21,7 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useInitiateGroupCircleContribution, useVerifyGroupCircleContribution } from "@/service/group-circle/hook";
 import { ContributionProvider, InitiateContributionResponse } from "@/service/group-circle/types";
-import StripeProvider from "../../../components/stripe-provider";
+import StripeProvider from "@/components/stripe-provider";
 import { PaymentElement, useStripe, useElements } from "@stripe/react-stripe-js";
 import { PayPalButtons, PayPalScriptProvider } from "@paypal/react-paypal-js";
 
@@ -146,21 +146,8 @@ export function ContributionDialog({
             } else {
                 setStep(2);
             }
-            console.log("API initiation success");
         } catch (error) {
-            console.warn("API initiation failed, mocking for testing:", error);
-            // Simulate API response for UI progression
-            const mockData: InitiateContributionResponse = {
-                clientSecret: provider === 'STRIPE' ? "mock_secret_" + Date.now() : undefined,
-                orderId: provider === 'PAYPAL' ? "MOCK_ORDER_" + Date.now() : undefined
-            };
-            setInitiateData(mockData);
-
-            if (provider === 'MANUAL') {
-                handleVerify("MOCK_MANUAL_TX_" + Date.now());
-            } else {
-                setStep(2);
-            }
+            toast.error("Failed to initiate contribution");
         }
     };
 
@@ -178,11 +165,9 @@ export function ContributionDialog({
                 }
             });
             setStep(3); // Success
-            toast.success("Contribution recorded! (API Success)");
+            toast.success("Contribution recorded successfully!");
         } catch (error) {
-            console.warn("API verification failed, mocking success:", error);
-            setStep(3); // Success
-            toast.success("Contribution recorded! (Mock Success)");
+            toast.error("Failed to verify contribution");
         } finally {
             setIsVerifying(false);
         }
@@ -271,7 +256,7 @@ export function ContributionDialog({
                                 animate={{ opacity: 1, scale: 1 }}
                                 className="space-y-4"
                             >
-                                <StripeProvider clientSecret={initiateData.clientSecret}>
+                                <StripeProvider>
                                     <StripeContributionForm
                                         onSuccess={handleVerify}
                                         onCancel={() => setStep(1)}

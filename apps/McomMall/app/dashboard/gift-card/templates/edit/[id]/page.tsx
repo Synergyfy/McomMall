@@ -17,7 +17,6 @@ import Image from "next/image";
 import { SketchPicker, ColorResult } from 'react-color';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
-import { useGetUserListings } from '@/service/listings/hook';
 import {
   Select,
   SelectContent,
@@ -25,6 +24,11 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select";
+import { useGetAllListings } from '@/service/listings/hook';
+import { useGetGroupCircles } from '@/service/group-circle/hook';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 
 const EditGiftCardTemplatePage = () => {
@@ -44,7 +48,66 @@ const EditGiftCardTemplatePage = () => {
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
 
-  const { data: listings } = useGetUserListings(1, 100);
+  // Spending Locations States & Data
+  const { data: allListingsData } = useGetAllListings({ page: 1, limit: 100 });
+  const { data: groupCirclesData } = useGetGroupCircles({ page: 1, limit: 100 });
+
+  const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+
+  // Load from local storage on mount
+  useEffect(() => {
+    if (id) {
+      const stored = localStorage.getItem(`spending-locations-${id}`);
+      if (stored) {
+        try {
+          setSpendingLocations(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to parse spending locations", e);
+        }
+      }
+    }
+  }, [id]);
+
+  // Combine options
+  const locationOptions = React.useMemo(() => {
+    const opts: any[] = [];
+    if (allListingsData?.data) {
+      allListingsData.data.forEach(b => {
+        opts.push({ id: b.id, label: b.businessName, type: 'Business' });
+      });
+    }
+    if (groupCirclesData?.data) {
+      groupCirclesData.data.forEach(gc => {
+        gc.members.forEach(m => {
+          const contact = m.network;
+          if (contact) {
+            const label = contact.businessName || contact.fullName;
+            if (!opts.find(o => o.id === contact.id)) {
+              opts.push({ id: contact.id, label, type: 'Group Circle Contact' });
+            }
+          }
+        });
+      });
+    }
+    return opts;
+  }, [allListingsData, groupCirclesData]);
+
+  const toggleLocation = (option: any) => {
+    setSpendingLocations(prev => {
+      const exists = prev.find(p => p.id === option.id);
+      let updated;
+      if (exists) {
+        updated = prev.filter(p => p.id !== option.id);
+      } else {
+        updated = [...prev, option];
+      }
+      localStorage.setItem(`spending-locations-${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const { data: listings } = useGetAllListings({ page: 1, limit: 100 });
 
   useEffect(() => {
     if (template) {
@@ -231,6 +294,11 @@ const EditGiftCardTemplatePage = () => {
 
     updateTemplate({ id, templateData: submissionData }, {
       onSuccess: () => {
+        if (submissionData.logoUrl) {
+          localStorage.setItem(`gift-card-logo-${id}`, submissionData.logoUrl);
+        } else if (submissionData.logoUrl === '') {
+          localStorage.removeItem(`gift-card-logo-${id}`);
+        }
         toast.success("Gift card template updated successfully!");
         router.push('/dashboard/gift-card/templates');
       },
@@ -275,6 +343,68 @@ const EditGiftCardTemplatePage = () => {
                   </SelectContent>
                 </Select>
                 {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              </div>
+
+              <div>
+                <Label>Where you can spend your gift card</Label>
+                <p className="text-xs text-gray-500 mb-2">Select businesses or group circle contacts (Persisted locally for now)</p>
+                <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isLocationOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {spendingLocations.length > 0
+                        ? `${spendingLocations.length} location(s) selected`
+                        : "Select businesses or contacts..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search locations..." />
+                      <CommandList>
+                        <CommandEmpty>No location found.</CommandEmpty>
+                        <CommandGroup heading="Businesses">
+                          {locationOptions.filter(o => o.type === 'Business').map((option) => (
+                            <CommandItem
+                              key={option.id}
+                              value={option.label}
+                              onSelect={() => toggleLocation(option)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  spendingLocations.find(l => l.id === option.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandGroup heading="Group Circle Contacts">
+                          {locationOptions.filter(o => o.type === 'Group Circle Contact').map((option) => (
+                            <CommandItem
+                              key={option.id}
+                              value={option.label}
+                              onSelect={() => toggleLocation(option)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  spendingLocations.find(l => l.id === option.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
+                  </PopoverContent>
+                </Popover>
               </div>
 
               <div>
