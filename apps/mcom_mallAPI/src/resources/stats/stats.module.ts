@@ -8,7 +8,6 @@ import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCard } from '../gift-card/entities/gift-card.entity';
 import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 import { Transaction } from '../transaction/entities/transaction.entity';
-import { CouponTransaction } from '../coupon/entities/coupon-transaction.entity';
 import { Voucher } from '../voucher/entities/voucher.entity';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
@@ -36,7 +35,6 @@ import { PromotionModule } from '../promotion/promotion.module';
       GiftCard,
       PointTransaction,
       Transaction,
-      CouponTransaction,
       Voucher,
       Product,
       Service,
@@ -59,4 +57,4 @@ import { PromotionModule } from '../promotion/promotion.module';
   controllers: [StatsController],
   providers: [StatsService],
 })
-export class StatsModule {}
+export class StatsModule { }

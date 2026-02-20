@@ -10,7 +10,6 @@ import {
   PointTransactionType,
 } from '../transaction/entities/point-transaction.entity';
 import { Transaction } from '../transaction/entities/transaction.entity';
-import { CouponTransaction } from '../coupon/entities/coupon-transaction.entity';
 import { Voucher } from '../voucher/entities/voucher.entity';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
@@ -35,8 +34,6 @@ export class StatsService {
     private readonly pointTransactionRepository: Repository<PointTransaction>,
     @InjectRepository(Transaction)
     private readonly transactionRepository: Repository<Transaction>,
-    @InjectRepository(CouponTransaction)
-    private readonly couponTransactionRepository: Repository<CouponTransaction>,
     @InjectRepository(Voucher)
     private readonly voucherRepository: Repository<Voucher>,
     @InjectRepository(Product)
@@ -93,13 +90,6 @@ export class StatsService {
       .where('offer.user = :userId', { userId })
       .getCount();
 
-    const couponQuery = this.couponTransactionRepository
-      .createQueryBuilder('ct')
-      .select('SUM(ct.amount)', 'sum')
-      .leftJoin('ct.coupon', 'coupon')
-      .where('coupon.owner = :userId', { userId })
-      .getRawOne();
-
     const voucherQuery = this.voucherRepository
       .createQueryBuilder('voucher')
       .select('SUM(voucher.initialValue)', 'sum')
@@ -128,7 +118,6 @@ export class StatsService {
       giftCard,
       promotions,
       offersRedeemed,
-      coupon,
       voucher,
       productCount,
       serviceCount,
@@ -139,7 +128,6 @@ export class StatsService {
       giftCardQuery,
       promotionsQuery,
       offersRedeemedQuery,
-      couponQuery,
       voucherQuery,
       productCountQuery,
       serviceCountQuery,
@@ -151,7 +139,7 @@ export class StatsService {
       totalAmountEarnedFromGiftCard: +giftCard.sum || 0,
       totalAmountSpentForPromotions: +promotions.sum || 0,
       totalOffersRedeemed: offersRedeemed,
-      totalAmountSpentOnCoupon: +coupon.sum || 0,
+      totalAmountSpentOnCoupon: 0,
       totalAmountOfVoucherPurchased: +voucher.sum || 0,
       totalAmountOfProduct: productCount,
       totalAmountOfService: serviceCount,

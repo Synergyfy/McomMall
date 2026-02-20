@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { clearDatabase } from './test-utils';
 import { CreateCouponDto } from '../src/resources/coupon/dto/create-coupon.dto';
-import { DiscountType } from '../src/resources/coupon/coupon.enum';
+import { DiscountType, CouponSourceType } from '../src/resources/coupon/coupon.enum';
 import { UsersService } from '../src/resources/users/users.service';
 import { CreateUserDto } from '../src/resources/users/dto/create-user.dto';
 import { UserRole } from '../src/common/role.enum';
@@ -49,10 +49,13 @@ describe('CouponController (e2e)', () => {
     await app.close();
   });
 
-  it('should create a coupon with a timestamp expiryDate', async () => {
+  it('should create a coupon', async () => {
     const createCouponDto: CreateCouponDto = {
-        amount: 10,
-        couponProductId: 'test-product-id',
+      title: 'New Sale',
+      code: 'SALE20',
+      sourceType: CouponSourceType.PLATFORM,
+      discountType: DiscountType.PERCENTAGE,
+      discountValue: 20
     };
 
     const response = await request(app.getHttpServer())

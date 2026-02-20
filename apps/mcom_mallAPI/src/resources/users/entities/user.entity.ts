@@ -5,7 +5,6 @@ import { Offer } from '../../offer/entities/offer.entity';
 import { UserRole } from '../../../common/role.enum';
 import { Business } from '../../listings/entities/listing.entity';
 import { Coupon } from '../../coupon/entities/coupon.entity';
-import { CouponProduct } from '../../coupon/entities/coupon-product.entity';
 import { PromotionParticipant } from '../../promotion/entities/promotion-participant.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { Social } from './social.entity';
@@ -14,7 +13,6 @@ import { Wallet } from '../../wallet/entities/wallet.entity';
 import { Voucher } from '../../voucher/entities/voucher.entity';
 import { VoucherProduct } from '../../voucher/entities/voucher-product.entity';
 import { ServiceProviderProfile } from '../../service-provider-profile/entities/service-provider-profile.entity';
-import { CouponTransaction } from '../../coupon/entities/coupon-transaction.entity';
 import { Membership } from '../../membership/entities/membership.entity';
 import { ShippingAddress } from '../../shipping-address/entities/shipping-address.entity';
 import { Expose } from 'class-transformer';
@@ -122,9 +120,6 @@ export class User extends AbstractBaseEntity {
     { cascade: true },
   )
   serviceProviderProfile: ServiceProviderProfile;
-
-  @OneToMany(() => CouponTransaction, (transaction) => transaction.processedBy)
-  couponTransactions: CouponTransaction[];
 
   @OneToOne(() => Membership, (membership) => membership.user, { cascade: true })
   membership: Membership;

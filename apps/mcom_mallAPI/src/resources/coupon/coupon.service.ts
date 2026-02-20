@@ -25,6 +25,8 @@ import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 
+import { SavedCoupon } from './entities/saved-coupon.entity';
+
 @Injectable()
 export class CouponService {
   constructor(
@@ -40,6 +42,8 @@ export class CouponService {
     private readonly redemptionLogRepository: Repository<RedemptionLog>,
     @InjectRepository(ShippingAddress)
     private readonly addressRepository: Repository<ShippingAddress>,
+    @InjectRepository(SavedCoupon)
+    private readonly savedCouponRepository: Repository<SavedCoupon>,
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
@@ -286,14 +290,55 @@ export class CouponService {
     return [];
   }
 
-  async createSystemCoupon(payload: any): Promise<any> {
-    return { message: 'System coupon creation is deprecated. Use the new CreateCoupon API.' };
-  }
-
   async countForUser(userId: string): Promise<number> {
     return this.couponRepository.count({
       where: { business: { user: { id: userId } } },
       relations: ['business', 'business.user'],
+    });
+  }
+
+  // ==== Consumer endpoints for saved coupons ====
+
+  async saveCoupon(code: string, user: User): Promise<SavedCoupon> {
+    const coupon = await this.couponRepository.findOne({ where: { code } });
+    if (!coupon) throw new NotFoundException('Coupon not found');
+
+    const existing = await this.savedCouponRepository.findOne({
+      where: { user: { id: user.id }, coupon: { id: coupon.id } },
+    });
+
+    if (existing) {
+      throw new BadRequestException('Coupon is already saved');
+    }
+
+    const savedCoupon = this.savedCouponRepository.create({
+      user,
+      coupon,
+    });
+
+    return await this.savedCouponRepository.save(savedCoupon);
+  }
+
+  async removeSavedCoupon(code: string, user: User): Promise<void> {
+    const coupon = await this.couponRepository.findOne({ where: { code } });
+    if (!coupon) throw new NotFoundException('Coupon not found');
+
+    const savedCoupon = await this.savedCouponRepository.findOne({
+      where: { user: { id: user.id }, coupon: { id: coupon.id } },
+    });
+
+    if (!savedCoupon) {
+      throw new NotFoundException('Coupon was not saved');
+    }
+
+    await this.savedCouponRepository.remove(savedCoupon);
+  }
+
+  async getSavedCoupons(user: User): Promise<SavedCoupon[]> {
+    return this.savedCouponRepository.find({
+      where: { user: { id: user.id } },
+      relations: ['coupon', 'coupon.campaign', 'coupon.business'],
+      order: { savedAt: 'DESC' },
     });
   }
 }

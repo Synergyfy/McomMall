@@ -11,12 +11,15 @@ import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entit
 import { BrandingAssociation } from './entities/branding-association.entity';
 import { RedemptionLog } from './entities/redemption-log.entity';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
+import { SavedCoupon } from './entities/saved-coupon.entity';
+import { BusinessCouponController } from './business-coupon.controller';
 
 @Module({
   imports: [
     forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Coupon,
+      SavedCoupon,
       User,
       Order,
       Business,
@@ -26,8 +29,8 @@ import { ShippingAddress } from '../shipping-address/entities/shipping-address.e
       ShippingAddress,
     ]),
   ],
-  controllers: [CouponController],
+  controllers: [CouponController, BusinessCouponController],
   providers: [CouponService],
   exports: [CouponService],
 })
-export class CouponModule {}
+export class CouponModule { }
