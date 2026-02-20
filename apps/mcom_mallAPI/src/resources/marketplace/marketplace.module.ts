@@ -7,7 +7,6 @@ import { MarketplaceCategory } from './entities/marketplace-category.entity';
 import { MarketplaceSection } from './entities/marketplace-section.entity';
 import { VoucherProduct } from '../voucher/entities/voucher-product.entity';
 import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entity';
-import { CouponProduct } from '../coupon/entities/coupon-product.entity';
 import { Service } from '../services/entities/service.entity';
 
 @Module({
@@ -18,7 +17,6 @@ import { Service } from '../services/entities/service.entity';
       MarketplaceSection,
       VoucherProduct,
       GiftCardTemplate,
-      CouponProduct,
       Service
     ])
   ],
@@ -26,4 +24,4 @@ import { Service } from '../services/entities/service.entity';
   providers: [MarketplaceService],
   exports: [MarketplaceService]
 })
-export class MarketplaceModule {}
+export class MarketplaceModule { }

@@ -23,7 +23,7 @@ import { Coupon } from './entities/coupon.entity';
 export class CouponController {
   constructor(
     private readonly couponService: CouponService,
-  ) {}
+  ) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
@@ -59,10 +59,42 @@ export class CouponController {
     return this.couponService.validateCoupon(code, req.user);
   }
 
-  // @UseGuards(JwtAuthGuard)
-  // @ApiBearerAuth()
-  // @Get('my-redemptions')
-  // findUserRedemptions(@Req() req: AuthenticatedRequest) {
-  //   return this.couponService.findUserRedemptions(req.user.id);
-  // }
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('save')
+  @ApiOperation({
+    summary: 'Save a Coupon',
+    description: 'Allows a customer to save a discovered coupon to their digital wallet/saved offers list.'
+  })
+  saveCoupon(
+    @Body('code') code: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.couponService.saveCoupon(code, req.user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Post('remove-saved')
+  @ApiOperation({
+    summary: 'Remove a Saved Coupon',
+    description: 'Allows a customer to remove a coupon from their saved list.'
+  })
+  removeSavedCoupon(
+    @Body('code') code: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    return this.couponService.removeSavedCoupon(code, req.user);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('saved')
+  @ApiOperation({
+    summary: 'Get Saved Coupons',
+    description: 'List all coupons saved by the customer.'
+  })
+  getSavedCoupons(@Req() req: AuthenticatedRequest) {
+    return this.couponService.getSavedCoupons(req.user);
+  }
 }

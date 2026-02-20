@@ -7,12 +7,13 @@ import { CreateBannerDto, UpdateBannerDto, CreateCategoryDto, UpdateCategoryDto,
 import { Product } from '../product/entities/product.entity';
 import { VoucherProduct } from '../voucher/entities/voucher-product.entity';
 import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entity';
-import { CouponProduct } from '../coupon/entities/coupon-product.entity';
+import { Coupon } from '../coupon/entities/coupon.entity';
+import { CouponStatus, CouponSourceType } from '../coupon/coupon.enum';
 import { Service } from '../services/entities/service.entity';
 
 @Injectable()
 export class MarketplaceService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   // --- PUBLIC AGGREGATION ---
 
@@ -44,9 +45,10 @@ export class MarketplaceService {
       take: 5
     });
 
-    const coupons = await this.dataSource.manager.find(CouponProduct, {
-      where: { isEnabled: true },
-      order: { createdAt: 'DESC' },
+    const coupons = await this.dataSource.manager.find(Coupon, {
+      where: { status: CouponStatus.ACTIVE, sourceType: CouponSourceType.PLATFORM },
+      relations: ['campaign'],
+      order: { created_at: 'DESC' },
       take: 5
     });
 

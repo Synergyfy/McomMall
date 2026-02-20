@@ -27,7 +27,6 @@ import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
 import { Business } from '../listings/entities/listing.entity';
 import { VoucherService } from '../voucher/voucher.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
-import { CouponTransaction } from '../coupon/entities/coupon-transaction.entity';
 import { Coupon } from '../coupon/entities/coupon.entity';
 import { CouponStatus } from '../coupon/coupon.enum';
 import { BookingService } from '../booking/booking.service';
@@ -191,9 +190,9 @@ export class OrderService {
         const coupon = await this.couponService.validateCoupon(createCheckoutDto.couponCode, user);
 
         if (coupon.discountType === 'fixed' as any) { // Type check if needed
-            couponAmountToApply = Math.min(totalBeforeRedemption, Number(coupon.discountValue));
+          couponAmountToApply = Math.min(totalBeforeRedemption, Number(coupon.discountValue));
         } else {
-            couponAmountToApply = totalBeforeRedemption * (Number(coupon.discountValue) / 100);
+          couponAmountToApply = totalBeforeRedemption * (Number(coupon.discountValue) / 100);
         }
       } catch (error) {
         throw new BadRequestException(`Invalid coupon: ${error.message}`);
@@ -402,9 +401,9 @@ export class OrderService {
     });
 
     const pageMetaDto = new PageMetaDto({
-        itemCount: items.length,
-        totalItems: total,
-        pageOptionsDto: pagination as any,
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination as any,
     });
 
     return new PageDto(items, pageMetaDto);
@@ -429,9 +428,9 @@ export class OrderService {
     const [items, total] = await queryBuilder.getManyAndCount();
 
     const pageMetaDto = new PageMetaDto({
-        itemCount: items.length,
-        totalItems: total,
-        pageOptionsDto: pagination as any,
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination as any,
     });
 
     return new PageDto(items, pageMetaDto);
