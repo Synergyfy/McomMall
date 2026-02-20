@@ -29,7 +29,10 @@ describe('ListingsService - Points Calculation', () => {
     businessName: 'Business A',
     shortDescription: 'Short description',
     businessPhone: '1234567890',
-    products: [{ id: 'product-A1' } as Product, { id: 'product-A2' } as Product],
+    products: [
+      { id: 'product-A1' } as Product,
+      { id: 'product-A2' } as Product,
+    ],
     status: BusinessStatus.PUBLISHED,
     isGoogleVerified: false,
     isClaimed: true,
@@ -97,7 +100,10 @@ describe('ListingsService - Points Calculation', () => {
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: DataSource, useValue: { createQueryRunner: jest.fn() } },
         { provide: ActivitiesService, useValue: { create: jest.fn() } },
-        { provide: ActivityTimerService, useValue: { completeTaskByKey: jest.fn() } },
+        {
+          provide: ActivityTimerService,
+          useValue: { completeTaskByKey: jest.fn() },
+        },
         {
           provide: PromotionService,
           useValue: {

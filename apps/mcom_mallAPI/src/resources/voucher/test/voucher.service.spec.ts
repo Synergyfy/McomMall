@@ -107,7 +107,10 @@ describe('VoucherService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VoucherService,
-        { provide: getRepositoryToken(Voucher), useValue: mockVoucherRepository },
+        {
+          provide: getRepositoryToken(Voucher),
+          useValue: mockVoucherRepository,
+        },
         {
           provide: getRepositoryToken(VoucherProduct),
           useValue: mockVoucherProductRepository,
@@ -228,11 +231,22 @@ describe('VoucherService', () => {
         ok: true,
       });
 
-      mockOrderPaymentRepository.create.mockImplementation((dto) => ({ ...dto, id: 'payment-1' }));
-      mockOrderRepository.create.mockImplementation((dto) => ({ ...dto, id: 'order-1' }));
-      mockVoucherRepository.create.mockImplementation((dto) => ({ ...dto, id: 'voucher-1' }));
+      mockOrderPaymentRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'payment-1',
+      }));
+      mockOrderRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'order-1',
+      }));
+      mockVoucherRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'voucher-1',
+      }));
 
-      mockOrderPaymentRepository.save.mockImplementation((p) => Promise.resolve(p));
+      mockOrderPaymentRepository.save.mockImplementation((p) =>
+        Promise.resolve(p),
+      );
       mockOrderRepository.save.mockImplementation((o) => Promise.resolve(o));
     });
 
@@ -285,7 +299,10 @@ describe('VoucherService', () => {
       } as Voucher;
       mockVoucherRepository.findOne.mockResolvedValue(voucher);
 
-      const result = await service.redeemVoucher({ code: 'TESTCODE', amount: 20 });
+      const result = await service.redeemVoucher({
+        code: 'TESTCODE',
+        amount: 20,
+      });
 
       expect(result.balance).toBe(30);
       expect(result.status).toBe(VoucherStatus.PARTIALLY_REDEEMED);
@@ -327,7 +344,11 @@ describe('VoucherService', () => {
         }),
       };
 
-      const result = await service.redeemForOrder(redeemDto, order, manager as any);
+      const result = await service.redeemForOrder(
+        redeemDto,
+        order,
+        manager as any,
+      );
 
       expect(result.balance).toBe(25);
       expect(result.status).toBe(VoucherStatus.PARTIALLY_REDEEMED);
@@ -404,10 +425,7 @@ describe('VoucherService', () => {
         getManyAndCount: jest.fn().mockResolvedValue([transactions, 1]),
       });
 
-      const result = await service.getTransactionHistory(
-        ownerId,
-        query as any,
-      );
+      const result = await service.getTransactionHistory(ownerId, query as any);
 
       expect(result.data.length).toBe(1);
       expect(result.meta.itemCount).toBe(1);
@@ -428,9 +446,9 @@ describe('VoucherService', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn(),
       };
-      (voucherProductRepository.createQueryBuilder as jest.Mock).mockReturnValue(
-        queryBuilder,
-      );
+      (
+        voucherProductRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(queryBuilder);
     });
 
     it('should filter by search, min/max amount, businessId and businessName', async () => {

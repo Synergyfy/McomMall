@@ -18,7 +18,11 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
     ActivityTimerModule,
   ],
   controllers: [PaymentsController, CashbackController],
-  providers: [PaymentsService, PaymentProviderService, CentralIntegrationService],
+  providers: [
+    PaymentsService,
+    PaymentProviderService,
+    CentralIntegrationService,
+  ],
   exports: [PaymentsService, PaymentProviderService, CentralIntegrationService],
 })
 export class PaymentsModule {}

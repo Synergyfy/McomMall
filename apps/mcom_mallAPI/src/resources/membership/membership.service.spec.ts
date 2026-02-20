@@ -14,7 +14,10 @@ import {
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
-import { InitiateMembershipPaymentDto, PlanType } from './dto/initiate-membership-payment.dto';
+import {
+  InitiateMembershipPaymentDto,
+  PlanType,
+} from './dto/initiate-membership-payment.dto';
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { Tier } from '../tier/entities/tier.entity';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
@@ -30,19 +33,19 @@ describe('MembershipService', () => {
   let dataSource: DataSource;
 
   const mockMembershipRepository = {
-    create: jest.fn().mockImplementation(dto => ({ ...dto })),
-    save: jest.fn().mockImplementation(m => Promise.resolve(m)),
+    create: jest.fn().mockImplementation((dto) => ({ ...dto })),
+    save: jest.fn().mockImplementation((m) => Promise.resolve(m)),
     findOne: jest.fn(),
   };
 
   const mockUserRepository = {
-    save: jest.fn().mockImplementation(u => Promise.resolve(u)),
+    save: jest.fn().mockImplementation((u) => Promise.resolve(u)),
     findOne: jest.fn(),
   };
 
   const mockPaymentRepository = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(p => Promise.resolve(p)),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest.fn().mockImplementation((p) => Promise.resolve(p)),
   };
 
   const mockTierRepository = {
@@ -152,9 +155,12 @@ describe('MembershipService', () => {
 
   describe('verifyAndCreateMembership with Seasonal Tier', () => {
     it('should use season dates for membership when tier is seasonal', async () => {
-      const season = { startDate: new Date('2026-06-01'), endDate: new Date('2026-08-31') };
+      const season = {
+        startDate: new Date('2026-06-01'),
+        endDate: new Date('2026-08-31'),
+      };
       const seasonalTier = { id: 'tier-1', type: TierType.SEASONAL, season };
-      
+
       const verifyDto: VerifyMembershipPaymentDto = {
         paymentProvider: PaymentMethod.STRIPE,
         transactionId: 'pi_123',
@@ -163,9 +169,13 @@ describe('MembershipService', () => {
 
       mockMembershipRepository.findOne.mockResolvedValue(null);
       mockTierRepository.findOne.mockResolvedValue(seasonalTier);
-      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
-      mockMembershipRepository.create.mockImplementation(dto => dto);
-      mockMembershipRepository.save.mockImplementation(m => Promise.resolve(m));
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
+        ok: true,
+      });
+      mockMembershipRepository.create.mockImplementation((dto) => dto);
+      mockMembershipRepository.save.mockImplementation((m) =>
+        Promise.resolve(m),
+      );
 
       const result = await service.verifyAndCreateMembership(verifyDto, user);
 
@@ -176,12 +186,12 @@ describe('MembershipService', () => {
 
   describe('ensureDates', () => {
     it('should backfill dates for existing membership', async () => {
-      const membership: any = { 
-        id: 'mem-1', 
-        created_at: new Date('2026-01-01'), 
-        expiresAt: new Date('2026-02-01') 
+      const membership: any = {
+        id: 'mem-1',
+        created_at: new Date('2026-01-01'),
+        expiresAt: new Date('2026-02-01'),
       };
-      
+
       await (service as any).ensureDates(membership);
 
       expect(membership.startDate).toEqual(membership.created_at);

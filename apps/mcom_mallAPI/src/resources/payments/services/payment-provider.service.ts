@@ -45,7 +45,11 @@ export class PaymentProviderService {
     });
   }
 
-  async createPaypalOrder(amount: number, currency: string, metadata?: Record<string, any>): Promise<any> {
+  async createPaypalOrder(
+    amount: number,
+    currency: string,
+    metadata?: Record<string, any>,
+  ): Promise<any> {
     const request: OrderRequest = {
       intent: CheckoutPaymentIntent.Capture,
       purchaseUnits: [
@@ -78,17 +82,23 @@ export class PaymentProviderService {
       return { ok: false, reason: 'Stripe payment intent not found' };
     }
     if (intent.status !== 'succeeded') {
-      return { ok: false, details: intent, reason: `Stripe intent status ${intent.status}` };
+      return {
+        ok: false,
+        details: intent,
+        reason: `Stripe intent status ${intent.status}`,
+      };
     }
-    
+
     const expectedAmountInCents = Math.round(expectedAmount * 100);
-        const intentAmountInGBP = intent.amount / 100;
-    const isAmount100xLarger = Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
-    
-    const amountMatches = intent.amount_received === expectedAmountInCents || isAmount100xLarger;
-    const currencyMatches = intent.currency.toLowerCase() === currency.toLowerCase();
-    
-    
+    const intentAmountInGBP = intent.amount / 100;
+    const isAmount100xLarger =
+      Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
+
+    const amountMatches =
+      intent.amount_received === expectedAmountInCents || isAmount100xLarger;
+    const currencyMatches =
+      intent.currency.toLowerCase() === currency.toLowerCase();
+
     if (!amountMatches || !currencyMatches) {
       return {
         ok: false,
@@ -113,15 +123,22 @@ export class PaymentProviderService {
     // Basic validations based on PayPal capture response
     const status = result?.status;
     if (status !== 'COMPLETED') {
-      return { ok: false, details: result, reason: `PayPal order status ${status}` };
+      return {
+        ok: false,
+        details: result,
+        reason: `PayPal order status ${status}`,
+      };
     }
     try {
       const captureAmount = Number(
         result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value,
       );
-      const captureCurrency = result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.currency_code;
+      const captureCurrency =
+        result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount
+          ?.currency_code;
       const amountMatches = captureAmount === Number(expectedAmount);
-      const currencyMatches = (captureCurrency || '').toLowerCase() === currency.toLowerCase();
+      const currencyMatches =
+        (captureCurrency || '').toLowerCase() === currency.toLowerCase();
       if (!amountMatches || !currencyMatches) {
         return {
           ok: false,
@@ -130,7 +147,11 @@ export class PaymentProviderService {
         };
       }
     } catch (e) {
-      return { ok: false, details: result, reason: 'Unable to parse PayPal capture amount' };
+      return {
+        ok: false,
+        details: result,
+        reason: 'Unable to parse PayPal capture amount',
+      };
     }
     return { ok: true, details: result };
   }

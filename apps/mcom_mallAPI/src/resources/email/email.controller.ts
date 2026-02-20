@@ -6,7 +6,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 
 @Controller('email')
 export class EmailController {
-  constructor(private readonly emailService: EmailService) { }
+  constructor(private readonly emailService: EmailService) {}
 
   @Public()
   @Post('send-otp')
@@ -19,6 +19,4 @@ export class EmailController {
   validateOtp(@Body() validateOtpDto: ValidateOtpDto) {
     return this.emailService.validateOtp(validateOtpDto);
   }
-
-
 }

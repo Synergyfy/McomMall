@@ -136,7 +136,11 @@ describe('CouponProductService', () => {
         ...updateCouponProductDto,
       });
 
-      const result = await service.update('1', updateCouponProductDto, mockUser);
+      const result = await service.update(
+        '1',
+        updateCouponProductDto,
+        mockUser,
+      );
 
       expect(result.name).toEqual(updateCouponProductDto.name);
       expect(service.findOne).toHaveBeenCalledWith('1', mockUser);

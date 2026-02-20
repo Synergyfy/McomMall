@@ -10,45 +10,81 @@ export enum TerminalLevel {
 
 @Entity('terminal_configs')
 export class TerminalConfig extends AbstractBaseEntity {
-  @ApiProperty({ example: 'user-uuid-here', description: 'Unique Owner/User ID' })
+  @ApiProperty({
+    example: 'user-uuid-here',
+    description: 'Unique Owner/User ID',
+  })
   @PrimaryColumn()
   userId: string;
 
-  @ApiProperty({ example: 'John Doe', description: 'Display name of the owner' })
+  @ApiProperty({
+    example: 'John Doe',
+    description: 'Display name of the owner',
+  })
   @Column()
   userName: string;
 
-  @ApiProperty({ enum: TerminalLevel, example: TerminalLevel.VERIFIED_L1, description: 'Protocol Level (1=Ranges, 2=Fixed, 3=API)' })
-  @Column({ type: 'enum', enum: TerminalLevel, default: TerminalLevel.VERIFIED_L1 })
+  @ApiProperty({
+    enum: TerminalLevel,
+    example: TerminalLevel.VERIFIED_L1,
+    description: 'Protocol Level (1=Ranges, 2=Fixed, 3=API)',
+  })
+  @Column({
+    type: 'enum',
+    enum: TerminalLevel,
+    default: TerminalLevel.VERIFIED_L1,
+  })
   level: TerminalLevel;
 
-  @ApiProperty({ example: true, description: 'Is the terminal currently active?' })
+  @ApiProperty({
+    example: true,
+    description: 'Is the terminal currently active?',
+  })
   @Column({ default: true })
   isEnabled: boolean;
 
-  @ApiProperty({ example: 48, description: 'Hours before auto-approval kicks in' })
+  @ApiProperty({
+    example: 48,
+    description: 'Hours before auto-approval kicks in',
+  })
   @Column({ default: 48 })
   autoApprovalHours: number;
 
-  @ApiProperty({ 
-    example: [{ id: '1', minSpend: 10, maxSpend: 50, rewardValue: 2, isActive: true }], 
-    description: 'Reward ranges for Level 1', 
-    nullable: true 
+  @ApiProperty({
+    example: [
+      { id: '1', minSpend: 10, maxSpend: 50, rewardValue: 2, isActive: true },
+    ],
+    description: 'Reward ranges for Level 1',
+    nullable: true,
   })
   @Column('jsonb', { nullable: true })
-  ranges: { id: string; minSpend: number; maxSpend: number; rewardValue: number; isActive: boolean }[];
+  ranges: {
+    id: string;
+    minSpend: number;
+    maxSpend: number;
+    rewardValue: number;
+    isActive: boolean;
+  }[];
 
-  @ApiProperty({ example: 1.50, description: 'Fixed reward amount for Level 2', nullable: true })
+  @ApiProperty({
+    example: 1.5,
+    description: 'Fixed reward amount for Level 2',
+    nullable: true,
+  })
   @Column('decimal', { precision: 10, scale: 2, nullable: true })
   fixedRewardValue: number;
 
-  @ApiProperty({ example: 'https://api.merchant.com/verify', description: 'External POS endpoint for Level 3', nullable: true })
+  @ApiProperty({
+    example: 'https://api.merchant.com/verify',
+    description: 'External POS endpoint for Level 3',
+    nullable: true,
+  })
   @Column({ nullable: true })
   apiEndpoint: string;
 
-  @ApiProperty({ 
-    example: { maxPerDay: 100, monthlyBudget: 5000 }, 
-    description: 'Economic guardrails' 
+  @ApiProperty({
+    example: { maxPerDay: 100, monthlyBudget: 5000 },
+    description: 'Economic guardrails',
   })
   @Column('jsonb', { default: {} })
   limits: {

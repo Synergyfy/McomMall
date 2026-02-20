@@ -14,9 +14,11 @@ import { OrderPayment } from '../order/entities/order-payment.entity';
 import { VoucherService } from './voucher.service';
 import { WalletModule } from '../wallet/wallet.module';
 import { PaymentsModule } from '../payments/payments.module';
+import { DigitalValueModule } from '../digital-value/digital-value.module';
 
 @Module({
   imports: [
+    DigitalValueModule,
     TypeOrmModule.forFeature([
       Voucher,
       VoucherProduct,
@@ -38,4 +40,4 @@ import { PaymentsModule } from '../payments/payments.module';
   providers: [VoucherService],
   exports: [VoucherService],
 })
-export class VoucherModule { }
+export class VoucherModule {}

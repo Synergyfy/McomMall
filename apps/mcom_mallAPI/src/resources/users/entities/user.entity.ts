@@ -1,4 +1,12 @@
-import { Column, Entity, OneToMany, OneToOne, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  OneToOne,
+  AfterLoad,
+  BeforeInsert,
+  BeforeUpdate,
+} from 'typeorm';
 import { Promotion } from '../../promotion/entities/promotion.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
@@ -126,7 +134,9 @@ export class User extends AbstractBaseEntity {
   @OneToMany(() => CouponTransaction, (transaction) => transaction.processedBy)
   couponTransactions: CouponTransaction[];
 
-  @OneToOne(() => Membership, (membership) => membership.user, { cascade: true })
+  @OneToOne(() => Membership, (membership) => membership.user, {
+    cascade: true,
+  })
   membership: Membership;
 
   @OneToMany(() => ShippingAddress, (address) => address.user)

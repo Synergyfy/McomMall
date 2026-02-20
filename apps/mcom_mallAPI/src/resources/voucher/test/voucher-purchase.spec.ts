@@ -38,7 +38,8 @@ const createMockDataSource = () => ({
       getRepository: (entity) => {
         // Return a mock repository for the given entity
         if (entity === Voucher) return mockVoucherRepository;
-        if (entity === VoucherTransaction) return mockVoucherTransactionRepository;
+        if (entity === VoucherTransaction)
+          return mockVoucherTransactionRepository;
         if (entity === Order) return mockOrderRepository;
         if (entity === OrderPayment) return mockOrderPaymentRepository;
         return createMockRepository();
@@ -128,7 +129,9 @@ describe('VoucherService - Purchase and Redemption', () => {
       mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
         ok: true,
       });
-      mockVoucherProductRepository.findOne.mockResolvedValue(mockVoucherProduct);
+      mockVoucherProductRepository.findOne.mockResolvedValue(
+        mockVoucherProduct,
+      );
 
       const savedVoucher = {
         id: 'voucher-123',

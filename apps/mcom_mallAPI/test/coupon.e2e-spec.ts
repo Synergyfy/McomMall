@@ -51,8 +51,8 @@ describe('CouponController (e2e)', () => {
 
   it('should create a coupon with a timestamp expiryDate', async () => {
     const createCouponDto: CreateCouponDto = {
-        amount: 10,
-        couponProductId: 'test-product-id',
+      amount: 10,
+      couponProductId: 'test-product-id',
     };
 
     const response = await request(app.getHttpServer())

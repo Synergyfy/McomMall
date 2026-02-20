@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
@@ -13,12 +17,22 @@ export class ActivityTimerService {
     private readonly activityRepository: Repository<ActivityTimer>,
     @InjectRepository(UserActivity)
     private readonly userActivityRepository: Repository<UserActivity>,
-  ) { }
+  ) {}
 
   // --- Admin: Publish a Task (Create Definition) ---
 
   async createActivity(dto: any): Promise<ActivityTimer> {
-    const { title, description, key, actionUrl, type, durationDays, includedTierIds, excludedTierIds, expiresAt } = dto;
+    const {
+      title,
+      description,
+      key,
+      actionUrl,
+      type,
+      durationDays,
+      includedTierIds,
+      excludedTierIds,
+      expiresAt,
+    } = dto;
 
     const activity = this.activityRepository.create({
       title,
@@ -30,7 +44,7 @@ export class ActivityTimerService {
       includedTierIds,
       excludedTierIds,
       expiresAt: expiresAt ? new Date(expiresAt) : null,
-      isActive: true
+      isActive: true,
     });
 
     return this.activityRepository.save(activity);
@@ -39,7 +53,8 @@ export class ActivityTimerService {
   // --- Admin: List Definitions ---
 
   async findAllActivities(): Promise<ActivityTimer[]> {
-    return this.activityRepository.createQueryBuilder('ActivityTimer')
+    return this.activityRepository
+      .createQueryBuilder('ActivityTimer')
       .select([
         'ActivityTimer.id',
         'ActivityTimer.type',
@@ -52,7 +67,7 @@ export class ActivityTimerService {
         'ActivityTimer.durationDays',
         'ActivityTimer.createdAt',
         'ActivityTimer.expiresAt',
-        'ActivityTimer.isActive'
+        'ActivityTimer.isActive',
       ])
       .orderBy('ActivityTimer.createdAt', 'DESC')
       .getMany();
@@ -96,7 +111,8 @@ export class ActivityTimerService {
     });
 
     // 2. Fetch all relevant Activities
-    const allActivities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+    const allActivities = await this.activityRepository
+      .createQueryBuilder('ActivityTimer')
       .select([
         'ActivityTimer.id',
         'ActivityTimer.type',
@@ -109,7 +125,7 @@ export class ActivityTimerService {
         'ActivityTimer.durationDays',
         'ActivityTimer.createdAt',
         'ActivityTimer.expiresAt',
-        'ActivityTimer.isActive'
+        'ActivityTimer.isActive',
       ])
       .where('ActivityTimer.isActive = :isActive', { isActive: true })
       .orderBy('ActivityTimer.createdAt', 'DESC')
@@ -117,7 +133,7 @@ export class ActivityTimerService {
 
     const userTierId = fullUser?.membership?.tierId;
 
-    const eligibleActivities = allActivities.filter(activity => {
+    const eligibleActivities = allActivities.filter((activity) => {
       // 1. Inclusion Check
       let isIncluded = false;
       // If no specific tiers included, it applies to all (unless excluded)
@@ -129,7 +145,11 @@ export class ActivityTimerService {
 
       // 2. Exclusion Check
       let isExcluded = false;
-      if (userTierId && activity.excludedTierIds && activity.excludedTierIds.includes(userTierId)) {
+      if (
+        userTierId &&
+        activity.excludedTierIds &&
+        activity.excludedTierIds.includes(userTierId)
+      ) {
         isExcluded = true;
       }
 
@@ -137,20 +157,25 @@ export class ActivityTimerService {
     });
 
     // 3. Fetch User's Completions
-    const userCompletions = await this.userActivityRepository.createQueryBuilder('UserActivity')
+    const userCompletions = await this.userActivityRepository
+      .createQueryBuilder('UserActivity')
       .leftJoinAndSelect('UserActivity.activity', 'activity')
       .where('UserActivity.userId = :userId', { userId })
       .select([
         'UserActivity.id',
         'UserActivity.completedAt',
         'activity.id',
-        'activity.key'
+        'activity.key',
       ])
       .getMany();
 
-    const completedActivityIds = new Set(userCompletions.map(ua => ua.activity.id));
+    const completedActivityIds = new Set(
+      userCompletions.map((ua) => ua.activity.id),
+    );
     const completionMap = new Map<string, Date>();
-    userCompletions.forEach(ua => completionMap.set(ua.activity.id, ua.completedAt));
+    userCompletions.forEach((ua) =>
+      completionMap.set(ua.activity.id, ua.completedAt),
+    );
 
     const now = new Date();
     const membership = fullUser?.membership;
@@ -159,19 +184,24 @@ export class ActivityTimerService {
     const activitiesByType = new Map<ActivityTimerType, ActivityTimer[]>();
 
     for (const activity of eligibleActivities) {
-      if (!activitiesByType.has(activity.type)) activitiesByType.set(activity.type, []);
+      if (!activitiesByType.has(activity.type))
+        activitiesByType.set(activity.type, []);
       activitiesByType.get(activity.type).push(activity);
     }
 
     // Handle TRIAL Users
     if (membership && membership.isTrial && membership.isActive) {
-      const trialActivities = activitiesByType.get(ActivityTimerType.TRIAL) || [];
+      const trialActivities =
+        activitiesByType.get(ActivityTimerType.TRIAL) || [];
       const bothActivities = activitiesByType.get(ActivityTimerType.BOTH) || [];
       const allTrialActivities = [...trialActivities, ...bothActivities];
 
       if (allTrialActivities.length > 0) {
         const trialExpiry = new Date(membership.expiresAt);
-        const remainingTime = Math.max(0, trialExpiry.getTime() - now.getTime());
+        const remainingTime = Math.max(
+          0,
+          trialExpiry.getTime() - now.getTime(),
+        );
 
         response.push({
           id: `trial-timer-${userId}`,
@@ -182,15 +212,15 @@ export class ActivityTimerService {
           expiresAt: trialExpiry,
           completedAt: null,
           isPaused: false,
-          tasks: allTrialActivities.map(t => ({
+          tasks: allTrialActivities.map((t) => ({
             id: t.id, // Include ID for manual completion
             key: t.key,
             title: t.title,
             description: t.description,
             url: t.actionUrl,
             expiresAt: t.expiresAt,
-            isCompleted: completedActivityIds.has(t.id)
-          }))
+            isCompleted: completedActivityIds.has(t.id),
+          })),
         });
       }
     } else {
@@ -198,15 +228,15 @@ export class ActivityTimerService {
       // This includes GENERAL and BOTH types applicable to the tier
 
       for (const [type, activities] of activitiesByType.entries()) {
-        // Skip TRIAL tasks for paid users unless we want to show them? 
-        // Usually Trial tasks are only for trial. 
+        // Skip TRIAL tasks for paid users unless we want to show them?
+        // Usually Trial tasks are only for trial.
         // But if filtering Logic included them, maybe we show them?
         // User said "if a user is trial tier member... fetch only trial activity timer".
         // "if a user has a paid membership... each row... has a timer".
 
         // I will process all eligible activities.
         for (const t of activities) {
-          // Skip if it's strictly a TRIAL type and user is not trial? 
+          // Skip if it's strictly a TRIAL type and user is not trial?
           // The filter above should handle it if 'includedTierIds' is set correctly by admin.
           // But as a safeguard/convention:
           if (type === ActivityTimerType.TRIAL) continue;
@@ -216,13 +246,17 @@ export class ActivityTimerService {
           let expiresAt = t.expiresAt;
           // Dynamic expiry based on durationDays relative to... something.
           // Defaulting to "expires X days after creation" for fixed definitions?
-          // Or maybe relative to membership start? 
+          // Or maybe relative to membership start?
           // For now, sticking to logic: Fixed Date OR Duration from Creation.
           if (!expiresAt && t.durationDays) {
-            expiresAt = new Date(t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000);
+            expiresAt = new Date(
+              t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000,
+            );
           }
 
-          const remaining = expiresAt ? Math.max(0, expiresAt.getTime() - now.getTime()) : null; // null if no expiry
+          const remaining = expiresAt
+            ? Math.max(0, expiresAt.getTime() - now.getTime())
+            : null; // null if no expiry
 
           response.push({
             id: t.id,
@@ -234,14 +268,17 @@ export class ActivityTimerService {
             completedAt: completionMap.get(t.id) || null,
             isPaused: false,
             key: t.key, // Add key to top level for easy access
-            tasks: [{ // Keep nested structure for consistency if frontend expects it, or flatten?
-              id: t.id,
-              key: t.key,
-              title: t.title,
-              description: t.description,
-              url: t.actionUrl,
-              isCompleted: isCompleted
-            }]
+            tasks: [
+              {
+                // Keep nested structure for consistency if frontend expects it, or flatten?
+                id: t.id,
+                key: t.key,
+                title: t.title,
+                description: t.description,
+                url: t.actionUrl,
+                isCompleted: isCompleted,
+              },
+            ],
           });
         }
       }
@@ -256,16 +293,21 @@ export class ActivityTimerService {
   async completeTaskByKey(userId: string, key: string): Promise<void> {
     // Only allow manual completion for "OTHER" tasks as per requirement
     if (key !== 'OTHER') {
-      throw new BadRequestException('This task type is handled automatically by the system and cannot be marked manually.');
+      throw new BadRequestException(
+        'This task type is handled automatically by the system and cannot be marked manually.',
+      );
     }
 
-    const user = await this.activityRepository.manager.findOne(User, { where: { id: userId } });
+    const user = await this.activityRepository.manager.findOne(User, {
+      where: { id: userId },
+    });
     if (!user) throw new NotFoundException('User not found');
 
     // Find ALL active activities with this key that are NOT yet completed by this user
     // Since we don't have a direct "pending" list, we query Definitions + UserActivities
 
-    const activities = await this.activityRepository.createQueryBuilder('ActivityTimer')
+    const activities = await this.activityRepository
+      .createQueryBuilder('ActivityTimer')
       .select(['ActivityTimer.id', 'ActivityTimer.key'])
       .where('ActivityTimer.key = :key', { key })
       .andWhere('ActivityTimer.isActive = :isActive', { isActive: true })
@@ -276,7 +318,7 @@ export class ActivityTimerService {
     for (const activity of activities) {
       // Check if already completed
       const existing = await this.userActivityRepository.findOne({
-        where: { user: { id: userId }, activity: { id: activity.id } }
+        where: { user: { id: userId }, activity: { id: activity.id } },
       });
 
       if (!existing) {

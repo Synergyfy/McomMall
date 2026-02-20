@@ -23,7 +23,10 @@ import { ConfigurableAddon } from './entities/configurable-addon.entity';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
-import { ActionType, CapabilityService } from '../capability/capability.service';
+import {
+  ActionType,
+  CapabilityService,
+} from '../capability/capability.service';
 import { ServiceSearchDto } from './dto/service-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
@@ -67,9 +70,13 @@ export class ServicesService {
       where: { business: { user: { id: userId } } },
     });
 
-    await this.capabilityService.checkPermission(userId, ActionType.CREATE_SERVICE, {
-      currentCount: currentServiceCount,
-    });
+    await this.capabilityService.checkPermission(
+      userId,
+      ActionType.CREATE_SERVICE,
+      {
+        currentCount: currentServiceCount,
+      },
+    );
 
     const business = await this.businessRepository.findOne({
       where: { id: createServiceDto.businessId },

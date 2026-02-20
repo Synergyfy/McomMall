@@ -67,7 +67,10 @@ describe('CouponProductBusinessController', () => {
         bonusThreshold: 100,
         bonusAmount: 10,
       };
-      const result = await controller.create(createCouponProductDto, mockRequest as any);
+      const result = await controller.create(
+        createCouponProductDto,
+        mockRequest as any,
+      );
       expect(result).toEqual(mockCouponProduct);
       expect(service.create).toHaveBeenCalledWith(
         createCouponProductDto,

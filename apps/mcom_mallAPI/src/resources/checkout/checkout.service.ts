@@ -84,12 +84,12 @@ export class CheckoutService {
     // Apply Coupon if provided
     let couponDiscount = 0;
     if (couponCode) {
-        const coupon = await this.couponService.validateCoupon(couponCode, user);
-        if (coupon.discountType === DiscountType.FIXED) {
-            couponDiscount = Math.min(subtotal, Number(coupon.discountValue));
-        } else {
-            couponDiscount = subtotal * (Number(coupon.discountValue) / 100);
-        }
+      const coupon = await this.couponService.validateCoupon(couponCode, user);
+      if (coupon.discountType === DiscountType.FIXED) {
+        couponDiscount = Math.min(subtotal, Number(coupon.discountValue));
+      } else {
+        couponDiscount = subtotal * (Number(coupon.discountValue) / 100);
+      }
     }
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
@@ -97,10 +97,12 @@ export class CheckoutService {
     // Apply gift card if provided
     let giftCardAmountToApply = 0;
     if (giftCardCode) {
-      const balanceResponse = await this.giftCardService.checkBalance(
-        giftCardCode,
+      const balanceResponse =
+        await this.giftCardService.checkBalance(giftCardCode);
+      giftCardAmountToApply = Math.min(
+        totalAfterCoupon,
+        balanceResponse.currentBalance,
       );
-      giftCardAmountToApply = Math.min(totalAfterCoupon, balanceResponse.currentBalance);
     }
 
     const remainingTotal = totalAfterCoupon - giftCardAmountToApply;
@@ -165,7 +167,10 @@ export class CheckoutService {
       throw new NotFoundException('Pending order not found.');
     }
 
-    const remainingTotal = order.total - (order.giftCardAmountApplied || 0) - (order.couponDiscountApplied || 0);
+    const remainingTotal =
+      order.total -
+      (order.giftCardAmountApplied || 0) -
+      (order.couponDiscountApplied || 0);
 
     // Verify payment if one was made
     if (remainingTotal > 0) {
@@ -200,20 +205,28 @@ export class CheckoutService {
           code: order.giftCardCode,
           amount: order.giftCardAmountApplied,
         };
-        
+
         // Fetch order items to get a potential business ID for non-system gift cards
         const orderWithItems = await orderRepo.findOne({
           where: { id: order.id },
           relations: ['items', 'items.product', 'items.product.business'],
         });
-        
-        const businessId = orderWithItems.items?.length > 0 ? orderWithItems.items[0].product.business.id : undefined;
-        await this.giftCardService.redeem(redeemDto, order, businessId, manager);
+
+        const businessId =
+          orderWithItems.items?.length > 0
+            ? orderWithItems.items[0].product.business.id
+            : undefined;
+        await this.giftCardService.redeem(
+          redeemDto,
+          order,
+          businessId,
+          manager,
+        );
       }
 
       // Redeem Coupon
       if (order.couponCode && order.couponDiscountApplied > 0) {
-          await this.couponService.redeem(order.couponCode, user, order);
+        await this.couponService.redeem(order.couponCode, user, order);
       }
 
       order.status = OrderStatus.COMPLETED;

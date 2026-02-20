@@ -1,25 +1,47 @@
-import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Patch,
+  Param,
+  Delete,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { ActivityTimerService } from './activity-timer.service';
 import { PublishTaskDto, UpdateTaskDto } from './dto/activity-timer.dto';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { Request } from 'express';
-import { ActivityTaskType, ActivityTimerType } from './enums/activity-task-type.enum';
+import {
+  ActivityTaskType,
+  ActivityTimerType,
+} from './enums/activity-task-type.enum';
 import { ActivityTimer } from './entities/activity-timer.entity';
 
 @ApiTags('Activity Timer')
 @ApiBearerAuth()
 @Controller('activity-timer')
 export class ActivityTimerController {
-  constructor(private readonly timerService: ActivityTimerService) { }
+  constructor(private readonly timerService: ActivityTimerService) {}
 
   // --- Admin Endpoints ---
 
   @Post('admin/publish')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Publish a new Activity Timer Definition (Admin)' })
-  @ApiResponse({ status: 201, description: 'Task published successfully', type: ActivityTimer })
+  @ApiResponse({
+    status: 201,
+    description: 'Task published successfully',
+    type: ActivityTimer,
+  })
   publishTask(@Body() dto: PublishTaskDto) {
     return this.timerService.createActivity(dto);
   }
@@ -27,7 +49,11 @@ export class ActivityTimerController {
   @Get('admin/definitions')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Get all published task definitions (Admin)' })
-  @ApiResponse({ status: 200, description: 'List of definitions', type: [ActivityTimer] })
+  @ApiResponse({
+    status: 200,
+    description: 'List of definitions',
+    type: [ActivityTimer],
+  })
   getDefinitions() {
     return this.timerService.findAllActivities();
   }
@@ -35,7 +61,11 @@ export class ActivityTimerController {
   @Patch('admin/:id')
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update an Activity Timer Definition (Admin)' })
-  @ApiResponse({ status: 200, description: 'Task updated successfully', type: ActivityTimer })
+  @ApiResponse({
+    status: 200,
+    description: 'Task updated successfully',
+    type: ActivityTimer,
+  })
   updateTask(@Param('id') id: string, @Body() dto: UpdateTaskDto) {
     return this.timerService.updateActivity(id, dto);
   }
@@ -51,16 +81,17 @@ export class ActivityTimerController {
   // --- User Endpoints ---
 
   @Get('status')
-  @ApiOperation({ summary: 'Get current user active tasks (TRIAL, GENERAL & BOTH)' })
+  @ApiOperation({
+    summary: 'Get current user active tasks (TRIAL, GENERAL & BOTH)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns active tasks with detailed status',
-    type: [ActivityTimer]
+    type: [ActivityTimer],
   })
   getStatus(@Req() req: Request) {
     return this.timerService.getUserActiveTasks(req.user as any);
   }
-
 
   @Post('complete-task/:key')
   @ApiOperation({ summary: 'Mark a task as completed by Key' })

@@ -1,11 +1,10 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CapabilityService, ActionType } from '../capability.service';
-import { CHECK_PERMISSION_KEY, PermissionContext } from '../decorators/check-permission.decorator';
+import {
+  CHECK_PERMISSION_KEY,
+  PermissionContext,
+} from '../decorators/check-permission.decorator';
 import { UserRole } from '../../../common/role.enum';
 
 @Injectable()
@@ -40,7 +39,7 @@ export class CapabilitiesGuard implements CanActivate {
 
     // Dynamic context extraction could happen here if needed,
     // but simplified compared to McomLoyaltyAPI as counts are handled in service now.
-    const dynamicContext = {}; 
+    const dynamicContext = {};
     const finalContext = { ...staticContext, ...dynamicContext };
 
     await this.capabilityService.checkPermission(user.id, action, finalContext);

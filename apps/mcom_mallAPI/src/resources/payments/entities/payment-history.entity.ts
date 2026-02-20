@@ -26,7 +26,11 @@ export class PaymentHistory extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: PaygOption, nullable: true })
   paygOption: PaygOption;
 
-  @Column({ type: 'enum', enum: PaymentPurpose, default: PaymentPurpose.MEMBERSHIP })
+  @Column({
+    type: 'enum',
+    enum: PaymentPurpose,
+    default: PaymentPurpose.MEMBERSHIP,
+  })
   purpose: PaymentPurpose;
 
   @Column({ nullable: true })

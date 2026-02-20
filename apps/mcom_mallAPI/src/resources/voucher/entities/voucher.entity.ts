@@ -75,7 +75,9 @@ export class Voucher {
   @ManyToOne(() => Order, (order) => order.vouchers, { nullable: true })
   order: Order;
 
-  @ManyToOne(() => VoucherProduct, (product) => product.vouchers, { nullable: true })
+  @ManyToOne(() => VoucherProduct, (product) => product.vouchers, {
+    nullable: true,
+  })
   voucherProduct: VoucherProduct;
 
   @OneToMany(() => VoucherTransaction, (transaction) => transaction.voucher)

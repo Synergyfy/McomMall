@@ -13,13 +13,18 @@ export class ShippingAddressService {
     private readonly shippingAddressRepository: Repository<ShippingAddress>,
   ) {}
 
-  async create(user: User, createDto: CreateShippingAddressDto): Promise<ShippingAddress> {
+  async create(
+    user: User,
+    createDto: CreateShippingAddressDto,
+  ): Promise<ShippingAddress> {
     if (createDto.isMain) {
       await this.unsetMainAddress(user.id);
     }
 
     // If it's the first address, make it main anyway
-    const count = await this.shippingAddressRepository.count({ where: { user: { id: user.id } } });
+    const count = await this.shippingAddressRepository.count({
+      where: { user: { id: user.id } },
+    });
     const isMain = count === 0 ? true : !!createDto.isMain;
 
     const address = this.shippingAddressRepository.create({
@@ -60,7 +65,11 @@ export class ShippingAddressService {
     return address;
   }
 
-  async update(userId: string, id: string, updateDto: UpdateShippingAddressDto): Promise<ShippingAddress> {
+  async update(
+    userId: string,
+    id: string,
+    updateDto: UpdateShippingAddressDto,
+  ): Promise<ShippingAddress> {
     const address = await this.findOne(userId, id);
 
     if (updateDto.isMain && !address.isMain) {
@@ -74,19 +83,19 @@ export class ShippingAddressService {
   async remove(userId: string, id: string): Promise<void> {
     const address = await this.findOne(userId, id);
     const wasMain = address.isMain;
-    
+
     await this.shippingAddressRepository.remove(address);
 
     // If we deleted the main address, make the most recent one main
     if (wasMain) {
-        const nextAddress = await this.shippingAddressRepository.findOne({
-            where: { user: { id: userId } },
-            order: { created_at: 'DESC' }
-        });
-        if (nextAddress) {
-            nextAddress.isMain = true;
-            await this.shippingAddressRepository.save(nextAddress);
-        }
+      const nextAddress = await this.shippingAddressRepository.findOne({
+        where: { user: { id: userId } },
+        order: { created_at: 'DESC' },
+      });
+      if (nextAddress) {
+        nextAddress.isMain = true;
+        await this.shippingAddressRepository.save(nextAddress);
+      }
     }
   }
 
@@ -103,10 +112,10 @@ export class ShippingAddressService {
       { isMain: false },
     );
   }
-  
+
   async findMain(userId: string): Promise<ShippingAddress | null> {
-      return this.shippingAddressRepository.findOne({
-          where: { user: { id: userId }, isMain: true }
-      });
+    return this.shippingAddressRepository.findOne({
+      where: { user: { id: userId }, isMain: true },
+    });
   }
 }

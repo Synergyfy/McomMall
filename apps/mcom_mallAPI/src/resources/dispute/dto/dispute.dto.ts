@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsEnum,
+  IsNotEmpty,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 import { DisputeReason, DisputeStatus } from '../dispute.enum';
 
 export class CreateDisputeDto {
@@ -13,7 +20,7 @@ export class CreateDisputeDto {
   @IsOptional()
   orderId?: string;
 
-  @ApiProperty({ example: 45.50 })
+  @ApiProperty({ example: 45.5 })
   @IsNumber()
   @IsNotEmpty()
   amount: number;
@@ -28,7 +35,10 @@ export class CreateDisputeDto {
   @IsNotEmpty()
   description: string;
 
-  @ApiPropertyOptional({ type: [String], example: ['https://example.com/evidence1.jpg'] })
+  @ApiPropertyOptional({
+    type: [String],
+    example: ['https://example.com/evidence1.jpg'],
+  })
   @IsOptional()
   evidence?: string[];
 }
@@ -51,10 +61,16 @@ export class DisputeQueryDto {
   @ApiPropertyOptional({ example: 'disp-123' })
   search?: string;
 
-  @ApiPropertyOptional({ enum: DisputeStatus, example: DisputeStatus.UNDER_REVIEW })
+  @ApiPropertyOptional({
+    enum: DisputeStatus,
+    example: DisputeStatus.UNDER_REVIEW,
+  })
   status?: string;
 
-  @ApiPropertyOptional({ enum: DisputeReason, example: DisputeReason.NOT_RECEIVED })
+  @ApiPropertyOptional({
+    enum: DisputeReason,
+    example: DisputeReason.NOT_RECEIVED,
+  })
   reason?: string;
 
   @ApiPropertyOptional({ example: 1, default: 1 })
@@ -83,7 +99,7 @@ export class AdminDisputeDto {
   @ApiPropertyOptional({ example: 'ord-456' })
   orderId?: string;
 
-  @ApiProperty({ example: 45.50 })
+  @ApiProperty({ example: 45.5 })
   amount: number;
 
   @ApiProperty({ enum: DisputeReason, example: DisputeReason.DEFECTIVE })

@@ -6,10 +6,7 @@ import { Tier } from './entities/tier.entity';
 import { SeasonsModule } from '../seasons/seasons.module';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Tier]),
-    SeasonsModule,
-  ],
+  imports: [TypeOrmModule.forFeature([Tier]), SeasonsModule],
   controllers: [TierController],
   providers: [TierService],
   exports: [TierService],

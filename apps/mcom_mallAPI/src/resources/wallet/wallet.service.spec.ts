@@ -10,7 +10,10 @@ import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { InitiateFundingDto } from './dto/initiate-funding.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { VerifyFundingDto } from './dto/verify-funding.dto';
-import { WalletTransaction, WalletTransactionType } from './entities/wallet-transaction.entity';
+import {
+  WalletTransaction,
+  WalletTransactionType,
+} from './entities/wallet-transaction.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { VoucherService } from '../voucher/voucher.service';
 import { CreditEarningDto } from './dto/credit-earning.dto';
@@ -167,7 +170,9 @@ describe('WalletService', () => {
       mockGiftCardService.getOwnerStats.mockResolvedValue(giftCardStats);
       mockVoucherService.getSummaryStatistics.mockResolvedValue(voucherStats);
       mockCouponService.getSummaryStatistics.mockResolvedValue(couponStats);
-      mockBookingService.getCompletedBookingsForOwner.mockResolvedValue(completedBookings);
+      mockBookingService.getCompletedBookingsForOwner.mockResolvedValue(
+        completedBookings,
+      );
 
       const newWallet = {
         user,
@@ -184,14 +189,16 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              create: () => newWallet,
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                create: () => newWallet,
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -215,12 +222,18 @@ describe('WalletService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockOrderService.getOrdersForOwner.mockResolvedValue(orders);
-      mockWalletRepository.save.mockResolvedValue({ ...existingWallet, totalOrders: 3 });
+      mockWalletRepository.save.mockResolvedValue({
+        ...existingWallet,
+        totalOrders: 3,
+      });
 
       const result = await service.getWallet(userId);
 
       expect(result.totalOrders).toBe(3);
-      expect(mockWalletRepository.save).toHaveBeenCalledWith({ ...existingWallet, totalOrders: 3 });
+      expect(mockWalletRepository.save).toHaveBeenCalledWith({
+        ...existingWallet,
+        totalOrders: 3,
+      });
     });
   });
 
@@ -249,15 +262,17 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(null),
-              create: () => newWallet,
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(null),
+                create: () => newWallet,
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -299,14 +314,16 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(existingWallet),
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(existingWallet),
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -360,14 +377,16 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(wallet),
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(wallet),
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);

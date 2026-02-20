@@ -22,9 +22,11 @@ import { GiftCardAssetService } from './gift-card-asset.service';
 import { AssetCategoryService } from './asset-category.service';
 import { User } from '../users/entities/user.entity';
 import { CapabilityModule } from '../capability/capability.module';
+import { DigitalValueModule } from '../digital-value/digital-value.module';
 
 @Module({
   imports: [
+    DigitalValueModule,
     forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       GiftCard,
@@ -52,4 +54,4 @@ import { CapabilityModule } from '../capability/capability.module';
   providers: [GiftCardService, GiftCardAssetService, AssetCategoryService],
   exports: [GiftCardService, GiftCardAssetService, AssetCategoryService],
 })
-export class GiftCardModule { }
+export class GiftCardModule {}

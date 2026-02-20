@@ -123,7 +123,9 @@ describe('EmailService', () => {
       };
 
       // Spy on validateOtp to avoid integration issues within unit test
-      jest.spyOn(service, 'validateOtp').mockResolvedValue({ message: 'OTP validated' });
+      jest
+        .spyOn(service, 'validateOtp')
+        .mockResolvedValue({ message: 'OTP validated' });
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockHashService.hashPassword.mockResolvedValue('newHashedPassword');

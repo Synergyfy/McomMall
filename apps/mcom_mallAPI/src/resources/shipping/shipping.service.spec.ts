@@ -53,7 +53,13 @@ describe('ShippingService', () => {
         id: 'order-123',
         total: 100,
         user: { email: 'test@example.com', name: 'Test User', trustScore: 100 },
-        items: [{ product: { sku: 'SKU1', title: 'Product 1' }, quantity: 1, price: 100 }],
+        items: [
+          {
+            product: { sku: 'SKU1', title: 'Product 1' },
+            quantity: 1,
+            price: 100,
+          },
+        ],
         business: {
           businessName: 'Test Business',
           businessPhone: '1234567890',
@@ -78,7 +84,10 @@ describe('ShippingService', () => {
       const result = await service.generateLabel('order-123');
 
       expect(result.labelUrl).toBeDefined();
-      expect(mockEventEmitter.emit).toHaveBeenCalledWith('ORDER_LABEL_GENERATED', expect.anything());
+      expect(mockEventEmitter.emit).toHaveBeenCalledWith(
+        'ORDER_LABEL_GENERATED',
+        expect.anything(),
+      );
     });
 
     it('should throw BadRequestException if fraud check fails', async () => {
@@ -91,7 +100,9 @@ describe('ShippingService', () => {
 
       mockOrderRepository.findOne.mockResolvedValue(riskyOrder);
 
-      await expect(service.generateLabel('order-risk')).rejects.toThrow(BadRequestException);
+      await expect(service.generateLabel('order-risk')).rejects.toThrow(
+        BadRequestException,
+      );
     });
   });
 });

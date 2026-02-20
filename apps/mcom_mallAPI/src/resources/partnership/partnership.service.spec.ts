@@ -52,35 +52,59 @@ describe('PartnershipService', () => {
         },
         {
           provide: getRepositoryToken(UserPartnership),
-          useValue: { findOne: jest.fn(), find: jest.fn(), create: jest.fn(), save: jest.fn(), count: jest.fn() },
+          useValue: {
+            findOne: jest.fn(),
+            find: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            count: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(UserPartnershipRequest),
-          useValue: { findOne: jest.fn(), create: jest.fn(), save: jest.fn(), find: jest.fn(), count: jest.fn() },
+          useValue: {
+            findOne: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
+            count: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(ItemPartnershipRequest),
-          useValue: { create: jest.fn(), save: jest.fn(), findOne: jest.fn(), find: jest.fn(), count: jest.fn() },
+          useValue: {
+            create: jest.fn(),
+            save: jest.fn(),
+            findOne: jest.fn(),
+            find: jest.fn(),
+            count: jest.fn(),
+          },
         },
         {
           provide: getRepositoryToken(Product),
-          useValue: { findOne: jest.fn(), createQueryBuilder: jest.fn(() => ({
-            leftJoinAndSelect: jest.fn().mockReturnThis(),
-            where: jest.fn().mockReturnThis(),
-            andWhere: jest.fn().mockReturnThis(),
-            take: jest.fn().mockReturnThis(),
-            getMany: jest.fn().mockResolvedValue([mockProduct]),
-          })) },
+          useValue: {
+            findOne: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+              leftJoinAndSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              take: jest.fn().mockReturnThis(),
+              getMany: jest.fn().mockResolvedValue([mockProduct]),
+            })),
+          },
         },
         {
           provide: getRepositoryToken(Service),
-          useValue: { findOne: jest.fn(), createQueryBuilder: jest.fn(() => ({
-            leftJoinAndSelect: jest.fn().mockReturnThis(),
-            where: jest.fn().mockReturnThis(),
-            andWhere: jest.fn().mockReturnThis(),
-            take: jest.fn().mockReturnThis(),
-            getMany: jest.fn().mockResolvedValue([]),
-          })) },
+          useValue: {
+            findOne: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+              leftJoinAndSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              take: jest.fn().mockReturnThis(),
+              getMany: jest.fn().mockResolvedValue([]),
+            })),
+          },
         },
         {
           provide: getRepositoryToken(User),
@@ -101,8 +125,12 @@ describe('PartnershipService', () => {
     emailService = module.get<EmailService>(EmailService);
     productRepository = module.get(getRepositoryToken(Product));
     userPartnershipRepository = module.get(getRepositoryToken(UserPartnership));
-    userPartnershipRequestRepository = module.get(getRepositoryToken(UserPartnershipRequest));
-    itemPartnershipRequestRepository = module.get(getRepositoryToken(ItemPartnershipRequest));
+    userPartnershipRequestRepository = module.get(
+      getRepositoryToken(UserPartnershipRequest),
+    );
+    itemPartnershipRequestRepository = module.get(
+      getRepositoryToken(ItemPartnershipRequest),
+    );
     userRepository = module.get(getRepositoryToken(User));
   });
 
@@ -116,18 +144,24 @@ describe('PartnershipService', () => {
       userRepository.findOne.mockResolvedValue(mockTargetUser);
       userPartnershipRepository.findOne.mockResolvedValue(null); // No existing partnership
       userPartnershipRequestRepository.findOne.mockResolvedValue(null); // No pending request
-      
-      const mockUserRequest = { id: 'req-1', status: PartnershipStatus.PENDING };
+
+      const mockUserRequest = {
+        id: 'req-1',
+        status: PartnershipStatus.PENDING,
+      };
       userPartnershipRequestRepository.create.mockReturnValue(mockUserRequest);
       userPartnershipRequestRepository.save.mockResolvedValue(mockUserRequest);
 
-      const mockItemRequest = { id: 'item-req-1', status: PartnershipStatus.PENDING };
+      const mockItemRequest = {
+        id: 'item-req-1',
+        status: PartnershipStatus.PENDING,
+      };
       itemPartnershipRequestRepository.create.mockReturnValue(mockItemRequest);
       itemPartnershipRequestRepository.save.mockResolvedValue(mockItemRequest);
 
       const result = await service.createCompositePartnershipRequest(
         { plusProductId: 'prod-1', baseProductId: 'my-prod-1' },
-        mockUser
+        mockUser,
       );
 
       expect(userPartnershipRequestRepository.create).toHaveBeenCalled();
@@ -140,15 +174,21 @@ describe('PartnershipService', () => {
     it('should only create item request if partnership exists', async () => {
       productRepository.findOne.mockResolvedValue(mockProduct);
       userRepository.findOne.mockResolvedValue(mockTargetUser);
-      userPartnershipRepository.findOne.mockResolvedValue({ id: 'partnership-1', isActive: true }); // Active partnership
+      userPartnershipRepository.findOne.mockResolvedValue({
+        id: 'partnership-1',
+        isActive: true,
+      }); // Active partnership
 
-      const mockItemRequest = { id: 'item-req-1', status: PartnershipStatus.PENDING };
+      const mockItemRequest = {
+        id: 'item-req-1',
+        status: PartnershipStatus.PENDING,
+      };
       itemPartnershipRequestRepository.create.mockReturnValue(mockItemRequest);
       itemPartnershipRequestRepository.save.mockResolvedValue(mockItemRequest);
 
       const result = await service.createCompositePartnershipRequest(
         { plusProductId: 'prod-1', baseProductId: 'my-prod-1' },
-        mockUser
+        mockUser,
       );
 
       expect(userPartnershipRequestRepository.create).not.toHaveBeenCalled();
@@ -159,29 +199,34 @@ describe('PartnershipService', () => {
     });
 
     it('should throw error if partnering with self', async () => {
-        productRepository.findOne.mockResolvedValue({ ...mockProduct, business: { user: mockUser } }); // Owned by self
-        
-        await expect(service.createCompositePartnershipRequest(
-            { plusProductId: 'prod-1' },
-            mockUser
-        )).rejects.toThrow(BadRequestException);
+      productRepository.findOne.mockResolvedValue({
+        ...mockProduct,
+        business: { user: mockUser },
+      }); // Owned by self
+
+      await expect(
+        service.createCompositePartnershipRequest(
+          { plusProductId: 'prod-1' },
+          mockUser,
+        ),
+      ).rejects.toThrow(BadRequestException);
     });
   });
 
   describe('searchPartnerItems', () => {
-      it('should return formatted items', async () => {
-          userPartnershipRepository.find.mockResolvedValue([]); // No partners
-          
-          const result = await service.searchPartnerItems('test', 'user-1');
-          
-          expect(result).toHaveLength(1); // 1 product mocked
-          expect(result[0].type).toBe('product');
-          expect(result[0].owner.name).toBe('Jane Doe');
-      });
+    it('should return formatted items', async () => {
+      userPartnershipRepository.find.mockResolvedValue([]); // No partners
 
-      it('should return empty array for short query', async () => {
-          const result = await service.searchPartnerItems('a', 'user-1');
-          expect(result).toEqual([]);
-      });
+      const result = await service.searchPartnerItems('test', 'user-1');
+
+      expect(result).toHaveLength(1); // 1 product mocked
+      expect(result[0].type).toBe('product');
+      expect(result[0].owner.name).toBe('Jane Doe');
+    });
+
+    it('should return empty array for short query', async () => {
+      const result = await service.searchPartnerItems('a', 'user-1');
+      expect(result).toEqual([]);
+    });
   });
 });

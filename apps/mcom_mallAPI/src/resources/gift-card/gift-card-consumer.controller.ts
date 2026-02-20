@@ -34,7 +34,7 @@ import { GiftCardTemplate } from './entities/gift-card-template.entity';
 @ApiTags('Gift Cards (Consumer)')
 @Controller('gift-cards')
 export class GiftCardConsumerController {
-  constructor(private readonly giftCardService: GiftCardService) { }
+  constructor(private readonly giftCardService: GiftCardService) {}
 
   @Post('purchase')
   @UseGuards(JwtAuthGuard)
@@ -75,7 +75,8 @@ export class GiftCardConsumerController {
   @ApiBearerAuth()
   @ApiOperation({
     summary: 'Initiate a gift card reload',
-    description: 'Returns a client secret for Stripe or an order ID for PayPal.',
+    description:
+      'Returns a client secret for Stripe or an order ID for PayPal.',
   })
   initiateReload(
     @Param('code') code: string,
@@ -100,13 +101,19 @@ export class GiftCardConsumerController {
     @Body() verifyDto: VerifyReloadDto,
     @CurrentUser() user: User,
   ) {
-    return this.giftCardService.verifyAndCompleteReload(code, verifyDto, user.id);
+    return this.giftCardService.verifyAndCompleteReload(
+      code,
+      verifyDto,
+      user.id,
+    );
   }
 
   @Get('my-purchases')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all gift cards purchased by the authenticated user' })
+  @ApiOperation({
+    summary: 'Get all gift cards purchased by the authenticated user',
+  })
   async getMyPurchasedCards(@Req() req: Request) {
     const userId = req.user.id;
     return this.giftCardService.findMyPurchasedCards(userId);
@@ -131,7 +138,9 @@ export class GiftCardConsumerController {
   @ApiOperation({
     summary: 'Get all public gift card templates with pagination and search',
   })
-  async findAllPublicTemplates(@Query() searchDto: GiftCardTemplateSearchDto): Promise<PageDto<GiftCardTemplate>> {
+  async findAllPublicTemplates(
+    @Query() searchDto: GiftCardTemplateSearchDto,
+  ): Promise<PageDto<GiftCardTemplate>> {
     return this.giftCardService.findAllPublicTemplates(searchDto);
   }
 

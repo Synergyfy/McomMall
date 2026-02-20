@@ -49,8 +49,12 @@ describe('SupportTicketsService', () => {
     }).compile();
 
     service = module.get<SupportTicketsService>(SupportTicketsService);
-    ticketRepo = module.get<Repository<SupportTicket>>(getRepositoryToken(SupportTicket));
-    messageRepo = module.get<Repository<SupportMessage>>(getRepositoryToken(SupportMessage));
+    ticketRepo = module.get<Repository<SupportTicket>>(
+      getRepositoryToken(SupportTicket),
+    );
+    messageRepo = module.get<Repository<SupportMessage>>(
+      getRepositoryToken(SupportMessage),
+    );
   });
 
   it('should be defined', () => {
@@ -64,10 +68,12 @@ describe('SupportTicketsService', () => {
 
       expect(ticketRepo.create).toHaveBeenCalled();
       expect(ticketRepo.save).toHaveBeenCalled();
-      expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        content: dto.description,
-        senderId: mockUser.id,
-      }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: dto.description,
+          senderId: mockUser.id,
+        }),
+      );
       expect(result).toEqual(mockTicket);
     });
   });
@@ -77,59 +83,75 @@ describe('SupportTicketsService', () => {
       const dto = { content: 'Reply' };
       await service.addMessage(mockUser, 'ticket-1', dto);
 
-      expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        content: dto.content,
-        senderId: mockUser.id,
-        isAdminMessage: false,
-      }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: dto.content,
+          senderId: mockUser.id,
+          isAdminMessage: false,
+        }),
+      );
       expect(ticketRepo.save).toHaveBeenCalled();
     });
 
     it('should allow admin to add a message and update status', async () => {
       const dto = { content: 'Admin Reply' };
-      (ticketRepo.findOne as jest.Mock).mockResolvedValue({ ...mockTicket, status: TicketStatus.OPEN });
-      
+      (ticketRepo.findOne as jest.Mock).mockResolvedValue({
+        ...mockTicket,
+        status: TicketStatus.OPEN,
+      });
+
       await service.addMessage(mockAdmin, 'ticket-1', dto);
 
-      expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({
-        content: dto.content,
-        senderId: mockAdmin.id,
-        isAdminMessage: true,
-      }));
-      expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({
-        status: TicketStatus.IN_PROGRESS,
-      }));
+      expect(messageRepo.create).toHaveBeenCalledWith(
+        expect.objectContaining({
+          content: dto.content,
+          senderId: mockAdmin.id,
+          isAdminMessage: true,
+        }),
+      );
+      expect(ticketRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: TicketStatus.IN_PROGRESS,
+        }),
+      );
     });
 
     it('should throw ForbiddenException if non-owner user tries to add message', async () => {
       const otherUser = { id: 'user-2', role: UserRole.CUSTOMER } as User;
-      await expect(service.addMessage(otherUser, 'ticket-1', { content: 'Hi' }))
-        .rejects.toThrow(ForbiddenException);
+      await expect(
+        service.addMessage(otherUser, 'ticket-1', { content: 'Hi' }),
+      ).rejects.toThrow(ForbiddenException);
     });
   });
 
   describe('findAll', () => {
     it('should return user tickets for customer', async () => {
       await service.findAll(mockUser);
-      expect(ticketRepo.find).toHaveBeenCalledWith(expect.objectContaining({
-        where: { userId: mockUser.id }
-      }));
+      expect(ticketRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { userId: mockUser.id },
+        }),
+      );
     });
 
     it('should return all tickets for admin', async () => {
       await service.findAll(mockAdmin);
-      expect(ticketRepo.find).toHaveBeenCalledWith(expect.objectContaining({
-        relations: ['user']
-      }));
+      expect(ticketRepo.find).toHaveBeenCalledWith(
+        expect.objectContaining({
+          relations: ['user'],
+        }),
+      );
     });
   });
 
   describe('resolveTicket', () => {
     it('should update status to RESOLVED', async () => {
       await service.resolveTicket(mockUser, 'ticket-1');
-      expect(ticketRepo.save).toHaveBeenCalledWith(expect.objectContaining({
-        status: TicketStatus.RESOLVED
-      }));
+      expect(ticketRepo.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          status: TicketStatus.RESOLVED,
+        }),
+      );
     });
   });
 });

@@ -1,11 +1,11 @@
-import { Test, TestingModule } from "@nestjs/testing";
-import { getRepositoryToken } from "@nestjs/typeorm";
-import { ProvisionService } from "./provision.service";
-import { Provision, ProvisionType } from "./entities/provision.entity";
-import { Repository } from "typeorm";
-import { BadRequestException, NotFoundException } from "@nestjs/common";
+import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
+import { ProvisionService } from './provision.service';
+import { Provision, ProvisionType } from './entities/provision.entity';
+import { Repository } from 'typeorm';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 
-describe("ProvisionService (Mall)", () => {
+describe('ProvisionService (Mall)', () => {
   let service: ProvisionService;
   let repository: Repository<Provision>;
 
@@ -27,20 +27,22 @@ describe("ProvisionService (Mall)", () => {
     }).compile();
 
     service = module.get<ProvisionService>(ProvisionService);
-    repository = module.get<Repository<Provision>>(getRepositoryToken(Provision));
+    repository = module.get<Repository<Provision>>(
+      getRepositoryToken(Provision),
+    );
   });
 
   afterEach(() => {
     jest.clearAllMocks();
   });
 
-  describe("create", () => {
-    it("should create and save a new provision", async () => {
+  describe('create', () => {
+    it('should create and save a new provision', async () => {
       const dto = {
-        code: "MALL-CODE",
+        code: 'MALL-CODE',
         type: ProvisionType.TRIAL_EXTENSION,
         payload: { durationDays: 30 },
-        expiresAt: "2026-12-31",
+        expiresAt: '2026-12-31',
       };
 
       mockProvisionRepository.findOne.mockResolvedValue(null);
@@ -49,30 +51,34 @@ describe("ProvisionService (Mall)", () => {
 
       const result = await service.create(dto);
 
-      expect(repository.findOne).toHaveBeenCalledWith({ where: { code: dto.code } });
-      expect(repository.create).toHaveBeenCalledWith(expect.objectContaining({ code: dto.code }));
+      expect(repository.findOne).toHaveBeenCalledWith({
+        where: { code: dto.code },
+      });
+      expect(repository.create).toHaveBeenCalledWith(
+        expect.objectContaining({ code: dto.code }),
+      );
       expect(result).toEqual(dto);
     });
   });
 
-  describe("validateAndMarkRedeemed", () => {
-      it("should mark provision as redeemed if valid", async () => {
-          const code = "VALID-MALL";
-          const userId = "user-123";
-          const provision = {
-              code,
-              isRedeemed: false,
-              expiresAt: new Date(Date.now() + 100000), 
-              save: jest.fn()
-          };
+  describe('validateAndMarkRedeemed', () => {
+    it('should mark provision as redeemed if valid', async () => {
+      const code = 'VALID-MALL';
+      const userId = 'user-123';
+      const provision = {
+        code,
+        isRedeemed: false,
+        expiresAt: new Date(Date.now() + 100000),
+        save: jest.fn(),
+      };
 
-          mockProvisionRepository.findOne.mockResolvedValue(provision);
-          mockProvisionRepository.save.mockImplementation((val) => val);
+      mockProvisionRepository.findOne.mockResolvedValue(provision);
+      mockProvisionRepository.save.mockImplementation((val) => val);
 
-          const result = await service.validateAndMarkRedeemed(code, userId);
+      const result = await service.validateAndMarkRedeemed(code, userId);
 
-          expect(result.isRedeemed).toBe(true);
-          expect(result.redeemedByUserId).toBe(userId);
-      });
+      expect(result.isRedeemed).toBe(true);
+      expect(result.redeemedByUserId).toBe(userId);
+    });
   });
 });

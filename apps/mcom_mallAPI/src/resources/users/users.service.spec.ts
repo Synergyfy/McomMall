@@ -99,8 +99,8 @@ describe('UsersService', () => {
         {
           provide: ProvisionService,
           useValue: {
-              findByCode: jest.fn(),
-              validateAndMarkRedeemed: jest.fn(),
+            findByCode: jest.fn(),
+            validateAndMarkRedeemed: jest.fn(),
           },
         },
         {
@@ -112,7 +112,9 @@ describe('UsersService', () => {
         {
           provide: TierService,
           useValue: {
-            findTrialTier: jest.fn().mockResolvedValue({ id: 'tier-1', name: 'Trial' }),
+            findTrialTier: jest
+              .fn()
+              .mockResolvedValue({ id: 'tier-1', name: 'Trial' }),
           },
         },
         {
@@ -252,7 +254,7 @@ describe('UsersService', () => {
         email: 'test@example.com',
         password: 'password',
         phoneNumber: '1234567890',
-        confirm_password: 'password'
+        confirm_password: 'password',
       };
 
       const result = await service.create(createUserDto as any);

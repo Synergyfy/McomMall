@@ -34,7 +34,9 @@ export class ShippingAddress extends AbstractBaseEntity {
   @Column({ default: false })
   isMain: boolean;
 
-  @ManyToOne(() => User, (user) => user.shippingAddresses, { onDelete: 'CASCADE' })
+  @ManyToOne(() => User, (user) => user.shippingAddresses, {
+    onDelete: 'CASCADE',
+  })
   @JoinColumn({ name: 'userId' })
   user: User;
 }

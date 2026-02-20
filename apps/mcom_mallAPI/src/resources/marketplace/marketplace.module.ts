@@ -19,11 +19,11 @@ import { Service } from '../services/entities/service.entity';
       VoucherProduct,
       GiftCardTemplate,
       CouponProduct,
-      Service
-    ])
+      Service,
+    ]),
   ],
   controllers: [MarketplaceController],
   providers: [MarketplaceService],
-  exports: [MarketplaceService]
+  exports: [MarketplaceService],
 })
 export class MarketplaceModule {}

@@ -34,4 +34,4 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
   providers: [AuthService, HashService, JwtStrategy],
   exports: [AuthService],
 })
-export class AuthModule { }
+export class AuthModule {}

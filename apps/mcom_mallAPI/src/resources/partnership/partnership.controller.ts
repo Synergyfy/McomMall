@@ -1,5 +1,19 @@
-import { Body, Controller, Get, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Patch,
+  Post,
+  Query,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthGuard } from '@nestjs/passport';
 import { PartnershipService } from './partnership.service';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
@@ -14,12 +28,14 @@ import { Public } from 'src/common/decorators/public.decorator';
 @ApiTags('Partnerships')
 @Controller('partnerships')
 export class PartnershipController {
-  constructor(private readonly partnershipService: PartnershipService) { }
+  constructor(private readonly partnershipService: PartnershipService) {}
 
   @Get('search-items')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Search for potential items (products/services) to partner with' })
+  @ApiOperation({
+    summary: 'Search for potential items (products/services) to partner with',
+  })
   searchPartnerItems(
     @Query('q') q: string,
     @CurrentUser() user: User,
@@ -45,30 +61,36 @@ export class PartnershipController {
 
   @Get('/product/:id/plus-items')
   @Public()
-  @ApiOperation({ summary: 'Get linked plus items (services/products) for a specific product' })
-  getProductPartnerships(
-    @Param('id') id: string,
-  ): Promise<any[]> {
+  @ApiOperation({
+    summary: 'Get linked plus items (services/products) for a specific product',
+  })
+  getProductPartnerships(@Param('id') id: string): Promise<any[]> {
     return this.partnershipService.getProductPartnerships(id);
   }
 
   @Get('/service/:id/plus-items')
   @Public()
-  @ApiOperation({ summary: 'Get linked plus items (services/products) for a specific service' })
-  getServicePartnerships(
-    @Param('id') id: string,
-  ): Promise<any[]> {
+  @ApiOperation({
+    summary: 'Get linked plus items (services/products) for a specific service',
+  })
+  getServicePartnerships(@Param('id') id: string): Promise<any[]> {
     return this.partnershipService.getServicePartnerships(id);
   }
 
   @Post('/composite-request')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Request partnership with an owner AND a specific item simultaneously' })
+  @ApiOperation({
+    summary:
+      'Request partnership with an owner AND a specific item simultaneously',
+  })
   createCompositePartnershipRequest(
     @Body() dto: CreateItemPartnershipRequestDto,
     @CurrentUser() user: User,
-  ): Promise<{ userRequest: UserPartnershipRequest | null, itemRequest: ItemPartnershipRequest }> {
+  ): Promise<{
+    userRequest: UserPartnershipRequest | null;
+    itemRequest: ItemPartnershipRequest;
+  }> {
     return this.partnershipService.createCompositePartnershipRequest(dto, user);
   }
 
@@ -94,14 +116,20 @@ export class PartnershipController {
     @Body() dto: RespondToUserPartnershipRequestDto,
     @CurrentUser() user: User,
   ): Promise<UserPartnershipRequest> {
-    return this.partnershipService.respondToUserPartnershipRequest(id, dto, user);
+    return this.partnershipService.respondToUserPartnershipRequest(
+      id,
+      dto,
+      user,
+    );
   }
 
   @Get('/requests/user/received')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get received user partnership requests' })
-  getReceivedUserRequests(@CurrentUser() user: User): Promise<UserPartnershipRequest[]> {
+  getReceivedUserRequests(
+    @CurrentUser() user: User,
+  ): Promise<UserPartnershipRequest[]> {
     return this.partnershipService.getReceivedUserRequests(user);
   }
 
@@ -109,7 +137,9 @@ export class PartnershipController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get sent user partnership requests' })
-  getSentUserRequests(@CurrentUser() user: User): Promise<UserPartnershipRequest[]> {
+  getSentUserRequests(
+    @CurrentUser() user: User,
+  ): Promise<UserPartnershipRequest[]> {
     return this.partnershipService.getSentUserRequests(user);
   }
 
@@ -117,7 +147,9 @@ export class PartnershipController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get received item partnership requests' })
-  getReceivedItemRequests(@CurrentUser() user: User): Promise<ItemPartnershipRequest[]> {
+  getReceivedItemRequests(
+    @CurrentUser() user: User,
+  ): Promise<ItemPartnershipRequest[]> {
     return this.partnershipService.getReceivedItemRequests(user);
   }
 
@@ -125,14 +157,18 @@ export class PartnershipController {
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get sent item partnership requests' })
-  getSentItemRequests(@CurrentUser() user: User): Promise<ItemPartnershipRequest[]> {
+  getSentItemRequests(
+    @CurrentUser() user: User,
+  ): Promise<ItemPartnershipRequest[]> {
     return this.partnershipService.getSentItemRequests(user);
   }
 
   @Get('/my-partners')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get all active owner partners with their postcodes' })
+  @ApiOperation({
+    summary: 'Get all active owner partners with their postcodes',
+  })
   getMyPartners(@CurrentUser() user: User): Promise<any[]> {
     return this.partnershipService.getMyPartners(user);
   }
@@ -159,13 +195,19 @@ export class PartnershipController {
     @Body() dto: RespondToUserPartnershipRequestDto,
     @CurrentUser() user: User,
   ): Promise<ItemPartnershipRequest> {
-    return this.partnershipService.respondToItemPartnershipRequest(id, dto, user);
+    return this.partnershipService.respondToItemPartnershipRequest(
+      id,
+      dto,
+      user,
+    );
   }
 
   @Get('/partner-items/:partnershipId')
   @UseGuards(AuthGuard('jwt'))
   @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get shared products/services for a specific partnership' })
+  @ApiOperation({
+    summary: 'Get shared products/services for a specific partnership',
+  })
   getPartnerItems(
     @Param('partnershipId') partnershipId: string,
     @CurrentUser() user: User,

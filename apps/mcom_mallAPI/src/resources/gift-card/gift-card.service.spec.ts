@@ -4,9 +4,7 @@ import { Repository, DataSource } from 'typeorm';
 import { GiftCardService } from './gift-card.service';
 import { GiftCard } from './entities/gift-card.entity';
 import { GiftCardTemplate } from './entities/gift-card-template.entity';
-import {
-  GiftCardTransaction,
-} from './entities/gift-card-transaction.entity';
+import { GiftCardTransaction } from './entities/gift-card-transaction.entity';
 import { GiftCardSettings } from './entities/gift-card-settings.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { Order } from '../order/entities/order.entity';
@@ -142,12 +140,18 @@ describe('GiftCardService (User-Centric)', () => {
         },
         { provide: getRepositoryToken(Business), useFactory: mockRepository },
         { provide: getRepositoryToken(Order), useFactory: mockRepository },
-        { provide: getRepositoryToken(OrderPayment), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(OrderPayment),
+          useFactory: mockRepository,
+        },
         {
           provide: getRepositoryToken(GiftCardAsset),
           useFactory: mockRepository,
         },
-        { provide: PaymentProviderService, useValue: mockPaymentProviderService },
+        {
+          provide: PaymentProviderService,
+          useValue: mockPaymentProviderService,
+        },
         { provide: MailerService, useValue: mockMailerService },
         { provide: DataSource, useValue: mockDataSource },
         {
@@ -178,9 +182,8 @@ describe('GiftCardService (User-Centric)', () => {
     }).compile();
 
     service = module.get<GiftCardService>(GiftCardService);
-    giftCardAssetService = module.get<GiftCardAssetService>(
-      GiftCardAssetService,
-    );
+    giftCardAssetService =
+      module.get<GiftCardAssetService>(GiftCardAssetService);
     templateRepo = module.get<Repository<GiftCardTemplate>>(
       getRepositoryToken(GiftCardTemplate),
     );
@@ -256,7 +259,9 @@ describe('GiftCardService (User-Centric)', () => {
       };
       expect(() =>
         (service as any).validatePurchaseAmount(25, template),
-      ).toThrow('Invalid amount. Must be one of: 10, 20 or a custom amount between 30 and 50.');
+      ).toThrow(
+        'Invalid amount. Must be one of: 10, 20 or a custom amount between 30 and 50.',
+      );
     });
 
     it('should throw if amount is below min custom amount', () => {
@@ -491,9 +496,10 @@ describe('GiftCardService (User-Centric)', () => {
         'some-user',
       );
 
-      expect(
-        (service as any).findTemplateByIdForOwner,
-      ).toHaveBeenCalledWith('template-1', 'some-user');
+      expect((service as any).findTemplateByIdForOwner).toHaveBeenCalledWith(
+        'template-1',
+        'some-user',
+      );
       expect(giftCardAssetService.findAssetsByOwner).toHaveBeenCalledWith(
         'owner-id-123',
       );
@@ -656,11 +662,20 @@ describe('GiftCardService (User-Centric)', () => {
         .spyOn(service as any, 'findGiftCardDetailsForOwner')
         .mockResolvedValue(mockGiftCard);
 
-      await service.adjustBalance('gc-1', mockOwner.id, 30, 'Test adjustment', mockOwner.id);
+      await service.adjustBalance(
+        'gc-1',
+        mockOwner.id,
+        30,
+        'Test adjustment',
+        mockOwner.id,
+      );
 
       expect(dataSource.transaction).toHaveBeenCalled();
-      const savedCard: GiftCard = (mockManager.save as jest.Mock).mock.calls[0][0];
-      const savedTransaction: GiftCardTransaction = (mockManager.save as jest.Mock).mock.calls[1][0];
+      const savedCard: GiftCard = (mockManager.save as jest.Mock).mock
+        .calls[0][0];
+      const savedTransaction: GiftCardTransaction = (
+        mockManager.save as jest.Mock
+      ).mock.calls[1][0];
 
       expect(savedCard.currentBalance).toBe(30);
       expect(savedTransaction.amount).toBe(-20);

@@ -1,9 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsBoolean,
-  IsObject,
-  ValidateNested,
-} from 'class-validator';
+import { IsBoolean, IsObject, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 
 class RedemptionRulesDto {

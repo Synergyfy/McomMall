@@ -10,8 +10,12 @@ describe('SeasonsService', () => {
   let repository: Repository<Season>;
 
   const mockRepository = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(season => Promise.resolve({ id: 'uuid', ...season })),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest
+      .fn()
+      .mockImplementation((season) =>
+        Promise.resolve({ id: 'uuid', ...season }),
+      ),
     find: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
@@ -81,7 +85,12 @@ describe('SeasonsService', () => {
 
   describe('update', () => {
     it('should update a season successfully', async () => {
-      const season = { id: 'uuid', name: 'Summer', startDate: new Date('2026-06-01'), endDate: new Date('2026-08-31') };
+      const season = {
+        id: 'uuid',
+        name: 'Summer',
+        startDate: new Date('2026-06-01'),
+        endDate: new Date('2026-08-31'),
+      };
       mockRepository.findOne.mockResolvedValue(season);
       const dto = { name: 'Updated Summer' };
       const result = await service.update('uuid', dto);
@@ -89,10 +98,17 @@ describe('SeasonsService', () => {
     });
 
     it('should throw BadRequestException if updated dates are invalid', async () => {
-      const season = { id: 'uuid', name: 'Summer', startDate: new Date('2026-06-01'), endDate: new Date('2026-08-31') };
+      const season = {
+        id: 'uuid',
+        name: 'Summer',
+        startDate: new Date('2026-06-01'),
+        endDate: new Date('2026-08-31'),
+      };
       mockRepository.findOne.mockResolvedValue(season);
       const dto = { endDate: '2026-05-01T00:00:00Z' };
-      await expect(service.update('uuid', dto)).rejects.toThrow('Start date must be before end date');
+      await expect(service.update('uuid', dto)).rejects.toThrow(
+        'Start date must be before end date',
+      );
     });
   });
 });

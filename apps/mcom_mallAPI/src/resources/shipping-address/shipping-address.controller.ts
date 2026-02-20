@@ -19,11 +19,16 @@ import { User } from '../users/entities/user.entity';
 @ApiBearerAuth()
 @Controller('shipping-address')
 export class ShippingAddressController {
-  constructor(private readonly shippingAddressService: ShippingAddressService) {}
+  constructor(
+    private readonly shippingAddressService: ShippingAddressService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Add a new shipping address' })
-  create(@CurrentUser() user: User, @Body() createDto: CreateShippingAddressDto) {
+  create(
+    @CurrentUser() user: User,
+    @Body() createDto: CreateShippingAddressDto,
+  ) {
     return this.shippingAddressService.create(user, createDto);
   }
 
@@ -40,7 +45,7 @@ export class ShippingAddressController {
   @Get('main')
   @ApiOperation({ summary: 'Get the main shipping address' })
   findMain(@CurrentUser() user: User) {
-      return this.shippingAddressService.findMain(user.id);
+    return this.shippingAddressService.findMain(user.id);
   }
 
   @Get(':id')

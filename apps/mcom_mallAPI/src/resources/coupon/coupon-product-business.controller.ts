@@ -7,11 +7,15 @@ import {
   Param,
   Delete,
   UseGuards,
-
   Req,
   Query,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiOkResponse,
+} from '@nestjs/swagger';
 import { CouponService } from './coupon.service';
 import { CouponStatsDto } from './dto/coupon-stats.dto';
 import { CouponChartDataDto } from './dto/coupon-chart-data.dto';
@@ -34,7 +38,7 @@ export class CouponProductBusinessController {
   constructor(
     private readonly couponProductService: CouponProductService,
     private readonly couponService: CouponService,
-  ) { }
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new coupon product' })
@@ -48,7 +52,7 @@ export class CouponProductBusinessController {
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard stats for coupons' })
   @ApiOkResponse({
-    description: 'Dashboard statistics for the merchant\'s coupons',
+    description: "Dashboard statistics for the merchant's coupons",
     type: CouponStatsDto,
   })
   getStats(@Req() req: AuthenticatedRequest) {
@@ -104,7 +108,11 @@ export class CouponProductBusinessController {
     @Body() updateCouponProductDto: UpdateCouponProductDto,
     @Req() req: AuthenticatedRequest,
   ) {
-    return this.couponProductService.update(id, updateCouponProductDto, req.user);
+    return this.couponProductService.update(
+      id,
+      updateCouponProductDto,
+      req.user,
+    );
   }
 
   @Delete(':id')

@@ -13,28 +13,33 @@ import {
   IsUUID,
 } from 'class-validator';
 
-import { ProductVariantConfig, ProductAttribute, ProductVariation } from '../interfaces/product-variant.interface';
+import {
+  ProductVariantConfig,
+  ProductAttribute,
+  ProductVariation,
+} from '../interfaces/product-variant.interface';
 
 export class CreateProductDto {
   @ApiProperty({
-    description: 'The attributes for product variants (e.g., Color: [Red, Blue]).',
+    description:
+      'The attributes for product variants (e.g., Color: [Red, Blue]).',
     required: false,
     example: [
       {
         name: 'Color',
         options: [
           { name: 'Red', priceModifier: 0 },
-          { name: 'Blue', priceModifier: 0 }
-        ]
+          { name: 'Blue', priceModifier: 0 },
+        ],
       },
       {
         name: 'Size',
         options: [
           { name: 'S', priceModifier: 0 },
-          { name: 'M', priceModifier: 0 }
-        ]
-      }
-    ]
+          { name: 'M', priceModifier: 0 },
+        ],
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -53,9 +58,9 @@ export class CreateProductDto {
         available: true,
         image: 'https://example.com/red-s.jpg',
         warranty: '1 Year',
-        notes: 'limited edition'
-      }
-    ]
+        notes: 'limited edition',
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -77,18 +82,19 @@ export class CreateProductDto {
         type: 'select',
         options: [
           { name: 'Red', priceModifier: 0 },
-          { name: 'Blue', priceModifier: 3 }
-        ]
-      }
+          { name: 'Blue', priceModifier: 3 },
+        ],
+      },
     ],
-    required: false
+    required: false,
   })
   @IsOptional()
   @IsArray()
   variantConfig?: ProductVariantConfig[];
 
   @ApiPropertyOptional({
-    description: 'The ID of the service provider to associate with this product.',
+    description:
+      'The ID of the service provider to associate with this product.',
     example: 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11',
   })
   @IsOptional()
@@ -214,25 +220,37 @@ export class CreateProductDto {
   @IsIn(['physical', 'virtual', 'downloadable'])
   productType: string;
 
-  @ApiPropertyOptional({ description: 'The price of the product (frontend style).', example: 45.5 })
+  @ApiPropertyOptional({
+    description: 'The price of the product (frontend style).',
+    example: 45.5,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   regular_price?: number;
 
-  @ApiPropertyOptional({ description: 'The sale price of the product (frontend style).', example: 35.0 })
+  @ApiPropertyOptional({
+    description: 'The sale price of the product (frontend style).',
+    example: 35.0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   sale_price?: number;
 
-  @ApiPropertyOptional({ description: 'The price of the product.', example: 45.5 })
+  @ApiPropertyOptional({
+    description: 'The price of the product.',
+    example: 45.5,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)
   price?: number;
 
-  @ApiPropertyOptional({ description: 'The sale price of the product.', example: 35.0 })
+  @ApiPropertyOptional({
+    description: 'The sale price of the product.',
+    example: 35.0,
+  })
   @IsOptional()
   @IsNumber()
   @Min(0)

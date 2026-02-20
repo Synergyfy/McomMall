@@ -15,18 +15,25 @@ export class ProductVariantTemplateService {
     private readonly templateRepository: Repository<ProductVariantTemplate>,
   ) {}
 
-  async create(createDto: CreateProductVariantTemplateDto): Promise<ProductVariantTemplate> {
+  async create(
+    createDto: CreateProductVariantTemplateDto,
+  ): Promise<ProductVariantTemplate> {
     const template = this.templateRepository.create(createDto);
     return this.templateRepository.save(template);
   }
 
-  async findAllPaginated(searchDto: ProductVariantTemplateSearchDto): Promise<PageDto<ProductVariantTemplate>> {
-    const { page, limit, productType, category, subCategory, search } = searchDto;
+  async findAllPaginated(
+    searchDto: ProductVariantTemplateSearchDto,
+  ): Promise<PageDto<ProductVariantTemplate>> {
+    const { page, limit, productType, category, subCategory, search } =
+      searchDto;
 
     const queryBuilder = this.templateRepository.createQueryBuilder('template');
 
     if (productType) {
-      queryBuilder.andWhere('template.productType = :productType', { productType });
+      queryBuilder.andWhere('template.productType = :productType', {
+        productType,
+      });
     }
 
     if (category) {
@@ -34,11 +41,15 @@ export class ProductVariantTemplateService {
     }
 
     if (subCategory) {
-      queryBuilder.andWhere('template.subCategory = :subCategory', { subCategory });
+      queryBuilder.andWhere('template.subCategory = :subCategory', {
+        subCategory,
+      });
     }
 
     if (search) {
-      queryBuilder.andWhere('template.name ILIKE :search', { search: `%${search}%` });
+      queryBuilder.andWhere('template.name ILIKE :search', {
+        search: `%${search}%`,
+      });
     }
 
     queryBuilder
@@ -64,12 +75,18 @@ export class ProductVariantTemplateService {
   async findOne(id: string): Promise<ProductVariantTemplate> {
     const template = await this.templateRepository.findOne({ where: { id } });
     if (!template) {
-      throw new NotFoundException(`Product variant template with ID ${id} not found`);
+      throw new NotFoundException(
+        `Product variant template with ID ${id} not found`,
+      );
     }
     return template;
   }
 
-  async findByFilter(productType: string, category?: string, subCategory?: string): Promise<ProductVariantTemplate[]> {
+  async findByFilter(
+    productType: string,
+    category?: string,
+    subCategory?: string,
+  ): Promise<ProductVariantTemplate[]> {
     const where: any = { productType };
     if (category) where.category = category;
     if (subCategory) where.subCategory = subCategory;
@@ -77,7 +94,10 @@ export class ProductVariantTemplateService {
     return this.templateRepository.find({ where });
   }
 
-  async update(id: string, updateDto: UpdateProductVariantTemplateDto): Promise<ProductVariantTemplate> {
+  async update(
+    id: string,
+    updateDto: UpdateProductVariantTemplateDto,
+  ): Promise<ProductVariantTemplate> {
     const template = await this.findOne(id);
     Object.assign(template, updateDto);
     return this.templateRepository.save(template);

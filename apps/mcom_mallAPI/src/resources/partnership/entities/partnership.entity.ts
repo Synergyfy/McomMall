@@ -1,4 +1,11 @@
-import { Column, Entity, ManyToOne, OneToMany, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Product } from '../../product/entities/product.entity';
 import { Service } from '../../services/entities/service.entity';
@@ -26,6 +33,9 @@ export class Partnership extends AbstractBaseEntity {
   @Column({ default: true })
   isActive: boolean;
 
-  @OneToMany(() => ProductServiceBooking, productServiceBooking => productServiceBooking.partnership)
+  @OneToMany(
+    () => ProductServiceBooking,
+    (productServiceBooking) => productServiceBooking.partnership,
+  )
   productServiceBookings: ProductServiceBooking[];
 }

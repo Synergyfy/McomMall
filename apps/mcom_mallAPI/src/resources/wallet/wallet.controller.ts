@@ -1,11 +1,4 @@
-import {
-  Controller,
-  Get,
-  UseGuards,
-  Req,
-  Post,
-  Body,
-} from '@nestjs/common';
+import { Controller, Get, UseGuards, Req, Post, Body } from '@nestjs/common';
 import { WalletService } from './wallet.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { Request } from 'express';
@@ -40,6 +33,9 @@ export class WalletController {
     @Body() verifyFundingDto: VerifyFundingDto,
   ) {
     const userId = request.user.id;
-    return this.walletService.verifyAndCompleteFunding(verifyFundingDto, userId);
+    return this.walletService.verifyAndCompleteFunding(
+      verifyFundingDto,
+      userId,
+    );
   }
 }
