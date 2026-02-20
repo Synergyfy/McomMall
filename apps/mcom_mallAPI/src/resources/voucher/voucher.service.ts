@@ -43,6 +43,8 @@ import { PageMetaDto } from 'src/common/dto/page-meta.dto';
 import { WalletService } from '../wallet/wallet.service';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
+import { DigitalValueService } from '../digital-value/digital-value.service';
+import { DigitalValueType } from '../digital-value/digital-value.enums';
 
 @Injectable()
 export class VoucherService {
@@ -66,6 +68,7 @@ export class VoucherService {
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
     private readonly dataSource: DataSource,
+    private readonly digitalValueService: DigitalValueService,
   ) {}
 
   // --- Business Owner Methods ---
@@ -278,7 +281,6 @@ export class VoucherService {
         : new Date();
       const isScheduled = deliveryDate > new Date();
 
-      const code = await this.generateUniqueVoucherCode();
       const expiresAt = product.expiryDays
         ? new Date(Date.now() + product.expiryDays * 24 * 60 * 60 * 1000)
         : null;
@@ -292,8 +294,19 @@ export class VoucherService {
         finalAmount = Number(amount) + Number(product.bonusAmount);
       }
 
+      const dv = await this.digitalValueService.create({
+        type: DigitalValueType.VOUCHER,
+        initialValue: finalAmount,
+        ownerId: userId,
+        metadata: {
+            ...purchaseDetails,
+            voucherProductId: product.id,
+        },
+        expiryDate: expiresAt ? expiresAt.toISOString() : null,
+      }, userId, manager);
+
       const newVoucher = voucherRepo.create({
-        code,
+        code: dv.code,
         initialValue: finalAmount,
         balance: finalAmount,
         status: isScheduled
@@ -449,6 +462,13 @@ export class VoucherService {
       });
       await orderRepo.save(newOrder);
 
+      try {
+        const dv = await this.digitalValueService.getByCode(code);
+        await this.digitalValueService.fund(dv.id, { amount }, manager);
+      } catch (e) {
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+      }
+
       const user = await manager.findOne(User, { where: { id: userId } });
 
       const balanceBefore = voucher.balance;
@@ -523,6 +543,16 @@ export class VoucherService {
         );
       }
 
+      try {
+        const dv = await this.digitalValueService.getByCode(code);
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: undefined,
+        }, manager);
+      } catch (e) {
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+      }
+
       const balanceBefore = voucher.balance;
       voucher.balance -= redemptionAmount;
       const balanceAfter = voucher.balance;
@@ -583,6 +613,16 @@ export class VoucherService {
         throw new BadRequestException(
           'This voucher does not allow partial redemption.',
         );
+      }
+
+      try {
+        const dv = await this.digitalValueService.getByCode(code);
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: order.business ? order.business.id : undefined,
+        }, manager);
+      } catch (e) {
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const balanceBefore = voucher.balance;
@@ -647,6 +687,17 @@ export class VoucherService {
 
       const balanceBefore = voucher.balance;
       const redemptionAmount = voucher.balance;
+
+      try {
+        const dv = await this.digitalValueService.getByCode(code);
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: undefined,
+        }, manager);
+      } catch (e) {
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+      }
+
       voucher.balance = 0;
       const balanceAfter = voucher.balance;
 
@@ -785,7 +836,6 @@ export class VoucherService {
     const amount = Number(payload.amount);
     const { recipientEmail, recipientName, message, businessName } = payload;
 
-    const code = await this.generateUniqueVoucherCode();
     // Default expiry 1 year for loyalty rewards
     const expiresAt = new Date();
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
@@ -793,8 +843,22 @@ export class VoucherService {
     // Try to find existing user to link
     const owner = await this.userRepository.findOne({ where: { email: recipientEmail } });
 
+    // Use Digital Value Engine
+    const dv = await this.digitalValueService.create({
+      type: DigitalValueType.VOUCHER,
+      initialValue: amount,
+      ownerId: owner?.id,
+      metadata: {
+        recipientEmail,
+        recipientName,
+        personalMessage: message,
+        businessName,
+      },
+      expiryDate: expiresAt.toISOString(),
+    });
+
     const newVoucher = this.voucherRepository.create({
-      code,
+      code: dv.code,
       initialValue: amount,
       balance: amount,
       status: VoucherStatus.UNREDEEMED,
@@ -814,7 +878,7 @@ export class VoucherService {
     await this.createTransaction({
       voucher: savedVoucher,
       amount,
-      type: TransactionType.PURCHASE, 
+      type: TransactionType.PURCHASE,
       balanceBefore: 0,
       balanceAfter: amount,
       notes: `Generated by Loyalty System for ${businessName}`,

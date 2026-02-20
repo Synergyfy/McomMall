@@ -190,20 +190,20 @@ export class PartnershipService {
           message: dto.message,
         });
                         await this.userPartnershipRequestRepository.save(userRequest);
-                        
+
                         await this.emailService.sendPartnershipRequestEmail(targetUser, currentUser);
                     }
                 }
-          
+
                 // 3. Create Item Partnership Request (Orphan if no partnership yet)
-                const baseItem = dto.baseProductId 
-                  ? { id: dto.baseProductId } as Product 
+                const baseItem = dto.baseProductId
+                  ? { id: dto.baseProductId } as Product
                   : { id: dto.baseServiceId } as Service;
-                  
-                const plusItem = dto.plusProductId 
-                  ? { id: dto.plusProductId } as Product 
+
+                const plusItem = dto.plusProductId
+                  ? { id: dto.plusProductId } as Product
                   : { id: dto.plusServiceId } as Service;
-          
+
                 const itemRequest = this.itemPartnershipRequestRepository.create({
           partnership: userPartnership || null, // Can be null now
           proposer: currentUser,
@@ -216,26 +216,26 @@ export class PartnershipService {
           sentAt: new Date(),
           message: dto.message,
         });
-          
+
                 const savedItemRequest = await this.itemPartnershipRequestRepository.save(itemRequest);
-          
+
                 // Fetch details for email
-                const fullBaseItem = dto.baseProductId 
+                const fullBaseItem = dto.baseProductId
                   ? await this.productRepository.findOne({ where: { id: dto.baseProductId } })
                   : await this.serviceRepository.findOne({ where: { id: dto.baseServiceId } });
-                  
+
                 const fullPlusItem = dto.plusProductId
                   ? await this.productRepository.findOne({ where: { id: dto.plusProductId } })
                   : await this.serviceRepository.findOne({ where: { id: dto.plusServiceId } });
-          
+
                 await this.emailService.sendPartnershipRequestEmail(targetUser, currentUser, {
                     baseItemName: (fullBaseItem as any)?.title || (fullBaseItem as any)?.name || 'Base Item',
                     plusItemName: (fullPlusItem as any)?.title || (fullPlusItem as any)?.name || 'Plus Item',
                 });
-          
+
                 return { userRequest, itemRequest: savedItemRequest };
             }
-          
+
   // --- User-to-User Partnerships ---
 
   async createUserPartnershipRequest(dto: CreateUserPartnershipRequestDto, sender: User): Promise<UserPartnershipRequest> {
@@ -269,7 +269,7 @@ export class PartnershipService {
 
     const savedRequest = await this.userPartnershipRequestRepository.save(request);
     await this.emailService.sendPartnershipRequestEmail(receiver, sender);
-    
+
     return savedRequest;
   }
 
@@ -437,10 +437,10 @@ export class PartnershipService {
     const savedRequest = await this.itemPartnershipRequestRepository.save(request);
 
     // Fetch details for email
-    const fullBaseItem = dto.baseProductId 
+    const fullBaseItem = dto.baseProductId
       ? await this.productRepository.findOne({ where: { id: dto.baseProductId } })
       : await this.serviceRepository.findOne({ where: { id: dto.baseServiceId } });
-      
+
     const fullPlusItem = dto.plusProductId
       ? await this.productRepository.findOne({ where: { id: dto.plusProductId } })
       : await this.serviceRepository.findOne({ where: { id: dto.plusServiceId } });

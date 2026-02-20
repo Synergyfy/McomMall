@@ -51,7 +51,7 @@ export class PaymentsService {
     if (dto.tierId) {
         const tier = await this.tierRepository.findOne({ where: { id: dto.tierId } });
         if (!tier) throw new NotFoundException('Tier not found');
-        
+
         metadata.tierId = dto.tierId;
         metadata.planType = dto.planType || PlanType.MONTHLY;
 
@@ -78,7 +78,7 @@ export class PaymentsService {
     if (dto.tierId) {
         const tier = await this.tierRepository.findOne({ where: { id: dto.tierId } });
         if (!tier) throw new NotFoundException('Tier not found');
-        
+
         metadata.tierId = dto.tierId;
         metadata.planType = dto.planType || PlanType.MONTHLY;
 
@@ -148,7 +148,7 @@ export class PaymentsService {
       purpose,
       tierId,
     });
-    
+
     await this.paymentHistoryRepository.save(paymentHistory);
 
     // If purpose is MEMBERSHIP, create/update membership
@@ -186,7 +186,7 @@ export class PaymentsService {
   async getSubscriptionStatus(userId: string): Promise<SubscriptionStatusDto> {
     try {
       const membership = await this.membershipService.findOne(userId);
-      
+
       if (membership && membership.isTrial) {
         // Populate tasks
         const tasksMap = {
@@ -202,7 +202,7 @@ export class PaymentsService {
             const user = await this.userRepository.findOne({ where: { id: userId }, relations: ['membership', 'membership.tier'] });
             if (user) {
                 const activityTasks = await this.activityTimerService.getUserActiveTasks(user);
-                
+
                 // Find TRIAL composite task or just check all tasks
                 for (const group of activityTasks) {
                     if (group.type === ActivityTimerType.TRIAL && group.tasks) {

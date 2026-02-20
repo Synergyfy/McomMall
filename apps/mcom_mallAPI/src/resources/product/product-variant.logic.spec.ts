@@ -119,7 +119,7 @@ describe('ProductService - Variant Logic', () => {
             options: [{ name: 'Used', priceModifier: -5 }],
           },
         ];
-  
+
         const price = service.calculatePrice(product, { Condition: 'Used' });
         expect(price).toBe(15);
       });

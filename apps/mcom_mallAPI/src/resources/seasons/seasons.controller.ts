@@ -18,14 +18,14 @@ export class SeasonsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a new season',
     description: 'Allows an administrator to define a new season with a specific date range. This season can then be linked to subscription tiers to create seasonal memberships.'
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'The season has been successfully created.',
-    type: Season 
+    type: Season
   })
   @ApiResponse({ status: 400, description: 'Bad Request. Validation failed or start date is after end date.' })
   @ApiResponse({ status: 401, description: 'Unauthorized. JWT token is missing or invalid.' })
@@ -35,12 +35,12 @@ export class SeasonsController {
   }
 
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all seasons',
     description: 'Retrieves a list of all configured seasons in the system.'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of all seasons retrieved successfully.',
     type: [Season]
   })
@@ -49,12 +49,12 @@ export class SeasonsController {
   }
 
   @Get(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get a season by ID',
     description: 'Retrieves the details of a specific season using its unique identifier.'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Season details retrieved successfully.',
     type: Season
   })
@@ -67,12 +67,12 @@ export class SeasonsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Update a season',
     description: 'Allows an administrator to update the details of an existing season. If dates are updated, validation ensures the start date remains before the end date.'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'The season has been successfully updated.',
     type: Season
   })
@@ -88,7 +88,7 @@ export class SeasonsController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Delete a season',
     description: 'Permanently removes a season from the system. Note: This might affect tiers that are currently linked to this season.'
   })

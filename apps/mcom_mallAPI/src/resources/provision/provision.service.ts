@@ -45,7 +45,7 @@ export class ProvisionService {
 
     return this.provisionRepository.save(provision);
   }
-  
+
   async findByCode(code: string): Promise<Provision> {
       return this.provisionRepository.findOne({ where: { code } });
   }

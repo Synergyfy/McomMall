@@ -154,7 +154,7 @@ describe('MembershipService', () => {
     it('should use season dates for membership when tier is seasonal', async () => {
       const season = { startDate: new Date('2026-06-01'), endDate: new Date('2026-08-31') };
       const seasonalTier = { id: 'tier-1', type: TierType.SEASONAL, season };
-      
+
       const verifyDto: VerifyMembershipPaymentDto = {
         paymentProvider: PaymentMethod.STRIPE,
         transactionId: 'pi_123',
@@ -176,12 +176,12 @@ describe('MembershipService', () => {
 
   describe('ensureDates', () => {
     it('should backfill dates for existing membership', async () => {
-      const membership: any = { 
-        id: 'mem-1', 
-        created_at: new Date('2026-01-01'), 
-        expiresAt: new Date('2026-02-01') 
+      const membership: any = {
+        id: 'mem-1',
+        created_at: new Date('2026-01-01'),
+        expiresAt: new Date('2026-02-01')
       };
-      
+
       await (service as any).ensureDates(membership);
 
       expect(membership.startDate).toEqual(membership.created_at);

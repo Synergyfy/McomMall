@@ -47,7 +47,7 @@ export class TaxonomyService {
 
   async updateSector(id: string, updateSectorDto: UpdateSectorDto): Promise<Sector> {
     const sector = await this.findOneSector(id);
-    
+
     if (updateSectorDto.name && updateSectorDto.name !== sector.name) {
       const existing = await this.sectorRepository.findOne({ where: { name: updateSectorDto.name } });
       if (existing) {
@@ -104,7 +104,7 @@ export class TaxonomyService {
 
   async updateCategory(id: string, updateCategoryDto: UpdateCategoryDto): Promise<TaxonomyCategory> {
     const category = await this.findOneCategory(id);
-    
+
     if (updateCategoryDto.sectorId) {
       await this.findOneSector(updateCategoryDto.sectorId);
     }
@@ -154,7 +154,7 @@ export class TaxonomyService {
 
   async updateSubcategory(id: string, updateSubcategoryDto: UpdateSubcategoryDto): Promise<TaxonomySubcategory> {
     const subcategory = await this.findOneSubcategory(id);
-    
+
     if (updateSubcategoryDto.categoryId) {
       await this.findOneCategory(updateSubcategoryDto.categoryId);
     }

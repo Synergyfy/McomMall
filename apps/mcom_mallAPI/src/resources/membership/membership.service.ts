@@ -224,7 +224,7 @@ export class MembershipService {
     const currency = 'GBP';
 
     if (tierId) {
-      tierEntity = await this.tierRepository.findOne({ 
+      tierEntity = await this.tierRepository.findOne({
         where: { id: tierId },
         relations: ['season']
       });
@@ -347,7 +347,7 @@ export class MembershipService {
       throw new ForbiddenException('User has already used their trial period.');
     }
 
-    const tier = await this.tierRepository.findOne({ 
+    const tier = await this.tierRepository.findOne({
       where: { id: tierId },
       relations: ['season']
     });
@@ -391,7 +391,7 @@ export class MembershipService {
   }
 
   async grantAccess(user: User, tierId: string, durationDays: number, source: string): Promise<Membership> {
-    const tier = await this.tierRepository.findOne({ 
+    const tier = await this.tierRepository.findOne({
       where: { id: tierId },
       relations: ['season']
     });

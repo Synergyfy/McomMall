@@ -40,7 +40,7 @@ export class CapabilitiesGuard implements CanActivate {
 
     // Dynamic context extraction could happen here if needed,
     // but simplified compared to McomLoyaltyAPI as counts are handled in service now.
-    const dynamicContext = {}; 
+    const dynamicContext = {};
     const finalContext = { ...staticContext, ...dynamicContext };
 
     await this.capabilityService.checkPermission(user.id, action, finalContext);

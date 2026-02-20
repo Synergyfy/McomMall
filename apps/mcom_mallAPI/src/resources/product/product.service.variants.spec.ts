@@ -130,13 +130,13 @@ describe('ProductService - Variants', () => {
 
     mockProductRepository.count.mockResolvedValue(0);
     mockCapabilityService.checkPermission.mockResolvedValue(true);
-    
+
     // Mock the create method to return the DTO merged with business
     mockProductRepository.create.mockImplementation((dto) => dto);
-    
-    mockProductRepository.save.mockResolvedValue({ 
+
+    mockProductRepository.save.mockResolvedValue({
         id: 'new-product-id',
-        ...createProductDto 
+        ...createProductDto
     });
 
     await service.create(createProductDto, business);
@@ -145,7 +145,7 @@ describe('ProductService - Variants', () => {
         attributes: createProductDto.attributes,
         variations: createProductDto.variations
     }));
-    
+
     expect(mockProductRepository.save).toHaveBeenCalledWith(expect.objectContaining({
         attributes: createProductDto.attributes,
         variations: createProductDto.variations

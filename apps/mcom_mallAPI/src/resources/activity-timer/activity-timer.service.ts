@@ -198,15 +198,15 @@ export class ActivityTimerService {
       // This includes GENERAL and BOTH types applicable to the tier
 
       for (const [type, activities] of activitiesByType.entries()) {
-        // Skip TRIAL tasks for paid users unless we want to show them? 
-        // Usually Trial tasks are only for trial. 
+        // Skip TRIAL tasks for paid users unless we want to show them?
+        // Usually Trial tasks are only for trial.
         // But if filtering Logic included them, maybe we show them?
         // User said "if a user is trial tier member... fetch only trial activity timer".
         // "if a user has a paid membership... each row... has a timer".
 
         // I will process all eligible activities.
         for (const t of activities) {
-          // Skip if it's strictly a TRIAL type and user is not trial? 
+          // Skip if it's strictly a TRIAL type and user is not trial?
           // The filter above should handle it if 'includedTierIds' is set correctly by admin.
           // But as a safeguard/convention:
           if (type === ActivityTimerType.TRIAL) continue;
@@ -216,7 +216,7 @@ export class ActivityTimerService {
           let expiresAt = t.expiresAt;
           // Dynamic expiry based on durationDays relative to... something.
           // Defaulting to "expires X days after creation" for fixed definitions?
-          // Or maybe relative to membership start? 
+          // Or maybe relative to membership start?
           // For now, sticking to logic: Fixed Date OR Duration from Creation.
           if (!expiresAt && t.durationDays) {
             expiresAt = new Date(t.createdAt.getTime() + t.durationDays * 24 * 60 * 60 * 1000);

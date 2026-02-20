@@ -116,7 +116,7 @@ describe('PartnershipService', () => {
       userRepository.findOne.mockResolvedValue(mockTargetUser);
       userPartnershipRepository.findOne.mockResolvedValue(null); // No existing partnership
       userPartnershipRequestRepository.findOne.mockResolvedValue(null); // No pending request
-      
+
       const mockUserRequest = { id: 'req-1', status: PartnershipStatus.PENDING };
       userPartnershipRequestRepository.create.mockReturnValue(mockUserRequest);
       userPartnershipRequestRepository.save.mockResolvedValue(mockUserRequest);
@@ -160,7 +160,7 @@ describe('PartnershipService', () => {
 
     it('should throw error if partnering with self', async () => {
         productRepository.findOne.mockResolvedValue({ ...mockProduct, business: { user: mockUser } }); // Owned by self
-        
+
         await expect(service.createCompositePartnershipRequest(
             { plusProductId: 'prod-1' },
             mockUser
@@ -171,9 +171,9 @@ describe('PartnershipService', () => {
   describe('searchPartnerItems', () => {
       it('should return formatted items', async () => {
           userPartnershipRepository.find.mockResolvedValue([]); // No partners
-          
+
           const result = await service.searchPartnerItems('test', 'user-1');
-          
+
           expect(result).toHaveLength(1); // 1 product mocked
           expect(result[0].type).toBe('product');
           expect(result[0].owner.name).toBe('Jane Doe');

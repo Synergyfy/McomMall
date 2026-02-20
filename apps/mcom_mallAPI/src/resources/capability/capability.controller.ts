@@ -13,8 +13,8 @@ export class CapabilityController {
   @Get('check')
   @ApiOperation({ summary: 'Check if the current user has permission for a specific action' })
   @ApiQuery({ name: 'action', enum: ActionType, description: 'The action to check permission for' })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'Returns success if allowed, or throws ForbiddenException if not.',
     schema: {
         example: { status: 'allowed' }

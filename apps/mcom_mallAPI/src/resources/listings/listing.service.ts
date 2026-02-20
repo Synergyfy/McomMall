@@ -136,7 +136,7 @@ export class ListingsService {
         'listing',
         savedBusiness.businessName,
       );
-      
+
       await this.activityTimerService.completeTaskByKey(userId, 'createdBusiness');
 
       await queryRunner.commitTransaction();

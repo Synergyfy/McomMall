@@ -50,7 +50,7 @@ export class CreateRewardDefinitionDto {
   @IsString({ each: true })
   @IsOptional()
   seasonalLabels?: string[];
-  
+
   @ApiPropertyOptional({ default: true })
   @IsBoolean()
   @IsOptional()
@@ -122,7 +122,7 @@ export class UserVoucherResponseDto {
   code: string;
 
   @ApiProperty({ example: 100.00, description: 'Combined Real + Reward balance' })
-  totalBalance: number; 
+  totalBalance: number;
 
   @ApiProperty({ example: 'active' })
   state: string;

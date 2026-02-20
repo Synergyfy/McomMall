@@ -30,10 +30,10 @@ export class TerminalConfig extends AbstractBaseEntity {
   @Column({ default: 48 })
   autoApprovalHours: number;
 
-  @ApiProperty({ 
-    example: [{ id: '1', minSpend: 10, maxSpend: 50, rewardValue: 2, isActive: true }], 
-    description: 'Reward ranges for Level 1', 
-    nullable: true 
+  @ApiProperty({
+    example: [{ id: '1', minSpend: 10, maxSpend: 50, rewardValue: 2, isActive: true }],
+    description: 'Reward ranges for Level 1',
+    nullable: true
   })
   @Column('jsonb', { nullable: true })
   ranges: { id: string; minSpend: number; maxSpend: number; rewardValue: number; isActive: boolean }[];
@@ -46,9 +46,9 @@ export class TerminalConfig extends AbstractBaseEntity {
   @Column({ nullable: true })
   apiEndpoint: string;
 
-  @ApiProperty({ 
-    example: { maxPerDay: 100, monthlyBudget: 5000 }, 
-    description: 'Economic guardrails' 
+  @ApiProperty({
+    example: { maxPerDay: 100, monthlyBudget: 5000 },
+    description: 'Economic guardrails'
   })
   @Column('jsonb', { default: {} })
   limits: {

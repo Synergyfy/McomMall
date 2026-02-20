@@ -29,9 +29,9 @@ export class CouponController {
   @Roles(UserRole.ADMIN, UserRole.OWNER)
   @ApiBearerAuth()
   @Post()
-  @ApiOperation({ 
-    summary: 'Create a new Coupon', 
-    description: 'Enforces tier-based capabilities for businesses. Admins can create platform coupons. Owners can create business coupons.' 
+  @ApiOperation({
+    summary: 'Create a new Coupon',
+    description: 'Enforces tier-based capabilities for businesses. Admins can create platform coupons. Owners can create business coupons.'
   })
   @ApiResponse({ status: 201, type: Coupon })
   create(@Body() createCouponDto: CreateCouponDto) {
@@ -47,9 +47,9 @@ export class CouponController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @Post('validate')
-  @ApiOperation({ 
-    summary: 'Validate a Coupon code', 
-    description: 'Checks expiry, usage limits, stacking rules, and hyperlocal restrictions.' 
+  @ApiOperation({
+    summary: 'Validate a Coupon code',
+    description: 'Checks expiry, usage limits, stacking rules, and hyperlocal restrictions.'
   })
   @ApiResponse({ status: 200, type: Coupon })
   validate(

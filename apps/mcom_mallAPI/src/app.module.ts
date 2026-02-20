@@ -52,9 +52,11 @@ import { ActivityTimerModule } from './resources/activity-timer/activity-timer.m
 import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 import { SeasonsModule } from './resources/seasons/seasons.module';
+import { DigitalValueModule } from './resources/digital-value/digital-value.module';
 
 @Module({
   imports: [
+    DigitalValueModule,
     SupportTicketsModule,
     ActivityTimerModule,
     MarketplaceModule,

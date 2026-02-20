@@ -94,7 +94,7 @@ export class ShippingService {
       shipTo: {
         name: order.user.name,
         // Replace with actual Order shipping address relation
-        street1: '123 Customer St', 
+        street1: '123 Customer St',
         city: 'London',
         postalCode: 'SW1A 1AA',
         country: 'GB',
@@ -176,7 +176,7 @@ export class ShippingService {
           },
         }),
       );
-      
+
       this.logger.log(`Order created in ShipStation: ${createOrderResponse.data.orderId}`);
 
       // Then generate the label for the created order
@@ -187,7 +187,7 @@ export class ShippingService {
       // To keep it stateless and fast, "shipments/createlabel" is often preferred if we don't need SS as a CMS.
       // However, creating the order first allows better tracking in SS dashboard.
       // Let's use shipments/createlabel directly with full payload for speed/statelessness as requested.
-      
+
       const labelResponse = await lastValueFrom(
         this.httpService.post(`${this.shipStationApiUrl}/shipments/createlabel`, payload, {
           headers: {
@@ -205,7 +205,7 @@ export class ShippingService {
       order.trackingNumber = shipmentData.trackingNumber;
       order.labelUrl = shipmentData.labelData; // Or labelDownloadUrl depending on response format
       order.carrierCode = shipmentData.carrierCode;
-      
+
       const savedOrder = await this.orderRepository.save(order);
 
       // 6. Trigger Event (Output)
@@ -235,6 +235,6 @@ export class ShippingService {
     const cost = Number(order.actualShippingCost || 0);
     // If collected > cost, we made profit (positive)
     // If collected < cost, we deduct the difference (negative)
-    return collected - cost; 
+    return collected - cost;
   }
 }
