@@ -17,6 +17,14 @@ import Image from "next/image";
 import { SketchPicker, ColorResult } from 'react-color';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
+import { useGetUserListings } from '@/service/listings/hook';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 
 const EditGiftCardTemplatePage = () => {
@@ -33,6 +41,10 @@ const EditGiftCardTemplatePage = () => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  const { data: listings } = useGetUserListings(1, 100);
 
   useEffect(() => {
     if (template) {
@@ -46,9 +58,13 @@ const EditGiftCardTemplatePage = () => {
         minCustomAmount: template.minCustomAmount,
         maxCustomAmount: template.maxCustomAmount,
         allowReloading: template.allowReloading,
+        logoUrl: template.logoUrl || undefined,
       });
       if (template.backgroundImageUrl) {
         setImagePreview(template.backgroundImageUrl);
+      }
+      if (template.logoUrl) {
+        setLogoPreview(template.logoUrl);
       }
     }
   }, [template]);
@@ -79,16 +95,25 @@ const EditGiftCardTemplatePage = () => {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
-      setFormData(prev => ({...prev, backgroundImageUrl: URL.createObjectURL(file)}));
+      setFormData(prev => ({ ...prev, backgroundImageUrl: URL.createObjectURL(file) }));
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.backgroundImageUrl;
         return newErrors;
       });
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+      setFormData(prev => ({ ...prev, logoUrl: URL.createObjectURL(file) }));
     } else {
-      setImageFile(null);
-      setImagePreview(null);
-      setFormData(prev => ({...prev, backgroundImageUrl: ''}));
+      setLogoFile(null);
+      setLogoPreview(null);
+      setFormData(prev => ({ ...prev, logoUrl: '' }));
     }
   };
 
@@ -177,6 +202,33 @@ const EditGiftCardTemplatePage = () => {
       submissionData.backgroundImageUrl = template?.backgroundImageUrl || undefined;
     }
 
+    if (logoFile) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', logoFile);
+
+      try {
+        const response = await fetch('/api/upload/gift-card', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Logo upload failed');
+        }
+
+        const result = await response.json();
+        submissionData.logoUrl = result.secure_url;
+
+      } catch (error) {
+        console.error("Logo upload error:", error);
+        toast.error("Logo upload failed. Please try again.");
+        setIsUploading(false);
+        return;
+      }
+    } else {
+      submissionData.logoUrl = template?.logoUrl || undefined;
+    }
+
     updateTemplate({ id, templateData: submissionData }, {
       onSuccess: () => {
         toast.success("Gift card template updated successfully!");
@@ -206,131 +258,155 @@ const EditGiftCardTemplatePage = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="name">Template Name</Label>
-              <Input id="name" name="name" value={formData.name || ''} onChange={handleInputChange} className="mt-1" />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
+                <Label htmlFor="name">Template Name (Business Listing)</Label>
+                <Select
+                  value={formData.name || ''}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, name: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select a business listing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {listings?.data.map((listing) => (
+                      <SelectItem key={listing.id} value={listing.businessName}>
+                        {listing.businessName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" value={formData.description || ''} onChange={handleInputChange} className="mt-1" />
-              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Background Color</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.backgroundColor }} />
-                      {formData.backgroundColor}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" name="description" value={formData.description || ''} onChange={handleInputChange} className="mt-1" />
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
-              <div>
-                <Label>Text Color</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.textColor }} />
-                      {formData.textColor}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
-                  </PopoverContent>
-                </Popover>
-              </div>
-            </div>
 
-            <div>
-              <Label htmlFor="image">Background Image (optional)</Label>
-              <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
-              {imagePreview && (
-                <div className="mt-4">
-                  <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
-                </div>
-              )}
-              {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="fixedAmounts">Fixed Amounts (£)</Label>
-              <Input
-                id="fixedAmounts"
-                value={fixedAmountInput}
-                onChange={(e) => setFixedAmountInput(e.target.value)}
-                onKeyDown={handleFixedAmountKeyDown}
-                placeholder="Enter amount and press , or Enter"
-                className="mt-1"
-              />
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.fixedAmounts?.map((amount) => (
-                  <div key={amount} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
-                    £{amount}
-                    <button type="button" onClick={() => removeFixedAmount(amount)} className="ml-2">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {errors.fixedAmounts && <p className="text-red-500 text-xs mt-1">{errors.fixedAmounts}</p>}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id="allowCustomAmount" checked={!!formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
-              <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id="allowReloading" checked={!!formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
-              <Label htmlFor="allowReloading">Allow Reloading</Label>
-            </div>
-
-            {formData.allowCustomAmount && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="minCustomAmount">Min Custom Amount (£)</Label>
-                  <Input
-                    id="minCustomAmount"
-                    name="minCustomAmount"
-                    type="number"
-                    value={formData.minCustomAmount || ''}
-                    onChange={handleInputChange}
-                    className="mt-1"
-                  />
-                  {errors.minCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.minCustomAmount}</p>}
+                  <Label>Background Color</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.backgroundColor }} />
+                        {formData.backgroundColor}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0">
+                      <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
-                  <Label htmlFor="maxCustomAmount">Max Custom Amount (£)</Label>
-                  <Input
-                    id="maxCustomAmount"
-                    name="maxCustomAmount"
-                    type="number"
-                    value={formData.maxCustomAmount || ''}
-                    onChange={handleInputChange}
-                    className="mt-1"
-                  />
-                  {errors.maxCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.maxCustomAmount}</p>}
+                  <Label>Text Color</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.textColor }} />
+                        {formData.textColor}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0">
+                      <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-            )}
 
-            <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isUpdating || isUploading || isFetching}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isUpdating || isUploading || isFetching}>
-                {isUpdating ? 'Updating...' : isUploading ? 'Uploading...' : 'Update Template'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
+              <div>
+                <Label htmlFor="logo">Business Logo (optional)</Label>
+                <Input id="logo" type="file" onChange={handleLogoChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
+                {logoPreview && (
+                  <div className="mt-4">
+                    <img src={logoPreview} alt="Logo preview" className="w-24 h-24 object-contain rounded-md border" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="image">Background Image (optional)</Label>
+                <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
+                {imagePreview && (
+                  <div className="mt-4">
+                    <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+                  </div>
+                )}
+                {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="fixedAmounts">Fixed Amounts (£)</Label>
+                <Input
+                  id="fixedAmounts"
+                  value={fixedAmountInput}
+                  onChange={(e) => setFixedAmountInput(e.target.value)}
+                  onKeyDown={handleFixedAmountKeyDown}
+                  placeholder="Enter amount and press , or Enter"
+                  className="mt-1"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.fixedAmounts?.map((amount) => (
+                    <div key={amount} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
+                      £{amount}
+                      <button type="button" onClick={() => removeFixedAmount(amount)} className="ml-2">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {errors.fixedAmounts && <p className="text-red-500 text-xs mt-1">{errors.fixedAmounts}</p>}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="allowCustomAmount" checked={!!formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
+                <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="allowReloading" checked={!!formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
+                <Label htmlFor="allowReloading">Allow Reloading</Label>
+              </div>
+
+              {formData.allowCustomAmount && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minCustomAmount">Min Custom Amount (£)</Label>
+                    <Input
+                      id="minCustomAmount"
+                      name="minCustomAmount"
+                      type="number"
+                      value={formData.minCustomAmount || ''}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    {errors.minCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.minCustomAmount}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="maxCustomAmount">Max Custom Amount (£)</Label>
+                    <Input
+                      id="maxCustomAmount"
+                      name="maxCustomAmount"
+                      type="number"
+                      value={formData.maxCustomAmount || ''}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    {errors.maxCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.maxCustomAmount}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-4">
+                <Button type="button" variant="outline" onClick={() => router.back()} disabled={isUpdating || isUploading || isFetching}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isUpdating || isUploading || isFetching}>
+                  {isUpdating ? 'Updating...' : isUploading ? 'Uploading...' : 'Update Template'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
         </Card>
         <div>
           <GiftCardPreview template={formData} />

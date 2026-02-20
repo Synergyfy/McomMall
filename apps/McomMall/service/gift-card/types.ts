@@ -17,6 +17,7 @@ export interface GiftCardTemplate {
   bonusThreshold?: number;
   bonusAmount?: number;
   media?: string[] | null;
+  logoUrl?: string | null;
 }
 
 export interface CreateGiftCardTemplateDto {
@@ -33,6 +34,7 @@ export interface CreateGiftCardTemplateDto {
   allowReloading?: boolean;
   bonusThreshold?: number;
   bonusAmount?: number;
+  logoUrl?: string;
 }
 
 export interface InitiatePurchaseDto {

@@ -82,8 +82,12 @@ const GiftCardPreview: React.FC<GiftCardPreviewProps> = ({ template }) => {
           </div>
           <div className="text-right">
             <div className="bg-white/95 p-1 rounded-xl inline-block shadow-lg">
-              <div className="w-10 h-10 border-2 border-gray-100 rounded flex items-center justify-center text-gray-400">
-                <Sparkles size={24} />
+              <div className="w-10 h-10 border-2 border-gray-100 rounded flex items-center justify-center text-gray-400 overflow-hidden relative">
+                {template.logoUrl ? (
+                  <img src={template.logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                ) : (
+                  <Sparkles size={24} />
+                )}
               </div>
             </div>
           </div>

@@ -82,7 +82,7 @@ export const CouponTicketFull: React.FC<CouponTicketFullProps> = ({
                 </div>
 
                 {/* Main content */}
-                <div className="flex items-stretch min-h-[130px]">
+                <div className="flex items-stretch h-[130px]">
                     {/* Value badge area */}
                     <div className="flex-shrink-0 flex items-center justify-center bg-[#2563eb] w-28 p-4">
                         <div className="text-center">
@@ -91,8 +91,8 @@ export const CouponTicketFull: React.FC<CouponTicketFullProps> = ({
                     </div>
 
                     {/* Title section */}
-                    <div className="flex-1 flex flex-col justify-center px-5 py-4 border-l border-blue-400/20">
-                        <h3 className="text-2xl font-black uppercase tracking-tight leading-none mb-1">{title}</h3>
+                    <div className="flex-1 flex flex-col justify-center px-5 py-4 border-l border-blue-400/20 overflow-hidden">
+                        <h3 className="text-xl font-black uppercase tracking-tight leading-tight line-clamp-2 mb-1">{title}</h3>
                         {subtitle && (
                             <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-blue-200">{subtitle}</p>
                         )}
@@ -102,8 +102,9 @@ export const CouponTicketFull: React.FC<CouponTicketFullProps> = ({
                 {/* Footer band */}
                 <div className="border-t border-dashed border-blue-400/40 bg-[#0d2550] px-5 py-3 flex items-center justify-between">
                     <div>
-                        <p className="text-[9px] font-bold uppercase tracking-widest text-blue-300 mb-0.5">This Voucher Valid Until</p>
-                        <p className="text-[11px] font-black text-white">{validUntil}</p>
+                        <p className="text-[10px] font-black uppercase tracking-widest text-blue-300">
+                            Valid Until: <span className="text-white ml-1">{validUntil}</span>
+                        </p>
                     </div>
                     <div className="flex items-center gap-2">
                         {[...Array(6)].map((_, i) => (
@@ -166,19 +167,20 @@ export const CouponTicketSplit: React.FC<CouponTicketSplitProps> = ({
                 </div>
 
                 {/* Main split layout */}
-                <div className="flex w-full pt-5 pb-5 min-h-[140px]">
+                <div className="flex w-full pt-5 pb-5 h-[140px] overflow-hidden">
                     {/* Left section: title + stars + validity */}
-                    <div className="flex-1 flex flex-col justify-between px-5 py-2">
+                    <div className="flex-1 flex flex-col justify-between px-5 py-2 overflow-hidden">
                         <div>
                             {showStars && <StarDecor count={3} className="mb-2" />}
-                            <h3 className="text-lg font-black uppercase text-[#1a3a6b] leading-tight tracking-tight">{title}</h3>
+                            <h3 className="text-base font-black uppercase text-[#1a3a6b] leading-tight tracking-tight line-clamp-2">{title}</h3>
                             {subtitle && (
                                 <p className="text-[9px] font-bold uppercase tracking-[0.15em] text-blue-400 mt-0.5">{subtitle}</p>
                             )}
                         </div>
-                        <div className="mt-3">
-                            <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">This Voucher Valid Until</p>
-                            <p className="text-[10px] font-black text-[#1a3a6b]">{validUntil}</p>
+                        <div className="mt-auto">
+                            <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                                Valid Until: <span className="text-[#1a3a6b] ml-1">{validUntil}</span>
+                            </p>
                             {footerText && (
                                 <p className="text-[8px] font-bold text-blue-400 mt-0.5">{footerText}</p>
                             )}
