@@ -2,13 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Dispute } from './entities/dispute.entity';
-import {
-  CreateDisputeDto,
-  DisputeQueryDto,
-  PaginatedDisputesDto,
-  DisputeStatsDto,
-  AdminDisputeDto,
-} from './dto/dispute.dto';
+import { CreateDisputeDto, DisputeQueryDto, PaginatedDisputesDto, DisputeStatsDto, AdminDisputeDto } from './dto/dispute.dto';
 import { DisputeStatus } from './dispute.enum';
 import { User } from '../users/entities/user.entity';
 
@@ -19,10 +13,7 @@ export class DisputeService {
     private disputeRepository: Repository<Dispute>,
   ) {}
 
-  async create(
-    createDisputeDto: CreateDisputeDto,
-    customer: User,
-  ): Promise<Dispute> {
+  async create(createDisputeDto: CreateDisputeDto, customer: User): Promise<Dispute> {
     const dispute = this.disputeRepository.create({
       ...createDisputeDto,
       customerId: customer.id,
@@ -34,12 +25,8 @@ export class DisputeService {
     const [total, open, underReview, escalated] = await Promise.all([
       this.disputeRepository.count(),
       this.disputeRepository.count({ where: { status: DisputeStatus.NEW } }),
-      this.disputeRepository.count({
-        where: { status: DisputeStatus.UNDER_REVIEW },
-      }),
-      this.disputeRepository.count({
-        where: { status: DisputeStatus.ESCALATED },
-      }),
+      this.disputeRepository.count({ where: { status: DisputeStatus.UNDER_REVIEW } }),
+      this.disputeRepository.count({ where: { status: DisputeStatus.ESCALATED } }),
     ]);
 
     return { total, open, underReview, escalated };
@@ -49,8 +36,7 @@ export class DisputeService {
     const { search, status, reason, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const qb = this.disputeRepository
-      .createQueryBuilder('dispute')
+    const qb = this.disputeRepository.createQueryBuilder('dispute')
       .leftJoinAndSelect('dispute.customer', 'customer')
       .leftJoinAndSelect('dispute.business', 'business')
       .take(limit)
@@ -58,10 +44,7 @@ export class DisputeService {
       .orderBy('dispute.created_at', 'DESC');
 
     if (search) {
-      qb.andWhere(
-        '(dispute.id::text ILIKE :search OR customer.name ILIKE :search OR business.businessName ILIKE :search)',
-        { search: `%${search}%` },
-      );
+      qb.andWhere('(dispute.id::text ILIKE :search OR customer.name ILIKE :search OR business.businessName ILIKE :search)', { search: `%${search}%` });
     }
 
     if (status && status !== 'all') {
@@ -74,7 +57,7 @@ export class DisputeService {
 
     const [disputes, total] = await qb.getManyAndCount();
 
-    const mappedData: AdminDisputeDto[] = disputes.map((d) => ({
+    const mappedData: AdminDisputeDto[] = disputes.map(d => ({
       id: d.id,
       customerName: d.customer?.name || 'Unknown',
       customerId: d.customerId,

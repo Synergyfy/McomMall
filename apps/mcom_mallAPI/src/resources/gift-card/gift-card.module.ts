@@ -54,4 +54,4 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
   providers: [GiftCardService, GiftCardAssetService, AssetCategoryService],
   exports: [GiftCardService, GiftCardAssetService, AssetCategoryService],
 })
-export class GiftCardModule {}
+export class GiftCardModule { }

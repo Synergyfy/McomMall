@@ -24,7 +24,9 @@ import { ServiceProviderProfile } from './entities/service-provider-profile.enti
 @ApiTags('Service Provider Profiles')
 @Controller('service-provider-profiles')
 export class ServiceProviderProfileController {
-  constructor(private readonly profileService: ServiceProviderProfileService) {}
+  constructor(
+    private readonly profileService: ServiceProviderProfileService,
+  ) {}
 
   @Post()
   @UseGuards(JwtAuthGuard)
@@ -47,7 +49,7 @@ export class ServiceProviderProfileController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({ summary: "Get the current user's service provider profile" })
+  @ApiOperation({ summary: 'Get the current user\'s service provider profile' })
   @ApiResponse({
     status: 200,
     description: 'The service provider profile.',
@@ -76,9 +78,7 @@ export class ServiceProviderProfileController {
   @Patch('me')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
-  @ApiOperation({
-    summary: "Update the current user's service provider profile",
-  })
+  @ApiOperation({ summary: 'Update the current user\'s service provider profile' })
   @ApiResponse({
     status: 200,
     description: 'The profile has been successfully updated.',

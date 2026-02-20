@@ -1,10 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  InternalServerErrorException,
-  Inject,
-  forwardRef,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, InternalServerErrorException, Inject, forwardRef } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CouponProduct } from './entities/coupon-product.entity';
@@ -12,10 +6,7 @@ import { CouponProductSearchDto } from './dto/coupon-product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
 import { Business } from '../listings/entities/listing.entity';
-import {
-  CapabilityService,
-  ActionType,
-} from '../capability/capability.service';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 import { CreateCouponProductDto } from './dto/create-coupon-product.dto';
 import { UpdateCouponProductDto } from './dto/update-coupon-product.dto';
 import { User } from '../users/entities/user.entity';
@@ -31,17 +22,13 @@ export class CouponProductService {
     private readonly capabilityService: CapabilityService,
   ) {}
 
-  async findCouponProductsByBusiness(
-    businessId: string,
-  ): Promise<CouponProduct[]> {
+  async findCouponProductsByBusiness(businessId: string): Promise<CouponProduct[]> {
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
       relations: ['user'],
     });
     if (!business) {
-      throw new NotFoundException(
-        `Business with ID "${businessId}" not found.`,
-      );
+      throw new NotFoundException(`Business with ID "${businessId}" not found.`);
     }
     if (!business.user) {
       throw new InternalServerErrorException(
@@ -58,13 +45,9 @@ export class CouponProductService {
 
   async create(createCouponProductDto: CreateCouponProductDto, user: User) {
     const currentCount = await this.couponProductRepository.count({
-      where: { user: { id: user.id } },
+        where: { user: { id: user.id } }
     });
-    await this.capabilityService.checkPermission(
-      user.id,
-      ActionType.CREATE_COUPON_TEMPLATE,
-      { currentCount },
-    );
+    await this.capabilityService.checkPermission(user.id, ActionType.CREATE_COUPON_TEMPLATE, { currentCount });
 
     const couponProduct = this.couponProductRepository.create({
       ...createCouponProductDto,
@@ -74,22 +57,14 @@ export class CouponProductService {
   }
 
   async findAll(user: User) {
-    return this.couponProductRepository.find({
-      where: { user: { id: user.id } },
-    });
+    return this.couponProductRepository.find({ where: { user: { id: user.id } } });
   }
 
   async findOne(id: string, user: User) {
-    return this.couponProductRepository.findOne({
-      where: { id, user: { id: user.id } },
-    });
+    return this.couponProductRepository.findOne({ where: { id, user: { id: user.id } } });
   }
 
-  async update(
-    id: string,
-    updateCouponProductDto: UpdateCouponProductDto,
-    user: User,
-  ) {
+  async update(id: string, updateCouponProductDto: UpdateCouponProductDto, user: User) {
     const couponProduct = await this.findOne(id, user);
     if (!couponProduct) {
       return null;
@@ -107,26 +82,13 @@ export class CouponProductService {
   }
 
   async countForUser(userId: string): Promise<number> {
-    return this.couponProductRepository.count({
-      where: { user: { id: userId } },
-    });
+    return this.couponProductRepository.count({ where: { user: { id: userId } } });
   }
 
-  async findAllPublic(
-    searchDto: CouponProductSearchDto,
-  ): Promise<PageDto<CouponProduct>> {
-    const {
-      page,
-      limit,
-      search,
-      minAmount,
-      maxAmount,
-      businessId,
-      businessName,
-    } = searchDto;
+  async findAllPublic(searchDto: CouponProductSearchDto): Promise<PageDto<CouponProduct>> {
+    const { page, limit, search, minAmount, maxAmount, businessId, businessName } = searchDto;
 
-    const queryBuilder =
-      this.couponProductRepository.createQueryBuilder('couponProduct');
+    const queryBuilder = this.couponProductRepository.createQueryBuilder('couponProduct');
 
     queryBuilder
       .leftJoinAndSelect('couponProduct.user', 'user')
@@ -141,15 +103,11 @@ export class CouponProductService {
     }
 
     if (minAmount !== undefined) {
-      queryBuilder.andWhere('couponProduct.minCustomAmount >= :minAmount', {
-        minAmount,
-      });
+      queryBuilder.andWhere('couponProduct.minCustomAmount >= :minAmount', { minAmount });
     }
 
     if (maxAmount !== undefined) {
-      queryBuilder.andWhere('couponProduct.maxCustomAmount <= :maxAmount', {
-        maxAmount,
-      });
+      queryBuilder.andWhere('couponProduct.maxCustomAmount <= :maxAmount', { maxAmount });
     }
 
     if (businessId) {

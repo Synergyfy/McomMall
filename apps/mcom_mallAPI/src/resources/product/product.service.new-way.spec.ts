@@ -17,11 +17,7 @@ describe('ProductService (New Way - Frontend Compatibility)', () => {
 
   const mockProductRepository = {
     create: jest.fn().mockImplementation((dto) => dto),
-    save: jest
-      .fn()
-      .mockImplementation((product) =>
-        Promise.resolve({ id: 'new-id', ...product }),
-      ),
+    save: jest.fn().mockImplementation((product) => Promise.resolve({ id: 'new-id', ...product })),
     count: jest.fn().mockResolvedValue(0),
     findOne: jest.fn(),
   };
@@ -95,9 +91,7 @@ describe('ProductService (New Way - Frontend Compatibility)', () => {
     }).compile();
 
     service = module.get<ProductService>(ProductService);
-    productRepository = module.get<Repository<Product>>(
-      getRepositoryToken(Product),
-    );
+    productRepository = module.get<Repository<Product>>(getRepositoryToken(Product));
   });
 
   afterEach(() => {
@@ -149,10 +143,7 @@ describe('ProductService (New Way - Frontend Compatibility)', () => {
     expect(result.salePrice).toBe(80);
     expect(result.lowStockThreshold).toBe(10);
     expect(result.stock).toBe(50);
-    expect(result.sizeGuide).toEqual({
-      system: 'international',
-      measurements: [],
-    });
+    expect(result.sizeGuide).toEqual({ system: 'international', measurements: [] });
   });
 
   it('should create a product by mapping frontend-style fields (productName, regular_price, etc.)', async () => {

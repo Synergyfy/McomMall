@@ -5,9 +5,7 @@ import { DigitalValueTransactionType } from '../digital-value.enums';
 
 @Entity('digital_value_transactions')
 export class DigitalValueTransaction extends AbstractBaseEntity {
-  @ManyToOne(() => DigitalValueMaster, (master) => master.transactions, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => DigitalValueMaster, (master) => master.transactions, { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'digital_value_id' })
   digitalValue: DigitalValueMaster;
 

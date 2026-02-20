@@ -13,10 +13,7 @@ import { MembershipTier } from './membership-tier.enum';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
-import {
-  InitiateMembershipPaymentDto,
-  PlanType,
-} from './dto/initiate-membership-payment.dto';
+import { InitiateMembershipPaymentDto, PlanType } from './dto/initiate-membership-payment.dto';
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { MembershipPayment } from './entities/membership-payment.entity';
@@ -43,7 +40,7 @@ export class MembershipService {
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly dataSource: DataSource,
-  ) {}
+  ) { }
 
   async findOne(userId: string): Promise<Membership> {
     const membership = await this.membershipRepository.findOne({
@@ -66,7 +63,7 @@ export class MembershipService {
       hours: Math.floor((totalSeconds % (3600 * 24)) / 3600),
       minutes: Math.floor((totalSeconds % 3600) / 60),
       seconds: totalSeconds % 60,
-      totalSeconds,
+      totalSeconds
     };
 
     return membership;
@@ -79,10 +76,7 @@ export class MembershipService {
       changed = true;
     }
     if (!membership.endDate) {
-      if (
-        membership.tier?.type === TierType.SEASONAL &&
-        membership.tier.season
-      ) {
+      if (membership.tier?.type === TierType.SEASONAL && membership.tier.season) {
         membership.endDate = membership.tier.season.endDate;
       } else {
         membership.endDate = membership.expiresAt;
@@ -102,36 +96,29 @@ export class MembershipService {
     });
 
     if (membership && !membership.tier && membership.tierType) {
-      console.log(
-        `[MembershipService] Self-healing initiated for user ${userId} with tierType ${membership.tierType}`,
-      );
+      console.log(`[MembershipService] Self-healing initiated for user ${userId} with tierType ${membership.tierType}`);
 
       const legacyTierMap: Record<string, string> = {
-        basic: 'Basic',
-        extended: 'Extended',
-        professional: 'Professional',
+        'basic': 'Basic',
+        'extended': 'Extended',
+        'professional': 'Professional',
       };
 
-      const targetName =
-        legacyTierMap[membership.tierType] || membership.tierType;
+      const targetName = legacyTierMap[membership.tierType] || membership.tierType;
 
       const tier = await this.tierRepository.findOne({
         where: { name: targetName },
       });
 
       if (tier) {
-        console.log(
-          `[MembershipService] Found matching tier: ${tier.name} (${tier.id})`,
-        );
+        console.log(`[MembershipService] Found matching tier: ${tier.name} (${tier.id})`);
         membership.tier = tier;
         membership.tierId = tier.id;
         await this.ensureDates(membership);
         await this.membershipRepository.save(membership);
         console.log(`[MembershipService] Membership updated with tier link.`);
       } else {
-        console.warn(
-          `[MembershipService] Could not find tier with name: ${targetName}`,
-        );
+        console.warn(`[MembershipService] Could not find tier with name: ${targetName}`);
       }
     }
 
@@ -153,11 +140,7 @@ export class MembershipService {
   async initiateMembershipPayment(
     initiateDto: InitiateMembershipPaymentDto,
     user: User,
-  ): Promise<{
-    clientSecret?: string;
-    orderId?: string;
-    provider: PaymentMethod;
-  }> {
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
     const existingMembership = await this.membershipRepository.findOne({
       where: { user: { id: user.id }, isActive: true },
     });
@@ -172,9 +155,7 @@ export class MembershipService {
     let planId: string | null = null;
 
     if (initiateDto.tierId) {
-      const tier = await this.tierRepository.findOne({
-        where: { id: initiateDto.tierId },
-      });
+      const tier = await this.tierRepository.findOne({ where: { id: initiateDto.tierId } });
       if (!tier) throw new NotFoundException('Tier not found');
 
       const planType = initiateDto.planType || PlanType.MONTHLY;
@@ -202,11 +183,10 @@ export class MembershipService {
     }
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          price,
-          currency,
-        );
+      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
+        price,
+        currency,
+      );
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
@@ -229,11 +209,7 @@ export class MembershipService {
     user: User,
   ): Promise<Membership> {
     const { paymentProvider, transactionId, purchaseDetails } = verifyDto;
-    const {
-      tier: tierEnum,
-      tierId,
-      planType = PlanType.MONTHLY,
-    } = purchaseDetails;
+    const { tier: tierEnum, tierId, planType = PlanType.MONTHLY } = purchaseDetails;
 
     const existingMembership = await this.membershipRepository.findOne({
       where: { user: { id: user.id }, isActive: true },
@@ -250,7 +226,7 @@ export class MembershipService {
     if (tierId) {
       tierEntity = await this.tierRepository.findOne({
         where: { id: tierId },
-        relations: ['season'],
+        relations: ['season']
       });
       if (!tierEntity) throw new NotFoundException('Tier not found');
 
@@ -268,19 +244,17 @@ export class MembershipService {
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          price,
-          currency,
-        );
+      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
+        transactionId,
+        price,
+        currency,
+      );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          price,
-          currency,
-        );
+      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
+        transactionId,
+        price,
+        currency,
+      );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -355,7 +329,7 @@ export class MembershipService {
   async joinTrial(tierId: string, user: User): Promise<Membership> {
     const existingMembership = await this.membershipRepository.findOne({
       where: { user: { id: user.id } },
-      order: { created_at: 'DESC' }, // Check mostly recent
+      order: { created_at: 'DESC' } // Check mostly recent
     });
 
     // Simple check: if they ever had a membership (trial or paid), deny?
@@ -367,7 +341,7 @@ export class MembershipService {
 
     // If we want strict "one trial per user ever", we'd check if any previous membership had isTrial=true
     const trialUsage = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isTrial: true },
+      where: { user: { id: user.id }, isTrial: true }
     });
     if (trialUsage) {
       throw new ForbiddenException('User has already used their trial period.');
@@ -375,7 +349,7 @@ export class MembershipService {
 
     const tier = await this.tierRepository.findOne({
       where: { id: tierId },
-      relations: ['season'],
+      relations: ['season']
     });
     if (!tier) throw new NotFoundException('Tier not found');
 
@@ -405,7 +379,7 @@ export class MembershipService {
         isActive: true,
         isTrial: true,
         trialDuration: trialDurationDays,
-        planType: PlanType.MONTHLY, // Default to monthly after trial usually
+        planType: PlanType.MONTHLY // Default to monthly after trial usually
       });
 
       const savedMembership = await membershipRepo.save(membership);
@@ -416,21 +390,16 @@ export class MembershipService {
     });
   }
 
-  async grantAccess(
-    user: User,
-    tierId: string,
-    durationDays: number,
-    source: string,
-  ): Promise<Membership> {
+  async grantAccess(user: User, tierId: string, durationDays: number, source: string): Promise<Membership> {
     const tier = await this.tierRepository.findOne({
       where: { id: tierId },
-      relations: ['season'],
+      relations: ['season']
     });
     if (!tier) throw new NotFoundException('Tier not found');
 
     // Check for existing active membership
     const existingMembership = await this.membershipRepository.findOne({
-      where: { user: { id: user.id }, isActive: true },
+      where: { user: { id: user.id }, isActive: true }
     });
     if (existingMembership) {
       // In a real scenario we might extend it, or upgrade it.

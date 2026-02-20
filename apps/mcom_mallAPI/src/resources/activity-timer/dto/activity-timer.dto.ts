@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsOptional,
-  IsString,
-  IsNumber,
-  IsDateString,
-} from 'class-validator';
+import { IsEnum, IsNotEmpty, IsOptional, IsString, IsNumber, IsDateString } from 'class-validator';
 import { ActivityTimerType } from '../enums/activity-task-type.enum';
 
 export class CreateActivityTaskDto {
@@ -34,20 +27,14 @@ export class CreateActivityTaskDto {
   @IsString()
   actionUrl?: string;
 
-  @ApiProperty({
-    required: false,
-    description: 'Required for tasks with fixed expiry',
-  })
+  @ApiProperty({ required: false, description: 'Required for tasks with fixed expiry' })
   @IsOptional()
   @IsDateString()
   expiresAt?: Date;
 }
 
 export class PublishTaskDto extends CreateActivityTaskDto {
-  @ApiProperty({
-    type: [String],
-    description: 'List of Tier IDs to include. Empty means all tiers.',
-  })
+  @ApiProperty({ type: [String], description: 'List of Tier IDs to include. Empty means all tiers.' })
   @IsOptional()
   includedTierIds?: string[];
 
@@ -55,10 +42,7 @@ export class PublishTaskDto extends CreateActivityTaskDto {
   @IsOptional()
   excludedTierIds?: string[];
 
-  @ApiProperty({
-    description: 'Duration in days for tasks (alternative to fixed expiry)',
-    required: false,
-  })
+  @ApiProperty({ description: 'Duration in days for tasks (alternative to fixed expiry)', required: false })
   @IsOptional()
   @IsNumber()
   durationDays?: number;
@@ -66,4 +50,4 @@ export class PublishTaskDto extends CreateActivityTaskDto {
 
 import { PartialType } from '@nestjs/swagger';
 
-export class UpdateTaskDto extends PartialType(PublishTaskDto) {}
+export class UpdateTaskDto extends PartialType(PublishTaskDto) { }

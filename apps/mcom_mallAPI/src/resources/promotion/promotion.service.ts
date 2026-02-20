@@ -28,10 +28,7 @@ import { PromotionHistoryQueryDto } from './dto/promotion-history-query.dto';
 import { PageDto } from 'src/common/dto/page.dto';
 import { PromotionTransactionHistoryDto } from './dto/promotion-transaction-history.dto';
 import { PageMetaDto } from 'src/common/dto/page-meta.dto';
-import {
-  CapabilityService,
-  ActionType,
-} from '../capability/capability.service';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 @Injectable()
@@ -55,7 +52,7 @@ export class PromotionService {
     private readonly activityTimerService: ActivityTimerService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) {}
+  ) { }
 
   async create(
     userId: string,
@@ -67,13 +64,9 @@ export class PromotionService {
     }
 
     const currentCount = await this.promotionRepository.count({
-      where: { user: { id: userId } },
+      where: { user: { id: userId } }
     });
-    await this.capabilityService.checkPermission(
-      userId,
-      ActionType.CREATE_LOYALTY_PROGRAM,
-      { currentCount },
-    );
+    await this.capabilityService.checkPermission(userId, ActionType.CREATE_LOYALTY_PROGRAM, { currentCount });
 
     const {
       includedProductIds,
@@ -132,10 +125,7 @@ export class PromotionService {
       'promotion',
       savedPromotion.name,
     );
-    await this.activityTimerService.completeTaskByKey(
-      userId,
-      'createdPromotion',
-    );
+    await this.activityTimerService.completeTaskByKey(userId, 'createdPromotion');
     return savedPromotion;
   }
 
@@ -575,11 +565,7 @@ export class PromotionService {
 
     switch (promotion.promotionScope) {
       case PromotionScope.ALL_LISTINGS:
-        return (
-          business.user?.id &&
-          promotion.user?.id &&
-          business.user.id === promotion.user.id
-        );
+        return business.user?.id && promotion.user?.id && business.user.id === promotion.user.id;
       case PromotionScope.SPECIFIC_LISTINGS:
         return (
           promotion.businesses &&
@@ -588,11 +574,7 @@ export class PromotionService {
           )
         );
       case PromotionScope.ALL_PRODUCTS:
-        return (
-          business.user?.id &&
-          promotion.user?.id &&
-          business.user.id === promotion.user.id
-        );
+        return business.user?.id && promotion.user?.id && business.user.id === promotion.user.id;
       case PromotionScope.SPECIFIC_PRODUCTS:
         return (
           promotion.includedProducts &&

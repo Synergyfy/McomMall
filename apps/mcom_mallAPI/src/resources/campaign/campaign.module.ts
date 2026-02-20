@@ -8,9 +8,7 @@ import { MarketingCampaign } from './entities/marketing-campaign.entity';
 import { Season } from '../seasons/entities/season.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([Campaign, Business, MarketingCampaign, Season]),
-  ],
+  imports: [TypeOrmModule.forFeature([Campaign, Business, MarketingCampaign, Season])],
   controllers: [CampaignController],
   providers: [CampaignService],
   exports: [TypeOrmModule],

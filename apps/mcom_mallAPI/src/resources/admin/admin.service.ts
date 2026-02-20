@@ -4,25 +4,9 @@ import { Repository, Between, MoreThan, Like } from 'typeorm';
 import { User } from '../users/entities/user.entity';
 import { CreateAdminDto, LoginAdminDto } from './dto/admin.dto';
 import { AdminDashboardResponseDto } from './dto/dashboard.dto';
-import {
-  UserStatsDto,
-  UserQueryDto,
-  PaginatedUsersDto,
-  AdminUserDto,
-} from './dto/users.dto';
-import {
-  BusinessStatsDto,
-  BusinessQueryDto,
-  PaginatedBusinessesDto,
-  AdminBusinessDto,
-  AdminBusinessListingDto,
-} from './dto/businesses.dto';
-import {
-  ListingStatsDto,
-  ListingQueryDto,
-  PaginatedListingsDto,
-  AdminListingDto,
-} from './dto/listings.dto';
+import { UserStatsDto, UserQueryDto, PaginatedUsersDto, AdminUserDto } from './dto/users.dto';
+import { BusinessStatsDto, BusinessQueryDto, PaginatedBusinessesDto, AdminBusinessDto, AdminBusinessListingDto } from './dto/businesses.dto';
+import { ListingStatsDto, ListingQueryDto, PaginatedListingsDto, AdminListingDto } from './dto/listings.dto';
 import { UpdateBusinessAdminDto } from './dto/update-business.dto';
 import { HashService } from 'src/common/hash/hash.service';
 import { UserRole } from 'src/common/role.enum';
@@ -51,7 +35,7 @@ export class AdminService {
     private readonly hashService: HashService,
     private readonly authService: AuthService,
     private readonly userService: UsersService,
-  ) {}
+  ) { }
 
   async create(createAdminDto: CreateAdminDto) {
     const { email, password, name, phoneNumber } = createAdminDto;
@@ -61,8 +45,9 @@ export class AdminService {
       throw ErrorFactory.existingEmail();
     }
 
-    const phoneNumberExists =
-      await this.userService.checkPhoneNumberExists(phoneNumber);
+    const phoneNumberExists = await this.userService.checkPhoneNumberExists(
+      phoneNumber,
+    );
     if (phoneNumberExists) {
       throw ErrorFactory.existingPhoneNumber();
     }
@@ -119,24 +104,16 @@ export class AdminService {
 
   async getDashboardData(): Promise<AdminDashboardResponseDto> {
     const now = new Date();
-    const startOfDay = new Date(
-      now.getFullYear(),
-      now.getMonth(),
-      now.getDate(),
-    );
+    const startOfDay = new Date(now.getFullYear(), now.getMonth(), now.getDate());
     const twentyFourHoursAgo = new Date(now.getTime() - 24 * 60 * 60 * 1000);
     const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
 
     // 1. Stats
-    const activeUsers = await this.userRepository.count({
-      where: { isActive: true },
-    });
+    const activeUsers = await this.userRepository.count({ where: { isActive: true } });
     const totalBusinesses = await this.businessRepository.count();
 
     // Assuming 'pending' status for products/services. If not used, these might return 0.
-    const pendingProducts = await this.productRepository.count({
-      where: { productStatus: 'pending' },
-    });
+    const pendingProducts = await this.productRepository.count({ where: { productStatus: 'pending' } });
     const pendingListings = pendingProducts;
 
     const newSignups24h = await this.userRepository.count({
@@ -163,44 +140,34 @@ export class AdminService {
     // Signups Chart
     const recentSignups = await this.userRepository
       .createQueryBuilder('user')
-      .select('DATE(user.created_at) as date, COUNT(user.id) as count')
-      .where('user.created_at > :sevenDaysAgo', { sevenDaysAgo })
-      .groupBy('DATE(user.created_at)')
+      .select("DATE(user.created_at) as date, COUNT(user.id) as count")
+      .where("user.created_at > :sevenDaysAgo", { sevenDaysAgo })
+      .groupBy("DATE(user.created_at)")
       .getRawMany();
 
-    const signupsChart = Array.from(dateMap.keys())
-      .map((date) => {
-        const found = recentSignups.find((s) => {
-          const d =
-            s.date instanceof Date
-              ? s.date.toISOString().split('T')[0]
-              : String(s.date).split('T')[0];
-          return d === date;
-        });
-        return { date, value: found ? Number(found.count) : 0 };
-      })
-      .reverse();
+    const signupsChart = Array.from(dateMap.keys()).map(date => {
+      const found = recentSignups.find(s => {
+        const d = s.date instanceof Date ? s.date.toISOString().split('T')[0] : String(s.date).split('T')[0];
+        return d === date;
+      });
+      return { date, value: found ? Number(found.count) : 0 };
+    }).reverse();
 
     // Revenue Chart
     const recentRevenue = await this.orderRepository
       .createQueryBuilder('order')
-      .select('DATE(order.created_at) as date, SUM(order.total) as total')
-      .where('order.created_at > :sevenDaysAgo', { sevenDaysAgo })
-      .groupBy('DATE(order.created_at)')
+      .select("DATE(order.created_at) as date, SUM(order.total) as total")
+      .where("order.created_at > :sevenDaysAgo", { sevenDaysAgo })
+      .groupBy("DATE(order.created_at)")
       .getRawMany();
 
-    const revenueChart = Array.from(dateMap.keys())
-      .map((date) => {
-        const found = recentRevenue.find((r) => {
-          const d =
-            r.date instanceof Date
-              ? r.date.toISOString().split('T')[0]
-              : String(r.date).split('T')[0];
-          return d === date;
-        });
-        return { date, value: found ? Number(found.total) : 0 };
-      })
-      .reverse();
+    const revenueChart = Array.from(dateMap.keys()).map(date => {
+      const found = recentRevenue.find(r => {
+        const d = r.date instanceof Date ? r.date.toISOString().split('T')[0] : String(r.date).split('T')[0];
+        return d === date;
+      });
+      return { date, value: found ? Number(found.total) : 0 };
+    }).reverse();
 
     // Weekly totals
     const weeklySignups = signupsChart.reduce((sum, day) => sum + day.value, 0);
@@ -209,29 +176,27 @@ export class AdminService {
     // 3. Recent Activity (Mix of Users joined and Orders placed)
     const recentUsers = await this.userRepository.find({
       order: { created_at: 'DESC' },
-      take: 5,
+      take: 5
     });
 
     const recentOrders = await this.orderRepository.find({
       relations: ['user'],
       order: { created_at: 'DESC' },
-      take: 5,
+      take: 5
     });
 
     const activities = [
-      ...recentUsers.map((u) => ({
+      ...recentUsers.map(u => ({
         type: 'user',
         message: `New user joined: ${u.name || u.email}`,
-        timestamp: u.created_at,
+        timestamp: u.created_at
       })),
-      ...recentOrders.map((o) => ({
+      ...recentOrders.map(o => ({
         type: 'order',
         message: `New order #${o.id} by ${o.user?.name || 'Unknown'} for $${o.total}`,
-        timestamp: o.created_at,
-      })),
-    ]
-      .sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime())
-      .slice(0, 10);
+        timestamp: o.created_at
+      }))
+    ].sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime()).slice(0, 10);
 
     return {
       stats: {
@@ -254,15 +219,9 @@ export class AdminService {
 
   async getUserStats(): Promise<UserStatsDto> {
     const total = await this.userRepository.count();
-    const active = await this.userRepository.count({
-      where: { isActive: true, isEmailVerified: true },
-    });
-    const suspended = await this.userRepository.count({
-      where: { isActive: false },
-    });
-    const pending = await this.userRepository.count({
-      where: { isEmailVerified: false },
-    });
+    const active = await this.userRepository.count({ where: { isActive: true, isEmailVerified: true } });
+    const suspended = await this.userRepository.count({ where: { isActive: false } });
+    const pending = await this.userRepository.count({ where: { isEmailVerified: false } });
 
     return {
       total,
@@ -276,31 +235,23 @@ export class AdminService {
     const { search, status, type, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const qb = this.userRepository
-      .createQueryBuilder('user')
+    const qb = this.userRepository.createQueryBuilder('user')
       .leftJoinAndSelect('user.wallet', 'wallet')
       .skip(skip)
       .take(limit)
       .orderBy('user.created_at', 'DESC');
 
     if (search) {
-      qb.andWhere('(user.name ILIKE :search OR user.email ILIKE :search)', {
-        search: `%${search}%`,
-      });
+      qb.andWhere('(user.name ILIKE :search OR user.email ILIKE :search)', { search: `%${search}%` });
     }
 
     if (status && status !== 'all') {
       if (status === 'active') {
-        qb.andWhere(
-          'user.isActive = :isActive AND user.isEmailVerified = :isEmailVerified',
-          { isActive: true, isEmailVerified: true },
-        );
+        qb.andWhere('user.isActive = :isActive AND user.isEmailVerified = :isEmailVerified', { isActive: true, isEmailVerified: true });
       } else if (status === 'suspended' || status === 'banned') {
         qb.andWhere('user.isActive = :isActive', { isActive: false });
       } else if (status === 'pending') {
-        qb.andWhere('user.isEmailVerified = :isEmailVerified', {
-          isEmailVerified: false,
-        });
+        qb.andWhere('user.isEmailVerified = :isEmailVerified', { isEmailVerified: false });
       }
     }
 
@@ -314,7 +265,7 @@ export class AdminService {
 
     const [users, total] = await qb.getManyAndCount();
 
-    const mappedUsers: AdminUserDto[] = users.map((user) => {
+    const mappedUsers: AdminUserDto[] = users.map(user => {
       let statusStr = 'pending';
       if (user.isActive && user.isEmailVerified) statusStr = 'active';
       else if (!user.isActive) statusStr = 'suspended';
@@ -351,15 +302,9 @@ export class AdminService {
 
   async getBusinessStats(): Promise<BusinessStatsDto> {
     const total = await this.businessRepository.count();
-    const active = await this.businessRepository.count({
-      where: { status: BusinessStatus.PUBLISHED },
-    });
-    const pending = await this.businessRepository.count({
-      where: { status: BusinessStatus.DRAFT },
-    });
-    const verified = await this.businessRepository.count({
-      where: { isVerified: true },
-    });
+    const active = await this.businessRepository.count({ where: { status: BusinessStatus.PUBLISHED } });
+    const pending = await this.businessRepository.count({ where: { status: BusinessStatus.DRAFT } });
+    const verified = await this.businessRepository.count({ where: { isVerified: true } });
 
     return {
       total,
@@ -369,14 +314,11 @@ export class AdminService {
     };
   }
 
-  async getBusinesses(
-    query: BusinessQueryDto,
-  ): Promise<PaginatedBusinessesDto> {
+  async getBusinesses(query: BusinessQueryDto): Promise<PaginatedBusinessesDto> {
     const { search, status, sector, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const qb = this.businessRepository
-      .createQueryBuilder('business')
+    const qb = this.businessRepository.createQueryBuilder('business')
       .leftJoinAndSelect('business.user', 'user')
       .leftJoinAndSelect('business.location', 'location')
       .leftJoinAndSelect('business.sector', 'sector')
@@ -390,10 +332,7 @@ export class AdminService {
       .orderBy('business.created_at', 'DESC');
 
     if (search) {
-      qb.andWhere(
-        '(business.businessName ILIKE :search OR user.name ILIKE :search)',
-        { search: `%${search}%` },
-      );
+      qb.andWhere('(business.businessName ILIKE :search OR user.name ILIKE :search)', { search: `%${search}%` });
     }
 
     if (status && status !== 'all') {
@@ -409,7 +348,7 @@ export class AdminService {
 
     const [businesses, total] = await qb.getManyAndCount();
 
-    const mappedBusinesses: AdminBusinessDto[] = businesses.map((b) => {
+    const mappedBusinesses: AdminBusinessDto[] = businesses.map(b => {
       let statusStr = 'active';
       if (b.status === BusinessStatus.DRAFT) statusStr = 'pending';
       if (b.status === BusinessStatus.ARCHIVED) statusStr = 'suspended';
@@ -433,9 +372,7 @@ export class AdminService {
         listingCount: (b['productCount'] || 0) + (b['serviceCount'] || 0),
         sector: sectorName,
         category: categoryName,
-        address: b.location
-          ? `${b.location.addressLine1}, ${b.location.city}`
-          : 'N/A',
+        address: b.location ? `${b.location.addressLine1}, ${b.location.city}` : 'N/A',
         email: b.businessEmail || 'N/A',
         phone: b.businessPhone || 'N/A',
         createdAt: b.created_at,
@@ -452,9 +389,7 @@ export class AdminService {
     };
   }
 
-  async getBusinessListings(
-    businessId: string,
-  ): Promise<AdminBusinessListingDto[]> {
+  async getBusinessListings(businessId: string): Promise<AdminBusinessListingDto[]> {
     const business = await this.businessRepository.findOne({
       where: { id: businessId },
       relations: ['products', 'services'],
@@ -462,9 +397,7 @@ export class AdminService {
 
     if (!business) throw new NotFoundException('Business not found');
 
-    const productListings: AdminBusinessListingDto[] = (
-      business.products || []
-    ).map((p) => ({
+    const productListings: AdminBusinessListingDto[] = (business.products || []).map(p => ({
       id: p.id,
       name: p.title,
       price: p.price,
@@ -472,9 +405,7 @@ export class AdminService {
       type: 'product',
     }));
 
-    const serviceListings: AdminBusinessListingDto[] = (
-      business.services || []
-    ).map((s) => ({
+    const serviceListings: AdminBusinessListingDto[] = (business.services || []).map(s => ({
       id: s.id,
       name: s.name,
       price: Number(s.fixedPrice || s.pricePerHour || s.pricePerUnit || 0),
@@ -497,10 +428,7 @@ export class AdminService {
     return this.businessRepository.update(id, { status });
   }
 
-  async updateBusiness(
-    id: string,
-    updateBusinessAdminDto: UpdateBusinessAdminDto,
-  ) {
+  async updateBusiness(id: string, updateBusinessAdminDto: UpdateBusinessAdminDto) {
     const business = await this.businessRepository.findOne({ where: { id } });
     if (!business) throw new NotFoundException('Business not found');
 
@@ -509,16 +437,7 @@ export class AdminService {
   }
 
   async getListingStats(): Promise<ListingStatsDto> {
-    const [
-      pTotal,
-      sTotal,
-      pPending,
-      sPending,
-      pApproved,
-      sApproved,
-      pFeatured,
-      sFeatured,
-    ] = await Promise.all([
+    const [pTotal, sTotal, pPending, sPending, pApproved, sApproved, pFeatured, sFeatured] = await Promise.all([
       this.productRepository.count(),
       this.serviceRepository.count(),
       this.productRepository.count({ where: { productStatus: 'pending' } }),
@@ -541,8 +460,7 @@ export class AdminService {
     const { search, status, category, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const qb = this.businessRepository
-      .createQueryBuilder('business')
+    const qb = this.businessRepository.createQueryBuilder('business')
       .leftJoinAndSelect('business.user', 'user')
       .leftJoinAndSelect('business.location', 'location')
       .leftJoinAndSelect('business.sector', 'sector')
@@ -553,10 +471,7 @@ export class AdminService {
       .orderBy('business.created_at', 'DESC');
 
     if (search) {
-      qb.andWhere(
-        '(business.businessName ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)',
-        { search: `%${search}%` },
-      );
+      qb.andWhere('(business.businessName ILIKE :search OR user.firstName ILIKE :search OR user.lastName ILIKE :search)', { search: `%${search}%` });
     }
 
     if (status) {
@@ -569,7 +484,7 @@ export class AdminService {
 
     const [listings, total] = await qb.getManyAndCount();
 
-    const mappedData: AdminListingDto[] = listings.map((b) => {
+    const mappedData: AdminListingDto[] = listings.map(b => {
       // Basic rating calculation
       const rating = b.reviews?.length
         ? b.reviews.reduce((acc, r) => acc + r.rating, 0) / b.reviews.length
@@ -578,9 +493,7 @@ export class AdminService {
       return {
         id: b.id,
         businessName: b.businessName,
-        ownerName: b.user
-          ? `${b.user.firstName} ${b.user.lastName}`
-          : 'Unknown',
+        ownerName: b.user ? `${b.user.firstName} ${b.user.lastName}` : 'Unknown',
         ownerEmail: b.user?.email || '',
         category: b.category?.name || 'Uncategorized',
         sector: b.sector?.name || 'N/A',
@@ -588,9 +501,7 @@ export class AdminService {
         isVerified: b.isVerified,
         rating: Number(rating.toFixed(1)),
         reviewCount: b.reviews?.length || 0,
-        location: b.location
-          ? `${b.location.addressLine1}, ${b.location.city}`
-          : 'No Location',
+        location: b.location ? `${b.location.addressLine1}, ${b.location.city}` : 'No Location',
         description: b.shortDescription,
         images: b.media || [],
         createdAt: b.created_at,
@@ -617,9 +528,7 @@ export class AdminService {
     const exists = await this.businessRepository.findOne({ where: { id } });
     if (!exists) throw new NotFoundException('Business not found');
     // Map string status to BusinessStatus enum if needed, or use as is if types match
-    return this.businessRepository.update(id, {
-      status: status as BusinessStatus,
-    });
+    return this.businessRepository.update(id, { status: status as BusinessStatus });
   }
 
   // Featured logic for businesses isn't in the entity by default, skipping or removing validation error

@@ -76,9 +76,10 @@ describe('MembershipController', () => {
 
       const result = await controller.initiatePayment(initiateDto, mockUser);
 
-      expect(
-        mockMembershipService.initiateMembershipPayment,
-      ).toHaveBeenCalledWith(initiateDto, mockUser);
+      expect(mockMembershipService.initiateMembershipPayment).toHaveBeenCalledWith(
+        initiateDto,
+        mockUser,
+      );
       expect(result).toEqual(expectedResponse);
     });
   });
@@ -100,9 +101,10 @@ describe('MembershipController', () => {
 
       const result = await controller.verifyPayment(verifyDto, mockUser);
 
-      expect(
-        mockMembershipService.verifyAndCreateMembership,
-      ).toHaveBeenCalledWith(verifyDto, mockUser);
+      expect(mockMembershipService.verifyAndCreateMembership).toHaveBeenCalledWith(
+        verifyDto,
+        mockUser,
+      );
       expect(result).toEqual(createdMembership);
     });
   });

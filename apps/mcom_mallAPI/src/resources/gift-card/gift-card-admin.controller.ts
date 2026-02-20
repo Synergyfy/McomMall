@@ -8,12 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { GiftCardService } from './gift-card.service';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiOkResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -54,7 +49,7 @@ export class GiftCardAdminController {
   }
 
   @Get('for-owner/:ownerId')
-  @ApiOperation({ summary: 'List all gift cards for a specific owner' })
+  @ApiOperation({ summary: "List all gift cards for a specific owner" })
   @ApiOkResponse({
     description: 'A paginated list of gift cards for a specific owner.',
     type: PageDto,

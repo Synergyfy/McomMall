@@ -29,18 +29,12 @@ export class Service extends AbstractBaseEntity {
 
   @Column({ length: 160 })
   @Length(1, 160)
-  @ApiProperty({
-    description: 'Name of the service',
-    example: 'Professional House Cleaning',
-  })
+  @ApiProperty({ description: 'Name of the service', example: 'Professional House Cleaning' })
   name: string;
 
   @Column('text', { nullable: true })
   @IsOptional()
-  @ApiProperty({
-    description: 'Detailed description',
-    example: 'Complete professional cleaning',
-  })
+  @ApiProperty({ description: 'Detailed description', example: 'Complete professional cleaning' })
   description?: string;
 
   @Column('jsonb', { nullable: true })

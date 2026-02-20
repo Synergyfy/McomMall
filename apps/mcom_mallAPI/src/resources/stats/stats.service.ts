@@ -26,8 +26,7 @@ import { SalesChartQueryDto } from './dto/sales-chart.dto';
 export class StatsService {
   constructor(
     @InjectRepository(User) private readonly userRepository: Repository<User>,
-    @InjectRepository(Order)
-    private readonly orderRepository: Repository<Order>,
+    @InjectRepository(Order) private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
     @InjectRepository(GiftCard)
@@ -50,7 +49,7 @@ export class StatsService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(PromotionParticipant)
     private readonly promotionParticipantRepository: Repository<PromotionParticipant>,
-  ) {}
+  ) { }
 
   async getUserStats(user: User): Promise<OwnerStatsDto | CustomerStatsDto> {
     if (user.role === UserRole.OWNER) {
@@ -178,10 +177,9 @@ export class StatsService {
       where: { user: { id: userId } },
     });
 
-    const promotionsParticipatingQuery =
-      this.promotionParticipantRepository.count({
-        where: { user: { id: userId } },
-      });
+    const promotionsParticipatingQuery = this.promotionParticipantRepository.count(
+      { where: { user: { id: userId } } },
+    );
 
     const pointsEarnedQuery = this.pointTransactionRepository
       .createQueryBuilder('pt')

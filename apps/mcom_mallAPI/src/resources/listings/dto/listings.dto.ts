@@ -150,7 +150,7 @@ export class CreateBusinessDto {
   serviceProviderProfile?: CreateServiceProviderProfileDto;
 }
 
-export class UpdateBusinessDto extends PartialType(CreateBusinessDto) {}
+export class UpdateBusinessDto extends PartialType(CreateBusinessDto) { }
 
 export class SearchBusinessDto {
   @IsString()

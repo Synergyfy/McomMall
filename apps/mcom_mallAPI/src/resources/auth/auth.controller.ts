@@ -28,7 +28,7 @@ export class AuthController {
     private readonly userService: UsersService,
     private readonly emailService: EmailService,
     private readonly activityTimerService: ActivityTimerService,
-  ) {}
+  ) { }
 
   @ApiOperation({ summary: 'Authenticate as user' })
   @ApiResponse({
@@ -63,17 +63,9 @@ export class AuthController {
 
     await this.userService.updateLastLogin(id);
 
-    const activeTimers =
-      await this.activityTimerService.getUserActiveTasks(user);
+    const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
 
-    return {
-      auth,
-      name,
-      role,
-      packageInfo: null,
-      userId: id,
-      tasks: activeTimers,
-    };
+    return { auth, name, role, packageInfo: null, userId: id, tasks: activeTimers };
   }
 
   @ApiOperation({ summary: 'Login via SSO' })
@@ -90,8 +82,7 @@ export class AuthController {
       const user = await this.userService.findCurrentUser(authData.email);
       await this.userService.updateLastLogin(user.id);
 
-      const activeTimers =
-        await this.activityTimerService.getUserActiveTasks(user);
+      const activeTimers = await this.activityTimerService.getUserActiveTasks(user);
 
       return {
         auth: {
@@ -119,9 +110,7 @@ export class AuthController {
   @Post('refresh')
   async refreshToken(@Body() payload: RefreshAuthDto) {
     try {
-      const result = await this.authService.refreshAccessToken(
-        payload.refreshToken,
-      );
+      const result = await this.authService.refreshAccessToken(payload.refreshToken);
       await this.userService.updateLastLogin(result.userId);
       return result;
     } catch (error) {

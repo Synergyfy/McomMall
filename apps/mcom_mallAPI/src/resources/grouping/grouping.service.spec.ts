@@ -178,9 +178,7 @@ describe('GroupingService', () => {
     it('should create a group and add the founder as a member with PENDING_PAYMENT status', async () => {
       mockManager.findOne.mockResolvedValue(founder);
       mockManager.create.mockImplementation((entity, data) => data);
-      mockManager.save.mockImplementation((entity, data) =>
-        Promise.resolve(data ?? entity),
-      );
+      mockManager.save.mockImplementation((entity, data) => Promise.resolve(data ?? entity));
 
       const result = await service.create(groupDto, founder);
 
@@ -203,7 +201,9 @@ describe('GroupingService', () => {
       );
       expect(result.name).toBe('Test Group');
       expect(result.members).toHaveLength(1);
-      expect(result.members[0].status).toBe(GroupMemberStatus.PENDING_PAYMENT);
+      expect(result.members[0].status).toBe(
+        GroupMemberStatus.PENDING_PAYMENT,
+      );
     });
   });
 
@@ -215,9 +215,7 @@ describe('GroupingService', () => {
       mockManager.count.mockResolvedValue(1);
       mockManager.exists.mockResolvedValue(false);
       mockManager.create.mockImplementation((_, data) => data);
-      mockManager.save.mockImplementation((entity, data) =>
-        Promise.resolve(data),
-      );
+      mockManager.save.mockImplementation((entity, data) => Promise.resolve(data));
 
       const result = await service.joinGroup(groupId, baseMockUser);
 
@@ -304,9 +302,9 @@ describe('GroupingService', () => {
     };
 
     it('should initiate a Stripe payment', async () => {
-      jest.spyOn(groupMemberRepository, 'findOne').mockResolvedValue({
-        status: GroupMemberStatus.PENDING_PAYMENT,
-      } as GroupMember);
+      jest
+        .spyOn(groupMemberRepository, 'findOne')
+        .mockResolvedValue({ status: GroupMemberStatus.PENDING_PAYMENT } as GroupMember);
       mockPaymentProviderService.createStripePaymentIntent.mockResolvedValue({
         client_secret: 'stripe-secret',
       });
@@ -330,9 +328,7 @@ describe('GroupingService', () => {
     };
 
     it('should verify a payment and activate the member', async () => {
-      const groupMember = {
-        status: GroupMemberStatus.PENDING_PAYMENT,
-      } as GroupMember;
+      const groupMember = { status: GroupMemberStatus.PENDING_PAYMENT } as GroupMember;
       const groupWallet = { balance: 2750 };
       jest
         .spyOn(groupMemberRepository, 'findOne')

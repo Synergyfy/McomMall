@@ -23,10 +23,7 @@ import { InitiateContributionPaymentDto } from './dto/initiate-contribution-paym
 import { VerifyContributionPaymentDto } from './dto/verify-contribution-payment.dto';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { GroupResponseDto } from './dto/group-response.dto';
-import {
-  CapabilityService,
-  ActionType,
-} from '../capability/capability.service';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 
 const CONTRIBUTION_AMOUNT = 250;
 const ACTIVATION_BALANCE = 3000;
@@ -51,10 +48,7 @@ export class GroupingService {
       // Use capability service to check permission
       // We need to check outside transaction or inside?
       // Check permission first.
-      await this.capabilityService.checkPermission(
-        founder.id,
-        ActionType.CREATE_GROUP,
-      );
+      await this.capabilityService.checkPermission(founder.id, ActionType.CREATE_GROUP);
 
       const userWithMembership = await manager.findOne(User, {
         where: { id: founder.id },
@@ -67,6 +61,7 @@ export class GroupingService {
         recruitmentDeadline: new Date(createGroupDto.recruitmentDeadline),
       });
       const savedGroup = await manager.save(group);
+
 
       const groupWallet = manager.create(GroupWallet, {
         group: savedGroup,
@@ -193,11 +188,7 @@ export class GroupingService {
     groupId: string,
     user: User,
     initiateDto: InitiateContributionPaymentDto,
-  ): Promise<{
-    clientSecret?: string;
-    orderId?: string;
-    provider: PaymentMethod;
-  }> {
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
     const groupMember = await this.groupMemberRepository.findOne({
       where: { groupId, userId: user.id },
     });

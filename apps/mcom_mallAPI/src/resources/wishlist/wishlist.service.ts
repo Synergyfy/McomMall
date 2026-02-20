@@ -17,7 +17,7 @@ export class WishlistService {
     private readonly wishlistItemRepository: Repository<WishlistItem>,
     private readonly productService: ProductService,
     private readonly servicesService: ServicesService,
-  ) {}
+  ) { }
 
   async create(createWishlistDto: CreateWishlistDto, userId: string) {
     const { productId } = createWishlistDto;
@@ -49,8 +49,7 @@ export class WishlistService {
     }
 
     const existingItem = wishlist.items.find(
-      (item) =>
-        item.product?.id === productId || item.service?.id === productId,
+      (item) => (item.product?.id === productId) || (item.service?.id === productId),
     );
     if (existingItem) {
       return wishlist;
@@ -85,8 +84,7 @@ export class WishlistService {
     }
 
     const wishlistItem = wishlist.items.find(
-      (item) =>
-        item.product?.id === productId || item.service?.id === productId,
+      (item) => (item.product?.id === productId) || (item.service?.id === productId),
     );
 
     if (!wishlistItem) {
@@ -96,8 +94,7 @@ export class WishlistService {
     await this.wishlistItemRepository.remove(wishlistItem);
 
     wishlist.items = wishlist.items.filter(
-      (item) =>
-        item.product?.id !== productId && item.service?.id !== productId,
+      (item) => (item.product?.id !== productId) && (item.service?.id !== productId),
     );
 
     return wishlist;

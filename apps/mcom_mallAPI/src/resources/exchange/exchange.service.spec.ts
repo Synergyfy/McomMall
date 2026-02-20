@@ -207,9 +207,7 @@ describe('ExchangeService', () => {
         offeredItem: { id: 'offered-item-id' },
         requestedItem: { id: 'requested-item-id' },
       } as unknown as ExchangeProposal;
-      const updateDto: UpdateExchangeProposalDto = {
-        status: ProposalStatus.ACCEPTED,
-      };
+      const updateDto: UpdateExchangeProposalDto = { status: ProposalStatus.ACCEPTED };
       const savedEscrow = { id: 'escrow-id' };
 
       mockProposalRepository.findOne.mockResolvedValue(proposal);

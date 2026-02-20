@@ -10,4 +10,4 @@ import { UserActivity } from './entities/user-activity.entity';
   providers: [ActivityTimerService],
   exports: [ActivityTimerService],
 })
-export class ActivityTimerModule {}
+export class ActivityTimerModule { }

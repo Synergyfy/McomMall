@@ -42,11 +42,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new sector (Admin only)' })
-  @ApiResponse({
-    status: 201,
-    description: 'The sector has been successfully created.',
-    type: Sector,
-  })
+  @ApiResponse({ status: 201, description: 'The sector has been successfully created.', type: Sector })
   createSector(@Body() createSectorDto: CreateSectorDto): Promise<Sector> {
     return this.taxonomyService.createSector(createSectorDto);
   }
@@ -56,11 +52,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a sector (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The sector has been successfully updated.',
-    type: Sector,
-  })
+  @ApiResponse({ status: 200, description: 'The sector has been successfully updated.', type: Sector })
   @ApiResponse({ status: 404, description: 'Sector not found.' })
   updateSector(
     @Param('id') id: string,
@@ -74,10 +66,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a sector (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The sector has been successfully deleted.',
-  })
+  @ApiResponse({ status: 200, description: 'The sector has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Sector not found.' })
   removeSector(@Param('id') id: string): Promise<void> {
     return this.taxonomyService.removeSector(id);
@@ -86,11 +75,7 @@ export class TaxonomyController {
   @Public()
   @Get('sectors')
   @ApiOperation({ summary: 'Get all sectors' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return all sectors.',
-    type: [Sector],
-  })
+  @ApiResponse({ status: 200, description: 'Return all sectors.', type: [Sector] })
   findAllSectors(): Promise<Sector[]> {
     return this.taxonomyService.findAllSectors();
   }
@@ -111,14 +96,8 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new category (Admin only)' })
-  @ApiResponse({
-    status: 201,
-    description: 'The category has been successfully created.',
-    type: TaxonomyCategory,
-  })
-  createCategory(
-    @Body() createCategoryDto: CreateCategoryDto,
-  ): Promise<TaxonomyCategory> {
+  @ApiResponse({ status: 201, description: 'The category has been successfully created.', type: TaxonomyCategory })
+  createCategory(@Body() createCategoryDto: CreateCategoryDto): Promise<TaxonomyCategory> {
     return this.taxonomyService.createCategory(createCategoryDto);
   }
 
@@ -127,11 +106,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a category (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The category has been successfully updated.',
-    type: TaxonomyCategory,
-  })
+  @ApiResponse({ status: 200, description: 'The category has been successfully updated.', type: TaxonomyCategory })
   @ApiResponse({ status: 404, description: 'Category not found.' })
   updateCategory(
     @Param('id') id: string,
@@ -145,10 +120,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a category (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The category has been successfully deleted.',
-  })
+  @ApiResponse({ status: 200, description: 'The category has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Category not found.' })
   removeCategory(@Param('id') id: string): Promise<void> {
     return this.taxonomyService.removeCategory(id);
@@ -157,11 +129,7 @@ export class TaxonomyController {
   @Public()
   @Get('categories/all')
   @ApiOperation({ summary: 'Get all categories without pagination' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return all categories.',
-    type: [TaxonomyCategory],
-  })
+  @ApiResponse({ status: 200, description: 'Return all categories.', type: [TaxonomyCategory] })
   findAllCategoriesAll(): Promise<TaxonomyCategory[]> {
     return this.taxonomyService.findAllCategoriesAll();
   }
@@ -169,11 +137,7 @@ export class TaxonomyController {
   @Public()
   @Get('categories')
   @ApiOperation({ summary: 'Get all categories' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return all categories.',
-    type: [TaxonomyCategory],
-  })
+  @ApiResponse({ status: 200, description: 'Return all categories.', type: [TaxonomyCategory] })
   findAllCategories(): Promise<TaxonomyCategory[]> {
     return this.taxonomyService.findAllCategories();
   }
@@ -181,25 +145,15 @@ export class TaxonomyController {
   @Public()
   @Get('sectors/:sectorId/categories')
   @ApiOperation({ summary: 'Get categories of a specific sector' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return categories of the sector.',
-    type: [TaxonomyCategory],
-  })
-  findCategoriesBySector(
-    @Param('sectorId') sectorId: string,
-  ): Promise<TaxonomyCategory[]> {
+  @ApiResponse({ status: 200, description: 'Return categories of the sector.', type: [TaxonomyCategory] })
+  findCategoriesBySector(@Param('sectorId') sectorId: string): Promise<TaxonomyCategory[]> {
     return this.taxonomyService.findCategoriesBySector(sectorId);
   }
 
   @Public()
   @Get('categories/:id')
   @ApiOperation({ summary: 'Get a category by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return the category.',
-    type: TaxonomyCategory,
-  })
+  @ApiResponse({ status: 200, description: 'Return the category.', type: TaxonomyCategory })
   @ApiResponse({ status: 404, description: 'Category not found.' })
   findOneCategory(@Param('id') id: string): Promise<TaxonomyCategory> {
     return this.taxonomyService.findOneCategory(id);
@@ -212,14 +166,8 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new subcategory (Admin only)' })
-  @ApiResponse({
-    status: 201,
-    description: 'The subcategory has been successfully created.',
-    type: TaxonomySubcategory,
-  })
-  createSubcategory(
-    @Body() createSubcategoryDto: CreateSubcategoryDto,
-  ): Promise<TaxonomySubcategory> {
+  @ApiResponse({ status: 201, description: 'The subcategory has been successfully created.', type: TaxonomySubcategory })
+  createSubcategory(@Body() createSubcategoryDto: CreateSubcategoryDto): Promise<TaxonomySubcategory> {
     return this.taxonomyService.createSubcategory(createSubcategoryDto);
   }
 
@@ -228,11 +176,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a subcategory (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The subcategory has been successfully updated.',
-    type: TaxonomySubcategory,
-  })
+  @ApiResponse({ status: 200, description: 'The subcategory has been successfully updated.', type: TaxonomySubcategory })
   @ApiResponse({ status: 404, description: 'Subcategory not found.' })
   updateSubcategory(
     @Param('id') id: string,
@@ -246,10 +190,7 @@ export class TaxonomyController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Delete a subcategory (Admin only)' })
-  @ApiResponse({
-    status: 200,
-    description: 'The subcategory has been successfully deleted.',
-  })
+  @ApiResponse({ status: 200, description: 'The subcategory has been successfully deleted.' })
   @ApiResponse({ status: 404, description: 'Subcategory not found.' })
   removeSubcategory(@Param('id') id: string): Promise<void> {
     return this.taxonomyService.removeSubcategory(id);
@@ -258,25 +199,15 @@ export class TaxonomyController {
   @Public()
   @Get('categories/:categoryId/subcategories')
   @ApiOperation({ summary: 'Get subcategories of a specific category' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return subcategories of the category.',
-    type: [TaxonomySubcategory],
-  })
-  findSubcategoriesByCategory(
-    @Param('categoryId') categoryId: string,
-  ): Promise<TaxonomySubcategory[]> {
+  @ApiResponse({ status: 200, description: 'Return subcategories of the category.', type: [TaxonomySubcategory] })
+  findSubcategoriesByCategory(@Param('categoryId') categoryId: string): Promise<TaxonomySubcategory[]> {
     return this.taxonomyService.findSubcategoriesByCategory(categoryId);
   }
 
   @Public()
   @Get('subcategories/:id')
   @ApiOperation({ summary: 'Get a subcategory by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Return the subcategory.',
-    type: TaxonomySubcategory,
-  })
+  @ApiResponse({ status: 200, description: 'Return the subcategory.', type: TaxonomySubcategory })
   @ApiResponse({ status: 404, description: 'Subcategory not found.' })
   findOneSubcategory(@Param('id') id: string): Promise<TaxonomySubcategory> {
     return this.taxonomyService.findOneSubcategory(id);

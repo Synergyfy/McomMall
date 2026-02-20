@@ -60,15 +60,15 @@ export class CapabilityService {
     // 1. Try Membership (Paid/Assigned)
     const membership = await this.membershipService.findActiveWithTier(userId);
     if (membership && membership.tier && membership.isActive) {
-      if (!membership.expiresAt || new Date() <= membership.expiresAt) {
-        return membership.tier.configuration;
-      }
+        if (!membership.expiresAt || new Date() <= membership.expiresAt) {
+            return membership.tier.configuration;
+        }
     }
 
     // 2. Fallback to Default/Free Tier
     const defaultTier = await this.tierService.findDefaultTier();
     if (defaultTier) {
-      return defaultTier.configuration;
+        return defaultTier.configuration;
     }
 
     return null;
@@ -82,9 +82,7 @@ export class CapabilityService {
     const config = await this.getEffectiveConfig(userId);
 
     if (!config) {
-      throw new ForbiddenException(
-        'Active membership or trial is required to perform this action.',
-      );
+      throw new ForbiddenException('Active membership or trial is required to perform this action.');
     }
 
     switch (action) {
@@ -93,83 +91,51 @@ export class CapabilityService {
         break;
       case ActionType.CAN_SELL_PRODUCTS:
         if (!config.quotas.allowProductListing) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow product listings.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow product listings.');
         }
         break;
       case ActionType.CAN_SELL_SERVICES:
         if (!config.quotas.allowServiceListing) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow service listings.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow service listings.');
         }
         break;
       case ActionType.CREATE_PRODUCT:
         if (!config.quotas.allowProductListing) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow product listings.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow product listings.');
         }
         await this.checkProductLimit(userId, config);
         break;
       case ActionType.CREATE_SERVICE:
         if (!config.quotas.allowServiceListing) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow service listings.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow service listings.');
         }
         await this.checkServiceLimit(userId, config);
         break;
       case ActionType.CREATE_GIFT_CARD_TEMPLATE:
-        const gcCount =
-          context?.currentCount ??
-          (await this.giftCardService.countTemplatesForOwner(userId));
-        this.checkQuota(
-          gcCount,
-          config.quotas.maxGiftCardTemplates,
-          'gift card templates',
-        );
+        const gcCount = context?.currentCount ?? await this.giftCardService.countTemplatesForOwner(userId);
+        this.checkQuota(gcCount, config.quotas.maxGiftCardTemplates, 'gift card templates');
         break;
       case ActionType.CREATE_COUPON_TEMPLATE:
-        const couponCount =
-          context?.currentCount ??
-          (await this.couponService.countForUser(userId));
-        this.checkQuota(
-          couponCount,
-          config.quotas.maxCouponTemplates,
-          'coupon templates',
-        );
+        const couponCount = context?.currentCount ?? await this.couponService.countForUser(userId);
+        this.checkQuota(couponCount, config.quotas.maxCouponTemplates, 'coupon templates');
         break;
       case ActionType.CREATE_LOYALTY_PROGRAM:
-        const loyaltyCount =
-          context?.currentCount ??
-          (await this.promotionService.countForUser(userId));
-        this.checkQuota(
-          loyaltyCount,
-          config.quotas.maxLoyaltyPrograms,
-          'loyalty programs',
-        );
+        const loyaltyCount = context?.currentCount ?? await this.promotionService.countForUser(userId);
+        this.checkQuota(loyaltyCount, config.quotas.maxLoyaltyPrograms, 'loyalty programs');
         break;
       case ActionType.ACCESS_ADVANCED_ANALYTICS:
         if (!config.featureFlags.advancedAnalytics) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow access to advanced analytics.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow access to advanced analytics.');
         }
         break;
       case ActionType.USE_CUSTOM_BRANDING:
         if (!config.featureFlags.allowCustomBranding) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow custom branding.',
-          );
+          throw new ForbiddenException('Your current tier/trial does not allow custom branding.');
         }
         break;
       case ActionType.CREATE_GROUP:
         if (!config.featureFlags.allowGroupCreation) {
-          throw new ForbiddenException(
-            'Your current tier/trial does not allow creating groups.',
-          );
+            throw new ForbiddenException('Your current tier/trial does not allow creating groups.');
         }
         break;
       default:
@@ -180,100 +146,71 @@ export class CapabilityService {
   async getUsageSummary(userId: string) {
     const config = await this.getEffectiveConfig(userId);
     if (!config) {
-      return {
-        hasAccess: false,
-        message: 'No active membership or trial found.',
-      };
+        return {
+            hasAccess: false,
+            message: 'No active membership or trial found.'
+        };
     }
 
     const [
-      listingCount,
-      productCount,
-      serviceCount,
-      giftCardTemplateCount,
-      couponTemplateCount,
-      loyaltyProgramCount,
+        listingCount,
+        productCount,
+        serviceCount,
+        giftCardTemplateCount,
+        couponTemplateCount,
+        loyaltyProgramCount
     ] = await Promise.all([
-      this.listingsService
-        .findAllForUser(userId, 1, 1)
-        .then((res) => res.meta.total),
-      this.productService.countForUser(userId),
-      this.servicesService.countForUser(userId),
-      this.giftCardService.countTemplatesForOwner(userId),
-      this.couponService.countForUser(userId),
-      this.promotionService.countForUser(userId),
+        this.listingsService.findAllForUser(userId, 1, 1).then(res => res.meta.total),
+        this.productService.countForUser(userId),
+        this.servicesService.countForUser(userId),
+        this.giftCardService.countTemplatesForOwner(userId),
+        this.couponService.countForUser(userId),
+        this.promotionService.countForUser(userId)
     ]);
 
     return {
-      hasAccess: true,
-      quotas: {
-        listings: {
-          used: listingCount,
-          limit: config.quotas.maxListings,
-          remaining:
-            config.quotas.maxListings === -1
-              ? -1
-              : Math.max(0, config.quotas.maxListings - listingCount),
+        hasAccess: true,
+        quotas: {
+            listings: {
+                used: listingCount,
+                limit: config.quotas.maxListings,
+                remaining: config.quotas.maxListings === -1 ? -1 : Math.max(0, config.quotas.maxListings - listingCount)
+            },
+            products: {
+                used: productCount,
+                limit: config.quotas.maxProducts,
+                remaining: config.quotas.maxProducts === -1 ? -1 : Math.max(0, config.quotas.maxProducts - productCount),
+                allowed: config.quotas.allowProductListing
+            },
+            services: {
+                used: serviceCount,
+                limit: config.quotas.maxServices,
+                remaining: config.quotas.maxServices === -1 ? -1 : Math.max(0, config.quotas.maxServices - serviceCount),
+                allowed: config.quotas.allowServiceListing
+            },
+            giftCardTemplates: {
+                used: giftCardTemplateCount,
+                limit: config.quotas.maxGiftCardTemplates,
+                remaining: config.quotas.maxGiftCardTemplates === -1 ? -1 : Math.max(0, config.quotas.maxGiftCardTemplates - giftCardTemplateCount)
+            },
+            couponTemplates: {
+                used: couponTemplateCount,
+                limit: config.quotas.maxCouponTemplates,
+                remaining: config.quotas.maxCouponTemplates === -1 ? -1 : Math.max(0, config.quotas.maxCouponTemplates - couponTemplateCount)
+            },
+            loyaltyPrograms: {
+                used: loyaltyProgramCount,
+                limit: config.quotas.maxLoyaltyPrograms,
+                remaining: config.quotas.maxLoyaltyPrograms === -1 ? -1 : Math.max(0, config.quotas.maxLoyaltyPrograms - loyaltyProgramCount)
+            },
+            imagesPerListing: {
+                limit: config.quotas.maxImagesPerListing
+            },
+            featuredListings: {
+                limit: config.quotas.featuredListingAllowance
+            }
         },
-        products: {
-          used: productCount,
-          limit: config.quotas.maxProducts,
-          remaining:
-            config.quotas.maxProducts === -1
-              ? -1
-              : Math.max(0, config.quotas.maxProducts - productCount),
-          allowed: config.quotas.allowProductListing,
-        },
-        services: {
-          used: serviceCount,
-          limit: config.quotas.maxServices,
-          remaining:
-            config.quotas.maxServices === -1
-              ? -1
-              : Math.max(0, config.quotas.maxServices - serviceCount),
-          allowed: config.quotas.allowServiceListing,
-        },
-        giftCardTemplates: {
-          used: giftCardTemplateCount,
-          limit: config.quotas.maxGiftCardTemplates,
-          remaining:
-            config.quotas.maxGiftCardTemplates === -1
-              ? -1
-              : Math.max(
-                  0,
-                  config.quotas.maxGiftCardTemplates - giftCardTemplateCount,
-                ),
-        },
-        couponTemplates: {
-          used: couponTemplateCount,
-          limit: config.quotas.maxCouponTemplates,
-          remaining:
-            config.quotas.maxCouponTemplates === -1
-              ? -1
-              : Math.max(
-                  0,
-                  config.quotas.maxCouponTemplates - couponTemplateCount,
-                ),
-        },
-        loyaltyPrograms: {
-          used: loyaltyProgramCount,
-          limit: config.quotas.maxLoyaltyPrograms,
-          remaining:
-            config.quotas.maxLoyaltyPrograms === -1
-              ? -1
-              : Math.max(
-                  0,
-                  config.quotas.maxLoyaltyPrograms - loyaltyProgramCount,
-                ),
-        },
-        imagesPerListing: {
-          limit: config.quotas.maxImagesPerListing,
-        },
-        featuredListings: {
-          limit: config.quotas.featuredListingAllowance,
-        },
-      },
-      features: config.featureFlags,
+        features: config.featureFlags
     };
   }
 
@@ -285,9 +222,7 @@ export class CapabilityService {
     const currentCount = meta.total;
 
     if (currentCount >= limit) {
-      throw new ForbiddenException(
-        `You have reached your limit of ${limit} listings.`,
-      );
+       throw new ForbiddenException(`You have reached your limit of ${limit} listings.`);
     }
   }
 
@@ -298,9 +233,7 @@ export class CapabilityService {
     const currentCount = await this.productService.countForUser(userId);
 
     if (currentCount >= limit) {
-      throw new ForbiddenException(
-        `You have reached your limit of ${limit} products.`,
-      );
+       throw new ForbiddenException(`You have reached your limit of ${limit} products.`);
     }
   }
 
@@ -311,18 +244,14 @@ export class CapabilityService {
     const currentCount = await this.servicesService.countForUser(userId);
 
     if (currentCount >= limit) {
-      throw new ForbiddenException(
-        `You have reached your limit of ${limit} services.`,
-      );
+       throw new ForbiddenException(`You have reached your limit of ${limit} services.`);
     }
   }
 
   private checkQuota(current: number, limit: number, resourceName: string) {
     if (limit === -1) return;
     if (current >= limit) {
-      throw new ForbiddenException(
-        `You have reached your limit of ${limit} ${resourceName}.`,
-      );
+      throw new ForbiddenException(`You have reached your limit of ${limit} ${resourceName}.`);
     }
   }
 }

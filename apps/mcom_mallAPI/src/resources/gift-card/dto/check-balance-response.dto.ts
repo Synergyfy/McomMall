@@ -13,10 +13,7 @@ export class CheckBalanceResponseDto {
   })
   currentBalance: number;
 
-  @ApiProperty({
-    description: 'The currency of the gift card.',
-    example: 'USD',
-  })
+  @ApiProperty({ description: 'The currency of the gift card.', example: 'USD' })
   currency: string;
 
   @ApiProperty({

@@ -1,15 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MoneyEngineService } from './money-engine.service';
 import { DataSource, EntityManager } from 'typeorm';
-import {
-  RewardDefinition,
-  ScopeType,
-} from './entities/reward-definition.entity';
+import { RewardDefinition, ScopeType } from './entities/reward-definition.entity';
 import { UserVoucher, VoucherState } from './entities/user-voucher.entity';
-import {
-  VoucherTransaction,
-  TransactionSourceType,
-} from './entities/voucher-transaction.entity';
+import { VoucherTransaction, TransactionSourceType } from './entities/voucher-transaction.entity';
 import { BadRequestException } from '@nestjs/common';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { PaymentGateway } from '../payments/enums/payment-gateway.enum';
@@ -71,13 +65,9 @@ describe('MoneyEngineService', () => {
       definition.splitRatio = { real: 0.5, reward: 0.5 };
       definition.isActive = true;
       mockEntityManager.findOne.mockResolvedValue(definition);
-      mockEntityManager.save.mockImplementation((entity) =>
-        Promise.resolve({ ...entity, id: 'voucher-1' }),
-      );
+      mockEntityManager.save.mockImplementation((entity) => Promise.resolve({ ...entity, id: 'voucher-1' }));
 
-      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
-        ok: true,
-      });
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
 
       const result = await service.purchaseVoucher('user-1', {
         rewardDefinitionId: 'def-1',
@@ -86,9 +76,7 @@ describe('MoneyEngineService', () => {
         paymentGateway: PaymentGateway.STRIPE,
       });
 
-      expect(
-        mockPaymentProviderService.verifyStripePaymentIntent,
-      ).toHaveBeenCalledWith('pi_123', 50, 'gbp');
+      expect(mockPaymentProviderService.verifyStripePaymentIntent).toHaveBeenCalledWith('pi_123', 50, 'gbp');
       expect(result.realBalance).toBe(50);
       expect(result.rewardBalance).toBe(50); // 50 / 0.5 = 100 total -> 50 reward
       expect(mockEntityManager.save).toHaveBeenCalledTimes(3); // Voucher, Tx1, Tx2
@@ -99,13 +87,9 @@ describe('MoneyEngineService', () => {
       definition.splitRatio = { real: 0.5, reward: 0.5 };
       definition.isActive = true;
       mockEntityManager.findOne.mockResolvedValue(definition);
-      mockEntityManager.save.mockImplementation((entity) =>
-        Promise.resolve({ ...entity, id: 'voucher-1' }),
-      );
+      mockEntityManager.save.mockImplementation((entity) => Promise.resolve({ ...entity, id: 'voucher-1' }));
 
-      mockPaymentProviderService.captureAndVerifyPaypalOrder.mockResolvedValue({
-        ok: true,
-      });
+      mockPaymentProviderService.captureAndVerifyPaypalOrder.mockResolvedValue({ ok: true });
 
       await service.purchaseVoucher('user-1', {
         rewardDefinitionId: 'def-1',
@@ -114,43 +98,32 @@ describe('MoneyEngineService', () => {
         paymentGateway: PaymentGateway.PAYPAL,
       });
 
-      expect(
-        mockPaymentProviderService.captureAndVerifyPaypalOrder,
-      ).toHaveBeenCalledWith('order_123', 50, 'gbp');
+      expect(mockPaymentProviderService.captureAndVerifyPaypalOrder).toHaveBeenCalledWith('order_123', 50, 'gbp');
     });
 
     it('should throw BadRequestException if payment verification fails', async () => {
-      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
-        ok: false,
-        reason: 'failed',
-      });
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: false, reason: 'failed' });
 
-      await expect(
-        service.purchaseVoucher('user-1', {
-          rewardDefinitionId: 'def-1',
-          paymentAmount: 50,
-          transactionId: 'pi_123',
-          paymentGateway: PaymentGateway.STRIPE,
-        }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.purchaseVoucher('user-1', {
+        rewardDefinitionId: 'def-1',
+        paymentAmount: 50,
+        transactionId: 'pi_123',
+        paymentGateway: PaymentGateway.STRIPE,
+      })).rejects.toThrow(BadRequestException);
     });
 
     it('should throw BadRequestException if definition is inactive', async () => {
       const definition = new RewardDefinition();
       definition.isActive = false;
       mockEntityManager.findOne.mockResolvedValue(definition);
-      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
-        ok: true,
-      });
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
 
-      await expect(
-        service.purchaseVoucher('user-1', {
-          rewardDefinitionId: 'def-1',
-          paymentAmount: 50,
-          transactionId: 'pi_123',
-          paymentGateway: PaymentGateway.STRIPE,
-        }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.purchaseVoucher('user-1', {
+        rewardDefinitionId: 'def-1',
+        paymentAmount: 50,
+        transactionId: 'pi_123',
+        paymentGateway: PaymentGateway.STRIPE,
+      })).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -159,14 +132,10 @@ describe('MoneyEngineService', () => {
       const voucher = new UserVoucher();
       voucher.state = VoucherState.ACTIVE;
       voucher.rewardBalance = 10;
-      voucher.definition = {
-        scopeType: ScopeType.ANY_SHOP,
-      } as RewardDefinition;
+      voucher.definition = { scopeType: ScopeType.ANY_SHOP } as RewardDefinition;
 
       mockEntityManager.findOne.mockResolvedValue(voucher);
-      mockEntityManager.save.mockImplementation((entity) =>
-        Promise.resolve(entity),
-      );
+      mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 
       const result = await service.injectCashback({
         userVoucherId: 'v-1',
@@ -185,15 +154,10 @@ describe('MoneyEngineService', () => {
       voucher.state = VoucherState.ACTIVE;
       voucher.realBalance = 50;
       voucher.rewardBalance = 50;
-      voucher.definition = {
-        scopeType: ScopeType.ANY_SHOP,
-        burnStrategy: 'real_first',
-      } as RewardDefinition;
+      voucher.definition = { scopeType: ScopeType.ANY_SHOP, burnStrategy: 'real_first' } as RewardDefinition;
 
       mockEntityManager.findOne.mockResolvedValue(voucher);
-      mockEntityManager.save.mockImplementation((entity) =>
-        Promise.resolve(entity),
-      );
+      mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 
       await service.spend({
         userVoucherId: 'v-1',
@@ -205,9 +169,7 @@ describe('MoneyEngineService', () => {
       expect(voucher.realBalance).toBe(0);
       expect(voucher.rewardBalance).toBe(40);
 
-      const txCall = mockEntityManager.save.mock.calls.find(
-        (call) => call[0] instanceof VoucherTransaction,
-      );
+      const txCall = mockEntityManager.save.mock.calls.find(call => call[0] instanceof VoucherTransaction);
       const tx = txCall[0];
       expect(tx.realAmountDelta).toBe(-50);
       expect(tx.rewardAmountDelta).toBe(-10);
@@ -220,13 +182,11 @@ describe('MoneyEngineService', () => {
       voucher.rewardBalance = 50;
       voucher.definition = {
         scopeType: ScopeType.ANY_SHOP,
-        burnStrategy: 'reward_first',
+        burnStrategy: 'reward_first'
       } as RewardDefinition;
 
       mockEntityManager.findOne.mockResolvedValue(voucher);
-      mockEntityManager.save.mockImplementation((entity) =>
-        Promise.resolve(entity),
-      );
+      mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 
       await service.spend({
         userVoucherId: 'v-1',
@@ -244,19 +204,15 @@ describe('MoneyEngineService', () => {
       voucher.state = VoucherState.ACTIVE;
       voucher.realBalance = 10;
       voucher.rewardBalance = 10;
-      voucher.definition = {
-        scopeType: ScopeType.ANY_SHOP,
-      } as RewardDefinition;
+      voucher.definition = { scopeType: ScopeType.ANY_SHOP } as RewardDefinition;
 
       mockEntityManager.findOne.mockResolvedValue(voucher);
 
-      await expect(
-        service.spend({
-          userVoucherId: 'v-1',
-          amount: 30,
-          shopId: 's-1',
-        }),
-      ).rejects.toThrow(BadRequestException);
+      await expect(service.spend({
+        userVoucherId: 'v-1',
+        amount: 30,
+        shopId: 's-1',
+      })).rejects.toThrow(BadRequestException);
     });
   });
 });

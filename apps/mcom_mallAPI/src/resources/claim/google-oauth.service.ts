@@ -6,7 +6,7 @@ import { OAuth2Client } from 'google-auth-library';
 
 @Injectable()
 export class GoogleOAuthService {
-  constructor(private readonly configService: ConfigService) {}
+  constructor(private readonly configService: ConfigService) { }
   onModuleInit() {
     console.log(
       'GOOGLE_CLIENT_ID:',

@@ -53,18 +53,9 @@ describe('PromotionEngineService', () => {
         PromotionEngineService,
         { provide: DataSource, useValue: mockDataSource },
         { provide: getRepositoryToken(Promotion), useValue: {} },
-        {
-          provide: getRepositoryToken(PromotionParticipant),
-          useValue: mockParticipantRepository,
-        },
-        {
-          provide: getRepositoryToken(PromotionActivity),
-          useValue: { create: jest.fn().mockImplementation((dto) => dto) },
-        },
-        {
-          provide: getRepositoryToken(Product),
-          useValue: mockProductRepository,
-        },
+        { provide: getRepositoryToken(PromotionParticipant), useValue: mockParticipantRepository },
+        { provide: getRepositoryToken(PromotionActivity), useValue: { create: jest.fn().mockImplementation(dto => dto) } },
+        { provide: getRepositoryToken(Product), useValue: mockProductRepository },
       ],
     }).compile();
 
@@ -82,11 +73,7 @@ describe('PromotionEngineService', () => {
 
   it('should process purchase, award points, update wallet, and create transaction', async () => {
     const user = { id: 'u1', points: 100 } as User;
-    const order = {
-      id: 'o1',
-      total: 100,
-      items: [{ product: { id: 'p1' }, price: 50, quantity: 2 }],
-    } as any;
+    const order = { id: 'o1', total: 100, items: [{ product: { id: 'p1' }, price: 50, quantity: 2 }] } as any;
     const business = { id: 'b1', user: { id: 'owner1' } };
     const product = { id: 'p1', business };
     const promotion = {
@@ -108,7 +95,7 @@ describe('PromotionEngineService', () => {
     mockManager.count.mockResolvedValue(0); // Limit check
 
     // Mock save to return entity
-    mockManager.save.mockImplementation((entity) => Promise.resolve(entity));
+    mockManager.save.mockImplementation(entity => Promise.resolve(entity));
 
     await service.processPurchase(user, order);
 
@@ -119,60 +106,46 @@ describe('PromotionEngineService', () => {
 
     // Verify Points Calculation (50 * 2 * 2 = 200)
     // Save Participant
-    expect(mockManager.save).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
         id: 'part1',
-        pointsEarned: 200,
-      }),
-    );
+        pointsEarned: 200
+    }));
 
     // Verify Wallet Update (100 + 200 = 300)
-    expect(mockManager.save).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
         id: 'u1',
-        points: 300,
-      }),
-    );
+        points: 300
+    }));
 
     // Verify Activity Log
-    expect(mockManager.save).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
         pointsEarned: 200,
-        participant: expect.objectContaining({ id: 'part1' }),
-      }),
-    );
+        participant: expect.objectContaining({ id: 'part1' })
+    }));
 
     // Verify Point Transaction Creation (The Ghost Fix)
-    expect(mockManager.save).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockManager.save).toHaveBeenCalledWith(expect.objectContaining({
         points: 200,
         type: 'EARNED',
         user: expect.objectContaining({ id: 'u1' }),
-        order: expect.objectContaining({ id: 'o1' }),
-      }),
-    );
+        order: expect.objectContaining({ id: 'o1' })
+    }));
   });
 
   it('should rollback transaction if save fails', async () => {
     const user = { id: 'u1', points: 0 } as User;
-    const order = {
-      items: [{ product: { id: 'p1' }, quantity: 1, price: 10 }],
-    } as any;
+    const order = { items: [{ product: { id: 'p1' }, quantity: 1, price: 10 }] } as any;
     const promotion = {
-      id: 'promo1',
-      isActive: true,
-      promotionScope: PromotionScope.ALL_LISTINGS,
-      businesses: [{ id: 'b1' }],
-      promotionType: PromotionType.BONUS_POINTS,
-      bonusPoints: 100,
+        id: 'promo1', isActive: true,
+        promotionScope: PromotionScope.ALL_LISTINGS,
+        businesses: [{id: 'b1'}],
+        promotionType: PromotionType.BONUS_POINTS,
+        bonusPoints: 100
     };
     const participant = { id: 'part1', promotion, pointsEarned: 0 };
 
     mockParticipantRepository.find.mockResolvedValue([participant]);
-    mockProductRepository.findOne.mockResolvedValue({
-      id: 'p1',
-      business: { id: 'b1' },
-    });
+    mockProductRepository.findOne.mockResolvedValue({ id: 'p1', business: { id: 'b1' } });
 
     // Fail the save
     mockManager.save.mockRejectedValue(new Error('Save failed'));

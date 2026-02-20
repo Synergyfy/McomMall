@@ -18,7 +18,7 @@ export class EmailService {
     @InjectRepository(Otp)
     private readonly otpRepository: Repository<Otp>,
     private readonly hashService: HashService,
-  ) {}
+  ) { }
 
   async sendUserWelcomeEmail(user: User) {
     await this.mailerService.sendMail({
@@ -67,15 +67,15 @@ export class EmailService {
 
     let otpDetails;
     if (user) {
-      otpDetails = await this.otpRepository.findOne({
-        where: { user: { id: user.id }, otp, type },
-        order: { expiresAt: 'DESC' },
-      });
+        otpDetails = await this.otpRepository.findOne({
+          where: { user: { id: user.id }, otp, type },
+          order: { expiresAt: 'DESC' },
+        });
     } else {
-      otpDetails = await this.otpRepository.findOne({
-        where: { email, otp, type },
-        order: { expiresAt: 'DESC' },
-      });
+        otpDetails = await this.otpRepository.findOne({
+            where: { email, otp, type },
+            order: { expiresAt: 'DESC' },
+        });
     }
 
     if (!otpDetails) {
@@ -111,17 +111,14 @@ export class EmailService {
   async sendPartnershipRequestEmail(
     receiver: User,
     sender: User,
-    itemDetails?: { baseItemName: string; plusItemName: string },
+    itemDetails?: { baseItemName: string; plusItemName: string }
   ) {
     const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:4200'}/dashboard/marketing/my-partners`;
-    const senderInitials =
-      (sender.firstName?.[0] || 'U') + (sender.lastName?.[0] || '');
+    const senderInitials = (sender.firstName?.[0] || 'U') + (sender.lastName?.[0] || '');
 
     await this.mailerService.sendMail({
       to: receiver.email,
-      subject: itemDetails
-        ? `Proposal: Connect ${itemDetails.baseItemName} + ${itemDetails.plusItemName}`
-        : `New Partnership Request from ${sender.firstName}`,
+      subject: itemDetails ? `Proposal: Connect ${itemDetails.baseItemName} + ${itemDetails.plusItemName}` : `New Partnership Request from ${sender.firstName}`,
       template: './partnership-request',
       context: {
         receiverName: receiver.firstName,

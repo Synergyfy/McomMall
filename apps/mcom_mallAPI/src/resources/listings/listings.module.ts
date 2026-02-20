@@ -56,4 +56,4 @@ import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
   providers: [ListingsService, GooglePlacesService],
   exports: [ListingsService],
 })
-export class ListingsModule {}
+export class ListingsModule { }

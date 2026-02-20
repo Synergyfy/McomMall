@@ -34,13 +34,10 @@ import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 @ApiBearerAuth()
 @Controller('users')
 export class UsersController {
-  constructor(private readonly usersService: UsersService) {}
+  constructor(private readonly usersService: UsersService) { }
 
   @ApiOperation({ summary: 'Check if email exists' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns true if email exists, false otherwise.',
-  })
+  @ApiResponse({ status: 200, description: 'Returns true if email exists, false otherwise.' })
   @Public()
   @Get('check-email')
   async checkEmail(@Query('email') email: string) {
@@ -168,10 +165,7 @@ export class UsersController {
   }
 
   @ApiOperation({ summary: 'Update user features by ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'User features updated successfully.',
-  })
+  @ApiResponse({ status: 200, description: 'User features updated successfully.' })
   @ApiResponse({ status: 404, description: 'User not found.' })
   @Patch('features')
   updateFeatures(

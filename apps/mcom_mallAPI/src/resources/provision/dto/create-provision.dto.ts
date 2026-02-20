@@ -1,16 +1,9 @@
-import {
-  IsEnum,
-  IsNotEmpty,
-  IsObject,
-  IsOptional,
-  IsString,
-  IsDateString,
-} from 'class-validator';
-import { ApiProperty } from '@nestjs/swagger';
-import { ProvisionType } from '../entities/provision.entity';
+import { IsEnum, IsNotEmpty, IsObject, IsOptional, IsString, IsDateString } from "class-validator";
+import { ApiProperty } from "@nestjs/swagger";
+import { ProvisionType } from "../entities/provision.entity";
 
 export class CreateProvisionDto {
-  @ApiProperty({ example: 'MALL-123-XYZ' })
+  @ApiProperty({ example: "MALL-123-XYZ" })
   @IsString()
   @IsNotEmpty()
   code: string;

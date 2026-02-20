@@ -34,9 +34,7 @@ describe('ShippingAddressService', () => {
     }).compile();
 
     service = module.get<ShippingAddressService>(ShippingAddressService);
-    repository = module.get<Repository<ShippingAddress>>(
-      getRepositoryToken(ShippingAddress),
-    );
+    repository = module.get<Repository<ShippingAddress>>(getRepositoryToken(ShippingAddress));
   });
 
   afterEach(() => {
@@ -45,102 +43,71 @@ describe('ShippingAddressService', () => {
 
   describe('create', () => {
     it('should create a first address as main automatically', async () => {
-      const dto = {
-        addressName: 'Home',
-        recipientName: 'John',
-        phoneNumber: '123',
-        addressLine1: 'St 1',
-        city: 'NYC',
-        state: 'NY',
-        country: 'USA',
-      };
+      const dto = { addressName: 'Home', recipientName: 'John', phoneNumber: '123', addressLine1: 'St 1', city: 'NYC', state: 'NY', country: 'USA' };
 
       mockRepository.count.mockResolvedValue(0);
-      mockRepository.create.mockReturnValue({
-        ...dto,
-        isMain: true,
-        user: mockUser,
-      });
-      mockRepository.save.mockResolvedValue({
-        id: 'addr-1',
-        ...dto,
-        isMain: true,
-      });
+      mockRepository.create.mockReturnValue({ ...dto, isMain: true, user: mockUser });
+      mockRepository.save.mockResolvedValue({ id: 'addr-1', ...dto, isMain: true });
 
       const result = await service.create(mockUser, dto);
 
       expect(mockRepository.count).toHaveBeenCalled();
-      expect(mockRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({ isMain: true }),
-      );
+      expect(mockRepository.create).toHaveBeenCalledWith(expect.objectContaining({ isMain: true }));
       expect(result.isMain).toBe(true);
     });
 
     it('should unset previous main if new address is marked as main', async () => {
-      const dto = {
-        addressName: 'Office',
-        isMain: true,
-        recipientName: 'John',
-        phoneNumber: '123',
-        addressLine1: 'St 2',
-        city: 'NYC',
-        state: 'NY',
-        country: 'USA',
-      };
+        const dto = { addressName: 'Office', isMain: true, recipientName: 'John', phoneNumber: '123', addressLine1: 'St 2', city: 'NYC', state: 'NY', country: 'USA' };
 
-      mockRepository.count.mockResolvedValue(1);
-      mockRepository.create.mockReturnValue({ ...dto, user: mockUser });
-      mockRepository.save.mockResolvedValue({ id: 'addr-2', ...dto });
+        mockRepository.count.mockResolvedValue(1);
+        mockRepository.create.mockReturnValue({ ...dto, user: mockUser });
+        mockRepository.save.mockResolvedValue({ id: 'addr-2', ...dto });
 
-      await service.create(mockUser, dto);
+        await service.create(mockUser, dto);
 
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        { user: { id: 'user-1' }, isMain: true },
-        { isMain: false },
-      );
+        expect(mockRepository.update).toHaveBeenCalledWith(
+            { user: { id: 'user-1' }, isMain: true },
+            { isMain: false }
+        );
     });
   });
 
   describe('findAll', () => {
     it('should return paginated result', async () => {
-      mockRepository.findAndCount.mockResolvedValue([[], 0]);
-      const result = await service.findAll('user-1', 1, 10);
-      expect(result.data).toBeDefined();
-      expect(result.totalPages).toBe(0);
+        mockRepository.findAndCount.mockResolvedValue([[], 0]);
+        const result = await service.findAll('user-1', 1, 10);
+        expect(result.data).toBeDefined();
+        expect(result.totalPages).toBe(0);
     });
   });
 
   describe('remove', () => {
-    it('should promote next address to main if main is deleted', async () => {
-      const mainAddr = { id: 'addr-1', isMain: true };
-      const nextAddr = { id: 'addr-2', isMain: false };
+      it('should promote next address to main if main is deleted', async () => {
+          const mainAddr = { id: 'addr-1', isMain: true };
+          const nextAddr = { id: 'addr-2', isMain: false };
 
-      mockRepository.findOne.mockResolvedValueOnce(mainAddr); // findOne inside remove
-      mockRepository.remove.mockResolvedValue(mainAddr);
-      mockRepository.findOne.mockResolvedValueOnce(nextAddr); // findOne for promotion
+          mockRepository.findOne.mockResolvedValueOnce(mainAddr); // findOne inside remove
+          mockRepository.remove.mockResolvedValue(mainAddr);
+          mockRepository.findOne.mockResolvedValueOnce(nextAddr); // findOne for promotion
 
-      await service.remove('user-1', 'addr-1');
+          await service.remove('user-1', 'addr-1');
 
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'addr-2', isMain: true }),
-      );
-    });
+          expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ id: 'addr-2', isMain: true }));
+      });
   });
 
   describe('setMain', () => {
-    it('should set an address as main and unset others', async () => {
-      const targetAddr = { id: 'addr-2', isMain: false };
-      mockRepository.findOne.mockResolvedValue(targetAddr);
+      it('should set an address as main and unset others', async () => {
+          const targetAddr = { id: 'addr-2', isMain: false };
+          mockRepository.findOne.mockResolvedValue(targetAddr);
 
-      await service.setMain('user-1', 'addr-2');
+          await service.setMain('user-1', 'addr-2');
 
-      expect(mockRepository.update).toHaveBeenCalledWith(
-        { user: { id: 'user-1' }, isMain: true },
-        { isMain: false },
-      );
-      expect(mockRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ isMain: true }),
-      );
-    });
+          expect(mockRepository.update).toHaveBeenCalledWith(
+              { user: { id: 'user-1' }, isMain: true },
+              { isMain: false }
+          );
+          expect(mockRepository.save).toHaveBeenCalledWith(expect.objectContaining({ isMain: true }));
+      });
   });
 });

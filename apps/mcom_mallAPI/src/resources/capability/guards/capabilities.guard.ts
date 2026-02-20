@@ -1,10 +1,11 @@
-import { Injectable, CanActivate, ExecutionContext } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+} from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { CapabilityService, ActionType } from '../capability.service';
-import {
-  CHECK_PERMISSION_KEY,
-  PermissionContext,
-} from '../decorators/check-permission.decorator';
+import { CHECK_PERMISSION_KEY, PermissionContext } from '../decorators/check-permission.decorator';
 import { UserRole } from '../../../common/role.enum';
 
 @Injectable()

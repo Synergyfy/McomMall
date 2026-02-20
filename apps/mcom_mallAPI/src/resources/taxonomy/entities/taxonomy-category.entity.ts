@@ -6,26 +6,15 @@ import { TaxonomySubcategory } from './taxonomy-subcategory.entity';
 
 @Entity('taxonomy_categories')
 export class TaxonomyCategory extends AbstractBaseEntity {
-  @ApiProperty({
-    example: 'Mobile Phones',
-    description: 'The name of the category',
-  })
+  @ApiProperty({ example: 'Mobile Phones', description: 'The name of the category' })
   @Column({ unique: true })
   name: string;
 
-  @ApiProperty({
-    example: 'https://example.com/cat.jpg',
-    description: 'The image of the category',
-    required: false,
-  })
+  @ApiProperty({ example: 'https://example.com/cat.jpg', description: 'The image of the category', required: false })
   @Column({ nullable: true })
   image: string;
 
-  @ApiProperty({
-    example: 'Smartphones etc.',
-    description: 'The description of the category',
-    required: false,
-  })
+  @ApiProperty({ example: 'Smartphones etc.', description: 'The description of the category', required: false })
   @Column({ nullable: true })
   description: string;
 
@@ -35,10 +24,7 @@ export class TaxonomyCategory extends AbstractBaseEntity {
   @JoinColumn({ name: 'sectorId' })
   sector: Sector;
 
-  @ApiProperty({
-    example: 'uuid-sector-id',
-    description: 'The ID of the parent sector',
-  })
+  @ApiProperty({ example: 'uuid-sector-id', description: 'The ID of the parent sector' })
   @Column()
   sectorId: string;
 

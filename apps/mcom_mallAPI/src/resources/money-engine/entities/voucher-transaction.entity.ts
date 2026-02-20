@@ -1,4 +1,8 @@
-import { Column, Entity, ManyToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  ManyToOne,
+} from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { UserVoucher } from './user-voucher.entity';
 
@@ -7,14 +11,12 @@ export enum TransactionSourceType {
   PEER_TRANSFER = 'peer_transfer',
   SYSTEM_REWARD = 'system_reward',
   BUSINESS_CASHBACK = 'business_cashback',
-  SPEND = 'spend',
+  SPEND = 'spend'
 }
 
 @Entity('money_voucher_transactions')
 export class VoucherTransaction extends AbstractBaseEntity {
-  @ManyToOne(() => UserVoucher, (voucher) => voucher.transactions, {
-    onDelete: 'CASCADE',
-  })
+  @ManyToOne(() => UserVoucher, (voucher) => voucher.transactions, { onDelete: 'CASCADE' })
   voucher: UserVoucher;
 
   @Column({

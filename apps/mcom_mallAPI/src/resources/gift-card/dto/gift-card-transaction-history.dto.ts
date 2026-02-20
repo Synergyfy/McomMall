@@ -18,13 +18,13 @@ export class GiftCardTransactionHistoryDto {
   createdAt: Date;
 
   @ApiProperty({
-    description: 'The name of the customer involved in the transaction.',
+    description: "The name of the customer involved in the transaction.",
     example: 'John Doe',
   })
   customerName: string;
 
   @ApiProperty({
-    description: 'The email of the customer involved in the transaction.',
+    description: "The email of the customer involved in the transaction.",
     example: 'john.doe@example.com',
   })
   customerEmail: string;

@@ -51,19 +51,9 @@ export class VoucherTransaction {
   @ManyToOne(() => Order, { nullable: true })
   order: Order;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Balance before the transaction',
-  })
+  @Column({ type: 'decimal', precision: 10, scale: 2, comment: 'Balance before the transaction' })
   balanceBefore: number;
 
-  @Column({
-    type: 'decimal',
-    precision: 10,
-    scale: 2,
-    comment: 'Balance after the transaction',
-  })
+  @Column({ type: 'decimal', precision: 10, scale: 2, comment: 'Balance after the transaction' })
   balanceAfter: number;
 }

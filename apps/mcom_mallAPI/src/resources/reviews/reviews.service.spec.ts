@@ -117,77 +117,61 @@ describe('ReviewsService', () => {
 
   describe('findOne', () => {
     it('should return published review', async () => {
-      const id = '1';
-      const review = { id, status: ReviewStatus.PUBLISHED } as Review;
-      mockReviewRepository.findOne.mockResolvedValue(review);
+        const id = '1';
+        const review = { id, status: ReviewStatus.PUBLISHED } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
 
-      const result = await service.findOne(id);
+        const result = await service.findOne(id);
 
-      expect(result).toEqual(review);
+        expect(result).toEqual(review);
     });
 
     it('should return pending review to admin', async () => {
-      const id = '1';
-      const review = { id, status: ReviewStatus.PENDING } as Review;
-      const admin = { id: 'admin', role: UserRole.ADMIN } as User;
-      mockReviewRepository.findOne.mockResolvedValue(review);
+        const id = '1';
+        const review = { id, status: ReviewStatus.PENDING } as Review;
+        const admin = { id: 'admin', role: UserRole.ADMIN } as User;
+        mockReviewRepository.findOne.mockResolvedValue(review);
 
-      const result = await service.findOne(id, admin);
+        const result = await service.findOne(id, admin);
 
-      expect(result).toEqual(review);
+        expect(result).toEqual(review);
     });
 
     it('should return pending review to reviewer', async () => {
-      const id = '1';
-      const reviewer = { id: 'reviewer' } as User;
-      const review = {
-        id,
-        status: ReviewStatus.PENDING,
-        user: { id: 'reviewer' },
-      } as Review;
-      mockReviewRepository.findOne.mockResolvedValue(review);
+        const id = '1';
+        const reviewer = { id: 'reviewer' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
 
-      const result = await service.findOne(id, reviewer);
+        const result = await service.findOne(id, reviewer);
 
-      expect(result).toEqual(review);
+        expect(result).toEqual(review);
     });
 
     it('should return pending review to business owner', async () => {
-      const id = '1';
-      const owner = { id: 'owner' } as User;
-      const review = {
-        id,
-        status: ReviewStatus.PENDING,
-        user: { id: 'reviewer' },
-        business: { user: { id: 'owner' } },
-      } as Review;
-      mockReviewRepository.findOne.mockResolvedValue(review);
+        const id = '1';
+        const owner = { id: 'owner' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' }, business: { user: { id: 'owner' } } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
 
-      const result = await service.findOne(id, owner);
+        const result = await service.findOne(id, owner);
 
-      expect(result).toEqual(review);
+        expect(result).toEqual(review);
     });
 
     it('should throw NotFoundException for pending review if user not authorized', async () => {
-      const id = '1';
-      const user = { id: 'other' } as User;
-      const review = {
-        id,
-        status: ReviewStatus.PENDING,
-        user: { id: 'reviewer' },
-        business: { user: { id: 'owner' } },
-      } as Review;
-      mockReviewRepository.findOne.mockResolvedValue(review);
+        const id = '1';
+        const user = { id: 'other' } as User;
+        const review = { id, status: ReviewStatus.PENDING, user: { id: 'reviewer' }, business: { user: { id: 'owner' } } } as Review;
+        mockReviewRepository.findOne.mockResolvedValue(review);
 
-      await expect(service.findOne(id, user)).rejects.toThrow(
-        NotFoundException,
-      );
+        await expect(service.findOne(id, user)).rejects.toThrow(NotFoundException);
     });
 
-    it('should return null (or throw) if not found', async () => {
-      mockReviewRepository.findOne.mockResolvedValue(null);
-      await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
-    });
+     it('should return null (or throw) if not found', async () => {
+         mockReviewRepository.findOne.mockResolvedValue(null);
+         await expect(service.findOne('1')).rejects.toThrow(NotFoundException);
+     });
   });
 
   describe('update', () => {
@@ -230,9 +214,9 @@ describe('ReviewsService', () => {
 
       mockReviewRepository.findOne.mockResolvedValue(review);
 
-      await expect(service.update('1', updateReviewDto, user)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(
+        service.update('1', updateReviewDto, user),
+      ).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException if review not found', async () => {
@@ -240,9 +224,9 @@ describe('ReviewsService', () => {
       const user = { id: 'user1' } as User;
       mockReviewRepository.findOne.mockResolvedValue(null);
 
-      await expect(service.update('1', updateReviewDto, user)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.update('1', updateReviewDto, user),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -287,17 +271,9 @@ describe('ReviewsService', () => {
 
       const result = await service.findBusinessReviews(businessId);
 
-      expect(mockReviewRepository.createQueryBuilder).toHaveBeenCalledWith(
-        'review',
-      );
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'business.id = :businessId',
-        { businessId },
-      );
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        'review.status = :published',
-        { published: ReviewStatus.PUBLISHED },
-      );
+      expect(mockReviewRepository.createQueryBuilder).toHaveBeenCalledWith('review');
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith('business.id = :businessId', { businessId });
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith('review.status = :published', { published: ReviewStatus.PUBLISHED });
       expect(result).toEqual(reviews);
     });
 
@@ -309,9 +285,7 @@ describe('ReviewsService', () => {
 
       const result = await service.findBusinessReviews(businessId, currentUser);
 
-      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
-        expect.any(Object),
-      ); // Brackets logic is complex to match exactly with jest mocks, checking it was called is a good start.
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(expect.any(Object)); // Brackets logic is complex to match exactly with jest mocks, checking it was called is a good start.
       expect(result).toEqual(reviews);
     });
   });
@@ -322,9 +296,7 @@ describe('ReviewsService', () => {
       const reviews = [new Review()];
       const itemCount = 1;
       mockQueryBuilder.getCount.mockResolvedValue(itemCount);
-      mockQueryBuilder.getRawAndEntities.mockResolvedValue({
-        entities: reviews,
-      });
+      mockQueryBuilder.getRawAndEntities.mockResolvedValue({ entities: reviews });
 
       const result = await service.findAllAdmin(query);
 
@@ -335,16 +307,13 @@ describe('ReviewsService', () => {
     });
 
     it('should filter by status if provided', async () => {
-      const query = { page: 1, limit: 10, status: ReviewStatus.PENDING };
-      mockQueryBuilder.getCount.mockResolvedValue(0);
-      mockQueryBuilder.getRawAndEntities.mockResolvedValue({ entities: [] });
+        const query = { page: 1, limit: 10, status: ReviewStatus.PENDING };
+        mockQueryBuilder.getCount.mockResolvedValue(0);
+        mockQueryBuilder.getRawAndEntities.mockResolvedValue({ entities: [] });
 
-      await service.findAllAdmin(query);
+        await service.findAllAdmin(query);
 
-      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
-        'review.status = :status',
-        { status: ReviewStatus.PENDING },
-      );
+        expect(mockQueryBuilder.where).toHaveBeenCalledWith('review.status = :status', { status: ReviewStatus.PENDING });
     });
   });
 
@@ -354,22 +323,17 @@ describe('ReviewsService', () => {
       const review = new Review();
       review.status = ReviewStatus.PENDING;
       mockReviewRepository.findOne.mockResolvedValue(review);
-      mockReviewRepository.save.mockResolvedValue({
-        ...review,
-        status: ReviewStatus.PUBLISHED,
-      });
+      mockReviewRepository.save.mockResolvedValue({ ...review, status: ReviewStatus.PUBLISHED });
 
       const result = await service.publish(id);
 
       expect(result.status).toEqual(ReviewStatus.PUBLISHED);
-      expect(mockReviewRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ReviewStatus.PUBLISHED }),
-      );
+      expect(mockReviewRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: ReviewStatus.PUBLISHED }));
     });
 
     it('should throw NotFoundException if review not found', async () => {
-      mockReviewRepository.findOne.mockResolvedValue(null);
-      await expect(service.publish('1')).rejects.toThrow(NotFoundException);
+        mockReviewRepository.findOne.mockResolvedValue(null);
+        await expect(service.publish('1')).rejects.toThrow(NotFoundException);
     });
   });
 
@@ -379,17 +343,12 @@ describe('ReviewsService', () => {
       const review = new Review();
       review.status = ReviewStatus.PUBLISHED;
       mockReviewRepository.findOne.mockResolvedValue(review);
-      mockReviewRepository.save.mockResolvedValue({
-        ...review,
-        status: ReviewStatus.PENDING,
-      });
+      mockReviewRepository.save.mockResolvedValue({ ...review, status: ReviewStatus.PENDING });
 
       const result = await service.unpublish(id);
 
       expect(result.status).toEqual(ReviewStatus.PENDING);
-      expect(mockReviewRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ status: ReviewStatus.PENDING }),
-      );
+      expect(mockReviewRepository.save).toHaveBeenCalledWith(expect.objectContaining({ status: ReviewStatus.PENDING }));
     });
   });
 
@@ -427,9 +386,7 @@ describe('ReviewsService', () => {
 
       mockReviewRepository.findOne.mockResolvedValue(review);
 
-      await expect(service.remove(id, user)).rejects.toThrow(
-        ForbiddenException,
-      );
+      await expect(service.remove(id, user)).rejects.toThrow(ForbiddenException);
     });
 
     it('should throw NotFoundException if review not found', async () => {

@@ -16,8 +16,7 @@ export class UpdateExchangeItemDto {
   @IsOptional()
   @ApiPropertyOptional({
     description: 'The updated description of the item.',
-    example:
-      'A beautifully crafted vintage chair made from solid oak, recently restored.',
+    example: 'A beautifully crafted vintage chair made from solid oak, recently restored.',
   })
   description?: string;
 

@@ -1,10 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-  InternalServerErrorException,
-  BadRequestException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException, InternalServerErrorException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Tier } from './entities/tier.entity';
@@ -19,7 +13,7 @@ export class TierService {
     @InjectRepository(Tier)
     private readonly tierRepository: Repository<Tier>,
     private readonly seasonsService: SeasonsService,
-  ) {}
+  ) { }
 
   async create(createTierDto: CreateTierDto): Promise<Tier> {
     try {
@@ -33,14 +27,12 @@ export class TierService {
       // Validation: Trial tiers must have duration
       if (createTierDto.type === TierType.TRIAL) {
         if (!createTierDto.trialDuration || createTierDto.trialDuration <= 0) {
-          throw new BadRequestException(
-            'Trial tiers must have a valid trialDuration greater than 0',
-          );
+          throw new BadRequestException('Trial tiers must have a valid trialDuration greater than 0');
         }
 
         // Global Upsert for Trial Tier: Check if one exists
         const existingTrial = await this.tierRepository.findOne({
-          where: { type: TierType.TRIAL },
+          where: { type: TierType.TRIAL }
         });
 
         if (existingTrial) {
@@ -79,9 +71,7 @@ export class TierService {
         throw new ConflictException('Tier with this name already exists');
       }
       // Provide more context for database errors
-      throw new InternalServerErrorException(
-        `Failed to create tier: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Failed to create tier: ${error.message}`);
     }
   }
 
@@ -100,10 +90,7 @@ export class TierService {
   async update(id: string, updateTierDto: UpdateTierDto): Promise<Tier> {
     const tier = await this.findOne(id);
 
-    if (
-      updateTierDto.type === TierType.SEASONAL ||
-      (tier.type === TierType.SEASONAL && updateTierDto.seasonId)
-    ) {
+    if (updateTierDto.type === TierType.SEASONAL || (tier.type === TierType.SEASONAL && updateTierDto.seasonId)) {
       const seasonId = updateTierDto.seasonId || tier.seasonId;
       if (!seasonId) {
         throw new BadRequestException('Seasonal tiers must have a seasonId');
@@ -113,12 +100,9 @@ export class TierService {
 
     // Ensure prices are numbers and rounded if provided
     const updateData = { ...updateTierDto };
-    if (updateData.monthlyPrice !== undefined)
-      updateData.monthlyPrice = Number(updateData.monthlyPrice);
-    if (updateData.quarterlyPrice !== undefined)
-      updateData.quarterlyPrice = Number(updateData.quarterlyPrice);
-    if (updateData.annualPrice !== undefined)
-      updateData.annualPrice = Number(updateData.annualPrice);
+    if (updateData.monthlyPrice !== undefined) updateData.monthlyPrice = Number(updateData.monthlyPrice);
+    if (updateData.quarterlyPrice !== undefined) updateData.quarterlyPrice = Number(updateData.quarterlyPrice);
+    if (updateData.annualPrice !== undefined) updateData.annualPrice = Number(updateData.annualPrice);
 
     if (updateData.isDefault) {
       await this.clearDefaultTier(id);
@@ -129,24 +113,17 @@ export class TierService {
       // Check if we are changing type to TRIAL, ensure no OTHER trial exists
       if (tier.type !== TierType.TRIAL) {
         const existingTrial = await this.tierRepository.findOne({
-          where: { type: TierType.TRIAL },
+          where: { type: TierType.TRIAL }
         });
         if (existingTrial && existingTrial.id !== id) {
-          throw new ConflictException(
-            'A Trial tier already exists. You can only have one Trial tier.',
-          );
+          throw new ConflictException('A Trial tier already exists. You can only have one Trial tier.');
         }
       }
 
       // If changing to TRIAL (or updating existing TRIAL), must have duration
-      const duration =
-        updateTierDto.trialDuration !== undefined
-          ? updateTierDto.trialDuration
-          : tier.trialDuration;
+      const duration = updateTierDto.trialDuration !== undefined ? updateTierDto.trialDuration : tier.trialDuration;
       if (!duration || duration <= 0) {
-        throw new BadRequestException(
-          'Trial tiers must have a valid trialDuration greater than 0',
-        );
+        throw new BadRequestException('Trial tiers must have a valid trialDuration greater than 0');
       }
     }
 
@@ -154,18 +131,13 @@ export class TierService {
     try {
       return await this.tierRepository.save(tier);
     } catch (error) {
-      if (
-        error instanceof BadRequestException ||
-        error instanceof ConflictException
-      ) {
+      if (error instanceof BadRequestException || error instanceof ConflictException) {
         throw error;
       }
       if (error.code === '23505') {
         throw new ConflictException('Tier with this name already exists');
       }
-      throw new InternalServerErrorException(
-        `Failed to update tier: ${error.message}`,
-      );
+      throw new InternalServerErrorException(`Failed to update tier: ${error.message}`);
     }
   }
 

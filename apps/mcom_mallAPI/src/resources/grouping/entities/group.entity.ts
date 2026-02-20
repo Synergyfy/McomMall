@@ -47,4 +47,5 @@ export class Group extends AbstractBaseEntity {
 
   @OneToOne(() => GroupWallet, (wallet) => wallet.group)
   wallet: GroupWallet;
+
 }

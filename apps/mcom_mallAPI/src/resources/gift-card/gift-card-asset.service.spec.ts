@@ -171,9 +171,9 @@ describe('GiftCardAssetService', () => {
   describe('findOne', () => {
     it('should throw NotFoundException if asset not found', async () => {
       mockAssetRepository.findOne.mockResolvedValue(null);
-      await expect(
-        service.findOne('non-existent-id', mockUser),
-      ).rejects.toThrow(NotFoundException);
+      await expect(service.findOne('non-existent-id', mockUser)).rejects.toThrow(
+        NotFoundException,
+      );
     });
   });
 });

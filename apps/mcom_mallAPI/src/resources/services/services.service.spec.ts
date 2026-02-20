@@ -149,14 +149,7 @@ describe('ServicesService', () => {
           weekendMultiplier: 1.2,
         },
         availability: {
-          schedule: [
-            {
-              day: 'monday',
-              enabled: true,
-              startTime: '09:00',
-              endTime: '17:00',
-            },
-          ],
+          schedule: [{ day: 'monday', enabled: true, startTime: '09:00', endTime: '17:00' }],
           slotDuration: 60,
           bufferTime: 15,
           maxBookingsPerSlot: 1,
@@ -165,7 +158,9 @@ describe('ServicesService', () => {
           { name: '60 min', type: VariantType.TIME, price: 80, duration: 60 },
         ],
         enableTieredPackages: true,
-        tiers: [{ name: 'Basic', price: 50, features: ['Feature 1'] }],
+        tiers: [
+          { name: 'Basic', price: 50, features: ['Feature 1'] },
+        ],
         requireApproval: true,
         bookingRequirements: {
           requireAddress: true,
@@ -188,7 +183,7 @@ describe('ServicesService', () => {
           subcategory: 'Massage',
           deliveryConfig: expect.any(Object),
           variants: expect.any(Array),
-        }),
+        })
       );
     });
 

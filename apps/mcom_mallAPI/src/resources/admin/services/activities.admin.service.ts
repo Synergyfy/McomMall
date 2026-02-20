@@ -12,15 +12,7 @@ export class AdminActivitiesService {
 
   findAll() {
     return this.activitiesRepository.find({
-      relations: [
-        'user',
-        'listing',
-        'product',
-        'service',
-        'order',
-        'booking',
-        'promotion',
-      ],
+      relations: ['user', 'listing', 'product', 'service', 'order', 'booking', 'promotion'],
     });
   }
 }

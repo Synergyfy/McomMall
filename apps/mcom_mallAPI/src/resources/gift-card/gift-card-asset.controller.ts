@@ -25,7 +25,9 @@ import { User } from '../users/entities/user.entity';
 @Roles(UserRole.OWNER)
 @Controller('gift-card-assets')
 export class GiftCardAssetController {
-  constructor(private readonly giftCardAssetService: GiftCardAssetService) {}
+  constructor(
+    private readonly giftCardAssetService: GiftCardAssetService,
+  ) {}
 
   @Post()
   create(
@@ -51,11 +53,7 @@ export class GiftCardAssetController {
     @Body() updateGiftCardAssetDto: UpdateGiftCardAssetDto,
     @Req() req: { user: User },
   ) {
-    return this.giftCardAssetService.update(
-      id,
-      updateGiftCardAssetDto,
-      req.user,
-    );
+    return this.giftCardAssetService.update(id, updateGiftCardAssetDto, req.user);
   }
 
   @Delete(':id')

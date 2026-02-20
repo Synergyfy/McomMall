@@ -1,8 +1,4 @@
-import {
-  BadRequestException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { DataSource, EntityManager, LessThanOrEqual } from 'typeorm';
 import {
   RewardDefinition,
@@ -29,10 +25,7 @@ import { PaymentGateway } from '../payments/enums/payment-gateway.enum';
 import { PaymentHistory } from '../payments/entities/payment-history.entity';
 import { PaymentPurpose } from '../payments/enums/payment-purpose.enum';
 
-const generateVoucherCode = customAlphabet(
-  'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789',
-  12,
-);
+const generateVoucherCode = customAlphabet('ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789', 12);
 
 @Injectable()
 export class MoneyEngineService {
@@ -42,75 +35,63 @@ export class MoneyEngineService {
   ) {}
 
   // --- Admin: Create Definition ---
-  async createRewardDefinition(
-    dto: CreateRewardDefinitionDto,
-  ): Promise<RewardDefinition> {
+  async createRewardDefinition(dto: CreateRewardDefinitionDto): Promise<RewardDefinition> {
     const { validShopIds, ...rest } = dto;
     const definition = new RewardDefinition();
     Object.assign(definition, rest);
 
     if (validShopIds) {
-      definition.validShops = validShopIds.map((id) => ({ id }) as Business);
+      definition.validShops = validShopIds.map(id => ({ id } as Business));
     }
 
     return await this.dataSource.manager.save(definition);
   }
 
   // --- Admin: Update Definition ---
-  async updateRewardDefinition(
-    id: string,
-    dto: UpdateRewardDefinitionDto,
-  ): Promise<RewardDefinition> {
-    const definition = await this.dataSource.manager.findOne(RewardDefinition, {
-      where: { id },
-      relations: ['validShops'],
-    });
+  async updateRewardDefinition(id: string, dto: UpdateRewardDefinitionDto): Promise<RewardDefinition> {
+      const definition = await this.dataSource.manager.findOne(RewardDefinition, {
+          where: { id },
+          relations: ['validShops']
+      });
 
-    if (!definition) {
-      throw new NotFoundException('Reward Definition not found');
-    }
+      if (!definition) {
+          throw new NotFoundException('Reward Definition not found');
+      }
 
-    const { validShopIds, ...rest } = dto;
-    Object.assign(definition, rest);
+      const { validShopIds, ...rest } = dto;
+      Object.assign(definition, rest);
 
-    if (validShopIds) {
-      definition.validShops = validShopIds.map((id) => ({ id }) as Business);
-    }
+      if (validShopIds) {
+          definition.validShops = validShopIds.map(id => ({ id } as Business));
+      }
 
-    return await this.dataSource.manager.save(definition);
+      return await this.dataSource.manager.save(definition);
   }
 
   // --- Logic 1: The "Split" Injection (Creation) ---
-  async purchaseVoucher(
-    userId: string,
-    dto: PurchaseVoucherDto,
-  ): Promise<UserVoucher> {
+  async purchaseVoucher(userId: string, dto: PurchaseVoucherDto): Promise<UserVoucher> {
     // 1. Verify Payment with Provider
     const currency = 'gbp'; // Default currency for now
     let verification: { ok: boolean; reason?: string };
 
     if (dto.paymentGateway === PaymentGateway.STRIPE) {
-      verification =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          dto.transactionId,
-          dto.paymentAmount,
-          currency,
+        verification = await this.paymentProviderService.verifyStripePaymentIntent(
+            dto.transactionId,
+            dto.paymentAmount,
+            currency
         );
     } else if (dto.paymentGateway === PaymentGateway.PAYPAL) {
-      verification =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          dto.transactionId,
-          dto.paymentAmount,
-          currency,
+        verification = await this.paymentProviderService.captureAndVerifyPaypalOrder(
+            dto.transactionId,
+            dto.paymentAmount,
+            currency
         );
     } else {
-      throw new BadRequestException('Unsupported payment gateway');
+        throw new BadRequestException('Unsupported payment gateway');
     }
 
     if (!verification.ok) {
-      throw new BadRequestException(
-        `Payment verification failed: ${verification.reason}`,
-      );
+        throw new BadRequestException(`Payment verification failed: ${verification.reason}`);
     }
 
     // 2. Proceed with Voucher Creation
@@ -124,9 +105,7 @@ export class MoneyEngineService {
       }
 
       if (!definition.isActive) {
-        throw new BadRequestException(
-          'This reward definition is currently inactive',
-        );
+        throw new BadRequestException('This reward definition is currently inactive');
       }
 
       // Calculate Split
@@ -136,9 +115,7 @@ export class MoneyEngineService {
       }
 
       const totalValue = parseFloat((dto.paymentAmount / realRatio).toFixed(2));
-      const rewardAmount = parseFloat(
-        (totalValue - dto.paymentAmount).toFixed(2),
-      );
+      const rewardAmount = parseFloat((totalValue - dto.paymentAmount).toFixed(2));
 
       // Create Voucher
       const voucher = new UserVoucher();
@@ -244,13 +221,12 @@ export class MoneyEngineService {
       }
 
       if (!voucher.definition) {
-        throw new BadRequestException('Voucher definition missing');
+          throw new BadRequestException('Voucher definition missing');
       }
 
       await this.validateScope(manager, voucher.definition, dto.shopId);
 
-      const totalBalance =
-        Number(voucher.realBalance) + Number(voucher.rewardBalance);
+      const totalBalance = Number(voucher.realBalance) + Number(voucher.rewardBalance);
       const spendAmount = Number(dto.amount);
 
       if (totalBalance < spendAmount) {
@@ -307,24 +283,13 @@ export class MoneyEngineService {
     });
   }
 
-  async transfer(
-    fromVoucherId: string,
-    toVoucherId: string,
-    amount: number,
-  ): Promise<void> {
+  async transfer(fromVoucherId: string, toVoucherId: string, amount: number): Promise<void> {
     await this.dataSource.transaction(async (manager) => {
-      const from = await manager.findOne(UserVoucher, {
-        where: { id: fromVoucherId },
-        lock: { mode: 'pessimistic_write' },
-      });
-      const to = await manager.findOne(UserVoucher, {
-        where: { id: toVoucherId },
-        lock: { mode: 'pessimistic_write' },
-      });
+      const from = await manager.findOne(UserVoucher, { where: { id: fromVoucherId }, lock: { mode: 'pessimistic_write' } });
+      const to = await manager.findOne(UserVoucher, { where: { id: toVoucherId }, lock: { mode: 'pessimistic_write' } });
 
       if (!from || !to) throw new NotFoundException('Voucher not found');
-      if (from.totalBalance < amount)
-        throw new BadRequestException('Insufficient funds');
+      if (from.totalBalance < amount) throw new BadRequestException('Insufficient funds');
 
       const total = from.totalBalance;
       const realRatio = Number(from.realBalance) / total;
@@ -356,37 +321,26 @@ export class MoneyEngineService {
     });
   }
 
-  async getUserVouchers(
-    userId: string,
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: UserVoucher[]; count: number }> {
-    const [data, count] = await this.dataSource.manager.findAndCount(
-      UserVoucher,
-      {
-        where: { owner: { id: userId } },
-        relations: ['definition'],
-        order: { created_at: 'DESC' } as any,
-        skip: (pagination.page - 1) * pagination.limit,
-        take: pagination.limit,
-      },
-    );
+  async getUserVouchers(userId: string, pagination: PaginationQueryDto): Promise<{ data: UserVoucher[], count: number }> {
+    const [data, count] = await this.dataSource.manager.findAndCount(UserVoucher, {
+      where: { owner: { id: userId } },
+      relations: ['definition'],
+      order: { created_at: 'DESC' } as any,
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit
+    });
     return { data, count };
   }
 
   // --- ADMIN METHODS ---
 
-  async getAllVouchers(
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: UserVoucher[]; count: number }> {
-    const [data, count] = await this.dataSource.manager.findAndCount(
-      UserVoucher,
-      {
-        relations: ['definition', 'owner'],
-        order: { created_at: 'DESC' } as any,
-        skip: (pagination.page - 1) * pagination.limit,
-        take: pagination.limit,
-      },
-    );
+  async getAllVouchers(pagination: PaginationQueryDto): Promise<{ data: UserVoucher[], count: number }> {
+    const [data, count] = await this.dataSource.manager.findAndCount(UserVoucher, {
+      relations: ['definition', 'owner'],
+      order: { created_at: 'DESC' } as any,
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit
+    });
     return { data, count };
   }
 
@@ -395,19 +349,14 @@ export class MoneyEngineService {
   /**
    * For Customers: List all active voucher types they can purchase.
    */
-  async getPublicDefinitions(
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: RewardDefinition[]; count: number }> {
-    const [data, count] = await this.dataSource.manager.findAndCount(
-      RewardDefinition,
-      {
-        where: { isActive: true },
-        order: { created_at: 'DESC' } as any,
-        skip: (pagination.page - 1) * pagination.limit,
-        take: pagination.limit,
-      },
-    );
-    return { data, count };
+  async getPublicDefinitions(pagination: PaginationQueryDto): Promise<{ data: RewardDefinition[], count: number }> {
+      const [data, count] = await this.dataSource.manager.findAndCount(RewardDefinition, {
+          where: { isActive: true },
+          order: { created_at: 'DESC' } as any,
+          skip: (pagination.page - 1) * pagination.limit,
+          take: pagination.limit
+      });
+      return { data, count };
   }
 
   /**
@@ -416,91 +365,70 @@ export class MoneyEngineService {
    * 1. Include ALL definitions where scopeType = ANY_SHOP
    * 2. Include definitions where scopeType = SPECIFIC_SHOPS AND shopId is in validShops
    */
-  async getDefinitionsForShop(
-    shopId: string,
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: RewardDefinition[]; count: number }> {
-    const qb = this.dataSource.manager
-      .createQueryBuilder(RewardDefinition, 'rd')
-      .leftJoin('rd.validShops', 'shop')
-      .where('rd.isActive = :isActive', { isActive: true })
-      .andWhere(
-        '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id = :shopId))',
-        {
-          isActive: true,
-          anyScope: ScopeType.ANY_SHOP,
-          specificScopes: [
-            ScopeType.SPECIFIC_SHOPS,
-            ScopeType.EXPO_ONLY,
-            ScopeType.CAMPAIGN_ONLY,
-          ],
-          shopId,
-        },
-      )
-      .skip((pagination.page - 1) * pagination.limit)
-      .take(pagination.limit)
-      .orderBy('rd.created_at', 'DESC');
+  async getDefinitionsForShop(shopId: string, pagination: PaginationQueryDto): Promise<{ data: RewardDefinition[], count: number }> {
+      const qb = this.dataSource.manager.createQueryBuilder(RewardDefinition, 'rd')
+          .leftJoin('rd.validShops', 'shop')
+          .where('rd.isActive = :isActive', { isActive: true })
+          .andWhere(
+              '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id = :shopId))',
+              {
+                  isActive: true,
+                  anyScope: ScopeType.ANY_SHOP,
+                  specificScopes: [ScopeType.SPECIFIC_SHOPS, ScopeType.EXPO_ONLY, ScopeType.CAMPAIGN_ONLY],
+                  shopId
+              }
+          )
+          .skip((pagination.page - 1) * pagination.limit)
+          .take(pagination.limit)
+          .orderBy('rd.created_at', 'DESC');
 
-    const [data, count] = await qb.getManyAndCount();
-    return { data, count };
+      const [data, count] = await qb.getManyAndCount();
+      return { data, count };
   }
 
   /**
    * For Business Owners: List all voucher types that are accepted at ANY of their shops.
    */
-  async getDefinitionsForOwner(
-    userId: string,
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: RewardDefinition[]; count: number }> {
-    // 1. Get all shops owned by this user
-    const shops = await this.dataSource.manager.find(Business, {
-      where: { user: { id: userId } },
-      select: ['id'],
-    });
+  async getDefinitionsForOwner(userId: string, pagination: PaginationQueryDto): Promise<{ data: RewardDefinition[], count: number }> {
+      // 1. Get all shops owned by this user
+      const shops = await this.dataSource.manager.find(Business, {
+          where: { user: { id: userId } },
+          select: ['id']
+      });
 
-    const shopIds = shops.map((s) => s.id);
+      const shopIds = shops.map(s => s.id);
 
-    if (shopIds.length === 0) {
-      // If they own no shops, they still see global vouchers
-      return this.getPublicDefinitions(pagination);
-    }
+      if (shopIds.length === 0) {
+          // If they own no shops, they still see global vouchers
+          return this.getPublicDefinitions(pagination);
+      }
 
-    const qb = this.dataSource.manager
-      .createQueryBuilder(RewardDefinition, 'rd')
-      .leftJoin('rd.validShops', 'shop')
-      .where('rd.isActive = :isActive', { isActive: true })
-      .andWhere(
-        '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id IN (:...shopIds)))',
-        {
-          isActive: true,
-          anyScope: ScopeType.ANY_SHOP,
-          specificScopes: [
-            ScopeType.SPECIFIC_SHOPS,
-            ScopeType.EXPO_ONLY,
-            ScopeType.CAMPAIGN_ONLY,
-          ],
-          shopIds,
-        },
-      )
-      .skip((pagination.page - 1) * pagination.limit)
-      .take(pagination.limit)
-      .orderBy('rd.created_at', 'DESC');
+      const qb = this.dataSource.manager.createQueryBuilder(RewardDefinition, 'rd')
+          .leftJoin('rd.validShops', 'shop')
+          .where('rd.isActive = :isActive', { isActive: true })
+          .andWhere(
+              '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id IN (:...shopIds)))',
+              {
+                  isActive: true,
+                  anyScope: ScopeType.ANY_SHOP,
+                  specificScopes: [ScopeType.SPECIFIC_SHOPS, ScopeType.EXPO_ONLY, ScopeType.CAMPAIGN_ONLY],
+                  shopIds
+              }
+          )
+          .skip((pagination.page - 1) * pagination.limit)
+          .take(pagination.limit)
+          .orderBy('rd.created_at', 'DESC');
 
-    const [data, count] = await qb.getManyAndCount();
-    return { data, count };
+      const [data, count] = await qb.getManyAndCount();
+      return { data, count };
   }
 
-  async getAllDefinitions(
-    pagination: PaginationQueryDto,
-  ): Promise<{ data: RewardDefinition[]; count: number }> {
-    const [data, count] = await this.dataSource.manager.findAndCount(
-      RewardDefinition,
-      {
-        order: { created_at: 'DESC' } as any,
-        skip: (pagination.page - 1) * pagination.limit,
-        take: pagination.limit,
-      },
-    );
+  async getAllDefinitions(pagination: PaginationQueryDto): Promise<{ data: RewardDefinition[], count: number }> {
+    const [data, count] = await this.dataSource.manager.findAndCount(RewardDefinition, {
+      order: { created_at: 'DESC' } as any,
+      skip: (pagination.page - 1) * pagination.limit,
+      take: pagination.limit
+    });
     return { data, count };
   }
 
@@ -527,9 +455,7 @@ export class MoneyEngineService {
       .innerJoin('tx.voucher', 'voucher')
       .select('SUM(tx.rewardAmountDelta)', 'sum')
       .where('voucher.ownerId = :userId', { userId })
-      .andWhere('tx.sourceType = :type', {
-        type: TransactionSourceType.BUSINESS_CASHBACK,
-      })
+      .andWhere('tx.sourceType = :type', { type: TransactionSourceType.BUSINESS_CASHBACK })
       .getRawOne();
 
     const totalBusinessRewardsReceived = parseFloat(businessRewards?.sum || 0);
@@ -551,7 +477,7 @@ export class MoneyEngineService {
       currentRealBalance,
       currentRewardBalance,
       totalBusinessRewardsReceived,
-      totalSpent,
+      totalSpent
     };
   }
 
@@ -559,7 +485,7 @@ export class MoneyEngineService {
 
   async getBusinessStatsForUser(userId: string): Promise<any> {
     const business = await this.dataSource.manager.findOne(Business, {
-      where: { user: { id: userId } },
+      where: { user: { id: userId } }
     });
 
     if (!business) {
@@ -570,40 +496,38 @@ export class MoneyEngineService {
   }
 
   async getBusinessStats(shopId: string): Promise<any> {
-    // 1. Total spent in this shop via vouchers
-    const spentResult = await this.dataSource.manager
-      .createQueryBuilder(VoucherTransaction, 'tx')
-      .select('SUM(ABS(tx.amount))', 'sum')
-      .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
-      .andWhere('tx.contributorId = :shopId', { shopId })
-      .getRawOne();
+      // 1. Total spent in this shop via vouchers
+      const spentResult = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('SUM(ABS(tx.amount))', 'sum')
+            .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
+            .andWhere('tx.contributorId = :shopId', { shopId })
+            .getRawOne();
 
-    const totalSpent = parseFloat(spentResult?.sum || 0);
+      const totalSpent = parseFloat(spentResult?.sum || 0);
 
-    // 2. Count of distinct vouchers used (Customers)
-    const customersResult = await this.dataSource.manager
-      .createQueryBuilder(VoucherTransaction, 'tx')
-      .select('COUNT(DISTINCT tx.voucherId)', 'count')
-      .where('tx.contributorId = :shopId', { shopId })
-      .getRawOne();
+      // 2. Count of distinct vouchers used (Customers)
+      const customersResult = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('COUNT(DISTINCT tx.voucherId)', 'count')
+            .where('tx.contributorId = :shopId', { shopId })
+            .getRawOne();
 
-    const customersCount = parseInt(customersResult?.count || 0, 10);
+      const customersCount = parseInt(customersResult?.count || 0, 10);
 
-    // 3. Count of cashback given
-    const cashbackResult = await this.dataSource.manager
-      .createQueryBuilder(VoucherTransaction, 'tx')
-      .select('COUNT(*)', 'count')
-      .where('tx.sourceType = :type', {
-        type: TransactionSourceType.BUSINESS_CASHBACK,
-      })
-      .andWhere('tx.contributorId = :shopId', { shopId })
-      .getRawOne();
+      // 3. Count of cashback given
+      const cashbackResult = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('COUNT(*)', 'count')
+            .where('tx.sourceType = :type', { type: TransactionSourceType.BUSINESS_CASHBACK })
+            .andWhere('tx.contributorId = :shopId', { shopId })
+            .getRawOne();
 
-    return {
-      totalSpentInShop: totalSpent,
-      customersCount: customersCount,
-      cashbackGivenCount: parseInt(cashbackResult?.count || 0, 10),
-    };
+      return {
+          totalSpentInShop: totalSpent,
+          customersCount: customersCount,
+          cashbackGivenCount: parseInt(cashbackResult?.count || 0, 10)
+      };
   }
 
   async getAdminAnalytics(): Promise<any> {
@@ -611,151 +535,108 @@ export class MoneyEngineService {
     const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
     const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
-    const activeVouchersCount = await this.dataSource.manager.count(
-      UserVoucher,
-      {
-        where: { state: VoucherState.ACTIVE },
-      },
-    );
+    const activeVouchersCount = await this.dataSource.manager.count(UserVoucher, {
+      where: { state: VoucherState.ACTIVE }
+    });
 
-    const activeVouchersPrev = await this.dataSource.manager.count(
-      UserVoucher,
-      {
-        where: {
-          state: VoucherState.ACTIVE,
-          created_at: LessThanOrEqual(thirtyDaysAgo) as any,
-        },
-      },
-    );
+    const activeVouchersPrev = await this.dataSource.manager.count(UserVoucher, {
+      where: {
+        state: VoucherState.ACTIVE,
+        created_at: LessThanOrEqual(thirtyDaysAgo) as any
+      }
+    });
 
     const getDepositSum = async (startDate: Date, endDate: Date) => {
-      const result = await this.dataSource.manager
-        .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.amount)', 'sum')
-        .where('tx.sourceType = :type', {
-          type: TransactionSourceType.USER_DEPOSIT,
-        })
-        .andWhere('tx.created_at BETWEEN :start AND :end', {
-          start: startDate,
-          end: endDate,
-        })
-        .getRawOne();
-      return parseFloat(result?.sum || 0);
+        const result = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('SUM(tx.amount)', 'sum')
+            .where('tx.sourceType = :type', { type: TransactionSourceType.USER_DEPOSIT })
+            .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .getRawOne();
+        return parseFloat(result?.sum || 0);
     };
 
     const realMoneyCurrent = await getDepositSum(thirtyDaysAgo, now);
     const realMoneyPrev = await getDepositSum(sixtyDaysAgo, thirtyDaysAgo);
 
     const getRewardSum = async (startDate: Date, endDate: Date) => {
-      const result = await this.dataSource.manager
-        .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.rewardAmountDelta)', 'sum')
-        .where('tx.sourceType IN (:...types)', {
-          types: [
-            TransactionSourceType.SYSTEM_REWARD,
-            TransactionSourceType.BUSINESS_CASHBACK,
-          ],
-        })
-        .andWhere('tx.created_at BETWEEN :start AND :end', {
-          start: startDate,
-          end: endDate,
-        })
-        .getRawOne();
-      return parseFloat(result?.sum || 0);
+        const result = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('SUM(tx.rewardAmountDelta)', 'sum')
+            .where('tx.sourceType IN (:...types)', { types: [TransactionSourceType.SYSTEM_REWARD, TransactionSourceType.BUSINESS_CASHBACK] })
+            .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .getRawOne();
+        return parseFloat(result?.sum || 0);
     };
 
     const rewardsCurrent = await getRewardSum(thirtyDaysAgo, now);
     const rewardsPrev = await getRewardSum(sixtyDaysAgo, thirtyDaysAgo);
 
     const getUtilizationMetrics = async (startDate: Date, endDate: Date) => {
-      const spent = await this.dataSource.manager
-        .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(ABS(tx.amount))', 'sum')
-        .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
-        .andWhere('tx.created_at BETWEEN :start AND :end', {
-          start: startDate,
-          end: endDate,
-        })
-        .getRawOne();
+        const spent = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('SUM(ABS(tx.amount))', 'sum')
+            .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
+            .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .getRawOne();
 
-      const issued = await this.dataSource.manager
-        .createQueryBuilder(VoucherTransaction, 'tx')
-        .select('SUM(tx.amount)', 'sum')
-        .where('tx.sourceType IN (:...types)', {
-          types: [
-            TransactionSourceType.USER_DEPOSIT,
-            TransactionSourceType.SYSTEM_REWARD,
-            TransactionSourceType.BUSINESS_CASHBACK,
-          ],
-        })
-        .andWhere('tx.created_at BETWEEN :start AND :end', {
-          start: startDate,
-          end: endDate,
-        })
-        .getRawOne();
+        const issued = await this.dataSource.manager
+            .createQueryBuilder(VoucherTransaction, 'tx')
+            .select('SUM(tx.amount)', 'sum')
+            .where('tx.sourceType IN (:...types)', { types: [TransactionSourceType.USER_DEPOSIT, TransactionSourceType.SYSTEM_REWARD, TransactionSourceType.BUSINESS_CASHBACK] })
+            .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
+            .getRawOne();
 
-      const spentVal = parseFloat(spent?.sum || 0);
-      const issuedVal = parseFloat(issued?.sum || 0);
+        const spentVal = parseFloat(spent?.sum || 0);
+        const issuedVal = parseFloat(issued?.sum || 0);
 
-      return issuedVal > 0 ? (spentVal / issuedVal) * 100 : 0;
+        return issuedVal > 0 ? (spentVal / issuedVal) * 100 : 0;
     };
 
     const utilCurrent = await getUtilizationMetrics(thirtyDaysAgo, now);
     const utilPrev = await getUtilizationMetrics(sixtyDaysAgo, thirtyDaysAgo);
 
     const calculateChange = (current: number, prev: number) => {
-      if (prev === 0) return current > 0 ? 100 : 0;
-      return parseFloat((((current - prev) / prev) * 100).toFixed(2));
+        if (prev === 0) return current > 0 ? 100 : 0;
+        return parseFloat((((current - prev) / prev) * 100).toFixed(2));
     };
 
     return {
-      activeVouchers: {
-        value: activeVouchersCount,
-        percentageChange: calculateChange(
-          activeVouchersCount,
-          activeVouchersPrev,
-        ),
-      },
-      realMoneyInput: {
-        value: realMoneyCurrent,
-        percentageChange: calculateChange(realMoneyCurrent, realMoneyPrev),
-      },
-      rewardValueGiven: {
-        value: rewardsCurrent,
-        percentageChange: calculateChange(rewardsCurrent, rewardsPrev),
-      },
-      networkUtilization: {
-        value: parseFloat(utilCurrent.toFixed(2)),
-        percentageChange: calculateChange(utilCurrent, utilPrev),
-      },
+        activeVouchers: {
+            value: activeVouchersCount,
+            percentageChange: calculateChange(activeVouchersCount, activeVouchersPrev)
+        },
+        realMoneyInput: {
+            value: realMoneyCurrent,
+            percentageChange: calculateChange(realMoneyCurrent, realMoneyPrev)
+        },
+        rewardValueGiven: {
+            value: rewardsCurrent,
+            percentageChange: calculateChange(rewardsCurrent, rewardsPrev)
+        },
+        networkUtilization: {
+            value: parseFloat(utilCurrent.toFixed(2)),
+            percentageChange: calculateChange(utilCurrent, utilPrev)
+        }
     };
   }
 
-  private async validateScope(
-    manager: EntityManager,
-    definition: RewardDefinition,
-    shopId: string,
-  ): Promise<void> {
+  private async validateScope(manager: EntityManager, definition: RewardDefinition, shopId: string): Promise<void> {
     if (definition.scopeType === ScopeType.ANY_SHOP) {
       return;
     }
 
-    if (
-      definition.scopeType === ScopeType.SPECIFIC_SHOPS ||
-      definition.scopeType === ScopeType.EXPO_ONLY
-    ) {
+    if (definition.scopeType === ScopeType.SPECIFIC_SHOPS || definition.scopeType === ScopeType.EXPO_ONLY) {
       const validShops = await manager
         .createQueryBuilder()
         .relation(RewardDefinition, 'validShops')
         .of(definition)
         .loadMany();
 
-      const isAuthorized = validShops.some((shop) => shop.id === shopId);
+      const isAuthorized = validShops.some(shop => shop.id === shopId);
 
       if (!isAuthorized) {
-        throw new BadRequestException(
-          'Shop is not authorized for this voucher',
-        );
+        throw new BadRequestException('Shop is not authorized for this voucher');
       }
     }
   }

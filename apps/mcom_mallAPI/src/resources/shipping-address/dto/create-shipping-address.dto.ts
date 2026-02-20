@@ -12,10 +12,7 @@ export class CreateShippingAddressDto {
   @IsNotEmpty()
   recipientName: string;
 
-  @ApiProperty({
-    example: '+1234567890',
-    description: 'Contact number for shipping',
-  })
+  @ApiProperty({ example: '+1234567890', description: 'Contact number for shipping' })
   @IsString()
   @IsNotEmpty()
   phoneNumber: string;
@@ -25,11 +22,7 @@ export class CreateShippingAddressDto {
   @IsNotEmpty()
   addressLine1: string;
 
-  @ApiProperty({
-    example: 'Apt 4B',
-    description: 'Apartment, suite, etc.',
-    required: false,
-  })
+  @ApiProperty({ example: 'Apt 4B', description: 'Apartment, suite, etc.', required: false })
   @IsString()
   @IsOptional()
   addressLine2?: string;
@@ -49,20 +42,12 @@ export class CreateShippingAddressDto {
   @IsNotEmpty()
   country: string;
 
-  @ApiProperty({
-    example: '10001',
-    description: 'Postal/Zip code',
-    required: false,
-  })
+  @ApiProperty({ example: '10001', description: 'Postal/Zip code', required: false })
   @IsString()
   @IsOptional()
   postalCode?: string;
 
-  @ApiProperty({
-    example: false,
-    description: 'Set as main shipping address',
-    default: false,
-  })
+  @ApiProperty({ example: false, description: 'Set as main shipping address', default: false })
   @IsBoolean()
   @IsOptional()
   isMain?: boolean;

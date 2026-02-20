@@ -147,10 +147,7 @@ describe('GroupingController', () => {
 
       const result = await controller.findOne(groupId, mockUser);
 
-      expect(mockGroupingService.findOne).toHaveBeenCalledWith(
-        groupId,
-        mockUser,
-      );
+      expect(mockGroupingService.findOne).toHaveBeenCalledWith(groupId, mockUser);
       expect(result).toEqual(group);
     });
   });
@@ -181,9 +178,7 @@ describe('GroupingController', () => {
         clientSecret: 'test_secret',
         provider: PaymentMethod.STRIPE,
       };
-      mockGroupingService.initiateContributionPayment.mockResolvedValue(
-        response,
-      );
+      mockGroupingService.initiateContributionPayment.mockResolvedValue(response);
 
       const result = await controller.initiateContributionPayment(
         groupId,

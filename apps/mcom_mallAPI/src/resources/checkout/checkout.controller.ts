@@ -5,12 +5,7 @@ import { ApplicableOffersDto } from './dto/applicable-offers.dto';
 import { Request } from 'express';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
-import {
-  ApiBearerAuth,
-  ApiOperation,
-  ApiTags,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Checkout')
 @ApiBearerAuth()
@@ -20,11 +15,7 @@ export class CheckoutController {
   constructor(private readonly checkoutService: CheckoutService) {}
 
   @Post('initiate')
-  @ApiOperation({
-    summary: 'Initiate checkout session',
-    description:
-      'Calculates subtotal, applies coupons/gift cards, and returns payment intent if required.',
-  })
+  @ApiOperation({ summary: 'Initiate checkout session', description: 'Calculates subtotal, applies coupons/gift cards, and returns payment intent if required.' })
   initiateCheckout(
     @Req() req: Request,
     @Body() createCheckoutDto: CreateCheckoutDto,
@@ -34,11 +25,7 @@ export class CheckoutController {
   }
 
   @Post('complete')
-  @ApiOperation({
-    summary: 'Complete checkout session',
-    description:
-      'Verifies payment and finalizes the order, redeeming all applied coupons/vouchers.',
-  })
+  @ApiOperation({ summary: 'Complete checkout session', description: 'Verifies payment and finalizes the order, redeeming all applied coupons/vouchers.' })
   completeCheckout(
     @Req() req: Request,
     @Body() completeCheckoutDto: CompleteCheckoutDto,
@@ -48,11 +35,7 @@ export class CheckoutController {
   }
 
   @Post('applicable-offers')
-  @ApiOperation({
-    summary: 'Get applicable offers for items',
-    description:
-      'Checks for active loyalty offers based on user points and cart items.',
-  })
+  @ApiOperation({ summary: 'Get applicable offers for items', description: 'Checks for active loyalty offers based on user points and cart items.' })
   getApplicableOffers(
     @Req() req: Request,
     @Body() applicableOffersDto: ApplicableOffersDto,

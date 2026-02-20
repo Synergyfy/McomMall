@@ -18,12 +18,7 @@ import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
-import {
-  ApiTags,
-  ApiBearerAuth,
-  ApiOperation,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
 
 @ApiTags('Gift Card Asset Categories')
 @ApiBearerAuth()
@@ -35,12 +30,12 @@ export class AssetCategoryController {
   @Post()
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Create a new asset category' })
-  @ApiResponse({
-    status: 201,
-    description: 'The category has been successfully created.',
-  })
+  @ApiResponse({ status: 201, description: 'The category has been successfully created.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
-  create(@Body() createDto: CreateAssetCategoryDto, @CurrentUser() user: User) {
+  create(
+    @Body() createDto: CreateAssetCategoryDto,
+    @CurrentUser() user: User,
+  ) {
     return this.assetCategoryService.create(createDto, user);
   }
 
@@ -54,7 +49,10 @@ export class AssetCategoryController {
   @Get(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Get an asset category by ID' })
-  findOne(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: User) {
+  findOne(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
     return this.assetCategoryService.findOne(id, user);
   }
 
@@ -72,11 +70,11 @@ export class AssetCategoryController {
   @Delete(':id')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Delete an asset category' })
-  @ApiResponse({
-    status: 204,
-    description: 'The category has been successfully deleted.',
-  })
-  remove(@Param('id', ParseUUIDPipe) id: string, @CurrentUser() user: User) {
+  @ApiResponse({ status: 204, description: 'The category has been successfully deleted.' })
+  remove(
+    @Param('id', ParseUUIDPipe) id: string,
+    @CurrentUser() user: User,
+  ) {
     return this.assetCategoryService.remove(id, user);
   }
 }

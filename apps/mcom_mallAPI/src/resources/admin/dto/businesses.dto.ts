@@ -4,16 +4,10 @@ export class BusinessStatsDto {
   @ApiProperty({ example: 3421, description: 'Total number of businesses' })
   total: number;
 
-  @ApiProperty({
-    example: 3100,
-    description: 'Number of active/published businesses',
-  })
+  @ApiProperty({ example: 3100, description: 'Number of active/published businesses' })
   active: number;
 
-  @ApiProperty({
-    example: 45,
-    description: 'Number of businesses pending review',
-  })
+  @ApiProperty({ example: 45, description: 'Number of businesses pending review' })
   pending: number;
 
   @ApiProperty({ example: 1250, description: 'Number of verified businesses' })
@@ -21,32 +15,19 @@ export class BusinessStatsDto {
 }
 
 export class BusinessQueryDto {
-  @ApiPropertyOptional({
-    example: 'urban',
-    description: 'Search query for business or owner name',
-  })
+  @ApiPropertyOptional({ example: 'urban', description: 'Search query for business or owner name' })
   search?: string;
 
-  @ApiPropertyOptional({
-    example: 'active',
-    description: 'Filter by status (all, active, pending, suspended)',
-  })
+  @ApiPropertyOptional({ example: 'active', description: 'Filter by status (all, active, pending, suspended)' })
   status?: string;
 
-  @ApiPropertyOptional({
-    example: 'Retail',
-    description: 'Filter by sector name',
-  })
+  @ApiPropertyOptional({ example: 'Retail', description: 'Filter by sector name' })
   sector?: string;
 
   @ApiPropertyOptional({ example: 1, description: 'Page number', default: 1 })
   page?: number;
 
-  @ApiPropertyOptional({
-    example: 10,
-    description: 'Items per page',
-    default: 10,
-  })
+  @ApiPropertyOptional({ example: 10, description: 'Items per page', default: 10 })
   limit?: number;
 }
 
@@ -63,10 +44,7 @@ export class AdminBusinessDto {
   @ApiProperty({ example: 'user-456' })
   ownerId: string;
 
-  @ApiProperty({
-    example: 'active',
-    description: 'active | pending | suspended',
-  })
+  @ApiProperty({ example: 'active', description: 'active | pending | suspended' })
   status: string;
 
   @ApiProperty({ example: true })

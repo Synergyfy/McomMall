@@ -77,26 +77,14 @@ export class BookingController {
 
   @UseGuards(JwtAuthGuard)
   @Post('initiate-payment')
-  initiatePayment(
-    @Body() initiateBookingPaymentDto: InitiateBookingPaymentDto,
-    @Request() req,
-  ) {
-    return this.bookingService.initiatePayment(
-      initiateBookingPaymentDto,
-      req.user.id,
-    );
+  initiatePayment(@Body() initiateBookingPaymentDto: InitiateBookingPaymentDto, @Request() req) {
+    return this.bookingService.initiatePayment(initiateBookingPaymentDto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)
   @Post('verify-payment')
-  verifyPayment(
-    @Body() verifyBookingPaymentDto: VerifyBookingPaymentDto,
-    @Request() req,
-  ) {
-    return this.bookingService.verifyPayment(
-      verifyBookingPaymentDto,
-      req.user.id,
-    );
+  verifyPayment(@Body() verifyBookingPaymentDto: VerifyBookingPaymentDto, @Request() req) {
+    return this.bookingService.verifyPayment(verifyBookingPaymentDto, req.user.id);
   }
 
   @UseGuards(JwtAuthGuard)

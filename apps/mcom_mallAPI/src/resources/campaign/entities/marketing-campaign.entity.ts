@@ -1,9 +1,6 @@
 import { Column, Entity, Index, OneToMany, ManyToOne } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import {
-  MarketingCampaignType,
-  MarketingCampaignStatus,
-} from '../marketing-campaign.enum';
+import { MarketingCampaignType, MarketingCampaignStatus } from '../marketing-campaign.enum';
 import { Coupon } from '../../coupon/entities/coupon.entity';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Season } from '../../seasons/entities/season.entity';
@@ -14,10 +11,7 @@ export class MarketingCampaign extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @ApiProperty({
-    enum: MarketingCampaignType,
-    example: MarketingCampaignType.SEASONAL,
-  })
+  @ApiProperty({ enum: MarketingCampaignType, example: MarketingCampaignType.SEASONAL })
   @Column({
     type: 'enum',
     enum: MarketingCampaignType,
@@ -36,10 +30,7 @@ export class MarketingCampaign extends AbstractBaseEntity {
   @ManyToOne(() => Season, { nullable: true })
   season: Season;
 
-  @ApiProperty({
-    enum: MarketingCampaignStatus,
-    example: MarketingCampaignStatus.ACTIVE,
-  })
+  @ApiProperty({ enum: MarketingCampaignStatus, example: MarketingCampaignStatus.ACTIVE })
   @Index()
   @Column({
     type: 'enum',

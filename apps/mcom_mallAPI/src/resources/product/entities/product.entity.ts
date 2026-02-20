@@ -3,11 +3,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 
-import {
-  ProductVariantConfig,
-  ProductAttribute,
-  ProductVariation,
-} from '../interfaces/product-variant.interface';
+import { ProductVariantConfig, ProductAttribute, ProductVariation } from '../interfaces/product-variant.interface';
 
 @Entity('Products')
 export class Product extends AbstractBaseEntity {

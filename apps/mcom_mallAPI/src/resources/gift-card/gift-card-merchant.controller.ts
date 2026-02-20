@@ -13,13 +13,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { GiftCardService } from './gift-card.service';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiBearerAuth,
-  ApiOkResponse,
-  ApiResponse,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiBearerAuth, ApiOkResponse, ApiResponse } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
 import { UpdateGiftCardTemplateDto } from './dto/update-gift-card-template.dto';
@@ -42,7 +36,7 @@ import { GiftCardTransactionHistoryDto } from './dto/gift-card-transaction-histo
 @UseGuards(JwtAuthGuard)
 @Controller('merchant/gift-cards')
 export class GiftCardMerchantController {
-  constructor(private readonly giftCardService: GiftCardService) {}
+  constructor(private readonly giftCardService: GiftCardService) { }
 
   // --- Settings Management ---
   @Get('settings')
@@ -64,17 +58,10 @@ export class GiftCardMerchantController {
   @Post('templates')
   @ApiOperation({
     summary: 'Create a new gift card template',
-    description:
-      'Creates a new template for gift cards. This action is subject to tier-based capability checks (quota limits on the number of templates). Requires an active membership.',
+    description: 'Creates a new template for gift cards. This action is subject to tier-based capability checks (quota limits on the number of templates). Requires an active membership.'
   })
-  @ApiOkResponse({
-    description: 'The created gift card template.',
-    type: CreateGiftCardTemplateDto,
-  }) // Note: Returns Entity, but usually we doc DTO or Entity if exposed
-  @ApiResponse({
-    status: 403,
-    description: 'Forbidden. Quota exceeded or membership issue.',
-  })
+  @ApiOkResponse({ description: 'The created gift card template.', type: CreateGiftCardTemplateDto }) // Note: Returns Entity, but usually we doc DTO or Entity if exposed
+  @ApiResponse({ status: 403, description: 'Forbidden. Quota exceeded or membership issue.' })
   createTemplate(
     @CurrentUser() user: User,
     @Body() createDto: CreateGiftCardTemplateDto,
@@ -93,13 +80,19 @@ export class GiftCardMerchantController {
     summary:
       "Get all of a user's assets, based on the owner of a given template",
   })
-  findAssetsByTemplate(@Param('id') id: string, @CurrentUser() user: User) {
+  findAssetsByTemplate(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
     return this.giftCardService.findAssetsByTemplateId(id, user.id);
   }
 
   @Get('templates/:id')
   @ApiOperation({ summary: 'Get a single gift card template by ID' })
-  findTemplateById(@Param('id') id: string, @CurrentUser() user: User) {
+  findTemplateById(
+    @Param('id') id: string,
+    @CurrentUser() user: User,
+  ) {
     return this.giftCardService.findTemplateByIdForOwner(id, user.id);
   }
 
@@ -172,7 +165,7 @@ export class GiftCardMerchantController {
   @Get('stats')
   @ApiOperation({ summary: 'Get dashboard stats for gift cards' })
   @ApiOkResponse({
-    description: "Dashboard statistics for the merchant's gift cards",
+    description: 'Dashboard statistics for the merchant\'s gift cards',
     type: GiftCardStatsDto,
   })
   getStats(@CurrentUser() user: User) {

@@ -1,13 +1,4 @@
-import {
-  IsBoolean,
-  IsEnum,
-  IsNotEmpty,
-  IsNumber,
-  IsOptional,
-  IsString,
-  IsUrl,
-  ValidateNested,
-} from 'class-validator';
+import { IsBoolean, IsEnum, IsNotEmpty, IsNumber, IsOptional, IsString, IsUrl, ValidateNested } from 'class-validator';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
 import { TerminalLevel } from '../entities/terminal-config.entity';
@@ -17,15 +8,15 @@ class RangeDto {
   @IsString()
   id: string;
 
-  @ApiProperty({ example: 10.0, description: 'Minimum spend amount' })
+  @ApiProperty({ example: 10.00, description: 'Minimum spend amount' })
   @IsNumber()
   minSpend: number;
 
-  @ApiProperty({ example: 50.0, description: 'Maximum spend amount' })
+  @ApiProperty({ example: 50.00, description: 'Maximum spend amount' })
   @IsNumber()
   maxSpend: number;
 
-  @ApiProperty({ example: 2.0, description: 'Cashback reward value' })
+  @ApiProperty({ example: 2.00, description: 'Cashback reward value' })
   @IsNumber()
   rewardValue: number;
 
@@ -35,47 +26,27 @@ class RangeDto {
 }
 
 class LimitsDto {
-  @ApiProperty({
-    example: 500,
-    description: 'Max total cashback per day',
-    required: false,
-  })
+  @ApiProperty({ example: 500, description: 'Max total cashback per day', required: false })
   @IsNumber()
   @IsOptional()
   maxPerDay: number;
 
-  @ApiProperty({
-    example: 50,
-    description: 'Max cashback per customer lifetime',
-    required: false,
-  })
+  @ApiProperty({ example: 50, description: 'Max cashback per customer lifetime', required: false })
   @IsNumber()
   @IsOptional()
   maxPerCustomer: number;
 
-  @ApiProperty({
-    example: 10,
-    description: 'Max cashback per single receipt',
-    required: false,
-  })
+  @ApiProperty({ example: 10, description: 'Max cashback per single receipt', required: false })
   @IsNumber()
   @IsOptional()
   maxPerReceipt: number;
 
-  @ApiProperty({
-    example: 5000,
-    description: 'Max monthly budget for the terminal',
-    required: false,
-  })
+  @ApiProperty({ example: 5000, description: 'Max monthly budget for the terminal', required: false })
   @IsNumber()
   @IsOptional()
   monthlyBudget: number;
 
-  @ApiProperty({
-    example: 3,
-    description: 'Max claims per user per day/period',
-    required: false,
-  })
+  @ApiProperty({ example: 3, description: 'Max claims per user per day/period', required: false })
   @IsNumber()
   @IsOptional()
   maxClaimsPerUser: number;
@@ -96,37 +67,23 @@ export class CreateTerminalConfigDto {
   @IsEnum(TerminalLevel)
   level: TerminalLevel;
 
-  @ApiProperty({
-    type: [RangeDto],
-    description: 'List of reward ranges (for Level 1)',
-    required: false,
-  })
+  @ApiProperty({ type: [RangeDto], description: 'List of reward ranges (for Level 1)', required: false })
   @IsOptional()
   @ValidateNested({ each: true })
   @Type(() => RangeDto)
   ranges?: RangeDto[];
 
-  @ApiPropertyOptional({
-    example: 1.5,
-    description: 'Fixed reward amount for Level 2',
-  })
+  @ApiPropertyOptional({ example: 1.50, description: 'Fixed reward amount for Level 2' })
   @IsNumber()
   @IsOptional()
   fixedRewardValue?: number;
 
-  @ApiPropertyOptional({
-    example: 'https://api.merchant.com/verify',
-    description: 'External POS endpoint for Level 3',
-  })
+  @ApiPropertyOptional({ example: 'https://api.merchant.com/verify', description: 'External POS endpoint for Level 3' })
   @IsUrl()
   @IsOptional()
   apiEndpoint?: string;
 
-  @ApiProperty({
-    type: LimitsDto,
-    description: 'Spending limits and guardrails',
-    required: false,
-  })
+  @ApiProperty({ type: LimitsDto, description: 'Spending limits and guardrails', required: false })
   @IsOptional()
   @ValidateNested()
   @Type(() => LimitsDto)
@@ -134,36 +91,36 @@ export class CreateTerminalConfigDto {
 }
 
 export class UpdateTerminalConfigDto {
-  @ApiProperty({ example: true, required: false })
-  @IsOptional()
-  @IsBoolean()
-  isEnabled?: boolean;
+    @ApiProperty({ example: true, required: false })
+    @IsOptional()
+    @IsBoolean()
+    isEnabled?: boolean;
 
-  @ApiProperty({ enum: TerminalLevel, required: false })
-  @IsOptional()
-  @IsEnum(TerminalLevel)
-  level?: TerminalLevel;
+    @ApiProperty({ enum: TerminalLevel, required: false })
+    @IsOptional()
+    @IsEnum(TerminalLevel)
+    level?: TerminalLevel;
 
-  @ApiProperty({ example: 48, required: false })
-  @IsOptional()
-  @IsNumber()
-  autoApprovalHours?: number;
+    @ApiProperty({ example: 48, required: false })
+    @IsOptional()
+    @IsNumber()
+    autoApprovalHours?: number;
 
-  @ApiProperty({ type: [RangeDto], required: false })
-  @IsOptional()
-  ranges?: RangeDto[];
+    @ApiProperty({ type: [RangeDto], required: false })
+    @IsOptional()
+    ranges?: RangeDto[];
 
-  @ApiPropertyOptional({ example: 1.5 })
-  @IsNumber()
-  @IsOptional()
-  fixedRewardValue?: number;
+    @ApiPropertyOptional({ example: 1.50 })
+    @IsNumber()
+    @IsOptional()
+    fixedRewardValue?: number;
 
-  @ApiPropertyOptional({ example: 'https://api.merchant.com/verify' })
-  @IsUrl()
-  @IsOptional()
-  apiEndpoint?: string;
+    @ApiPropertyOptional({ example: 'https://api.merchant.com/verify' })
+    @IsUrl()
+    @IsOptional()
+    apiEndpoint?: string;
 
-  @ApiProperty({ type: LimitsDto, required: false })
-  @IsOptional()
-  limits?: LimitsDto;
+    @ApiProperty({ type: LimitsDto, required: false })
+    @IsOptional()
+    limits?: LimitsDto;
 }

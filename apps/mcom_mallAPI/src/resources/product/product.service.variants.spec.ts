@@ -85,9 +85,9 @@ describe('ProductService - Variants', () => {
           useValue: mockPromotionService,
         },
         {
-          provide: CapabilityService,
-          useValue: mockCapabilityService,
-        },
+            provide: CapabilityService,
+            useValue: mockCapabilityService,
+        }
       ],
     }).compile();
 
@@ -110,31 +110,19 @@ describe('ProductService - Variants', () => {
       bussinessId: 'test-business-id',
       media: ['http://example.com/image.jpg'],
       attributes: [
-        {
-          name: 'Color',
-          options: [
-            { name: 'Red', priceModifier: 0 },
-            { name: 'Blue', priceModifier: 0 },
-          ],
-        },
-        {
-          name: 'Size',
-          options: [
-            { name: 'S', priceModifier: 0 },
-            { name: 'M', priceModifier: 0 },
-          ],
-        },
+        { name: 'Color', options: [{ name: 'Red', priceModifier: 0 }, { name: 'Blue', priceModifier: 0 }] },
+        { name: 'Size', options: [{ name: 'S', priceModifier: 0 }, { name: 'M', priceModifier: 0 }] }
       ],
       variations: [
         {
-          id: 'v1',
-          combination: { Color: 'Red', Size: 'S' },
-          sku: 'VAR-PROD-RED-S',
-          price: 100,
-          stock: 10,
-          available: true,
-        },
-      ],
+            id: 'v1',
+            combination: { Color: 'Red', Size: 'S' },
+            sku: 'VAR-PROD-RED-S',
+            price: 100,
+            stock: 10,
+            available: true
+        }
+      ]
     };
 
     const business = new Business();
@@ -147,25 +135,21 @@ describe('ProductService - Variants', () => {
     mockProductRepository.create.mockImplementation((dto) => dto);
 
     mockProductRepository.save.mockResolvedValue({
-      id: 'new-product-id',
-      ...createProductDto,
+        id: 'new-product-id',
+        ...createProductDto
     });
 
     await service.create(createProductDto, business);
 
-    expect(mockProductRepository.create).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockProductRepository.create).toHaveBeenCalledWith(expect.objectContaining({
         attributes: createProductDto.attributes,
-        variations: createProductDto.variations,
-      }),
-    );
+        variations: createProductDto.variations
+    }));
 
-    expect(mockProductRepository.save).toHaveBeenCalledWith(
-      expect.objectContaining({
+    expect(mockProductRepository.save).toHaveBeenCalledWith(expect.objectContaining({
         attributes: createProductDto.attributes,
-        variations: createProductDto.variations,
-      }),
-    );
+        variations: createProductDto.variations
+    }));
   });
 
   describe('calculatePrice', () => {
@@ -179,9 +163,9 @@ describe('ProductService - Variants', () => {
             price: 120,
             salePrice: 115,
             available: true,
-            stock: 10,
-          },
-        ],
+            stock: 10
+          }
+        ]
       } as unknown as Product;
 
       const selectedOptions = { Color: 'Red', Size: 'S' };
@@ -200,9 +184,9 @@ describe('ProductService - Variants', () => {
             combination: { Color: 'Red', Size: 'S' },
             price: 120,
             available: true,
-            stock: 10,
-          },
-        ],
+            stock: 10
+          }
+        ]
       } as unknown as Product;
 
       const selectedOptions = { Color: 'Red', Size: 'S' };
@@ -217,7 +201,7 @@ describe('ProductService - Variants', () => {
         price: 100,
         salePrice: 90,
         useVariantPricing: true,
-        variations: [],
+        variations: []
       } as unknown as Product;
 
       const selectedOptions = { Color: 'Blue' };
@@ -233,9 +217,9 @@ describe('ProductService - Variants', () => {
         variations: [
           {
             combination: { Color: 'Red' },
-            price: 120,
-          },
-        ],
+            price: 120
+          }
+        ]
       } as unknown as Product;
 
       const selectedOptions = { Color: 'Red' };

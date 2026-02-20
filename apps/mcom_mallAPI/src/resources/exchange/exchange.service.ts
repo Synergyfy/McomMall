@@ -73,9 +73,7 @@ export class ExchangeService {
 
     if (itemType === ExchangeItemType.PRODUCT) {
       if (!productId) {
-        throw new BadRequestException(
-          'productId must be provided for products.',
-        );
+        throw new BadRequestException('productId must be provided for products.');
       }
       const product = await this.productRepository.findOneBy({ id: productId });
       if (!product) {
@@ -86,9 +84,7 @@ export class ExchangeService {
       itemData.description = product.description;
     } else if (itemType === ExchangeItemType.SERVICE) {
       if (!serviceId) {
-        throw new BadRequestException(
-          'serviceId must be provided for services.',
-        );
+        throw new BadRequestException('serviceId must be provided for services.');
       }
       const service = await this.serviceRepository.findOneBy({ id: serviceId });
       if (!service) {
@@ -168,9 +164,7 @@ export class ExchangeService {
     });
 
     if (!offeredItem || offeredItem.status !== ItemStatus.AVAILABLE) {
-      throw new NotFoundException(
-        'Your offered item is not available for trade.',
-      );
+      throw new NotFoundException('Your offered item is not available for trade.');
     }
 
     const requestedItem = await this.itemRepository.findOne({
@@ -179,9 +173,7 @@ export class ExchangeService {
     });
 
     if (!requestedItem || requestedItem.status !== ItemStatus.AVAILABLE) {
-      throw new NotFoundException(
-        'The requested item is not available for trade.',
-      );
+      throw new NotFoundException('The requested item is not available for trade.');
     }
 
     if (offeredItem.owner.id === requestedItem.owner.id) {
@@ -226,15 +218,11 @@ export class ExchangeService {
     });
 
     if (!proposal) {
-      throw new NotFoundException(
-        'Proposal not found or you are not the receiver.',
-      );
+      throw new NotFoundException('Proposal not found or you are not the receiver.');
     }
 
     if (proposal.status !== ProposalStatus.PENDING) {
-      throw new UnauthorizedException(
-        'This proposal has already been responded to.',
-      );
+      throw new UnauthorizedException('This proposal has already been responded to.');
     }
 
     const detailsBefore = { ...proposal };
@@ -275,16 +263,13 @@ export class ExchangeService {
     return updatedProposal;
   }
 
-  async confirmExchange(escrowId: string, userId: string): Promise<Escrow> {
+  async confirmExchange(
+    escrowId: string,
+    userId: string,
+  ): Promise<Escrow> {
     const escrow = await this.escrowRepository.findOne({
       where: { id: escrowId },
-      relations: [
-        'proposal',
-        'proposal.proposer',
-        'proposal.receiver',
-        'proposal.offeredItem',
-        'proposal.requestedItem',
-      ],
+      relations: ['proposal', 'proposal.proposer', 'proposal.receiver', 'proposal.offeredItem', 'proposal.requestedItem'],
     });
 
     if (!escrow) {
@@ -330,16 +315,13 @@ export class ExchangeService {
     return this.escrowRepository.save(escrow);
   }
 
-  async cancelExchange(escrowId: string, userId: string): Promise<Escrow> {
+  async cancelExchange(
+    escrowId: string,
+    userId: string,
+  ): Promise<Escrow> {
     const escrow = await this.escrowRepository.findOne({
       where: { id: escrowId },
-      relations: [
-        'proposal',
-        'proposal.proposer',
-        'proposal.receiver',
-        'proposal.offeredItem',
-        'proposal.requestedItem',
-      ],
+      relations: ['proposal', 'proposal.proposer', 'proposal.receiver', 'proposal.offeredItem', 'proposal.requestedItem'],
     });
 
     if (!escrow) {
@@ -369,10 +351,9 @@ export class ExchangeService {
     return this.escrowRepository.save(escrow);
   }
 
-  async findAllItems(options: {
-    page: number;
-    limit: number;
-  }): Promise<{ items: ExchangeItem[]; total: number }> {
+  async findAllItems(
+    options: { page: number; limit: number },
+  ): Promise<{ items: ExchangeItem[], total: number }> {
     const [items, total] = await this.itemRepository.findAndCount({
       where: { status: ItemStatus.AVAILABLE },
       relations: ['owner', 'product', 'service'],

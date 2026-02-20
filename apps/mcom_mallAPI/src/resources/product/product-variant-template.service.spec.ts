@@ -9,12 +9,8 @@ describe('ProductVariantTemplateService', () => {
   let repository: any;
 
   const mockRepository = {
-    create: jest.fn().mockImplementation((dto) => dto),
-    save: jest
-      .fn()
-      .mockImplementation((template) =>
-        Promise.resolve({ id: 'uuid', ...template }),
-      ),
+    create: jest.fn().mockImplementation(dto => dto),
+    save: jest.fn().mockImplementation(template => Promise.resolve({ id: 'uuid', ...template })),
     find: jest.fn(),
     findOne: jest.fn(),
     remove: jest.fn(),
@@ -38,9 +34,7 @@ describe('ProductVariantTemplateService', () => {
       ],
     }).compile();
 
-    service = module.get<ProductVariantTemplateService>(
-      ProductVariantTemplateService,
-    );
+    service = module.get<ProductVariantTemplateService>(ProductVariantTemplateService);
     repository = module.get(getRepositoryToken(ProductVariantTemplate));
   });
 
@@ -57,9 +51,7 @@ describe('ProductVariantTemplateService', () => {
       const dto = {
         name: 'Test Template',
         productType: 'physical',
-        attributes: [
-          { name: 'Color', options: [{ name: 'Red', priceModifier: 0 }] },
-        ],
+        attributes: [{ name: 'Color', options: [{ name: 'Red', priceModifier: 0 }] }],
       };
       const result = await service.create(dto as any);
       expect(result).toHaveProperty('id', 'uuid');
@@ -83,27 +75,15 @@ describe('ProductVariantTemplateService', () => {
       const totalItems = 1;
 
       const queryBuilder = repository.createQueryBuilder();
-      queryBuilder.getManyAndCount.mockResolvedValue([
-        mockTemplates,
-        totalItems,
-      ]);
+      queryBuilder.getManyAndCount.mockResolvedValue([mockTemplates, totalItems]);
 
       const result = await service.findAllPaginated(searchDto as any);
 
       expect(result.data).toEqual(mockTemplates);
       expect(result.meta.totalItems).toBe(totalItems);
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'template.productType = :productType',
-        { productType: 'physical' },
-      );
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'template.category = :category',
-        { category: 'Electronics' },
-      );
-      expect(queryBuilder.andWhere).toHaveBeenCalledWith(
-        'template.name ILIKE :search',
-        { search: '%Template%' },
-      );
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith('template.productType = :productType', { productType: 'physical' });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith('template.category = :category', { category: 'Electronics' });
+      expect(queryBuilder.andWhere).toHaveBeenCalledWith('template.name ILIKE :search', { search: '%Template%' });
     });
   });
 

@@ -1,5 +1,5 @@
 export enum TierType {
-  STANDARD = 'STANDARD',
-  TRIAL = 'TRIAL',
-  SEASONAL = 'SEASONAL',
+    STANDARD = 'STANDARD',
+    TRIAL = 'TRIAL',
+    SEASONAL = 'SEASONAL',
 }

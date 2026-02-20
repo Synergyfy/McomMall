@@ -33,10 +33,10 @@ import { TierModule } from '../tier/tier.module';
     ProvisionModule,
     MembershipModule,
     ActivityTimerModule,
-    TierModule,
+    TierModule
   ],
   controllers: [UsersController],
   providers: [UsersService, HashService],
   exports: [UsersService],
 })
-export class UsersModule {}
+export class UsersModule { }

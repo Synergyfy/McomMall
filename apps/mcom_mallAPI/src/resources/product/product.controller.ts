@@ -24,12 +24,7 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { Product } from './entities/product.entity';
-import {
-  ApiTags,
-  ApiOperation,
-  ApiResponse,
-  ApiBearerAuth,
-} from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 
 @ApiTags('Product')
 @ApiBearerAuth()
@@ -38,7 +33,7 @@ export class ProductController {
   constructor(
     private readonly productService: ProductService,
     private readonly listingsService: ListingsService,
-  ) {}
+  ) { }
 
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
@@ -55,7 +50,7 @@ export class ProductController {
       sku: 'TSHIRT-001',
       category: 'Clothing',
       attributes: [
-        { name: 'Color', options: [{ name: 'Red', priceModifier: 0 }] },
+        { name: 'Color', options: [{ name: 'Red', priceModifier: 0 }] }
       ],
       variations: [
         {
@@ -65,14 +60,14 @@ export class ProductController {
           price: 25.0,
           salePrice: 20.0,
           stock: 100,
-          available: true,
-        },
+          available: true
+        }
       ],
       useVariantPricing: true,
       productStatus: 'published',
       created_at: '2024-03-05T12:00:00Z',
-      updated_at: '2024-03-05T12:00:00Z',
-    },
+      updated_at: '2024-03-05T12:00:00Z'
+    }
   })
   async create(
     @Body() createProductDto: CreateProductDto,
@@ -100,9 +95,7 @@ export class ProductController {
 
   @Public()
   @Get('public')
-  findAllPublic(
-    @Query() searchDto: ProductSearchDto,
-  ): Promise<PageDto<Product>> {
+  findAllPublic(@Query() searchDto: ProductSearchDto): Promise<PageDto<Product>> {
     return this.productService.findAllPublic(searchDto);
   }
   @Public()

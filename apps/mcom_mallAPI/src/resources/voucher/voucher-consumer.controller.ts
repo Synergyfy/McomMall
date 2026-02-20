@@ -24,7 +24,7 @@ import { Query } from '@nestjs/common';
 
 @Controller('vouchers')
 export class VoucherConsumerController {
-  constructor(private readonly voucherService: VoucherService) {}
+  constructor(private readonly voucherService: VoucherService) { }
 
   @Public()
   @Get('products/business/:businessId')
@@ -36,9 +36,7 @@ export class VoucherConsumerController {
 
   @Public()
   @Get('products/public')
-  findAllPublicVoucherProducts(
-    @Query() searchDto: VoucherProductSearchDto,
-  ): Promise<PageDto<VoucherProduct>> {
+  findAllPublicVoucherProducts(@Query() searchDto: VoucherProductSearchDto): Promise<PageDto<VoucherProduct>> {
     return this.voucherService.findAllPublicVoucherProducts(searchDto);
   }
 
@@ -50,7 +48,9 @@ export class VoucherConsumerController {
 
   @Post('initiate-purchase')
   @UseGuards(JwtAuthGuard)
-  async initiatePurchase(@Body() initiateDto: InitiateVoucherPurchaseDto) {
+  async initiatePurchase(
+    @Body() initiateDto: InitiateVoucherPurchaseDto,
+  ) {
     return this.voucherService.initiateVoucherPurchase(initiateDto);
   }
 
@@ -77,7 +77,10 @@ export class VoucherConsumerController {
     @Param('code') code: string,
     @Body() initiateDto: InitiateReloadDto,
   ) {
-    return this.voucherService.initiateVoucherReload(code, initiateDto);
+    return this.voucherService.initiateVoucherReload(
+      code,
+      initiateDto,
+    );
   }
 
   @Post(':code/verify-reload')

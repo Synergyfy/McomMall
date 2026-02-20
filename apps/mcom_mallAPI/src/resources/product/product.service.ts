@@ -20,10 +20,7 @@ import { PartnershipRequestStatus } from '../partnership/partnership.enum';
 import { ActivitiesService } from '../activities/activities.service';
 import { PaginationDto } from '../../common/dto/pagination.dto';
 import { PromotionService } from '../promotion/promotion.service';
-import {
-  CapabilityService,
-  ActionType,
-} from '../capability/capability.service';
+import { CapabilityService, ActionType } from '../capability/capability.service';
 import { ProductSearchDto } from './dto/product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
@@ -47,7 +44,7 @@ export class ProductService {
     private readonly promotionService: PromotionService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) {}
+  ) { }
 
   async countForUser(userId: string): Promise<number> {
     return this.productRepository.count({
@@ -61,13 +58,9 @@ export class ProductService {
       where: { business: { user: { id: userId } } },
     });
 
-    await this.capabilityService.checkPermission(
-      userId,
-      ActionType.CREATE_PRODUCT,
-      {
-        currentCount: currentProductCount,
-      },
-    );
+    await this.capabilityService.checkPermission(userId, ActionType.CREATE_PRODUCT, {
+      currentCount: currentProductCount,
+    });
 
     const { serviceProviderId, ...restOfDto } = createProductDto;
     let serviceProvider: User | undefined;
@@ -80,14 +73,13 @@ export class ProductService {
         throw new NotFoundException('Service provider not found');
       }
 
-      const partnershipRequest =
-        await this.partnershipRequestRepository.findOne({
-          where: {
-            requestingUser: { id: business.user.id },
-            serviceOwner: { id: serviceProviderId },
-            status: PartnershipRequestStatus.ACCEPTED,
-          },
-        });
+      const partnershipRequest = await this.partnershipRequestRepository.findOne({
+        where: {
+          requestingUser: { id: business.user.id },
+          serviceOwner: { id: serviceProviderId },
+          status: PartnershipRequestStatus.ACCEPTED,
+        },
+      });
 
       if (!partnershipRequest) {
         throw new ForbiddenException(
@@ -117,16 +109,10 @@ export class ProductService {
     if (restOfDto.fullDesc && !restOfDto.description) {
       restOfDto.description = restOfDto.fullDesc;
     }
-    if (
-      restOfDto.regular_price !== undefined &&
-      restOfDto.price === undefined
-    ) {
+    if (restOfDto.regular_price !== undefined && restOfDto.price === undefined) {
       restOfDto.price = restOfDto.regular_price;
     }
-    if (
-      restOfDto.sale_price !== undefined &&
-      restOfDto.salePrice === undefined
-    ) {
+    if (restOfDto.sale_price !== undefined && restOfDto.salePrice === undefined) {
       restOfDto.salePrice = restOfDto.sale_price;
     }
     if (restOfDto.quantity !== undefined && restOfDto.stock === undefined) {
@@ -155,8 +141,8 @@ export class ProductService {
     );
 
     await this.activityTimerService.completeTaskByKey(
-      business.user.id,
-      'createdProductOrService',
+        business.user.id,
+        'createdProductOrService',
     );
 
     return savedProduct;
@@ -213,16 +199,10 @@ export class ProductService {
     if (restOfDto.fullDesc && !restOfDto.description) {
       restOfDto.description = restOfDto.fullDesc;
     }
-    if (
-      restOfDto.regular_price !== undefined &&
-      restOfDto.price === undefined
-    ) {
+    if (restOfDto.regular_price !== undefined && restOfDto.price === undefined) {
       restOfDto.price = restOfDto.regular_price;
     }
-    if (
-      restOfDto.sale_price !== undefined &&
-      restOfDto.salePrice === undefined
-    ) {
+    if (restOfDto.sale_price !== undefined && restOfDto.salePrice === undefined) {
       restOfDto.salePrice = restOfDto.sale_price;
     }
     if (restOfDto.quantity !== undefined && restOfDto.stock === undefined) {
@@ -249,14 +229,13 @@ export class ProductService {
           throw new NotFoundException('Service provider not found');
         }
 
-        const partnershipRequest =
-          await this.partnershipRequestRepository.findOne({
-            where: {
-              requestingUser: { id: product.business.user.id },
-              serviceOwner: { id: serviceProviderId },
-              status: PartnershipRequestStatus.ACCEPTED,
-            },
-          });
+        const partnershipRequest = await this.partnershipRequestRepository.findOne({
+          where: {
+            requestingUser: { id: product.business.user.id },
+            serviceOwner: { id: serviceProviderId },
+            status: PartnershipRequestStatus.ACCEPTED,
+          },
+        });
 
         if (!partnershipRequest) {
           throw new ForbiddenException(
@@ -399,10 +378,7 @@ export class ProductService {
    * @returns The calculated price.
    * @throws BadRequestException if variant selection is invalid when required.
    */
-  calculatePrice(
-    product: Product,
-    selectedOptions: Record<string, string>,
-  ): number {
+  calculatePrice(product: Product, selectedOptions: Record<string, string>): number {
     const hasVariations = product.variations && product.variations.length > 0;
     const isVariantPricingEnabled = product.useVariantPricing !== false;
 
@@ -420,15 +396,11 @@ export class ProductService {
         if (variantKeys.length !== selectedKeys.length) return false;
 
         // Strict: All key-values must match exactly
-        return variantKeys.every(
-          (key) => v.combination[key] === selectedOptions[key],
-        );
+        return variantKeys.every(key => v.combination[key] === selectedOptions[key]);
       });
 
       if (!variation) {
-        throw new BadRequestException(
-          'Selected product options are unavailable or invalid.',
-        );
+        throw new BadRequestException('Selected product options are unavailable or invalid.');
       }
 
       // Variation price is absolute
@@ -445,10 +417,9 @@ export class ProductService {
         : product.price;
     }
 
-    let finalPrice =
-      product.salePrice !== undefined && product.salePrice !== null
-        ? product.salePrice
-        : product.price;
+    let finalPrice = product.salePrice !== undefined && product.salePrice !== null
+      ? product.salePrice
+      : product.price;
 
     if (product.variantConfig && product.variantConfig.length > 0) {
       for (const config of product.variantConfig) {

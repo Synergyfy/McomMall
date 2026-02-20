@@ -56,8 +56,8 @@ export class Membership extends AbstractBaseEntity {
       hours: 10,
       minutes: 5,
       seconds: 30,
-      totalSeconds: 2455530,
-    },
+      totalSeconds: 2455530
+    }
   })
   expiresIn?: {
     days: number;

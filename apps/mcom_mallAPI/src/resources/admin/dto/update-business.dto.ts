@@ -1,12 +1,5 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import {
-  IsEmail,
-  IsEnum,
-  IsOptional,
-  IsString,
-  IsUrl,
-  Length,
-} from 'class-validator';
+import { IsEmail, IsEnum, IsOptional, IsString, IsUrl, Length } from 'class-validator';
 import { BusinessStatus, ListingType } from '../../listings/listing.enum';
 
 export class UpdateBusinessAdminDto {
@@ -27,9 +20,7 @@ export class UpdateBusinessAdminDto {
   @IsString()
   shortDescription?: string;
 
-  @ApiPropertyOptional({
-    example: 'We have been serving the community for over 10 years...',
-  })
+  @ApiPropertyOptional({ example: 'We have been serving the community for over 10 years...' })
   @IsOptional()
   @IsString()
   about?: string;
@@ -59,19 +50,12 @@ export class UpdateBusinessAdminDto {
   @IsUrl()
   bannerUrl?: string;
 
-  @ApiPropertyOptional({
-    enum: BusinessStatus,
-    example: BusinessStatus.PUBLISHED,
-  })
+  @ApiPropertyOptional({ enum: BusinessStatus, example: BusinessStatus.PUBLISHED })
   @IsOptional()
   @IsEnum(BusinessStatus)
   status?: BusinessStatus;
 
-  @ApiPropertyOptional({
-    enum: ListingType,
-    isArray: true,
-    example: [ListingType.PRODUCT],
-  })
+  @ApiPropertyOptional({ enum: ListingType, isArray: true, example: [ListingType.PRODUCT] })
   @IsOptional()
   @IsEnum(ListingType, { each: true })
   listingType?: ListingType[];

@@ -18,9 +18,7 @@ export class PaymentsController {
   createStripePaymentIntent(
     @Body() createPaymentIntentDto: CreatePaymentIntentDto,
   ) {
-    return this.paymentsService.createStripePaymentIntent(
-      createPaymentIntentDto,
-    );
+    return this.paymentsService.createStripePaymentIntent(createPaymentIntentDto);
   }
 
   @Post('paypal/create-order')
@@ -46,4 +44,5 @@ export class PaymentsController {
     const userId = req.user.id;
     return this.paymentsService.getSubscriptionStatus(userId);
   }
+
 }

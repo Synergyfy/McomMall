@@ -46,23 +46,20 @@ describe('ActivityTimerService', () => {
 
   describe('getUserActiveTasks', () => {
     it('should return trial tasks with dynamic expiry', async () => {
-      const user = {
-        id: 'user-1',
-        created_at: new Date('2026-01-01T00:00:00Z'),
-      } as User;
+      const user = { id: 'user-1', created_at: new Date('2026-01-01T00:00:00Z') } as User;
       const tasks = [
         {
           id: 'task-1',
           type: ActivityTimerType.TRIAL,
           isActive: true,
-          expiresAt: null,
-        },
+          expiresAt: null
+        }
       ] as ActivityTimer[];
 
       managerMock.findOne.mockResolvedValue({
         ...user,
         membership: { tier: { configuration: { trialDurationDays: 10 } } },
-        trialPauses: [],
+        trialPauses: []
       });
       timerRepository.find.mockResolvedValue(tasks);
 
@@ -81,8 +78,8 @@ describe('ActivityTimerService', () => {
           id: 'task-2',
           type: ActivityTimerType.GENERAL,
           isActive: true,
-          expiresAt: fixedExpiry,
-        },
+          expiresAt: fixedExpiry
+        }
       ] as ActivityTimer[];
 
       managerMock.findOne.mockResolvedValue(user);
@@ -110,13 +107,11 @@ describe('ActivityTimerService', () => {
     it('should throw BadRequestException if already paused', async () => {
       const user = {
         id: 'user-1',
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }],
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
       } as User;
       managerMock.findOne.mockResolvedValue(user);
 
-      await expect(service.pauseTrial(user.id)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.pauseTrial(user.id)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -124,7 +119,7 @@ describe('ActivityTimerService', () => {
     it('should resume trial if currently paused', async () => {
       const user = {
         id: 'user-1',
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }],
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
       } as User;
       managerMock.findOne.mockResolvedValue(user);
       managerMock.save.mockImplementation((u) => u);
@@ -139,9 +134,7 @@ describe('ActivityTimerService', () => {
       const user = { id: 'user-1', trialPauses: [] } as User;
       managerMock.findOne.mockResolvedValue(user);
 
-      await expect(service.resumeTrial(user.id)).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(service.resumeTrial(user.id)).rejects.toThrow(BadRequestException);
     });
   });
 
@@ -151,7 +144,7 @@ describe('ActivityTimerService', () => {
       const fullUser = {
         ...user,
         created_at: new Date(),
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }],
+        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
       };
 
       managerMock.findOne.mockResolvedValue(fullUser);
@@ -163,7 +156,7 @@ describe('ActivityTimerService', () => {
     it('should return false for paid users', async () => {
       const user = {
         id: 'user-1',
-        membership: { tierId: 'paid-tier' },
+        membership: { tierId: 'paid-tier' }
       } as User;
 
       const result = await service.isRestricted(user);

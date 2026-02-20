@@ -41,28 +41,24 @@ describe('PartnershipController', () => {
       const user = { id: 'user1' } as User;
       const dto = { targetUserId: 'user2' };
       await controller.createUserPartnershipRequest(dto, user);
-      expect(
-        mockPartnershipService.createUserPartnershipRequest,
-      ).toHaveBeenCalledWith(dto, user);
+      expect(mockPartnershipService.createUserPartnershipRequest).toHaveBeenCalledWith(dto, user);
     });
   });
 
   describe('getMyPartners', () => {
-    it('should call service.getMyPartners', async () => {
-      const user = { id: 'user1' } as User;
-      await controller.getMyPartners(user);
-      expect(mockPartnershipService.getMyPartners).toHaveBeenCalledWith(user);
-    });
+      it('should call service.getMyPartners', async () => {
+          const user = { id: 'user1' } as User;
+          await controller.getMyPartners(user);
+          expect(mockPartnershipService.getMyPartners).toHaveBeenCalledWith(user);
+      });
   });
 
   describe('getAnalytics', () => {
-    it('should return analytics', async () => {
-      const user = { id: 'user1' } as User;
-      mockPartnershipService.getAnalytics.mockResolvedValue({
-        totalPartners: 5,
+      it('should return analytics', async () => {
+          const user = { id: 'user1' } as User;
+          mockPartnershipService.getAnalytics.mockResolvedValue({ totalPartners: 5 });
+          const result = await controller.getAnalytics(user);
+          expect(result.totalPartners).toBe(5);
       });
-      const result = await controller.getAnalytics(user);
-      expect(result.totalPartners).toBe(5);
-    });
   });
 });

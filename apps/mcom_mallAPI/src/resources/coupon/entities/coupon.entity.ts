@@ -1,4 +1,11 @@
-import { Column, Entity, Index, ManyToOne, OneToMany, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  ManyToOne,
+  OneToMany,
+  OneToOne,
+} from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { CouponStatus, CouponSourceType, DiscountType } from '../coupon.enum';
 import { MarketingCampaign } from '../../campaign/entities/marketing-campaign.entity';
@@ -44,10 +51,7 @@ export class Coupon extends AbstractBaseEntity {
   })
   discountType: DiscountType;
 
-  @ApiProperty({
-    description: 'Total redemptions allowed. 0 for unlimited.',
-    example: 100,
-  })
+  @ApiProperty({ description: 'Total redemptions allowed. 0 for unlimited.', example: 100 })
   @Column({ default: 0 })
   usageLimit: number; // 0 = unlimited
 
@@ -75,15 +79,10 @@ export class Coupon extends AbstractBaseEntity {
 
   @ApiPropertyOptional({ type: () => MarketingCampaign })
   @Index()
-  @ManyToOne(() => MarketingCampaign, (campaign) => campaign.coupons, {
-    nullable: true,
-  })
+  @ManyToOne(() => MarketingCampaign, (campaign) => campaign.coupons, { nullable: true })
   campaign: MarketingCampaign;
 
-  @OneToOne(() => BrandingAssociation, (branding) => branding.coupon, {
-    nullable: true,
-    cascade: true,
-  })
+  @OneToOne(() => BrandingAssociation, (branding) => branding.coupon, { nullable: true, cascade: true })
   branding: BrandingAssociation;
 
   // @ManyToOne(() => User, (user) => user.purchasedCoupons)

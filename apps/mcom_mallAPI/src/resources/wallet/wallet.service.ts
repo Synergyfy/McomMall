@@ -62,10 +62,7 @@ export class WalletService {
     }
 
     if (user.wallet) {
-      const orders = await this.orderService.getOrdersForOwner(userId, {
-        page: 1,
-        limit: 1000,
-      });
+      const orders = await this.orderService.getOrdersForOwner(userId, { page: 1, limit: 1000 });
       user.wallet.totalOrders = orders.meta.totalItems;
       await this.walletRepository.save(user.wallet);
       return user.wallet;
@@ -74,38 +71,22 @@ export class WalletService {
     return this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
 
-      const orders = await this.orderService.getOrdersForOwner(userId, {
-        page: 1,
-        limit: 1000,
-      });
+      const orders = await this.orderService.getOrdersForOwner(userId, { page: 1, limit: 1000 });
       const giftCardStats = await this.giftCardService.getOwnerStats(userId);
-      const voucherStats =
-        await this.voucherService.getSummaryStatistics(userId);
+      const voucherStats = await this.voucherService.getSummaryStatistics(userId);
       const couponStats = await this.couponService.getSummaryStatistics(userId);
-      const completedBookings =
-        await this.bookingService.getCompletedBookingsForOwner(userId);
+      const completedBookings = await this.bookingService.getCompletedBookingsForOwner(userId);
 
-      const earningsFromOrders = orders.data.reduce(
-        (sum, order) => sum + Number(order.total),
-        0,
-      );
+      const earningsFromOrders = orders.data.reduce((sum, order) => sum + Number(order.total), 0);
       const earningsFromGiftCard = giftCardStats.totalSold;
       const earningsFromVoucher = voucherStats.totalSold;
       const earningsFromCoupons = couponStats.totalSold;
-      const earningsFromBookings = completedBookings.reduce(
-        (sum, booking) => sum + Number(booking.payment.amount),
-        0,
-      );
+      const earningsFromBookings = completedBookings.reduce((sum, booking) => sum + Number(booking.payment.amount), 0);
 
       const newWallet = walletRepo.create({
         user,
         balance: 0,
-        earningsBalance:
-          earningsFromOrders +
-          earningsFromGiftCard +
-          earningsFromVoucher +
-          earningsFromCoupons +
-          earningsFromBookings,
+        earningsBalance: earningsFromOrders + earningsFromGiftCard + earningsFromVoucher + earningsFromCoupons + earningsFromBookings,
         spendableBalance: 0,
         totalOrders: orders.meta.totalItems,
         earningsFromOrders,
@@ -118,44 +99,16 @@ export class WalletService {
       const savedWallet = await walletRepo.save(newWallet);
 
       if (earningsFromOrders > 0) {
-        await this.createTransaction(
-          savedWallet,
-          earningsFromOrders,
-          WalletTransactionType.EARNING_ORDER,
-          'Backfilled order earnings',
-          savedWallet.earningsBalance,
-          manager,
-        );
+        await this.createTransaction(savedWallet, earningsFromOrders, WalletTransactionType.EARNING_ORDER, 'Backfilled order earnings', savedWallet.earningsBalance, manager);
       }
       if (earningsFromGiftCard > 0) {
-        await this.createTransaction(
-          savedWallet,
-          earningsFromGiftCard,
-          WalletTransactionType.EARNING_GIFT_CARD,
-          'Backfilled gift card earnings',
-          savedWallet.earningsBalance,
-          manager,
-        );
+        await this.createTransaction(savedWallet, earningsFromGiftCard, WalletTransactionType.EARNING_GIFT_CARD, 'Backfilled gift card earnings', savedWallet.earningsBalance, manager);
       }
       if (earningsFromVoucher > 0) {
-        await this.createTransaction(
-          savedWallet,
-          earningsFromVoucher,
-          WalletTransactionType.EARNING_VOUCHER,
-          'Backfilled voucher earnings',
-          savedWallet.earningsBalance,
-          manager,
-        );
+        await this.createTransaction(savedWallet, earningsFromVoucher, WalletTransactionType.EARNING_VOUCHER, 'Backfilled voucher earnings', savedWallet.earningsBalance, manager);
       }
       if (newWallet.earningsFromBookings > 0) {
-        await this.createTransaction(
-          savedWallet,
-          newWallet.earningsFromBookings,
-          WalletTransactionType.EARNING_BOOKING,
-          'Backfilled booking earnings',
-          savedWallet.earningsBalance,
-          manager,
-        );
+        await this.createTransaction(savedWallet, newWallet.earningsFromBookings, WalletTransactionType.EARNING_BOOKING, 'Backfilled booking earnings', savedWallet.earningsBalance, manager);
       }
 
       return savedWallet;
@@ -168,8 +121,7 @@ export class WalletService {
 
     const totalCashbackBalance = Number(wallet.earningsBalance);
     const terminalCashbackBalance = Number(wallet.earningsFromTerminalCashback);
-    const normalCashbackBalance =
-      totalCashbackBalance - terminalCashbackBalance;
+    const normalCashbackBalance = totalCashbackBalance - terminalCashbackBalance;
 
     return {
       wallet,
@@ -192,9 +144,7 @@ export class WalletService {
         throw new NotFoundException('User not found');
       }
 
-      let wallet = await walletRepo.findOne({
-        where: { user: { id: userId } },
-      });
+      let wallet = await walletRepo.findOne({ where: { user: { id: userId } } });
 
       if (!wallet) {
         wallet = walletRepo.create({
@@ -214,20 +164,15 @@ export class WalletService {
       } else {
         wallet.earningsBalance = Number(wallet.earningsBalance) + amount;
         if (type === WalletTransactionType.EARNING_ORDER) {
-          wallet.earningsFromOrders =
-            Number(wallet.earningsFromOrders) + amount;
+          wallet.earningsFromOrders = Number(wallet.earningsFromOrders) + amount;
         } else if (type === WalletTransactionType.EARNING_GIFT_CARD) {
-          wallet.earningsFromGiftCard =
-            Number(wallet.earningsFromGiftCard) + amount;
+          wallet.earningsFromGiftCard = Number(wallet.earningsFromGiftCard) + amount;
         } else if (type === WalletTransactionType.EARNING_VOUCHER) {
-          wallet.earningsFromVoucher =
-            Number(wallet.earningsFromVoucher) + amount;
+          wallet.earningsFromVoucher = Number(wallet.earningsFromVoucher) + amount;
         } else if (type === WalletTransactionType.EARNING_COUPON) {
-          wallet.earningsFromCoupons =
-            Number(wallet.earningsFromCoupons) + amount;
+          wallet.earningsFromCoupons = Number(wallet.earningsFromCoupons) + amount;
         } else if (type === WalletTransactionType.EARNING_TERMINAL_CASHBACK) {
-          wallet.earningsFromTerminalCashback =
-            Number(wallet.earningsFromTerminalCashback) + amount;
+          wallet.earningsFromTerminalCashback = Number(wallet.earningsFromTerminalCashback) + amount;
         }
       }
 
@@ -238,9 +183,7 @@ export class WalletService {
         amount,
         type,
         description,
-        type === WalletTransactionType.EARNING_BOOKING
-          ? savedWallet.pendingBalance
-          : savedWallet.earningsBalance,
+        type === WalletTransactionType.EARNING_BOOKING ? savedWallet.pendingBalance : savedWallet.earningsBalance,
         manager,
       );
 
@@ -251,12 +194,7 @@ export class WalletService {
   async releaseBookingPayment(bookingId: string): Promise<Wallet> {
     const booking = await this.dataSource.manager.findOne(ServiceBooking, {
       where: { id: bookingId },
-      relations: [
-        'payment',
-        'service',
-        'service.business',
-        'service.business.user',
-      ],
+      relations: ['payment', 'service', 'service.business', 'service.business.user'],
     });
 
     if (!booking || !booking.payment) {
@@ -268,9 +206,7 @@ export class WalletService {
 
     return this.dataSource.transaction(async (manager) => {
       const walletRepo = manager.getRepository(Wallet);
-      const wallet = await walletRepo.findOne({
-        where: { user: { id: userId } },
-      });
+      const wallet = await walletRepo.findOne({ where: { user: { id: userId } } });
 
       if (!wallet) {
         throw new NotFoundException('Wallet not found.');
@@ -278,8 +214,7 @@ export class WalletService {
 
       wallet.pendingBalance = Number(wallet.pendingBalance) - amount;
       wallet.earningsBalance = Number(wallet.earningsBalance) + amount;
-      wallet.earningsFromBookings =
-        Number(wallet.earningsFromBookings) + amount;
+      wallet.earningsFromBookings = Number(wallet.earningsFromBookings) + amount;
 
       const savedWallet = await walletRepo.save(wallet);
 
@@ -306,11 +241,7 @@ export class WalletService {
   async initiateWalletFunding(
     initiateDto: InitiateFundingDto,
     userId: string,
-  ): Promise<{
-    clientSecret?: string;
-    orderId?: string;
-    provider: PaymentMethod;
-  }> {
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
     if (initiateDto.amount < 10) {
       throw new BadRequestException('Minimum funding amount is 10 GBP');
     }

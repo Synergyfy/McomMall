@@ -1,7 +1,7 @@
-import { SetMetadata } from '@nestjs/common';
-import { ActionType } from '../capability.service';
+import { SetMetadata } from "@nestjs/common";
+import { ActionType } from "../capability.service";
 
-export const CHECK_PERMISSION_KEY = 'check_permission';
+export const CHECK_PERMISSION_KEY = "check_permission";
 
 export interface PermissionContext {
   [key: string]: any;

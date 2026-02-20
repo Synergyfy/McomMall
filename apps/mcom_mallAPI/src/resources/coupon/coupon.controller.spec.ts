@@ -71,10 +71,7 @@ describe('CouponController', () => {
   describe('verifyPurchase', () => {
     it('should verify a coupon purchase', async () => {
       const verifyDto = {};
-      const result = await controller.verifyPurchase(
-        verifyDto,
-        mockRequest as any,
-      );
+      const result = await controller.verifyPurchase(verifyDto, mockRequest as any);
       expect(result).toEqual(mockCoupon);
       expect(service.verifyAndCompletePurchase).toHaveBeenCalledWith(
         verifyDto,
@@ -131,9 +128,7 @@ describe('CouponController', () => {
     it('should return an array of coupon products for a business', async () => {
       const result = await controller.findCouponProductsByBusiness('1');
       expect(result).toEqual([]);
-      expect(productService.findCouponProductsByBusiness).toHaveBeenCalledWith(
-        '1',
-      );
+      expect(productService.findCouponProductsByBusiness).toHaveBeenCalledWith('1');
     });
   });
 });

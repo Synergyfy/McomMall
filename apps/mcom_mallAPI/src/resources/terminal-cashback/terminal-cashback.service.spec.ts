@@ -1,10 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TerminalCashbackService } from './terminal-cashback.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import {
-  TerminalCashbackClaim,
-  TerminalCashbackStatus,
-} from './entities/terminal-cashback-claim.entity';
+import { TerminalCashbackClaim, TerminalCashbackStatus } from './entities/terminal-cashback-claim.entity';
 import { TerminalConfig } from './entities/terminal-config.entity';
 import { TerminalGlobalRule } from './entities/terminal-global-rule.entity';
 import { WalletService } from '../wallet/wallet.service';
@@ -40,18 +37,9 @@ describe('TerminalCashbackService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TerminalCashbackService,
-        {
-          provide: getRepositoryToken(TerminalCashbackClaim),
-          useFactory: mockRepository,
-        },
-        {
-          provide: getRepositoryToken(TerminalConfig),
-          useFactory: mockRepository,
-        },
-        {
-          provide: getRepositoryToken(TerminalGlobalRule),
-          useFactory: mockRepository,
-        },
+        { provide: getRepositoryToken(TerminalCashbackClaim), useFactory: mockRepository },
+        { provide: getRepositoryToken(TerminalConfig), useFactory: mockRepository },
+        { provide: getRepositoryToken(TerminalGlobalRule), useFactory: mockRepository },
         { provide: WalletService, useFactory: mockWalletService },
         { provide: CentralIntegrationService, useFactory: mockCentralService },
       ],
@@ -62,9 +50,7 @@ describe('TerminalCashbackService', () => {
     configRepository = module.get(getRepositoryToken(TerminalConfig));
     ruleRepository = module.get(getRepositoryToken(TerminalGlobalRule));
     walletService = module.get<WalletService>(WalletService);
-    centralService = module.get<CentralIntegrationService>(
-      CentralIntegrationService,
-    );
+    centralService = module.get<CentralIntegrationService>(CentralIntegrationService);
   });
 
   it('should be defined', () => {
@@ -73,66 +59,36 @@ describe('TerminalCashbackService', () => {
 
   describe('createClaim', () => {
     it('should create and save a new claim if terminal enabled', async () => {
-      const dto = {
-        ownerId: 'OWNER1',
-        amount: 10,
-        proofUrl: 'http://url',
-        spendAmount: 100,
-      };
+      const dto = { ownerId: 'OWNER1', amount: 10, proofUrl: 'http://url', spendAmount: 100 };
       const userId = 'user1';
-      const expectedClaim = {
-        ...dto,
-        userId,
-        status: TerminalCashbackStatus.PENDING,
-        riskScore: 0,
-      };
+      const expectedClaim = { ...dto, userId, status: TerminalCashbackStatus.PENDING, riskScore: 0 };
 
       // Mock Config Check
-      jest
-        .spyOn(configRepository, 'findOne')
-        .mockResolvedValue({ isEnabled: true } as any);
+      jest.spyOn(configRepository, 'findOne').mockResolvedValue({ isEnabled: true } as any);
 
-      jest
-        .spyOn(claimRepository, 'create')
-        .mockReturnValue(expectedClaim as any);
-      jest
-        .spyOn(claimRepository, 'save')
-        .mockResolvedValue(expectedClaim as any);
+      jest.spyOn(claimRepository, 'create').mockReturnValue(expectedClaim as any);
+      jest.spyOn(claimRepository, 'save').mockResolvedValue(expectedClaim as any);
 
       const result = await service.createClaim(userId, dto);
       expect(result).toEqual(expectedClaim);
-      expect(claimRepository.create).toHaveBeenCalledWith(
-        expect.objectContaining({
-          userId,
-          ...dto,
-          status: TerminalCashbackStatus.PENDING,
-        }),
-      );
+      expect(claimRepository.create).toHaveBeenCalledWith(expect.objectContaining({
+        userId,
+        ...dto,
+        status: TerminalCashbackStatus.PENDING,
+      }));
     });
 
     it('should throw error if terminal not found or disabled', async () => {
-      jest.spyOn(configRepository, 'findOne').mockResolvedValue(null);
-      await expect(
-        service.createClaim('u1', { ownerId: 'x', amount: 10 }),
-      ).rejects.toThrow();
+        jest.spyOn(configRepository, 'findOne').mockResolvedValue(null);
+        await expect(service.createClaim('u1', { ownerId: 'x', amount: 10 })).rejects.toThrow();
     });
   });
 
   describe('updateClaimStatus', () => {
     it('should approve claim and credit wallet and sync with central', async () => {
-      const claim = {
-        id: 'c1',
-        userId: 'u1',
-        amount: 10,
-        ownerId: 'o1',
-        status: TerminalCashbackStatus.PENDING,
-        user: { email: 'test@test.com' },
-      };
+      const claim = { id: 'c1', userId: 'u1', amount: 10, ownerId: 'o1', status: TerminalCashbackStatus.PENDING, user: { email: 'test@test.com' } };
       jest.spyOn(claimRepository, 'findOne').mockResolvedValue(claim as any);
-      jest.spyOn(claimRepository, 'save').mockResolvedValue({
-        ...claim,
-        status: TerminalCashbackStatus.APPROVED,
-      } as any);
+      jest.spyOn(claimRepository, 'save').mockResolvedValue({ ...claim, status: TerminalCashbackStatus.APPROVED } as any);
 
       await service.updateClaimStatus('c1', TerminalCashbackStatus.APPROVED);
 
@@ -147,23 +103,14 @@ describe('TerminalCashbackService', () => {
         'test@test.com',
         10,
         expect.any(String),
-        expect.stringContaining('o1'),
+        expect.stringContaining('o1')
       );
     });
 
     it('should not credit wallet if rejected', async () => {
-      const claim = {
-        id: 'c1',
-        userId: 'u1',
-        amount: 10,
-        ownerId: 'o1',
-        status: TerminalCashbackStatus.PENDING,
-      };
+      const claim = { id: 'c1', userId: 'u1', amount: 10, ownerId: 'o1', status: TerminalCashbackStatus.PENDING };
       jest.spyOn(claimRepository, 'findOne').mockResolvedValue(claim as any);
-      jest.spyOn(claimRepository, 'save').mockResolvedValue({
-        ...claim,
-        status: TerminalCashbackStatus.REJECTED,
-      } as any);
+      jest.spyOn(claimRepository, 'save').mockResolvedValue({ ...claim, status: TerminalCashbackStatus.REJECTED } as any);
 
       await service.updateClaimStatus('c1', TerminalCashbackStatus.REJECTED);
 

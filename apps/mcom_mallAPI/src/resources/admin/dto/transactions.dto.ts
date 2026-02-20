@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TransactionStatsDto {
-  @ApiProperty({ example: 450000.5 })
+  @ApiProperty({ example: 450000.50 })
   totalVolume: number;
 
   @ApiProperty({ example: 12500.25 })
@@ -21,10 +21,7 @@ export class TransactionQueryDto {
   @ApiPropertyOptional({ example: 'completed' })
   status?: string;
 
-  @ApiPropertyOptional({
-    example: 'payment',
-    enum: ['payment', 'refund', 'payout'],
-  })
+  @ApiPropertyOptional({ example: 'payment', enum: ['payment', 'refund', 'payout'] })
   type?: string;
 
   @ApiPropertyOptional({ example: 1, default: 1 })
@@ -47,10 +44,10 @@ export class AdminTransactionDto {
   @ApiProperty({ example: 'payment', enum: ['payment', 'refund', 'payout'] })
   type: 'payment' | 'refund' | 'payout';
 
-  @ApiProperty({ example: 250.0 })
+  @ApiProperty({ example: 250.00 })
   amount: number;
 
-  @ApiProperty({ example: 7.5 })
+  @ApiProperty({ example: 7.50 })
   fees: number;
 
   @ApiProperty({ example: 'card' })

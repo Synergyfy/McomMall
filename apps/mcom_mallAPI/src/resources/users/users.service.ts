@@ -1,8 +1,4 @@
-import {
-  Injectable,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -50,7 +46,7 @@ export class UsersService {
     private readonly activityTimerService: ActivityTimerService,
     private readonly tierService: TierService,
     private readonly membershipService: MembershipService,
-  ) {}
+  ) { }
 
   async checkEmailExists(email: string): Promise<boolean> {
     try {
@@ -85,10 +81,8 @@ export class UsersService {
     if (payload.provisionCode) {
       provision = await this.provisionService.findByCode(payload.provisionCode);
       if (!provision) throw new BadRequestException('Invalid provision code');
-      if (provision.isRedeemed)
-        throw new BadRequestException('Provision code already redeemed');
-      if (new Date() > provision.expiresAt)
-        throw new BadRequestException('Provision code expired');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
     const createdUser = await this.dataSource.transaction(async (manager) => {
@@ -103,14 +97,8 @@ export class UsersService {
       // Redeem provision code inside transaction
       let trialDuration = 14;
       if (provision) {
-        await this.provisionService.validateAndMarkRedeemed(
-          provision.code,
-          savedUser.id,
-        );
-        if (
-          provision.type === ProvisionType.TRIAL_EXTENSION &&
-          provision.payload?.durationDays
-        ) {
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
           trialDuration = provision.payload.durationDays;
         }
       }
@@ -135,21 +123,14 @@ export class UsersService {
           // Join the trial membership
           // Note: joinTrial handles creating the membership entity
           await this.membershipService.joinTrial(trialTier.id, createdUser);
-          console.log(
-            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`,
-          );
+          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`);
         } else {
-          console.log(
-            `[UsersService] No active Trial Tier found for auto-assignment.`,
-          );
+          console.log(`[UsersService] No active Trial Tier found for auto-assignment.`);
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
-        console.error(
-          'Failed to auto-assign activity timer or trial membership:',
-          error,
-        );
+        console.error('Failed to auto-assign activity timer or trial membership:', error);
       }
     }
 
@@ -162,10 +143,8 @@ export class UsersService {
     if (payload.provisionCode) {
       provision = await this.provisionService.findByCode(payload.provisionCode);
       if (!provision) throw new BadRequestException('Invalid provision code');
-      if (provision.isRedeemed)
-        throw new BadRequestException('Provision code already redeemed');
-      if (new Date() > provision.expiresAt)
-        throw new BadRequestException('Provision code expired');
+      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
     }
 
     const createdUser = await this.dataSource.transaction(async (manager) => {
@@ -181,14 +160,8 @@ export class UsersService {
       // Redeem provision code inside transaction
       let trialDuration = 14;
       if (provision) {
-        await this.provisionService.validateAndMarkRedeemed(
-          provision.code,
-          savedUser.id,
-        );
-        if (
-          provision.type === ProvisionType.TRIAL_EXTENSION &&
-          provision.payload?.durationDays
-        ) {
+        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
+        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
           trialDuration = provision.payload.durationDays;
         }
       }
@@ -213,17 +186,12 @@ export class UsersService {
         const trialTier = await this.tierService.findTrialTier();
         if (trialTier) {
           await this.membershipService.joinTrial(trialTier.id, createdUser);
-          console.log(
-            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`,
-          );
+          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`);
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
-        console.error(
-          'Failed to auto-assign activity timer or trial membership:',
-          error,
-        );
+        console.error('Failed to auto-assign activity timer or trial membership:', error);
       }
     }
 
@@ -327,19 +295,13 @@ export class UsersService {
           skills.forEach((skill, index) => {
             const skillParam = `skill_${index}`;
             if (index === 0) {
-              qb.where(
-                `LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`,
-                {
-                  [skillParam]: `%${skill}%`,
-                },
-              );
+              qb.where(`LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`, {
+                [skillParam]: `%${skill}%`,
+              });
             } else {
-              qb.orWhere(
-                `LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`,
-                {
-                  [skillParam]: `%${skill}%`,
-                },
-              );
+              qb.orWhere(`LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`, {
+                [skillParam]: `%${skill}%`,
+              });
             }
           });
         }),
@@ -538,10 +500,7 @@ export class UsersService {
     };
   }
 
-  async updateFeatures(
-    id: string,
-    updateUserFeaturesDto: UpdateUserFeaturesDto,
-  ) {
+  async updateFeatures(id: string, updateUserFeaturesDto: UpdateUserFeaturesDto) {
     const user = await this.userRepository.findOne({
       where: { id },
     });

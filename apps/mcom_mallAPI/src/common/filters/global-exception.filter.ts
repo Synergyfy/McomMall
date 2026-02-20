@@ -32,10 +32,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : (exception as any).code || null;
 
     if (status === HttpStatus.INTERNAL_SERVER_ERROR) {
-      this.logger.error(
-        `Unhandled Exception: ${exception.message}`,
-        exception.stack,
-      );
+      this.logger.error(`Unhandled Exception: ${exception.message}`, exception.stack);
     }
 
     response.status(status).json({

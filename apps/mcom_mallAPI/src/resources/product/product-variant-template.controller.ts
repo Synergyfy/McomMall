@@ -20,9 +20,7 @@ import { UserRole } from '../../common/role.enum';
 @ApiBearerAuth()
 @Controller('product-variant-template')
 export class ProductVariantTemplateController {
-  constructor(
-    private readonly templateService: ProductVariantTemplateService,
-  ) {}
+  constructor(private readonly templateService: ProductVariantTemplateService) {}
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -32,17 +30,13 @@ export class ProductVariantTemplateController {
   }
 
   @Get()
-  @ApiOperation({
-    summary: 'Get all variant templates with pagination and search',
-  })
+  @ApiOperation({ summary: 'Get all variant templates with pagination and search' })
   findAll(@Query() searchDto: ProductVariantTemplateSearchDto) {
     return this.templateService.findAllPaginated(searchDto);
   }
 
   @Get('filter')
-  @ApiOperation({
-    summary: 'Fetch templates by product type and category (Paginated)',
-  })
+  @ApiOperation({ summary: 'Fetch templates by product type and category (Paginated)' })
   findByFilter(@Query() searchDto: ProductVariantTemplateSearchDto) {
     return this.templateService.findAllPaginated(searchDto);
   }

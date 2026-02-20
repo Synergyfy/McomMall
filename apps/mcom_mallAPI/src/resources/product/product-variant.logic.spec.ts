@@ -90,10 +90,7 @@ describe('ProductService - Variant Logic', () => {
         },
       ];
 
-      const price = service.calculatePrice(product, {
-        Color: 'Blue',
-        Size: 'XL',
-      });
+      const price = service.calculatePrice(product, { Color: 'Blue', Size: 'XL' });
       expect(price).toBe(28); // 20 + 3 + 5
     });
 
@@ -113,18 +110,18 @@ describe('ProductService - Variant Logic', () => {
     });
 
     it('should handle negative modifiers', () => {
-      const product = new Product();
-      product.price = 20;
-      product.variantConfig = [
-        {
-          name: 'Condition',
-          type: 'select',
-          options: [{ name: 'Used', priceModifier: -5 }],
-        },
-      ];
+        const product = new Product();
+        product.price = 20;
+        product.variantConfig = [
+          {
+            name: 'Condition',
+            type: 'select',
+            options: [{ name: 'Used', priceModifier: -5 }],
+          },
+        ];
 
-      const price = service.calculatePrice(product, { Condition: 'Used' });
-      expect(price).toBe(15);
-    });
+        const price = service.calculatePrice(product, { Condition: 'Used' });
+        expect(price).toBe(15);
+      });
   });
 });

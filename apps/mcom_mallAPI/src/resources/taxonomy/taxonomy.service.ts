@@ -1,8 +1,4 @@
-import {
-  ConflictException,
-  Injectable,
-  NotFoundException,
-} from '@nestjs/common';
+import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Sector } from './entities/sector.entity';
@@ -29,13 +25,9 @@ export class TaxonomyService {
   // --- Sectors ---
 
   async createSector(createSectorDto: CreateSectorDto): Promise<Sector> {
-    const existing = await this.sectorRepository.findOne({
-      where: { name: createSectorDto.name },
-    });
+    const existing = await this.sectorRepository.findOne({ where: { name: createSectorDto.name } });
     if (existing) {
-      throw new ConflictException(
-        `Sector with name "${createSectorDto.name}" already exists`,
-      );
+      throw new ConflictException(`Sector with name "${createSectorDto.name}" already exists`);
     }
     const sector = this.sectorRepository.create(createSectorDto);
     return this.sectorRepository.save(sector);
@@ -53,20 +45,13 @@ export class TaxonomyService {
     return sector;
   }
 
-  async updateSector(
-    id: string,
-    updateSectorDto: UpdateSectorDto,
-  ): Promise<Sector> {
+  async updateSector(id: string, updateSectorDto: UpdateSectorDto): Promise<Sector> {
     const sector = await this.findOneSector(id);
 
     if (updateSectorDto.name && updateSectorDto.name !== sector.name) {
-      const existing = await this.sectorRepository.findOne({
-        where: { name: updateSectorDto.name },
-      });
+      const existing = await this.sectorRepository.findOne({ where: { name: updateSectorDto.name } });
       if (existing) {
-        throw new ConflictException(
-          `Sector with name "${updateSectorDto.name}" already exists`,
-        );
+        throw new ConflictException(`Sector with name "${updateSectorDto.name}" already exists`);
       }
     }
 
@@ -81,19 +66,13 @@ export class TaxonomyService {
 
   // --- Categories ---
 
-  async createCategory(
-    createCategoryDto: CreateCategoryDto,
-  ): Promise<TaxonomyCategory> {
+  async createCategory(createCategoryDto: CreateCategoryDto): Promise<TaxonomyCategory> {
     // Validate sector exists
     await this.findOneSector(createCategoryDto.sectorId);
 
-    const existing = await this.categoryRepository.findOne({
-      where: { name: createCategoryDto.name },
-    });
+    const existing = await this.categoryRepository.findOne({ where: { name: createCategoryDto.name } });
     if (existing) {
-      throw new ConflictException(
-        `Category with name "${createCategoryDto.name}" already exists`,
-      );
+      throw new ConflictException(`Category with name "${createCategoryDto.name}" already exists`);
     }
 
     const category = this.categoryRepository.create(createCategoryDto);
@@ -123,10 +102,7 @@ export class TaxonomyService {
     return category;
   }
 
-  async updateCategory(
-    id: string,
-    updateCategoryDto: UpdateCategoryDto,
-  ): Promise<TaxonomyCategory> {
+  async updateCategory(id: string, updateCategoryDto: UpdateCategoryDto): Promise<TaxonomyCategory> {
     const category = await this.findOneCategory(id);
 
     if (updateCategoryDto.sectorId) {
@@ -134,13 +110,9 @@ export class TaxonomyService {
     }
 
     if (updateCategoryDto.name && updateCategoryDto.name !== category.name) {
-      const existing = await this.categoryRepository.findOne({
-        where: { name: updateCategoryDto.name },
-      });
+      const existing = await this.categoryRepository.findOne({ where: { name: updateCategoryDto.name } });
       if (existing) {
-        throw new ConflictException(
-          `Category with name "${updateCategoryDto.name}" already exists`,
-        );
+        throw new ConflictException(`Category with name "${updateCategoryDto.name}" already exists`);
       }
     }
 
@@ -155,62 +127,42 @@ export class TaxonomyService {
 
   // --- Subcategories ---
 
-  async createSubcategory(
-    createSubcategoryDto: CreateSubcategoryDto,
-  ): Promise<TaxonomySubcategory> {
+  async createSubcategory(createSubcategoryDto: CreateSubcategoryDto): Promise<TaxonomySubcategory> {
     // Validate category exists
     await this.findOneCategory(createSubcategoryDto.categoryId);
 
-    const existing = await this.subcategoryRepository.findOne({
-      where: { name: createSubcategoryDto.name },
-    });
+    const existing = await this.subcategoryRepository.findOne({ where: { name: createSubcategoryDto.name } });
     if (existing) {
-      throw new ConflictException(
-        `Subcategory with name "${createSubcategoryDto.name}" already exists`,
-      );
+      throw new ConflictException(`Subcategory with name "${createSubcategoryDto.name}" already exists`);
     }
 
     const subcategory = this.subcategoryRepository.create(createSubcategoryDto);
     return this.subcategoryRepository.save(subcategory);
   }
 
-  async findSubcategoriesByCategory(
-    categoryId: string,
-  ): Promise<TaxonomySubcategory[]> {
+  async findSubcategoriesByCategory(categoryId: string): Promise<TaxonomySubcategory[]> {
     return this.subcategoryRepository.find({ where: { categoryId } });
   }
 
   async findOneSubcategory(id: string): Promise<TaxonomySubcategory> {
-    const subcategory = await this.subcategoryRepository.findOne({
-      where: { id },
-    });
+    const subcategory = await this.subcategoryRepository.findOne({ where: { id } });
     if (!subcategory) {
       throw new NotFoundException(`Subcategory with ID "${id}" not found`);
     }
     return subcategory;
   }
 
-  async updateSubcategory(
-    id: string,
-    updateSubcategoryDto: UpdateSubcategoryDto,
-  ): Promise<TaxonomySubcategory> {
+  async updateSubcategory(id: string, updateSubcategoryDto: UpdateSubcategoryDto): Promise<TaxonomySubcategory> {
     const subcategory = await this.findOneSubcategory(id);
 
     if (updateSubcategoryDto.categoryId) {
       await this.findOneCategory(updateSubcategoryDto.categoryId);
     }
 
-    if (
-      updateSubcategoryDto.name &&
-      updateSubcategoryDto.name !== subcategory.name
-    ) {
-      const existing = await this.subcategoryRepository.findOne({
-        where: { name: updateSubcategoryDto.name },
-      });
+    if (updateSubcategoryDto.name && updateSubcategoryDto.name !== subcategory.name) {
+      const existing = await this.subcategoryRepository.findOne({ where: { name: updateSubcategoryDto.name } });
       if (existing) {
-        throw new ConflictException(
-          `Subcategory with name "${updateSubcategoryDto.name}" already exists`,
-        );
+        throw new ConflictException(`Subcategory with name "${updateSubcategoryDto.name}" already exists`);
       }
     }
 

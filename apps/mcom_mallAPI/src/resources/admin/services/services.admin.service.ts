@@ -2,12 +2,7 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Service } from 'src/resources/services/entities/service.entity';
 import { Repository } from 'typeorm';
-import {
-  ServiceQueryDto,
-  PaginatedServicesDto,
-  ServiceStatsDto,
-  AdminServiceDto,
-} from '../dto/catalog.dto';
+import { ServiceQueryDto, PaginatedServicesDto, ServiceStatsDto, AdminServiceDto } from '../dto/catalog.dto';
 
 @Injectable()
 export class AdminServicesService {
@@ -29,7 +24,7 @@ export class AdminServicesService {
     return {
       total,
       active,
-      avgDuration: Math.round(Number(avgDurationResult?.avg || 0)),
+      avgDuration: Math.round(Number(avgDurationResult?.avg || 0))
     };
   }
 
@@ -37,18 +32,14 @@ export class AdminServicesService {
     const { search, status, category, page = 1, limit = 10 } = query;
     const skip = (page - 1) * limit;
 
-    const qb = this.servicesRepository
-      .createQueryBuilder('service')
+    const qb = this.servicesRepository.createQueryBuilder('service')
       .leftJoinAndSelect('service.business', 'business')
       .take(limit)
       .skip(skip)
       .orderBy('service.created_at', 'DESC');
 
     if (search) {
-      qb.andWhere(
-        '(service.name ILIKE :search OR business.businessName ILIKE :search OR service.id::text ILIKE :search)',
-        { search: `%${search}%` },
-      );
+      qb.andWhere('(service.name ILIKE :search OR business.businessName ILIKE :search OR service.id::text ILIKE :search)', { search: `%${search}%` });
     }
 
     if (status && status !== 'all') {
@@ -59,14 +50,14 @@ export class AdminServicesService {
     }
 
     if (category && category !== 'all') {
-      // Since services don't have a direct 'category' column like products, we might skip or filter by business categories.
-      // For simplicity, if the frontend sends Spa/Auto, we might need a more complex join.
-      // For now, I'll ignore category filter for services unless I find the column.
+       // Since services don't have a direct 'category' column like products, we might skip or filter by business categories.
+       // For simplicity, if the frontend sends Spa/Auto, we might need a more complex join.
+       // For now, I'll ignore category filter for services unless I find the column.
     }
 
     const [services, total] = await qb.getManyAndCount();
 
-    const mappedData: AdminServiceDto[] = services.map((s) => ({
+    const mappedData: AdminServiceDto[] = services.map(s => ({
       id: s.id,
       name: s.name,
       businessName: s.business?.businessName || 'Unknown',

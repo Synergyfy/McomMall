@@ -1,15 +1,10 @@
-import {
-  Injectable,
-  CanActivate,
-  ExecutionContext,
-  ForbiddenException,
-} from '@nestjs/common';
+import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
 import { ActivityTimerService } from './activity-timer.service';
 import { UserRole } from '../../common/role.enum';
 
 @Injectable()
 export class ActivityTimerGuard implements CanActivate {
-  constructor(private readonly timerService: ActivityTimerService) {}
+  constructor(private readonly timerService: ActivityTimerService) { }
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();

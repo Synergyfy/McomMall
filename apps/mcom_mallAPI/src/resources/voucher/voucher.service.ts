@@ -114,9 +114,7 @@ export class VoucherService {
       relations: ['user'],
     });
     if (!business) {
-      throw new NotFoundException(
-        `Business with ID "${businessId}" not found.`,
-      );
+      throw new NotFoundException(`Business with ID "${businessId}" not found.`);
     }
     if (!business.user) {
       throw new InternalServerErrorException(
@@ -142,9 +140,7 @@ export class VoucherService {
       relations: ['user'],
     });
     if (!business) {
-      throw new NotFoundException(
-        `Business with ID "${businessId}" not found.`,
-      );
+      throw new NotFoundException(`Business with ID "${businessId}" not found.`);
     }
     if (!business.user) {
       throw new InternalServerErrorException(
@@ -165,9 +161,7 @@ export class VoucherService {
       relations: ['user'],
     });
     if (!business) {
-      throw new NotFoundException(
-        `Business with ID "${businessId}" not found.`,
-      );
+      throw new NotFoundException(`Business with ID "${businessId}" not found.`);
     }
     if (!business.user) {
       throw new InternalServerErrorException(
@@ -184,11 +178,7 @@ export class VoucherService {
 
   async initiateVoucherPurchase(
     initiateDto: InitiateVoucherPurchaseDto,
-  ): Promise<{
-    clientSecret?: string;
-    orderId?: string;
-    provider: PaymentMethod;
-  }> {
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
     const product = await this.voucherProductRepository.findOneBy({
       id: initiateDto.voucherProductId,
       isEnabled: true,
@@ -202,11 +192,10 @@ export class VoucherService {
     const currency = 'GBP'; // Or get from config/product
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent =
-        await this.paymentProviderService.createStripePaymentIntent(
-          initiateDto.amount,
-          currency,
-        );
+      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
+        initiateDto.amount,
+        currency,
+      );
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
@@ -242,19 +231,17 @@ export class VoucherService {
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult =
-        await this.paymentProviderService.verifyStripePaymentIntent(
-          transactionId,
-          amount,
-          currency,
-        );
+      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
+        transactionId,
+        amount,
+        currency,
+      );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult =
-        await this.paymentProviderService.captureAndVerifyPaypalOrder(
-          transactionId,
-          amount,
-          currency,
-        );
+      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
+        transactionId,
+        amount,
+        currency,
+      );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -307,26 +294,24 @@ export class VoucherService {
         finalAmount = Number(amount) + Number(product.bonusAmount);
       }
 
-      const dv = await this.digitalValueService.create(
-        {
-          type: DigitalValueType.VOUCHER,
-          initialValue: finalAmount,
-          ownerId: userId,
-          metadata: {
+      const dv = await this.digitalValueService.create({
+        type: DigitalValueType.VOUCHER,
+        initialValue: finalAmount,
+        ownerId: userId,
+        metadata: {
             ...purchaseDetails,
             voucherProductId: product.id,
-          },
-          expiryDate: expiresAt ? expiresAt.toISOString() : null,
         },
-        userId,
-        manager,
-      );
+        expiryDate: expiresAt ? expiresAt.toISOString() : null,
+      }, userId, manager);
 
       const newVoucher = voucherRepo.create({
         code: dv.code,
         initialValue: finalAmount,
         balance: finalAmount,
-        status: isScheduled ? VoucherStatus.DISABLED : VoucherStatus.UNREDEEMED,
+        status: isScheduled
+          ? VoucherStatus.DISABLED
+          : VoucherStatus.UNREDEEMED,
         expiresAt,
         buyer: { id: userId } as User,
         owner: product.user,
@@ -379,11 +364,7 @@ export class VoucherService {
   async initiateVoucherReload(
     code: string,
     initiateDto: InitiateReloadDto,
-  ): Promise<{
-    clientSecret?: string;
-    orderId?: string;
-    provider: PaymentMethod;
-  }> {
+  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
     const voucher = await this.findActiveVoucherByCode(code);
     const product = await this.voucherProductRepository.findOneBy({
       id: voucher.voucherProduct.id,
@@ -485,17 +466,14 @@ export class VoucherService {
         const dv = await this.digitalValueService.getByCode(code);
         await this.digitalValueService.fund(dv.id, { amount }, manager);
       } catch (e) {
-        if (e instanceof NotFoundException) {
-          /* ignore legacy */
-        } else {
-          throw e;
-        }
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const user = await manager.findOne(User, { where: { id: userId } });
 
       const balanceBefore = voucher.balance;
-      voucher.balance = parseFloat(voucher.balance.toString()) + amount;
+      voucher.balance =
+        parseFloat(voucher.balance.toString()) + amount;
       const savedVoucher = await voucherRepo.save(voucher);
 
       await this.createTransaction(
@@ -567,20 +545,12 @@ export class VoucherService {
 
       try {
         const dv = await this.digitalValueService.getByCode(code);
-        await this.digitalValueService.redeem(
-          dv.id,
-          {
-            amount: redemptionAmount,
-            merchantId: undefined,
-          },
-          manager,
-        );
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: undefined,
+        }, manager);
       } catch (e) {
-        if (e instanceof NotFoundException) {
-          /* ignore legacy */
-        } else {
-          throw e;
-        }
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const balanceBefore = voucher.balance;
@@ -647,20 +617,12 @@ export class VoucherService {
 
       try {
         const dv = await this.digitalValueService.getByCode(code);
-        await this.digitalValueService.redeem(
-          dv.id,
-          {
-            amount: redemptionAmount,
-            merchantId: order.business ? order.business.id : undefined,
-          },
-          manager,
-        );
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: order.business ? order.business.id : undefined,
+        }, manager);
       } catch (e) {
-        if (e instanceof NotFoundException) {
-          /* ignore legacy */
-        } else {
-          throw e;
-        }
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const balanceBefore = voucher.balance;
@@ -728,20 +690,12 @@ export class VoucherService {
 
       try {
         const dv = await this.digitalValueService.getByCode(code);
-        await this.digitalValueService.redeem(
-          dv.id,
-          {
-            amount: redemptionAmount,
-            merchantId: undefined,
-          },
-          manager,
-        );
+        await this.digitalValueService.redeem(dv.id, {
+          amount: redemptionAmount,
+          merchantId: undefined,
+        }, manager);
       } catch (e) {
-        if (e instanceof NotFoundException) {
-          /* ignore legacy */
-        } else {
-          throw e;
-        }
+         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       voucher.balance = 0;
@@ -887,9 +841,7 @@ export class VoucherService {
     expiresAt.setFullYear(expiresAt.getFullYear() + 1);
 
     // Try to find existing user to link
-    const owner = await this.userRepository.findOne({
-      where: { email: recipientEmail },
-    });
+    const owner = await this.userRepository.findOne({ where: { email: recipientEmail } });
 
     // Use Digital Value Engine
     const dv = await this.digitalValueService.create({
@@ -1000,9 +952,7 @@ export class VoucherService {
     let isUnique = false;
     while (!isUnique) {
       code = crypto.randomBytes(4).toString('hex').toUpperCase();
-      const existing = await this.voucherRepository.findOne({
-        where: { code },
-      });
+      const existing = await this.voucherRepository.findOne({ where: { code } });
       if (!existing) {
         isUnique = true;
       }
@@ -1064,21 +1014,10 @@ export class VoucherService {
     return transactionRepo.save(transaction);
   }
 
-  async findAllPublicVoucherProducts(
-    searchDto: VoucherProductSearchDto,
-  ): Promise<PageDto<VoucherProduct>> {
-    const {
-      page,
-      limit,
-      search,
-      minAmount,
-      maxAmount,
-      businessId,
-      businessName,
-    } = searchDto;
+  async findAllPublicVoucherProducts(searchDto: VoucherProductSearchDto): Promise<PageDto<VoucherProduct>> {
+    const { page, limit, search, minAmount, maxAmount, businessId, businessName } = searchDto;
 
-    const queryBuilder =
-      this.voucherProductRepository.createQueryBuilder('voucherProduct');
+    const queryBuilder = this.voucherProductRepository.createQueryBuilder('voucherProduct');
 
     queryBuilder
       .leftJoinAndSelect('voucherProduct.user', 'user')
@@ -1093,15 +1032,11 @@ export class VoucherService {
     }
 
     if (minAmount !== undefined) {
-      queryBuilder.andWhere('voucherProduct.minCustomAmount >= :minAmount', {
-        minAmount,
-      });
+      queryBuilder.andWhere('voucherProduct.minCustomAmount >= :minAmount', { minAmount });
     }
 
     if (maxAmount !== undefined) {
-      queryBuilder.andWhere('voucherProduct.maxCustomAmount <= :maxAmount', {
-        maxAmount,
-      });
+      queryBuilder.andWhere('voucherProduct.maxCustomAmount <= :maxAmount', { maxAmount });
     }
 
     if (businessId) {

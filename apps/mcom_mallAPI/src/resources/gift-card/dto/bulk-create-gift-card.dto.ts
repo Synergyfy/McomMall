@@ -1,12 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsInt,
-  IsNotEmpty,
-  IsNumber,
-  IsPositive,
-  IsString,
-  Min,
-} from 'class-validator';
+import { IsInt, IsNotEmpty, IsNumber, IsPositive, IsString, Min } from 'class-validator';
 
 export class BulkCreateGiftCardDto {
   @ApiProperty({

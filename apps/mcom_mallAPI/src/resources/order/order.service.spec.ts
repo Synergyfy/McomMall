@@ -104,11 +104,11 @@ describe('OrderService', () => {
 
   const mockProductServiceBookingRepository = {
     create: jest.fn(),
-  };
+  }
 
   const mockPartnershipRepository = {
     findOne: jest.fn(),
-  };
+  }
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -142,14 +142,8 @@ describe('OrderService', () => {
         { provide: GiftCardService, useValue: mockGiftCardService },
         { provide: BookingService, useValue: mockBookingService },
         { provide: PartnershipService, useValue: mockPartnershipService },
-        {
-          provide: getRepositoryToken(ProductServiceBooking),
-          useValue: mockProductServiceBookingRepository,
-        },
-        {
-          provide: getRepositoryToken(Partnership),
-          useValue: mockPartnershipRepository,
-        },
+        { provide: getRepositoryToken(ProductServiceBooking), useValue: mockProductServiceBookingRepository },
+        { provide: getRepositoryToken(Partnership), useValue: mockPartnershipRepository },
         { provide: EntityManager, useValue: mockEntityManager },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
