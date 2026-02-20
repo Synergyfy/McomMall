@@ -111,20 +111,20 @@ export class MarketplacePublicViewDto {
   @ApiProperty({
     description: 'Map of section types to their configurations',
     example: {
-      flash_sale: { 
-        title: 'Flash Sales', 
-        isVisible: true, 
-        config: { endTime: '2024-12-31' }, 
+      flash_sale: {
+        title: 'Flash Sales',
+        isVisible: true,
+        config: { endTime: '2024-12-31' },
         products: [
           { id: 'uuid-1', title: 'Product A', price: 100, media: ['url-1'] }
-        ] 
+        ]
       },
-      promo_carousel: { 
-        title: 'Featured Products', 
-        isVisible: true, 
+      promo_carousel: {
+        title: 'Featured Products',
+        isVisible: true,
         products: [
           { id: 'uuid-2', title: 'Product B', price: 50, media: ['url-2'] }
-        ] 
+        ]
       },
     },
   })

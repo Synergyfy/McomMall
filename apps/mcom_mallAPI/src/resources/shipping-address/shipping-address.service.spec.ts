@@ -44,7 +44,7 @@ describe('ShippingAddressService', () => {
   describe('create', () => {
     it('should create a first address as main automatically', async () => {
       const dto = { addressName: 'Home', recipientName: 'John', phoneNumber: '123', addressLine1: 'St 1', city: 'NYC', state: 'NY', country: 'USA' };
-      
+
       mockRepository.count.mockResolvedValue(0);
       mockRepository.create.mockReturnValue({ ...dto, isMain: true, user: mockUser });
       mockRepository.save.mockResolvedValue({ id: 'addr-1', ...dto, isMain: true });
@@ -58,7 +58,7 @@ describe('ShippingAddressService', () => {
 
     it('should unset previous main if new address is marked as main', async () => {
         const dto = { addressName: 'Office', isMain: true, recipientName: 'John', phoneNumber: '123', addressLine1: 'St 2', city: 'NYC', state: 'NY', country: 'USA' };
-        
+
         mockRepository.count.mockResolvedValue(1);
         mockRepository.create.mockReturnValue({ ...dto, user: mockUser });
         mockRepository.save.mockResolvedValue({ id: 'addr-2', ...dto });

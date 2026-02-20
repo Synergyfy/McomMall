@@ -54,3 +54,18 @@ export const useGetCapabilityUsage = () => {
     queryKey: ['GET_CAPABILITY_USAGE'],
   });
 };
+
+/**
+ * Hook to fetch the effective capability configuration for the account.
+ */
+export const useGetCapabilityEffectiveConfig = () => {
+  const fetcher = async () => {
+    const response = await api.get('capability/effective-config');
+    return response.data;
+  };
+
+  return useQuery({
+    queryFn: fetcher,
+    queryKey: ['GET_CAPABILITY_CONFIG'],
+  });
+};

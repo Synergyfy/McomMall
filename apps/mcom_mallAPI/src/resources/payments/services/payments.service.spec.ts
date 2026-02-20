@@ -126,7 +126,7 @@ describe('PaymentsService', () => {
         expiresAt: expiresAt,
         user: mockUser,
       };
-      
+
       mockMembershipService.findOne.mockResolvedValue(membership);
 
       const result = await service.getSubscriptionStatus('1');
@@ -144,7 +144,7 @@ describe('PaymentsService', () => {
         expiresAt: new Date(),
         user: mockUser,
       };
-      
+
       mockMembershipService.findOne.mockResolvedValue(membership);
 
       const result = await service.getSubscriptionStatus('1');

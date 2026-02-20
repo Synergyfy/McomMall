@@ -34,7 +34,6 @@ import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
-import { ServiceBookingRepository } from './service-booking.repository';
 
 @Injectable()
 export class BookingService {
@@ -43,7 +42,8 @@ export class BookingService {
     private readonly blockedSlotRepository: Repository<BlockedSlot>,
     @InjectRepository(PriceModifier)
     private readonly priceModifierRepository: Repository<PriceModifier>,
-    private readonly bookingRepository: ServiceBookingRepository,
+    @InjectRepository(ServiceBooking)
+    private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(ServicePayment)
     private readonly servicePaymentRepository: Repository<ServicePayment>,
     @InjectRepository(Business)
@@ -56,7 +56,7 @@ export class BookingService {
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
-  ) {}
+  ) { }
 
   async checkAvailability(
     checkAvailabilityDto: CheckAvailabilityDto,

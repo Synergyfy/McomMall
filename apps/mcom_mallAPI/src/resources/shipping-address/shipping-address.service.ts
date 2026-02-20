@@ -74,7 +74,7 @@ export class ShippingAddressService {
   async remove(userId: string, id: string): Promise<void> {
     const address = await this.findOne(userId, id);
     const wasMain = address.isMain;
-    
+
     await this.shippingAddressRepository.remove(address);
 
     // If we deleted the main address, make the most recent one main
@@ -103,7 +103,7 @@ export class ShippingAddressService {
       { isMain: false },
     );
   }
-  
+
   async findMain(userId: string): Promise<ShippingAddress | null> {
       return this.shippingAddressRepository.findOne({
           where: { user: { id: userId }, isMain: true }

@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '@/service/api';
-import { CouponProduct, CreateCouponProductDto, UpdateCouponProductDto } from './types';
+import { CouponProduct, CreateCouponProductDto, UpdateCouponProductDto, CouponStats, CouponChartData, CouponTransaction } from './types';
 
 export const useGetCouponProducts = () => {
   return useQuery<CouponProduct[]>({
@@ -87,5 +87,29 @@ export const useDeleteCouponProduct = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['coupon-products'] });
     },
+  });
+};
+
+export const useGetCouponStats = () => {
+  return useQuery<CouponStats>({
+    queryKey: ['coupon-stats'],
+    queryFn: () => api.get('/business/coupon-products/stats').then(res => res.data),
+  });
+};
+
+export const useGetCouponChartData = () => {
+  return useQuery<CouponChartData>({
+    queryKey: ['coupon-chart-data'],
+    queryFn: () => api.get('/business/coupon-products/chart-data').then(res => res.data),
+  });
+};
+
+export const useGetCouponTransactions = (startDate: string, endDate: string) => {
+  return useQuery<CouponTransaction[]>({
+    queryKey: ['coupon-transactions', startDate, endDate],
+    queryFn: () => api.get('/business/coupon-products/sales-and-redemptions', {
+      params: { startDate, endDate }
+    }).then(res => res.data),
+    enabled: !!startDate && !!endDate,
   });
 };

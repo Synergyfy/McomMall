@@ -532,5 +532,5 @@ export class AdminService {
   }
 
   // Featured logic for businesses isn't in the entity by default, skipping or removing validation error
-  // async toggleListingFeatured(id: string, isFeatured: boolean) { ... } 
+  // async toggleListingFeatured(id: string, isFeatured: boolean) { ... }
 }

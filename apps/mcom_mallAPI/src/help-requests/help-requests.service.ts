@@ -45,7 +45,7 @@ export class HelpRequestsService {
           },
         })
       );
-      
+
       this.logger.log(`Help request ${savedRequest.id} forwarded to Central.`);
     } catch (error) {
       this.logger.error(`Failed to forward help request to Central: ${error.message}`, error.stack);

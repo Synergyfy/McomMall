@@ -1,25 +1,47 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Timer, Play, Pause, ChevronRight } from 'lucide-react';
-import { useGetTrialStatus, usePauseOrPlay } from '@/service/payments/hooks';
-import { TrialAction } from '@/service/payments/types';
+import { Timer, Play, Pause, ChevronRight, AlertCircle } from 'lucide-react';
+import { useGetActivityTimerStatus, usePauseActivityTimer, useResumeActivityTimer } from '@/service/activity-timer/hook';
+import { ActivityTimerType, ActiveTimerResponse } from '@/service/activity-timer/types';
 import { Button } from './ui/button';
 import { cn } from '@/lib/utils';
 import Link from 'next/link';
 
 export const HeaderTimer = () => {
-    const { data: trialStatus } = useGetTrialStatus();
-    const { mutate: pauseOrPlay, isPending } = usePauseOrPlay();
+    const { data: allTimers, isLoading } = useGetActivityTimerStatus();
+    const { mutate: pauseTimer, isPending: isPausing } = usePauseActivityTimer();
+    const { mutate: resumeTimer, isPending: isResuming } = useResumeActivityTimer();
+
     const [timeLeft, setTimeLeft] = useState(0);
 
+    // Select the timer to display
+    const activeTimer = useMemo(() => {
+        if (!allTimers || allTimers.length === 0) return null;
+
+        const now = new Date().getTime();
+
+        // 1. For Trial Accounts: Prioritize the Global Trial (latest expiring TRIAL timer)
+        const trialTimers = allTimers.filter(t => t.type === ActivityTimerType.TRIAL && !t.completedAt);
+        if (trialTimers.length > 0) {
+            return [...trialTimers].sort((a, b) => new Date(b.expiresAt).getTime() - new Date(a.expiresAt).getTime())[0];
+        }
+
+        // 2. Otherwise: Find the absolute earliest expiring timer that hasn't passed yet
+        const expiringSoon = allTimers
+            .filter(t => t.expiresAt && new Date(t.expiresAt).getTime() > now && !t.completedAt)
+            .sort((a, b) => new Date(a.expiresAt).getTime() - new Date(b.expiresAt).getTime());
+
+        return expiringSoon[0] || allTimers[0];
+    }, [allTimers]);
+
     useEffect(() => {
-        if (!trialStatus || !trialStatus.expiresAt || trialStatus.isPaused) return;
+        if (!activeTimer || !activeTimer.expiresAt || activeTimer.isPaused) return;
 
         const updateTimer = () => {
             const now = new Date().getTime();
-            const end = new Date(trialStatus.expiresAt!).getTime();
+            const end = new Date(activeTimer.expiresAt).getTime();
             const remaining = Math.max(0, end - now);
             setTimeLeft(remaining);
         };
@@ -30,9 +52,9 @@ export const HeaderTimer = () => {
         const interval = setInterval(updateTimer, 1000);
 
         return () => clearInterval(interval);
-    }, [trialStatus?.expiresAt, trialStatus?.isPaused]);
+    }, [activeTimer?.expiresAt, activeTimer?.isPaused]);
 
-    if (!trialStatus?.isActive) return null;
+    if (isLoading || !activeTimer) return null;
 
     const formatTime = (ms: number) => {
         const totalSeconds = Math.floor(ms / 1000);
@@ -41,19 +63,36 @@ export const HeaderTimer = () => {
         const minutes = Math.floor((totalSeconds % 3600) / 60);
         const seconds = totalSeconds % 60;
 
-        if (days > 0) return `${days}d ${hours}h`;
+        if (days > 0) return `${days}d ${hours}h ${minutes}m`;
         return `${hours}h ${minutes}m ${seconds}s`;
     };
 
+    const isExpiringSoon = timeLeft < 24 * 60 * 60 * 1000; // Less than 24 hours
+    const isTrial = activeTimer.type === ActivityTimerType.TRIAL;
+
     return (
-        <div className="flex items-center gap-3 bg-white/10 backdrop-blur-md border border-white/20 rounded-full px-4 py-1.5 text-white shadow-sm">
+        <div className={cn(
+            "flex items-center gap-3 backdrop-blur-md border rounded-full px-4 py-1.5 text-white shadow-sm transition-all duration-300",
+            isExpiringSoon ? "bg-red-500/20 border-red-500/30" : "bg-white/10 border-white/20"
+        )}>
             <div className="flex items-center gap-2">
                 <div className="relative">
-                    <Timer className="w-4 h-4 text-orange-400 animate-pulse" />
+                    <Timer className={cn(
+                        "w-4 h-4 transition-colors",
+                        isExpiringSoon ? "text-red-400 animate-pulse" : "text-orange-400"
+                    )} />
                 </div>
                 <div className="flex flex-col">
-                    <span className="text-[10px] uppercase font-bold text-orange-300 leading-none">Trial Ends In</span>
-                    <span className="text-sm font-mono font-bold leading-none mt-0.5">
+                    <span className={cn(
+                        "text-[10px] uppercase font-black leading-none tracking-wider truncate max-w-[120px]",
+                        isExpiringSoon ? "text-red-300" : "text-orange-300"
+                    )}>
+                        {isTrial && timeLeft === 0
+                            ? "Trial has ended"
+                            : ((activeTimer as any).name || activeTimer.tasks[0]?.title || (isTrial ? "Trial Ends In" : "Task Due In"))
+                        }
+                    </span>
+                    <span className="text-sm font-mono font-bold leading-none mt-0.5 whitespace-nowrap">
                         {formatTime(timeLeft)}
                     </span>
                 </div>
@@ -62,29 +101,27 @@ export const HeaderTimer = () => {
             <div className="h-4 w-[1px] bg-white/20 mx-1" />
 
             <div className="flex items-center gap-1">
-                {trialStatus.isTrialPausable && (
-                    <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
-                        onClick={() => pauseOrPlay({
-                            action: trialStatus.isPaused ? TrialAction.RESUME : TrialAction.PAUSE
-                        })}
-                        disabled={isPending || (!trialStatus.isPaused && (trialStatus.remainingPauses ?? 0) <= 0)}
-                    >
-                        {trialStatus.isPaused ? (
-                            <Play className="w-3.5 h-3.5 fill-current" />
-                        ) : (
-                            <Pause className="w-3.5 h-3.5 fill-current" />
-                        )}
-                    </Button>
-                )}
+                <Button
+                    variant="ghost"
+                    size="icon"
+                    className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
+                    onClick={() => activeTimer.isPaused ? resumeTimer() : pauseTimer()}
+                    disabled={isPausing || isResuming}
+                    title={activeTimer.isPaused ? "Resume Timer" : "Pause Timer"}
+                >
+                    {activeTimer.isPaused ? (
+                        <Play className="w-3.5 h-3.5 fill-current" />
+                    ) : (
+                        <Pause className="w-3.5 h-3.5 fill-current" />
+                    )}
+                </Button>
 
                 <Link href="/dashboard/activity-timer">
                     <Button
                         variant="ghost"
                         size="icon"
                         className="h-7 w-7 rounded-full hover:bg-white/20 text-white p-0"
+                        title="View All Timers"
                     >
                         <ChevronRight className="w-4 h-4" />
                     </Button>

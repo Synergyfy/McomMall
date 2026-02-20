@@ -93,7 +93,7 @@ describe('PromotionEngineService', () => {
     mockParticipantRepository.find.mockResolvedValue([participant]);
     mockProductRepository.findOne.mockResolvedValue(product);
     mockManager.count.mockResolvedValue(0); // Limit check
-    
+
     // Mock save to return entity
     mockManager.save.mockImplementation(entity => Promise.resolve(entity));
 
@@ -135,18 +135,18 @@ describe('PromotionEngineService', () => {
   it('should rollback transaction if save fails', async () => {
     const user = { id: 'u1', points: 0 } as User;
     const order = { items: [{ product: { id: 'p1' }, quantity: 1, price: 10 }] } as any;
-    const promotion = { 
-        id: 'promo1', isActive: true, 
+    const promotion = {
+        id: 'promo1', isActive: true,
         promotionScope: PromotionScope.ALL_LISTINGS,
         businesses: [{id: 'b1'}],
-        promotionType: PromotionType.BONUS_POINTS, 
-        bonusPoints: 100 
+        promotionType: PromotionType.BONUS_POINTS,
+        bonusPoints: 100
     };
     const participant = { id: 'part1', promotion, pointsEarned: 0 };
 
     mockParticipantRepository.find.mockResolvedValue([participant]);
     mockProductRepository.findOne.mockResolvedValue({ id: 'p1', business: { id: 'b1' } });
-    
+
     // Fail the save
     mockManager.save.mockRejectedValue(new Error('Save failed'));
 

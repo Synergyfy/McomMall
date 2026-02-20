@@ -33,7 +33,7 @@ export class EmailService {
 
   async sendOtp({ email, type }: SendOtpDto) {
     const user = await this.userRepository.findOne({ where: { email } });
-    
+
     if (!user && type === OtpType.PASSWORD_RESET) {
       throw new NotFoundException('User not found');
     }
@@ -64,7 +64,7 @@ export class EmailService {
 
   async validateOtp({ email, otp, type }: ValidateOtpDto) {
     const user = await this.userRepository.findOne({ where: { email } });
-    
+
     let otpDetails;
     if (user) {
         otpDetails = await this.otpRepository.findOne({

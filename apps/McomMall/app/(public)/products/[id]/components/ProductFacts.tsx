@@ -12,6 +12,7 @@ export default function ProductFacts({ product, variation }: ProductFactsProps) 
   const facts = [
     { label: 'Status', value: product.productStatus, capitalize: true },
     { label: 'Category', value: product.category },
+    { label: 'Gender', value: product.gender && product.gender !== 'none' ? product.gender : null, capitalize: true },
     { label: 'SKU', value: variation?.sku || product.sku },
     {
       label: 'Stock',

@@ -28,7 +28,7 @@ export class TierController {
   @Post()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Create a new tier (Admin only)',
     description: 'Creates a new subscription tier with specific configuration for quotas (listings, products, etc.) and feature flags. Only Admins can perform this action.'
   })
@@ -42,7 +42,7 @@ export class TierController {
 
   @Public()
   @Get()
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get all tiers',
     description: 'Retrieves a list of all available subscription tiers.'
   })
@@ -53,7 +53,7 @@ export class TierController {
 
   @Public()
   @Get(':id')
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Get a tier by ID',
     description: 'Retrieves details of a specific tier by its unique ID.'
   })
@@ -66,7 +66,7 @@ export class TierController {
   @Patch(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Update a tier (Admin only)',
     description: 'Updates an existing tier configuration. Only Admins can perform this action.'
   })
@@ -82,7 +82,7 @@ export class TierController {
   @Delete(':id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Delete a tier (Admin only)',
     description: 'Deletes a tier. Only Admins can perform this action.'
   })

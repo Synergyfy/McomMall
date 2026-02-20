@@ -62,7 +62,7 @@ describe('TerminalCashbackService', () => {
       const dto = { ownerId: 'OWNER1', amount: 10, proofUrl: 'http://url', spendAmount: 100 };
       const userId = 'user1';
       const expectedClaim = { ...dto, userId, status: TerminalCashbackStatus.PENDING, riskScore: 0 };
-      
+
       // Mock Config Check
       jest.spyOn(configRepository, 'findOne').mockResolvedValue({ isEnabled: true } as any);
 

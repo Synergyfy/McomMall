@@ -62,7 +62,7 @@ describe("ProvisionService (Mall)", () => {
           const provision = {
               code,
               isRedeemed: false,
-              expiresAt: new Date(Date.now() + 100000), 
+              expiresAt: new Date(Date.now() + 100000),
               save: jest.fn()
           };
 

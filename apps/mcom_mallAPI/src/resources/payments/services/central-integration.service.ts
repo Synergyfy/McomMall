@@ -20,12 +20,12 @@ export class CentralIntegrationService {
         amountPaid,
         transactionReference,
       };
-      
+
       this.logger.log(`Sending cashback request to central: ${JSON.stringify(payload)}`);
-      
+
       // In a real scenario, we would use HttpService (Axios) to call mcom_central
       await axios.post(`${this.centralUrl}/cashback/process`, payload);
-      
+
       return { success: true };
     } catch (error) {
       this.logger.error(`Failed to process cashback: ${error.message}`);

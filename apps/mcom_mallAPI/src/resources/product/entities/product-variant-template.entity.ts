@@ -23,7 +23,7 @@ export class ProductVariantTemplate {
   @Column({ nullable: true })
   subCategory: string;
 
-  @ApiProperty({ 
+  @ApiProperty({
     description: 'Predefined attributes for this template'
   })
   @Column({ type: 'jsonb' })

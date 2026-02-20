@@ -1,27 +1,11 @@
 "use client";
 import React from 'react';
 import { Button } from "@/components/ui/button";
-import Link from 'next/link';
-import { PlusCircle } from 'lucide-react';
+import { PlusCircle, Loader2, Zap, Terminal } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import { useRouter } from 'next/navigation';
-import Image from 'next/image';
-import { Badge } from "@/components/ui/badge";
-import {
-  AlertDialog,
-  AlertDialogAction,
-  AlertDialogCancel,
-  AlertDialogContent,
-  AlertDialogDescription,
-  AlertDialogFooter,
-  AlertDialogHeader,
-  AlertDialogTitle,
-  AlertDialogTrigger,
-} from "@/components/ui/alert-dialog";
 import { toast } from "sonner";
-
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
-import { Terminal } from "lucide-react";
 import { useGetGiftCardTemplates, useDeleteGiftCardTemplate } from '@/service/gift-card/hook';
 
 const DashboardGiftCard = dynamic(() => import('@/app/dashboard/component/DashboardMarketingCards').then(mod => mod.DashboardGiftCard), {
@@ -32,7 +16,7 @@ const DashboardGiftCard = dynamic(() => import('@/app/dashboard/component/Dashbo
 const GiftCardTemplatesPage = () => {
   const router = useRouter();
   const { data: templates, isPending, isError } = useGetGiftCardTemplates();
-  const { mutate: deleteTemplate, isPending: isDeleting } = useDeleteGiftCardTemplate();
+  const { mutate: deleteTemplate } = useDeleteGiftCardTemplate();
 
   const handleDelete = (id: string) => {
     deleteTemplate(id, {
@@ -46,12 +30,16 @@ const GiftCardTemplatesPage = () => {
   };
 
   if (isPending) {
-    return <div>Loading...</div>;
+    return (
+      <div className="flex justify-center items-center h-[60vh]">
+        <Loader2 className="animate-spin text-orange-600" size={48} />
+      </div>
+    );
   }
 
   if (isError) {
     return (
-      <div className="p-6">
+      <div className="container mx-auto px-4 py-8">
         <Alert variant="destructive">
           <Terminal className="h-4 w-4" />
           <AlertTitle>Error</AlertTitle>
@@ -64,39 +52,49 @@ const GiftCardTemplatesPage = () => {
   }
 
   return (
-    <div className="p-6 bg-gray-50 min-h-screen">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-3xl font-bold text-gray-800">Gift Card Templates</h1>
-        <Link href="/dashboard/gift-card/templates/new" passHref>
-          <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-            <PlusCircle className="mr-2 h-4 w-4" />
-            Add New Template
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <main className="container mx-auto px-4 py-8">
+        <header className="flex flex-col md:flex-row justify-between items-start md:items-center mb-12 gap-4">
+          <div>
+            <h1 className="text-4xl font-black text-slate-800 tracking-tight">Gift Card Catalog</h1>
+            <p className="text-slate-500 font-bold text-sm mt-2 uppercase tracking-widest">
+              Home &gt; Dashboard &gt; Gift Cards &gt; Templates
+            </p>
+          </div>
+          <Button
+            onClick={() => router.push('/dashboard/gift-card/templates/new')}
+            className="rounded-full px-8 py-6 bg-orange-600 hover:bg-orange-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.05] active:scale-[0.98]"
+          >
+            <PlusCircle className="mr-2" size={18} /> New Template
           </Button>
-        </Link>
-      </div>
+        </header>
 
-      {templates && templates.length === 0 ? (
-        <div className="text-center py-20">
-          <p className="text-gray-500 mb-4">You haven&apos;t created any gift card templates yet.</p>
-          <Link href="/dashboard/gift-card/templates/new" passHref>
-            <Button className="bg-orange-600 hover:bg-orange-700 text-white">
-              <PlusCircle className="mr-2 h-4 w-4" />
-              Create Your First Template
+        {templates && templates.length > 0 ? (
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-12">
+            {templates.map((template) => (
+              <DashboardGiftCard
+                key={template.id}
+                template={template}
+                onEdit={(id) => router.push(`/dashboard/gift-card/templates/edit/${id}`)}
+                onDelete={handleDelete}
+              />
+            ))}
+          </div>
+        ) : (
+          <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
+            <Zap className="mx-auto text-gray-200 mb-6" size={64} />
+            <h3 className="text-2xl font-black text-gray-900">No Templates Found</h3>
+            <p className="text-gray-500 font-bold mt-2">Design your first gift card template to start issuing cards.</p>
+            <Button
+              variant="outline"
+              onClick={() => router.push('/dashboard/gift-card/templates/new')}
+              className="mt-6 rounded-full border-gray-200 font-black uppercase text-[10px] tracking-widest"
+            >
+              Start Designing
             </Button>
-          </Link>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
-          {templates && templates.map((template) => (
-            <DashboardGiftCard
-              key={template.id}
-              template={template}
-              onEdit={(id) => router.push(`/dashboard/gift-card/templates/edit/${id}`)}
-              onDelete={handleDelete}
-            />
-          ))}
-        </div>
-      )}
+          </div>
+        )}
+      </main>
     </div>
   );
 };

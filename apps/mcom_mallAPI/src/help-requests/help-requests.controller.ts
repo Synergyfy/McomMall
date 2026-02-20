@@ -12,11 +12,11 @@ export class HelpRequestsController {
   constructor(private readonly helpRequestsService: HelpRequestsService) {}
 
   @Post()
-  @ApiOperation({ 
-    summary: 'Submit a new help request', 
-    description: 'Allows Mall Owners/Sellers to request assistance from the 247GBS support team. Requests are synced to the central hub.' 
+  @ApiOperation({
+    summary: 'Submit a new help request',
+    description: 'Allows Mall Owners/Sellers to request assistance from the 247GBS support team. Requests are synced to the central hub.'
   })
-  @ApiBody({ 
+  @ApiBody({
     type: CreateHelpRequestDto,
     examples: {
       productHelp: {
@@ -37,8 +37,8 @@ export class HelpRequestsController {
       }
     }
   })
-  @ApiResponse({ 
-    status: 201, 
+  @ApiResponse({
+    status: 201,
     description: 'Help request successfully submitted.',
     schema: {
       example: {
@@ -59,12 +59,12 @@ export class HelpRequestsController {
   }
 
   @Get()
-  @ApiOperation({ 
-    summary: 'List submitted help requests', 
-    description: 'Retrieves the history of all help requests submitted by the currently logged-in user.' 
+  @ApiOperation({
+    summary: 'List submitted help requests',
+    description: 'Retrieves the history of all help requests submitted by the currently logged-in user.'
   })
-  @ApiResponse({ 
-    status: 200, 
+  @ApiResponse({
+    status: 200,
     description: 'List of help requests.',
     schema: {
       example: [

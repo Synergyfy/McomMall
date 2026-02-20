@@ -247,9 +247,9 @@ export class MoneyEngineController {
         description: 'Business stats retrieved.',
         type: BusinessStatsResponseDto
     })
-    async getBusinessStats(@CurrentUser() user: User) { 
+    async getBusinessStats(@CurrentUser() user: User) {
         return this.moneyEngineService.getBusinessStatsForUser(user.id);
-    }  
+    }
   // Revised Business Stats to be more robust
   @Get('business/:shopId/stats')
   @Roles(UserRole.OWNER)
@@ -279,7 +279,7 @@ export class MoneyEngineController {
     const voucher = await this.moneyEngineService.spend(dto);
     return this.mapToResponse(voucher);
   }
-  
+
   // --- PEER TRANSFER ---
 
   @Post('transfer')

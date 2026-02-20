@@ -20,8 +20,9 @@ const ListingUsageBar = () => {
         return null;
     }
 
-    const { used, limit, remaining, allowed } = data.quotas.listings;
+    const { used, limit, remaining } = data.quotas.listings;
     const isUnlimited = limit === -1;
+    const isLimitReached = !isUnlimited && used >= limit;
     const percentage = isUnlimited ? 0 : Math.min((used / limit) * 100, 100);
 
     return (
@@ -36,7 +37,7 @@ const ListingUsageBar = () => {
                     <div>
                         <div className="flex items-center gap-2 mb-1">
                             <span className="text-[#f48c25] text-[10px] font-black uppercase tracking-[0.2em]">Listing Capacity</span>
-                            {!allowed && !isUnlimited && (
+                            {isLimitReached && (
                                 <div className="bg-red-100 text-red-600 text-[8px] font-bold px-2 py-0.5 rounded-full uppercase">Limit Reached</div>
                             )}
                         </div>
@@ -73,7 +74,7 @@ const ListingUsageBar = () => {
                 </p>
             </div>
 
-            {!allowed && !isUnlimited && (
+            {isLimitReached && (
                 <Alert variant="destructive" className="mt-4 rounded-xl border-red-100 bg-red-50/50">
                     <AlertCircle className="h-4 w-4" />
                     <AlertTitle className="text-xs font-bold uppercase tracking-wider">Note</AlertTitle>

@@ -21,10 +21,10 @@ export class AdminServicesService {
         .getRawOne(),
     ]);
 
-    return { 
-      total, 
-      active, 
-      avgDuration: Math.round(Number(avgDurationResult?.avg || 0)) 
+    return {
+      total,
+      active,
+      avgDuration: Math.round(Number(avgDurationResult?.avg || 0))
     };
   }
 

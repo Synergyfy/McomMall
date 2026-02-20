@@ -29,9 +29,9 @@ export default function BookingCalendar({ availability, selectedDate, onDateSele
         if (!dayName) return false;
 
         const schedule = availability.schedule.find(s => s.day === dayName);
-        // If no schedule found for this day, assume closed? Or open? Usually closed if not explicit.
-        // But our editor defaults all to open.
-        return !schedule?.enabled;
+        // If no schedule found for this day, default to enabled
+        // Only disable if explicitly set to disabled
+        return schedule ? !schedule.enabled : false;
     };
 
     return (

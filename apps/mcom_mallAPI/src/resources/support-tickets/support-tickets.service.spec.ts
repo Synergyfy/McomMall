@@ -88,7 +88,7 @@ describe('SupportTicketsService', () => {
     it('should allow admin to add a message and update status', async () => {
       const dto = { content: 'Admin Reply' };
       (ticketRepo.findOne as jest.Mock).mockResolvedValue({ ...mockTicket, status: TicketStatus.OPEN });
-      
+
       await service.addMessage(mockAdmin, 'ticket-1', dto);
 
       expect(messageRepo.create).toHaveBeenCalledWith(expect.objectContaining({

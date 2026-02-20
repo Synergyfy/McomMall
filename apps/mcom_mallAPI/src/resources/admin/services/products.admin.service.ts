@@ -39,7 +39,7 @@ export class AdminProductsService {
       let pStatus = status;
       if (status === 'active') pStatus = 'published';
       if (status === 'inactive') pStatus = 'draft';
-      
+
       if (status === 'out_of_stock') {
         qb.andWhere('product.stock = 0');
       } else {

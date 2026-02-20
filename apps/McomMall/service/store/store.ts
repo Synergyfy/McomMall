@@ -1,4 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
+import { useDispatch, useSelector } from 'react-redux';
 import authReducer from './authSlice';
 import uiReducer from './uiSlice';
 import cartReducer from './cartSlice';
@@ -17,3 +18,7 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+// Pre-typed hooks — use these instead of plain useSelector/useDispatch
+export const useAppDispatch = () => useDispatch<AppDispatch>();
+export const useAppSelector = useSelector.withTypes<RootState>();

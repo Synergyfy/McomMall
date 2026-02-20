@@ -39,7 +39,7 @@ export class MoneyEngineService {
     const { validShopIds, ...rest } = dto;
     const definition = new RewardDefinition();
     Object.assign(definition, rest);
-    
+
     if (validShopIds) {
       definition.validShops = validShopIds.map(id => ({ id } as Business));
     }
@@ -179,8 +179,8 @@ export class MoneyEngineService {
       }
 
       // Verify if shop is allowed to give cashback (reuse scope logic or allow all?)
-      // Usually, any shop can give cashback if they are part of the ecosystem, 
-      // but strictly, maybe only valid shops for that voucher? 
+      // Usually, any shop can give cashback if they are part of the ecosystem,
+      // but strictly, maybe only valid shops for that voucher?
       // For now, we assume the shop must be valid for the voucher to interact with it.
       await this.validateScope(manager, voucher.definition, dto.shopId);
 
@@ -196,7 +196,7 @@ export class MoneyEngineService {
       tx.amount = amount;
       tx.realAmountDelta = 0;
       tx.rewardAmountDelta = amount;
-      
+
       await manager.save(tx);
 
       return voucher;
@@ -209,7 +209,7 @@ export class MoneyEngineService {
       const voucher = await manager.findOne(UserVoucher, {
         where: { id: dto.userVoucherId },
         relations: ['definition', 'definition.validShops'],
-        lock: { mode: 'pessimistic_write' }, 
+        lock: { mode: 'pessimistic_write' },
       });
 
       if (!voucher) {
@@ -256,7 +256,7 @@ export class MoneyEngineService {
         }
       }
 
-      const salesImpactBefore = 0; 
+      const salesImpactBefore = 0;
 
       voucher.realBalance = realBal - realDeduction;
       voucher.rewardBalance = rewardBal - rewardDeduction;
@@ -276,7 +276,7 @@ export class MoneyEngineService {
       tx.rewardAmountDelta = -rewardDeduction;
       tx.salesImpactBefore = salesImpactBefore;
       tx.salesImpactAfter = salesImpactBefore + spendAmount;
-      
+
       await manager.save(tx);
 
       return voucher;
@@ -309,7 +309,7 @@ export class MoneyEngineService {
       txFrom.amount = -amount;
       txFrom.realAmountDelta = -realToMove;
       txFrom.rewardAmountDelta = -rewardToMove;
-      
+
       const txTo = new VoucherTransaction();
       txTo.voucher = to;
       txTo.sourceType = TransactionSourceType.PEER_TRANSFER;
@@ -361,7 +361,7 @@ export class MoneyEngineService {
 
   /**
    * For Businesses: List all voucher types that are accepted at their shop.
-   * Logic: 
+   * Logic:
    * 1. Include ALL definitions where scopeType = ANY_SHOP
    * 2. Include definitions where scopeType = SPECIFIC_SHOPS AND shopId is in validShops
    */
@@ -371,11 +371,11 @@ export class MoneyEngineService {
           .where('rd.isActive = :isActive', { isActive: true })
           .andWhere(
               '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id = :shopId))',
-              { 
-                  isActive: true, 
-                  anyScope: ScopeType.ANY_SHOP, 
+              {
+                  isActive: true,
+                  anyScope: ScopeType.ANY_SHOP,
                   specificScopes: [ScopeType.SPECIFIC_SHOPS, ScopeType.EXPO_ONLY, ScopeType.CAMPAIGN_ONLY],
-                  shopId 
+                  shopId
               }
           )
           .skip((pagination.page - 1) * pagination.limit)
@@ -408,11 +408,11 @@ export class MoneyEngineService {
           .where('rd.isActive = :isActive', { isActive: true })
           .andWhere(
               '(rd.scopeType = :anyScope OR (rd.scopeType IN (:...specificScopes) AND shop.id IN (:...shopIds)))',
-              { 
-                  isActive: true, 
-                  anyScope: ScopeType.ANY_SHOP, 
+              {
+                  isActive: true,
+                  anyScope: ScopeType.ANY_SHOP,
                   specificScopes: [ScopeType.SPECIFIC_SHOPS, ScopeType.EXPO_ONLY, ScopeType.CAMPAIGN_ONLY],
-                  shopIds 
+                  shopIds
               }
           )
           .skip((pagination.page - 1) * pagination.limit)
@@ -494,7 +494,7 @@ export class MoneyEngineService {
 
     return this.getBusinessStats(business.id);
   }
-  
+
   async getBusinessStats(shopId: string): Promise<any> {
       // 1. Total spent in this shop via vouchers
       const spentResult = await this.dataSource.manager
@@ -503,7 +503,7 @@ export class MoneyEngineService {
             .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
             .andWhere('tx.contributorId = :shopId', { shopId })
             .getRawOne();
-      
+
       const totalSpent = parseFloat(spentResult?.sum || 0);
 
       // 2. Count of distinct vouchers used (Customers)
@@ -540,7 +540,7 @@ export class MoneyEngineService {
     });
 
     const activeVouchersPrev = await this.dataSource.manager.count(UserVoucher, {
-      where: { 
+      where: {
         state: VoucherState.ACTIVE,
         created_at: LessThanOrEqual(thirtyDaysAgo) as any
       }
@@ -579,17 +579,17 @@ export class MoneyEngineService {
             .where('tx.sourceType = :type', { type: TransactionSourceType.SPEND })
             .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
             .getRawOne();
-        
+
         const issued = await this.dataSource.manager
             .createQueryBuilder(VoucherTransaction, 'tx')
             .select('SUM(tx.amount)', 'sum')
             .where('tx.sourceType IN (:...types)', { types: [TransactionSourceType.USER_DEPOSIT, TransactionSourceType.SYSTEM_REWARD, TransactionSourceType.BUSINESS_CASHBACK] })
             .andWhere('tx.created_at BETWEEN :start AND :end', { start: startDate, end: endDate })
             .getRawOne();
-        
+
         const spentVal = parseFloat(spent?.sum || 0);
         const issuedVal = parseFloat(issued?.sum || 0);
-        
+
         return issuedVal > 0 ? (spentVal / issuedVal) * 100 : 0;
     };
 
@@ -634,7 +634,7 @@ export class MoneyEngineService {
         .loadMany();
 
       const isAuthorized = validShops.some(shop => shop.id === shopId);
-        
+
       if (!isAuthorized) {
         throw new BadRequestException('Shop is not authorized for this voucher');
       }

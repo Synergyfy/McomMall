@@ -16,10 +16,10 @@ export class CreateCouponDto {
   @IsString()
   code: string;
 
-  @ApiProperty({ 
-    description: 'Source of the coupon', 
+  @ApiProperty({
+    description: 'Source of the coupon',
     enum: CouponSourceType,
-    example: CouponSourceType.PLATFORM 
+    example: CouponSourceType.PLATFORM
   })
   @IsEnum(CouponSourceType)
   sourceType: CouponSourceType;
@@ -29,10 +29,10 @@ export class CreateCouponDto {
   @Min(0)
   discountValue: number;
 
-  @ApiProperty({ 
-    description: 'Type of discount', 
+  @ApiProperty({
+    description: 'Type of discount',
     enum: DiscountType,
-    example: DiscountType.FIXED 
+    example: DiscountType.FIXED
   })
   @IsEnum(DiscountType)
   discountType: DiscountType;

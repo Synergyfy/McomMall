@@ -26,14 +26,14 @@ export class AdminTransactionsService {
       this.ordersRepository.count({ where: { status: OrderStatus.PENDING } }),
       this.bookingsRepository.count({ where: { status: 'pending' as any } }),
     ]);
-    
+
     const totalVolume = Number(orderSum?.sum || 0) + Number(bookingSum?.sum || 0) + Number(membershipSum?.sum || 0);
 
-    return { 
-      totalVolume, 
-      totalFees: 0, 
-      pendingCount: orderPending + bookingPending, 
-      refundCount: 0 
+    return {
+      totalVolume,
+      totalFees: 0,
+      pendingCount: orderPending + bookingPending,
+      refundCount: 0
     };
   }
 

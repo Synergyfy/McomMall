@@ -66,7 +66,7 @@ describe('MoneyEngineService', () => {
       definition.isActive = true;
       mockEntityManager.findOne.mockResolvedValue(definition);
       mockEntityManager.save.mockImplementation((entity) => Promise.resolve({ ...entity, id: 'voucher-1' }));
-      
+
       mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
 
       const result = await service.purchaseVoucher('user-1', {
@@ -133,7 +133,7 @@ describe('MoneyEngineService', () => {
       voucher.state = VoucherState.ACTIVE;
       voucher.rewardBalance = 10;
       voucher.definition = { scopeType: ScopeType.ANY_SHOP } as RewardDefinition;
-      
+
       mockEntityManager.findOne.mockResolvedValue(voucher);
       mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 
@@ -155,7 +155,7 @@ describe('MoneyEngineService', () => {
       voucher.realBalance = 50;
       voucher.rewardBalance = 50;
       voucher.definition = { scopeType: ScopeType.ANY_SHOP, burnStrategy: 'real_first' } as RewardDefinition;
-      
+
       mockEntityManager.findOne.mockResolvedValue(voucher);
       mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 
@@ -168,7 +168,7 @@ describe('MoneyEngineService', () => {
       // 60 spent: 50 Real (all), 10 Reward
       expect(voucher.realBalance).toBe(0);
       expect(voucher.rewardBalance).toBe(40);
-      
+
       const txCall = mockEntityManager.save.mock.calls.find(call => call[0] instanceof VoucherTransaction);
       const tx = txCall[0];
       expect(tx.realAmountDelta).toBe(-50);
@@ -180,11 +180,11 @@ describe('MoneyEngineService', () => {
       voucher.state = VoucherState.ACTIVE;
       voucher.realBalance = 50;
       voucher.rewardBalance = 50;
-      voucher.definition = { 
+      voucher.definition = {
         scopeType: ScopeType.ANY_SHOP,
         burnStrategy: 'reward_first'
       } as RewardDefinition;
-      
+
       mockEntityManager.findOne.mockResolvedValue(voucher);
       mockEntityManager.save.mockImplementation((entity) => Promise.resolve(entity));
 

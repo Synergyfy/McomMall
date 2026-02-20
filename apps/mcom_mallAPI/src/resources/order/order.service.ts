@@ -189,7 +189,7 @@ export class OrderService {
       try {
         const user = await this.userRepository.findOne({ where: { id: userId } });
         const coupon = await this.couponService.validateCoupon(createCheckoutDto.couponCode, user);
-        
+
         if (coupon.discountType === 'fixed' as any) { // Type check if needed
             couponAmountToApply = Math.min(totalBeforeRedemption, Number(coupon.discountValue));
         } else {

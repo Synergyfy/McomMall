@@ -124,11 +124,11 @@ export class MarketplaceService {
   // --- SECTIONS ---
 
   async updateSection(type: SectionType, dto: UpdateSectionDto) {
-    let section = await this.dataSource.manager.findOne(MarketplaceSection, { 
+    let section = await this.dataSource.manager.findOne(MarketplaceSection, {
       where: { type },
-      relations: ['products'] 
+      relations: ['products']
     });
-    
+
     if (!section) {
       // Create if it doesn't exist (Seed on the fly)
       section = new MarketplaceSection();

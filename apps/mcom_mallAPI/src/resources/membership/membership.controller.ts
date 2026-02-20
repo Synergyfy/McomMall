@@ -41,7 +41,7 @@ export class MembershipController {
 
   @Post('initiate-payment')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Initiate a payment for a membership',
     description: 'Starts the payment process for a membership tier subscription. Supports Stripe and PayPal. Returns a client secret (Stripe) or Order ID (PayPal) to complete the transaction on the frontend.'
   })
@@ -79,7 +79,7 @@ export class MembershipController {
 
   @Post('verify-payment')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Verify a payment and create the membership',
     description: 'Verifies the payment with the provider (Stripe/PayPal) and creates the membership record linked to the purchased Tier. Must be called after successful frontend payment.'
   })
@@ -100,7 +100,7 @@ export class MembershipController {
 
   @Post('join-trial')
   @Roles(UserRole.OWNER)
-  @ApiOperation({ 
+  @ApiOperation({
     summary: 'Join a 7-day trial for a specific tier',
     description: 'Grants a 7-day trial membership for the specified tier. Allows users to test features before purchasing. Users are limited to one trial.'
   })

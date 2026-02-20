@@ -13,7 +13,6 @@ import { PriceModifier } from './entities/price-modifier.entity';
 import { RentalBooking } from './entities/rental-booking.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
-import { ServiceBookingRepository } from './service-booking.repository';
 
 @Module({
   imports: [
@@ -31,7 +30,7 @@ import { ServiceBookingRepository } from './service-booking.repository';
     forwardRef(() => WalletModule),
   ],
   controllers: [BookingController],
-  providers: [BookingService, ServiceBookingRepository],
+  providers: [BookingService],
   exports: [BookingService],
 })
-export class BookingModule {}
+export class BookingModule { }

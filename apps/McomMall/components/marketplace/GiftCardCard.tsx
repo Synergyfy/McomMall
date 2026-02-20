@@ -20,6 +20,22 @@ const gradientThemes = [
     'from-slate-300 via-gray-300 to-zinc-400', // Silver
 ];
 
+const GoldenRibbon = () => (
+    <div className="absolute bottom-[20%] left-0 w-full h-2 z-10">
+        <div className="w-full h-full bg-gradient-to-b from-amber-300 via-yellow-500 to-amber-600 shadow-md" />
+    </div>
+);
+
+const GoldenBow = () => (
+    <div className="absolute bottom-[20%] left-1/2 -translate-x-1/2 -translate-y-[calc(50%-4px)] z-20 scale-[0.6]">
+        <div className="relative w-12 h-8 flex items-center justify-center">
+            <div className="absolute -left-1 w-6 h-6 border-2 border-yellow-500 rounded-full bg-gradient-to-br from-amber-400 to-yellow-600 rotate-[-15deg]" />
+            <div className="absolute -right-1 w-6 h-6 border-2 border-yellow-500 rounded-full bg-gradient-to-bl from-amber-400 to-yellow-600 rotate-[15deg]" />
+            <div className="relative w-3 h-3 rounded-full bg-gradient-to-br from-yellow-300 via-amber-500 to-yellow-600 border border-yellow-200 z-10" />
+        </div>
+    </div>
+);
+
 export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCardProps) {
     // Select gradient based on ID
     const idNum = typeof giftCard.id === 'number'
@@ -44,31 +60,31 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                         {/* Left - Gift Card Visual */}
                         <div className="relative w-full sm:w-80 h-48 flex-shrink-0 p-6 bg-gradient-to-br from-gray-50 to-gray-100">
                             <div className={cn(
-                                "w-full h-full rounded-xl bg-gradient-to-br shadow-xl p-6 relative overflow-hidden group-hover:scale-105 transition-transform duration-500",
+                                "w-full h-full rounded-2xl bg-gradient-to-br shadow-xl p-6 relative overflow-hidden group-hover:scale-105 transition-transform duration-500",
                                 gradientClass
                             )}>
-                                {/* Shine effect */}
-                                <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/30 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12" />
+                                <GoldenRibbon />
+                                <GoldenBow />
 
-                                <div className="relative z-10 h-full flex flex-col justify-between text-white">
+                                <div className="relative z-30 h-full flex flex-col justify-between text-white">
                                     <div className="flex justify-between items-start">
-                                        <Gift className="w-8 h-8" />
-                                        <Sparkles className="w-6 h-6" />
+                                        <h4 className="text-2xl font-black text-yellow-400 italic">GIFT CARD</h4>
+                                        <Sparkles className="w-5 h-5 text-yellow-300" />
                                     </div>
 
                                     <div>
-                                        <div className="text-xs opacity-80 mb-1">GIFT CARD</div>
-                                        <div className="font-mono text-lg tracking-wider">•••• •••• •••• ••••</div>
+                                        <div className="font-mono text-sm tracking-widest text-white/80">•••• •••• ••••</div>
                                     </div>
                                 </div>
                             </div>
                         </div>
 
                         {/* Right - Details */}
+                        {/* ... rest of list view stays similar ... */}
                         <div className="flex-1 p-6">
-                            <Badge className="bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 mb-3">
+                            <Badge className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0 mb-3">
                                 <Gift className="w-3 h-3 mr-1" />
-                                Gift Card
+                                Premium Gift Card
                             </Badge>
 
                             <h3 className="text-2xl font-bold text-gray-900 mb-2">{giftCard.title}</h3>
@@ -91,7 +107,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                         {displayAmounts.map((amount, idx) => (
                                             <div
                                                 key={idx}
-                                                className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border border-gray-200 font-semibold text-gray-900 hover:border-orange-500 hover:shadow-md transition-all"
+                                                className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border border-gray-200 font-semibold text-gray-900 hover:border-yellow-500 hover:shadow-md transition-all"
                                             >
                                                 £{amount}
                                             </div>
@@ -104,7 +120,7 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                 {hasMultipleAmounts && (
                                     <span className="text-sm text-gray-500">From</span>
                                 )}
-                                <span className="text-3xl font-bold text-gray-900">
+                                <span className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
                                     £{Number(minPrice).toFixed(2)}
                                 </span>
                             </div>
@@ -115,53 +131,48 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
         );
     }
 
-    // Grid View - Card-like Design
+    // Grid View
     return (
         <Link href={giftCard.link || `/gift-cards/${giftCard.id}`} className="block h-full">
-            <div className="group relative bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col border border-gray-100 hover:scale-[1.02]">
+            <div className="group relative bg-white rounded-3xl overflow-hidden shadow-lg hover:shadow-2xl transition-all duration-300 h-full flex flex-col border border-gray-100 hover:scale-[1.02]">
 
                 {/* Gift Card Visual */}
-                <div className="relative h-48 p-6 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
+                <div className="relative h-48 p-4 bg-gradient-to-br from-gray-50 to-gray-100 overflow-hidden">
                     <div className={cn(
-                        "w-full h-full rounded-xl bg-gradient-to-br shadow-xl p-4 relative overflow-hidden group-hover:rotate-3 group-hover:scale-105 transition-all duration-500",
+                        "w-full h-full rounded-[1.5rem] bg-gradient-to-br shadow-xl p-4 relative overflow-hidden transition-all duration-500",
                         gradientClass
                     )}>
-                        {/* Animated shine effect */}
-                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/40 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700 transform -skew-x-12 translate-x-[-200%] group-hover:translate-x-[200%]"
-                            style={{ transition: 'all 1.5s ease-in-out' }} />
+                        <GoldenRibbon />
+                        <GoldenBow />
 
                         {/* Card content */}
-                        <div className="relative z-10 h-full flex flex-col justify-between text-white">
+                        <div className="relative z-30 h-full flex flex-col justify-between text-white">
                             <div className="flex justify-between items-start">
-                                <Gift className="w-6 h-6 md:w-8 md:h-8 drop-shadow-lg" />
-                                <Sparkles className="w-5 h-5 md:w-6 md:h-6 animate-pulse" />
+                                <h4 className="text-xl font-black text-yellow-400 italic">GIFT <span className="text-yellow-300">CARD</span></h4>
+                                <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
                             </div>
 
                             <div>
-                                <div className="text-[10px] md:text-xs opacity-80 mb-1 font-semibold tracking-wide">
-                                    GIFT CARD
-                                </div>
-                                <div className="font-mono text-sm md:text-base tracking-wider drop-shadow">
-                                    •••• •••• •••• ••••
+                                <div className="font-mono text-xs tracking-wider text-white/80">
+                                    •••• •••• ••••
                                 </div>
                             </div>
                         </div>
 
-                        {/* Decorative elements */}
-                        <div className="absolute top-0 right-0 w-24 h-24 bg-white/10 rounded-full blur-2xl" />
-                        <div className="absolute bottom-0 left-0 w-32 h-32 bg-white/10 rounded-full blur-3xl" />
+                        {/* Glare effect */}
+                        <div className="absolute inset-0 bg-gradient-to-tr from-white/0 via-white/20 to-white/0 opacity-0 group-hover:opacity-100 transition-opacity duration-700" />
                     </div>
 
                     {/* Type Badge */}
-                    <Badge className="absolute top-3 left-3 bg-gradient-to-r from-orange-500 to-amber-600 text-white border-0 shadow-lg z-10">
+                    <Badge className="absolute top-3 left-3 bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0 shadow-lg z-10 px-3">
                         <Gift className="w-3 h-3 mr-1" />
-                        Gift Card
+                        PREMIUM
                     </Badge>
                 </div>
 
                 {/* Details Section */}
-                <div className="flex-1 p-4 flex flex-col">
-                    <h3 className="text-sm md:text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-orange-600 transition-colors">
+                <div className="flex-1 p-5 flex flex-col">
+                    <h3 className="text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-yellow-600 transition-colors">
                         {giftCard.title}
                     </h3>
 

@@ -139,7 +139,7 @@ export class ProductService {
       'product',
       savedProduct.title,
     );
-    
+
     await this.activityTimerService.completeTaskByKey(
         business.user.id,
         'createdProductOrService',

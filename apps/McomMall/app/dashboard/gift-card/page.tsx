@@ -12,72 +12,32 @@ import { GiftCardForm } from './components/GiftCardForm';
 // import { GiftCardForm } from "./components/GiftCardForm";
 
 // Background pattern components for visual flair
-const GridPattern = () => (
+const PinstripePattern = () => (
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
     <defs>
       <pattern
-        id="a"
+        id="pinstripe-main"
         patternUnits="userSpaceOnUse"
-        width="20"
-        height="20"
-        patternTransform="scale(1) rotate(0)"
+        width="100%"
+        height="4"
       >
-        <rect x="0" y="0" width="100%" height="100%" fill="hsla(0,0%,100%,0)" />
-        <path
-          d="M10 0v20M0 10h20"
-          strokeWidth="0.5"
-          stroke="hsla(0,0%,100%,1)"
-          fill="none"
-        />
+        <line x1="0" y1="0" x2="100%" y2="0" stroke="rgba(255,255,255,0.08)" strokeWidth="1" />
       </pattern>
     </defs>
-    <rect width="100%" height="100%" fill="url(#a)" />
+    <rect width="100%" height="100%" fill="url(#pinstripe-main)" />
   </svg>
 );
-const DotsPattern = () => (
+
+const SilkPattern = () => (
   <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
     <defs>
-      <pattern
-        id="b"
-        patternUnits="userSpaceOnUse"
-        width="20"
-        height="20"
-        patternTransform="scale(1) rotate(0)"
-      >
-        <rect x="0" y="0" width="100%" height="100%" fill="hsla(0,0%,100%,0)" />
-        <circle
-          cx="10"
-          cy="10"
-          r="1.5"
-          strokeWidth="0"
-          stroke="hsla(0,0%,100%,1)"
-          fill="hsla(0,0%,100%,1)"
-        />
-      </pattern>
+      <linearGradient id="silk-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="rgba(255,255,255,0.05)" />
+        <stop offset="50%" stopColor="rgba(255,255,255,0.15)" />
+        <stop offset="100%" stopColor="rgba(255,255,255,0.05)" />
+      </linearGradient>
     </defs>
-    <rect width="100%" height="100%" fill="url(#b)" />
-  </svg>
-);
-const LinesPattern = () => (
-  <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <pattern
-        id="c"
-        patternUnits="userSpaceOnUse"
-        width="20"
-        height="20"
-        patternTransform="scale(2) rotate(45)"
-      >
-        <rect x="0" y="0" width="100%" height="100%" fill="hsla(0,0%,100%,0)" />
-        <path
-          d="M0 10h20"
-          strokeWidth="0.5"
-          stroke="hsla(0,0%,100%,1)"
-          fill="none"
-        />
-      </pattern>
-    </defs>
-    <rect width="100%" height="100%" fill="url(#c)" />
+    <rect width="100%" height="100%" fill="url(#silk-grad)" />
   </svg>
 );
 
@@ -85,27 +45,27 @@ const LinesPattern = () => (
 const giftCardDesigns: GiftCardDesign[] = [
   {
     id: 'classic',
-    name: 'Classic',
+    name: 'Royal Red',
     icon: Gift,
-    primaryColor: '#4a5568',
-    secondaryColor: '#1a202c',
-    pattern: <GridPattern />,
+    primaryColor: '#8b0000',
+    secondaryColor: '#4b0000',
+    pattern: <PinstripePattern />,
   },
   {
-    id: 'birthday',
-    name: 'Birthday',
+    id: 'midnight',
+    name: 'Midnight Gold',
     icon: Star,
-    primaryColor: '#4299e1',
-    secondaryColor: '#434190',
-    pattern: <DotsPattern />,
+    primaryColor: '#1a202c',
+    secondaryColor: '#000000',
+    pattern: <PinstripePattern />,
   },
   {
-    id: 'love',
-    name: 'Love',
+    id: 'premium',
+    name: 'Silk Rose',
     icon: Heart,
-    primaryColor: '#ed64a6',
-    secondaryColor: '#b83280',
-    pattern: <LinesPattern />,
+    primaryColor: '#8b4513',
+    secondaryColor: '#3d1c02',
+    pattern: <SilkPattern />,
   },
 ];
 

@@ -80,15 +80,15 @@ export class PaymentProviderService {
     if (intent.status !== 'succeeded') {
       return { ok: false, details: intent, reason: `Stripe intent status ${intent.status}` };
     }
-    
+
     const expectedAmountInCents = Math.round(expectedAmount * 100);
         const intentAmountInGBP = intent.amount / 100;
     const isAmount100xLarger = Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
-    
+
     const amountMatches = intent.amount_received === expectedAmountInCents || isAmount100xLarger;
     const currencyMatches = intent.currency.toLowerCase() === currency.toLowerCase();
-    
-    
+
+
     if (!amountMatches || !currencyMatches) {
       return {
         ok: false,

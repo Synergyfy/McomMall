@@ -25,7 +25,7 @@ export class MarketplaceSection extends AbstractBaseEntity {
 
   @ApiProperty({ example: { endTime: '2024-12-31T23:59:59Z' }, required: false })
   @Column('jsonb', { nullable: true })
-  config: any; 
+  config: any;
   // For Flash Sale: { endTime: Date }
   // For Promo: { itemsPerView: number }
 

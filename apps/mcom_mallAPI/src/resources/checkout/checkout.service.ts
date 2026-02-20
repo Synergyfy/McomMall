@@ -200,13 +200,13 @@ export class CheckoutService {
           code: order.giftCardCode,
           amount: order.giftCardAmountApplied,
         };
-        
+
         // Fetch order items to get a potential business ID for non-system gift cards
         const orderWithItems = await orderRepo.findOne({
           where: { id: order.id },
           relations: ['items', 'items.product', 'items.product.business'],
         });
-        
+
         const businessId = orderWithItems.items?.length > 0 ? orderWithItems.items[0].product.business.id : undefined;
         await this.giftCardService.redeem(redeemDto, order, businessId, manager);
       }

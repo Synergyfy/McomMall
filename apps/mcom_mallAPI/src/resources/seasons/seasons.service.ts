@@ -42,7 +42,7 @@ export class SeasonsService {
 
   async update(id: string, updateSeasonDto: UpdateSeasonDto) {
     const season = await this.findOne(id);
-    
+
     const startDate = updateSeasonDto.startDate ? new Date(updateSeasonDto.startDate) : season.startDate;
     const endDate = updateSeasonDto.endDate ? new Date(updateSeasonDto.endDate) : season.endDate;
 

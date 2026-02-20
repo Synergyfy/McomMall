@@ -157,7 +157,7 @@ describe('CouponService', () => {
         targetPostalCodes: ['SW1A', 'W1B'],
       } as MarketingCampaign;
       const coupon = { ...mockCoupon, campaign };
-      
+
       jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
       jest.spyOn(addressRepo, 'findOne').mockResolvedValue({ postalCode: 'E1 6AN' } as ShippingAddress);
       jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
@@ -172,11 +172,11 @@ describe('CouponService', () => {
           targetPostalCodes: ['SW1A'],
         } as MarketingCampaign;
         const coupon = { ...mockCoupon, campaign };
-        
+
         jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
         jest.spyOn(addressRepo, 'findOne').mockResolvedValue({ postalCode: 'SW1A 1AA' } as ShippingAddress);
         jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
-  
+
         const result = await service.validateCoupon('SAVE10', mockUser);
         expect(result).toEqual(coupon);
     });
@@ -185,7 +185,7 @@ describe('CouponService', () => {
         const businessUser = { id: 'bus-user-1' } as User;
         const business = { user: businessUser } as Business;
         const coupon = { ...mockCoupon, sourceType: CouponSourceType.BUSINESS, business };
-        
+
         jest.spyOn(couponRepo, 'findOne').mockResolvedValue(coupon as Coupon);
         jest.spyOn(redemptionLogRepo, 'count').mockResolvedValue(0);
         jest.spyOn(capabilityService, 'checkPermission').mockRejectedValue(new ForbiddenException());

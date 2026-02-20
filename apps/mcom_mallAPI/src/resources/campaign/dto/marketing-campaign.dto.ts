@@ -8,10 +8,10 @@ export class CreateMarketingCampaignDto {
   @IsNotEmpty()
   name: string;
 
-  @ApiProperty({ 
-    description: 'Type of the campaign', 
+  @ApiProperty({
+    description: 'Type of the campaign',
     enum: MarketingCampaignType,
-    example: MarketingCampaignType.SEASONAL 
+    example: MarketingCampaignType.SEASONAL
   })
   @IsEnum(MarketingCampaignType)
   @IsNotEmpty()
@@ -27,10 +27,10 @@ export class CreateMarketingCampaignDto {
   @IsNotEmpty()
   endDate: Date;
 
-  @ApiPropertyOptional({ 
-    description: 'Status of the campaign', 
+  @ApiPropertyOptional({
+    description: 'Status of the campaign',
     enum: MarketingCampaignStatus,
-    default: MarketingCampaignStatus.DRAFT 
+    default: MarketingCampaignStatus.DRAFT
   })
   @IsEnum(MarketingCampaignStatus)
   @IsOptional()
@@ -41,8 +41,8 @@ export class CreateMarketingCampaignDto {
   @IsOptional()
   seasonId?: string;
 
-  @ApiPropertyOptional({ 
-    description: 'Target postal code prefixes for hyperlocal campaigns (UK format)', 
+  @ApiPropertyOptional({
+    description: 'Target postal code prefixes for hyperlocal campaigns (UK format)',
     example: ['SW1A', 'W1B'],
     type: [String]
   })

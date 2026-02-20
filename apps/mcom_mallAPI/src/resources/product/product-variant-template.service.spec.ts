@@ -70,7 +70,7 @@ describe('ProductVariantTemplateService', () => {
         category: 'Electronics',
         search: 'Template',
       };
-      
+
       const mockTemplates = [{ id: '1', name: 'Template 1' }];
       const totalItems = 1;
 
