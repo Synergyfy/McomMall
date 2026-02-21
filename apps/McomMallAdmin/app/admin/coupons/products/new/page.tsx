@@ -1,8 +1,8 @@
 'use client';
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { CouponProductForm } from '@/app/dashboard/coupons/components/CouponProductForm';
-import { CouponCardPreview } from '@/app/dashboard/coupons/components/CouponCardPreview';
+import { CouponProductForm } from './CouponProductForm';
+import { CouponCardPreview } from './CouponCardPreview';
 import { CreateCouponProductDto, UpdateCouponProductDto } from '@/service/coupon-products/types';
 import { useCreateCouponProduct } from '@/service/coupon-products/hooks';
 import { toast } from 'sonner';
@@ -17,9 +17,11 @@ const NewCouponProductPage = () => {
   const handleSubmit = async (data: CreateCouponProductDto | UpdateCouponProductDto) => {
     setIsSubmitting(true);
     try {
-      let imageUrl: string | undefined;
-      if (data.backgroundImage && data.backgroundImage.length > 0) {
-        const file = data.backgroundImage[0];
+      let imageUrl: string | undefined = typeof data.backgroundImage === 'string' ? data.backgroundImage : undefined;
+      let logoUrl: string | undefined = typeof data.logoUrl === 'string' ? data.logoUrl : undefined;
+
+      if (data.backgroundImage && (data.backgroundImage as any) instanceof FileList && (data.backgroundImage as any).length > 0) {
+        const file = (data.backgroundImage as any)[0];
         const formData = new FormData();
         formData.append('file', file);
 
@@ -28,17 +30,35 @@ const NewCouponProductPage = () => {
           body: formData,
         });
 
-        if (!response.ok) {
-          throw new Error('Failed to upload image');
+        if (response.ok) {
+          const result = await response.json();
+          imageUrl = result.secure_url;
         }
-
-        const result = await response.json();
-        imageUrl = result.secure_url;
       }
 
-      await createCouponProduct.mutateAsync({ ...data, backgroundImage: imageUrl } as CreateCouponProductDto);
+      if (data.logoUrl && (data.logoUrl as any) instanceof FileList && (data.logoUrl as any).length > 0) {
+        const file = (data.logoUrl as any)[0];
+        const formData = new FormData();
+        formData.append('file', file);
+
+        const response = await fetch('/api/upload/coupons', {
+          method: 'POST',
+          body: formData,
+        });
+
+        if (response.ok) {
+          const result = await response.json();
+          logoUrl = result.secure_url;
+        }
+      }
+
+      await createCouponProduct.mutateAsync({
+        ...data,
+        backgroundImage: imageUrl,
+        logoUrl: logoUrl
+      } as CreateCouponProductDto);
       toast.success('Coupon product created successfully!');
-      router.push('/dashboard/coupons/products');
+      router.push('/admin/templates');
     } catch (error) {
       toast.error('An error occurred while creating the coupon product.');
     } finally {

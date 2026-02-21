@@ -7,10 +7,12 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
 import { PromotionalItem } from '@/lib/listing-data';
+import { useState, useEffect } from 'react';
 
 interface GiftCardCardProps {
     giftCard: PromotionalItem;
     viewMode?: 'grid' | 'list';
+    hidePrice?: boolean;
 }
 
 const gradientThemes = [
@@ -36,7 +38,18 @@ const GoldenBow = () => (
     </div>
 );
 
-export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCardProps) {
+export default function GiftCardCard({ giftCard, viewMode = 'grid', hidePrice = false }: GiftCardCardProps) {
+    const [localLogo, setLocalLogo] = useState<string | null>(null);
+
+    useEffect(() => {
+        if (giftCard.id) {
+            const storedLogo = localStorage.getItem(`gift-card-logo-${giftCard.id}`);
+            if (storedLogo) {
+                setLocalLogo(storedLogo);
+            }
+        }
+    }, [giftCard.id]);
+
     // Select gradient based on ID
     const idNum = typeof giftCard.id === 'number'
         ? giftCard.id
@@ -66,10 +79,26 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                                 <GoldenRibbon />
                                 <GoldenBow />
 
+                                {/* Brand Name Overlay */}
+                                <div className="absolute inset-0 z-20 flex items-center justify-center p-8">
+                                    <div className="text-center group-hover:scale-110 transition-transform duration-500 max-w-full px-4">
+                                        <h2 className="text-4xl font-black text-white/90 tracking-[0.2em] uppercase drop-shadow-[0_4px_12px_rgba(0,0,0,0.5)] leading-tight">
+                                            {giftCard.title}
+                                        </h2>
+                                        <div className="h-1 w-16 bg-gradient-to-r from-transparent via-yellow-400 to-transparent mx-auto mt-4 rounded-full opacity-60" />
+                                    </div>
+                                </div>
+
                                 <div className="relative z-30 h-full flex flex-col justify-between text-white">
                                     <div className="flex justify-between items-start">
                                         <h4 className="text-2xl font-black text-yellow-400 italic">GIFT CARD</h4>
-                                        <Sparkles className="w-5 h-5 text-yellow-300" />
+                                        {localLogo ? (
+                                            <div className="w-10 h-10 bg-white shadow-sm rounded-md p-1 flex items-center justify-center">
+                                                <img src={localLogo} alt="Logo" className="max-w-full max-h-full object-contain mix-blend-multiply" />
+                                            </div>
+                                        ) : (
+                                            <Sparkles className="w-5 h-5 text-yellow-300" />
+                                        )}
                                     </div>
 
                                     <div>
@@ -80,50 +109,22 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                         </div>
 
                         {/* Right - Details */}
-                        {/* ... rest of list view stays similar ... */}
-                        <div className="flex-1 p-6">
-                            <Badge className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0 mb-3">
+                        <div className="flex-1 p-6 flex flex-col justify-center">
+                            <Badge className="bg-gradient-to-r from-yellow-500 to-amber-600 text-white border-0 w-fit mb-4">
                                 <Gift className="w-3 h-3 mr-1" />
                                 Premium Gift Card
                             </Badge>
 
-                            <h3 className="text-2xl font-bold text-gray-900 mb-2">{giftCard.title}</h3>
-
-                            {hasBonus && (
-                                <div className="bg-green-50 border border-green-200 rounded-lg p-3 mb-4">
-                                    <div className="flex items-center gap-2 text-green-700">
-                                        <Star className="w-4 h-4 fill-green-500" />
-                                        <span className="font-semibold text-sm">
-                                            Buy £{giftCard.bonusThreshold}, Get £{giftCard.bonusAmount} FREE!
-                                        </span>
-                                    </div>
+                            {!hidePrice && (
+                                <div className="flex items-baseline gap-2">
+                                    {hasMultipleAmounts && (
+                                        <span className="text-sm text-gray-500">From</span>
+                                    )}
+                                    <span className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
+                                        £{Number(minPrice).toFixed(2)}
+                                    </span>
                                 </div>
                             )}
-
-                            {displayAmounts.length > 0 && (
-                                <div className="mb-4">
-                                    <div className="text-sm text-gray-600 mb-2">Available amounts:</div>
-                                    <div className="flex flex-wrap gap-2">
-                                        {displayAmounts.map((amount, idx) => (
-                                            <div
-                                                key={idx}
-                                                className="px-4 py-2 bg-gradient-to-r from-gray-100 to-gray-50 rounded-lg border border-gray-200 font-semibold text-gray-900 hover:border-yellow-500 hover:shadow-md transition-all"
-                                            >
-                                                £{amount}
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                            <div className="flex items-baseline gap-2 mt-auto">
-                                {hasMultipleAmounts && (
-                                    <span className="text-sm text-gray-500">From</span>
-                                )}
-                                <span className="text-3xl font-black bg-gradient-to-r from-yellow-600 to-amber-600 bg-clip-text text-transparent">
-                                    £{Number(minPrice).toFixed(2)}
-                                </span>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -145,11 +146,27 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                         <GoldenRibbon />
                         <GoldenBow />
 
+                        {/* Brand Name Overlay */}
+                        <div className="absolute inset-0 z-20 flex items-center justify-center p-6">
+                            <div className="text-center group-hover:scale-110 transition-transform duration-500 max-w-full px-4">
+                                <h2 className="text-2xl font-black text-white/90 tracking-[0.15em] uppercase drop-shadow-[0_4px_8px_rgba(0,0,0,0.5)] line-clamp-2 leading-tight">
+                                    {giftCard.title}
+                                </h2>
+                                <div className="h-0.5 w-10 bg-gradient-to-r from-transparent via-yellow-400 to-transparent mx-auto mt-2 rounded-full opacity-60" />
+                            </div>
+                        </div>
+
                         {/* Card content */}
                         <div className="relative z-30 h-full flex flex-col justify-between text-white">
                             <div className="flex justify-between items-start">
                                 <h4 className="text-xl font-black text-yellow-400 italic">GIFT <span className="text-yellow-300">CARD</span></h4>
-                                <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                                {localLogo ? (
+                                    <div className="w-10 h-10 bg-white shadow-sm rounded-md p-1 flex items-center justify-center">
+                                        <img src={localLogo} alt="Logo" className="max-w-full max-h-full object-contain mix-blend-multiply" />
+                                    </div>
+                                ) : (
+                                    <Sparkles className="w-5 h-5 text-yellow-300 animate-pulse" />
+                                )}
                             </div>
 
                             <div>
@@ -171,49 +188,18 @@ export default function GiftCardCard({ giftCard, viewMode = 'grid' }: GiftCardCa
                 </div>
 
                 {/* Details Section */}
-                <div className="flex-1 p-5 flex flex-col">
-                    <h3 className="text-base font-bold text-gray-900 mb-2 line-clamp-2 group-hover:text-yellow-600 transition-colors">
-                        {giftCard.title}
-                    </h3>
-
-                    {/* Bonus Badge */}
-                    {hasBonus && (
-                        <div className="bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200 rounded-lg p-2 mb-3">
-                            <div className="flex items-center gap-1 text-green-700">
-                                <Star className="w-3 h-3 fill-green-500 flex-shrink-0" />
-                                <span className="font-semibold text-[10px] md:text-xs">
-                                    Buy £{giftCard.bonusThreshold}, Get £{giftCard.bonusAmount} FREE
-                                </span>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Amount Options */}
-                    {displayAmounts.length > 0 && (
-                        <div className="mb-3">
-                            <div className="text-xs text-gray-500 mb-1">Options:</div>
-                            <div className="flex flex-wrap gap-1">
-                                {displayAmounts.slice(0, 3).map((amount, idx) => (
-                                    <div
-                                        key={idx}
-                                        className="px-2 py-1 bg-gradient-to-r from-gray-100 to-gray-50 rounded text-xs font-semibold text-gray-700 border border-gray-200"
-                                    >
-                                        £{amount}
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    )}
-
+                <div className="p-4 mt-auto">
                     {/* Price */}
-                    <div className="mt-auto flex items-baseline gap-1">
-                        {hasMultipleAmounts && (
-                            <span className="text-xs text-gray-500">From</span>
-                        )}
-                        <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
-                            £{Number(minPrice).toFixed(2)}
-                        </span>
-                    </div>
+                    {!hidePrice && (
+                        <div className="flex items-baseline gap-1 justify-center">
+                            {hasMultipleAmounts && (
+                                <span className="text-xs text-gray-500">From</span>
+                            )}
+                            <span className="text-xl md:text-2xl font-black bg-gradient-to-r from-orange-600 to-amber-600 bg-clip-text text-transparent">
+                                £{Number(minPrice).toFixed(2)}
+                            </span>
+                        </div>
+                    )}
                 </div>
 
                 {/* Decorative corner accent */}

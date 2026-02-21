@@ -112,6 +112,8 @@ export interface PromotionalItem {
   basePrice?: number | string;
   pricePerGuest?: number | string;
   additionalGuestPrice?: number | string;
+  expiryDays?: number;
+  expiryDate?: string;
 }
 
 

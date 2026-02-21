@@ -75,12 +75,6 @@ const CouponProductsPage = () => {
               Home &gt; Dashboard &gt; Coupons &gt; Management
             </p>
           </div>
-          <Button
-            onClick={() => router.push('/dashboard/coupons/products/new')}
-            className="rounded-full px-8 py-6 bg-black hover:bg-neutral-800 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.05] active:scale-[0.98]"
-          >
-            <Plus className="mr-2" size={18} /> Create New Coupon
-          </Button>
         </header>
 
         {couponProducts && couponProducts.length > 0 ? (
@@ -97,14 +91,7 @@ const CouponProductsPage = () => {
           <div className="text-center py-24 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
             <Zap className="mx-auto text-gray-200 mb-6" size={64} />
             <h3 className="text-2xl font-black text-gray-900">No Coupon Templates</h3>
-            <p className="text-gray-500 font-bold mt-2">Create your first coupon template to start selling.</p>
-            <Button
-              variant="outline"
-              onClick={() => router.push('/dashboard/coupons/products/new')}
-              className="mt-6 rounded-full border-gray-200 font-black uppercase text-[10px] tracking-widest"
-            >
-              Initialize Catalog
-            </Button>
+            <p className="text-gray-500 font-bold mt-2">Go to the global templates catalog to find templates to sell.</p>
           </div>
         )}
 

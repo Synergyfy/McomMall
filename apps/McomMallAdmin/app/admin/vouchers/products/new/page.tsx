@@ -57,7 +57,7 @@ export default function NewVoucherProductPage() {
 
       await addVoucherProduct({ ...data, backgroundImage: imageUrl, expiryDays });
       toast.success('Voucher product created successfully!');
-      router.push('/dashboard/vouchers/products');
+      router.push('/admin/templates');
     } catch (error) {
       toast.error('An error occurred while creating the voucher product.');
     } finally {

@@ -40,12 +40,14 @@ const InfoBlock: FC<{
   title: string;
   children: React.ReactNode;
 }> = ({ icon, title, children }) => (
-  <div className="bg-gray-50/70 p-3 rounded-lg flex-1">
-    <h3 className="text-sm font-semibold text-gray-600 flex items-center mb-2">
+  <div className="flex items-center space-x-3 bg-gray-50/50 p-2.5 rounded-md border border-gray-100/80">
+    <div className="flex-shrink-0 text-gray-400">
       {icon}
-      <span className="ml-2">{title}</span>
-    </h3>
-    <div className="text-sm text-gray-800">{children}</div>
+    </div>
+    <div className="flex flex-col">
+      <span className="text-xs text-gray-500 font-medium">{title}</span>
+      <div className="text-sm font-semibold text-gray-800 leading-tight mt-0.5">{children}</div>
+    </div>
   </div>
 );
 
@@ -95,7 +97,7 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
   const getStatusBadge = (status: string) => {
     const style = statusStyles[status] || statusStyles.default;
     return (
-      <Badge variant="outline" className={style.badge}>
+      <Badge variant="outline" className={`${style.badge} text-[10px] px-1.5 py-0 h-5`}>
         {status}
       </Badge>
     );
@@ -106,21 +108,21 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
 
   return (
     <Card
-      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle}`}
+      className={`shadow-sm hover:shadow-md transition-shadow duration-300 w-full ${cardBorderStyle} overflow-hidden`}
     >
-      <CardContent className="p-6 space-y-4">
+      <CardContent className="p-4 space-y-3">
         <div className="flex justify-between items-start">
           <div>
-            <h2 className="text-xl font-bold text-gray-800">
+            <h2 className="text-lg font-bold text-gray-800 leading-tight">
               Booking #{booking.id.slice(0, 8)}
             </h2>
-            <p className="text-sm text-gray-500">for {booking.service.name}</p>
+            <p className="text-xs text-gray-500 mt-0.5">for {booking.service.name}</p>
           </div>
           <div className="flex items-center space-x-2">
             {getStatusBadge(booking.status)}
             <DropdownMenu>
               <DropdownMenuTrigger asChild>
-                <Button variant="ghost" size="icon">
+                <Button variant="ghost" size="icon" className="h-6 w-6">
                   <MoreHorizontal className="h-4 w-4" />
                 </Button>
               </DropdownMenuTrigger>
@@ -165,15 +167,15 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
           </AlertDialogContent>
         </AlertDialog>
 
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-2 w-full">
           <InfoBlock
             icon={<Calendar className="h-4 w-4" />}
             title="Booking Date"
           >
-            <p>{new Date(booking.createdAt).toLocaleDateString()}</p>
+            <span>{new Date(booking.createdAt).toLocaleDateString()}</span>
           </InfoBlock>
           <InfoBlock icon={<Clock className="h-4 w-4" />} title="Booking Time">
-            <p>
+            <span>
               {new Date(booking.startTime).toLocaleTimeString([], {
                 hour: "2-digit",
                 minute: "2-digit",
@@ -183,34 +185,31 @@ const MyBookingCard: FC<{ booking: Booking }> = ({ booking }) => {
                 hour: "2-digit",
                 minute: "2-digit",
               })}
-            </p>
+            </span>
           </InfoBlock>
-        </div>
 
-        {booking.service && (
-          <InfoBlock icon={<Briefcase className="h-4 w-4" />} title="Service">
-            <p className="font-semibold">{booking.service.name}</p>
-            <p className="text-xs text-gray-500">
-              {booking.service.description}
-            </p>
-          </InfoBlock>
-        )}
-        {booking.payment && (
-          <InfoBlock
-            icon={<PoundSterling className="h-4 w-4" />}
-            title="Payment"
-          >
-            <p className="font-semibold">
-              {new Intl.NumberFormat("en-GB", {
-                style: "currency",
-                currency: "GBP",
-              }).format(booking.payment.amount)}
-            </p>
-            <p className="text-xs text-gray-500">
-              via {booking.payment.paymentMethod}
-            </p>
-          </InfoBlock>
-        )}
+          {booking.service && (
+            <InfoBlock icon={<Briefcase className="h-4 w-4" />} title={`Service: ${booking.service.name}`}>
+              <span className="text-xs text-gray-500 line-clamp-1">
+                {booking.service.description}
+              </span>
+            </InfoBlock>
+          )}
+
+          {booking.payment && (
+            <InfoBlock
+              icon={<PoundSterling className="h-4 w-4" />}
+              title={`Payment: ${booking.payment.paymentMethod}`}
+            >
+              <span>
+                {new Intl.NumberFormat("en-GB", {
+                  style: "currency",
+                  currency: "GBP",
+                }).format(booking.payment.amount)}
+              </span>
+            </InfoBlock>
+          )}
+        </div>
       </CardContent>
     </Card>
   );

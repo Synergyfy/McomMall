@@ -68,7 +68,7 @@ const navItems: NavItem[] = [
     { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle },
     { title: 'Marketing', href: '/admin/marketing', icon: Megaphone },
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket },
-    { title: 'Templates', href: '/admin/templates/products', icon: LayoutTemplate },
+    { title: 'Templates', href: '/admin/templates', icon: LayoutTemplate },
     { title: 'Activity Timers', href: '/admin/activity-timer', icon: Clock },
     { title: 'Compliance', href: '/admin/compliance', icon: ShieldAlert },
     { title: 'Quality Assurance', href: '/admin/quality', icon: Award },
