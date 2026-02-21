@@ -5,7 +5,7 @@ import { Product } from '../listings/types';
 import { Service } from '../services/types';
 import { VoucherProduct } from '../vouchers/types';
 import { GiftCardTemplate } from '../gift-cards/types';
-import { CouponProduct } from '../coupons/types';
+import { CouponProduct } from '../coupon-products/types';
 
 export interface DiscoveryQueryParams {
   page?: number;

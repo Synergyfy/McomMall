@@ -57,11 +57,11 @@ type MarketItem = {
   price?: number | string;
   salePrice?: number | string;
   amount?: number | string;
-  fixedAmounts?: number[];
+  fixedAmounts?: number[] | null;
   imageUrl?: string | null;
   image?: string;
   url?: string;
-  backgroundImage?: string;
+  backgroundImage?: string | null;
   media?: string[] | null;
   category?: string;
 };

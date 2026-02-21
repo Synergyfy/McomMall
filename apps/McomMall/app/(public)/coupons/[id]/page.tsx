@@ -13,155 +13,175 @@ import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
 import { CouponProduct } from '@/service/coupon-products/types';
 import { Coupon } from '@/service/my-coupons/types';
 import { useGetCouponProduct } from '@/service/coupon-products/hooks';
+import { PromotionalItem } from '@/lib/listing-data';
+import VoucherCard from '@/components/marketplace/VoucherCard';
 
 export default function CouponPage() {
-  const params = useParams();
-  const id = Array.isArray(params.id) ? params.id[0] : params.id;
-  
-  const { selectedItem } = useMarketplaceContext();
-  const cachedItem = (selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null) as unknown as CouponProduct;
+    const params = useParams();
+    const id = Array.isArray(params.id) ? params.id[0] : params.id;
 
-  const { data: couponResponse, isLoading, isError } = useGetCouponProduct(id || '');
+    const { selectedItem } = useMarketplaceContext();
+    const cachedItem = (selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null) as unknown as CouponProduct;
 
-  const product = couponResponse?.data as CouponProduct | undefined;
-  const displayCoupon = cachedItem || product;
+    const { data: couponResponse, isLoading, isError } = useGetCouponProduct(id || '');
 
-  const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
-  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
-  const [purchasedCoupon, setPurchasedCoupon] = useState<Coupon | null>(null);
+    const product = couponResponse?.data as CouponProduct | undefined;
+    const displayCoupon = cachedItem || product;
 
-  if (!displayCoupon && isLoading) {
-    return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><Loader className="animate-spin text-orange-600" size={48} /></div>;
-  }
+    const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
+    const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+    const [purchasedCoupon, setPurchasedCoupon] = useState<Coupon | null>(null);
 
-  if ((!displayCoupon && isError) || (!displayCoupon && !isLoading)) {
-    return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><p className="text-xl text-red-500">Coupon not found.</p></div>;
-  }
+    if (!displayCoupon && isLoading) {
+        return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><Loader className="animate-spin text-orange-600" size={48} /></div>;
+    }
 
-  const handleBuyNow = () => {
-    setIsPurchaseModalOpen(true);
-  };
+    if ((!displayCoupon && isError) || (!displayCoupon && !isLoading)) {
+        return <div className="flex justify-center items-center h-screen bg-gray-50 pt-16"><p className="text-xl text-red-500">Coupon not found.</p></div>;
+    }
 
-  const handlePurchaseSuccess = (coupon: Coupon) => {
-    setIsPurchaseModalOpen(false);
-    setPurchasedCoupon(coupon);
-    setIsSuccessModalOpen(true);
-  };
+    const handleBuyNow = () => {
+        setIsPurchaseModalOpen(true);
+    };
 
-  const handleClosePurchaseModal = () => {
-    setIsPurchaseModalOpen(false);
-  };
+    const handlePurchaseSuccess = (coupon: Coupon) => {
+        setIsPurchaseModalOpen(false);
+        setPurchasedCoupon(coupon);
+        setIsSuccessModalOpen(true);
+    };
 
-  const handleCloseSuccessModal = () => {
-    setIsSuccessModalOpen(false);
-    setPurchasedCoupon(null);
-  };
-  
-  const title = displayCoupon.name || (displayCoupon as any).title || 'Coupon';
-  const description = displayCoupon.description || (displayCoupon as any).couponDescription || "No description.";
-  
-  const discountDisplay = (displayCoupon as any).discountType 
-    ? ((displayCoupon as any).discountType === 'percentage' ? `${(displayCoupon as any).couponAmount}%` : `£${(displayCoupon as any).couponAmount}`)
-    : ((displayCoupon as any).price ? `Value: £${(displayCoupon as any).price}` : 'Special Offer');
+    const handleClosePurchaseModal = () => {
+        setIsPurchaseModalOpen(false);
+    };
 
-  const codeDisplay = (displayCoupon as any).couponCode || (cachedItem ? 'Login to view code' : 'N/A');
+    const handleCloseSuccessModal = () => {
+        setIsSuccessModalOpen(false);
+        setPurchasedCoupon(null);
+    };
 
-  const images = (displayCoupon as any).media && (displayCoupon as any).media.length > 0
-    ? (displayCoupon as any).media
-    : (displayCoupon.backgroundImage 
-        ? [displayCoupon.backgroundImage] 
-        : ((displayCoupon as any).imageUrl ? [(displayCoupon as any).imageUrl] : ['/placeholder.png']));
+    const title = displayCoupon.name || (displayCoupon as any).title || 'Coupon';
+    const description = displayCoupon.description || (displayCoupon as any).couponDescription || "No description.";
 
-  return (
-    <div className="min-h-screen bg-gray-50 pb-12 pt-3">
-        <div className="bg-white border-b shadow-sm mb-6">
-            <div className="container mx-auto px-4 h-14 flex items-center">
-                <Link href="/marketplace" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
-                    <ChevronLeft className="w-4 h-4 mr-1" /> Back to Listings
-                </Link>
+    const discountDisplay = (displayCoupon as any).discountType
+        ? ((displayCoupon as any).discountType === 'percentage' ? `${(displayCoupon as any).couponAmount}%` : `£${(displayCoupon as any).couponAmount}`)
+        : ((displayCoupon as any).price ? `Value: £${(displayCoupon as any).price}` : 'Special Offer');
+
+    const codeDisplay = (displayCoupon as any).couponCode || (cachedItem ? 'Login to view code' : 'N/A');
+
+    const images = (displayCoupon as any).media && (displayCoupon as any).media.length > 0
+        ? (displayCoupon as any).media
+        : (displayCoupon.backgroundImage
+            ? [displayCoupon.backgroundImage]
+            : ((displayCoupon as any).imageUrl ? [(displayCoupon as any).imageUrl] : ['/placeholder.png']));
+
+    const promotionalItemFormat: PromotionalItem = {
+        id: displayCoupon?.id || '',
+        title: title,
+        image: images[0] || '/placeholder.png',
+        category: 'Coupon',
+        price: (displayCoupon as any)?.price || 0,
+        items_left: 1,
+        fixedAmounts: displayCoupon?.fixedAmounts ?? undefined,
+        bonusAmount: displayCoupon?.bonusAmount ?? undefined,
+        bonusThreshold: displayCoupon?.bonusThreshold ?? undefined,
+        link: '#',
+        expiryDate: displayCoupon?.expiryDays?.toString()
+    };
+
+    return (
+        <div className="min-h-screen bg-gray-50 pb-12 pt-3">
+            <div className="bg-white border-b shadow-sm mb-6">
+                <div className="container mx-auto px-4 h-14 flex items-center">
+                    <Link href="/marketplace" className="flex items-center text-gray-600 hover:text-gray-900 transition-colors text-sm font-medium">
+                        <ChevronLeft className="w-4 h-4 mr-1" /> Back to Listings
+                    </Link>
+                </div>
             </div>
-        </div>
 
-        <div className="container mx-auto px-4">
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div className="lg:col-span-2 space-y-8">
-                    <ServiceGallery images={images} title={title} />
-                    <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
-                        <h2 className="text-xl font-bold text-gray-900 mb-4">Coupon Offer</h2>
-                        <p className="text-gray-700">{description}</p>
-                        <div className="mt-4 grid grid-cols-2 gap-4">
-                            <div>
-                                <p className="text-sm text-gray-500">Discount</p>
-                                <p className="font-semibold">{discountDisplay}</p>
+            <div className="container mx-auto px-4">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                    <div className="lg:col-span-2 space-y-8">
+                        <div className="flex justify-center items-center bg-gray-100/50 rounded-2xl p-8 border border-gray-100 w-full">
+                            <div className="w-full max-w-[380px] pointer-events-none">
+                                <VoucherCard voucher={promotionalItemFormat} viewMode="grid" type="coupons" />
                             </div>
-                            <div>
-                                <p className="text-sm text-gray-500">Code</p>
-                                <p className="font-mono font-bold bg-gray-100 inline-block px-2 py-1 rounded">{codeDisplay}</p>
+                        </div>
+                        <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                            <h2 className="text-xl font-bold text-gray-900 mb-4">Coupon Offer</h2>
+                            <p className="text-gray-700">{description}</p>
+                            <div className="mt-4 grid grid-cols-2 gap-4">
+                                <div>
+                                    <p className="text-sm text-gray-500">Discount</p>
+                                    <p className="font-semibold">{discountDisplay}</p>
+                                </div>
+                                <div>
+                                    <p className="text-sm text-gray-500">Code</p>
+                                    <p className="font-mono font-bold bg-gray-100 inline-block px-2 py-1 rounded">{codeDisplay}</p>
+                                </div>
                             </div>
                         </div>
                     </div>
-                </div>
 
-                <div className="relative">
-                    <div className="sticky top-20 space-y-6">
-                        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-                            <h1 className="text-2xl font-bold text-gray-900 mb-4">Claim Offer</h1>
-                            
-                            {/* Bonus Offer Display */}
-                            {displayCoupon.bonusThreshold && displayCoupon.bonusAmount && (
-                                <div className="mb-6 rounded-lg bg-green-50 p-3 border border-green-100">
-                                    <p className="font-bold text-green-700 text-sm">🎉 Special Bonus Offer!</p>
-                                    <p className="text-green-800 text-sm mt-1">
-                                        Buy for <span className="font-bold">£{displayCoupon.bonusThreshold}</span> or more and get an extra <span className="font-bold">£{displayCoupon.bonusAmount}</span> free!
-                                    </p>
-                                </div>
-                            )}
+                    <div className="relative">
+                        <div className="sticky top-20 space-y-6">
+                            <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
+                                <h1 className="text-2xl font-bold text-gray-900 mb-4">Claim Offer</h1>
 
-                            {/* Pricing Options Display */}
-                            <div className="mb-6">
-                                <p className="text-sm font-semibold text-gray-700 mb-3">Available Amounts:</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {displayCoupon.fixedAmounts?.map((amt) => (
-                                        <span key={amt} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-200">
-                                            £{amt}
-                                        </span>
-                                    ))}
-                                    {displayCoupon.allowCustomAmount && (
-                                        <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
-                                            Custom (£{displayCoupon.minCustomAmount} - £{displayCoupon.maxCustomAmount})
-                                        </span>
-                                    )}
+                                {/* Bonus Offer Display */}
+                                {displayCoupon.bonusThreshold && displayCoupon.bonusAmount && (
+                                    <div className="mb-6 rounded-lg bg-green-50 p-3 border border-green-100">
+                                        <p className="font-bold text-green-700 text-sm">🎉 Special Bonus Offer!</p>
+                                        <p className="text-green-800 text-sm mt-1">
+                                            Buy for <span className="font-bold">£{displayCoupon.bonusThreshold}</span> or more and get an extra <span className="font-bold">£{displayCoupon.bonusAmount}</span> free!
+                                        </p>
+                                    </div>
+                                )}
+
+                                {/* Pricing Options Display */}
+                                <div className="mb-6">
+                                    <p className="text-sm font-semibold text-gray-700 mb-3">Available Amounts:</p>
+                                    <div className="flex flex-wrap gap-2">
+                                        {displayCoupon.fixedAmounts?.map((amt) => (
+                                            <span key={amt} className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-gray-100 text-gray-800 border border-gray-200">
+                                                £{amt}
+                                            </span>
+                                        ))}
+                                        {displayCoupon.allowCustomAmount && (
+                                            <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-50 text-blue-700 border border-blue-100">
+                                                Custom (£{displayCoupon.minCustomAmount} - £{displayCoupon.maxCustomAmount})
+                                            </span>
+                                        )}
+                                    </div>
                                 </div>
+
+                                <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700" onClick={handleBuyNow}>
+                                    <ShoppingCart className="mr-2 h-5 w-5" /> Buy Now
+                                </Button>
                             </div>
-
-                            <Button size="lg" className="w-full bg-orange-600 hover:bg-orange-700" onClick={handleBuyNow}>
-                                <ShoppingCart className="mr-2 h-5 w-5" /> Buy Now
-                            </Button>
+                            <ServiceSafetyCard />
                         </div>
-                        <ServiceSafetyCard />
                     </div>
                 </div>
             </div>
+
+            {/* Modals */}
+            {displayCoupon && (
+                <CouponPurchaseModal
+                    product={displayCoupon}
+                    isOpen={isPurchaseModalOpen}
+                    onClose={handleClosePurchaseModal}
+                    onPurchaseSuccess={handlePurchaseSuccess}
+                />
+            )}
+
+            {purchasedCoupon && (
+                <CouponPaymentSuccessModal
+                    isOpen={isSuccessModalOpen}
+                    onClose={handleCloseSuccessModal}
+                    couponCode={purchasedCoupon.code}
+                    recipientEmail={purchasedCoupon.recipientEmail}
+                />
+            )}
         </div>
-
-        {/* Modals */}
-        {displayCoupon && (
-            <CouponPurchaseModal
-                product={displayCoupon}
-                isOpen={isPurchaseModalOpen}
-                onClose={handleClosePurchaseModal}
-                onPurchaseSuccess={handlePurchaseSuccess}
-            />
-        )}
-
-        {purchasedCoupon && (
-            <CouponPaymentSuccessModal
-                isOpen={isSuccessModalOpen}
-                onClose={handleCloseSuccessModal}
-                couponCode={purchasedCoupon.code}
-                recipientEmail={purchasedCoupon.recipientEmail}
-            />
-        )}
-    </div>
-  );
+    );
 }
