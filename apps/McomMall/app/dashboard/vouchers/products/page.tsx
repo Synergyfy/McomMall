@@ -76,12 +76,6 @@ export default function VoucherProductsPage() {
               Home &gt; Dashboard &gt; Vouchers &gt; Management
             </p>
           </div>
-          <Button
-            onClick={() => router.push('/dashboard/vouchers/products/new')}
-            className="rounded-full px-8 py-6 bg-pink-600 hover:bg-pink-700 text-white font-black uppercase text-xs tracking-[0.2em] shadow-2xl transition-all hover:scale-[1.05] active:scale-[0.98]"
-          >
-            <PlusCircle className="mr-2" size={18} /> Add New Voucher
-          </Button>
         </header>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -107,7 +101,7 @@ export default function VoucherProductsPage() {
             <div className="col-span-full py-20 text-center text-slate-500 bg-white rounded-3xl border-2 border-dashed border-gray-200">
               <Ticket className="mx-auto mb-4 text-gray-300" size={48} />
               <p className="font-bold">No voucher products found.</p>
-              <p className="text-xs mt-1">Create your first voucher to get started.</p>
+              <p className="text-xs mt-1">Check the global templates catalog to select one.</p>
             </div>
           )}
         </div>

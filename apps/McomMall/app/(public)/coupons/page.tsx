@@ -26,11 +26,11 @@ type MarketItem = {
     price?: number | string;
     salePrice?: number | string;
     amount?: number | string;
-    fixedAmounts?: number[];
+    fixedAmounts?: number[] | null;
     imageUrl?: string | null;
     image?: string;
     url?: string;
-    backgroundImage?: string;
+    backgroundImage?: string | null;
     media?: string[] | null;
     category?: string;
 };
@@ -51,8 +51,13 @@ export default function CouponsPage() {
     const displayItems = useMemo(() => {
         if (!couponsData?.data) return [];
 
+        // DEBUG: log first item to inspect actual API field names
+        if (couponsData.data.length > 0) {
+            console.log('[Coupon Debug] First item from API:', JSON.stringify(couponsData.data[0], null, 2));
+        }
+
         return couponsData.data.map((item: MarketItem) => {
-            const title = item.title || item.name || 'Untitled Coupon';
+            const title = item.title || item.name || (item as any).couponCode || (item as any).couponName || 'Untitled Coupon';
             const price = item.price || item.amount || item.fixedAmounts?.[0] || 0;
             const image = item.imageUrl || item.image || item.url || item.backgroundImage || (item.media && item.media[0]) || '/placeholder.png';
 

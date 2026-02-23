@@ -56,12 +56,12 @@ export default function UserNav({ align = 'end' }: UserNavProps) {
               {userName?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="hidden sm:block text-left">
-            <div className="text-base font-semibold text-white">{userName}</div>
-            <div className="text-xs text-gray-400 group-hover:text-white">
+          <div className="hidden sm:flex flex-col items-start text-left mt-0.5">
+            <div className="text-sm font-semibold text-white leading-none mb-1.5">{userName}</div>
+            <div className="text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-gray-600 bg-gray-800/80 text-gray-300 group-hover:border-orange-500/50 group-hover:text-orange-100 group-hover:bg-gray-800 transition-colors shadow-sm">
               {userRole === 'customer'
                 ? 'Customer'
-                : packageInfo?.planType}
+                : packageInfo?.planType || 'Member'}
             </div>
           </div>
           <ChevronDown className="hidden h-4 w-4 sm:block ml-auto" />

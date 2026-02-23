@@ -111,20 +111,21 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
     };
 
     return (
-        <div className="space-y-8">
+        <div className="w-full max-w-[340px] space-y-4">
             <Link href={`/dashboard/history/gift-card/${purchase.id}`}>
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
-                    className="group relative aspect-[1.58/1] w-full max-w-[340px] mx-auto cursor-pointer transition-transform hover:scale-[1.02]"
+                    className="group relative aspect-[1.58/1] w-full cursor-pointer transition-transform hover:scale-[1.02]"
                 >
+                    {/* ... (card internals) ... */}
                     <div
                         ref={cardRef}
                         className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 bg-black"
                     >
                         {purchase.template?.backgroundImageUrl ? (
                             <Image
-                                src={purchase.template.backgroundImageUrl}
+                                src={purchase.template?.backgroundImageUrl || ''}
                                 alt="Gift Card"
                                 fill
                                 className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
@@ -186,31 +187,33 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
                 </motion.div>
             </Link>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            {/* Action Buttons - Fixed positions */}
+            <div className="flex items-center justify-start gap-3 mt-4">
                 <Button
                     onClick={handleExport}
                     variant="outline"
-                    className="flex-1 h-12 rounded-2xl border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm"
+                    className="h-10 w-10 p-0 rounded-2xl border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center"
+                    title="Download Card"
                 >
-                    <Download size={18} className="mr-2" /> Download Card
+                    <Download size={18} />
+                </Button>
+                <Button
+                    onClick={() => onShare(purchase.id)}
+                    variant="outline"
+                    className={`h-10 w-10 p-0 rounded-2xl border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
+                    title="Share"
+                >
+                    {isShared ? <Check size={18} /> : <Share2 size={18} />}
                 </Button>
                 {onReload && purchase.isReloadable && (
                     <Button
-                        onClick={() => onReload(purchase)}
+                        onClick={() => onReload?.(purchase)}
                         variant="default"
-                        className="h-12 px-6 rounded-2xl bg-[#f58220] hover:bg-[#d9731b] text-white shadow-lg shadow-orange-500/20 font-black uppercase text-[10px] tracking-widest"
+                        className="h-10 px-4 rounded-2xl bg-[#f58220] hover:bg-[#d9731b] text-white shadow-lg shadow-orange-500/20 font-black uppercase text-[10px] tracking-widest"
                     >
                         <PlusCircle size={18} className="mr-2" /> Reload
                     </Button>
                 )}
-                <Button
-                    onClick={() => onShare(purchase.id)}
-                    variant="outline"
-                    className={`h-12 w-12 p-0 rounded-2xl border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
-                >
-                    {isShared ? <Check size={18} /> : <Share2 size={18} />}
-                </Button>
             </div>
         </div>
     );
@@ -270,8 +273,9 @@ export const HistoryVoucher: React.FC<HistoryVoucherProps> = ({
     };
 
     return (
-        <div className="space-y-8">
+        <div className="w-full max-w-[340px] space-y-4">
             <Link href={`/dashboard/history/my-vouchers/${voucher.id}`}>
+                {/* ... (voucher content) ... */}
                 <motion.div
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
@@ -363,19 +367,21 @@ export const HistoryVoucher: React.FC<HistoryVoucherProps> = ({
                 </motion.div>
             </Link>
 
-            {/* Action Bar */}
-            <div className="flex gap-3">
+            {/* Action Bar - Fixed positions */}
+            <div className="flex items-center justify-start gap-3 mt-4">
                 <Button
                     onClick={handleExport}
                     variant="outline"
-                    className="flex-1 h-12 rounded-2xl border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm"
+                    className="h-10 w-10 p-0 rounded-2xl border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center"
+                    title="Download Voucher"
                 >
-                    <Download size={18} className="mr-2" /> Download Card
+                    <Download size={18} />
                 </Button>
                 <Button
                     onClick={() => onShare(voucher.id)}
                     variant="outline"
-                    className={`h-12 w-12 p-0 rounded-2xl border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'border-gray-100 hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
+                    className={`h-10 w-10 p-0 rounded-2xl border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'border-gray-100 hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
+                    title="Share"
                 >
                     {isShared ? <Check size={18} /> : <Share2 size={18} />}
                 </Button>
@@ -427,7 +433,7 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
     const cardName = coupon.couponProduct?.name || coupon.couponProduct?.user?.businessName || 'McomMall Card';
 
     return (
-        <div className="space-y-8">
+        <div className="w-full max-w-[340px] space-y-4">
             <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -507,31 +513,33 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                 </div>
             </motion.div>
 
-            {/* Action Buttons */}
-            <div className="flex gap-3">
+            {/* Action Buttons - Fixed positions */}
+            <div className="flex items-center justify-start gap-3 mt-4">
                 <Button
                     onClick={handleExport}
                     variant="outline"
-                    className="flex-1 h-12 rounded-[1.25rem] border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm"
+                    className="h-10 w-10 p-0 rounded-[1.25rem] border-gray-200 hover:border-black hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center"
+                    title="Download Coupon"
                 >
-                    <Download size={18} className="mr-2" /> Download Card
+                    <Download size={18} />
+                </Button>
+                <Button
+                    onClick={() => onShare(coupon.id)}
+                    variant="outline"
+                    className={`h-10 w-10 p-0 rounded-[1.25rem] border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 shadow-green-100' : 'hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
+                    title="Share"
+                >
+                    {isShared ? <Check size={20} /> : <Share2 size={20} />}
                 </Button>
                 {coupon.couponProduct?.allowReloading && (
                     <Button
                         onClick={() => onReload(coupon)}
                         variant="default"
-                        className="h-12 px-6 rounded-[1.25rem] bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-500/20 font-black uppercase text-[10px] tracking-widest flex items-center"
+                        className="h-10 px-4 rounded-[1.25rem] bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-500/20 font-black uppercase text-[10px] tracking-widest flex items-center"
                     >
                         <PlusCircle size={18} className="mr-2" /> Top Up
                     </Button>
                 )}
-                <Button
-                    onClick={() => onShare(coupon.id)}
-                    variant="outline"
-                    className={`h-12 w-12 p-0 rounded-[1.25rem] border-gray-200 transition-all ${isShared ? 'text-green-500 border-green-500 shadow-green-100' : 'hover:border-blue-500 hover:text-blue-500 shadow-sm'}`}
-                >
-                    {isShared ? <Check size={20} /> : <Share2 size={20} />}
-                </Button>
             </div>
         </div>
     );

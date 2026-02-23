@@ -57,11 +57,11 @@ type MarketItem = {
   price?: number | string;
   salePrice?: number | string;
   amount?: number | string;
-  fixedAmounts?: number[];
+  fixedAmounts?: number[] | null;
   imageUrl?: string | null;
   image?: string;
   url?: string;
-  backgroundImage?: string;
+  backgroundImage?: string | null;
   media?: string[] | null;
   category?: string;
 };
@@ -198,6 +198,8 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
       pricePerGuest: (item as any).pricePerGuest,
       additionalGuestPrice: (item as any).additionalGuestPrice,
       pricingModel: (item as any).pricingModel,
+      expiryDays: (item as any).expiryDays || (item as any).expiry_days,
+      expiryDate: (item as any).expiryDate || (item as any).expiry_date || (item as any).expiresAt || (item as any).expires_at,
     } as PromotionalItem;
   };
 
@@ -358,7 +360,8 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
 
     // Detect item type and render appropriate card
     if (category.includes('voucher') || link.includes('/vouchers/') || category.includes('coupon') || link.includes('/coupons/')) {
-      return <VoucherCard key={item.id} voucher={item} viewMode={mode} />;
+      const type = (category.includes('coupon') || link.includes('/coupons/')) ? 'coupons' : 'vouchers';
+      return <VoucherCard key={item.id} voucher={item} viewMode={mode} type={type} />;
     }
 
     if (category.includes('gift') || link.includes('/gift-cards/')) {

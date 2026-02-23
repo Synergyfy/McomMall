@@ -264,18 +264,19 @@ export default function GiftCardDetailPage() {
                         </div>
 
                         {/* Visual Action Buttons */}
-                        <div className="flex flex-wrap gap-4 pt-10 justify-center lg:justify-start">
+                        <div className="flex items-start justify-start gap-4 mt-8">
                             <Button
                                 onClick={handleExport}
                                 variant="outline"
-                                className="h-16 flex-1 min-w-[200px] rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] hover:bg-black hover:text-white transition-all font-black uppercase text-[10px] tracking-widest shadow-sm flex items-center justify-center"
+                                className="h-12 w-12 p-0 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] hover:bg-black hover:text-white transition-all shadow-sm flex items-center justify-center"
+                                title="Download Gift Card"
                             >
-                                <Download size={22} className="mr-3" /> Download Voucher
+                                <Download size={22} />
                             </Button>
                             <Button
                                 onClick={handleShare}
                                 variant="outline"
-                                className={`h-16 w-16 p-0 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'hover:border-blue-500 hover:text-blue-500'}`}
+                                className={`h-12 w-12 p-0 rounded-3xl border-[#e8dbce] dark:border-[#4a3b2f] transition-all ${isShared ? 'text-green-500 border-green-500 bg-green-50' : 'hover:border-blue-500 hover:text-blue-500'}`}
                             >
                                 {isShared ? <Check size={22} /> : <Share2 size={22} />}
                             </Button>

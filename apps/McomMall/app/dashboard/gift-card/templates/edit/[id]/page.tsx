@@ -17,6 +17,18 @@ import Image from "next/image";
 import { SketchPicker, ColorResult } from 'react-color';
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import { useGetAllListings } from '@/service/listings/hook';
+import { useGetGroupCircles } from '@/service/group-circle/hook';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from "@/components/ui/command";
+import { Check, ChevronsUpDown } from "lucide-react";
+import { cn } from "@/lib/utils";
 
 
 const EditGiftCardTemplatePage = () => {
@@ -33,6 +45,69 @@ const EditGiftCardTemplatePage = () => {
   const [fixedAmountInput, setFixedAmountInput] = useState('');
   const [imageFile, setImageFile] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [logoFile, setLogoFile] = useState<File | null>(null);
+  const [logoPreview, setLogoPreview] = useState<string | null>(null);
+
+  // Spending Locations States & Data
+  const { data: allListingsData } = useGetAllListings({ page: 1, limit: 100 });
+  const { data: groupCirclesData } = useGetGroupCircles({ page: 1, limit: 100 });
+
+  const [spendingLocations, setSpendingLocations] = useState<any[]>([]);
+  const [isLocationOpen, setIsLocationOpen] = useState(false);
+
+  // Load from local storage on mount
+  useEffect(() => {
+    if (id) {
+      const stored = localStorage.getItem(`spending-locations-${id}`);
+      if (stored) {
+        try {
+          setSpendingLocations(JSON.parse(stored));
+        } catch (e) {
+          console.error("Failed to parse spending locations", e);
+        }
+      }
+    }
+  }, [id]);
+
+  // Combine options
+  const locationOptions = React.useMemo(() => {
+    const opts: any[] = [];
+    if (allListingsData?.data) {
+      allListingsData.data.forEach(b => {
+        opts.push({ id: b.id, label: b.businessName, type: 'Business' });
+      });
+    }
+    if (groupCirclesData?.data) {
+      groupCirclesData.data.forEach(gc => {
+        gc.members.forEach(m => {
+          const contact = m.network;
+          if (contact) {
+            const label = contact.businessName || contact.fullName;
+            if (!opts.find(o => o.id === contact.id)) {
+              opts.push({ id: contact.id, label, type: 'Group Circle Contact' });
+            }
+          }
+        });
+      });
+    }
+    return opts;
+  }, [allListingsData, groupCirclesData]);
+
+  const toggleLocation = (option: any) => {
+    setSpendingLocations(prev => {
+      const exists = prev.find(p => p.id === option.id);
+      let updated;
+      if (exists) {
+        updated = prev.filter(p => p.id !== option.id);
+      } else {
+        updated = [...prev, option];
+      }
+      localStorage.setItem(`spending-locations-${id}`, JSON.stringify(updated));
+      return updated;
+    });
+  };
+
+  const { data: listings } = useGetAllListings({ page: 1, limit: 100 });
 
   useEffect(() => {
     if (template) {
@@ -46,9 +121,13 @@ const EditGiftCardTemplatePage = () => {
         minCustomAmount: template.minCustomAmount,
         maxCustomAmount: template.maxCustomAmount,
         allowReloading: template.allowReloading,
+        logoUrl: template.logoUrl || undefined,
       });
       if (template.backgroundImageUrl) {
         setImagePreview(template.backgroundImageUrl);
+      }
+      if (template.logoUrl) {
+        setLogoPreview(template.logoUrl);
       }
     }
   }, [template]);
@@ -79,16 +158,25 @@ const EditGiftCardTemplatePage = () => {
     if (file) {
       setImageFile(file);
       setImagePreview(URL.createObjectURL(file));
-      setFormData(prev => ({...prev, backgroundImageUrl: URL.createObjectURL(file)}));
+      setFormData(prev => ({ ...prev, backgroundImageUrl: URL.createObjectURL(file) }));
       setErrors((prev) => {
         const newErrors = { ...prev };
         delete newErrors.backgroundImageUrl;
         return newErrors;
       });
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      setLogoPreview(URL.createObjectURL(file));
+      setFormData(prev => ({ ...prev, logoUrl: URL.createObjectURL(file) }));
     } else {
-      setImageFile(null);
-      setImagePreview(null);
-      setFormData(prev => ({...prev, backgroundImageUrl: ''}));
+      setLogoFile(null);
+      setLogoPreview(null);
+      setFormData(prev => ({ ...prev, logoUrl: '' }));
     }
   };
 
@@ -177,8 +265,40 @@ const EditGiftCardTemplatePage = () => {
       submissionData.backgroundImageUrl = template?.backgroundImageUrl || undefined;
     }
 
+    if (logoFile) {
+      const uploadFormData = new FormData();
+      uploadFormData.append('file', logoFile);
+
+      try {
+        const response = await fetch('/api/upload/gift-card', {
+          method: 'POST',
+          body: uploadFormData,
+        });
+
+        if (!response.ok) {
+          throw new Error('Logo upload failed');
+        }
+
+        const result = await response.json();
+        submissionData.logoUrl = result.secure_url;
+
+      } catch (error) {
+        console.error("Logo upload error:", error);
+        toast.error("Logo upload failed. Please try again.");
+        setIsUploading(false);
+        return;
+      }
+    } else {
+      submissionData.logoUrl = template?.logoUrl || undefined;
+    }
+
     updateTemplate({ id, templateData: submissionData }, {
       onSuccess: () => {
+        if (submissionData.logoUrl) {
+          localStorage.setItem(`gift-card-logo-${id}`, submissionData.logoUrl);
+        } else if (submissionData.logoUrl === '') {
+          localStorage.removeItem(`gift-card-logo-${id}`);
+        }
         toast.success("Gift card template updated successfully!");
         router.push('/dashboard/gift-card/templates');
       },
@@ -206,131 +326,217 @@ const EditGiftCardTemplatePage = () => {
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               <div>
-                <Label htmlFor="name">Template Name</Label>
-              <Input id="name" name="name" value={formData.name || ''} onChange={handleInputChange} className="mt-1" />
-              {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
-            </div>
+                <Label htmlFor="name">Template Name (Business Listing)</Label>
+                <Select
+                  value={formData.name || ''}
+                  onValueChange={(value) => setFormData(prev => ({ ...prev, name: value }))}
+                >
+                  <SelectTrigger className="mt-1">
+                    <SelectValue placeholder="Select a business listing" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {listings?.data.map((listing) => (
+                      <SelectItem key={listing.id} value={listing.businessName}>
+                        {listing.businessName}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {errors.name && <p className="text-red-500 text-xs mt-1">{errors.name}</p>}
+              </div>
 
-            <div>
-              <Label htmlFor="description">Description</Label>
-              <Textarea id="description" name="description" value={formData.description || ''} onChange={handleInputChange} className="mt-1" />
-              {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
-            </div>
-
-            <div className="grid grid-cols-2 gap-4">
               <div>
-                <Label>Background Color</Label>
-                <Popover>
+                <Label>Where you can spend your gift card</Label>
+                <p className="text-xs text-gray-500 mb-2">Select businesses or group circle contacts (Persisted locally for now)</p>
+                <Popover open={isLocationOpen} onOpenChange={setIsLocationOpen}>
                   <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.backgroundColor }} />
-                      {formData.backgroundColor}
+                    <Button
+                      variant="outline"
+                      role="combobox"
+                      aria-expanded={isLocationOpen}
+                      className="w-full justify-between font-normal"
+                    >
+                      {spendingLocations.length > 0
+                        ? `${spendingLocations.length} location(s) selected`
+                        : "Select businesses or contacts..."}
+                      <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                     </Button>
                   </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
+                  <PopoverContent className="w-[400px] p-0" align="start">
+                    <Command>
+                      <CommandInput placeholder="Search locations..." />
+                      <CommandList>
+                        <CommandEmpty>No location found.</CommandEmpty>
+                        <CommandGroup heading="Businesses">
+                          {locationOptions.filter(o => o.type === 'Business').map((option) => (
+                            <CommandItem
+                              key={option.id}
+                              value={option.label}
+                              onSelect={() => toggleLocation(option)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  spendingLocations.find(l => l.id === option.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                        <CommandGroup heading="Group Circle Contacts">
+                          {locationOptions.filter(o => o.type === 'Group Circle Contact').map((option) => (
+                            <CommandItem
+                              key={option.id}
+                              value={option.label}
+                              onSelect={() => toggleLocation(option)}
+                            >
+                              <Check
+                                className={cn(
+                                  "mr-2 h-4 w-4",
+                                  spendingLocations.find(l => l.id === option.id) ? "opacity-100" : "opacity-0"
+                                )}
+                              />
+                              {option.label}
+                            </CommandItem>
+                          ))}
+                        </CommandGroup>
+                      </CommandList>
+                    </Command>
                   </PopoverContent>
                 </Popover>
               </div>
+
               <div>
-                <Label>Text Color</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button variant="outline" className="w-full justify-start text-left font-normal">
-                      <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.textColor }} />
-                      {formData.textColor}
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="p-0">
-                    <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
-                  </PopoverContent>
-                </Popover>
+                <Label htmlFor="description">Description</Label>
+                <Textarea id="description" name="description" value={formData.description || ''} onChange={handleInputChange} className="mt-1" />
+                {errors.description && <p className="text-red-500 text-xs mt-1">{errors.description}</p>}
               </div>
-            </div>
 
-            <div>
-              <Label htmlFor="image">Background Image (optional)</Label>
-              <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
-              {imagePreview && (
-                <div className="mt-4">
-                  <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
-                </div>
-              )}
-              {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
-            </div>
-
-            <div>
-              <Label htmlFor="fixedAmounts">Fixed Amounts (£)</Label>
-              <Input
-                id="fixedAmounts"
-                value={fixedAmountInput}
-                onChange={(e) => setFixedAmountInput(e.target.value)}
-                onKeyDown={handleFixedAmountKeyDown}
-                placeholder="Enter amount and press , or Enter"
-                className="mt-1"
-              />
-              <div className="flex flex-wrap gap-2 mt-2">
-                {formData.fixedAmounts?.map((amount) => (
-                  <div key={amount} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
-                    £{amount}
-                    <button type="button" onClick={() => removeFixedAmount(amount)} className="ml-2">
-                      <X className="h-4 w-4" />
-                    </button>
-                  </div>
-                ))}
-              </div>
-              {errors.fixedAmounts && <p className="text-red-500 text-xs mt-1">{errors.fixedAmounts}</p>}
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id="allowCustomAmount" checked={!!formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
-              <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
-            </div>
-
-            <div className="flex items-center space-x-2">
-              <Switch id="allowReloading" checked={!!formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
-              <Label htmlFor="allowReloading">Allow Reloading</Label>
-            </div>
-
-            {formData.allowCustomAmount && (
               <div className="grid grid-cols-2 gap-4">
                 <div>
-                  <Label htmlFor="minCustomAmount">Min Custom Amount (£)</Label>
-                  <Input
-                    id="minCustomAmount"
-                    name="minCustomAmount"
-                    type="number"
-                    value={formData.minCustomAmount || ''}
-                    onChange={handleInputChange}
-                    className="mt-1"
-                  />
-                  {errors.minCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.minCustomAmount}</p>}
+                  <Label>Background Color</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.backgroundColor }} />
+                        {formData.backgroundColor}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0">
+                      <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
                 <div>
-                  <Label htmlFor="maxCustomAmount">Max Custom Amount (£)</Label>
-                  <Input
-                    id="maxCustomAmount"
-                    name="maxCustomAmount"
-                    type="number"
-                    value={formData.maxCustomAmount || ''}
-                    onChange={handleInputChange}
-                    className="mt-1"
-                  />
-                  {errors.maxCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.maxCustomAmount}</p>}
+                  <Label>Text Color</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button variant="outline" className="w-full justify-start text-left font-normal">
+                        <div className="w-6 h-6 rounded-full border mr-2" style={{ backgroundColor: formData.textColor }} />
+                        {formData.textColor}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="p-0">
+                      <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
+                    </PopoverContent>
+                  </Popover>
                 </div>
               </div>
-            )}
 
-            <div className="flex justify-end space-x-4">
-              <Button type="button" variant="outline" onClick={() => router.back()} disabled={isUpdating || isUploading || isFetching}>
-                Cancel
-              </Button>
-              <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isUpdating || isUploading || isFetching}>
-                {isUpdating ? 'Updating...' : isUploading ? 'Uploading...' : 'Update Template'}
-              </Button>
-            </div>
-          </form>
-        </CardContent>
+              <div>
+                <Label htmlFor="logo">Business Logo (optional)</Label>
+                <Input id="logo" type="file" onChange={handleLogoChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
+                {logoPreview && (
+                  <div className="mt-4">
+                    <img src={logoPreview} alt="Logo preview" className="w-24 h-24 object-contain rounded-md border" />
+                  </div>
+                )}
+              </div>
+
+              <div>
+                <Label htmlFor="image">Background Image (optional)</Label>
+                <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
+                {imagePreview && (
+                  <div className="mt-4">
+                    <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+                  </div>
+                )}
+                {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}
+              </div>
+
+              <div>
+                <Label htmlFor="fixedAmounts">Fixed Amounts (£)</Label>
+                <Input
+                  id="fixedAmounts"
+                  value={fixedAmountInput}
+                  onChange={(e) => setFixedAmountInput(e.target.value)}
+                  onKeyDown={handleFixedAmountKeyDown}
+                  placeholder="Enter amount and press , or Enter"
+                  className="mt-1"
+                />
+                <div className="flex flex-wrap gap-2 mt-2">
+                  {formData.fixedAmounts?.map((amount) => (
+                    <div key={amount} className="flex items-center bg-gray-200 rounded-full px-3 py-1 text-sm">
+                      £{amount}
+                      <button type="button" onClick={() => removeFixedAmount(amount)} className="ml-2">
+                        <X className="h-4 w-4" />
+                      </button>
+                    </div>
+                  ))}
+                </div>
+                {errors.fixedAmounts && <p className="text-red-500 text-xs mt-1">{errors.fixedAmounts}</p>}
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="allowCustomAmount" checked={!!formData.allowCustomAmount} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowCustomAmount')} />
+                <Label htmlFor="allowCustomAmount">Allow Custom Amount</Label>
+              </div>
+
+              <div className="flex items-center space-x-2">
+                <Switch id="allowReloading" checked={!!formData.allowReloading} onCheckedChange={(checked) => handleSwitchChange(checked, 'allowReloading')} />
+                <Label htmlFor="allowReloading">Allow Reloading</Label>
+              </div>
+
+              {formData.allowCustomAmount && (
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minCustomAmount">Min Custom Amount (£)</Label>
+                    <Input
+                      id="minCustomAmount"
+                      name="minCustomAmount"
+                      type="number"
+                      value={formData.minCustomAmount || ''}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    {errors.minCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.minCustomAmount}</p>}
+                  </div>
+                  <div>
+                    <Label htmlFor="maxCustomAmount">Max Custom Amount (£)</Label>
+                    <Input
+                      id="maxCustomAmount"
+                      name="maxCustomAmount"
+                      type="number"
+                      value={formData.maxCustomAmount || ''}
+                      onChange={handleInputChange}
+                      className="mt-1"
+                    />
+                    {errors.maxCustomAmount && <p className="text-red-500 text-xs mt-1">{errors.maxCustomAmount}</p>}
+                  </div>
+                </div>
+              )}
+
+              <div className="flex justify-end space-x-4">
+                <Button type="button" variant="outline" onClick={() => router.back()} disabled={isUpdating || isUploading || isFetching}>
+                  Cancel
+                </Button>
+                <Button type="submit" className="bg-orange-600 hover:bg-orange-700 text-white" disabled={isUpdating || isUploading || isFetching}>
+                  {isUpdating ? 'Updating...' : isUploading ? 'Uploading...' : 'Update Template'}
+                </Button>
+              </div>
+            </form>
+          </CardContent>
         </Card>
         <div>
           <GiftCardPreview template={formData} />

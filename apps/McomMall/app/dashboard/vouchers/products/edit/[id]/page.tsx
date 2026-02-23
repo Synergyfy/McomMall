@@ -2,8 +2,8 @@
 
 import React from 'react';
 import { useForm } from 'react-hook-form';
-import { VoucherProductForm } from '../../new/VoucherProductForm';
-import { VoucherCardPreview } from '../../new/VoucherCardPreview';
+import { VoucherProductForm } from '../../components/VoucherProductForm';
+import { VoucherCardPreview } from '../../components/VoucherCardPreview';
 import {
   CreateVoucherProductDto,
   VoucherProduct,

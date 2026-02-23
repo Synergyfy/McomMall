@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useForm, FormProvider } from "react-hook-form";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -62,6 +63,7 @@ const STEPS = [
 ];
 
 export default function ProductTemplatesPage() {
+    const router = useRouter();
     const methods = useForm<TemplateFormValues>({
         defaultValues: {
             name: "",
@@ -200,6 +202,15 @@ export default function ProductTemplatesPage() {
 
     return (
         <div className="space-y-6">
+            <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => router.push('/admin/templates')}
+                className="text-slate-500 hover:text-slate-900 -ml-2 h-8 px-2"
+            >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Back to Templates Library
+            </Button>
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
                     <h1 className="text-2xl font-bold text-slate-900">Product Templates</h1>
