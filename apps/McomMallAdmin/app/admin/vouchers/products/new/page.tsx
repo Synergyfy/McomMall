@@ -9,8 +9,13 @@ import { useAddVoucherProduct } from '@/service/hooks/useVoucherService';
 import { toast } from 'sonner';
 import { useRouter } from 'next/navigation';
 
+type VoucherProductFormValues = Omit<CreateVoucherProductDto, 'backgroundImage' | 'logoUrl'> & {
+  backgroundImage?: any;
+  logoUrl?: any;
+};
+
 export default function NewVoucherProductPage() {
-  const form = useForm<CreateVoucherProductDto>({
+  const form = useForm<VoucherProductFormValues>({
     defaultValues: {
       name: '',
       fixedAmounts: [],
@@ -26,7 +31,7 @@ export default function NewVoucherProductPage() {
   const router = useRouter();
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
-  const onSubmit = async (data: CreateVoucherProductDto) => {
+  const onSubmit = async (data: VoucherProductFormValues) => {
     setIsSubmitting(true);
     try {
       let imageUrl: string | undefined;
@@ -41,11 +46,33 @@ export default function NewVoucherProductPage() {
         });
 
         if (!response.ok) {
-          throw new Error('Failed to upload image');
+          throw new Error('Failed to upload background image');
         }
 
         const result = await response.json();
         imageUrl = result.secure_url;
+      }
+
+      let logoUrl: string | undefined;
+      if (data.logoUrl && data.logoUrl.length > 0) {
+        if (data.logoUrl[0] instanceof File) {
+          const formData = new FormData();
+          formData.append('file', data.logoUrl[0]);
+
+          const response = await fetch('/api/upload/vouchers', {
+            method: 'POST',
+            body: formData,
+          });
+
+          if (!response.ok) {
+            throw new Error('Failed to upload logo');
+          }
+
+          const result = await response.json();
+          logoUrl = result.secure_url;
+        } else if (typeof data.logoUrl === 'string') {
+          logoUrl = data.logoUrl;
+        }
       }
 
       const expiryDays = data.expiryDays;
@@ -55,7 +82,12 @@ export default function NewVoucherProductPage() {
         return;
       }
 
-      await addVoucherProduct({ ...data, backgroundImage: imageUrl, expiryDays });
+      await addVoucherProduct({
+        ...data,
+        backgroundImage: imageUrl,
+        logoUrl: logoUrl,
+        expiryDays
+      });
       toast.success('Voucher product created successfully!');
       router.push('/admin/templates');
     } catch (error) {
