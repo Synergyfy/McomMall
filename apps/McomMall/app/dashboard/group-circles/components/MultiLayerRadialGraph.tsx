@@ -2,7 +2,7 @@
 
 import React from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Zap } from "lucide-react";
+import { Zap, Users } from "lucide-react";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
@@ -21,6 +21,8 @@ export interface Member {
     avatar?: string;
     contributions?: number;
     drawDate?: string;
+    earnedPoints?: number;
+    distributions?: number;
     relationshipScore?: number;
     locationTag?: string;
     relationshipTag?: string;
@@ -52,8 +54,9 @@ export const MultiLayerRadialGraph = React.memo(({
     profileImage,
     relationshipFilter = null
 }: MultiLayerRadialGraphProps) => {
-    const me = members.find(m => m.id === currentMemberId) ||
-        members.find(m => m.role.toLowerCase() === 'owner');
+    const owner = members.find(m => m.role.toLowerCase() === 'owner');
+    const me = members.find(m => m.id === currentMemberId);
+    const isOwner = me?.id === owner?.id;
 
     return (
         <div className="w-full h-full flex items-center justify-center p-4 overflow-visible">
@@ -80,38 +83,29 @@ export const MultiLayerRadialGraph = React.memo(({
                             zIndex: 0
                         }}
                     >
-                        <TooltipProvider>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <div className="absolute top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] uppercase font-bold tracking-widest text-zinc-400 bg-white/80 dark:bg-zinc-950/80 backdrop-blur px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10 pointer-events-auto cursor-default">
-                                        {config.label}
-                                    </div>
-                                </TooltipTrigger>
-                                <TooltipContent side="top">
-                                    <p className="text-xs">{config.description}</p>
-                                </TooltipContent>
-                            </Tooltip>
-                        </TooltipProvider>
+                        <div className="absolute top-2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-[9px] uppercase font-bold tracking-widest text-zinc-400 bg-white/80 dark:bg-zinc-950/80 backdrop-blur px-2 py-0.5 rounded-full shadow-sm whitespace-nowrap z-10">
+                            {config.label}
+                        </div>
                     </div>
                 ))}
 
-                {/* --- The Hub (Center) --- */}
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
                             <div
                                 onClick={() => {
-                                    if (me) {
-                                        onMemberClick(me);
+                                    if (owner) {
+                                        onMemberClick(owner);
                                     } else {
-                                        toast.error("You are not identified as a member of this circle.");
+                                        toast.error("No owner found for this circle.");
                                     }
                                 }}
                                 className={cn(
-                                    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-orange-500 to-red-600 flex flex-col items-center justify-center text-white shadow-xl shadow-orange-500/30 border-4 border-white dark:border-zinc-900 transition-all hover:scale-105 select-none cursor-pointer hover:shadow-orange-500/50 pointer-events-auto overflow-hidden"
+                                    "absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-40 w-12 h-12 md:w-14 md:h-14 lg:w-16 lg:h-16 rounded-full bg-gradient-to-br from-zinc-800 to-black flex flex-col items-center justify-center text-white shadow-xl shadow-black/30 border-4 border-white dark:border-zinc-900 transition-all hover:scale-105 select-none cursor-pointer hover:shadow-black/50 pointer-events-auto overflow-hidden",
+                                    isOwner ? "from-orange-500 to-red-600 shadow-orange-500/30 hover:shadow-orange-500/50" : ""
                                 )}
                             >
-                                {profileImage ? (
+                                {isOwner && profileImage ? (
                                     <img
                                         src={profileImage}
                                         alt="You"
@@ -119,14 +113,19 @@ export const MultiLayerRadialGraph = React.memo(({
                                     />
                                 ) : (
                                     <>
-                                        <Zap className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-pulse pointer-events-none" />
-                                        <span className="text-[6px] md:text-[8px] font-bold pointer-events-none">YOU</span>
+                                        {isOwner ? <Zap className="w-4 h-4 md:w-6 md:h-6 mb-0.5 animate-pulse" /> : <Users className="w-4 h-4 md:w-6 md:h-6 mb-0.5" />}
+                                        <span className="text-[6px] md:text-[8px] font-bold pointer-events-none uppercase">
+                                            {isOwner ? "YOU" : "OWNER"}
+                                        </span>
                                     </>
                                 )}
                             </div>
                         </TooltipTrigger>
-                        <TooltipContent side="bottom">
-                            <p className="text-xs">You are the center of your circle. Click to view your profile details.</p>
+                        <TooltipContent side="top">
+                            <div className="text-center">
+                                <p className="font-bold">{owner?.name || "Circle Owner"}</p>
+                                <p className="text-xs text-muted-foreground">{isOwner ? "You are the owner" : "Circle Founder"}</p>
+                            </div>
                         </TooltipContent>
                     </Tooltip>
                 </TooltipProvider>
@@ -134,7 +133,7 @@ export const MultiLayerRadialGraph = React.memo(({
                 {/* --- The Particles (Members) --- */}
                 <AnimatePresence>
                     {members
-                        .filter(m => m.id !== (me?.id || null))
+                        .filter(m => m.id !== owner?.id)
                         .filter(m => {
                             const orbitMatch = !focusedOrbits || focusedOrbits.includes(m.orbit);
                             const relationMatch = !relationshipFilter || m.relationshipTag?.toLowerCase() === relationshipFilter.toLowerCase();
@@ -194,15 +193,17 @@ export const MultiLayerRadialGraph = React.memo(({
                                                 >
                                                     <div className={cn(
                                                         "w-full h-full rounded-full overflow-hidden border-2 shadow-sm bg-white dark:bg-zinc-900 transition-colors relative z-10",
-                                                        member.orbit === 1 ? "border-orange-500 ring-2 ring-orange-200/50" : "border-white dark:border-zinc-700",
+                                                        member.id === currentMemberId ? "border-blue-500 ring-2 ring-blue-200" :
+                                                            member.orbit === 1 ? "border-orange-500 ring-2 ring-orange-200/50" : "border-white dark:border-zinc-700",
                                                         member.status === 'offline' && "grayscale opacity-70"
                                                     )}>
                                                         <Avatar className="w-full h-full">
                                                             <AvatarFallback className={cn(
                                                                 "text-[10px] md:text-xs font-bold flex items-center justify-center w-full h-full",
-                                                                member.orbit === 1 ? "bg-orange-100 text-orange-700" : "bg-zinc-100 text-zinc-500"
+                                                                member.id === currentMemberId ? "bg-blue-100 text-blue-700" :
+                                                                    member.orbit === 1 ? "bg-orange-100 text-orange-700" : "bg-zinc-100 text-zinc-500"
                                                             )}>
-                                                                {member.name.substring(0, 2)}
+                                                                {member.id === currentMemberId ? "ME" : member.name.substring(0, 2)}
                                                             </AvatarFallback>
                                                         </Avatar>
                                                     </div>
