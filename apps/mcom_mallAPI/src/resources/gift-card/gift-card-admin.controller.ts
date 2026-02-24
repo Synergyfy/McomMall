@@ -16,6 +16,7 @@ import { ToggleFeatureDto } from './dto/toggle-feature.dto';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { GiftCard } from './entities/gift-card.entity';
+import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
 
 @ApiTags('Gift Cards (Admin)')
 @ApiBearerAuth()

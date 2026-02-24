@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, Suspense } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
     ArrowLeft, Gift, Users, Calendar, Search,
@@ -19,6 +19,7 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import Image from "next/image";
 import Link from "next/link";
+import { useSearchParams } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { DistributeOfferDialog } from "./components/DistributeOfferDialog";
 import { toast } from "sonner";
@@ -67,7 +68,11 @@ const MOCK_MARKETPLACE_OFFERS = [
     }
 ];
 
-export default function PartnerOffersPage() {
+function PartnerOffersContent() {
+    const searchParams = useSearchParams();
+    const circleName = searchParams.get('circleName');
+    const circleId = searchParams.get('circleId');
+
     const [adoptedCampaigns, setAdoptedCampaigns] = useState<any[]>([]);
     const [isLoading, setIsLoading] = useState(true);
     const [viewMode, setViewMode] = useState<"grid" | "list">("grid");
@@ -131,8 +136,10 @@ export default function PartnerOffersPage() {
                     >
                         <ArrowLeft className="w-4 h-4" /> Back to Circles
                     </Link>
-                    <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">Partner Offers</h1>
-                    <p className="text-zinc-500 font-medium">Manage and monitor your collaborative campaign partnerships.</p>
+                    <h1 className="text-4xl font-black tracking-tight text-zinc-900 dark:text-zinc-50">
+                        Partner Offers {circleName ? `for ${circleName}` : ""}
+                    </h1>
+                    <p className="text-zinc-500 font-medium">Manage and monitor your collaborative campaign partnerships {circleName ? `within your ${circleName} circle` : ""}.</p>
                 </div>
 
                 <div className="flex items-center gap-3">
@@ -429,5 +436,14 @@ export default function PartnerOffersPage() {
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+
+export default function PartnerOffersPage() {
+    return (
+        <Suspense fallback={<div>Loading Partner Offers...</div>}>
+            <PartnerOffersContent />
+        </Suspense>
     );
 }
