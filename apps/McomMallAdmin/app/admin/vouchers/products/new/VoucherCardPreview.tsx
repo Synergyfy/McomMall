@@ -6,8 +6,13 @@ import { CreateVoucherProductDto } from '@/service/vouchers/types';
 import { QRCode } from 'react-qrcode-logo';
 import { ShieldCheck, Tag } from 'lucide-react';
 
+type VoucherProductFormValues = Omit<CreateVoucherProductDto, 'backgroundImage' | 'logoUrl'> & {
+  backgroundImage?: any;
+  logoUrl?: any;
+};
+
 interface VoucherCardPreviewProps {
-  control: Control<CreateVoucherProductDto>;
+  control: Control<VoucherProductFormValues>;
 }
 
 const VerticalRedRibbon = () => (
@@ -46,7 +51,7 @@ export const VoucherCardPreview: React.FC<VoucherCardPreviewProps> = ({
     logoUrl,
   ] = useWatch({
     control,
-    name: ['name', 'textColor', 'backgroundImage', 'expiryDays', 'allowReloading', 'logoUrl' as any],
+    name: ['name', 'textColor', 'backgroundImage', 'expiryDays', 'allowReloading', 'logoUrl'],
   });
 
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);

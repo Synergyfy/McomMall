@@ -142,7 +142,7 @@ export const VoucherProductForm: React.FC<VoucherProductFormProps> = ({
         <Input
           id="logoUrl"
           type="file"
-          {...register('logoUrl' as any)}
+          {...register('logoUrl')}
           className="mt-1"
         />
         <SubNote text="Upload a small logo to be displayed on the voucher." />

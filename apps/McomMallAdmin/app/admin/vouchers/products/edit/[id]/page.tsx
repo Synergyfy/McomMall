@@ -3,7 +3,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm } from 'react-hook-form';
 import { VoucherProductForm } from '../../new/VoucherProductForm';
 import { VoucherCardPreview } from '../../new/VoucherCardPreview';
-import { UpdateVoucherProductDto } from '@/service/vouchers/types';
+import { CreateVoucherProductDto, UpdateVoucherProductDto } from '@/service/vouchers/types';
 import { useGetVoucherProduct, useEditVoucherProduct } from '@/service/hooks/useVoucherService';
 import { toast } from 'sonner';
 import { useRouter, useParams } from 'next/navigation';
@@ -18,7 +18,7 @@ export default function EditVoucherProductPage() {
     const editVoucherProduct = useEditVoucherProduct();
     const [isSubmitting, setIsSubmitting] = useState(false);
 
-    const form = useForm<UpdateVoucherProductDto>();
+    const form = useForm<CreateVoucherProductDto>();
 
     useEffect(() => {
         if (voucherProduct) {
@@ -38,7 +38,7 @@ export default function EditVoucherProductPage() {
         }
     }, [voucherProduct, form]);
 
-    const onSubmit = async (data: UpdateVoucherProductDto) => {
+    const onSubmit = async (data: CreateVoucherProductDto) => {
         setIsSubmitting(true);
         try {
             let imageUrl: string | undefined = voucherProduct?.backgroundImage;

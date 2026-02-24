@@ -18,7 +18,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip";
 import Image from "next/image";
-import { SketchPicker, ColorResult } from 'react-color';
+
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
 
@@ -60,8 +60,8 @@ const CreateGiftCardTemplatePage = () => {
     }
   };
 
-  const handleColorChange = (color: ColorResult, field: 'backgroundColor' | 'textColor') => {
-    setFormData((prev) => ({ ...prev, [field]: color.hex }));
+  const handleColorChange = (hex: string, field: 'backgroundColor' | 'textColor') => {
+    setFormData((prev) => ({ ...prev, [field]: hex }));
   };
 
   const handleSwitchChange = (checked: boolean, field: 'allowCustomAmount' | 'allowReloading') => {
@@ -83,6 +83,20 @@ const CreateGiftCardTemplatePage = () => {
       setImageFile(null);
       setImagePreview(null);
       setFormData(prev => ({ ...prev, backgroundImageUrl: '' }));
+    }
+  };
+
+  const handleLogoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setLogoFile(file);
+      const previewUrl = URL.createObjectURL(file);
+      setLogoPreview(previewUrl);
+      setFormData(prev => ({ ...prev, logoUrl: previewUrl }));
+    } else {
+      setLogoFile(null);
+      setLogoPreview(null);
+      setFormData(prev => ({ ...prev, logoUrl: undefined }));
     }
   };
 
@@ -246,8 +260,13 @@ const CreateGiftCardTemplatePage = () => {
                         {formData.backgroundColor}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0">
-                      <SketchPicker color={formData.backgroundColor} onChangeComplete={(color) => handleColorChange(color, 'backgroundColor')} />
+                    <PopoverContent className="p-2">
+                      <input
+                        type="color"
+                        value={formData.backgroundColor}
+                        onChange={(e) => handleColorChange(e.target.value, 'backgroundColor')}
+                        className="w-40 h-40 cursor-pointer border-0 p-0 bg-transparent"
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
@@ -260,8 +279,13 @@ const CreateGiftCardTemplatePage = () => {
                         {formData.textColor}
                       </Button>
                     </PopoverTrigger>
-                    <PopoverContent className="p-0">
-                      <SketchPicker color={formData.textColor} onChangeComplete={(color) => handleColorChange(color, 'textColor')} />
+                    <PopoverContent className="p-2">
+                      <input
+                        type="color"
+                        value={formData.textColor}
+                        onChange={(e) => handleColorChange(e.target.value, 'textColor')}
+                        className="w-40 h-40 cursor-pointer border-0 p-0 bg-transparent"
+                      />
                     </PopoverContent>
                   </Popover>
                 </div>
