@@ -38,79 +38,76 @@ const VoucherCampaignCard: React.FC<Props> = ({ campaign, onUnlockClick }) => {
     const isExpired = campaign.status === CampaignStatus.EXPIRED;
 
     return (
-        <div className={`group relative bg-white rounded-[2rem] shadow-xl overflow-hidden border border-gray-100 flex flex-col md:flex-row ${isExpired ? 'opacity-70 grayscale-[0.5]' : ''}`}>
+        <div className={`group relative bg-white rounded-[1.5rem] shadow-lg overflow-hidden border border-gray-100 flex flex-col md:flex-row ${isExpired ? 'opacity-70 grayscale-[0.5]' : ''}`}>
             {/* Left Section (Dark) */}
-            <div className="md:w-[20%] bg-neutral-900 relative overflow-hidden flex flex-row md:flex-col items-center justify-center p-4">
+            <div className="md:w-[15%] bg-neutral-900 relative overflow-hidden flex flex-row md:flex-col items-center justify-center p-3">
                 <div className="absolute inset-0 bg-gradient-to-b from-black/50 to-transparent opacity-50" />
                 {/* Circular Balance Badge */}
-                <div className="relative z-40 bg-red-600 w-16 h-16 md:w-20 md:h-20 rounded-full border-4 border-white/20 flex flex-col items-center justify-center shadow-2xl md:mb-8 md:translate-x-4">
+                <div className="relative z-40 bg-red-600 w-14 h-14 md:w-16 md:h-16 rounded-full border-2 border-white/20 flex flex-col items-center justify-center shadow-xl md:mb-4 md:translate-x-2">
                     <span className="text-white text-xs md:text-sm font-black leading-none drop-shadow">£{campaign.totalValue.toFixed(0)}</span>
                     <span className="text-white text-[6px] md:text-[8px] font-bold uppercase tracking-widest mt-0.5">Value</span>
                 </div>
-                <div className="hidden md:block absolute bottom-4 text-center">
-                    <span className="text-[10px] text-white/50 uppercase tracking-[0.2em] font-bold rotate-180 block" style={{ writingMode: 'vertical-rl' }}>Campaign</span>
+                <div className="hidden md:block absolute bottom-2 text-center">
+                    <span className="text-[8px] text-white/50 uppercase tracking-[0.2em] font-bold rotate-180 block" style={{ writingMode: 'vertical-rl' }}>Campaign</span>
                 </div>
             </div>
 
             {/* Right Section (Light) */}
-            <div className="flex-1 bg-white relative p-6 flex flex-col overflow-hidden">
+            <div className="flex-1 bg-white relative p-4 flex flex-col overflow-hidden">
                 <VoucherWatermark />
                 <VerticalRedRibbon />
                 <RedBow />
 
-                <div className="relative z-10 flex justify-between items-start mb-4">
-                    <div className="pl-6 md:pl-8">
-                        <div className="flex items-center gap-2 mb-1">
-                            <div className="w-3 h-3 rounded bg-red-600" />
-                            <span className="text-[10px] sm:text-xs font-black uppercase tracking-[0.2em] text-gray-900">
+                <div className="relative z-10 flex justify-between items-start mb-2">
+                    <div className="pl-5 md:pl-7">
+                        <div className="flex items-center gap-1.5 mb-0.5">
+                            <div className="w-2.5 h-2.5 rounded bg-red-600" />
+                            <span className="text-[9px] font-black uppercase tracking-[0.2em] text-gray-900">
                                 MCOM MALL OFFICIAL
                             </span>
                         </div>
-                        <h2 className="text-2xl sm:text-3xl font-black text-gray-900 tracking-tighter uppercase leading-none mt-2">{campaign.name}</h2>
+                        <h2 className="text-xl sm:text-2xl font-black text-gray-900 tracking-tighter uppercase leading-none mt-1">{campaign.name}</h2>
                     </div>
 
                     {/* QR Code graphic */}
-                    <div className="bg-white p-2 rounded-xl shadow-sm border border-gray-100 ml-4 flex-shrink-0">
-                        <QRCode value={campaign.id} size={50} />
+                    <div className="bg-white p-1.5 rounded-lg shadow-sm border border-gray-100 ml-3 flex-shrink-0">
+                        <QRCode value={campaign.id} size={40} />
                     </div>
                 </div>
 
-                <div className="relative z-10 pl-6 md:pl-8 mt-2 space-y-4">
-                    <div className="inline-block bg-gray-100 rounded-lg px-3 py-1.5">
-                        <p className="text-xs text-gray-600 font-bold uppercase tracking-wider">
+                <div className="relative z-10 pl-5 md:pl-7 mt-1 space-y-3">
+                    <div className="inline-block bg-gray-50 rounded-lg px-2 py-1 border border-gray-100">
+                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">
                             Expires: <span className="text-red-600">{new Date(campaign.expiryDate).toLocaleDateString()}</span>
                         </p>
                     </div>
 
                     {/* 3 Values Breakdown embedded inside Voucher UI */}
-                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-2 border border-gray-100 shadow-sm mt-4">
+                    <div className="bg-white/80 backdrop-blur-sm rounded-xl p-1.5 border border-gray-100 shadow-sm mt-2">
                         <CampaignValueSection campaign={campaign} />
                         <CampaignChannelBalances wallets={campaign.wallets} />
                     </div>
                 </div>
 
-                <div className="relative z-10 pl-6 md:pl-8 mt-6 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-4">
+                <div className="relative z-10 pl-5 md:pl-7 mt-4 flex flex-col sm:flex-row justify-between items-center sm:items-end gap-3">
                     <div className="w-full sm:w-auto">
                         {isFullyUsed && (
-                            <span className="px-3 py-1.5 bg-gray-800 text-white text-xs font-bold uppercase rounded flex items-center gap-2">
+                            <span className="px-2 py-1 bg-gray-800 text-white text-[10px] font-bold uppercase rounded flex items-center gap-2">
                                 Fully Redeemed
                             </span>
                         )}
                         {isExpired && (
-                            <span className="px-3 py-1.5 bg-red-100 text-red-800 text-xs font-bold uppercase rounded border border-red-200">
+                            <span className="px-2 py-1 bg-red-100 text-red-800 text-[10px] font-bold uppercase rounded border border-red-200">
                                 Expired
                             </span>
                         )}
-                        {campaign.status === CampaignStatus.NOT_ACTIVE && (
-                            <span className="text-xs font-bold text-gray-500 italic uppercase">Campaign Not Active</span>
-                        )}
                     </div>
 
-                    <div className="flex flex-col sm:flex-row gap-3 w-full sm:w-auto shrink-0 z-20">
+                    <div className="flex flex-col sm:flex-row gap-2 w-full sm:w-auto shrink-0 z-20">
                         {campaign.externalCampaign && campaign.externalRedemptionUrl && !isFullyUsed && !isExpired && (
                             <a href={campaign.externalRedemptionUrl} target="_blank" rel="noreferrer" className="w-full sm:w-auto">
-                                <Button variant="outline" className="w-full sm:w-auto gap-2 border-gray-300 text-gray-700 hover:bg-gray-50 h-11 rounded-xl">
-                                    Redeem <ExternalLink className="w-4 h-4" />
+                                <Button variant="outline" className="w-full sm:w-auto gap-2 border-gray-300 text-gray-700 hover:bg-gray-50 h-9 rounded-lg text-xs">
+                                    Redeem <ExternalLink className="w-3 h-3" />
                                 </Button>
                             </a>
                         )}
@@ -118,7 +115,7 @@ const VoucherCampaignCard: React.FC<Props> = ({ campaign, onUnlockClick }) => {
                         {!campaign.contributionPaid && !isFullyUsed && !isExpired && (
                             <Button
                                 onClick={() => onUnlockClick(campaign.id)}
-                                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white shadow-lg font-bold px-6 h-11 rounded-xl"
+                                className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white shadow-md font-bold px-4 h-9 rounded-lg text-xs"
                             >
                                 Unlock Full Value
                             </Button>
