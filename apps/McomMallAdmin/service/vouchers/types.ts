@@ -72,7 +72,7 @@ export interface CreateVoucherProductDto {
   bonusAmount?: number;
   allowReloading?: boolean;
   backgroundImage?: any;
-  logoUrl?: string;
+  logoUrl?: any;
   textColor?: string;
 }
 

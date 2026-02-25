@@ -5,10 +5,12 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import { Info, Globe, Smartphone, ArrowUpRight } from "lucide-react";
 import { GeneralCashback } from './components/GeneralCashback';
 import { TerminalCashback } from './components/TerminalCashback';
+import { CampaignCashbackList } from './components/campaign-cashback/CampaignCashbackList';
 
 import { useSelector } from "react-redux";
 import { RootState } from "@/service/store/store";
 import { UserRole } from "@/service/auth/types";
+import { Ticket } from 'lucide-react';
 
 const CashbackPage = () => {
   const { userRole } = useSelector((state: RootState) => state.auth);
@@ -28,7 +30,7 @@ const CashbackPage = () => {
       </div>
 
       {/* Explanation Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <Card className="relative overflow-hidden group border-none shadow-md bg-gradient-to-br from-blue-50 to-indigo-50 hover:shadow-lg transition-all duration-300">
           <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
             <Globe className="h-24 w-24 text-blue-600" />
@@ -41,8 +43,8 @@ const CashbackPage = () => {
             <CardDescription className="text-blue-700 font-medium">Online & Platform Rewards</CardDescription>
           </CardHeader>
           <CardContent className="relative">
-            <p className="text-sm text-blue-800/80 leading-relaxed max-w-[85%]">
-              Automatically earn rewards from your online purchases and platform activities. No manual steps required — rewards are calculated and credited based on your spending.
+            <p className="text-sm text-blue-800/80 leading-relaxed max-w-[90%]">
+              Automatically earn rewards from your online purchases and platform activities. No manual steps required.
             </p>
           </CardContent>
         </Card>
@@ -59,8 +61,26 @@ const CashbackPage = () => {
             <CardDescription className="text-orange-700 font-medium">In-Store & Local Rewards</CardDescription>
           </CardHeader>
           <CardContent className="relative">
-            <p className="text-sm text-orange-800/80 leading-relaxed max-w-[85%]">
-              Claim rewards for your physical visits to participating stores. Simply scan the terminal QR code and upload your proof of purchase to start earning back.
+            <p className="text-sm text-orange-800/80 leading-relaxed max-w-[90%]">
+              Claim rewards for your physical visits to participating stores. Simply scan the terminal QR code.
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card className="relative overflow-hidden group border-none shadow-md bg-gradient-to-br from-orange-50 to-amber-50 hover:shadow-lg transition-all duration-300">
+          <div className="absolute top-0 right-0 p-4 opacity-10 group-hover:opacity-20 transition-opacity">
+            <Ticket className="h-24 w-24 text-orange-600" />
+          </div>
+          <CardHeader className="pb-2 relative">
+            <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center mb-2">
+              <Ticket className="h-6 w-6 text-orange-600" />
+            </div>
+            <CardTitle className="text-xl font-bold text-orange-900">Campaign Cashback</CardTitle>
+            <CardDescription className="text-orange-700 font-medium">Promotional Rewards</CardDescription>
+          </CardHeader>
+          <CardContent className="relative">
+            <p className="text-sm text-orange-800/80 leading-relaxed max-w-[90%]">
+              Unlock special promotional rewards containing pre-loaded values from 247GBS and the MCOM System.
             </p>
           </CardContent>
         </Card>
@@ -68,29 +88,41 @@ const CashbackPage = () => {
 
       {/* Main Content Tabs */}
       <Tabs defaultValue={defaultTab} className="w-full">
-        <div className="flex items-center justify-center sm:justify-start border-b mb-6">
-          <TabsList className="bg-transparent h-auto p-0 gap-8">
-            <TabsTrigger 
-              value="general" 
+        <div className="flex items-center justify-center sm:justify-start border-b mb-6 overflow-x-auto">
+          <TabsList className="bg-transparent h-auto p-0 gap-8 min-w-max">
+            <TabsTrigger
+              value="general"
               className="px-4 py-3 text-base font-semibold border-b-2 border-transparent data-[state=active]:border-blue-600 data-[state=active]:bg-transparent data-[state=active]:text-blue-600 rounded-none shadow-none transition-all"
             >
               General Hub
             </TabsTrigger>
-            <TabsTrigger 
+            <TabsTrigger
               value="terminal"
               className="px-4 py-3 text-base font-semibold border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:bg-transparent data-[state=active]:text-orange-600 rounded-none shadow-none transition-all"
             >
               Terminal Cashback
             </TabsTrigger>
+            <TabsTrigger
+              value="campaign"
+              className="px-4 py-3 text-base font-semibold border-b-2 border-transparent data-[state=active]:border-orange-600 data-[state=active]:bg-transparent data-[state=active]:text-orange-600 rounded-none shadow-none transition-all"
+            >
+              Campaign Cashback
+            </TabsTrigger>
           </TabsList>
         </div>
-        
+
         <TabsContent value="general" className="mt-0 focus-visible:outline-none ring-offset-background">
           <GeneralCashback />
         </TabsContent>
-        
+
         <TabsContent value="terminal" className="mt-0 focus-visible:outline-none ring-offset-background">
           <TerminalCashback />
+        </TabsContent>
+
+        <TabsContent value="campaign" className="mt-0 focus-visible:outline-none ring-offset-background">
+          <div className="max-w-4xl pt-4">
+            <CampaignCashbackList />
+          </div>
         </TabsContent>
       </Tabs>
     </div>

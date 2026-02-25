@@ -18,7 +18,7 @@ import { Switch } from '@/components/ui/switch';
 import { CreateCouponProductDto, CouponProduct, UpdateCouponProductDto } from '@/service/coupon-products/types';
 import { X, Info } from 'lucide-react';
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
-import { SketchPicker } from 'react-color';
+
 import Image from 'next/image';
 import {
   Tooltip,
@@ -357,8 +357,13 @@ export function CouponProductForm({ couponProduct, onSubmit }: CouponProductForm
                     </Button>
                   </FormControl>
                 </PopoverTrigger>
-                <PopoverContent className="p-0">
-                  <SketchPicker color={field.value} onChangeComplete={(color) => field.onChange(color.hex)} />
+                <PopoverContent className="p-2">
+                  <input
+                    type="color"
+                    value={field.value}
+                    onChange={(e) => field.onChange(e.target.value)}
+                    className="w-40 h-40 cursor-pointer border-0 p-0 bg-transparent"
+                  />
                 </PopoverContent>
               </Popover>
               <FormMessage />
