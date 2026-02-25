@@ -5,6 +5,10 @@
             "dependsOn": [
                 "^build"
             ],
+            "env": [
+                "CLOUDINARY_API_KEY",
+                "CLOUDINARY_API_SECRET"
+            ],
             "outputs": [
                 ".next/**",
                 "dist/**"
