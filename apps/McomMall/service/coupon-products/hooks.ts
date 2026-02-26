@@ -113,3 +113,19 @@ export const useGetCouponTransactions = (startDate: string, endDate: string) => 
     enabled: !!startDate && !!endDate,
   });
 };
+
+export const useGetPublicCouponDetails = (code: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['publicCouponDetails', code],
+    queryFn: () => api.get(`/coupons/detail/${code}`).then(res => res.data),
+    enabled: options?.enabled !== undefined ? options.enabled : !!code,
+  });
+};
+
+export const useGetPublicCouponProductDetails = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['publicCouponProductDetails', id],
+    queryFn: () => api.get(`/coupons/products/detail/${id}`).then(res => res.data),
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
+  });
+};

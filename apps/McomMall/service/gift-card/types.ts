@@ -99,12 +99,23 @@ export interface GiftCard {
   initialBalance: number;
   currentBalance: number;
   currency: string;
-  recipientEmail: string;
+  recipientEmail: string | null;
+  recipientName?: string | null;
+  senderName?: string | null;
+  personalMessage?: string | null;
   deliveryStatus: string;
   isActive: boolean;
   createdAt: string;
   updatedAt: string;
   allowReloading?: boolean;
+  template?: GiftCardTemplate;
+  purchaseBusiness?: {
+    id: string;
+    businessName: string;
+    legalName: string;
+    businessEmail: string;
+    businessPhone: string;
+  };
 }
 
 

@@ -341,4 +341,17 @@ export class CouponService {
       order: { savedAt: 'DESC' },
     });
   }
+
+  async findProductById(id: string): Promise<Coupon> {
+    const coupon = await this.couponRepository.findOne({
+      where: { id },
+      relations: ['business', 'campaign'],
+    });
+
+    if (!coupon) {
+      throw new NotFoundException('Coupon not found.');
+    }
+
+    return coupon;
+  }
 }

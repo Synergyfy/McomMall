@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { Loader, ChevronLeft, ShoppingCart } from 'lucide-react';
+import { Loader, ChevronLeft, ShoppingCart, Ticket } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import ServiceSafetyCard from '@/app/(public)/services/[id]/components/ServiceSafetyCard';
@@ -12,7 +12,7 @@ import CouponPurchaseModal from '@/app/(public)/listings/[id]/components/CouponP
 import CouponPaymentSuccessModal from '@/components/CouponPaymentSuccessModal';
 import { CouponProduct } from '@/service/coupon-products/types';
 import { Coupon } from '@/service/my-coupons/types';
-import { useGetCouponProduct } from '@/service/coupon-products/hooks';
+import { useGetPublicCouponProductDetails, useGetPublicCouponDetails } from '@/service/coupon-products/hooks';
 import { PromotionalItem } from '@/lib/listing-data';
 import VoucherCard from '@/components/marketplace/VoucherCard';
 
@@ -23,10 +23,20 @@ export default function CouponPage() {
     const { selectedItem } = useMarketplaceContext();
     const cachedItem = (selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null) as unknown as CouponProduct;
 
-    const { data: couponResponse, isLoading, isError } = useGetCouponProduct(id || '');
+    // Detect if ID is a code (assume non-uuid characters or specific logic)
+    const isPossiblyCode = !!(id?.length && !id.includes('-')); // Rough check for non-uuid
 
-    const product = couponResponse?.data as CouponProduct | undefined;
-    const displayCoupon = cachedItem || product;
+    const { data: productData, isLoading: productLoading, isError: productError } = useGetPublicCouponProductDetails(id || '', {
+        enabled: !isPossiblyCode
+    });
+
+    const { data: couponDetail, isLoading: couponDetailLoading, isError: couponDetailError } = useGetPublicCouponDetails(id || '', {
+        enabled: isPossiblyCode
+    });
+
+    const displayCoupon = cachedItem || productData || couponDetail;
+    const isLoading = productLoading || couponDetailLoading;
+    const isError = productError && couponDetailError;
 
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -120,6 +130,50 @@ export default function CouponPage() {
                                 </div>
                             </div>
                         </div>
+
+                        {/* Issued Coupon Info (if viewing by code) */}
+                        {couponDetail && (
+                            <div className="bg-gradient-to-br from-green-500 to-emerald-600 rounded-xl p-6 md:p-8 text-white shadow-lg">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <Ticket className="w-8 h-8 opacity-90" />
+                                        <h3 className="text-xl font-bold">Your Discount Coupon</h3>
+                                    </div>
+                                    <div className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold tracking-wider uppercase backdrop-blur-sm">
+                                        {couponDetail.status}
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-md">
+                                        <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Coupon Code</p>
+                                        <p className="text-4xl font-black tracking-widest uppercase">{couponDetail.code}</p>
+                                    </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Discount</p>
+                                            <p className="font-bold text-lg">
+                                                {couponDetail.discountType === 'percentage' ? `${couponDetail.discountValue}%` : `£${couponDetail.discountValue}`} Off
+                                            </p>
+                                        </div>
+                                        {couponDetail.expiresAt && (
+                                            <div className="text-right">
+                                                <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Expires On</p>
+                                                <p className="font-bold text-lg">{new Date(couponDetail.expiresAt).toLocaleDateString()}</p>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {couponDetail.business && (
+                                        <div className="pt-4 border-t border-white/10">
+                                            <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Valid at</p>
+                                            <p className="font-bold">{couponDetail.business.businessName}</p>
+                                        </div>
+                                    )}
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative">

@@ -327,23 +327,23 @@ export class GiftCardService {
       }
 
       const expiryDate = template.expiryPeriodDays
-          ? new Date(
-            new Date().setDate(
-              new Date().getDate() + template.expiryPeriodDays,
-            ),
-          )
-          : null;
+        ? new Date(
+          new Date().setDate(
+            new Date().getDate() + template.expiryPeriodDays,
+          ),
+        )
+        : null;
 
       const dv = await this.digitalValueService.create({
-          type: DigitalValueType.GIFT_CARD,
-          initialValue: finalAmount,
-          ownerId: business.user.id,
-          metadata: {
-              ...purchaseDto,
-              purchaserId: userId,
-              templateId: template.id,
-          },
-          expiryDate: expiryDate ? expiryDate.toISOString() : null,
+        type: DigitalValueType.GIFT_CARD,
+        initialValue: finalAmount,
+        ownerId: business.user.id,
+        metadata: {
+          ...purchaseDto,
+          purchaserId: userId,
+          templateId: template.id,
+        },
+        expiryDate: expiryDate ? expiryDate.toISOString() : null,
       }, business.user.id, manager);
 
       const giftCard = giftCardRepo.create({
@@ -503,7 +503,7 @@ export class GiftCardService {
         const dv = await this.digitalValueService.getByCode(code);
         await this.digitalValueService.fund(dv.id, { amount }, manager);
       } catch (e) {
-         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const user = await manager.findOne(User, { where: { id: userId } });
@@ -601,10 +601,10 @@ export class GiftCardService {
     }
 
     const expiryDate = template.expiryPeriodDays
-        ? new Date(
-          new Date().setDate(new Date().getDate() + template.expiryPeriodDays),
-        )
-        : null;
+      ? new Date(
+        new Date().setDate(new Date().getDate() + template.expiryPeriodDays),
+      )
+      : null;
 
     return this.dataSource.transaction(async (manager) => {
       const dv = await this.digitalValueService.create({
@@ -612,8 +612,8 @@ export class GiftCardService {
         initialValue: finalAmount,
         ownerId,
         metadata: {
-            ...purchaseDto,
-            templateId: template.id,
+          ...purchaseDto,
+          templateId: template.id,
         },
         expiryDate: expiryDate ? expiryDate.toISOString() : null,
       }, ownerId, manager);
@@ -736,9 +736,9 @@ export class GiftCardService {
         // But if I can't migrate DB...
         // I'll log and ignore if DV not found, but if found, ensure consistency.
         if (e instanceof NotFoundException) {
-           // Ignore if DV missing (legacy)
+          // Ignore if DV missing (legacy)
         } else {
-           throw e;
+          throw e;
         }
       }
 
@@ -923,7 +923,7 @@ export class GiftCardService {
 
     // Check capability using ownerId
     const currentTemplateCount = await this.templateRepository.count({
-        where: { owner: { id: ownerId } }
+      where: { owner: { id: ownerId } }
     });
     await this.capabilityService.checkPermission(ownerId, ActionType.CREATE_GIFT_CARD_TEMPLATE, { currentCount: currentTemplateCount });
 
@@ -1454,5 +1454,38 @@ export class GiftCardService {
     });
 
     return new PageDto(items, pageMetaDto);
+  }
+
+  async findGiftCardDetailsByCode(code: string): Promise<GiftCard> {
+    const giftCard = await this.giftCardRepository.findOne({
+      where: { code },
+      relations: ['template', 'template.owner', 'purchaseBusiness'],
+    });
+
+    if (!giftCard) {
+      throw new NotFoundException('Gift card not found.');
+    }
+
+    // Attempt to link to a business if not explicitly present
+    if (!giftCard.purchaseBusiness && giftCard.template?.ownerId) {
+      giftCard.purchaseBusiness = await this.businessRepository.findOne({
+        where: { user: { id: giftCard.template.ownerId } },
+      });
+    }
+
+    return giftCard;
+  }
+
+  async findTemplateById(id: string): Promise<GiftCardTemplate> {
+    const template = await this.templateRepository.findOne({
+      where: { id },
+      relations: ['owner'],
+    });
+
+    if (!template) {
+      throw new NotFoundException('Gift card template not found.');
+    }
+
+    return template;
   }
 }

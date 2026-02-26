@@ -4,10 +4,14 @@ export interface Coupon {
   code: string;
   initialValue: number;
   balance: number;
-  status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled';
-  expiresAt: Date | null;
+  discountValue: number;
+  discountType: 'percentage' | 'fixed';
+  status: 'unredeemed' | 'redeemed' | 'partially_redeemed' | 'expired' | 'disabled' | 'ACTIVE' | 'DRAFT';
+  expiresAt: Date | string | null;
   buyer: any; // User
   owner: any; // User
+  business: any; // Business
+  campaign: any; // Campaign
   recipientName?: string;
   recipientEmail?: string;
   couponProduct: any; // CouponProduct

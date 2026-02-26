@@ -108,6 +108,12 @@ const adjustBalance = async ({ id, dto }: { id: string; dto: AdjustBalanceDto })
 };
 
 
+const fetchPublicGiftCardDetails = async (code: string): Promise<GiftCard> => {
+  const { data } = await api.get<GiftCard>(`/gift-cards/details/${code}`);
+  return data;
+};
+
+
 // React Query Hooks
 export const useGetGiftCardTemplates = () => {
   return useQuery<GiftCardTemplate[], Error>({
@@ -281,5 +287,21 @@ export const useVerifyPurchase = () => {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['giftCards'] });
     },
+  });
+};
+
+export const useGetPublicGiftCardDetails = (code: string, options?: { enabled?: boolean }) => {
+  return useQuery<GiftCard, Error>({
+    queryKey: ['publicGiftCardDetails', code],
+    queryFn: () => fetchPublicGiftCardDetails(code),
+    enabled: options?.enabled !== undefined ? options.enabled : !!code,
+  });
+};
+
+export const useGetPublicGiftCardTemplateDetails = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery<GiftCardTemplate, Error>({
+    queryKey: ['publicGiftCardTemplateDetails', id],
+    queryFn: () => api.get<GiftCardTemplate>(`/gift-cards/templates/details/${id}`).then(res => res.data),
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
   });
 };

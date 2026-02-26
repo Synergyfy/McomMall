@@ -6,7 +6,9 @@ import {
   UseGuards,
   Req,
   Query,
+  Param,
 } from '@nestjs/common';
+import { Public } from '../../common/decorators/public.decorator';
 import { CouponService } from './coupon.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../common/types';
@@ -38,6 +40,7 @@ export class CouponController {
     return this.couponService.create(createCouponDto);
   }
 
+  @Public()
   @Get('list')
   @ApiOperation({ summary: 'List all Coupons (Paginated)', description: 'Public endpoint.' })
   findAll(@Query() pagination: PaginationQueryDto) {
@@ -96,5 +99,21 @@ export class CouponController {
   })
   getSavedCoupons(@Req() req: AuthenticatedRequest) {
     return this.couponService.getSavedCoupons(req.user);
+  }
+
+  @Public()
+  @Get('detail/:code')
+  @ApiOperation({ summary: 'Get details of a specific Coupon by code', description: 'Public endpoint.' })
+  @ApiResponse({ status: 200, type: Coupon })
+  findOne(@Param('code') code: string) {
+    return this.couponService.findCouponByCode(code);
+  }
+
+  @Public()
+  @Get('products/detail/:id')
+  @ApiOperation({ summary: 'Get details of a specific Coupon product (template)', description: 'Public endpoint.' })
+  @ApiResponse({ status: 200, type: Coupon })
+  getProductDetail(@Param('id') id: string) {
+    return this.couponService.findProductById(id);
   }
 }

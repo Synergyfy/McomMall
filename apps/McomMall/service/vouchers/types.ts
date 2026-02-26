@@ -16,6 +16,7 @@ export interface VoucherProduct {
   backgroundImage?: string;
   textColor?: string;
   media?: string[] | null;
+  user?: any;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -53,6 +54,8 @@ export interface Voucher {
   recipientName?: string;
   voucherProduct?: VoucherProduct;
   media?: string[] | null;
+  user?: any;
+  purchaseBusiness?: any;
 }
 
 export interface CreateVoucherProductDto {
