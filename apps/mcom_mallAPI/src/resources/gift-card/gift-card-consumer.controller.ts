@@ -176,4 +176,28 @@ export class GiftCardConsumerController {
     }
     return this.giftCardService.processScheduledDeliveries();
   }
+
+  @Get('details/:code')
+  @Public()
+  @ApiOperation({ summary: 'Get details of a specific gift card publicly' })
+  @ApiParam({
+    name: 'code',
+    description: 'The unique 16-character gift card code',
+    type: 'string',
+  })
+  async getGiftCardDetails(@Param('code') code: string) {
+    return this.giftCardService.findGiftCardDetailsByCode(code);
+  }
+
+  @Get('templates/details/:id')
+  @Public()
+  @ApiOperation({ summary: 'Get details of a specific gift card template publicly' })
+  @ApiParam({
+    name: 'id',
+    description: 'The ID of the gift card template',
+    type: 'string',
+  })
+  async getTemplateDetails(@Param('id') id: string) {
+    return this.giftCardService.findTemplateById(id);
+  }
 }

@@ -21,6 +21,7 @@ import { VoucherProductSearchDto } from './dto/voucher-product-search.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { VoucherProduct } from './entities/voucher-product.entity';
 import { Query } from '@nestjs/common';
+import { ApiOperation } from '@nestjs/swagger';
 
 @Controller('vouchers')
 export class VoucherConsumerController {
@@ -98,8 +99,16 @@ export class VoucherConsumerController {
   }
 
   @Get(':code')
-  @UseGuards(JwtAuthGuard)
+  @Public()
+  @ApiOperation({ summary: 'Get details of a specific voucher publicly' })
   async getVoucherDetails(@Param('code') code: string) {
     return this.voucherService.findVoucherByCode(code);
+  }
+
+  @Get('products/:id')
+  @Public()
+  @ApiOperation({ summary: 'Get details of a specific voucher product publicly' })
+  async getProductDetails(@Param('id') id: string) {
+    return this.voucherService.findProductById(id);
   }
 }

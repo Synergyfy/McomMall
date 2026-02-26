@@ -1,11 +1,9 @@
 'use client';
 
-'use client';
-
 import { useState } from 'react';
 import { useParams } from 'next/navigation';
-import { useGetVoucherProduct } from '@/service/hooks/useVoucherService';
-import { Loader, ChevronLeft, ShoppingCart } from 'lucide-react';
+import { useGetPublicVoucherProductDetails, useGetPublicVoucherDetails } from '@/service/vouchers/hook';
+import { Loader, ChevronLeft, ShoppingCart, ArrowLeft, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import ServiceSafetyCard from '@/app/(public)/services/[id]/components/ServiceSafetyCard';
@@ -26,10 +24,20 @@ export default function VoucherPage() {
     const { selectedItem } = useMarketplaceContext();
     const cachedItem = selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null;
 
-    // We assume the ID corresponds to a VoucherProduct
-    const { voucherProduct, isLoading, isError } = useGetVoucherProduct(id || '');
+    // Detect if ID is a code (8 chars or non-uuid)
+    const isPossiblyCode = !!(id?.length && !id.includes('-'));
 
-    const displayVoucher = (voucherProduct || cachedItem) as unknown as VoucherProduct;
+    const { data: productData, isLoading: productLoading, isError: productError } = useGetPublicVoucherProductDetails(id || '', {
+        enabled: !cachedItem && !isPossiblyCode
+    });
+
+    const { data: issuedData, isLoading: issuedLoading, isError: issuedError } = useGetPublicVoucherDetails(id || '', {
+        enabled: !cachedItem && isPossiblyCode
+    });
+
+    const displayVoucher = (cachedItem || productData || issuedData?.voucherProduct) as unknown as VoucherProduct;
+    const isLoading = productLoading || issuedLoading;
+    const isError = isPossiblyCode ? issuedError : productError;
 
     const [isPurchaseModalOpen, setIsPurchaseModalOpen] = useState(false);
     const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -178,9 +186,43 @@ export default function VoucherPage() {
                             </div>
                             <p className="text-gray-700">Name: <span className="font-bold">{title}</span></p>
                             <p className="text-gray-700">Value: {amountDisplay}</p>
-                            <p className="text-gray-700">Status: {status}</p>
                             {displayVoucher.description && <p className="text-gray-600 mt-2">{displayVoucher.description}</p>}
                         </div>
+
+                        {/* Issued Voucher Info (if viewing by code) */}
+                        {issuedData && (
+                            <div className="bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl p-6 md:p-8 text-white shadow-lg">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard className="w-8 h-8 opacity-90" />
+                                        <h3 className="text-xl font-bold">Your Electronic Voucher</h3>
+                                    </div>
+                                    <div className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold tracking-wider uppercase backdrop-blur-sm">
+                                        Active Voucher
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-md">
+                                        <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Current Balance</p>
+                                        <p className="text-4xl font-black">£{Number(issuedData.balance).toFixed(2)}</p>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Voucher Code</p>
+                                            <p className="font-mono text-lg tracking-widest">{issuedData.code}</p>
+                                        </div>
+                                        {(issuedData as any)?.user?.businesses?.[0] && (
+                                            <div className="text-center sm:text-right">
+                                                <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Issued By</p>
+                                                <p className="font-bold">{(issuedData as any).user.businesses[0].businessName}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Right Column */}

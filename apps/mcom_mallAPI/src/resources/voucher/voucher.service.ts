@@ -69,7 +69,7 @@ export class VoucherService {
     private readonly walletService: WalletService,
     private readonly dataSource: DataSource,
     private readonly digitalValueService: DigitalValueService,
-  ) {}
+  ) { }
 
   // --- Business Owner Methods ---
 
@@ -299,8 +299,8 @@ export class VoucherService {
         initialValue: finalAmount,
         ownerId: userId,
         metadata: {
-            ...purchaseDetails,
-            voucherProductId: product.id,
+          ...purchaseDetails,
+          voucherProductId: product.id,
         },
         expiryDate: expiresAt ? expiresAt.toISOString() : null,
       }, userId, manager);
@@ -466,7 +466,7 @@ export class VoucherService {
         const dv = await this.digitalValueService.getByCode(code);
         await this.digitalValueService.fund(dv.id, { amount }, manager);
       } catch (e) {
-         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const user = await manager.findOne(User, { where: { id: userId } });
@@ -550,7 +550,7 @@ export class VoucherService {
           merchantId: undefined,
         }, manager);
       } catch (e) {
-         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const balanceBefore = voucher.balance;
@@ -622,7 +622,7 @@ export class VoucherService {
           merchantId: order.business ? order.business.id : undefined,
         }, manager);
       } catch (e) {
-         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       const balanceBefore = voucher.balance;
@@ -663,7 +663,7 @@ export class VoucherService {
   async findVoucherByCode(code: string): Promise<Voucher> {
     const voucher = await this.voucherRepository.findOne({
       where: { code },
-      relations: ['voucherProduct', 'transactions', 'owner'],
+      relations: ['voucherProduct', 'transactions', 'owner', 'owner.businesses'],
     });
     if (!voucher) {
       throw new NotFoundException('Voucher not found.');
@@ -695,7 +695,7 @@ export class VoucherService {
           merchantId: undefined,
         }, manager);
       } catch (e) {
-         if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
       }
 
       voucher.balance = 0;
@@ -1063,5 +1063,18 @@ export class VoucherService {
     });
 
     return new PageDto(items, pageMetaDto);
+  }
+
+  async findProductById(id: string): Promise<VoucherProduct> {
+    const product = await this.voucherProductRepository.findOne({
+      where: { id },
+      relations: ['user', 'user.businesses'],
+    });
+
+    if (!product) {
+      throw new NotFoundException('Voucher product not found.');
+    }
+
+    return product;
   }
 }

@@ -1,23 +1,21 @@
 'use client';
 
-'use client';
-
 import { useState } from 'react';
-import { useParams } from 'next/navigation';
-import { useGetGiftCardTemplateById } from '@/service/gift-card/hook';
-import { Loader, ChevronLeft, ShoppingCart, ArrowLeft } from 'lucide-react';
+import { useGetPublicGiftCardTemplateDetails, useGetPublicGiftCardDetails } from '@/service/gift-card/hook';
+import { Loader, ChevronLeft, ShoppingCart, ArrowLeft, CreditCard } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import ServiceSafetyCard from '@/app/(public)/services/[id]/components/ServiceSafetyCard';
 import { useMarketplaceContext } from '@/context/MarketplaceContext';
 import NewGiftCardFlow from '@/components/gift-card/NewGiftCardFlow';
-import { GiftCardTemplate } from '@/service/gift-card/types';
+import { GiftCardTemplate, GiftCard } from '@/service/gift-card/types';
 import Image from 'next/image';
 import GiftCardCard from '@/components/marketplace/GiftCardCard';
 import { PromotionalItem } from '@/lib/listing-data';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
 import { useEffect } from 'react';
+import { useParams } from 'next/navigation';
 
 export default function GiftCardPage() {
     const params = useParams();
@@ -26,11 +24,22 @@ export default function GiftCardPage() {
     const { selectedItem } = useMarketplaceContext();
     const cachedItem = selectedItem && String(selectedItem.id) === String(id) ? selectedItem : null;
 
-    const { data: giftCard, isLoading, isError } = useGetGiftCardTemplateById(id || '', {
-        enabled: !cachedItem
+    // Detect if ID is a code (16 chars) or UUID
+    const isCode = !!(id?.length === 16);
+
+    const { data: templateData, isLoading: templateLoading, isError: templateError } = useGetPublicGiftCardTemplateDetails(id || '', {
+        enabled: !cachedItem && !isCode
     });
 
-    const displayGiftCard = (cachedItem || giftCard) as GiftCardTemplate;
+    const { data: issuedData, isLoading: issuedLoading, isError: issuedError } = useGetPublicGiftCardDetails(id || '', {
+        enabled: !cachedItem && isCode
+    });
+
+    const giftCard = (cachedItem as unknown as GiftCardTemplate) || templateData || (issuedData as any)?.template;
+    const isLoading = templateLoading || issuedLoading;
+    const isError = isCode ? issuedError : templateError;
+
+    const displayGiftCard = giftCard;
     const [isBuying, setIsBuying] = useState(false);
 
     // Spending locations state
@@ -177,6 +186,41 @@ export default function GiftCardPage() {
                             </div>
                             <p className="text-gray-700 leading-relaxed whitespace-pre-wrap">{description}</p>
                         </div>
+
+                        {/* Issued Card Info (if viewing by code) */}
+                        {issuedData && (
+                            <div className="bg-gradient-to-br from-orange-500 to-amber-600 rounded-xl p-6 md:p-8 text-white shadow-lg">
+                                <div className="flex items-center justify-between mb-6">
+                                    <div className="flex items-center gap-3">
+                                        <CreditCard className="w-8 h-8 opacity-90" />
+                                        <h3 className="text-xl font-bold">Your Gift Card</h3>
+                                    </div>
+                                    <div className="px-3 py-1 bg-white/20 rounded-full text-xs font-bold tracking-wider uppercase backdrop-blur-sm">
+                                        Balance Card
+                                    </div>
+                                </div>
+
+                                <div className="space-y-6">
+                                    <div className="bg-white/10 rounded-lg p-4 backdrop-blur-md">
+                                        <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Current Balance</p>
+                                        <p className="text-4xl font-black">£{Number(issuedData.currentBalance).toFixed(2)}</p>
+                                    </div>
+
+                                    <div className="flex flex-col sm:flex-row gap-4 items-center justify-between">
+                                        <div>
+                                            <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Card Number</p>
+                                            <p className="font-mono text-lg tracking-widest">{issuedData.code.replace(/(.{4})/g, '$1 ')}</p>
+                                        </div>
+                                        {issuedData.purchaseBusiness && (
+                                            <div className="text-center sm:text-right">
+                                                <p className="text-xs uppercase tracking-widest opacity-80 mb-1">Issued By</p>
+                                                <p className="font-bold">{issuedData.purchaseBusiness.businessName}</p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     <div className="relative">

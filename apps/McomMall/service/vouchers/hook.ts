@@ -35,3 +35,19 @@ export const useGetVoucherById = (id: string, options?: { enabled?: boolean }) =
   });
 
 };
+
+export const useGetPublicVoucherDetails = (code: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['publicVoucherDetails', code],
+    queryFn: () => getVoucherByCode(code),
+    enabled: options?.enabled !== undefined ? options.enabled : !!code,
+  });
+};
+
+export const useGetPublicVoucherProductDetails = (id: string, options?: { enabled?: boolean }) => {
+  return useQuery({
+    queryKey: ['publicVoucherProductDetails', id],
+    queryFn: () => api.get(`/vouchers/products/${id}`).then(res => res.data),
+    enabled: options?.enabled !== undefined ? options.enabled : !!id,
+  });
+};
