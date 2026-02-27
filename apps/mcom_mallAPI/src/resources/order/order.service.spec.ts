@@ -1,4 +1,6 @@
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProductService } from '../product/product.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { OrderService } from './order.service';
@@ -147,6 +149,8 @@ describe('OrderService', () => {
         },
         { provide: EntityManager, useValue: mockEntityManager },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        { provide: EventEmitter2, useValue: { emitAsync: jest.fn(), emit: jest.fn() } },
+        { provide: ProductService, useValue: { calculatePrice: jest.fn().mockReturnValue(50) } },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
       ],
     }).compile();
@@ -189,7 +193,7 @@ describe('OrderService', () => {
       const createCheckoutDto: CreateCheckoutDto = {
         offerId: 'offer-id',
         payment: {
-          amount: 100,
+          amount: 50,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -212,7 +216,7 @@ describe('OrderService', () => {
       const createCheckoutDto: CreateCheckoutDto = {
         voucherCode: 'VOUCHER123',
         payment: {
-          amount: 50, // 100 (cart) - 50 (voucher)
+          amount: 0,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -231,7 +235,7 @@ describe('OrderService', () => {
       expect(voucherService.findVoucherByCode).toHaveBeenCalledWith(
         'VOUCHER123',
       );
-      expect(result.total).toBe(50);
+      expect(result.total).toBe(0);
       expect(voucherService.redeemForOrder).toHaveBeenCalled();
       expect(voucherService.redeemForOrder).toHaveBeenCalledWith(
         { code: 'VOUCHER123', amount: 50 },
@@ -267,7 +271,7 @@ describe('OrderService', () => {
         giftCardCode: 'GIFTCARD123',
         voucherCode: 'VOUCHER123',
         payment: {
-          amount: 30, // 100 (cart) - 20 (giftcard) - 50 (voucher)
+          amount: 0,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -297,12 +301,12 @@ describe('OrderService', () => {
         'VOUCHER123',
       );
       expect(voucherService.redeemForOrder).toHaveBeenCalledWith(
-        { code: 'VOUCHER123', amount: 50 },
+        { code: 'VOUCHER123', amount: 30 },
         expect.any(Object),
         expect.any(Object),
       );
 
-      expect(result.total).toBe(30);
+      expect(result.total).toBe(0);
     });
   });
 });

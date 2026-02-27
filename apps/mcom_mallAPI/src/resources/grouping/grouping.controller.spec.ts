@@ -16,7 +16,7 @@ import { PlanType } from '../membership/dto/initiate-membership-payment.dto';
 describe('GroupingController', () => {
   let controller: GroupingController;
 
-  const mockUser: User = {
+  const mockUser = { fullName: "Test User",
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',
@@ -35,9 +35,6 @@ describe('GroupingController', () => {
     created_at: new Date(),
     updated_at: new Date(),
     businesses: [],
-    coupons: [],
-    purchasedCoupons: [],
-    couponProducts: [],
     promotionParticipations: [],
     reviews: [],
     socials: null,
@@ -48,7 +45,6 @@ describe('GroupingController', () => {
     vouchers: [],
     offers: [],
     serviceProviderProfile: null,
-    couponTransactions: [],
     giftCard: true,
     voucher: true,
     promotion: true,

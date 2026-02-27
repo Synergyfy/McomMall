@@ -1,3 +1,6 @@
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListingsService } from './listing.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -22,7 +25,7 @@ describe('ListingsService - Points Calculation', () => {
   const mockOwnerA = { id: 'owner-A' } as User;
   const mockOwnerB = { id: 'owner-B' } as User;
 
-  const mockBusinessA: Business = {
+  const mockBusinessA = { sectorId: "sector-1", categoryId: "category-1", subCategoryId: "sub-category-1",
     id: 'business-A',
     user: mockOwnerA,
     listingType: [ListingType.PRODUCT],
@@ -87,6 +90,18 @@ describe('ListingsService - Points Calculation', () => {
           },
         },
         { provide: CapabilityService, useValue: {} },
+        {
+          provide: getRepositoryToken(Sector),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomyCategory),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomySubcategory),
+          useValue: {},
+        },
       ],
     }).compile();
 

@@ -1,3 +1,6 @@
+import { CentralIntegrationService } from '../payments/services/central-integration.service';
+import { DigitalValueService } from '../digital-value/digital-value.service';
+import { CapabilityService } from '../capability/capability.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -43,7 +46,7 @@ describe('GroupingService', () => {
     captureAndVerifyPaypalOrder: jest.fn(),
   };
 
-  const baseMockUser: User = {
+  const baseMockUser = { fullName: 'Test User',
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',
@@ -152,6 +155,9 @@ describe('GroupingService', () => {
           provide: PaymentProviderService,
           useValue: mockPaymentProviderService,
         },
+        { provide: CentralIntegrationService, useValue: { processCashback: jest.fn(), validateDigitalValue: jest.fn() } },
+        { provide: DigitalValueService, useValue: { createVoucher: jest.fn() } },
+        { provide: CapabilityService, useValue: { checkPermission: jest.fn() } },
       ],
     }).compile();
 

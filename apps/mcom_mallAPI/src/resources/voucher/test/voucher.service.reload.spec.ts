@@ -17,6 +17,7 @@ import { InitiateReloadDto } from '../dto/initiate-reload.dto';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 import { VerifyReloadDto } from '../dto/verify-reload.dto';
 import { DigitalValueService } from '../../digital-value/digital-value.service';
+import { CentralIntegrationService } from '../../../resources/payments/services/central-integration.service';
 
 describe('VoucherService Reloads', () => {
   let service: VoucherService;
@@ -94,11 +95,15 @@ describe('VoucherService Reloads', () => {
           },
         },
         {
+          provide: CentralIntegrationService,
+          useValue: { processCashback: jest.fn() },
+        },
+        {
           provide: DataSource,
           useValue: {
             transaction: jest
               .fn()
-              .mockImplementation((callback) => callback({})),
+              .mockImplementation((callback) => callback({ findOne: jest.fn().mockResolvedValue({ id: 'user-1' }), save: jest.fn(), create: jest.fn() })),
           },
         },
       ],
@@ -190,6 +195,7 @@ describe('VoucherService Reloads', () => {
         .mockResolvedValue(new VoucherTransaction());
 
       const mockEntityManager = {
+        findOne: jest.fn().mockResolvedValue({ id: 'user-id' }),
         getRepository: jest.fn().mockReturnValue({
           create: jest.fn((entity) => entity),
           save: jest.fn((entity) => Promise.resolve(entity)),

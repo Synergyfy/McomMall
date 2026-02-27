@@ -86,9 +86,22 @@ describe('ActivityTimerService', () => {
 
       managerMock.findOne.mockResolvedValue({
         ...user,
-        membership: { tier: { configuration: { trialDurationDays: 10 } } },
+        membership: { isTrial: true, isActive: true, expiresAt: new Date('2026-01-11T00:00:00Z'), tier: { configuration: { trialDurationDays: 10 } } },
       });
-      timerRepository.find.mockResolvedValue(tasks);
+      timerRepository.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(tasks),
+      });
+
+      userActivityRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getUserActiveTasks(user);
 
@@ -110,7 +123,20 @@ describe('ActivityTimerService', () => {
       ] as ActivityTimer[];
 
       managerMock.findOne.mockResolvedValue(user);
-      timerRepository.find.mockResolvedValue(tasks);
+      timerRepository.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(tasks),
+      });
+
+      userActivityRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getUserActiveTasks(user);
 

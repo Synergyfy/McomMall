@@ -141,7 +141,7 @@ describe('WalletService', () => {
       const completedBookings = [{ payment: { amount: 120 } }];
 
       mockUserRepository.findOne.mockResolvedValue(user);
-      mockOrderService.getOrdersForOwner.mockResolvedValue(orders);
+      mockOrderService.getOrdersForOwner.mockResolvedValue({ data: orders, meta: { totalItems: 2 } });
       mockGiftCardService.getOwnerStats.mockResolvedValue(giftCardStats);
       mockVoucherService.getSummaryStatistics.mockResolvedValue(voucherStats);
       mockCouponService.getSummaryStatistics.mockResolvedValue(couponStats);
@@ -196,7 +196,7 @@ describe('WalletService', () => {
       const orders = [{}, {}, {}]; // 3 orders
 
       mockUserRepository.findOne.mockResolvedValue(user);
-      mockOrderService.getOrdersForOwner.mockResolvedValue(orders);
+      mockOrderService.getOrdersForOwner.mockResolvedValue({ data: orders, meta: { totalItems: 3 } });
       mockWalletRepository.save.mockResolvedValue({
         ...existingWallet,
         totalOrders: 3,

@@ -32,7 +32,7 @@ describe('CouponController', () => {
           provide: CouponService,
           useValue: {
             create: jest.fn().mockResolvedValue(mockCoupon),
-            findAll: jest.fn().mockResolvedValue({ items: [mockCoupon], meta: {} }),
+            findAll: jest.fn().mockResolvedValue({ data: [mockCoupon], meta: {} }),
             validateCoupon: jest.fn().mockResolvedValue(mockCoupon),
             saveCoupon: jest.fn().mockResolvedValue({ id: 'save-1', coupon: mockCoupon }),
             removeSavedCoupon: jest.fn().mockResolvedValue(undefined),
@@ -71,7 +71,7 @@ describe('CouponController', () => {
     it('should return paginated coupons', async () => {
       const paginationDto: PaginationQueryDto = { page: 1, limit: 10 };
       const result = await controller.findAll(paginationDto);
-      expect(result.items).toEqual([mockCoupon]);
+      expect(result.data).toEqual([mockCoupon]);
       expect(service.findAll).toHaveBeenCalledWith(paginationDto);
     });
   });

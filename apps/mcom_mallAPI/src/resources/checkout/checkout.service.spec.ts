@@ -10,6 +10,8 @@ import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { ProductService } from '../product/product.service';
+import { CouponService } from '../coupon/coupon.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrderStatus } from '../order/enums/order-status.enum';
@@ -70,7 +72,11 @@ describe('CheckoutService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CheckoutService,
-        { provide: getRepositoryToken(User), useFactory: mockRepository },
+        { provide: getRepositoryToken(User), useValue: {
+            findOne: jest.fn().mockResolvedValue({ id: 'user-1' }),
+            create: jest.fn(),
+            save: jest.fn(),
+          } },
         { provide: getRepositoryToken(Offer), useFactory: mockRepository },
         { provide: getRepositoryToken(Product), useFactory: mockRepository },
         {
@@ -85,6 +91,8 @@ describe('CheckoutService', () => {
           useValue: mockPaymentProviderService,
         },
         { provide: DataSource, useValue: mockDataSource },
+        { provide: ProductService, useValue: { calculatePromotionalPrice: jest.fn().mockReturnValue(10), calculatePrice: jest.fn().mockReturnValue(10) } },
+        { provide: CouponService, useValue: { validateCoupon: jest.fn() } },
       ],
     }).compile();
 
@@ -225,6 +233,7 @@ describe('CheckoutService', () => {
         { code: 'GC123', amount: 20 },
         expect.any(Object),
         'business-1',
+        expect.any(Object)
       );
       expect(result.status).toBe(OrderStatus.COMPLETED);
     });

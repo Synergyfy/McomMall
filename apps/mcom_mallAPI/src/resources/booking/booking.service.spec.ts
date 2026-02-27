@@ -16,6 +16,7 @@ import {
 } from '@nestjs/common';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { Business } from '../listings/entities/listing.entity';
@@ -87,6 +88,10 @@ describe('BookingService', () => {
             verifyStripePaymentIntent: jest.fn(),
             captureAndVerifyPaypalOrder: jest.fn(),
           },
+        },
+        {
+          provide: CentralIntegrationService,
+          useValue: { processCashback: jest.fn() },
         },
         {
           provide: WalletService,
@@ -376,8 +381,9 @@ describe('BookingService', () => {
     it('should verify payment and update booking', async () => {
       const booking = {
         id: '1',
+        user: { email: 'test@test.com' },
         service: { business: { user: { id: '2' } } },
-      } as ServiceBooking;
+      } as any;
       const payment = {} as ServicePayment;
       jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
       jest

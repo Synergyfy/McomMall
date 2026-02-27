@@ -1,3 +1,4 @@
+import { DigitalValueService } from '../digital-value/digital-value.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
@@ -126,6 +127,15 @@ describe('GiftCardService (User-Centric)', () => {
       providers: [
         GiftCardService,
         { provide: getRepositoryToken(GiftCard), useFactory: mockRepository },
+        {
+          provide: DigitalValueService,
+          useValue: {
+            create: jest.fn().mockResolvedValue({ id: 'dv-id' }),
+            fund: jest.fn(),
+            redeem: jest.fn(),
+            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id' }),
+          },
+        },
         {
           provide: getRepositoryToken(GiftCardTemplate),
           useFactory: mockRepository,

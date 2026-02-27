@@ -36,6 +36,7 @@ const createMockRepository = () => ({
 const createMockDataSource = () => ({
   transaction: jest.fn().mockImplementation(async (callback) => {
     const manager = {
+      findOne: jest.fn().mockResolvedValue({ id: 'user-id' }),
       getRepository: (entity) => {
         // Return a mock repository for the given entity
         if (entity === Voucher) return mockVoucherRepository;

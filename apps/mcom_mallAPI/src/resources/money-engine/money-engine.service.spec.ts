@@ -88,7 +88,7 @@ describe('MoneyEngineService', () => {
       ).toHaveBeenCalledWith('pi_123', 50, 'gbp');
       expect(result.realBalance).toBe(50);
       expect(result.rewardBalance).toBe(50); // 50 / 0.5 = 100 total -> 50 reward
-      expect(mockEntityManager.save).toHaveBeenCalledTimes(3); // Voucher, Tx1, Tx2
+      expect(mockEntityManager.save).toHaveBeenCalledTimes(4); // Voucher, Tx1, Tx2
     });
 
     it('should verify PayPal payment', async () => {

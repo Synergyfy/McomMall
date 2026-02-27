@@ -9,6 +9,7 @@ import { PaymentProviderService } from './payment-provider.service';
 import { MembershipService } from 'src/resources/membership/membership.service';
 import { Tier } from '../../tier/entities/tier.entity';
 import { CentralIntegrationService } from './central-integration.service';
+import { ActivityTimerService } from '../../../resources/activity-timer/activity-timer.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
@@ -100,6 +101,10 @@ describe('PaymentsService', () => {
           provide: CentralIntegrationService,
           useValue: mockCentralIntegrationService,
         },
+        {
+          provide: ActivityTimerService,
+          useValue: {},
+        }
       ],
     }).compile();
 

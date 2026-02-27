@@ -23,6 +23,7 @@ import {
 } from '@nestjs/common';
 import { CapabilityService } from '../capability/capability.service';
 import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
+import { SavedCoupon } from './entities/saved-coupon.entity';
 
 describe('CouponService', () => {
   let service: CouponService;
@@ -51,6 +52,16 @@ describe('CouponService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CouponService,
+        {
+          provide: getRepositoryToken(SavedCoupon),
+          useValue: {
+            findOne: jest.fn(),
+            find: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            remove: jest.fn(),
+          },
+        },
         {
           provide: getRepositoryToken(Coupon),
           useValue: {
