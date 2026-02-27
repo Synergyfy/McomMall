@@ -23,24 +23,24 @@ const ValueBlock: React.FC<ValueProps> = ({ label, balance, isLocked, colorClass
         <Popover>
             <PopoverTrigger asChild>
                 <div className={`
-          relative flex flex-col p-4 rounded-xl border-2 transition-all cursor-help
+          relative flex flex-col p-2 rounded-xl border transition-all cursor-help
           ${isLocked ? 'border-gray-200 bg-gray-50 opacity-60' : `border-transparent ${bgClass}`}
           hover:shadow-sm
         `}>
                     {isLocked && (
-                        <div className="absolute top-2 right-2 text-gray-400">
-                            <Lock className="w-4 h-4" />
+                        <div className="absolute top-1 right-1 text-gray-400">
+                            <Lock className="w-3 h-3" />
                         </div>
                     )}
                     {!isLocked && (
-                        <div className={`absolute top-2 right-2 ${colorClass}`}>
-                            <Info className="w-4 h-4" />
+                        <div className={`absolute top-1 right-1 ${colorClass}`}>
+                            <Info className="w-3 h-3" />
                         </div>
                     )}
-                    <span className={`text-sm font-semibold mb-1 ${isLocked ? 'text-gray-500' : colorClass}`}>
+                    <span className={`text-[10px] font-semibold mb-0.5 ${isLocked ? 'text-gray-500' : colorClass}`}>
                         {label}
                     </span>
-                    <span className={`text-2xl font-bold ${isLocked ? 'text-gray-700' : 'text-gray-900'}`}>
+                    <span className={`text-sm font-bold ${isLocked ? 'text-gray-700' : 'text-gray-900'}`}>
                         £{balance.toFixed(2)}
                     </span>
                 </div>
@@ -96,7 +96,7 @@ export const CampaignValueSection: React.FC<{ campaign: CampaignCashback }> = ({
 
     // Value 1 & 2 are Green, Value 3 is Blue
     return (
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-6">
+        <div className="grid grid-cols-3 gap-2 mt-4">
             <ValueBlock
                 label="247GBS Credit"
                 balance={campaign.levelValue}
