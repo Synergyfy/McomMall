@@ -365,7 +365,7 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                             </div>
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer w-full max-w-sm">
                                 <RadioGroupItem value={CampaignDisplayType.E_CARD} id="cd-ecard" />
-                                <Label htmlFor="cd-ecard" className="cursor-pointer">Digital E-Card UI</Label>
+                                <Label htmlFor="cd-ecard" className="cursor-pointer">E-Gift Card UI</Label>
                             </div>
                         </RadioGroup>
                     </div>
