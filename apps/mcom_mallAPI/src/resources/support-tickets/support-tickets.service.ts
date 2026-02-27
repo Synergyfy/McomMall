@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { SupportTicket, TicketStatus } from './entities/support-ticket.entity';
@@ -17,7 +21,10 @@ export class SupportTicketsService {
     private readonly messageRepo: Repository<SupportMessage>,
   ) {}
 
-  async createTicket(user: User, dto: CreateSupportTicketDto): Promise<SupportTicket> {
+  async createTicket(
+    user: User,
+    dto: CreateSupportTicketDto,
+  ): Promise<SupportTicket> {
     const ticket = this.ticketRepo.create({
       ...dto,
       userId: user.id,
@@ -33,7 +40,11 @@ export class SupportTicketsService {
     return savedTicket;
   }
 
-  async addMessage(user: User, ticketId: string, dto: CreateSupportMessageDto): Promise<SupportMessage> {
+  async addMessage(
+    user: User,
+    ticketId: string,
+    dto: CreateSupportMessageDto,
+  ): Promise<SupportMessage> {
     const ticket = await this.ticketRepo.findOne({ where: { id: ticketId } });
     if (!ticket) {
       throw new NotFoundException('Support ticket not found');
@@ -41,7 +52,9 @@ export class SupportTicketsService {
 
     const isAdmin = user.role === UserRole.ADMIN;
     if (!isAdmin && ticket.userId !== user.id) {
-      throw new ForbiddenException('You do not have permission to add a message to this ticket');
+      throw new ForbiddenException(
+        'You do not have permission to add a message to this ticket',
+      );
     }
 
     const message = this.messageRepo.create({
@@ -86,11 +99,15 @@ export class SupportTicketsService {
     }
 
     if (user.role !== UserRole.ADMIN && ticket.userId !== user.id) {
-      throw new ForbiddenException('You do not have permission to view this ticket');
+      throw new ForbiddenException(
+        'You do not have permission to view this ticket',
+      );
     }
 
     // Sort messages by creation date
-    ticket.messages.sort((a, b) => a.created_at.getTime() - b.created_at.getTime());
+    ticket.messages.sort(
+      (a, b) => a.created_at.getTime() - b.created_at.getTime(),
+    );
 
     return ticket;
   }
@@ -102,7 +119,9 @@ export class SupportTicketsService {
     }
 
     if (user.role !== UserRole.ADMIN && ticket.userId !== user.id) {
-      throw new ForbiddenException('You do not have permission to resolve this ticket');
+      throw new ForbiddenException(
+        'You do not have permission to resolve this ticket',
+      );
     }
 
     ticket.status = TicketStatus.RESOLVED;
@@ -116,7 +135,9 @@ export class SupportTicketsService {
     }
 
     if (user.role !== UserRole.ADMIN && ticket.userId !== user.id) {
-      throw new ForbiddenException('You do not have permission to close this ticket');
+      throw new ForbiddenException(
+        'You do not have permission to close this ticket',
+      );
     }
 
     ticket.status = TicketStatus.CLOSED;

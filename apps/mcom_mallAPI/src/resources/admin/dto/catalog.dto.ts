@@ -52,10 +52,15 @@ export class AdminProductDto {
   @ApiProperty({ example: 45 })
   stock: number;
 
-  @ApiProperty({ example: 'active', description: 'active | inactive | out_of_stock' })
+  @ApiProperty({
+    example: 'active',
+    description: 'active | inactive | out_of_stock',
+  })
   status: string;
 
-  @ApiProperty({ example: 'Premium over-ear headphones with superior sound quality' })
+  @ApiProperty({
+    example: 'Premium over-ear headphones with superior sound quality',
+  })
   description: string;
 
   @ApiProperty({ type: [String], example: ['https://example.com/p1.jpg'] })
@@ -128,7 +133,7 @@ export class AdminServiceDto {
   @ApiProperty({ example: 'Spa' })
   category: string;
 
-  @ApiProperty({ example: 120.00 })
+  @ApiProperty({ example: 120.0 })
   price: number;
 
   @ApiProperty({ example: 90, description: 'Duration in minutes' })
@@ -137,7 +142,9 @@ export class AdminServiceDto {
   @ApiProperty({ example: 'active' })
   status: string;
 
-  @ApiProperty({ example: 'Tension-relieving deep tissue massage by professionals' })
+  @ApiProperty({
+    example: 'Tension-relieving deep tissue massage by professionals',
+  })
   description: string;
 
   @ApiProperty({ type: [String], example: ['https://example.com/s1.jpg'] })

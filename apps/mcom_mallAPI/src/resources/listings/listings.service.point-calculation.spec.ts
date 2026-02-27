@@ -29,41 +29,19 @@ describe('ListingsService - Points Calculation', () => {
     businessName: 'Business A',
     shortDescription: 'Short description',
     businessPhone: '1234567890',
-    products: [{ id: 'product-A1' } as Product, { id: 'product-A2' } as Product],
+    products: [
+      { id: 'product-A1' } as Product,
+      { id: 'product-A2' } as Product,
+    ],
     status: BusinessStatus.PUBLISHED,
     isGoogleVerified: false,
     isClaimed: true,
     isVerified: false,
     location: null,
     socialLinks: [],
-    categories: [],
-    businessHours: [],
-    specialDays: [],
-    campaigns: [],
-    services: [],
-    promotions: [],
-    reviews: [],
-    offers: [],
-    created_at: new Date(),
-    updated_at: new Date(),
-    deleted_at: null,
-  };
-
-  const mockBusinessB: Business = {
-    id: 'business-B',
-    user: mockOwnerB,
-    listingType: [ListingType.PRODUCT],
-    businessName: 'Business B',
-    shortDescription: 'Short description',
-    businessPhone: '1234567890',
-    products: [{ id: 'product-B1' } as Product],
-    status: BusinessStatus.PUBLISHED,
-    isGoogleVerified: false,
-    isClaimed: true,
-    isVerified: false,
-    location: null,
-    socialLinks: [],
-    categories: [],
+    sector: null,
+    category: null,
+    subCategory: null,
     businessHours: [],
     specialDays: [],
     campaigns: [],
@@ -97,7 +75,10 @@ describe('ListingsService - Points Calculation', () => {
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: DataSource, useValue: { createQueryRunner: jest.fn() } },
         { provide: ActivitiesService, useValue: { create: jest.fn() } },
-        { provide: ActivityTimerService, useValue: { completeTaskByKey: jest.fn() } },
+        {
+          provide: ActivityTimerService,
+          useValue: { completeTaskByKey: jest.fn() },
+        },
         {
           provide: PromotionService,
           useValue: {
@@ -136,8 +117,8 @@ describe('ListingsService - Points Calculation', () => {
       .spyOn(promotionService, 'findUserPromotions')
       .mockResolvedValue(mockPromotions);
     (promotionService.isProductQualified as jest.Mock).mockImplementation(
-      (product, promotion, business) =>
-        (service as any).isProductQualified(product, promotion, business),
+      (product, promotion, _business) =>
+        (service as any).isProductQualified(product, promotion, _business),
     );
 
     const result = await service.findOnePublic('business-A', mockUser);
@@ -162,8 +143,8 @@ describe('ListingsService - Points Calculation', () => {
       .spyOn(promotionService, 'findUserPromotions')
       .mockResolvedValue(mockPromotions);
     (promotionService.isProductQualified as jest.Mock).mockImplementation(
-      (product, promotion, business) => {
-        return promotion.user.id === business.user.id;
+      (product, promotion, _business) => {
+        return promotion.user.id === _business.user.id;
       },
     );
 

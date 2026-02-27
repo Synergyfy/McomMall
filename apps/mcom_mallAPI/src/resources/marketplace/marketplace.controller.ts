@@ -1,20 +1,49 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, UseGuards } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags, ApiBody, ApiParam } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Delete,
+  Get,
+  Param,
+  Patch,
+  Post,
+  UseGuards,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiBody,
+  ApiParam,
+} from '@nestjs/swagger';
 import { MarketplaceService } from './marketplace.service';
-import { CreateBannerDto, UpdateBannerDto, CreateCategoryDto, UpdateCategoryDto, UpdateSectionDto, MarketplacePublicViewDto } from './dto/dtos';
+import {
+  CreateBannerDto,
+  UpdateBannerDto,
+  CreateCategoryDto,
+  UpdateCategoryDto,
+  UpdateSectionDto,
+  MarketplacePublicViewDto,
+} from './dto/dtos';
 import { Roles } from '../../common/decorators/roles.decorator';
 import { UserRole } from '../../common/role.enum';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { RolesGuard } from '../../common/guards/roles.guard';
-import { MarketplaceBanner, BannerType } from './entities/marketplace-banner.entity';
+import {
+  MarketplaceBanner,
+  BannerType,
+} from './entities/marketplace-banner.entity';
 import { MarketplaceCategory } from './entities/marketplace-category.entity';
-import { MarketplaceSection, SectionType } from './entities/marketplace-section.entity';
+import {
+  MarketplaceSection,
+  SectionType,
+} from './entities/marketplace-section.entity';
 import { Public } from 'src/common/decorators/public.decorator';
 
 @ApiTags('Marketplace Page CMS')
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) { }
+  constructor(private readonly marketplaceService: MarketplaceService) {}
 
   // ===========================================================================
   // PUBLIC ENDPOINTS
@@ -24,9 +53,14 @@ export class MarketplaceController {
   @Get('public')
   @ApiOperation({
     summary: 'Get Marketplace Page Data',
-    description: 'Returns the fully aggregated configuration for the Marketplace page, including sidebar categories, active hero slides, flash sale settings, and promotional sections. Open to everyone.'
+    description:
+      'Returns the fully aggregated configuration for the Marketplace page, including sidebar categories, active hero slides, flash sale settings, and promotional sections. Open to everyone.',
   })
-  @ApiResponse({ status: 200, type: MarketplacePublicViewDto, description: 'Aggregated view returned.' })
+  @ApiResponse({
+    status: 200,
+    type: MarketplacePublicViewDto,
+    description: 'Aggregated view returned.',
+  })
   async getPublicView() {
     return this.marketplaceService.getPublicView();
   }
@@ -41,7 +75,8 @@ export class MarketplaceController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Create a Banner (Hero/Sidebar)',
-    description: 'Upload a new slide for the Treasure Hunt carousel or the Right Sidebar. Admin Only.'
+    description:
+      'Upload a new slide for the Treasure Hunt carousel or the Right Sidebar. Admin Only.',
   })
   @ApiBody({ type: CreateBannerDto })
   @ApiResponse({ status: 201, type: MarketplaceBanner })
@@ -63,7 +98,10 @@ export class MarketplaceController {
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
-  @ApiOperation({ summary: 'Update Banner', description: 'Change image, order, or active status.' })
+  @ApiOperation({
+    summary: 'Update Banner',
+    description: 'Change image, order, or active status.',
+  })
   @ApiResponse({ status: 200, type: MarketplaceBanner })
   async updateBanner(@Param('id') id: string, @Body() dto: UpdateBannerDto) {
     return this.marketplaceService.updateBanner(id, dto);
@@ -88,7 +126,8 @@ export class MarketplaceController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Create Sidebar Category',
-    description: 'Add a custom category to the left sidebar. Can link to a real Taxonomy ID.'
+    description:
+      'Add a custom category to the left sidebar. Can link to a real Taxonomy ID.',
   })
   @ApiBody({ type: CreateCategoryDto })
   @ApiResponse({ status: 201, type: MarketplaceCategory })
@@ -110,7 +149,10 @@ export class MarketplaceController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN)
   @ApiOperation({ summary: 'Update Category' })
-  async updateCategory(@Param('id') id: string, @Body() dto: UpdateCategoryDto) {
+  async updateCategory(
+    @Param('id') id: string,
+    @Body() dto: UpdateCategoryDto,
+  ) {
     return this.marketplaceService.updateCategory(id, dto);
   }
 
@@ -133,12 +175,16 @@ export class MarketplaceController {
   @Roles(UserRole.ADMIN)
   @ApiOperation({
     summary: 'Update Section Config',
-    description: 'Configure sections like Flash Sales (timer, items) or Promo Carousel.'
+    description:
+      'Configure sections like Flash Sales (timer, items) or Promo Carousel.',
   })
   @ApiParam({ name: 'type', enum: SectionType })
   @ApiBody({ type: UpdateSectionDto })
   @ApiResponse({ status: 200, type: MarketplaceSection })
-  async updateSection(@Param('type') type: SectionType, @Body() dto: UpdateSectionDto) {
+  async updateSection(
+    @Param('type') type: SectionType,
+    @Body() dto: UpdateSectionDto,
+  ) {
     return this.marketplaceService.updateSection(type, dto);
   }
 

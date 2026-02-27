@@ -4,30 +4,22 @@ import { getRepositoryToken } from '@nestjs/typeorm';
 import { Wallet } from './entities/wallet.entity';
 import { User } from '../users/entities/user.entity';
 import { OrderService } from '../order/order.service';
-import { DataSource, Repository } from 'typeorm';
-import { PaymentProviderService } from '../payments/services/payment-provider.service';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
-import { InitiateFundingDto } from './dto/initiate-funding.dto';
-import { PaymentMethod } from '../order/entities/order-payment.entity';
-import { VerifyFundingDto } from './dto/verify-funding.dto';
-import { WalletTransaction, WalletTransactionType } from './entities/wallet-transaction.entity';
-import { GiftCardService } from '../gift-card/gift-card.service';
-import { VoucherService } from '../voucher/voucher.service';
+import { DataSource } from 'typeorm';
+import {
+  WalletTransaction,
+  WalletTransactionType,
+} from './entities/wallet-transaction.entity';
 import { CreditEarningDto } from './dto/credit-earning.dto';
 import { BookingService } from '../booking/booking.service';
 import { CouponService } from '../coupon/coupon.service';
+import { GiftCardService } from '../gift-card/gift-card.service';
+import { VoucherService } from '../voucher/voucher.service';
+import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { NotFoundException } from '@nestjs/common';
 
 describe('WalletService', () => {
   let service: WalletService;
-  let walletRepository: Repository<Wallet>;
-  let userRepository: Repository<User>;
-  let walletTransactionRepository: Repository<WalletTransaction>;
-  let paymentProviderService: PaymentProviderService;
   let dataSource: DataSource;
-  let giftCardService: GiftCardService;
-  let voucherService: VoucherService;
-  let orderService: OrderService;
-  let bookingService: BookingService;
 
   const mockWalletRepository = {
     create: jest.fn(),
@@ -127,21 +119,7 @@ describe('WalletService', () => {
     }).compile();
 
     service = module.get<WalletService>(WalletService);
-    walletRepository = module.get<Repository<Wallet>>(
-      getRepositoryToken(Wallet),
-    );
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    walletTransactionRepository = module.get<Repository<WalletTransaction>>(
-      getRepositoryToken(WalletTransaction),
-    );
-    paymentProviderService = module.get<PaymentProviderService>(
-      PaymentProviderService,
-    );
     dataSource = module.get<DataSource>(DataSource);
-    giftCardService = module.get<GiftCardService>(GiftCardService);
-    voucherService = module.get<VoucherService>(VoucherService);
-    orderService = module.get<OrderService>(OrderService);
-    bookingService = module.get<BookingService>(BookingService);
   });
 
   afterEach(() => {
@@ -167,7 +145,9 @@ describe('WalletService', () => {
       mockGiftCardService.getOwnerStats.mockResolvedValue(giftCardStats);
       mockVoucherService.getSummaryStatistics.mockResolvedValue(voucherStats);
       mockCouponService.getSummaryStatistics.mockResolvedValue(couponStats);
-      mockBookingService.getCompletedBookingsForOwner.mockResolvedValue(completedBookings);
+      mockBookingService.getCompletedBookingsForOwner.mockResolvedValue(
+        completedBookings,
+      );
 
       const newWallet = {
         user,
@@ -184,14 +164,16 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              create: () => newWallet,
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                create: () => newWallet,
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -215,12 +197,18 @@ describe('WalletService', () => {
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockOrderService.getOrdersForOwner.mockResolvedValue(orders);
-      mockWalletRepository.save.mockResolvedValue({ ...existingWallet, totalOrders: 3 });
+      mockWalletRepository.save.mockResolvedValue({
+        ...existingWallet,
+        totalOrders: 3,
+      });
 
       const result = await service.getWallet(userId);
 
       expect(result.totalOrders).toBe(3);
-      expect(mockWalletRepository.save).toHaveBeenCalledWith({ ...existingWallet, totalOrders: 3 });
+      expect(mockWalletRepository.save).toHaveBeenCalledWith({
+        ...existingWallet,
+        totalOrders: 3,
+      });
     });
   });
 
@@ -249,15 +237,17 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(null),
-              create: () => newWallet,
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(null),
+                create: () => newWallet,
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -288,25 +278,21 @@ describe('WalletService', () => {
         earningsFromVoucher: 0,
       };
 
-      const updatedWallet = {
-        ...existingWallet,
-        earningsBalance: 150,
-        earningsFromGiftCard: 50,
-      };
-
       mockUserRepository.findOneBy.mockResolvedValue(user);
 
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(existingWallet),
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(existingWallet),
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);
@@ -360,14 +346,16 @@ describe('WalletService', () => {
       (dataSource.transaction as jest.Mock).mockImplementation(async (cb) => {
         const manager = {
           getRepository: (entity) => {
-            if (entity === Wallet) return {
-              findOne: () => Promise.resolve(wallet),
-              save: (w) => Promise.resolve(w)
-            };
-            if (entity === WalletTransaction) return {
-              create: (t) => t,
-              save: (t) => Promise.resolve(t)
-            }
+            if (entity === Wallet)
+              return {
+                findOne: () => Promise.resolve(wallet),
+                save: (w) => Promise.resolve(w),
+              };
+            if (entity === WalletTransaction)
+              return {
+                create: (t) => t,
+                save: (t) => Promise.resolve(t),
+              };
           },
         };
         return cb(manager);

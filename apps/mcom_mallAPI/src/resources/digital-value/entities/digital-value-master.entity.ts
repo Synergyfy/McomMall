@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, OneToMany, JoinColumn, Index } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToMany,
+  JoinColumn,
+  Index,
+} from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
@@ -31,10 +38,22 @@ export class DigitalValueMaster extends AbstractBaseEntity {
   @Column({ name: 'merchant_id', nullable: true })
   merchantId: string;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'initial_value' })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    name: 'initial_value',
+  })
   initialValue: number;
 
-  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0, name: 'current_balance' })
+  @Column({
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+    name: 'current_balance',
+  })
   currentBalance: number;
 
   @Column({
@@ -50,6 +69,9 @@ export class DigitalValueMaster extends AbstractBaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   metadata: any;
 
-  @OneToMany(() => DigitalValueTransaction, (transaction) => transaction.digitalValue)
+  @OneToMany(
+    () => DigitalValueTransaction,
+    (transaction) => transaction.digitalValue,
+  )
   transactions: DigitalValueTransaction[];
 }

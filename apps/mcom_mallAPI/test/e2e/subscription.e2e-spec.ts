@@ -1,4 +1,3 @@
-
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { createTestApp } from '../utils/create-app';
@@ -14,7 +13,10 @@ describe('Subscription Flow (E2E)', () => {
 
   beforeAll(async () => {
     app = await createTestApp();
-    const { user, accessToken } = await createAuthenticatedUser(app, UserRole.OWNER);
+    const { user, accessToken } = await createAuthenticatedUser(
+      app,
+      UserRole.OWNER,
+    );
     ownerToken = accessToken;
     ownerId = user.id;
   });
@@ -49,13 +51,16 @@ describe('Subscription Flow (E2E)', () => {
         paymentProvider: PaymentMethod.STRIPE,
         transactionId: 'pi_test_123',
         purchaseDetails: {
-           tier: MembershipTier.PROFESSIONAL,
-           planType: 'monthly'
-        }
+          tier: MembershipTier.PROFESSIONAL,
+          planType: 'monthly',
+        },
       });
 
     expect(response.status).toBe(201);
-    expect(response.body).toHaveProperty('tier', MembershipTier.PROFESSIONAL);
-    expect(response.body.userId).toBe(ownerId);
+    expect(response.body).toHaveProperty(
+      'tierType',
+      MembershipTier.PROFESSIONAL,
+    );
+    expect(response.body.user.id).toBe(ownerId);
   });
 });

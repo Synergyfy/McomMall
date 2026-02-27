@@ -66,7 +66,10 @@ export class Order extends AbstractBaseEntity {
   @OneToMany(() => Coupon, (coupon) => coupon.order)
   coupons: Coupon[];
 
-  @OneToMany(() => ProductServiceBooking, productServiceBooking => productServiceBooking.order)
+  @OneToMany(
+    () => ProductServiceBooking,
+    (productServiceBooking) => productServiceBooking.order,
+  )
   productServiceBookings: ProductServiceBooking[];
 
   // --- Shipping Fields ---

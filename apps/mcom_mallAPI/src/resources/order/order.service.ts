@@ -83,7 +83,7 @@ export class OrderService {
     private readonly eventEmitter: EventEmitter2,
     @Inject(forwardRef(() => ProductService))
     private readonly productService: ProductService,
-  ) { }
+  ) {}
 
   // Method is not used in checkout, but keeping it for other potential uses.
   async createOrder(
@@ -108,14 +108,18 @@ export class OrderService {
       giftCardPurchases && giftCardPurchases.length > 0;
 
     if (!isCartCheckout && !isDirectPurchase && !hasGiftCardPurchases) {
-      throw new BadRequestException('Checkout is empty. Please add items to your cart, specify a direct purchase, or purchase a gift card.');
+      throw new BadRequestException(
+        'Checkout is empty. Please add items to your cart, specify a direct purchase, or purchase a gift card.',
+      );
     }
     if (isCartCheckout && isDirectPurchase) {
-      throw new BadRequestException('Cannot process a cart checkout and a direct purchase in the same transaction.');
+      throw new BadRequestException(
+        'Cannot process a cart checkout and a direct purchase in the same transaction.',
+      );
     }
 
     let productTotal = 0;
-    let productIds: string[] = [];
+    const productIds: string[] = [];
     const earningsPerOwner: Map<string, number> = new Map();
     let businessContextId: string | null = null;
     let directPurchaseProduct: Product | null = null;
@@ -126,41 +130,62 @@ export class OrderService {
         relations: ['business', 'business.user'],
       });
       if (!product) {
-        throw new NotFoundException(`Product with ID "${directPurchase.productId}" not found.`);
+        throw new NotFoundException(
+          `Product with ID "${directPurchase.productId}" not found.`,
+        );
       }
       directPurchaseProduct = product;
       businessContextId = product.business.id;
       const ownerId = product.business.user.id;
 
-      const price = this.productService.calculatePrice(product, directPurchase.variant || {});
+      const price = this.productService.calculatePrice(
+        product,
+        directPurchase.variant || {},
+      );
       productTotal = price * directPurchase.quantity;
 
       productIds.push(product.id);
-      earningsPerOwner.set(ownerId, (earningsPerOwner.get(ownerId) || 0) + productTotal);
+      earningsPerOwner.set(
+        ownerId,
+        (earningsPerOwner.get(ownerId) || 0) + productTotal,
+      );
     } else if (isCartCheckout) {
       // Determine context from first cart item for legacy reasons (e.g. gift card redemption logic)
       businessContextId = cart.items[0].product.businessId;
 
       for (const item of cart.items) {
-        const price = this.productService.calculatePrice(item.product, item.selectedVariants || {});
+        const price = this.productService.calculatePrice(
+          item.product,
+          item.selectedVariants || {},
+        );
         const itemTotal = price * item.quantity;
         const ownerId = item.product.business.user.id;
 
         productTotal += itemTotal;
         productIds.push(item.product.id);
-        earningsPerOwner.set(ownerId, (earningsPerOwner.get(ownerId) || 0) + itemTotal);
+        earningsPerOwner.set(
+          ownerId,
+          (earningsPerOwner.get(ownerId) || 0) + itemTotal,
+        );
       }
     }
 
     if (serviceBookings && serviceBookings.length > 0) {
       if (!isDirectPurchase) {
-        throw new BadRequestException('Partnered services can only be booked with a direct product purchase.');
+        throw new BadRequestException(
+          'Partnered services can only be booked with a direct product purchase.',
+        );
       }
-      const partneredServices = await this.partnershipService.getProductPartnerships(directPurchase.productId);
-      const partneredServiceIds = partneredServices.map(s => s.id);
+      const partneredServices =
+        await this.partnershipService.getProductPartnerships(
+          directPurchase.productId,
+        );
+      const partneredServiceIds = partneredServices.map((s) => s.id);
       for (const bookingDetail of serviceBookings) {
         if (!partneredServiceIds.includes(bookingDetail.serviceId)) {
-          throw new BadRequestException(`Service with ID ${bookingDetail.serviceId} is not partnered with the specified product.`);
+          throw new BadRequestException(
+            `Service with ID ${bookingDetail.serviceId} is not partnered with the specified product.`,
+          );
         }
       }
     }
@@ -168,7 +193,10 @@ export class OrderService {
     let giftCardPurchaseTotal = 0;
     if (hasGiftCardPurchases) {
       for (const gcPurchase of giftCardPurchases) {
-        const business = await this.businessRepository.findOne({ where: { id: gcPurchase.businessId }, relations: ['user'] });
+        const business = await this.businessRepository.findOne({
+          where: { id: gcPurchase.businessId },
+          relations: ['user'],
+        });
         const purchaseOwnerId = business.user.id;
 
         if (!businessContextId) {
@@ -177,7 +205,10 @@ export class OrderService {
 
         giftCardPurchaseTotal += gcPurchase.amount;
         // Gift card purchases are also earnings for the owner
-        earningsPerOwner.set(purchaseOwnerId, (earningsPerOwner.get(purchaseOwnerId) || 0) + gcPurchase.amount);
+        earningsPerOwner.set(
+          purchaseOwnerId,
+          (earningsPerOwner.get(purchaseOwnerId) || 0) + gcPurchase.amount,
+        );
       }
     }
 
@@ -186,13 +217,23 @@ export class OrderService {
     let couponAmountToApply = 0;
     if (createCheckoutDto.couponCode) {
       try {
-        const user = await this.userRepository.findOne({ where: { id: userId } });
-        const coupon = await this.couponService.validateCoupon(createCheckoutDto.couponCode, user);
+        const user = await this.userRepository.findOne({
+          where: { id: userId },
+        });
+        const coupon = await this.couponService.validateCoupon(
+          createCheckoutDto.couponCode,
+          user,
+        );
 
-        if (coupon.discountType === 'fixed' as any) { // Type check if needed
-          couponAmountToApply = Math.min(totalBeforeRedemption, Number(coupon.discountValue));
+        if (coupon.discountType === ('fixed' as any)) {
+          // Type check if needed
+          couponAmountToApply = Math.min(
+            totalBeforeRedemption,
+            Number(coupon.discountValue),
+          );
         } else {
-          couponAmountToApply = totalBeforeRedemption * (Number(coupon.discountValue) / 100);
+          couponAmountToApply =
+            totalBeforeRedemption * (Number(coupon.discountValue) / 100);
         }
       } catch (error) {
         throw new BadRequestException(`Invalid coupon: ${error.message}`);
@@ -204,17 +245,27 @@ export class OrderService {
     let giftCardAmountToApply = 0;
     if (createCheckoutDto.giftCardCode) {
       try {
-        const balance = await this.giftCardService.checkBalance(createCheckoutDto.giftCardCode);
+        const balance = await this.giftCardService.checkBalance(
+          createCheckoutDto.giftCardCode,
+        );
         if (createCheckoutDto.giftCardAmount) {
           if (createCheckoutDto.giftCardAmount > balance.currentBalance) {
             throw new BadRequestException('Gift card amount exceeds balance.');
           }
-          giftCardAmountToApply = Math.min(totalAfterDiscounts, createCheckoutDto.giftCardAmount);
+          giftCardAmountToApply = Math.min(
+            totalAfterDiscounts,
+            createCheckoutDto.giftCardAmount,
+          );
         } else {
-          giftCardAmountToApply = Math.min(totalAfterDiscounts, balance.currentBalance);
+          giftCardAmountToApply = Math.min(
+            totalAfterDiscounts,
+            balance.currentBalance,
+          );
         }
       } catch (error) {
-        throw new BadRequestException(`Invalid or expired gift card: ${error.message}`);
+        throw new BadRequestException(
+          `Invalid or expired gift card: ${error.message}`,
+        );
       }
     }
 
@@ -223,15 +274,24 @@ export class OrderService {
     let voucherAmountToApply = 0;
     if (createCheckoutDto.voucherCode) {
       try {
-        const voucher = await this.voucherService.findVoucherByCode(createCheckoutDto.voucherCode);
-        if (voucher.status === VoucherStatus.REDEEMED || voucher.status === VoucherStatus.DISABLED || (voucher.expiresAt && new Date() > voucher.expiresAt)) {
+        const voucher = await this.voucherService.findVoucherByCode(
+          createCheckoutDto.voucherCode,
+        );
+        if (
+          voucher.status === VoucherStatus.REDEEMED ||
+          voucher.status === VoucherStatus.DISABLED ||
+          (voucher.expiresAt && new Date() > voucher.expiresAt)
+        ) {
           throw new BadRequestException('Voucher is invalid or expired.');
         }
         if (createCheckoutDto.voucherAmount) {
           if (createCheckoutDto.voucherAmount > voucher.balance) {
             throw new BadRequestException('Voucher amount exceeds balance.');
           }
-          voucherAmountToApply = Math.min(totalAfterGiftCard, createCheckoutDto.voucherAmount);
+          voucherAmountToApply = Math.min(
+            totalAfterGiftCard,
+            createCheckoutDto.voucherAmount,
+          );
         } else {
           voucherAmountToApply = Math.min(totalAfterGiftCard, voucher.balance);
         }
@@ -242,8 +302,12 @@ export class OrderService {
 
     const finalAmount = totalAfterGiftCard - voucherAmountToApply;
 
-    if (createCheckoutDto.payment.amount.toFixed(2) !== finalAmount.toFixed(2)) {
-      throw new BadRequestException(`The provided payment amount (${createCheckoutDto.payment.amount}) does not match the final total (${finalAmount}).`);
+    if (
+      createCheckoutDto.payment.amount.toFixed(2) !== finalAmount.toFixed(2)
+    ) {
+      throw new BadRequestException(
+        `The provided payment amount (${createCheckoutDto.payment.amount}) does not match the final total (${finalAmount}).`,
+      );
     }
 
     const user = await this.userRepository.findOneBy({ id: userId });
@@ -251,15 +315,27 @@ export class OrderService {
 
     let offer: Offer | null = null;
     if (createCheckoutDto.offerId) {
-      offer = await this.offerRepository.findOneBy({ id: createCheckoutDto.offerId });
+      offer = await this.offerRepository.findOneBy({
+        id: createCheckoutDto.offerId,
+      });
       if (!offer) throw new NotFoundException('Offer not found');
     }
 
     return this.entityManager.transaction(async (manager) => {
-      const orderPayment = manager.create(OrderPayment, { ...createCheckoutDto.payment, user, amount: finalAmount, currency: 'gbp' });
+      const orderPayment = manager.create(OrderPayment, {
+        ...createCheckoutDto.payment,
+        user,
+        amount: finalAmount,
+        currency: 'gbp',
+      });
       const savedPayment = await manager.save(orderPayment);
 
-      const orderData: Partial<Order> = { user, items: [], total: finalAmount, payment: savedPayment };
+      const orderData: Partial<Order> = {
+        user,
+        items: [],
+        total: finalAmount,
+        payment: savedPayment,
+      };
       if (offer) {
         orderData.appliedOffer = offer;
         orderData.pointsUsedToRedeem = offer.points;
@@ -267,15 +343,31 @@ export class OrderService {
       const savedOrder = await manager.save(Order, orderData);
 
       if (createCheckoutDto.giftCardCode && giftCardAmountToApply > 0) {
-        await this.giftCardService.redeem({ code: createCheckoutDto.giftCardCode, amount: giftCardAmountToApply }, savedOrder, businessContextId || undefined, manager);
+        await this.giftCardService.redeem(
+          {
+            code: createCheckoutDto.giftCardCode,
+            amount: giftCardAmountToApply,
+          },
+          savedOrder,
+          businessContextId || undefined,
+          manager,
+        );
       }
 
       if (createCheckoutDto.voucherCode && voucherAmountToApply > 0) {
-        await this.voucherService.redeemForOrder({ code: createCheckoutDto.voucherCode, amount: voucherAmountToApply }, savedOrder, manager);
+        await this.voucherService.redeemForOrder(
+          { code: createCheckoutDto.voucherCode, amount: voucherAmountToApply },
+          savedOrder,
+          manager,
+        );
       }
 
       if (createCheckoutDto.couponCode && couponAmountToApply > 0) {
-        await this.couponService.redeemForOrder({ code: createCheckoutDto.couponCode, amount: couponAmountToApply }, savedOrder, manager);
+        await this.couponService.redeemForOrder(
+          { code: createCheckoutDto.couponCode, amount: couponAmountToApply },
+          savedOrder,
+          manager,
+        );
       }
 
       // Process product items
@@ -305,18 +397,21 @@ export class OrderService {
       if (serviceBookings && serviceBookings.length > 0) {
         if (!directPurchaseProduct) {
           // This should ideally not be reached due to earlier checks
-          throw new BadRequestException("A product must be directly purchased to book partnered services.");
+          throw new BadRequestException(
+            'A product must be directly purchased to book partnered services.',
+          );
         }
         for (const bookingDetail of serviceBookings) {
-          const serviceBooking = await this.bookingService.createBookingForOrder(
-            {
-              serviceId: bookingDetail.serviceId,
-              startTime: bookingDetail.startTime,
-              endTime: bookingDetail.endTime,
-            },
-            userId,
-            manager,
-          );
+          const serviceBooking =
+            await this.bookingService.createBookingForOrder(
+              {
+                serviceId: bookingDetail.serviceId,
+                startTime: bookingDetail.startTime,
+                endTime: bookingDetail.endTime,
+              },
+              userId,
+              manager,
+            );
 
           const partnership = await this.partnershipRepository.findOne({
             where: [
@@ -334,15 +429,18 @@ export class OrderService {
           });
           if (!partnership) {
             // This check is a safeguard; the earlier validation should prevent this.
-            throw new BadRequestException(`Could not find an active partnership for product ${directPurchaseProduct.id} and service ${bookingDetail.serviceId}.`);
+            throw new BadRequestException(
+              `Could not find an active partnership for product ${directPurchaseProduct.id} and service ${bookingDetail.serviceId}.`,
+            );
           }
 
-          const productServiceBooking = this.productServiceBookingRepository.create({
-            order: savedOrder,
-            serviceBooking,
-            product: directPurchaseProduct,
-            partnership,
-          });
+          const productServiceBooking =
+            this.productServiceBookingRepository.create({
+              order: savedOrder,
+              serviceBooking,
+              product: directPurchaseProduct,
+              partnership,
+            });
           await manager.save(productServiceBooking);
         }
       }
@@ -350,13 +448,25 @@ export class OrderService {
       // Process new gift card purchases
       if (hasGiftCardPurchases) {
         for (const gcPurchase of giftCardPurchases) {
-          const businessForPurchase = await this.businessRepository.findOne({ where: { id: gcPurchase.businessId }, relations: ['user'] });
-          await this.giftCardService.purchaseGiftCard(gcPurchase, businessForPurchase, savedOrder);
+          const businessForPurchase = await this.businessRepository.findOne({
+            where: { id: gcPurchase.businessId },
+            relations: ['user'],
+          });
+          await this.giftCardService.purchaseGiftCard(
+            gcPurchase,
+            businessForPurchase,
+            savedOrder,
+          );
         }
       }
 
       if (offer) {
-        await this.pointsService.redeemPointsForOrder(savedOrder, user, offer, manager);
+        await this.pointsService.redeemPointsForOrder(
+          savedOrder,
+          user,
+          offer,
+          manager,
+        );
       }
 
       if (isDirectPurchase || isCartCheckout) {
@@ -388,7 +498,10 @@ export class OrderService {
   }
 
   // ... (other methods remain the same)
-  async getOrdersForCustomer(customerId: string, pagination: PaginationQueryDto): Promise<PageDto<Order>> {
+  async getOrdersForCustomer(
+    customerId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<Order>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 
@@ -397,7 +510,7 @@ export class OrderService {
       relations: ['items', 'items.product'],
       skip,
       take: limit,
-      order: { created_at: 'DESC' }
+      order: { created_at: 'DESC' },
     });
 
     const pageMetaDto = new PageMetaDto({
@@ -409,7 +522,10 @@ export class OrderService {
     return new PageDto(items, pageMetaDto);
   }
 
-  async getOrdersForOwner(ownerId: string, pagination: PaginationQueryDto): Promise<PageDto<Order>> {
+  async getOrdersForOwner(
+    ownerId: string,
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<Order>> {
     const { page, limit } = pagination;
     const skip = (page - 1) * limit;
 

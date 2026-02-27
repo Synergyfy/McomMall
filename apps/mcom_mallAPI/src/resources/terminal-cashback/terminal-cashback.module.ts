@@ -10,7 +10,11 @@ import { PaymentsModule } from '../payments/payments.module';
 
 @Module({
   imports: [
-    TypeOrmModule.forFeature([TerminalCashbackClaim, TerminalConfig, TerminalGlobalRule]),
+    TypeOrmModule.forFeature([
+      TerminalCashbackClaim,
+      TerminalConfig,
+      TerminalGlobalRule,
+    ]),
     WalletModule,
     PaymentsModule,
   ],

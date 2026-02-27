@@ -17,10 +17,7 @@ export class StatsController {
 
   @UseGuards(JwtAuthGuard)
   @Get('sales-chart')
-  getSalesChart(
-    @CurrentUser() user: User,
-    @Query() query: SalesChartQueryDto,
-  ) {
+  getSalesChart(@CurrentUser() user: User, @Query() query: SalesChartQueryDto) {
     return this.statsService.getSalesChart(user, query);
   }
 }

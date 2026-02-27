@@ -1,48 +1,41 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
 import { MembershipService } from './membership.service';
 import { Membership } from './entities/membership.entity';
 import { User } from '../users/entities/user.entity';
 import { MembershipTier } from './membership-tier.enum';
 import { UserRole } from '../../common/role.enum';
-import {
-  ConflictException,
-  NotFoundException,
-  BadRequestException,
-} from '@nestjs/common';
+import { ConflictException } from '@nestjs/common';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { MembershipPayment } from './entities/membership-payment.entity';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
-import { InitiateMembershipPaymentDto, PlanType } from './dto/initiate-membership-payment.dto';
+import {
+  InitiateMembershipPaymentDto,
+  PlanType,
+} from './dto/initiate-membership-payment.dto';
 import { VerifyMembershipPaymentDto } from './dto/verify-membership-payment.dto';
 import { Tier } from '../tier/entities/tier.entity';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { TierType } from '../tier/enums/tier-type.enum';
+import { DataSource } from 'typeorm';
 
 describe('MembershipService', () => {
   let service: MembershipService;
-  let membershipRepository: Repository<Membership>;
-  let userRepository: Repository<User>;
-  let paymentRepository: Repository<MembershipPayment>;
-  let tierRepository: Repository<Tier>;
-  let paymentProviderService: PaymentProviderService;
-  let dataSource: DataSource;
 
   const mockMembershipRepository = {
-    create: jest.fn().mockImplementation(dto => ({ ...dto })),
-    save: jest.fn().mockImplementation(m => Promise.resolve(m)),
+    create: jest.fn().mockImplementation((dto) => ({ ...dto })),
+    save: jest.fn().mockImplementation((m) => Promise.resolve(m)),
     findOne: jest.fn(),
   };
 
   const mockUserRepository = {
-    save: jest.fn().mockImplementation(u => Promise.resolve(u)),
+    save: jest.fn().mockImplementation((u) => Promise.resolve(u)),
     findOne: jest.fn(),
   };
 
   const mockPaymentRepository = {
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(p => Promise.resolve(p)),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest.fn().mockImplementation((p) => Promise.resolve(p)),
   };
 
   const mockTierRepository = {
@@ -116,18 +109,6 @@ describe('MembershipService', () => {
     }).compile();
 
     service = module.get<MembershipService>(MembershipService);
-    membershipRepository = module.get<Repository<Membership>>(
-      getRepositoryToken(Membership),
-    );
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    paymentRepository = module.get<Repository<MembershipPayment>>(
-      getRepositoryToken(MembershipPayment),
-    );
-    tierRepository = module.get<Repository<Tier>>(getRepositoryToken(Tier));
-    paymentProviderService = module.get<PaymentProviderService>(
-      PaymentProviderService,
-    );
-    dataSource = module.get<DataSource>(DataSource);
 
     jest.clearAllMocks();
   });
@@ -152,7 +133,10 @@ describe('MembershipService', () => {
 
   describe('verifyAndCreateMembership with Seasonal Tier', () => {
     it('should use season dates for membership when tier is seasonal', async () => {
-      const season = { startDate: new Date('2026-06-01'), endDate: new Date('2026-08-31') };
+      const season = {
+        startDate: new Date('2026-06-01'),
+        endDate: new Date('2026-08-31'),
+      };
       const seasonalTier = { id: 'tier-1', type: TierType.SEASONAL, season };
 
       const verifyDto: VerifyMembershipPaymentDto = {
@@ -163,9 +147,13 @@ describe('MembershipService', () => {
 
       mockMembershipRepository.findOne.mockResolvedValue(null);
       mockTierRepository.findOne.mockResolvedValue(seasonalTier);
-      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({ ok: true });
-      mockMembershipRepository.create.mockImplementation(dto => dto);
-      mockMembershipRepository.save.mockImplementation(m => Promise.resolve(m));
+      mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
+        ok: true,
+      });
+      mockMembershipRepository.create.mockImplementation((dto) => dto);
+      mockMembershipRepository.save.mockImplementation((m) =>
+        Promise.resolve(m),
+      );
 
       const result = await service.verifyAndCreateMembership(verifyDto, user);
 
@@ -179,7 +167,7 @@ describe('MembershipService', () => {
       const membership: any = {
         id: 'mem-1',
         created_at: new Date('2026-01-01'),
-        expiresAt: new Date('2026-02-01')
+        expiresAt: new Date('2026-02-01'),
       };
 
       await (service as any).ensureDates(membership);

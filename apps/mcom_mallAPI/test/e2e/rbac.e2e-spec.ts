@@ -1,4 +1,3 @@
-
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { createTestApp } from '../utils/create-app';
@@ -37,6 +36,13 @@ describe('RBAC Flow (E2E)', () => {
         role: UserRole.ADMIN,
       });
 
+    if (response.status !== 403) {
+      console.error(
+        'Customer creating admin failed with status:',
+        response.status,
+        response.body,
+      );
+    }
     expect(response.status).toBe(403);
   });
 
@@ -55,6 +61,13 @@ describe('RBAC Flow (E2E)', () => {
         role: UserRole.ADMIN,
       });
 
+    if (response.status !== 201) {
+      console.error(
+        'Admin creating admin failed with status:',
+        response.status,
+        response.body,
+      );
+    }
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('email', email);
   });

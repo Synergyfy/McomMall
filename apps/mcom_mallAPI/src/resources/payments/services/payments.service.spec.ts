@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { PaymentsService } from './payments.service';
 import { User } from '../../users/entities/user.entity';
 import { PaymentHistory } from '../entities/payment-history.entity';
@@ -13,8 +12,6 @@ import { CentralIntegrationService } from './central-integration.service';
 
 describe('PaymentsService', () => {
   let service: PaymentsService;
-  let membershipService: MembershipService;
-  let paymentHistoryRepository: Repository<PaymentHistory>;
 
   const mockUser = {
     id: '1',
@@ -64,8 +61,10 @@ describe('PaymentsService', () => {
 
   const mockPaymentHistoryRepository = {
     findOne: jest.fn(),
-    create: jest.fn().mockImplementation(dto => dto),
-    save: jest.fn().mockImplementation(dto => Promise.resolve({ id: 'ph-id', ...dto })),
+    create: jest.fn().mockImplementation((dto) => dto),
+    save: jest
+      .fn()
+      .mockImplementation((dto) => Promise.resolve({ id: 'ph-id', ...dto })),
   };
 
   const mockPaymentProviderService = {
@@ -100,15 +99,11 @@ describe('PaymentsService', () => {
         {
           provide: CentralIntegrationService,
           useValue: mockCentralIntegrationService,
-        }
+        },
       ],
     }).compile();
 
     service = module.get<PaymentsService>(PaymentsService);
-    membershipService = module.get<MembershipService>(MembershipService);
-    paymentHistoryRepository = module.get<Repository<PaymentHistory>>(
-      getRepositoryToken(PaymentHistory),
-    );
   });
 
   afterEach(() => {

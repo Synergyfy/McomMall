@@ -1,8 +1,6 @@
-
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { createTestApp } from '../utils/create-app';
-import { OtpType } from '../../src/resources/email/entities/otp.entity';
 
 // Mock EmailService to capture OTP
 // Since we are running E2E and EmailService might be a provider, we can spy on it or mock it.
@@ -37,7 +35,8 @@ describe('Auth Flow (E2E)', () => {
         confirm_password: 'Password123!',
         firstName: 'Test',
         lastName: 'User',
-        phoneNumber: `+1${Math.floor(Math.random() * 10000000000)}`,
+        phoneNumber: '+1234567890',
+        role: 'customer',
       });
 
     expect(response.status).toBe(201);
@@ -46,25 +45,26 @@ describe('Auth Flow (E2E)', () => {
   });
 
   it('should login with the new user', async () => {
-    const response = await request(app.getHttpServer())
-      .post('/auth')
-      .send({
-        email: userEmail,
-        password: 'Password123!',
-      });
+    const response = await request(app.getHttpServer()).post('/auth').send({
+      email: userEmail,
+      password: 'Password123!',
+    });
 
+    if (response.status !== 201) {
+      console.error('Login Failed:', response.body);
+    }
     expect(response.status).toBe(201);
     expect(response.body).toHaveProperty('auth');
     expect(response.body.auth).toHaveProperty('accessToken');
   });
 
   it('should request OTP', async () => {
-     // This just checks the endpoint is reachable and returns 201
-     const response = await request(app.getHttpServer())
-        .post('/auth/send-verification-otp')
-        .send({ email: userEmail });
+    // This just checks the endpoint is reachable and returns 201
+    const response = await request(app.getHttpServer())
+      .post('/auth/send-verification-otp')
+      .send({ email: userEmail });
 
-     expect(response.status).toBe(201);
+    expect(response.status).toBe(201);
   });
 
   // Note: verifying OTP would require knowing the OTP sent.

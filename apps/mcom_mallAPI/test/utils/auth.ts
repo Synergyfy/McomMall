@@ -1,4 +1,3 @@
-
 import { INestApplication } from '@nestjs/common';
 import { UsersService } from '../../src/resources/users/users.service';
 import { AuthService } from '../../src/resources/auth/auth.service';
@@ -30,11 +29,11 @@ export async function createAuthenticatedUser(
   // Since we are mocking everything or running in test env, we can directly create login
   // Note: authService.createLogin usually returns { accessToken, refreshToken, ... }
   const authResponse = await authService.createLogin({
-      sub: user.id,
-      role: user.role,
-      email: user.email,
-      name: `${user.firstName} ${user.lastName}`,
-      userId: user.id
+    sub: user.id,
+    role: user.role,
+    email: user.email,
+    name: `${user.firstName} ${user.lastName}`,
+    userId: user.id,
   });
 
   return {

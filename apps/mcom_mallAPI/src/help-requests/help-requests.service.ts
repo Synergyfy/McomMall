@@ -18,10 +18,15 @@ export class HelpRequestsService {
     private httpService: HttpService,
     private configService: ConfigService,
   ) {
-    this.centralUrl = this.configService.get<string>('MCOM_CENTRAL_URL') || 'http://localhost:3010/api/v1';
+    this.centralUrl =
+      this.configService.get<string>('MCOM_CENTRAL_URL') ||
+      'http://localhost:3010/api/v1';
   }
 
-  async create(userId: string, dto: CreateHelpRequestDto): Promise<HelpRequest> {
+  async create(
+    userId: string,
+    dto: CreateHelpRequestDto,
+  ): Promise<HelpRequest> {
     const helpRequest = this.helpRequestRepo.create({
       requesterId: userId,
       ...dto,
@@ -43,18 +48,24 @@ export class HelpRequestsService {
           headers: {
             'x-api-key': this.configService.get<string>('INTERNAL_API_KEY'),
           },
-        })
+        }),
       );
 
       this.logger.log(`Help request ${savedRequest.id} forwarded to Central.`);
     } catch (error) {
-      this.logger.error(`Failed to forward help request to Central: ${error.message}`, error.stack);
+      this.logger.error(
+        `Failed to forward help request to Central: ${error.message}`,
+        error.stack,
+      );
     }
 
     return savedRequest;
   }
 
   async findAll(userId: string) {
-    return this.helpRequestRepo.find({ where: { requesterId: userId }, order: { createdAt: 'DESC' } });
+    return this.helpRequestRepo.find({
+      where: { requesterId: userId },
+      order: { createdAt: 'DESC' },
+    });
   }
 }

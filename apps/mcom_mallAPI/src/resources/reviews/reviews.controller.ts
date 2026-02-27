@@ -39,14 +39,22 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Create a new review' })
-  @ApiResponse({ status: 201, description: 'Review successfully created.', type: Review })
+  @ApiResponse({
+    status: 201,
+    description: 'Review successfully created.',
+    type: Review,
+  })
   create(@Body() createReviewDto: CreateReviewDto, @Request() req) {
     return this.reviewsService.create(createReviewDto, req.user);
   }
 
   @Get()
   @ApiOperation({ summary: 'Get all reviews' })
-  @ApiResponse({ status: 200, description: 'Return all reviews.', type: [Review] })
+  @ApiResponse({
+    status: 200,
+    description: 'Return all reviews.',
+    type: [Review],
+  })
   findAll() {
     return this.reviewsService.findAll();
   }
@@ -56,7 +64,11 @@ export class ReviewsController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin: Get all reviews (paginated)' })
-  @ApiResponse({ status: 200, description: 'Return paginated reviews.', type: PageDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Return paginated reviews.',
+    type: PageDto,
+  })
   @ApiQuery({ name: 'status', enum: ReviewStatus, required: false })
   findAllAdmin(
     @Query() paginationQuery: PaginationQueryDto,
@@ -80,7 +92,11 @@ export class ReviewsController {
   @Roles(UserRole.ADMIN)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Admin: Unpublish a review' })
-  @ApiResponse({ status: 200, description: 'Review unpublished.', type: Review })
+  @ApiResponse({
+    status: 200,
+    description: 'Review unpublished.',
+    type: Review,
+  })
   unpublish(@Param('id') id: string) {
     return this.reviewsService.unpublish(id);
   }
@@ -98,7 +114,11 @@ export class ReviewsController {
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Update a review' })
-  @ApiResponse({ status: 200, description: 'Review successfully updated.', type: Review })
+  @ApiResponse({
+    status: 200,
+    description: 'Review successfully updated.',
+    type: Review,
+  })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   update(
     @Param('id') id: string,
@@ -122,7 +142,11 @@ export class ReviewsController {
   @Get('user/:userId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get reviews by user' })
-  @ApiResponse({ status: 200, description: 'Return user reviews.', type: [Review] })
+  @ApiResponse({
+    status: 200,
+    description: 'Return user reviews.',
+    type: [Review],
+  })
   findUserReviews(@Param('userId') userId: string, @Request() req) {
     return this.reviewsService.findUserReviews(userId, req.user);
   }
@@ -131,7 +155,11 @@ export class ReviewsController {
   @Get('business/:businessId')
   @ApiBearerAuth()
   @ApiOperation({ summary: 'Get reviews by business' })
-  @ApiResponse({ status: 200, description: 'Return business reviews.', type: [Review] })
+  @ApiResponse({
+    status: 200,
+    description: 'Return business reviews.',
+    type: [Review],
+  })
   findBusinessReviews(@Param('businessId') businessId: string, @Request() req) {
     return this.reviewsService.findBusinessReviews(businessId, req.user);
   }

@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In, Repository } from 'typeorm';
+import { In } from 'typeorm';
 import { GiftCardAssetService } from './gift-card-asset.service';
 import { GiftCardAsset } from './entities/gift-card-asset.entity';
 import { AssetCategory } from './entities/asset-category.entity';
@@ -13,8 +13,6 @@ const mockUser = { id: 'user-1' } as User;
 
 describe('GiftCardAssetService', () => {
   let service: GiftCardAssetService;
-  let assetRepository: Repository<GiftCardAsset>;
-  let categoryRepository: Repository<AssetCategory>;
 
   const mockAssetRepository = {
     create: jest.fn(),
@@ -46,12 +44,6 @@ describe('GiftCardAssetService', () => {
     }).compile();
 
     service = module.get<GiftCardAssetService>(GiftCardAssetService);
-    assetRepository = module.get<Repository<GiftCardAsset>>(
-      getRepositoryToken(GiftCardAsset),
-    );
-    categoryRepository = module.get<Repository<AssetCategory>>(
-      getRepositoryToken(AssetCategory),
-    );
   });
 
   afterEach(() => {
@@ -171,9 +163,9 @@ describe('GiftCardAssetService', () => {
   describe('findOne', () => {
     it('should throw NotFoundException if asset not found', async () => {
       mockAssetRepository.findOne.mockResolvedValue(null);
-      await expect(service.findOne('non-existent-id', mockUser)).rejects.toThrow(
-        NotFoundException,
-      );
+      await expect(
+        service.findOne('non-existent-id', mockUser),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 });

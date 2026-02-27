@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 import { VoucherService } from '../voucher.service';
 import { Voucher, VoucherStatus } from '../entities/voucher.entity';
@@ -16,10 +16,10 @@ import { WalletService } from '../../wallet/wallet.service';
 import { InitiateReloadDto } from '../dto/initiate-reload.dto';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 import { VerifyReloadDto } from '../dto/verify-reload.dto';
+import { DigitalValueService } from '../../digital-value/digital-value.service';
 
 describe('VoucherService Reloads', () => {
   let service: VoucherService;
-  let voucherRepository: Repository<Voucher>;
   let voucherProductRepository: Repository<VoucherProduct>;
   let paymentProviderService: PaymentProviderService;
   let walletService: WalletService;
@@ -87,23 +87,30 @@ describe('VoucherService Reloads', () => {
           },
         },
         {
+          provide: DigitalValueService,
+          useValue: {
+            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'RELOAD123' }),
+            fund: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn().mockImplementation((callback) => callback({})),
+            transaction: jest
+              .fn()
+              .mockImplementation((callback) => callback({})),
           },
         },
       ],
     }).compile();
 
     service = module.get<VoucherService>(VoucherService);
-    voucherRepository = module.get<Repository<Voucher>>(
-      getRepositoryToken(Voucher),
-    );
     voucherProductRepository = module.get<Repository<VoucherProduct>>(
       getRepositoryToken(VoucherProduct),
     );
-    paymentProviderService =
-      module.get<PaymentProviderService>(PaymentProviderService);
+    paymentProviderService = module.get<PaymentProviderService>(
+      PaymentProviderService,
+    );
     walletService = module.get<WalletService>(WalletService);
     dataSource = module.get<DataSource>(DataSource);
   });
@@ -139,7 +146,10 @@ describe('VoucherService Reloads', () => {
         amount: 25,
         paymentProvider: PaymentMethod.STRIPE,
       };
-      const nonReloadableProduct = { ...mockVoucherProduct, allowReloading: false };
+      const nonReloadableProduct = {
+        ...mockVoucherProduct,
+        allowReloading: false,
+      };
       const nonReloadableVoucher = {
         ...mockVoucher,
         voucherProduct: nonReloadableProduct,
@@ -189,18 +199,12 @@ describe('VoucherService Reloads', () => {
       jest
         .spyOn(dataSource as any, 'transaction')
         .mockImplementation(
-          async (
-            runInTransaction: (entityManager: any) => Promise<any>,
-          ) => {
+          async (runInTransaction: (entityManager: any) => Promise<any>) => {
             return runInTransaction(mockEntityManager);
           },
         );
 
-      await service.verifyAndCompleteReload(
-        'RELOAD123',
-        verifyDto,
-        'user-id',
-      );
+      await service.verifyAndCompleteReload('RELOAD123', verifyDto, 'user-id');
 
       expect(walletService.creditEarning).toHaveBeenCalled();
     });

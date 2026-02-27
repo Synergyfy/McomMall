@@ -31,7 +31,9 @@ export class SupportTicket extends AbstractBaseEntity {
   @Column()
   userId: string;
 
-  @OneToMany(() => SupportMessage, (message) => message.ticket, { cascade: true })
+  @OneToMany(() => SupportMessage, (message) => message.ticket, {
+    cascade: true,
+  })
   messages: SupportMessage[];
 
   @Column({ nullable: true })

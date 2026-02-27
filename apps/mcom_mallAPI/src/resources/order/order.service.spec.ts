@@ -1,7 +1,6 @@
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
 import { OrderService } from './order.service';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -25,17 +24,13 @@ import { PartnershipService } from '../partnership/partnership.service';
 import { ProductServiceBooking } from './entities/product-service-booking.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { EntityManager } from 'typeorm';
 
 describe('OrderService', () => {
   let service: OrderService;
   let pointsService: PointsService;
-  let offerRepository: Repository<Offer>;
-  let cartService: CartService;
-  let userRepository: Repository<User>;
-  let entityManager: EntityManager;
   let voucherService: VoucherService;
   let giftCardService: GiftCardService;
-  let businessRepository: Repository<Business>;
 
   const mockOrderRepository = {
     createQueryBuilder: jest.fn(() => ({
@@ -104,11 +99,11 @@ describe('OrderService', () => {
 
   const mockProductServiceBookingRepository = {
     create: jest.fn(),
-  }
+  };
 
   const mockPartnershipRepository = {
     findOne: jest.fn(),
-  }
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -142,8 +137,14 @@ describe('OrderService', () => {
         { provide: GiftCardService, useValue: mockGiftCardService },
         { provide: BookingService, useValue: mockBookingService },
         { provide: PartnershipService, useValue: mockPartnershipService },
-        { provide: getRepositoryToken(ProductServiceBooking), useValue: mockProductServiceBookingRepository },
-        { provide: getRepositoryToken(Partnership), useValue: mockPartnershipRepository },
+        {
+          provide: getRepositoryToken(ProductServiceBooking),
+          useValue: mockProductServiceBookingRepository,
+        },
+        {
+          provide: getRepositoryToken(Partnership),
+          useValue: mockPartnershipRepository,
+        },
         { provide: EntityManager, useValue: mockEntityManager },
         { provide: ConfigService, useValue: { get: jest.fn() } },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
@@ -152,15 +153,8 @@ describe('OrderService', () => {
 
     service = module.get<OrderService>(OrderService);
     pointsService = module.get<PointsService>(PointsService);
-    offerRepository = module.get<Repository<Offer>>(getRepositoryToken(Offer));
-    cartService = module.get<CartService>(CartService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    entityManager = module.get<EntityManager>(EntityManager);
     voucherService = module.get<VoucherService>(VoucherService);
     giftCardService = module.get<GiftCardService>(GiftCardService);
-    businessRepository = module.get<Repository<Business>>(
-      getRepositoryToken(Business),
-    );
   });
 
   it('should be defined', () => {

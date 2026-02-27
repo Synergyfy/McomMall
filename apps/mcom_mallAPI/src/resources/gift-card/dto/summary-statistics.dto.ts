@@ -1,4 +1,3 @@
-
 import { ApiProperty } from '@nestjs/swagger';
 import { GiftCardChartDataDto } from './gift-card-chart-data.dto';
 

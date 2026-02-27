@@ -4,16 +4,11 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { EmailService } from './email.service';
 import { User } from '../users/entities/user.entity';
 import { Otp } from './entities/otp.entity';
-import { Repository } from 'typeorm';
 import { OtpType } from './entities/otp.entity';
 import { HashService } from 'src/common/hash/hash.service';
 
 describe('EmailService', () => {
   let service: EmailService;
-  let mailerService: MailerService;
-  let userRepository: Repository<User>;
-  let otpRepository: Repository<Otp>;
-  let hashService: HashService;
 
   const mockMailerService = {
     sendMail: jest.fn(),
@@ -57,10 +52,6 @@ describe('EmailService', () => {
     }).compile();
 
     service = module.get<EmailService>(EmailService);
-    mailerService = module.get<MailerService>(MailerService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    otpRepository = module.get<Repository<Otp>>(getRepositoryToken(Otp));
-    hashService = module.get<HashService>(HashService);
   });
 
   it('should be defined', () => {
@@ -123,7 +114,9 @@ describe('EmailService', () => {
       };
 
       // Spy on validateOtp to avoid integration issues within unit test
-      jest.spyOn(service, 'validateOtp').mockResolvedValue({ message: 'OTP validated' });
+      jest
+        .spyOn(service, 'validateOtp')
+        .mockResolvedValue({ message: 'OTP validated' });
 
       mockUserRepository.findOne.mockResolvedValue(user);
       mockHashService.hashPassword.mockResolvedValue('newHashedPassword');

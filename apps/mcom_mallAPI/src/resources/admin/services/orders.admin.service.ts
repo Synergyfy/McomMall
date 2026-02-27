@@ -12,7 +12,7 @@ export class AdminOrdersService {
 
   findAll() {
     return this.ordersRepository.find({
-      relations: ['user', 'items', 'items.product','items.product.business'],
+      relations: ['user', 'items', 'items.product', 'items.product.business'],
     });
   }
 }

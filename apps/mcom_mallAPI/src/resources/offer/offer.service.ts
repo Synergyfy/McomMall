@@ -224,7 +224,12 @@ export class OfferService {
   async remove(userId: string, id: string): Promise<void> {
     const offer = await this.findOne(userId, id);
     await this.offerRepository.remove(offer);
-    await this.activitiesService.create(offer.user, 'deleted', 'offer', offer.name);
+    await this.activitiesService.create(
+      offer.user,
+      'deleted',
+      'offer',
+      offer.name,
+    );
   }
 
   async applyOffer(

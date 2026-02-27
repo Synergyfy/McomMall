@@ -1,4 +1,10 @@
-import { Entity, PrimaryGeneratedColumn, ManyToOne, OneToOne, JoinColumn } from 'typeorm';
+import {
+  Entity,
+  PrimaryGeneratedColumn,
+  ManyToOne,
+  OneToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Order } from './order.entity';
 import { ServiceBooking } from '../../booking/entities/service-booking.entity';
 import { Product } from '../../product/entities/product.entity';
@@ -9,16 +15,22 @@ export class ProductServiceBooking {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @ManyToOne(() => Order, order => order.productServiceBookings)
+  @ManyToOne(() => Order, (order) => order.productServiceBookings)
   order: Order;
 
-  @OneToOne(() => ServiceBooking, serviceBooking => serviceBooking.productServiceBooking)
+  @OneToOne(
+    () => ServiceBooking,
+    (serviceBooking) => serviceBooking.productServiceBooking,
+  )
   @JoinColumn()
   serviceBooking: ServiceBooking;
 
   @ManyToOne(() => Product)
   product: Product;
 
-  @ManyToOne(() => Partnership, partnership => partnership.productServiceBookings)
+  @ManyToOne(
+    () => Partnership,
+    (partnership) => partnership.productServiceBookings,
+  )
   partnership: Partnership;
 }

@@ -2,14 +2,12 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { MailerService } from '@nestjs-modules/mailer';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../src/resources/users/entities/user.entity';
 import { Repository } from 'typeorm';
 
 describe('Email (e2e)', () => {
   let app: INestApplication;
-  let mailerService: MailerService;
   let userRepository: Repository<User>;
 
   const mockMailerService = {
@@ -27,7 +25,6 @@ describe('Email (e2e)', () => {
     app = moduleFixture.createNestApplication();
     await app.init();
 
-    mailerService = moduleFixture.get<MailerService>(MailerService);
     userRepository = moduleFixture.get<Repository<User>>(
       getRepositoryToken(User),
     );

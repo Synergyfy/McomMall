@@ -33,4 +33,4 @@ import { ServicePayment } from './entities/service-payment.entity';
   providers: [BookingService],
   exports: [BookingService],
 })
-export class BookingModule { }
+export class BookingModule {}

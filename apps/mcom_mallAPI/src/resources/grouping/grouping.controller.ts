@@ -69,7 +69,10 @@ export class GroupingController {
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 403, description: 'Forbidden.' })
   @ApiResponse({ status: 404, description: 'Group not found.' })
-  @ApiResponse({ status: 409, description: 'Conflict. User is already a member.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. User is already a member.',
+  })
   joinGroup(
     @Param('groupId') groupId: string,
     @CurrentUser() user: User,
@@ -118,7 +121,11 @@ export class GroupingController {
     @Param('groupId') groupId: string,
     @CurrentUser() user: User,
     @Body() initiateDto: InitiateContributionPaymentDto,
-  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    provider: PaymentMethod;
+  }> {
     return this.groupingService.initiateContributionPayment(
       groupId,
       user,

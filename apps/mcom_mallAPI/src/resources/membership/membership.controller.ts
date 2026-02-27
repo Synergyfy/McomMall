@@ -43,7 +43,8 @@ export class MembershipController {
   @Roles(UserRole.OWNER)
   @ApiOperation({
     summary: 'Initiate a payment for a membership',
-    description: 'Starts the payment process for a membership tier subscription. Supports Stripe and PayPal. Returns a client secret (Stripe) or Order ID (PayPal) to complete the transaction on the frontend.'
+    description:
+      'Starts the payment process for a membership tier subscription. Supports Stripe and PayPal. Returns a client secret (Stripe) or Order ID (PayPal) to complete the transaction on the frontend.',
   })
   @ApiResponse({
     status: 201,
@@ -67,13 +68,23 @@ export class MembershipController {
       },
     },
   })
-  @ApiResponse({ status: 400, description: 'Bad Request. Invalid payment provider or tier.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Invalid payment provider or tier.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 409, description: 'Conflict. User already has an active membership.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. User already has an active membership.',
+  })
   initiatePayment(
     @Body() initiateDto: InitiateMembershipPaymentDto,
     @CurrentUser() user: User,
-  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    provider: PaymentMethod;
+  }> {
     return this.membershipService.initiateMembershipPayment(initiateDto, user);
   }
 
@@ -81,16 +92,23 @@ export class MembershipController {
   @Roles(UserRole.OWNER)
   @ApiOperation({
     summary: 'Verify a payment and create the membership',
-    description: 'Verifies the payment with the provider (Stripe/PayPal) and creates the membership record linked to the purchased Tier. Must be called after successful frontend payment.'
+    description:
+      'Verifies the payment with the provider (Stripe/PayPal) and creates the membership record linked to the purchased Tier. Must be called after successful frontend payment.',
   })
   @ApiResponse({
     status: 201,
     description: 'Membership created successfully after payment verification.',
     type: Membership,
   })
-  @ApiResponse({ status: 400, description: 'Bad Request. Payment verification failed.' })
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. Payment verification failed.',
+  })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
-  @ApiResponse({ status: 409, description: 'Conflict. User already has an active membership.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. User already has an active membership.',
+  })
   verifyPayment(
     @Body() verifyDto: VerifyMembershipPaymentDto,
     @CurrentUser() user: User,
@@ -102,7 +120,8 @@ export class MembershipController {
   @Roles(UserRole.OWNER)
   @ApiOperation({
     summary: 'Join a 7-day trial for a specific tier',
-    description: 'Grants a 7-day trial membership for the specified tier. Allows users to test features before purchasing. Users are limited to one trial.'
+    description:
+      'Grants a 7-day trial membership for the specified tier. Allows users to test features before purchasing. Users are limited to one trial.',
   })
   @ApiResponse({
     status: 201,
@@ -111,8 +130,14 @@ export class MembershipController {
   })
   @ApiResponse({ status: 401, description: 'Unauthorized.' })
   @ApiResponse({ status: 404, description: 'Tier not found.' })
-  @ApiResponse({ status: 409, description: 'Conflict. User already has an active membership.' })
-  @ApiResponse({ status: 403, description: 'Forbidden. User has already used their trial period.' })
+  @ApiResponse({
+    status: 409,
+    description: 'Conflict. User already has an active membership.',
+  })
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. User has already used their trial period.',
+  })
   joinTrial(
     @Body() joinTrialDto: JoinTrialDto,
     @CurrentUser() user: User,

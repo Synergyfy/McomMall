@@ -23,10 +23,7 @@ export class OfferController {
   constructor(private readonly offerService: OfferService) {}
 
   @Post('apply')
-  applyOffer(
-    @CurrentUser() user: User,
-    @Body() applyOfferDto: ApplyOfferDto,
-  ) {
+  applyOffer(@CurrentUser() user: User, @Body() applyOfferDto: ApplyOfferDto) {
     return this.offerService.applyOffer(user.id, applyOfferDto);
   }
 

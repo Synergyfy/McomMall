@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { CreateSeasonDto } from './dto/create-season.dto';
@@ -43,8 +47,12 @@ export class SeasonsService {
   async update(id: string, updateSeasonDto: UpdateSeasonDto) {
     const season = await this.findOne(id);
 
-    const startDate = updateSeasonDto.startDate ? new Date(updateSeasonDto.startDate) : season.startDate;
-    const endDate = updateSeasonDto.endDate ? new Date(updateSeasonDto.endDate) : season.endDate;
+    const startDate = updateSeasonDto.startDate
+      ? new Date(updateSeasonDto.startDate)
+      : season.startDate;
+    const endDate = updateSeasonDto.endDate
+      ? new Date(updateSeasonDto.endDate)
+      : season.endDate;
 
     if (startDate >= endDate) {
       throw new BadRequestException('Start date must be before end date');

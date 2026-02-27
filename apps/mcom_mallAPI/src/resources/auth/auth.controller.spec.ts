@@ -9,6 +9,7 @@ import { HashService } from '../../common/hash/hash.service';
 
 import { EmailService } from '../email/email.service';
 import { OtpType } from '../email/entities/otp.entity';
+import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
 describe('AuthController', () => {
   let controller: AuthController;
@@ -17,6 +18,11 @@ describe('AuthController', () => {
   const mockEmailService = {
     sendOtp: jest.fn(),
     resetPassword: jest.fn(),
+    validateOtp: jest.fn(),
+  };
+
+  const mockActivityTimerService = {
+    getUserActiveTasks: jest.fn().mockResolvedValue([]),
   };
 
   beforeEach(async () => {
@@ -43,6 +49,10 @@ describe('AuthController', () => {
         {
           provide: EmailService,
           useValue: mockEmailService,
+        },
+        {
+          provide: ActivityTimerService,
+          useValue: mockActivityTimerService,
         },
       ],
     }).compile();
