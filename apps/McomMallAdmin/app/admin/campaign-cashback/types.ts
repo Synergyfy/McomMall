@@ -1,6 +1,6 @@
 export enum CampaignTargetType {
-    B2C = 'B2C',
-    B2B = 'B2B',
+    CONSUMERS = 'CONSUMERS',
+    BUSINESS = 'BUSINESS',
 }
 
 export enum CampaignDisplayType {
@@ -22,11 +22,7 @@ export enum CampaignStatus {
     EXPIRED = 'EXPIRED',
 }
 
-export enum SpendingChannel {
-    ONLINE = 'ONLINE',
-    HYPERLOCAL = 'HYPERLOCAL',
-    NEARBY = 'NEARBY',
-}
+export type SpendingChannel = string;
 
 export interface CampaignWallet {
     channelType: SpendingChannel;
