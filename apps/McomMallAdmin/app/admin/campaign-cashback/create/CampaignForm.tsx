@@ -7,16 +7,15 @@ import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
-import { Switch } from '@/components/ui/switch';
 import { CampaignTargetType, CampaignDisplayType, CampaignUnlockMode, SpendingChannel } from '../types';
-import { Lock, Unlock, Globe, MapPin, Navigation, Info, Layers } from 'lucide-react';
+import { Lock, Unlock, Globe, Info, Layers } from 'lucide-react';
 
 export default function CampaignForm() {
     const router = useRouter();
 
     // Core Configuration
     const [name, setName] = useState('');
-    const [targetType, setTargetType] = useState<CampaignTargetType>(CampaignTargetType.B2C);
+    const [targetType, setTargetType] = useState<CampaignTargetType>(CampaignTargetType.CONSUMERS);
     const [displayType, setDisplayType] = useState<CampaignDisplayType>(CampaignDisplayType.VOUCHER);
     const [unlockMode, setUnlockMode] = useState<CampaignUnlockMode>(CampaignUnlockMode.REQUIRE_FULL_UNLOCK);
 
@@ -31,9 +30,9 @@ export default function CampaignForm() {
 
     // Value Channels
     const [channels, setChannels] = useState({
-        v1: [SpendingChannel.HYPERLOCAL, SpendingChannel.NEARBY],
-        v2: [SpendingChannel.ONLINE],
-        v3: [SpendingChannel.HYPERLOCAL, SpendingChannel.NEARBY, SpendingChannel.ONLINE],
+        v1: 'Hyperlocal, Nearby',
+        v2: 'Online',
+        v3: 'Hyperlocal, Nearby, Online',
     });
 
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -44,14 +43,8 @@ export default function CampaignForm() {
         setLevelValue(total / 3);
     }, [totalValueStr]);
 
-    const toggleChannel = (valueKey: 'v1' | 'v2' | 'v3', channel: SpendingChannel) => {
-        setChannels(prev => {
-            const current = prev[valueKey];
-            if (current.includes(channel)) {
-                return { ...prev, [valueKey]: current.filter(c => c !== channel) };
-            }
-            return { ...prev, [valueKey]: [...current, channel] };
-        });
+    const handleChannelChange = (valueKey: 'v1' | 'v2' | 'v3', val: string) => {
+        setChannels(prev => ({ ...prev, [valueKey]: val }));
     };
 
     const handleSubmit = async (e: React.FormEvent) => {
@@ -81,12 +74,12 @@ export default function CampaignForm() {
                         <Label className="text-sm font-semibold">Target Audience</Label>
                         <RadioGroup value={targetType} onValueChange={(val: any) => setTargetType(val)} className="flex flex-col space-y-1">
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer w-full max-w-sm">
-                                <RadioGroupItem value={CampaignTargetType.B2C} id="b2c" />
-                                <Label htmlFor="b2c" className="cursor-pointer">Consumers (B2C)</Label>
+                                <RadioGroupItem value={CampaignTargetType.BUSINESS} id="business" />
+                                <Label htmlFor="business" className="cursor-pointer">Business</Label>
                             </div>
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer w-full max-w-sm">
-                                <RadioGroupItem value={CampaignTargetType.B2B} id="b2b" />
-                                <Label htmlFor="b2b" className="cursor-pointer">Businesses (B2B)</Label>
+                                <RadioGroupItem value={CampaignTargetType.CONSUMERS} id="consumers" />
+                                <Label htmlFor="consumers" className="cursor-pointer">Consumers</Label>
                             </div>
                         </RadioGroup>
                     </div>
@@ -96,7 +89,7 @@ export default function CampaignForm() {
                         <RadioGroup value={displayType} onValueChange={(val: any) => setDisplayType(val)} className="flex flex-col space-y-1">
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer w-full max-w-sm">
                                 <RadioGroupItem value={CampaignDisplayType.VOUCHER} id="cd-voucher" />
-                                <Label htmlFor="cd-voucher" className="cursor-pointer">Physical Voucher UI</Label>
+                                <Label htmlFor="cd-voucher" className="cursor-pointer">Voucher UI</Label>
                             </div>
                             <div className="flex items-center space-x-2 border p-3 rounded-lg hover:bg-gray-50 cursor-pointer w-full max-w-sm">
                                 <RadioGroupItem value={CampaignDisplayType.E_CARD} id="cd-ecard" />
@@ -187,15 +180,13 @@ export default function CampaignForm() {
                                 <Input value={usages.v1} onChange={e => setUsages({ ...usages, v1: e.target.value })} className="h-9" placeholder="e.g., Redeemable internally" />
                             </div>
                             <div className="pt-3 border-t">
-                                <Label className="text-xs font-bold uppercase text-gray-500 mb-3 block">Valid Channels</Label>
-                                <div className="space-y-2">
-                                    {[SpendingChannel.HYPERLOCAL, SpendingChannel.NEARBY, SpendingChannel.ONLINE].map(ch => (
-                                        <div key={ch} className="flex items-center space-x-2">
-                                            <Switch id={`v1-${ch}`} checked={channels.v1.includes(ch)} onCheckedChange={() => toggleChannel('v1', ch)} />
-                                            <Label htmlFor={`v1-${ch}`} className="text-xs">{ch}</Label>
-                                        </div>
-                                    ))}
+                                <Label className="text-xs font-bold uppercase text-gray-500 mb-2 block">Valid Channels (Labels)</Label>
+                                <div className="flex gap-2 mb-2">
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Online</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Hyperlocal</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Nearby</span>
                                 </div>
+                                <Input value={channels.v1} onChange={e => handleChannelChange('v1', e.target.value)} className="h-9" placeholder="Enter valid channels..." />
                             </div>
                         </div>
                     </div>
@@ -219,15 +210,13 @@ export default function CampaignForm() {
                                 <Input value={usages.v2} onChange={e => setUsages({ ...usages, v2: e.target.value })} className="h-9" placeholder="e.g., Only in MCOM Mall" />
                             </div>
                             <div className="pt-3 border-t">
-                                <Label className="text-xs font-bold uppercase text-gray-500 mb-3 block">Valid Channels</Label>
-                                <div className="space-y-2">
-                                    {[SpendingChannel.HYPERLOCAL, SpendingChannel.NEARBY, SpendingChannel.ONLINE].map(ch => (
-                                        <div key={ch} className="flex items-center space-x-2">
-                                            <Switch id={`v2-${ch}`} checked={channels.v2.includes(ch)} onCheckedChange={() => toggleChannel('v2', ch)} />
-                                            <Label htmlFor={`v2-${ch}`} className="text-xs">{ch}</Label>
-                                        </div>
-                                    ))}
+                                <Label className="text-xs font-bold uppercase text-gray-500 mb-2 block">Valid Channels (Labels)</Label>
+                                <div className="flex gap-2 mb-2">
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Online</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Hyperlocal</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Nearby</span>
                                 </div>
+                                <Input value={channels.v2} onChange={e => handleChannelChange('v2', e.target.value)} className="h-9" placeholder="Enter valid channels..." />
                             </div>
                         </div>
                     </div>
@@ -251,15 +240,13 @@ export default function CampaignForm() {
                                 <Input value={usages.v3} onChange={e => setUsages({ ...usages, v3: e.target.value })} className="h-9" placeholder="e.g., Use anywhere" />
                             </div>
                             <div className="pt-3 border-t">
-                                <Label className="text-xs font-bold uppercase text-gray-500 mb-3 block">Valid Channels</Label>
-                                <div className="space-y-2">
-                                    {[SpendingChannel.HYPERLOCAL, SpendingChannel.NEARBY, SpendingChannel.ONLINE].map(ch => (
-                                        <div key={ch} className="flex items-center space-x-2">
-                                            <Switch id={`v3-${ch}`} checked={channels.v3.includes(ch)} onCheckedChange={() => toggleChannel('v3', ch)} />
-                                            <Label htmlFor={`v3-${ch}`} className="text-xs">{ch}</Label>
-                                        </div>
-                                    ))}
+                                <Label className="text-xs font-bold uppercase text-gray-500 mb-2 block">Valid Channels (Labels)</Label>
+                                <div className="flex gap-2 mb-2">
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Online</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Hyperlocal</span>
+                                    <span className="text-[10px] px-2 py-0.5 bg-gray-100 text-gray-600 rounded-full font-medium">Nearby</span>
                                 </div>
+                                <Input value={channels.v3} onChange={e => handleChannelChange('v3', e.target.value)} className="h-9" placeholder="Enter valid channels..." />
                             </div>
                         </div>
                     </div>
@@ -268,7 +255,7 @@ export default function CampaignForm() {
 
             <div className="pt-8 border-t border-slate-200 flex justify-end">
                 <Button type="button" variant="ghost" onClick={() => router.back()} className="mr-4">Cancel</Button>
-                <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-8 py-6 h-auto text-lg w-full md:w-auto shadow-xl">
+                <Button type="submit" disabled={isSubmitting} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 px-6 shadow-md">
                     {isSubmitting ? 'Creating Campaign...' : 'Generate New Campaign Cashback'}
                 </Button>
             </div>

@@ -11,9 +11,9 @@ export const CampaignChannelBalances: React.FC<Props> = ({ wallets }) => {
 
     // We map the array of wallets to individual components
     return (
-        <div className="w-full mt-4 pt-4 border-t border-gray-100/20">
-            <h4 className="text-xs font-bold uppercase tracking-widest opacity-60 mb-3">Channel Balances</h4>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div className="w-full mt-2 pt-2 border-t border-gray-100">
+            <h4 className="text-[10px] font-bold uppercase tracking-widest opacity-60 mb-2">Channel Balances</h4>
+            <div className="grid grid-cols-3 gap-2">
                 {wallets.map((wallet, index) => {
                     let Icon = Globe;
                     if (wallet.channelType === 'HYPERLOCAL') Icon = MapPin;
@@ -22,16 +22,16 @@ export const CampaignChannelBalances: React.FC<Props> = ({ wallets }) => {
                     const totalBalance = wallet.value1Balance + wallet.value2Balance + wallet.value3Balance;
 
                     return (
-                        <div key={wallet.channelType + index} className="flex items-center gap-3 bg-white/5 p-3 rounded-lg border border-gray-200/50">
-                            <div className="w-8 h-8 flex-shrink-0 bg-gray-100/10 rounded-full flex items-center justify-center border border-gray-300/30">
-                                <Icon className="w-4 h-4 opacity-70" />
+                        <div key={wallet.channelType + index} className="flex items-center gap-2 bg-gray-50/50 p-1.5 rounded-lg border border-gray-100">
+                            <div className="w-6 h-6 flex-shrink-0 bg-white rounded-full flex items-center justify-center border border-gray-100">
+                                <Icon className="w-3 h-3 opacity-70" />
                             </div>
-                            <div className="flex-1">
-                                <span className="block text-[10px] font-bold uppercase opacity-60 tracking-wider">
+                            <div className="flex-1 min-w-0">
+                                <span className="block text-[8px] font-bold uppercase opacity-60 tracking-wider truncate">
                                     {wallet.channelType}
                                 </span>
-                                <span className="block text-sm font-semibold">
-                                    £{totalBalance.toFixed(2)}
+                                <span className="block text-xs font-semibold">
+                                    £{totalBalance.toFixed(0)}
                                 </span>
                             </div>
                         </div>
