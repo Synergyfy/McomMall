@@ -181,7 +181,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
       price: Number(price),
       image,
       category: typeof category === 'string' ? category : 'General',
-      items_left: 10,
+      items_left: (item as any).stock ?? 0,
       rating: 4.5,
       reviews: 10,
       discountedPrice: item.salePrice ? Number(item.salePrice) : undefined,
@@ -648,13 +648,13 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
               // Dashboard View (Sections)
               <div className="space-y-4">
                 {/* We can put a welcome or search here if needed */}
-                <SectionRow title="New Arrivals" type="products" items={newProductsData?.data || []} />
+                <SectionRow title="Featured Products" type="products" items={publicData?.products || []} />
                 <SectionRow title="Featured Services" type="services" items={publicData?.services || []} />
                 <SectionRow title="Newest Vouchers" type="vouchers" items={publicData?.vouchers || []} />
                 <SectionRow title="Gift Cards" type="gift-cards" items={publicData?.giftCards || []} />
                 <SectionRow title="Latest Coupons" type="coupons" items={publicData?.coupons || []} />
 
-                {(!newProductsData?.data?.length && !publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length && !publicData?.coupons?.length) && !isPublicDataLoading && (
+                {(!publicData?.products?.length && !publicData?.services?.length && !publicData?.vouchers?.length && !publicData?.giftCards?.length && !publicData?.coupons?.length) && !isPublicDataLoading && (
                   <div className="text-center py-20 bg-white rounded-xl border border-dashed border-gray-300">
                     <div className="bg-gray-50 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
                       <Search className="h-8 w-8 text-gray-400" />

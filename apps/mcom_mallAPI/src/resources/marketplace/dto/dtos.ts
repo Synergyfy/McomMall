@@ -22,6 +22,7 @@ import { VoucherProduct } from '../../voucher/entities/voucher-product.entity';
 import { GiftCardTemplate } from '../../gift-card/entities/gift-card-template.entity';
 import { Coupon } from '../../coupon/entities/coupon.entity';
 import { Service } from '../../services/entities/service.entity';
+import { Product } from '../../product/entities/product.entity';
 
 // --- BANNER DTOs ---
 
@@ -55,7 +56,7 @@ export class CreateBannerDto {
   isActive?: boolean;
 }
 
-export class UpdateBannerDto extends PartialType(CreateBannerDto) {}
+export class UpdateBannerDto extends PartialType(CreateBannerDto) { }
 
 // --- SECTION DTOs ---
 
@@ -113,7 +114,7 @@ export class CreateCategoryDto {
   isVisible?: boolean;
 }
 
-export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
+export class UpdateCategoryDto extends PartialType(CreateCategoryDto) { }
 
 // --- PUBLIC VIEW RESPONSE ---
 
@@ -160,4 +161,7 @@ export class MarketplacePublicViewDto {
 
   @ApiProperty({ type: [Service] })
   services: Service[];
+
+  @ApiProperty({ type: [Product] })
+  products: Product[];
 }

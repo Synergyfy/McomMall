@@ -22,10 +22,11 @@ import { GiftCardTemplate } from '../gift-card/entities/gift-card-template.entit
 import { Coupon } from '../coupon/entities/coupon.entity';
 import { CouponStatus, CouponSourceType } from '../coupon/coupon.enum';
 import { Service } from '../services/entities/service.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 
 @Injectable()
 export class MarketplaceService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   // --- PUBLIC AGGREGATION ---
 
@@ -40,38 +41,101 @@ export class MarketplaceService {
       order: { displayOrder: 'ASC' },
     });
 
-    const sections = await this.dataSource.manager.find(MarketplaceSection, {
+    let sections = await this.dataSource.manager.find(MarketplaceSection, {
       where: { isVisible: true },
-      relations: ['products'],
+      relations: ['products', 'products.business'],
     });
 
-    const vouchers = await this.dataSource.manager.find(VoucherProduct, {
+    // Filter products within sections: Must be published, public, in stock (if managed), and belong to active business
+    sections = sections.map((section) => {
+      section.products = (section.products || []).filter((p) => {
+        const isPublished = p.productStatus === 'published';
+        const isPublic = p.visibility === 'public';
+        const hasBaseStock = !p.enableStockManagement || p.stock > 0;
+        const hasVariationStock =
+          p.variations &&
+          p.variations.some((v) => v.stock > 0 && v.available !== false);
+        const inStock = hasBaseStock || hasVariationStock;
+        const businessActive = p.business?.status === BusinessStatus.PUBLISHED;
+
+        return isPublished && isPublic && inStock && businessActive;
+      });
+      return section;
+    });
+
+    let vouchers = await this.dataSource.manager.find(VoucherProduct, {
       where: { isEnabled: true },
+      relations: ['user', 'user.businesses'],
       order: { createdAt: 'DESC' },
-      take: 5,
     });
 
-    const giftCards = await this.dataSource.manager.find(GiftCardTemplate, {
+    // Filter vouchers: Owner must have at least one published business
+    vouchers = vouchers.filter((v) =>
+      v.user?.businesses?.some((b) => b.status === BusinessStatus.PUBLISHED),
+    );
+    vouchers = vouchers.slice(0, 5);
+
+    let giftCards = await this.dataSource.manager.find(GiftCardTemplate, {
       where: { isActive: true },
+      relations: ['owner', 'owner.businesses'],
       order: { created_at: 'DESC' },
-      take: 5,
     });
 
-    const coupons = await this.dataSource.manager.find(Coupon, {
+    // Filter gift cards: Owner must have at least one published business
+    giftCards = giftCards.filter((gc) =>
+      gc.owner?.businesses?.some((b) => b.status === BusinessStatus.PUBLISHED),
+    );
+    giftCards = giftCards.slice(0, 5);
+
+    let coupons = await this.dataSource.manager.find(Coupon, {
       where: {
         status: CouponStatus.ACTIVE,
         sourceType: CouponSourceType.PLATFORM,
       },
-      relations: ['campaign'],
+      relations: ['campaign', 'redemptionLogs'],
+      order: { created_at: 'DESC' },
+    });
+
+    // Filter coupons: Must not have reached usage limit
+    coupons = coupons.filter((c) => {
+      if (c.usageLimit <= 0) return true;
+      const redeemedCount = (c.redemptionLogs || []).filter(
+        (log) => log.status === 'redeemed',
+      ).length;
+      return redeemedCount < c.usageLimit;
+    });
+    coupons = coupons.slice(0, 5);
+
+    const services = await this.dataSource.manager.find(Service, {
+      where: {
+        isActive: true,
+        status: 'published',
+        business: { status: BusinessStatus.PUBLISHED },
+      },
+      relations: ['business'],
       order: { created_at: 'DESC' },
       take: 5,
     });
 
-    const services = await this.dataSource.manager.find(Service, {
-      where: { isActive: true, status: 'published' },
+    let products = await this.dataSource.manager.find(Product, {
+      where: {
+        productStatus: 'published',
+        visibility: 'public',
+        business: { status: BusinessStatus.PUBLISHED },
+      },
+      relations: ['business'],
       order: { created_at: 'DESC' },
-      take: 5,
     });
+
+    products = products
+      .filter((p) => {
+        const hasBaseStock = !p.enableStockManagement || p.stock > 0;
+        const hasVariationStock =
+          p.variations &&
+          p.variations.some((v) => v.stock > 0 && v.available !== false);
+        return hasBaseStock || hasVariationStock;
+      })
+      .slice(0, 5);
 
     return {
       heroSlides: banners.filter((b) => b.type === BannerType.HERO_SLIDE),
@@ -87,6 +151,7 @@ export class MarketplaceService {
       giftCards,
       coupons,
       services,
+      products,
     };
   }
 
