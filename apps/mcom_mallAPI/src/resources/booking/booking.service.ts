@@ -39,6 +39,7 @@ import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
+import { BookingTransaction, TransactionType, TransactionStatus } from './entities/booking-transaction.entity';
 
 @Injectable()
 export class BookingService {
@@ -51,7 +52,10 @@ export class BookingService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(ServicePayment)
     private readonly servicePaymentRepository: Repository<ServicePayment>,
+    @InjectRepository(BookingTransaction)
+    private readonly bookingTransactionRepository: Repository<BookingTransaction>,
     @InjectRepository(Business)
+
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Service)
     private readonly serviceRepository: Repository<Service>,
@@ -66,19 +70,52 @@ export class BookingService {
   async checkAvailability(
     checkAvailabilityDto: CheckAvailabilityDto,
   ): Promise<{ isAvailable: boolean; priceMultiplier: number }> {
+    // ... previous code
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId },
-      relations: ['business', 'business.user'],
+      where: { id: serviceId, isActive: true },
+      relations: ['business', 'business.user', 'business.businessHours'],
     });
 
     if (!service) {
-      throw new NotFoundException('Service not found.');
+      throw new NotFoundException('Active service not found.');
+    }
+
+    if (service.business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException('Business is not currently active and cannot accept bookings.');
+    }
+
+    if (!service.business.user || !service.business.user.isActive) {
+      throw new BadRequestException('The owner of the business is not active.');
     }
 
     const start = new Date(startTime);
     const end = new Date(endTime);
+
+    // Check Business Hours
+    if (service.business.businessHours && service.business.businessHours.length > 0) {
+      const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+      const dayOfWeek = days[start.getDay()] as any;
+      const businessHour = service.business.businessHours.find((bh) => bh.dayOfWeek === dayOfWeek);
+
+      if (!businessHour) {
+        return { isAvailable: false, priceMultiplier: 1 }; // Not open on this day
+      }
+
+      if (!businessHour.is24h) {
+        // Simple time string comparison (e.g., '09:00:00' <= '10:00:00')
+        const formatTime = (date: Date) => {
+          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
+        };
+        const startTimeStr = formatTime(start);
+        const endTimeStr = formatTime(end);
+
+        if (startTimeStr < businessHour.openTime || endTimeStr > businessHour.closeTime) {
+          return { isAvailable: false, priceMultiplier: 1 }; // Outside business hours
+        }
+      }
+    }
 
     const blockedSlot = await this.blockedSlotRepository.findOne({
       where: {
@@ -89,6 +126,20 @@ export class BookingService {
     });
 
     if (blockedSlot) {
+      return { isAvailable: false, priceMultiplier: 1 };
+    }
+
+    // Check existing bookings for overlapping time
+    const overlappingBooking = await this.bookingRepository.findOne({
+      where: {
+        service: { id: serviceId },
+        startTime: LessThan(end),
+        endTime: MoreThan(start),
+        status: In([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.CONFIRMED]),
+      },
+    });
+
+    if (overlappingBooking) {
       return { isAvailable: false, priceMultiplier: 1 };
     }
 
@@ -105,6 +156,84 @@ export class BookingService {
       priceMultiplier: priceModifier ? priceModifier.priceMultiplier : 1,
     };
   }
+
+  async getAvailableTimeSlots(serviceId: string, dateStr: string): Promise<string[]> {
+    const service = await this.serviceRepository.findOne({
+      where: { id: serviceId, isActive: true },
+      relations: ['business', 'business.user', 'business.businessHours'],
+    });
+
+    if (!service || service.business.status !== BusinessStatus.PUBLISHED || !service.business.user?.isActive) {
+      return []; // Return empty slots if service or business is invalid
+    }
+
+    const targetDate = new Date(dateStr);
+    const startOfDay = new Date(targetDate.setHours(0, 0, 0, 0));
+    const endOfDay = new Date(targetDate.setHours(23, 59, 59, 999));
+
+    // Get Business Hours
+    const days = ['SUNDAY', 'MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY', 'SATURDAY'];
+    const dayOfWeek = days[startOfDay.getDay()] as any;
+    const businessHour = service.business.businessHours?.find((bh) => bh.dayOfWeek === dayOfWeek);
+
+    if (!businessHour) {
+      return [];
+    }
+
+    const durationMinutes = service.duration || 60; // Assume 60 mins if not set
+    const availableSlots: string[] = [];
+
+    // Parse open/close times
+    let openTimeMinutes = 0;
+    let closeTimeMinutes = 24 * 60;
+
+    if (!businessHour.is24h) {
+      const parseTimeStr = (tStr: string) => {
+        const [h, m] = tStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+      openTimeMinutes = parseTimeStr(businessHour.openTime);
+      closeTimeMinutes = parseTimeStr(businessHour.closeTime);
+    }
+
+    // Get blocked slots and existing bookings for the day
+    const blockedSlots = await this.blockedSlotRepository.find({
+      where: {
+        business: { id: service.business.id },
+        startTime: LessThan(endOfDay),
+        endTime: MoreThan(startOfDay),
+      },
+    });
+
+    const existingBookings = await this.bookingRepository.find({
+      where: {
+        service: { id: serviceId },
+        startTime: LessThan(endOfDay),
+        endTime: MoreThan(startOfDay),
+        status: In([BookingStatus.PENDING, BookingStatus.APPROVED, BookingStatus.CONFIRMED]),
+      },
+    });
+
+    // Generate slots
+    for (let m = openTimeMinutes; m + durationMinutes <= closeTimeMinutes; m += durationMinutes) {
+      const slotStart = new Date(startOfDay);
+      slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
+      
+      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+
+      // Check for overlap
+      const isBlocked = blockedSlots.some(bs => slotStart < bs.endTime && slotEnd > bs.startTime);
+      const isBooked = existingBookings.some(eb => slotStart < eb.endTime && slotEnd > eb.startTime);
+
+      if (!isBlocked && !isBooked) {
+        availableSlots.push(`${slotStart.getHours().toString().padStart(2, '0')}:${slotStart.getMinutes().toString().padStart(2, '0')}`);
+      }
+    }
+
+    return availableSlots;
+  }
+
+
 
   /**
    * Creates a new booking with a dedicated payment transaction.
@@ -471,30 +600,44 @@ export class BookingService {
       );
     }
 
-    // This is a placeholder for the actual amount calculation
-    const amount = booking.service.fixedPrice;
+    // Calculate amounts based on service configuration (simplified for this example)
+    const commissionRate = 0.10; // 10% commission
+    const totalAmount = booking.service.fixedPrice || 100; // Fallback if no fixed price
+    const commissionAmount = parseFloat((totalAmount * commissionRate).toFixed(2));
+    const providerAmount = parseFloat((totalAmount - commissionAmount).toFixed(2));
     const currency = 'GBP';
+
+    booking.totalAmount = totalAmount;
+    booking.commissionAmount = commissionAmount;
+    booking.providerAmount = providerAmount;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
       const paymentIntent =
         await this.paymentProviderService.createStripePaymentIntent(
-          amount,
+          totalAmount,
           currency,
         );
+      booking.paymentIntentId = paymentIntent.id;
+      await this.bookingRepository.save(booking);
+
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
       };
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
       const order = await this.paymentProviderService.createPaypalOrder(
-        amount,
+        totalAmount,
         currency,
       );
+      booking.paymentIntentId = order.id; // Using paymentIntentId column to store orderId for PayPal
+      await this.bookingRepository.save(booking);
+
       return { orderId: order.id, provider: PaymentMethod.PAYPAL };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
   }
+
 
   async verifyPayment(
     verifyDto: VerifyBookingPaymentDto,
@@ -556,6 +699,7 @@ export class BookingService {
 
     return this.dataSource.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(ServicePayment);
+      const transactionRepo = manager.getRepository(BookingTransaction);
 
       const newPayment = paymentRepo.create({
         user: { id: userId },
@@ -566,14 +710,24 @@ export class BookingService {
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
+      const newTransaction = transactionRepo.create({
+        booking,
+        type: TransactionType.PAYMENT,
+        amount,
+        referenceId: transactionId,
+        status: TransactionStatus.COMPLETED,
+      });
+      await transactionRepo.save(newTransaction);
+
       booking.payment = savedPayment;
+      booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
       await manager.save(booking);
 
       await this.walletService.creditEarning({
         userId: booking.service.business.user.id,
-        amount,
+        amount: booking.providerAmount, // Only credit provider amount for earnings info (though it's in escrow)
         type: WalletTransactionType.EARNING_BOOKING,
-        description: `Pending payment for booking #${booking.id}`,
+        description: `Pending payment in escrow for booking #${booking.id}`,
       });
 
       // Process Cashback
@@ -602,6 +756,7 @@ export class BookingService {
           'service',
           'service.business',
           'service.business.user',
+          'payment'
         ],
       });
 
@@ -628,6 +783,53 @@ export class BookingService {
 
       if (booking.businessOwnerCompleted && booking.customerCompleted) {
         booking.status = BookingStatus.COMPLETED;
+        
+        // --- Escrow Payout Logic ---
+        if (!booking.payoutProcessed && !booking.refundProcessed) {
+          const transactionRepo = manager.getRepository(BookingTransaction);
+          
+          let transferResult;
+          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+             // Assuming business user has a stripeAccountId property, defaulting to mock for now
+             const stripeAccountId = 'mock_acct_id'; 
+             transferResult = await this.paymentProviderService.createStripeTransfer(
+               booking.providerAmount,
+               'gbp',
+               stripeAccountId,
+               { bookingId: booking.id }
+             );
+             booking.transferId = transferResult.id;
+          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+             transferResult = await this.paymentProviderService.createPaypalPayout(
+               booking.providerAmount,
+               'gbp',
+               booking.service.business.user.email
+             );
+             booking.transferId = transferResult.batch_header.payout_batch_id;
+          }
+
+          if (transferResult) {
+            booking.payoutProcessed = true;
+            
+            const payoutTx = transactionRepo.create({
+              booking,
+              type: TransactionType.PAYOUT,
+              amount: booking.providerAmount,
+              referenceId: booking.transferId,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(payoutTx);
+            
+            const commissionTx = transactionRepo.create({
+              booking,
+              type: TransactionType.COMMISSION,
+              amount: booking.commissionAmount,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(commissionTx);
+          }
+        }
+        
         await this.walletService.releaseBookingPayment(booking.id);
       }
 
@@ -658,4 +860,64 @@ export class BookingService {
       relations: ['payment'],
     });
   }
+
+  async refundBooking(
+    bookingId: string,
+    adminId: string, // assuming refund is initiated by admin
+  ): Promise<ServiceBooking> {
+    return this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(ServiceBooking, {
+        where: { id: bookingId },
+        relations: ['user', 'payment'],
+      });
+
+      if (!booking) {
+        throw new NotFoundException('Booking not found.');
+      }
+
+      if (booking.status !== BookingStatus.CONFIRMED && booking.status !== BookingStatus.CANCELLED) {
+         throw new BadRequestException('Only confirmed or cancelled bookings can be refunded.');
+      }
+
+      if (booking.payoutProcessed) {
+         throw new BadRequestException('Cannot refund after payout has been processed.');
+      }
+
+      if (booking.refundProcessed) {
+         throw new BadRequestException('Refund already processed.');
+      }
+
+      if (!booking.paymentIntentId) {
+         throw new BadRequestException('No payment intent found to refund.');
+      }
+
+      const transactionRepo = manager.getRepository(BookingTransaction);
+      let refundResult;
+
+      if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+         refundResult = await this.paymentProviderService.refundStripePayment(booking.paymentIntentId);
+         booking.refundId = refundResult.id;
+      } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+         refundResult = await this.paymentProviderService.refundPaypalOrder(booking.paymentIntentId);
+         booking.refundId = refundResult.id;
+      }
+
+      if (refundResult) {
+        booking.refundProcessed = true;
+        booking.status = BookingStatus.REFUNDED;
+
+        const refundTx = transactionRepo.create({
+          booking,
+          type: TransactionType.REFUND,
+          amount: booking.totalAmount,
+          referenceId: booking.refundId,
+          status: TransactionStatus.COMPLETED,
+        });
+        await transactionRepo.save(refundTx);
+      }
+
+      return manager.save(booking);
+    });
+  }
 }
+

@@ -27,6 +27,15 @@ export class BookingController {
     return this.bookingService.checkAvailability(checkAvailabilityDto);
   }
 
+  @Get('available-slots')
+  getAvailableTimeSlots(
+    @Query('serviceId') serviceId: string,
+    @Query('date') date: string,
+  ) {
+    return this.bookingService.getAvailableTimeSlots(serviceId, date);
+  }
+
+
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
@@ -104,4 +113,11 @@ export class BookingController {
   complete(@Param('id') id: string, @Request() req) {
     return this.bookingService.completeBooking(id, req.user.id);
   }
+
+  @UseGuards(JwtAuthGuard) // Assuming admin only in real app, keeping simple for this scope
+  @Post(':id/refund')
+  refund(@Param('id') id: string, @Request() req) {
+    return this.bookingService.refundBooking(id, req.user.id);
+  }
 }
+

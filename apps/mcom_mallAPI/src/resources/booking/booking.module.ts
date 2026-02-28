@@ -13,6 +13,7 @@ import { PriceModifier } from './entities/price-modifier.entity';
 import { RentalBooking } from './entities/rental-booking.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
+import { BookingTransaction } from './entities/booking-transaction.entity';
 
 @Module({
   imports: [
@@ -24,7 +25,9 @@ import { ServicePayment } from './entities/service-payment.entity';
       ServicePayment,
       Business,
       Service,
+      BookingTransaction,
     ]),
+
     NotificationModule,
     PaymentsModule,
     forwardRef(() => WalletModule),

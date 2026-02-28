@@ -11,4 +11,7 @@ export enum BookingStatus {
   CANCELLED = 'cancelled',
   /** The service has been rendered and the booking is complete. */
   COMPLETED = 'completed',
+  /** The booking was refunded. */
+  REFUNDED = 'refunded',
 }
+

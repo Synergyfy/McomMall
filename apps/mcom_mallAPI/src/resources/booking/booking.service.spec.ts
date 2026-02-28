@@ -6,6 +6,7 @@ import { ServiceBooking } from './entities/service-booking.entity';
 import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServicePayment } from './entities/service-payment.entity';
+import { BookingTransaction } from './entities/booking-transaction.entity';
 import { Service } from '../services/entities/service.entity';
 import { ListingType } from '../listings/listing.enum';
 import { BookingStatus } from './entities/booking.enum';
@@ -27,8 +28,8 @@ describe('BookingService', () => {
   let blockedSlotRepository: Repository<BlockedSlot>;
   let priceModifierRepository: Repository<PriceModifier>;
   let serviceRepository: Repository<Service>;
-  let servicePaymentRepository: Repository<ServicePayment>;
-  let businessRepository: Repository<Business>;
+  let _servicePaymentRepository: Repository<ServicePayment>;
+  let _businessRepository: Repository<Business>;
   let paymentProviderService: PaymentProviderService;
   let walletService: WalletService;
 
@@ -76,6 +77,10 @@ describe('BookingService', () => {
           provide: getRepositoryToken(ServicePayment),
           useFactory: mockRepository,
         },
+        {
+          provide: getRepositoryToken(BookingTransaction),
+          useFactory: mockRepository,
+        },
         { provide: getRepositoryToken(Business), useFactory: mockRepository },
         { provide: getRepositoryToken(Service), useFactory: mockRepository },
         { provide: DataSource, useValue: mockDataSource },
@@ -87,8 +92,13 @@ describe('BookingService', () => {
             createPaypalOrder: jest.fn(),
             verifyStripePaymentIntent: jest.fn(),
             captureAndVerifyPaypalOrder: jest.fn(),
+            createStripeTransfer: jest.fn(),
+            refundStripePayment: jest.fn(),
+            createPaypalPayout: jest.fn(),
+            refundPaypalOrder: jest.fn(),
           },
         },
+
         {
           provide: CentralIntegrationService,
           useValue: { processCashback: jest.fn() },

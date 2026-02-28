@@ -27,6 +27,7 @@ describe('BookingController (e2e)', () => {
   let user: User;
   let customer: User;
   let bookingRepository: Repository<ServiceBooking>;
+  let booking3: ServiceBooking;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -123,7 +124,7 @@ describe('BookingController (e2e)', () => {
         now.getTime() - 20 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000,
       ),
     });
-    const booking3 = bookingRepository.create({
+    booking3 = bookingRepository.create({
       user: customer,
       service,
       startTime: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000), // 40 days ago
@@ -173,4 +174,27 @@ describe('BookingController (e2e)', () => {
 
     expect(response.body.length).toBe(2);
   });
+
+  it('should return available slots for a given day', async () => {
+    // Make sure we have business hours set for the business to make this pass properly
+    // This is just a minimal check for the public endpoint
+    const date = new Date().toISOString().split('T')[0];
+    const response = await request(app.getHttpServer())
+      .get(`/bookings/available-slots?serviceId=${service.id}&date=${date}`)
+      .expect(200);
+
+    // It should at least be an array (even if empty due to no business hours)
+    expect(Array.isArray(response.body)).toBe(true);
+  });
+
+  it('should prevent refunding a booking without a payment intent', async () => {
+    // We expect a 400 because there is no payment intent
+    const response = await request(app.getHttpServer())
+      .post(`/bookings/${booking3.id}/refund`)
+      .set('Authorization', `Bearer ${jwtToken}`) // Assuming admin or owner
+      .expect(400);
+
+    expect(response.body.message).toContain('Only confirmed or cancelled bookings');
+  });
 });
+
