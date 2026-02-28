@@ -13,7 +13,10 @@ import { User } from 'src/resources/users/entities/user.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ServiceBooking } from 'src/resources/booking/entities/service-booking.entity';
-import { ListingType } from 'src/resources/listings/listing.enum';
+import {
+  ListingType,
+  BusinessStatus,
+} from 'src/resources/listings/listing.enum';
 
 describe('BookingController (e2e)', () => {
   let app: INestApplication;
@@ -90,6 +93,7 @@ describe('BookingController (e2e)', () => {
       listingType: [ListingType.SERVICE],
       shortDescription: 'Test short description',
       businessPhone: '+441234567890',
+      status: BusinessStatus.PUBLISHED,
     });
     await businessRepository.save(business);
 

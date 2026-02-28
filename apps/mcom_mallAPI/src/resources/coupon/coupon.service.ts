@@ -1,6 +1,5 @@
 import {
   BadRequestException,
-  ForbiddenException,
   Inject,
   Injectable,
   NotFoundException,
@@ -10,7 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 
 import { Coupon } from './entities/coupon.entity';
-import { CouponStatus, CouponSourceType, DiscountType } from './coupon.enum';
+import { CouponStatus, CouponSourceType } from './coupon.enum';
 import {
   RedemptionLog,
   RedemptionStatus,
@@ -18,6 +17,7 @@ import {
 import { CreateCouponDto } from './dto/create-coupon.dto';
 import { MarketingCampaign } from '../campaign/entities/marketing-campaign.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { BrandingAssociation } from './entities/branding-association.entity';
 import { User } from '../users/entities/user.entity';
 import {
@@ -68,7 +68,7 @@ export class CouponService {
       discountType,
       usageLimit,
       perUserLimit,
-      startDate,
+      startDate: _startDate,
       expiresAt,
       campaignId,
       businessId,
@@ -248,12 +248,23 @@ export class CouponService {
     }
 
     if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
+      if (coupon.business.status !== BusinessStatus.PUBLISHED) {
+        throw new BadRequestException(
+          `Business "${coupon.business.businessName}" is not currently active. Coupon cannot be used.`,
+        );
+      }
+      if (!coupon.business.user || !coupon.business.user.isActive) {
+        throw new BadRequestException(
+          `The owner of business "${coupon.business.businessName}" is not currently active. Coupon cannot be used.`,
+        );
+      }
+
       try {
         await this.capabilityService.checkPermission(
           coupon.business.user.id,
           ActionType.CREATE_COUPON_TEMPLATE,
         );
-      } catch (e) {
+      } catch (_e) {
         throw new BadRequestException(
           'The business providing this coupon does not have an active tier allowing coupon distribution.',
         );
@@ -263,7 +274,11 @@ export class CouponService {
     return coupon;
   }
 
-  async redeem(code: string, user: User, order: Order): Promise<RedemptionLog> {
+  async redeem(
+    code: string,
+    user: User,
+    _order: Order,
+  ): Promise<RedemptionLog> {
     return this.dataSource.transaction(async (manager) => {
       const couponRepo = manager.getRepository(Coupon);
       const logRepo = manager.getRepository(RedemptionLog);
@@ -275,6 +290,19 @@ export class CouponService {
       });
 
       if (!coupon) throw new NotFoundException('Coupon not found');
+
+      if (coupon.sourceType === CouponSourceType.BUSINESS && coupon.business) {
+        if (coupon.business.status !== BusinessStatus.PUBLISHED) {
+          throw new BadRequestException(
+            `Business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
+          );
+        }
+        if (!coupon.business.user || !coupon.business.user.isActive) {
+          throw new BadRequestException(
+            `The owner of business "${coupon.business.businessName}" is not currently active. Coupon cannot be redeemed.`,
+          );
+        }
+      }
 
       const now = new Date();
       if (
@@ -359,7 +387,7 @@ export class CouponService {
     }
   }
 
-  async getSummaryStatistics(ownerId: string): Promise<{
+  async getSummaryStatistics(_ownerId: string): Promise<{
     totalSold: number;
     totalRedeemed: number;
     outstandingLiability: number;
@@ -367,7 +395,7 @@ export class CouponService {
     return { totalSold: 0, totalRedeemed: 0, outstandingLiability: 0 };
   }
 
-  async getOwnerStats(userId: string): Promise<any> {
+  async getOwnerStats(_userId: string): Promise<any> {
     return {
       totalSold: 0,
       totalRedeemed: 0,
@@ -376,14 +404,14 @@ export class CouponService {
     };
   }
 
-  async getSalesVsRedemptionsChartData(userId: string): Promise<any> {
+  async getSalesVsRedemptionsChartData(_userId: string): Promise<any> {
     return { data: [] };
   }
 
   async getTransactionHistoryForOwner(
-    userId: string,
-    startDate?: string,
-    endDate?: string,
+    _userId: string,
+    _startDate?: string,
+    _endDate?: string,
   ): Promise<any[]> {
     return [];
   }

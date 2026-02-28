@@ -46,7 +46,8 @@ describe('GroupingService', () => {
     captureAndVerifyPaypalOrder: jest.fn(),
   };
 
-  const baseMockUser = { fullName: 'Test User',
+  const baseMockUser = {
+    fullName: 'Test User',
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',
@@ -155,9 +156,21 @@ describe('GroupingService', () => {
           provide: PaymentProviderService,
           useValue: mockPaymentProviderService,
         },
-        { provide: CentralIntegrationService, useValue: { processCashback: jest.fn(), validateDigitalValue: jest.fn() } },
-        { provide: DigitalValueService, useValue: { createVoucher: jest.fn() } },
-        { provide: CapabilityService, useValue: { checkPermission: jest.fn() } },
+        {
+          provide: CentralIntegrationService,
+          useValue: {
+            processCashback: jest.fn(),
+            validateDigitalValue: jest.fn(),
+          },
+        },
+        {
+          provide: DigitalValueService,
+          useValue: { createVoucher: jest.fn() },
+        },
+        {
+          provide: CapabilityService,
+          useValue: { checkPermission: jest.fn() },
+        },
       ],
     }).compile();
 

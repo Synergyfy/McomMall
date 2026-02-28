@@ -33,6 +33,7 @@ import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
 import { UpdateGiftCardTemplateDto } from './dto/update-gift-card-template.dto';
 import { UpdateGiftCardSettingsDto } from './dto/update-gift-card-settings.dto';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import { customAlphabet } from 'nanoid';
 import {
   CapabilityService,
@@ -148,7 +149,7 @@ export class GiftCardService {
           phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`, // Placeholder
           isActive: true,
           isEmailVerified: true, // Trusted system
-          role: 'customer' as any, // UserRole.CUSTOMER
+          role: UserRole.CUSTOMER,
         });
       const savedUser = await this.businessRepository.manager
         .getRepository(User)
@@ -209,19 +210,25 @@ export class GiftCardService {
 
   async initiateGiftCardPurchase(
     initiateDto: InitiatePurchaseDto,
-    userId: string,
+    _userId: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
     provider: PaymentMethod;
   }> {
-    const template = await this.templateRepository.findOneBy({
-      id: initiateDto.templateId,
-      isActive: true,
+    const template = await this.templateRepository.findOne({
+      where: { id: initiateDto.templateId, isActive: true },
+      relations: ['owner'],
     });
     if (!template) {
       throw new NotFoundException(
         'Gift card template not found or is inactive.',
+      );
+    }
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card template is not currently active and cannot accept purchases.',
       );
     }
 
@@ -257,13 +264,19 @@ export class GiftCardService {
     const { purchaseDetails, paymentProvider, transactionId } = verifyDto;
     const { templateId, amount, assetId } = purchaseDetails;
 
-    const template = await this.templateRepository.findOneBy({
-      id: templateId,
-      isActive: true,
+    const template = await this.templateRepository.findOne({
+      where: { id: templateId, isActive: true },
+      relations: ['owner'],
     });
     if (!template) {
       throw new NotFoundException(
         'Gift card template not found or is inactive.',
+      );
+    }
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card template is no longer active. Payment cannot be verified.',
       );
     }
 
@@ -434,16 +447,23 @@ export class GiftCardService {
   async initiateGiftCardReload(
     code: string,
     initiateDto: InitiateReloadDto,
-    userId: string,
+    _userId: string,
   ): Promise<{
     clientSecret?: string;
     orderId?: string;
     provider: PaymentMethod;
   }> {
     const giftCard = await this.findActiveCardByCode(code);
-    const template = await this.templateRepository.findOneBy({
-      id: giftCard.templateId,
+    const template = await this.templateRepository.findOne({
+      where: { id: giftCard.templateId },
+      relations: ['owner'],
     });
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card is not currently active and cannot accept reloads.',
+      );
+    }
 
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
@@ -481,9 +501,16 @@ export class GiftCardService {
     const { amount } = reloadDetails;
 
     const giftCard = await this.findActiveCardByCode(code);
-    const template = await this.templateRepository.findOneBy({
-      id: giftCard.templateId,
+    const template = await this.templateRepository.findOne({
+      where: { id: giftCard.templateId },
+      relations: ['owner'],
     });
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card is no longer active. Reload payment cannot be verified.',
+      );
+    }
 
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');

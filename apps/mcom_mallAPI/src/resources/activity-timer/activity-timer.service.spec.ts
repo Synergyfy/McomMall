@@ -86,7 +86,12 @@ describe('ActivityTimerService', () => {
 
       managerMock.findOne.mockResolvedValue({
         ...user,
-        membership: { isTrial: true, isActive: true, expiresAt: new Date('2026-01-11T00:00:00Z'), tier: { configuration: { trialDurationDays: 10 } } },
+        membership: {
+          isTrial: true,
+          isActive: true,
+          expiresAt: new Date('2026-01-11T00:00:00Z'),
+          tier: { configuration: { trialDurationDays: 10 } },
+        },
       });
       timerRepository.createQueryBuilder.mockReturnValue({
         select: jest.fn().mockReturnThis(),
@@ -144,8 +149,6 @@ describe('ActivityTimerService', () => {
     });
   });
 
-
-
   describe('isRestricted', () => {
     it('should return true if trial has expired', async () => {
       const user = { id: 'user-1' } as unknown as User;
@@ -171,7 +174,7 @@ describe('ActivityTimerService', () => {
         membership: {
           isActive: true,
           isTrial: false,
-          tierId: 'paid-tier'
+          tierId: 'paid-tier',
         },
       } as unknown as User;
 

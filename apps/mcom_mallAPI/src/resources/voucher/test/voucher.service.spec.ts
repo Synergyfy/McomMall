@@ -135,7 +135,9 @@ describe('VoucherService', () => {
           provide: DigitalValueService,
           useValue: {
             create: jest.fn().mockResolvedValue({ code: 'DV-CODE' }),
-            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
+            getByCode: jest
+              .fn()
+              .mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
             fund: jest.fn().mockResolvedValue({}),
             redeem: jest.fn().mockResolvedValue({}),
           },
@@ -146,7 +148,9 @@ describe('VoucherService', () => {
     }).compile();
 
     service = module.get<VoucherService>(VoucherService);
-    voucherTransactionRepository = module.get(getRepositoryToken(VoucherTransaction));
+    voucherTransactionRepository = module.get(
+      getRepositoryToken(VoucherTransaction),
+    );
     voucherProductRepository = module.get(getRepositoryToken(VoucherProduct));
 
     // Default mock implementations
@@ -187,7 +191,7 @@ describe('VoucherService', () => {
     const product = {
       id: 'prod-1',
       isEnabled: true,
-      user: { id: 'owner-1' },
+      user: { id: 'owner-1', isActive: true },
       fixedAmounts: [20],
     } as VoucherProduct;
     const purchaseDetails: InitiateVoucherPurchaseDto = {

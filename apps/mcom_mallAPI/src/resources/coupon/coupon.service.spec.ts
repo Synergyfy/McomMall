@@ -238,8 +238,12 @@ describe('CouponService', () => {
     });
 
     it('should throw BadRequestException if Business coupon creator lacks capability', async () => {
-      const businessUser = { id: 'bus-user-1' } as User;
-      const business = { user: businessUser } as Business;
+      const businessUser = { id: 'bus-user-1', isActive: true } as User;
+      const business = {
+        user: businessUser,
+        status: 'published',
+        businessName: 'Test Business',
+      } as Business;
       const coupon = {
         ...mockCoupon,
         sourceType: CouponSourceType.BUSINESS,

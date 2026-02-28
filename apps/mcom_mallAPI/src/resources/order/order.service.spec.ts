@@ -149,8 +149,14 @@ describe('OrderService', () => {
         },
         { provide: EntityManager, useValue: mockEntityManager },
         { provide: ConfigService, useValue: { get: jest.fn() } },
-        { provide: EventEmitter2, useValue: { emitAsync: jest.fn(), emit: jest.fn() } },
-        { provide: ProductService, useValue: { calculatePrice: jest.fn().mockReturnValue(50) } },
+        {
+          provide: EventEmitter2,
+          useValue: { emitAsync: jest.fn(), emit: jest.fn() },
+        },
+        {
+          provide: ProductService,
+          useValue: { calculatePrice: jest.fn().mockReturnValue(50) },
+        },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
       ],
     }).compile();
@@ -168,7 +174,12 @@ describe('OrderService', () => {
   describe('checkout', () => {
     const userId = 'user-id';
     const user = { id: userId };
-    const business = { id: 'biz-id', user: { id: 'owner-id' } };
+    const business = {
+      id: 'biz-id',
+      businessName: 'Test Business',
+      status: 'published',
+      user: { id: 'owner-id', isActive: true },
+    };
     const cart = {
       items: [
         {

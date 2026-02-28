@@ -28,7 +28,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CapabilityService } from '../capability/capability.service';
 
-const mockOwner = { id: 'owner-1' } as User;
+const mockOwner = { id: 'owner-1', isActive: true } as User;
 const mockPurchaserId = 'purchaser-user-id-1';
 const mockBusiness = {
   id: 'business-1',
@@ -40,7 +40,7 @@ const mockOtherBusiness = {
 } as unknown as Business;
 const mockWrongBusiness = {
   id: 'business-3',
-  user: { id: 'owner-2' },
+  user: { id: 'owner-2', isActive: true },
 } as unknown as Business;
 
 const mockOrder = {
@@ -52,6 +52,7 @@ const mockOrder = {
 const mockTemplate = {
   id: 'template-1',
   ownerId: mockOwner.id,
+  owner: mockOwner,
   isActive: true,
   allowCustomAmount: true,
   minCustomAmount: 10,
@@ -312,7 +313,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should create a stripe payment intent', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       const result = await service.initiateGiftCardPurchase(
         initiateDto,
         mockPurchaserId,
@@ -325,7 +326,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should create a paypal order', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       const result = await service.initiateGiftCardPurchase(
         {
           ...initiateDto,
@@ -355,7 +356,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should verify payment and create a gift card with correct purchaser', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
 
       const result = await service.verifyAndCompletePurchase(
@@ -374,7 +375,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should save the htmlBody when provided', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
 
       const verifyDtoWithHtml: VerifyPurchaseDto = {
@@ -394,7 +395,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should throw if payment verification fails', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
@@ -427,7 +428,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should create a gift card associated with an owner', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
 
       const result = await service.purchaseGiftCard(
         purchaseDto,

@@ -4,7 +4,10 @@ import { ShippingService } from './shipping.service';
 import { Order } from '../order/entities/order.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { BadRequestException, InternalServerErrorException } from '@nestjs/common';
+import {
+  BadRequestException,
+  InternalServerErrorException,
+} from '@nestjs/common';
 import { ShippingStatus } from './enums/shipping-status.enum';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';

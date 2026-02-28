@@ -26,7 +26,7 @@ import { BusinessStatus } from '../listings/listing.enum';
 
 @Injectable()
 export class MarketplaceService {
-  constructor(private readonly dataSource: DataSource) { }
+  constructor(private readonly dataSource: DataSource) {}
 
   // --- PUBLIC AGGREGATION ---
 

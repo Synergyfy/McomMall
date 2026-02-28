@@ -125,8 +125,12 @@ describe('PartnershipService', () => {
     productRepository = module.get(getRepositoryToken(Product));
     userRepository = module.get(getRepositoryToken(User));
     userPartnershipRepository = module.get(getRepositoryToken(UserPartnership));
-    userPartnershipRequestRepository = module.get(getRepositoryToken(UserPartnershipRequest));
-    itemPartnershipRequestRepository = module.get(getRepositoryToken(ItemPartnershipRequest));
+    userPartnershipRequestRepository = module.get(
+      getRepositoryToken(UserPartnershipRequest),
+    );
+    itemPartnershipRequestRepository = module.get(
+      getRepositoryToken(ItemPartnershipRequest),
+    );
     emailService = module.get(EmailService);
   });
 

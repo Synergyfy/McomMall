@@ -72,11 +72,14 @@ describe('CheckoutService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CheckoutService,
-        { provide: getRepositoryToken(User), useValue: {
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
             findOne: jest.fn().mockResolvedValue({ id: 'user-1' }),
             create: jest.fn(),
             save: jest.fn(),
-          } },
+          },
+        },
         { provide: getRepositoryToken(Offer), useFactory: mockRepository },
         { provide: getRepositoryToken(Product), useFactory: mockRepository },
         {
@@ -91,7 +94,13 @@ describe('CheckoutService', () => {
           useValue: mockPaymentProviderService,
         },
         { provide: DataSource, useValue: mockDataSource },
-        { provide: ProductService, useValue: { calculatePromotionalPrice: jest.fn().mockReturnValue(10), calculatePrice: jest.fn().mockReturnValue(10) } },
+        {
+          provide: ProductService,
+          useValue: {
+            calculatePromotionalPrice: jest.fn().mockReturnValue(10),
+            calculatePrice: jest.fn().mockReturnValue(10),
+          },
+        },
         { provide: CouponService, useValue: { validateCoupon: jest.fn() } },
       ],
     }).compile();
@@ -233,7 +242,7 @@ describe('CheckoutService', () => {
         { code: 'GC123', amount: 20 },
         expect.any(Object),
         'business-1',
-        expect.any(Object)
+        expect.any(Object),
       );
       expect(result.status).toBe(OrderStatus.COMPLETED);
     });

@@ -111,7 +111,9 @@ describe('VoucherService - Purchase and Redemption', () => {
           provide: DigitalValueService,
           useValue: {
             create: jest.fn().mockResolvedValue({ code: 'DV-CODE' }),
-            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
+            getByCode: jest
+              .fn()
+              .mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
             fund: jest.fn().mockResolvedValue({}),
             redeem: jest.fn().mockResolvedValue({}),
           },

@@ -179,8 +179,10 @@ describe('BookingService', () => {
       id: '1',
       business: {
         id: 'business-1',
+        businessName: 'Test Business',
+        status: 'published',
         listingType: [ListingType.SERVICE],
-        user: { id: 'business-owner-id' },
+        user: { id: 'business-owner-id', isActive: true },
       },
     } as Service;
 

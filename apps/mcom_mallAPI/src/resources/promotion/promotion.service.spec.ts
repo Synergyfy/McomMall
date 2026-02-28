@@ -556,7 +556,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ businessId: 'business-1' });
 
-      expect(result).toEqual(promotions.map(p => ({ ...p, isParticipating: false })));
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions for a given productId', async () => {
@@ -573,7 +575,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ productId: 'product-1' });
 
-      expect(result).toEqual(promotions.map(p => ({ ...p, isParticipating: false })));
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions with ALL_LISTINGS scope', async () => {
@@ -592,7 +596,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ businessId: 'business-1' });
 
-      expect(result).toEqual(promotions.map(p => ({ ...p, isParticipating: false })));
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions with ALL_PRODUCTS scope', async () => {
@@ -611,7 +617,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ productId: 'product-1' });
 
-      expect(result).toEqual(promotions.map(p => ({ ...p, isParticipating: false })));
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should not return inactive promotions', async () => {
@@ -743,13 +751,17 @@ describe('PromotionService', () => {
         getRawOne: jest.fn(),
       };
 
-      (promotionParticipantRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQueryBuilder);
-      (pointTransactionRepository.createQueryBuilder as jest.Mock).mockReturnValue(mockQueryBuilder);
+      (
+        promotionParticipantRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(mockQueryBuilder);
+      (
+        pointTransactionRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(mockQueryBuilder);
 
       mockQueryBuilder.getRawOne
         .mockResolvedValueOnce({ total: '1000' }) // earned
-        .mockResolvedValueOnce({ total: '500' })  // redeemed
-        .mockResolvedValueOnce({ total: '50' });   // participants
+        .mockResolvedValueOnce({ total: '500' }) // redeemed
+        .mockResolvedValueOnce({ total: '50' }); // participants
 
       const result = await service.getSummaryStatistics(promotionId);
 

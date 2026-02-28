@@ -18,7 +18,7 @@ import {
 } from 'typeorm';
 
 import { Business } from '../listings/entities/listing.entity';
-import { ListingType } from '../listings/listing.enum';
+import { ListingType, BusinessStatus } from '../listings/listing.enum';
 import { NotificationType } from '../notification/notification.enum';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
@@ -185,6 +185,17 @@ export class BookingService {
     const business = service.business;
     if (!business)
       throw new NotFoundException('Business not found for this service.');
+
+    if (business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException(
+        `Business "${business.businessName}" is not currently active and cannot accept bookings.`,
+      );
+    }
+    if (!business.user || !business.user.isActive) {
+      throw new BadRequestException(
+        `The owner of business "${business.businessName}" is not currently active and cannot accept bookings.`,
+      );
+    }
 
     if (!business.listingType.includes(ListingType.SERVICE)) {
       throw new ForbiddenException(
@@ -441,11 +452,23 @@ export class BookingService {
 
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId, user: { id: userId } },
-      relations: ['service'],
+      relations: ['service', 'service.business', 'service.business.user'],
     });
 
     if (!booking) {
       throw new NotFoundException('Booking not found.');
+    }
+
+    const business = booking.service.business;
+    if (business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException(
+        `Business "${business.businessName}" is not active. Payment cannot be initiated.`,
+      );
+    }
+    if (!business.user || !business.user.isActive) {
+      throw new BadRequestException(
+        `The owner of business "${business.businessName}" is not active. Payment cannot be initiated.`,
+      );
     }
 
     // This is a placeholder for the actual amount calculation
@@ -493,6 +516,18 @@ export class BookingService {
 
     if (!booking) {
       throw new NotFoundException('Booking not found.');
+    }
+
+    const business = booking.service.business;
+    if (business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException(
+        `Business "${business.businessName}" is no longer active. Payment cannot be verified.`,
+      );
+    }
+    if (!business.user || !business.user.isActive) {
+      throw new BadRequestException(
+        `The owner of business "${business.businessName}" is no longer active. Payment cannot be verified.`,
+      );
     }
 
     if (paymentProvider === PaymentMethod.STRIPE) {

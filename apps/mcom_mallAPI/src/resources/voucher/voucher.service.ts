@@ -189,12 +189,21 @@ export class VoucherService {
     orderId?: string;
     provider: PaymentMethod;
   }> {
-    const product = await this.voucherProductRepository.findOneBy({
-      id: initiateDto.voucherProductId,
-      isEnabled: true,
+    const product = await this.voucherProductRepository.findOne({
+      where: {
+        id: initiateDto.voucherProductId,
+        isEnabled: true,
+      },
+      relations: ['user'],
     });
     if (!product) {
       throw new NotFoundException('Voucher product not found or is inactive.');
+    }
+
+    if (!product.user || !product.user.isActive) {
+      throw new BadRequestException(
+        'The owner of this voucher product is not currently active and cannot accept purchases.',
+      );
     }
 
     this.validatePurchaseAmount(initiateDto.amount, product);
@@ -238,6 +247,12 @@ export class VoucherService {
       throw new NotFoundException('Voucher product not found or is inactive.');
     }
 
+    if (!product.user || !product.user.isActive) {
+      throw new BadRequestException(
+        'The owner of this voucher product is no longer active. Payment cannot be verified.',
+      );
+    }
+
     const currency = 'GBP'; // Or get from config/product
     let verificationResult;
 
@@ -269,7 +284,7 @@ export class VoucherService {
       const orderRepo = manager.getRepository(Order);
       const paymentRepo = manager.getRepository(OrderPayment);
       const voucherRepo = manager.getRepository(Voucher);
-      const transactionRepo = manager.getRepository(VoucherTransaction);
+      const _transactionRepo = manager.getRepository(VoucherTransaction);
 
       const newPayment = paymentRepo.create({
         user: { id: userId } as User,
@@ -385,9 +400,16 @@ export class VoucherService {
     provider: PaymentMethod;
   }> {
     const voucher = await this.findActiveVoucherByCode(code);
-    const product = await this.voucherProductRepository.findOneBy({
-      id: voucher.voucherProduct.id,
+    const product = await this.voucherProductRepository.findOne({
+      where: { id: voucher.voucherProduct.id },
+      relations: ['user'],
     });
+
+    if (!product.user || !product.user.isActive) {
+      throw new BadRequestException(
+        'The owner of this voucher is not currently active and cannot accept reloads.',
+      );
+    }
 
     if (!product.allowReloading) {
       throw new BadRequestException('This voucher cannot be reloaded.');
@@ -425,9 +447,16 @@ export class VoucherService {
     const { amount } = reloadDetails;
 
     const voucher = await this.findActiveVoucherByCode(code);
-    const product = await this.voucherProductRepository.findOneBy({
-      id: voucher.voucherProduct.id,
+    const product = await this.voucherProductRepository.findOne({
+      where: { id: voucher.voucherProduct.id },
+      relations: ['user'],
     });
+
+    if (!product.user || !product.user.isActive) {
+      throw new BadRequestException(
+        'The owner of this voucher is no longer active. Reload payment cannot be verified.',
+      );
+    }
 
     if (!product.allowReloading) {
       throw new BadRequestException('This voucher cannot be reloaded.');

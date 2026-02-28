@@ -104,7 +104,7 @@ describe('PaymentsService', () => {
         {
           provide: ActivityTimerService,
           useValue: {},
-        }
+        },
       ],
     }).compile();
 

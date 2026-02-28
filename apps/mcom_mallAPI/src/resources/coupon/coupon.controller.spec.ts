@@ -32,11 +32,17 @@ describe('CouponController', () => {
           provide: CouponService,
           useValue: {
             create: jest.fn().mockResolvedValue(mockCoupon),
-            findAll: jest.fn().mockResolvedValue({ data: [mockCoupon], meta: {} }),
+            findAll: jest
+              .fn()
+              .mockResolvedValue({ data: [mockCoupon], meta: {} }),
             validateCoupon: jest.fn().mockResolvedValue(mockCoupon),
-            saveCoupon: jest.fn().mockResolvedValue({ id: 'save-1', coupon: mockCoupon }),
+            saveCoupon: jest
+              .fn()
+              .mockResolvedValue({ id: 'save-1', coupon: mockCoupon }),
             removeSavedCoupon: jest.fn().mockResolvedValue(undefined),
-            getSavedCoupons: jest.fn().mockResolvedValue([{ id: 'save-1', coupon: mockCoupon }]),
+            getSavedCoupons: jest
+              .fn()
+              .mockResolvedValue([{ id: 'save-1', coupon: mockCoupon }]),
             findCouponByCode: jest.fn().mockResolvedValue(mockCoupon),
             findProductById: jest.fn().mockResolvedValue(mockCoupon),
           },
@@ -95,7 +101,10 @@ describe('CouponController', () => {
   describe('removeSavedCoupon', () => {
     it('should remove a saved coupon', async () => {
       await controller.removeSavedCoupon('TESTCODE', mockRequest);
-      expect(service.removeSavedCoupon).toHaveBeenCalledWith('TESTCODE', mockUser);
+      expect(service.removeSavedCoupon).toHaveBeenCalledWith(
+        'TESTCODE',
+        mockUser,
+      );
     });
   });
 

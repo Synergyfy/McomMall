@@ -26,7 +26,7 @@ describe('VoucherService Reloads', () => {
   let walletService: WalletService;
   let dataSource: DataSource;
 
-  const mockUser = { id: 'user-id', name: 'Test User' } as User;
+  const mockUser = { id: 'user-id', name: 'Test User', isActive: true } as User;
   const mockVoucherProduct = {
     id: 'product-id',
     allowReloading: true,
@@ -90,7 +90,9 @@ describe('VoucherService Reloads', () => {
         {
           provide: DigitalValueService,
           useValue: {
-            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'RELOAD123' }),
+            getByCode: jest
+              .fn()
+              .mockResolvedValue({ id: 'dv-id', code: 'RELOAD123' }),
             fund: jest.fn().mockResolvedValue({}),
           },
         },
@@ -101,9 +103,13 @@ describe('VoucherService Reloads', () => {
         {
           provide: DataSource,
           useValue: {
-            transaction: jest
-              .fn()
-              .mockImplementation((callback) => callback({ findOne: jest.fn().mockResolvedValue({ id: 'user-1' }), save: jest.fn(), create: jest.fn() })),
+            transaction: jest.fn().mockImplementation((callback) =>
+              callback({
+                findOne: jest.fn().mockResolvedValue({ id: 'user-1' }),
+                save: jest.fn(),
+                create: jest.fn(),
+              }),
+            ),
           },
         },
       ],
@@ -131,7 +137,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'createStripePaymentIntent')
@@ -185,7 +191,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
@@ -226,7 +232,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')

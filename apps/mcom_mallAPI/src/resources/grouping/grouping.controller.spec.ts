@@ -16,7 +16,8 @@ import { PlanType } from '../membership/dto/initiate-membership-payment.dto';
 describe('GroupingController', () => {
   let controller: GroupingController;
 
-  const mockUser = { fullName: "Test User",
+  const mockUser = {
+    fullName: 'Test User',
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',

@@ -25,7 +25,10 @@ describe('ListingsService - Points Calculation', () => {
   const mockOwnerA = { id: 'owner-A' } as User;
   const mockOwnerB = { id: 'owner-B' } as User;
 
-  const mockBusinessA = { sectorId: "sector-1", categoryId: "category-1", subCategoryId: "sub-category-1",
+  const mockBusinessA = {
+    sectorId: 'sector-1',
+    categoryId: 'category-1',
+    subCategoryId: 'sub-category-1',
     id: 'business-A',
     user: mockOwnerA,
     listingType: [ListingType.PRODUCT],

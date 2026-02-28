@@ -17,18 +17,16 @@ import { OrderPayment } from './entities/order-payment.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionEngineService } from '../promotion/promotion-engine.service';
 import { NotificationService } from '../notification/notification.service';
-import { NotificationType } from '../notification/notification.enum';
 import { OrderItem } from './entities/order-item.entity';
 import { SalesStatsDto } from './dto/sales-stats.dto';
 import { PointsService } from '../transaction/points.service';
 import { Offer } from '../offer/entities/offer.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
-import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
 import { Business } from '../listings/entities/listing.entity';
+import { BusinessStatus } from '../listings/listing.enum';
 import { VoucherService } from '../voucher/voucher.service';
 import { VoucherStatus } from '../voucher/entities/voucher.entity';
-import { Coupon } from '../coupon/entities/coupon.entity';
-import { CouponStatus } from '../coupon/coupon.enum';
+import { DiscountType } from '../coupon/coupon.enum';
 import { BookingService } from '../booking/booking.service';
 import { PartnershipService } from '../partnership/partnership.service';
 import { ProductServiceBooking } from './entities/product-service-booking.entity';
@@ -40,6 +38,8 @@ import { ProductService } from '../product/product.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
+
+import { Service } from '../services/entities/service.entity';
 
 @Injectable()
 export class OrderService {
@@ -85,10 +85,26 @@ export class OrderService {
     private readonly productService: ProductService,
   ) {}
 
+  private validateBusinessAndOwner(business: Business) {
+    if (!business) {
+      throw new NotFoundException('Business not found.');
+    }
+    if (business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException(
+        `Business "${business.businessName}" is not currently active and cannot accept orders.`,
+      );
+    }
+    if (!business.user || !business.user.isActive) {
+      throw new BadRequestException(
+        `The owner of business "${business.businessName}" is not currently active and cannot accept orders.`,
+      );
+    }
+  }
+
   // Method is not used in checkout, but keeping it for other potential uses.
   async createOrder(
-    createOrderDto: any, // Keeping 'any' as this method is not the focus
-    userId: string,
+    _createOrderDto: any, // Keeping 'any' as this method is not the focus
+    _userId: string,
   ): Promise<Order> {
     // ... implementation from before
     return new Order();
@@ -134,6 +150,8 @@ export class OrderService {
           `Product with ID "${directPurchase.productId}" not found.`,
         );
       }
+      this.validateBusinessAndOwner(product.business);
+
       directPurchaseProduct = product;
       businessContextId = product.business.id;
       const ownerId = product.business.user.id;
@@ -154,6 +172,8 @@ export class OrderService {
       businessContextId = cart.items[0].product.businessId;
 
       for (const item of cart.items) {
+        this.validateBusinessAndOwner(item.product.business);
+
         const price = this.productService.calculatePrice(
           item.product,
           item.selectedVariants || {},
@@ -187,6 +207,17 @@ export class OrderService {
             `Service with ID ${bookingDetail.serviceId} is not partnered with the specified product.`,
           );
         }
+
+        // Validate service business status
+        const service = await this.entityManager
+          .getRepository(Service)
+          .findOne({
+            where: { id: bookingDetail.serviceId },
+            relations: ['business', 'business.user'],
+          });
+        if (service) {
+          this.validateBusinessAndOwner(service.business);
+        }
       }
     }
 
@@ -197,6 +228,13 @@ export class OrderService {
           where: { id: gcPurchase.businessId },
           relations: ['user'],
         });
+        if (!business) {
+          throw new NotFoundException(
+            `Business with ID "${gcPurchase.businessId}" not found for gift card purchase.`,
+          );
+        }
+        this.validateBusinessAndOwner(business);
+
         const purchaseOwnerId = business.user.id;
 
         if (!businessContextId) {
@@ -225,7 +263,7 @@ export class OrderService {
           user,
         );
 
-        if (coupon.discountType === ('fixed' as any)) {
+        if (coupon.discountType === DiscountType.FIXED) {
           // Type check if needed
           couponAmountToApply = Math.min(
             totalBeforeRedemption,
