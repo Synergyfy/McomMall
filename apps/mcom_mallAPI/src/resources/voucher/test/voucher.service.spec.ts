@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource } from 'typeorm';
 import { VoucherService } from '../voucher.service';
 import { Voucher, VoucherStatus } from '../entities/voucher.entity';
 import { VoucherProduct } from '../entities/voucher-product.entity';
@@ -10,12 +9,6 @@ import {
 } from '../entities/voucher-transaction.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { User } from '../../users/entities/user.entity';
-import {
-  NotFoundException,
-  BadRequestException,
-  ConflictException,
-  InternalServerErrorException,
-} from '@nestjs/common';
 import { PaymentProviderService } from '../../payments/services/payment-provider.service';
 import { Order } from '../../order/entities/order.entity';
 import {
@@ -27,6 +20,8 @@ import { VerifyVoucherPurchaseDto } from '../dto/verify-voucher-purchase.dto';
 import { RedeemVoucherDto } from '../dto/redeem-voucher.dto';
 import { WalletService } from '../../wallet/wallet.service';
 import { CentralIntegrationService } from '../../payments/services/central-integration.service';
+import { DataSource } from 'typeorm';
+import { DigitalValueService } from '../../digital-value/digital-value.service';
 
 // Mock repositories
 const mockVoucherRepository = {
@@ -97,17 +92,17 @@ const mockDataSource = {
 
 describe('VoucherService', () => {
   let service: VoucherService;
-  let voucherRepository: Repository<Voucher>;
   let voucherTransactionRepository: any;
-  let voucherProductRepository: Repository<VoucherProduct>;
-  let paymentProviderService: PaymentProviderService;
-  let dataSource: DataSource;
+  let voucherProductRepository: any;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VoucherService,
-        { provide: getRepositoryToken(Voucher), useValue: mockVoucherRepository },
+        {
+          provide: getRepositoryToken(Voucher),
+          useValue: mockVoucherRepository,
+        },
         {
           provide: getRepositoryToken(VoucherProduct),
           useValue: mockVoucherProductRepository,
@@ -136,25 +131,23 @@ describe('VoucherService', () => {
             processCashback: jest.fn(),
           },
         },
+        {
+          provide: DigitalValueService,
+          useValue: {
+            create: jest.fn().mockResolvedValue({ code: 'DV-CODE' }),
+            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
+            fund: jest.fn().mockResolvedValue({}),
+            redeem: jest.fn().mockResolvedValue({}),
+          },
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<VoucherService>(VoucherService);
-    voucherRepository = module.get<Repository<Voucher>>(
-      getRepositoryToken(Voucher),
-    );
-    voucherTransactionRepository = module.get<Repository<VoucherTransaction>>(
-      getRepositoryToken(VoucherTransaction),
-    );
-    voucherProductRepository = module.get<Repository<VoucherProduct>>(
-      getRepositoryToken(VoucherProduct),
-    );
-    paymentProviderService = module.get<PaymentProviderService>(
-      PaymentProviderService,
-    );
-    dataSource = module.get<DataSource>(DataSource);
+    voucherTransactionRepository = module.get(getRepositoryToken(VoucherTransaction));
+    voucherProductRepository = module.get(getRepositoryToken(VoucherProduct));
 
     // Default mock implementations
     mockVoucherTransactionRepository.create.mockImplementation((dto) => dto);
@@ -228,11 +221,22 @@ describe('VoucherService', () => {
         ok: true,
       });
 
-      mockOrderPaymentRepository.create.mockImplementation((dto) => ({ ...dto, id: 'payment-1' }));
-      mockOrderRepository.create.mockImplementation((dto) => ({ ...dto, id: 'order-1' }));
-      mockVoucherRepository.create.mockImplementation((dto) => ({ ...dto, id: 'voucher-1' }));
+      mockOrderPaymentRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'payment-1',
+      }));
+      mockOrderRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'order-1',
+      }));
+      mockVoucherRepository.create.mockImplementation((dto) => ({
+        ...dto,
+        id: 'voucher-1',
+      }));
 
-      mockOrderPaymentRepository.save.mockImplementation((p) => Promise.resolve(p));
+      mockOrderPaymentRepository.save.mockImplementation((p) =>
+        Promise.resolve(p),
+      );
       mockOrderRepository.save.mockImplementation((o) => Promise.resolve(o));
     });
 
@@ -285,7 +289,10 @@ describe('VoucherService', () => {
       } as Voucher;
       mockVoucherRepository.findOne.mockResolvedValue(voucher);
 
-      const result = await service.redeemVoucher({ code: 'TESTCODE', amount: 20 });
+      const result = await service.redeemVoucher({
+        code: 'TESTCODE',
+        amount: 20,
+      });
 
       expect(result.balance).toBe(30);
       expect(result.status).toBe(VoucherStatus.PARTIALLY_REDEEMED);
@@ -327,7 +334,11 @@ describe('VoucherService', () => {
         }),
       };
 
-      const result = await service.redeemForOrder(redeemDto, order, manager as any);
+      const result = await service.redeemForOrder(
+        redeemDto,
+        order,
+        manager as any,
+      );
 
       expect(result.balance).toBe(25);
       expect(result.status).toBe(VoucherStatus.PARTIALLY_REDEEMED);
@@ -404,10 +415,7 @@ describe('VoucherService', () => {
         getManyAndCount: jest.fn().mockResolvedValue([transactions, 1]),
       });
 
-      const result = await service.getTransactionHistory(
-        ownerId,
-        query as any,
-      );
+      const result = await service.getTransactionHistory(ownerId, query as any);
 
       expect(result.data.length).toBe(1);
       expect(result.meta.itemCount).toBe(1);
@@ -428,9 +436,9 @@ describe('VoucherService', () => {
         take: jest.fn().mockReturnThis(),
         getManyAndCount: jest.fn(),
       };
-      (voucherProductRepository.createQueryBuilder as jest.Mock).mockReturnValue(
-        queryBuilder,
-      );
+      (
+        voucherProductRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(queryBuilder);
     });
 
     it('should filter by search, min/max amount, businessId and businessName', async () => {

@@ -4,9 +4,16 @@ import { ListingsService } from './listing.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { SearchBusinessDto } from './dto/listings.dto';
 import { ServicesService } from '../services/services.service';
+import { CapabilityService } from '../capability/capability.service';
+import { Reflector } from '@nestjs/core';
+import { CapabilitiesGuard } from '../capability/guards/capabilities.guard';
 
 const mockServicesService = {
   findAllForBusiness: jest.fn(),
+};
+
+const mockCapabilityService = {
+  checkPermission: jest.fn(),
 };
 
 describe('ListingsController', () => {
@@ -26,15 +33,25 @@ describe('ListingsController', () => {
             update: jest.fn(),
             remove: jest.fn(),
             search: jest.fn(),
+            findRecent: jest.fn(),
+            findAllForUser: jest.fn(),
+            findOnePublic: jest.fn(),
           },
         },
         {
           provide: ServicesService,
           useValue: mockServicesService,
         },
+        {
+          provide: CapabilityService,
+          useValue: mockCapabilityService,
+        },
+        Reflector,
       ],
     })
       .overrideGuard(JwtAuthGuard)
+      .useValue({ canActivate: () => true })
+      .overrideGuard(CapabilitiesGuard)
       .useValue({ canActivate: () => true })
       .compile();
 

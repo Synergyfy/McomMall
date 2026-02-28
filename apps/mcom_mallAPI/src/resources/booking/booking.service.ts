@@ -8,7 +8,14 @@ import {
   forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { DataSource, EntityManager, In, LessThan, MoreThan, Repository } from 'typeorm';
+import {
+  DataSource,
+  EntityManager,
+  In,
+  LessThan,
+  MoreThan,
+  Repository,
+} from 'typeorm';
 
 import { Business } from '../listings/entities/listing.entity';
 import { ListingType } from '../listings/listing.enum';
@@ -19,9 +26,7 @@ import { PaymentProviderService } from '../payments/services/payment-provider.se
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { Service } from '../services/entities/service.entity';
-import {
-  WalletTransactionType,
-} from '../wallet/entities/wallet-transaction.entity';
+import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { WalletService } from '../wallet/wallet.service';
 import { BlockSlotDto } from './dto/block-slot.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
@@ -56,7 +61,7 @@ export class BookingService {
     private readonly centralIntegrationService: CentralIntegrationService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
-  ) { }
+  ) {}
 
   async checkAvailability(
     checkAvailabilityDto: CheckAvailabilityDto,
@@ -110,20 +115,27 @@ export class BookingService {
     userId: string,
   ): Promise<ServiceBooking> {
     return this.dataSource.transaction(async (transactionalEntityManager) => {
-      const booking = await this._createBooking(createBookingDto, userId, transactionalEntityManager);
+      const booking = await this._createBooking(
+        createBookingDto,
+        userId,
+        transactionalEntityManager,
+      );
 
       const service = await transactionalEntityManager.findOne(Service, {
         where: { id: createBookingDto.serviceId },
         relations: ['business'],
       });
 
-      const priceModifier = await transactionalEntityManager.findOne(PriceModifier, {
-        where: {
-          business: { id: service.business.id },
-          startTime: LessThan(new Date(createBookingDto.endTime)),
-          endTime: MoreThan(new Date(createBookingDto.startTime)),
+      const priceModifier = await transactionalEntityManager.findOne(
+        PriceModifier,
+        {
+          where: {
+            business: { id: service.business.id },
+            startTime: LessThan(new Date(createBookingDto.endTime)),
+            endTime: MoreThan(new Date(createBookingDto.startTime)),
+          },
         },
-      });
+      );
       const priceMultiplier = priceModifier ? priceModifier.priceMultiplier : 1;
 
       // TODO: Implement actual payment processing logic here.
@@ -150,7 +162,11 @@ export class BookingService {
     userId: string,
     transactionalEntityManager: EntityManager,
   ): Promise<ServiceBooking> {
-    return this._createBooking(createBookingDto, userId, transactionalEntityManager);
+    return this._createBooking(
+      createBookingDto,
+      userId,
+      transactionalEntityManager,
+    );
   }
 
   private async _createBooking(
@@ -167,10 +183,13 @@ export class BookingService {
     if (!service) throw new NotFoundException('Service not found.');
 
     const business = service.business;
-    if (!business) throw new NotFoundException('Business not found for this service.');
+    if (!business)
+      throw new NotFoundException('Business not found for this service.');
 
     if (!business.listingType.includes(ListingType.SERVICE)) {
-      throw new ForbiddenException('Bookings are not available for this business.');
+      throw new ForbiddenException(
+        'Bookings are not available for this business.',
+      );
     }
 
     const start = new Date(startTime);
@@ -183,7 +202,8 @@ export class BookingService {
         endTime: MoreThan(start),
       },
     });
-    if (blockedSlot) throw new ConflictException('The selected time slot is not available.');
+    if (blockedSlot)
+      throw new ConflictException('The selected time slot is not available.');
 
     const booking = transactionalEntityManager.create(ServiceBooking, {
       user: { id: userId },
@@ -412,7 +432,11 @@ export class BookingService {
   async initiatePayment(
     initiateDto: InitiateBookingPaymentDto,
     userId: string,
-  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    provider: PaymentMethod;
+  }> {
     const { bookingId, paymentProvider } = initiateDto;
 
     const booking = await this.bookingRepository.findOne({
@@ -429,10 +453,11 @@ export class BookingService {
     const currency = 'GBP';
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
-        amount,
-        currency,
-      );
+      const paymentIntent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          amount,
+          currency,
+        );
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
@@ -458,7 +483,12 @@ export class BookingService {
 
     const booking = await this.bookingRepository.findOne({
       where: { id: bookingId, user: { id: userId } },
-      relations: ['user', 'service', 'service.business', 'service.business.user'],
+      relations: [
+        'user',
+        'service',
+        'service.business',
+        'service.business.user',
+      ],
     });
 
     if (!booking) {
@@ -466,17 +496,19 @@ export class BookingService {
     }
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.verifyStripePaymentIntent(
+          transactionId,
+          amount,
+          currency,
+        );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.captureAndVerifyPaypalOrder(
+          transactionId,
+          amount,
+          currency,
+        );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -523,11 +555,19 @@ export class BookingService {
     });
   }
 
-  async completeBooking(bookingId: string, userId: string): Promise<ServiceBooking> {
+  async completeBooking(
+    bookingId: string,
+    userId: string,
+  ): Promise<ServiceBooking> {
     return this.dataSource.transaction(async (manager) => {
       const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
-        relations: ['user', 'service', 'service.business', 'service.business.user'],
+        relations: [
+          'user',
+          'service',
+          'service.business',
+          'service.business.user',
+        ],
       });
 
       if (!booking) {
@@ -538,7 +578,9 @@ export class BookingService {
       const isCustomer = booking.user.id === userId;
 
       if (!isBusinessOwner && !isCustomer) {
-        throw new ForbiddenException('You are not authorized to complete this booking.');
+        throw new ForbiddenException(
+          'You are not authorized to complete this booking.',
+        );
       }
 
       if (isBusinessOwner) {
@@ -558,7 +600,9 @@ export class BookingService {
     });
   }
 
-  async getCompletedBookingsForOwner(userId: string): Promise<ServiceBooking[]> {
+  async getCompletedBookingsForOwner(
+    userId: string,
+  ): Promise<ServiceBooking[]> {
     const businesses = await this.businessRepository.find({
       where: { user: { id: userId } },
       relations: ['services'],

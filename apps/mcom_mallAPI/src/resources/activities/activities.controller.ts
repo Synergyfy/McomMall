@@ -6,7 +6,7 @@ import { Request } from 'express';
 @Controller('activities')
 @UseGuards(JwtAuthGuard)
 export class ActivitiesController {
-  constructor(private readonly activitiesService: ActivitiesService) { }
+  constructor(private readonly activitiesService: ActivitiesService) {}
 
   @Get()
   async findAll(
@@ -25,5 +25,5 @@ export class ActivitiesController {
         date: activity.created_at,
       };
     });
-  };
+  }
 }

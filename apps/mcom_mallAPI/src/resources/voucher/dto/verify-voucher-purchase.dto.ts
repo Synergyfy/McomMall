@@ -1,10 +1,5 @@
 import { ApiProperty } from '@nestjs/swagger';
-import {
-  IsString,
-  IsNotEmpty,
-  IsIn,
-  ValidateNested,
-} from 'class-validator';
+import { IsString, IsNotEmpty, IsIn, ValidateNested } from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 import { InitiateVoucherPurchaseDto } from './initiate-voucher-purchase.dto';

@@ -7,11 +7,7 @@ import { HelpRequestsController } from './help-requests.controller';
 import { HelpRequest } from './entities/help-request.entity';
 
 @Module({
-  imports: [
-    TypeOrmModule.forFeature([HelpRequest]),
-    HttpModule,
-    ConfigModule,
-  ],
+  imports: [TypeOrmModule.forFeature([HelpRequest]), HttpModule, ConfigModule],
   controllers: [HelpRequestsController],
   providers: [HelpRequestsService],
 })

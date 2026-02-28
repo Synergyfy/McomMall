@@ -1,7 +1,26 @@
-import { Controller, Get, Post, Body, UseGuards, Query, Patch, Param } from '@nestjs/common';
-import { ApiTags, ApiBearerAuth, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  UseGuards,
+  Query,
+  Patch,
+  Param,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiBearerAuth,
+  ApiOperation,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { DisputeService } from './dispute.service';
-import { CreateDisputeDto, DisputeQueryDto, PaginatedDisputesDto, DisputeStatsDto } from './dto/dispute.dto';
+import {
+  CreateDisputeDto,
+  DisputeQueryDto,
+  PaginatedDisputesDto,
+  DisputeStatsDto,
+} from './dto/dispute.dto';
 import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { RolesGuard } from 'src/common/guards/roles.guard';
 import { Roles } from 'src/common/decorators/roles.decorator';
@@ -19,7 +38,10 @@ export class DisputeController {
   @Post()
   @ApiOperation({ summary: 'Open a new dispute (Customer/Business)' })
   @ApiResponse({ status: 201, description: 'Dispute opened successfully.' })
-  create(@Body() createDisputeDto: CreateDisputeDto, @CurrentUser() user: User) {
+  create(
+    @Body() createDisputeDto: CreateDisputeDto,
+    @CurrentUser() user: User,
+  ) {
     return this.disputeService.create(createDisputeDto, user);
   }
 

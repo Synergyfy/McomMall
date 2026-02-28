@@ -1,8 +1,4 @@
-import {
-  Column,
-  Entity,
-  ManyToOne,
-} from 'typeorm';
+import { Column, Entity, ManyToOne } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Wallet } from './wallet.entity';
 

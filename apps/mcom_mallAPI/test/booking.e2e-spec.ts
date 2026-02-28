@@ -6,8 +6,6 @@ import { UsersService } from '../src/resources/users/users.service';
 import { clearDatabase } from './test-utils';
 import { CreateUserDto } from '../src/resources/users/dto/create-user.dto';
 import { UserRole } from '../src/common/role.enum';
-import { CreateBookingDto } from 'src/resources/booking/dto/create-booking.dto';
-import { BookingService } from 'src/resources/booking/booking.service';
 import { Service } from 'src/resources/services/entities/service.entity';
 import { PricingModel } from 'src/resources/services/service.enum';
 import { Business } from 'src/resources/listings/entities/listing.entity';

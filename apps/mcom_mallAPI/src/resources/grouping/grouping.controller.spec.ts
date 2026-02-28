@@ -15,9 +15,8 @@ import { PlanType } from '../membership/dto/initiate-membership-payment.dto';
 
 describe('GroupingController', () => {
   let controller: GroupingController;
-  let service: GroupingService;
 
-  const mockUser: User = {
+  const mockUser = { fullName: "Test User",
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',
@@ -36,10 +35,6 @@ describe('GroupingController', () => {
     created_at: new Date(),
     updated_at: new Date(),
     businesses: [],
-    trial: null,
-    coupons: [],
-    purchasedCoupons: [],
-    couponProducts: [],
     promotionParticipations: [],
     reviews: [],
     socials: null,
@@ -50,7 +45,6 @@ describe('GroupingController', () => {
     vouchers: [],
     offers: [],
     serviceProviderProfile: null,
-    couponTransactions: [],
     giftCard: true,
     voucher: true,
     promotion: true,
@@ -60,6 +54,9 @@ describe('GroupingController', () => {
       tier: null,
       tierId: null,
       isTrial: false,
+      trialDuration: 0,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       planType: PlanType.MONTHLY,
       isActive: true,
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
@@ -72,6 +69,7 @@ describe('GroupingController', () => {
     wallet: null,
     deleted_at: null,
     populateName: jest.fn(),
+    updateFullName: jest.fn(),
   };
   const mockGroupingService = {
     create: jest.fn(),
@@ -95,7 +93,6 @@ describe('GroupingController', () => {
     }).compile();
 
     controller = module.get<GroupingController>(GroupingController);
-    service = module.get<GroupingService>(GroupingService);
   });
 
   afterEach(() => {
@@ -147,7 +144,10 @@ describe('GroupingController', () => {
 
       const result = await controller.findOne(groupId, mockUser);
 
-      expect(mockGroupingService.findOne).toHaveBeenCalledWith(groupId, mockUser);
+      expect(mockGroupingService.findOne).toHaveBeenCalledWith(
+        groupId,
+        mockUser,
+      );
       expect(result).toEqual(group);
     });
   });
@@ -178,7 +178,9 @@ describe('GroupingController', () => {
         clientSecret: 'test_secret',
         provider: PaymentMethod.STRIPE,
       };
-      mockGroupingService.initiateContributionPayment.mockResolvedValue(response);
+      mockGroupingService.initiateContributionPayment.mockResolvedValue(
+        response,
+      );
 
       const result = await controller.initiateContributionPayment(
         groupId,

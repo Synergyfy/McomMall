@@ -43,11 +43,13 @@ export class ListingsController {
   constructor(
     private readonly listingsService: ListingsService,
     private readonly servicesService: ServicesService,
-  ) { }
+  ) {}
 
   @Public()
   @Get('search')
-  @ApiOperation({ summary: 'Search businesses based on query text, category, location, etc.' })
+  @ApiOperation({
+    summary: 'Search businesses based on query text, category, location, etc.',
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns a list of businesses matching the search criteria.',
@@ -77,7 +79,12 @@ export class ListingsController {
   @Public()
   @Get('recent')
   @ApiOperation({ summary: 'Get recently created businesses' })
-  @ApiQuery({ name: 'limit', required: false, type: Number, description: 'Limit the number of results (default 6)' })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: Number,
+    description: 'Limit the number of results (default 6)',
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns a list of recently created businesses.',
@@ -97,7 +104,7 @@ export class ListingsController {
   @ApiOperation({ summary: 'Get all businesses created by the current user' })
   @ApiResponse({
     status: 200,
-    description: 'Returns a paginated list of user\'s businesses.',
+    description: "Returns a paginated list of user's businesses.",
     example: {
       items: [
         {
@@ -157,7 +164,10 @@ export class ListingsController {
             { dayOfWeek: 'TUESDAY', openTime: '08:00', closeTime: '18:00' },
           ],
           socialLinks: [
-            { platform: 'Instagram', url: 'https://instagram.com/goldenbakery' },
+            {
+              platform: 'Instagram',
+              url: 'https://instagram.com/goldenbakery',
+            },
           ],
         },
       },
@@ -263,7 +273,7 @@ export class ListingsController {
         {
           id: 's1s2s3s4-5555-6666-7777-88889999aaaa',
           name: 'Bread Baking Workshop',
-          price: 45.00,
+          price: 45.0,
         },
       ],
       meta: {

@@ -1,15 +1,35 @@
-import { IsEnum, IsNumber, IsOptional, IsString, IsUUID, ValidateNested, IsArray, IsBoolean } from 'class-validator';
+import {
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  ValidateNested,
+  IsArray,
+  IsBoolean,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { FunctionalType, ScopeType, SplitRatioConfig, VisualType } from '../entities/reward-definition.entity';
+import {
+  FunctionalType,
+  ScopeType,
+  SplitRatioConfig,
+  VisualType,
+} from '../entities/reward-definition.entity';
 import { PaymentGateway } from '../../payments/enums/payment-gateway.enum';
 
 export class SplitRatioDto {
-  @ApiProperty({ example: 0.5, description: 'The portion of value covered by Real Money (0-1)' })
+  @ApiProperty({
+    example: 0.5,
+    description: 'The portion of value covered by Real Money (0-1)',
+  })
   @IsNumber()
   real: number;
 
-  @ApiProperty({ example: 0.5, description: 'The portion of value covered by Reward Money (0-1)' })
+  @ApiProperty({
+    example: 0.5,
+    description: 'The portion of value covered by Reward Money (0-1)',
+  })
   @IsNumber()
   reward: number;
 }
@@ -41,7 +61,10 @@ export class CreateRewardDefinitionDto {
   @IsEnum(ScopeType)
   scopeType: ScopeType;
 
-  @ApiPropertyOptional({ example: ['shop-uuid-1', 'shop-uuid-2'], description: 'List of Shop IDs if scope is specific' })
+  @ApiPropertyOptional({
+    example: ['shop-uuid-1', 'shop-uuid-2'],
+    description: 'List of Shop IDs if scope is specific',
+  })
   @IsUUID('4', { each: true })
   @IsOptional()
   validShopIds?: string[];
@@ -57,18 +80,29 @@ export class CreateRewardDefinitionDto {
   isActive?: boolean;
 }
 
-export class UpdateRewardDefinitionDto extends PartialType(CreateRewardDefinitionDto) {}
+export class UpdateRewardDefinitionDto extends PartialType(
+  CreateRewardDefinitionDto,
+) {}
 
 export class PurchaseVoucherDto {
-  @ApiProperty({ example: 'reward-def-uuid', description: 'ID of the Reward Definition' })
+  @ApiProperty({
+    example: 'reward-def-uuid',
+    description: 'ID of the Reward Definition',
+  })
   @IsUUID()
   rewardDefinitionId: string;
 
-  @ApiProperty({ example: 50, description: 'Amount user pays (Real Money portion)' })
+  @ApiProperty({
+    example: 50,
+    description: 'Amount user pays (Real Money portion)',
+  })
   @IsNumber()
   paymentAmount: number;
 
-  @ApiProperty({ example: 'pi_3M...', description: 'Stripe Payment Intent ID or PayPal Order ID' })
+  @ApiProperty({
+    example: 'pi_3M...',
+    description: 'Stripe Payment Intent ID or PayPal Order ID',
+  })
   @IsString()
   transactionId: string;
 
@@ -82,7 +116,7 @@ export class CashbackInjectionDto {
   @IsUUID()
   userVoucherId: string;
 
-  @ApiProperty({ example: 5.00 })
+  @ApiProperty({ example: 5.0 })
   @IsNumber()
   amount: number;
 
@@ -96,7 +130,7 @@ export class SpendDto {
   @IsUUID()
   userVoucherId: string;
 
-  @ApiProperty({ example: 25.00 })
+  @ApiProperty({ example: 25.0 })
   @IsNumber()
   amount: number;
 
@@ -121,7 +155,10 @@ export class UserVoucherResponseDto {
   @ApiProperty({ example: 'ABC123XYZ789' })
   code: string;
 
-  @ApiProperty({ example: 100.00, description: 'Combined Real + Reward balance' })
+  @ApiProperty({
+    example: 100.0,
+    description: 'Combined Real + Reward balance',
+  })
   totalBalance: number;
 
   @ApiProperty({ example: 'active' })
@@ -140,16 +177,19 @@ export class TransferDto {
   @IsUUID()
   toVoucherId: string;
 
-  @ApiProperty({ example: 10.00 })
+  @ApiProperty({ example: 10.0 })
   @IsNumber()
   amount: number;
 }
 
 export class MetricWithChangeDto {
-  @ApiProperty({ example: 1250.50 })
+  @ApiProperty({ example: 1250.5 })
   value: number;
 
-  @ApiProperty({ example: 15.5, description: 'Percentage change compared to previous period' })
+  @ApiProperty({
+    example: 15.5,
+    description: 'Percentage change compared to previous period',
+  })
   percentageChange: number;
 }
 
@@ -171,10 +211,10 @@ export class VoucherAdminResponseDto extends UserVoucherResponseDto {
   @ApiProperty({ example: 'customer@example.com' })
   ownerEmail: string;
 
-  @ApiProperty({ example: 50.00 })
+  @ApiProperty({ example: 50.0 })
   realBalance: number;
 
-  @ApiProperty({ example: 50.00 })
+  @ApiProperty({ example: 50.0 })
   rewardBalance: number;
 
   @ApiProperty({ example: '2026-01-17T12:00:00Z' })
@@ -182,32 +222,47 @@ export class VoucherAdminResponseDto extends UserVoucherResponseDto {
 }
 
 export class BusinessStatsResponseDto {
-    @ApiProperty()
-    activeVouchersCount: number;
+  @ApiProperty()
+  activeVouchersCount: number;
 
-    @ApiProperty()
-    totalSpentInShop: number;
+  @ApiProperty()
+  totalSpentInShop: number;
 
-    @ApiProperty()
-    customersCount: number;
+  @ApiProperty()
+  customersCount: number;
 }
 
 export class CustomerMoneyStatsDto {
   @ApiProperty({ example: 5, description: 'Number of active vouchers owned' })
   activeVouchersCount: number;
 
-  @ApiProperty({ example: 500.00, description: 'Total value of all active vouchers (Real + Reward)' })
+  @ApiProperty({
+    example: 500.0,
+    description: 'Total value of all active vouchers (Real + Reward)',
+  })
   totalCurrentBalance: number;
 
-  @ApiProperty({ example: 250.00, description: 'Total Real Money balance in active vouchers' })
+  @ApiProperty({
+    example: 250.0,
+    description: 'Total Real Money balance in active vouchers',
+  })
   currentRealBalance: number;
 
-  @ApiProperty({ example: 250.00, description: 'Total Reward Money balance in active vouchers' })
+  @ApiProperty({
+    example: 250.0,
+    description: 'Total Reward Money balance in active vouchers',
+  })
   currentRewardBalance: number;
 
-  @ApiProperty({ example: 50.00, description: 'Total lifetime rewards received from business cashback' })
+  @ApiProperty({
+    example: 50.0,
+    description: 'Total lifetime rewards received from business cashback',
+  })
   totalBusinessRewardsReceived: number;
 
-  @ApiProperty({ example: 1200.00, description: 'Total amount spent across all vouchers' })
+  @ApiProperty({
+    example: 1200.0,
+    description: 'Total amount spent across all vouchers',
+  })
   totalSpent: number;
 }

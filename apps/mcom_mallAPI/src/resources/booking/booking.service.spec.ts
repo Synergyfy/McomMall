@@ -6,8 +6,6 @@ import { ServiceBooking } from './entities/service-booking.entity';
 import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServicePayment } from './entities/service-payment.entity';
-import { Business } from '../listings/entities/listing.entity';
-import { User } from '../users/entities/user.entity';
 import { Service } from '../services/entities/service.entity';
 import { ListingType } from '../listings/listing.enum';
 import { BookingStatus } from './entities/booking.enum';
@@ -18,17 +16,19 @@ import {
 } from '@nestjs/common';
 import { NotificationService } from '../notification/notification.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { WalletService } from '../wallet/wallet.service';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
+import { Business } from '../listings/entities/listing.entity';
 
 describe('BookingService', () => {
   let service: BookingService;
   let bookingRepository: Repository<ServiceBooking>;
   let blockedSlotRepository: Repository<BlockedSlot>;
   let priceModifierRepository: Repository<PriceModifier>;
+  let serviceRepository: Repository<Service>;
   let servicePaymentRepository: Repository<ServicePayment>;
   let businessRepository: Repository<Business>;
-  let serviceRepository: Repository<Service>;
   let paymentProviderService: PaymentProviderService;
   let walletService: WalletService;
 
@@ -88,6 +88,10 @@ describe('BookingService', () => {
             verifyStripePaymentIntent: jest.fn(),
             captureAndVerifyPaypalOrder: jest.fn(),
           },
+        },
+        {
+          provide: CentralIntegrationService,
+          useValue: { processCashback: jest.fn() },
         },
         {
           provide: WalletService,
@@ -231,7 +235,9 @@ describe('BookingService', () => {
   describe('decline', () => {
     it('should throw NotFoundException if booking not found', async () => {
       mockEntityManager.findOne.mockResolvedValue(null);
-      await expect(service.decline('1', '1')).rejects.toThrow(NotFoundException);
+      await expect(service.decline('1', '1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if user is not the business owner', async () => {
@@ -239,7 +245,9 @@ describe('BookingService', () => {
         service: { business: { user: { id: '2' } } },
       } as ServiceBooking;
       mockEntityManager.findOne.mockResolvedValue(booking);
-      await expect(service.decline('1', '1')).rejects.toThrow(ForbiddenException);
+      await expect(service.decline('1', '1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should decline the booking and return it', async () => {
@@ -258,7 +266,9 @@ describe('BookingService', () => {
   describe('approve', () => {
     it('should throw NotFoundException if booking not found', async () => {
       mockEntityManager.findOne.mockResolvedValue(null);
-      await expect(service.approve('1', '1')).rejects.toThrow(NotFoundException);
+      await expect(service.approve('1', '1')).rejects.toThrow(
+        NotFoundException,
+      );
     });
 
     it('should throw ForbiddenException if user is not the business owner', async () => {
@@ -266,7 +276,9 @@ describe('BookingService', () => {
         service: { business: { user: { id: '2' } } },
       } as ServiceBooking;
       mockEntityManager.findOne.mockResolvedValue(booking);
-      await expect(service.approve('1', '1')).rejects.toThrow(ForbiddenException);
+      await expect(service.approve('1', '1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should approve the booking and return it', async () => {
@@ -291,7 +303,9 @@ describe('BookingService', () => {
     it('should throw ForbiddenException if user is not the one who made the booking', async () => {
       const booking = { user: { id: '2' } } as unknown as ServiceBooking;
       mockEntityManager.findOne.mockResolvedValue(booking);
-      await expect(service.cancel('1', '1')).rejects.toThrow(ForbiddenException);
+      await expect(service.cancel('1', '1')).rejects.toThrow(
+        ForbiddenException,
+      );
     });
 
     it('should cancel the booking and return it', async () => {
@@ -367,15 +381,20 @@ describe('BookingService', () => {
     it('should verify payment and update booking', async () => {
       const booking = {
         id: '1',
+        user: { email: 'test@test.com' },
         service: { business: { user: { id: '2' } } },
-      } as ServiceBooking;
+      } as any;
       const payment = {} as ServicePayment;
       jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
         .mockResolvedValue({ ok: true });
-      (mockEntityManager.getRepository(ServicePayment).create as jest.Mock).mockReturnValue(payment);
-      (mockEntityManager.getRepository(ServicePayment).save as jest.Mock).mockResolvedValue(payment);
+      (
+        mockEntityManager.getRepository(ServicePayment).create as jest.Mock
+      ).mockReturnValue(payment);
+      (
+        mockEntityManager.getRepository(ServicePayment).save as jest.Mock
+      ).mockResolvedValue(payment);
       mockEntityManager.save.mockResolvedValue(booking);
       jest.spyOn(walletService, 'creditEarning').mockResolvedValue(null);
 
@@ -419,7 +438,9 @@ describe('BookingService', () => {
       } as ServiceBooking;
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockImplementation((booking) => booking);
-      jest.spyOn(walletService, 'releaseBookingPayment').mockResolvedValue(null);
+      jest
+        .spyOn(walletService, 'releaseBookingPayment')
+        .mockResolvedValue(null);
 
       await service.completeBooking('1', '1');
       expect(walletService.releaseBookingPayment).toHaveBeenCalledWith('1');

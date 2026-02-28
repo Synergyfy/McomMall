@@ -8,7 +8,11 @@ export class MarketplaceCategory extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @ApiProperty({ example: 'Smartphone', required: false, description: 'Lucide icon name' })
+  @ApiProperty({
+    example: 'Smartphone',
+    required: false,
+    description: 'Lucide icon name',
+  })
   @Column({ nullable: true })
   iconName: string; // e.g., 'Home', 'Smartphone' (matches Lucide icons on frontend)
 

@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ServicesService } from './services.service';
 import { Service } from './entities/service.entity';
 import { BundledService } from './entities/bundled-service.entity';
@@ -55,7 +54,6 @@ const mockConfigurableAddonRepository = {
 
 describe('ServicesService', () => {
   let service: ServicesService;
-  let businessRepository: Repository<Business>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -97,9 +95,6 @@ describe('ServicesService', () => {
     }).compile();
 
     service = module.get<ServicesService>(ServicesService);
-    businessRepository = module.get<Repository<Business>>(
-      getRepositoryToken(Business),
-    );
   });
 
   it('should be defined', () => {
@@ -110,6 +105,7 @@ describe('ServicesService', () => {
     const createServiceDto: CreateServiceDto = {
       name: 'Test Service',
       businessId: 'test-business-id',
+      sector: 'Wellness',
       category: 'Wellness',
       pricingModel: PricingModel.FIXED,
       fixedPrice: 100,
@@ -149,7 +145,14 @@ describe('ServicesService', () => {
           weekendMultiplier: 1.2,
         },
         availability: {
-          schedule: [{ day: 'monday', enabled: true, startTime: '09:00', endTime: '17:00' }],
+          schedule: [
+            {
+              day: 'monday',
+              enabled: true,
+              startTime: '09:00',
+              endTime: '17:00',
+            },
+          ],
           slotDuration: 60,
           bufferTime: 15,
           maxBookingsPerSlot: 1,
@@ -158,9 +161,7 @@ describe('ServicesService', () => {
           { name: '60 min', type: VariantType.TIME, price: 80, duration: 60 },
         ],
         enableTieredPackages: true,
-        tiers: [
-          { name: 'Basic', price: 50, features: ['Feature 1'] },
-        ],
+        tiers: [{ name: 'Basic', price: 50, features: ['Feature 1'] }],
         requireApproval: true,
         bookingRequirements: {
           requireAddress: true,
@@ -183,7 +184,7 @@ describe('ServicesService', () => {
           subcategory: 'Massage',
           deliveryConfig: expect.any(Object),
           variants: expect.any(Array),
-        })
+        }),
       );
     });
 

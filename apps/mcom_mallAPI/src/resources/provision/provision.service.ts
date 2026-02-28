@@ -1,8 +1,12 @@
-import { Injectable, NotFoundException, BadRequestException } from "@nestjs/common";
-import { InjectRepository } from "@nestjs/typeorm";
-import { Repository } from "typeorm";
-import { Provision, ProvisionType } from "./entities/provision.entity";
-import { CreateProvisionDto } from "./dto/create-provision.dto";
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { Provision, ProvisionType } from './entities/provision.entity';
+import { CreateProvisionDto } from './dto/create-provision.dto';
 
 @Injectable()
 export class ProvisionService {
@@ -12,31 +16,39 @@ export class ProvisionService {
   ) {}
 
   async create(createProvisionDto: CreateProvisionDto): Promise<Provision> {
-    const exists = await this.provisionRepository.findOne({ where: { code: createProvisionDto.code } });
+    const exists = await this.provisionRepository.findOne({
+      where: { code: createProvisionDto.code },
+    });
     if (exists) {
-        if (exists.isRedeemed) throw new BadRequestException("Code already exists and is redeemed");
-        return exists;
+      if (exists.isRedeemed)
+        throw new BadRequestException('Code already exists and is redeemed');
+      return exists;
     }
 
     const provision = this.provisionRepository.create({
-        ...createProvisionDto,
-        expiresAt: new Date(createProvisionDto.expiresAt)
+      ...createProvisionDto,
+      expiresAt: new Date(createProvisionDto.expiresAt),
     });
     return this.provisionRepository.save(provision);
   }
 
-  async validateAndMarkRedeemed(code: string, userId: string): Promise<Provision> {
-    const provision = await this.provisionRepository.findOne({ where: { code } });
+  async validateAndMarkRedeemed(
+    code: string,
+    userId: string,
+  ): Promise<Provision> {
+    const provision = await this.provisionRepository.findOne({
+      where: { code },
+    });
     if (!provision) {
-      throw new NotFoundException("Invalid redemption code");
+      throw new NotFoundException('Invalid redemption code');
     }
 
     if (provision.isRedeemed) {
-      throw new BadRequestException("Code already redeemed");
+      throw new BadRequestException('Code already redeemed');
     }
 
     if (new Date() > provision.expiresAt) {
-      throw new BadRequestException("Code expired");
+      throw new BadRequestException('Code expired');
     }
 
     provision.isRedeemed = true;
@@ -47,6 +59,6 @@ export class ProvisionService {
   }
 
   async findByCode(code: string): Promise<Provision> {
-      return this.provisionRepository.findOne({ where: { code } });
+    return this.provisionRepository.findOne({ where: { code } });
   }
 }

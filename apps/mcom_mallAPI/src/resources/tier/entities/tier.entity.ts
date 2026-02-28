@@ -11,7 +11,11 @@ export class Tier extends AbstractBaseEntity {
   @Column({ unique: true })
   name: string;
 
-  @ApiProperty({ example: 'Premium tier for established businesses', description: 'Description of the tier', nullable: true })
+  @ApiProperty({
+    example: 'Premium tier for established businesses',
+    description: 'Description of the tier',
+    nullable: true,
+  })
   @Column({ type: 'text', nullable: true })
   description: string;
 
@@ -20,7 +24,13 @@ export class Tier extends AbstractBaseEntity {
   monthlyPrice: number;
 
   @ApiProperty({ example: 79.99, description: 'Quarterly price' })
-  @Column({ name: 'quarterlyPrice', type: 'decimal', precision: 10, scale: 2, default: 0 })
+  @Column({
+    name: 'quarterlyPrice',
+    type: 'decimal',
+    precision: 10,
+    scale: 2,
+    default: 0,
+  })
   quarterlyPrice: number;
 
   @ApiProperty({ example: 299.99, description: 'Annual price' })
@@ -34,27 +44,51 @@ export class Tier extends AbstractBaseEntity {
   @Column({ type: 'simple-array', nullable: true })
   features: string[];
 
-  @ApiProperty({ example: 'price_123', description: 'Stripe monthly price ID', nullable: true })
+  @ApiProperty({
+    example: 'price_123',
+    description: 'Stripe monthly price ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   stripeMonthlyPriceId: string;
 
-  @ApiProperty({ example: 'price_789', description: 'Stripe quarterly price ID', nullable: true })
+  @ApiProperty({
+    example: 'price_789',
+    description: 'Stripe quarterly price ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   stripeQuarterlyPriceId: string;
 
-  @ApiProperty({ example: 'price_456', description: 'Stripe annual price ID', nullable: true })
+  @ApiProperty({
+    example: 'price_456',
+    description: 'Stripe annual price ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   stripeAnnualPriceId: string;
 
-  @ApiProperty({ example: 'P-123', description: 'PayPal monthly plan ID', nullable: true })
+  @ApiProperty({
+    example: 'P-123',
+    description: 'PayPal monthly plan ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   paypalMonthlyPlanId: string;
 
-  @ApiProperty({ example: 'P-789', description: 'PayPal quarterly plan ID', nullable: true })
+  @ApiProperty({
+    example: 'P-789',
+    description: 'PayPal quarterly plan ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   paypalQuarterlyPlanId: string;
 
-  @ApiProperty({ example: 'P-456', description: 'PayPal annual plan ID', nullable: true })
+  @ApiProperty({
+    example: 'P-456',
+    description: 'PayPal annual plan ID',
+    nullable: true,
+  })
   @Column({ nullable: true })
   paypalAnnualPlanId: string;
 
@@ -93,15 +127,23 @@ export class Tier extends AbstractBaseEntity {
   @Column({ default: false })
   isDefault: boolean;
 
-  @ApiProperty({ enum: TierType, example: TierType.STANDARD, description: 'Type of the tier' })
+  @ApiProperty({
+    enum: TierType,
+    example: TierType.STANDARD,
+    description: 'Type of the tier',
+  })
   @Column({
     type: 'enum',
     enum: TierType,
-    default: TierType.STANDARD
+    default: TierType.STANDARD,
   })
   type: TierType;
 
-  @ApiProperty({ example: 14, description: 'Duration of trial in days (only for TRIAL type)', nullable: true })
+  @ApiProperty({
+    example: 14,
+    description: 'Duration of trial in days (only for TRIAL type)',
+    nullable: true,
+  })
   @Column({ nullable: true })
   trialDuration: number;
 
@@ -110,7 +152,11 @@ export class Tier extends AbstractBaseEntity {
   @JoinColumn({ name: 'season_id' })
   season: Season;
 
-  @ApiProperty({ example: 'uuid', description: 'Season ID if this is a seasonal tier', nullable: true })
+  @ApiProperty({
+    example: 'uuid',
+    description: 'Season ID if this is a seasonal tier',
+    nullable: true,
+  })
   @Column({ name: 'season_id', nullable: true })
   seasonId: string;
 }

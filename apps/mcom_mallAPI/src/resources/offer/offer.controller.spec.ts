@@ -55,10 +55,7 @@ describe('OfferController', () => {
         businessIds: ['biz-uuid'],
       };
       controller.create(mockUser as any, createOfferDto);
-      expect(service.create).toHaveBeenCalledWith(
-        mockUser,
-        createOfferDto,
-      );
+      expect(service.create).toHaveBeenCalledWith(mockUser, createOfferDto);
     });
   });
 
@@ -73,10 +70,7 @@ describe('OfferController', () => {
     it('should call offerService.findOne with correct params', () => {
       const id = 'offer-uuid';
       controller.findOne(mockUser as any, id);
-      expect(service.findOne).toHaveBeenCalledWith(
-        mockUser.id,
-        id,
-      );
+      expect(service.findOne).toHaveBeenCalledWith(mockUser.id, id);
     });
   });
 
@@ -85,11 +79,7 @@ describe('OfferController', () => {
       const id = 'offer-uuid';
       const updateOfferDto: UpdateOfferDto = { name: 'Updated' };
       controller.update(mockUser as any, id, updateOfferDto);
-      expect(service.update).toHaveBeenCalledWith(
-        id,
-        updateOfferDto,
-        mockUser,
-      );
+      expect(service.update).toHaveBeenCalledWith(id, updateOfferDto, mockUser);
     });
   });
 
@@ -97,10 +87,7 @@ describe('OfferController', () => {
     it('should call offerService.remove with correct params', () => {
       const id = 'offer-uuid';
       controller.remove(mockUser as any, id);
-      expect(service.remove).toHaveBeenCalledWith(
-        mockUser.id,
-        id,
-      );
+      expect(service.remove).toHaveBeenCalledWith(mockUser.id, id);
     });
   });
 });

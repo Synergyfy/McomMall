@@ -40,4 +40,4 @@ import { DigitalValueModule } from '../digital-value/digital-value.module';
   providers: [VoucherService],
   exports: [VoucherService],
 })
-export class VoucherModule { }
+export class VoucherModule {}

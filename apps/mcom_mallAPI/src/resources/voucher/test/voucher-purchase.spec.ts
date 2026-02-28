@@ -1,7 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, DataSource, EntityManager } from 'typeorm';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { DataSource } from 'typeorm';
 
 import { VoucherService } from '../voucher.service';
 import { Voucher, VoucherStatus } from '../entities/voucher.entity';
@@ -22,6 +21,8 @@ import { VerifyVoucherPurchaseDto } from '../dto/verify-voucher-purchase.dto';
 import { InitiateVoucherPurchaseDto } from '../dto/initiate-voucher-purchase.dto';
 import { RedeemVoucherDto } from '../dto/redeem-voucher.dto';
 import { WalletService } from '../../wallet/wallet.service';
+import { DigitalValueService } from '../../digital-value/digital-value.service';
+import { CentralIntegrationService } from '../../payments/services/central-integration.service';
 
 // Mock repository provider
 const createMockRepository = () => ({
@@ -35,10 +36,12 @@ const createMockRepository = () => ({
 const createMockDataSource = () => ({
   transaction: jest.fn().mockImplementation(async (callback) => {
     const manager = {
+      findOne: jest.fn().mockResolvedValue({ id: 'user-id' }),
       getRepository: (entity) => {
         // Return a mock repository for the given entity
         if (entity === Voucher) return mockVoucherRepository;
-        if (entity === VoucherTransaction) return mockVoucherTransactionRepository;
+        if (entity === VoucherTransaction)
+          return mockVoucherTransactionRepository;
         if (entity === Order) return mockOrderRepository;
         if (entity === OrderPayment) return mockOrderPaymentRepository;
         return createMockRepository();
@@ -98,6 +101,21 @@ describe('VoucherService - Purchase and Redemption', () => {
           provide: PaymentProviderService,
           useValue: mockPaymentProviderService,
         },
+        {
+          provide: CentralIntegrationService,
+          useValue: {
+            processCashback: jest.fn(),
+          },
+        },
+        {
+          provide: DigitalValueService,
+          useValue: {
+            create: jest.fn().mockResolvedValue({ code: 'DV-CODE' }),
+            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id', code: 'DV-CODE' }),
+            fund: jest.fn().mockResolvedValue({}),
+            redeem: jest.fn().mockResolvedValue({}),
+          },
+        },
         { provide: DataSource, useValue: mockDataSource },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
       ],
@@ -128,7 +146,9 @@ describe('VoucherService - Purchase and Redemption', () => {
       mockPaymentProviderService.verifyStripePaymentIntent.mockResolvedValue({
         ok: true,
       });
-      mockVoucherProductRepository.findOne.mockResolvedValue(mockVoucherProduct);
+      mockVoucherProductRepository.findOne.mockResolvedValue(
+        mockVoucherProduct,
+      );
 
       const savedVoucher = {
         id: 'voucher-123',

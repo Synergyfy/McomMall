@@ -1,7 +1,22 @@
-import { IsBoolean, IsEnum, IsNumber, IsOptional, IsString, IsUUID, IsArray, ValidateNested } from 'class-validator';
+import {
+  IsBoolean,
+  IsEnum,
+  IsNumber,
+  IsOptional,
+  IsString,
+  IsUUID,
+  IsArray,
+  ValidateNested,
+} from 'class-validator';
 import { ApiProperty, ApiPropertyOptional, PartialType } from '@nestjs/swagger';
-import { BannerType, MarketplaceBanner } from '../entities/marketplace-banner.entity';
-import { SectionType, MarketplaceSection } from '../entities/marketplace-section.entity';
+import {
+  BannerType,
+  MarketplaceBanner,
+} from '../entities/marketplace-banner.entity';
+import {
+  SectionType,
+  MarketplaceSection,
+} from '../entities/marketplace-section.entity';
 import { MarketplaceCategory } from '../entities/marketplace-category.entity';
 import { VoucherProduct } from '../../voucher/entities/voucher-product.entity';
 import { GiftCardTemplate } from '../../gift-card/entities/gift-card-template.entity';
@@ -40,7 +55,7 @@ export class CreateBannerDto {
   isActive?: boolean;
 }
 
-export class UpdateBannerDto extends PartialType(CreateBannerDto) { }
+export class UpdateBannerDto extends PartialType(CreateBannerDto) {}
 
 // --- SECTION DTOs ---
 
@@ -55,7 +70,9 @@ export class UpdateSectionDto {
   @IsOptional()
   isVisible?: boolean;
 
-  @ApiPropertyOptional({ description: 'JSON configuration (e.g., timer for flash sales)' })
+  @ApiPropertyOptional({
+    description: 'JSON configuration (e.g., timer for flash sales)',
+  })
   @IsOptional()
   config?: any;
 
@@ -73,7 +90,9 @@ export class CreateCategoryDto {
   @IsString()
   name: string;
 
-  @ApiPropertyOptional({ description: 'Lucide icon name (e.g., Home, Smartphone)' })
+  @ApiPropertyOptional({
+    description: 'Lucide icon name (e.g., Home, Smartphone)',
+  })
   @IsString()
   @IsOptional()
   iconName?: string;
@@ -94,7 +113,7 @@ export class CreateCategoryDto {
   isVisible?: boolean;
 }
 
-export class UpdateCategoryDto extends PartialType(CreateCategoryDto) { }
+export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
 
 // --- PUBLIC VIEW RESPONSE ---
 
@@ -116,15 +135,15 @@ export class MarketplacePublicViewDto {
         isVisible: true,
         config: { endTime: '2024-12-31' },
         products: [
-          { id: 'uuid-1', title: 'Product A', price: 100, media: ['url-1'] }
-        ]
+          { id: 'uuid-1', title: 'Product A', price: 100, media: ['url-1'] },
+        ],
       },
       promo_carousel: {
         title: 'Featured Products',
         isVisible: true,
         products: [
-          { id: 'uuid-2', title: 'Product B', price: 50, media: ['url-2'] }
-        ]
+          { id: 'uuid-2', title: 'Product B', price: 50, media: ['url-2'] },
+        ],
       },
     },
   })

@@ -1,9 +1,9 @@
-import { Entity, Column } from "typeorm";
-import { AbstractBaseEntity } from "../../../database/entities/base.entity";
+import { Entity, Column } from 'typeorm';
+import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 
 export enum ProvisionType {
-  TRIAL_EXTENSION = "TRIAL_EXTENSION",
-  TIER_ACCESS = "TIER_ACCESS"
+  TRIAL_EXTENSION = 'TRIAL_EXTENSION',
+  TIER_ACCESS = 'TIER_ACCESS',
 }
 
 @Entity()
@@ -11,10 +11,10 @@ export class Provision extends AbstractBaseEntity {
   @Column({ unique: true })
   code: string;
 
-  @Column({ type: "enum", enum: ProvisionType })
+  @Column({ type: 'enum', enum: ProvisionType })
   type: ProvisionType;
 
-  @Column({ type: "jsonb", nullable: true })
+  @Column({ type: 'jsonb', nullable: true })
   payload: any;
 
   @Column({ default: false })

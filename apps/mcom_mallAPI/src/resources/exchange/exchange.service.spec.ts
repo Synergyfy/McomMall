@@ -1,6 +1,5 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
 import { ExchangeService } from './exchange.service';
 import { ExchangeItem } from './entities/exchange-item.entity';
 import { ExchangeProposal } from './entities/exchange-proposal.entity';
@@ -8,7 +7,6 @@ import { ExchangeHistory } from './entities/exchange-history.entity';
 import { User } from '../users/entities/user.entity';
 import { ItemStatus } from './entities/item-status.enum';
 import { CreateExchangeItemDto } from './dto/create-exchange-item.dto';
-import { ExchangeHistoryAction } from './entities/exchange-history-action.enum';
 import { Escrow } from './entities/escrow.entity';
 import { Product } from '../product/entities/product.entity';
 import { Service } from '../services/entities/service.entity';
@@ -20,12 +18,6 @@ import { UpdateExchangeProposalDto } from './dto/update-exchange-proposal.dto';
 
 describe('ExchangeService', () => {
   let service: ExchangeService;
-  let itemRepository: Repository<ExchangeItem>;
-  let proposalRepository: Repository<ExchangeProposal>;
-  let historyRepository: Repository<ExchangeHistory>;
-  let escrowRepository: Repository<Escrow>;
-  let productRepository: Repository<Product>;
-  let serviceRepository: Repository<Service>;
 
   const mockItemRepository = {
     create: jest.fn(),
@@ -94,24 +86,6 @@ describe('ExchangeService', () => {
     }).compile();
 
     service = module.get<ExchangeService>(ExchangeService);
-    itemRepository = module.get<Repository<ExchangeItem>>(
-      getRepositoryToken(ExchangeItem),
-    );
-    proposalRepository = module.get<Repository<ExchangeProposal>>(
-      getRepositoryToken(ExchangeProposal),
-    );
-    historyRepository = module.get<Repository<ExchangeHistory>>(
-      getRepositoryToken(ExchangeHistory),
-    );
-    escrowRepository = module.get<Repository<Escrow>>(
-      getRepositoryToken(Escrow),
-    );
-    productRepository = module.get<Repository<Product>>(
-      getRepositoryToken(Product),
-    );
-    serviceRepository = module.get<Repository<Service>>(
-      getRepositoryToken(Service),
-    );
   });
 
   it('should be defined', () => {
@@ -207,7 +181,9 @@ describe('ExchangeService', () => {
         offeredItem: { id: 'offered-item-id' },
         requestedItem: { id: 'requested-item-id' },
       } as unknown as ExchangeProposal;
-      const updateDto: UpdateExchangeProposalDto = { status: ProposalStatus.ACCEPTED };
+      const updateDto: UpdateExchangeProposalDto = {
+        status: ProposalStatus.ACCEPTED,
+      };
       const savedEscrow = { id: 'escrow-id' };
 
       mockProposalRepository.findOne.mockResolvedValue(proposal);

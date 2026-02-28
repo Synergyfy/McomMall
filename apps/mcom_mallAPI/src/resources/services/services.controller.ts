@@ -36,7 +36,7 @@ import { PaginationDto } from '../../common/dto/pagination.dto';
 @ApiBearerAuth()
 @Controller('services')
 export class ServicesController {
-  constructor(private readonly servicesService: ServicesService) { }
+  constructor(private readonly servicesService: ServicesService) {}
 
   @Get('search')
   @ApiOperation({ summary: 'Search services by term' })
@@ -51,12 +51,16 @@ export class ServicesController {
 
   @Public()
   @Get('public')
-  @ApiOperation({ summary: 'Get all public services with pagination and filtering' })
+  @ApiOperation({
+    summary: 'Get all public services with pagination and filtering',
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns a paginated list of public services.',
   })
-  async findAllPublic(@Query() searchDto: ServiceSearchDto): Promise<PageDto<Service>> {
+  async findAllPublic(
+    @Query() searchDto: ServiceSearchDto,
+  ): Promise<PageDto<Service>> {
     return this.servicesService.findAllPublic(searchDto);
   }
 

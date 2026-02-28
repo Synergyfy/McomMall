@@ -24,8 +24,11 @@ export class UpdateServiceProviderProfileDto {
   serviceArea?: string;
 
   @ApiProperty({
-    description: 'A list of URLs to the service provider\'s portfolio of work.',
-    example: ['https://example.com/portfolio/project1', 'https://example.com/portfolio/project2'],
+    description: "A list of URLs to the service provider's portfolio of work.",
+    example: [
+      'https://example.com/portfolio/project1',
+      'https://example.com/portfolio/project2',
+    ],
     required: false,
     type: [String],
   })

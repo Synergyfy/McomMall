@@ -23,7 +23,9 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ type: 'enum', enum: BookingStatus, default: BookingStatus.PENDING })
   status: BookingStatus;
 
-  @OneToOne(() => ServicePayment, (payment) => payment.booking, { nullable: true })
+  @OneToOne(() => ServicePayment, (payment) => payment.booking, {
+    nullable: true,
+  })
   @JoinColumn()
   payment: ServicePayment;
 
@@ -33,6 +35,9 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ default: false })
   customerCompleted: boolean;
 
-  @OneToOne(() => ProductServiceBooking, productServiceBooking => productServiceBooking.serviceBooking)
+  @OneToOne(
+    () => ProductServiceBooking,
+    (productServiceBooking) => productServiceBooking.serviceBooking,
+  )
   productServiceBooking: ProductServiceBooking;
 }

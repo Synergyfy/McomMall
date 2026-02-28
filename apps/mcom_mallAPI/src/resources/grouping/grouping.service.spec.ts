@@ -1,3 +1,6 @@
+import { CentralIntegrationService } from '../payments/services/central-integration.service';
+import { DigitalValueService } from '../digital-value/digital-value.service';
+import { CapabilityService } from '../capability/capability.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { DataSource, Repository } from 'typeorm';
@@ -7,16 +10,9 @@ import { Group } from './entities/group.entity';
 import { GroupMember } from './entities/group-member.entity';
 import { User } from '../users/entities/user.entity';
 import { MembershipTier } from '../membership/membership-tier.enum';
-import {
-  ForbiddenException,
-  NotFoundException,
-  ConflictException,
-  InternalServerErrorException,
-  BadRequestException,
-} from '@nestjs/common';
+import { ForbiddenException, NotFoundException } from '@nestjs/common';
 import { GroupStatus } from './group-status.enum';
 import { GroupMemberStatus } from './group-member-status.enum';
-import { GroupWallet } from './entities/group-wallet.entity';
 import { GroupTransaction } from './entities/group-transaction.entity';
 import { CreateGroupDto } from './dto/create-group.dto';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
@@ -29,7 +25,6 @@ describe('GroupingService', () => {
   let service: GroupingService;
   let groupMemberRepository: Repository<GroupMember>;
   let groupRepository: Repository<Group>;
-  let paymentProviderService: PaymentProviderService;
 
   const mockManager = {
     findOne: jest.fn(),
@@ -51,7 +46,7 @@ describe('GroupingService', () => {
     captureAndVerifyPaypalOrder: jest.fn(),
   };
 
-  const baseMockUser: User = {
+  const baseMockUser = { fullName: 'Test User',
     id: 'user-id',
     name: 'Test User',
     firstName: 'Test',
@@ -70,7 +65,6 @@ describe('GroupingService', () => {
     created_at: new Date(),
     updated_at: new Date(),
     businesses: [],
-    trial: null,
     coupons: [],
     purchasedCoupons: [],
     couponProducts: [],
@@ -94,6 +88,9 @@ describe('GroupingService', () => {
       tier: null,
       tierId: null,
       isTrial: false,
+      trialDuration: 0,
+      startDate: new Date(),
+      endDate: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
       planType: PlanType.MONTHLY,
       isActive: true,
       expiresAt: new Date(Date.now() + 365 * 24 * 60 * 60 * 1000),
@@ -106,6 +103,7 @@ describe('GroupingService', () => {
     wallet: null,
     deleted_at: null,
     populateName: jest.fn(),
+    updateFullName: jest.fn(),
   };
 
   const founder = {
@@ -157,6 +155,9 @@ describe('GroupingService', () => {
           provide: PaymentProviderService,
           useValue: mockPaymentProviderService,
         },
+        { provide: CentralIntegrationService, useValue: { processCashback: jest.fn(), validateDigitalValue: jest.fn() } },
+        { provide: DigitalValueService, useValue: { createVoucher: jest.fn() } },
+        { provide: CapabilityService, useValue: { checkPermission: jest.fn() } },
       ],
     }).compile();
 
@@ -165,9 +166,6 @@ describe('GroupingService', () => {
       getRepositoryToken(GroupMember),
     );
     groupRepository = module.get<Repository<Group>>(getRepositoryToken(Group));
-    paymentProviderService = module.get<PaymentProviderService>(
-      PaymentProviderService,
-    );
   });
 
   afterEach(() => {
@@ -178,7 +176,9 @@ describe('GroupingService', () => {
     it('should create a group and add the founder as a member with PENDING_PAYMENT status', async () => {
       mockManager.findOne.mockResolvedValue(founder);
       mockManager.create.mockImplementation((entity, data) => data);
-      mockManager.save.mockImplementation((entity, data) => Promise.resolve(data ?? entity));
+      mockManager.save.mockImplementation((entity, data) =>
+        Promise.resolve(data ?? entity),
+      );
 
       const result = await service.create(groupDto, founder);
 
@@ -201,9 +201,7 @@ describe('GroupingService', () => {
       );
       expect(result.name).toBe('Test Group');
       expect(result.members).toHaveLength(1);
-      expect(result.members[0].status).toBe(
-        GroupMemberStatus.PENDING_PAYMENT,
-      );
+      expect(result.members[0].status).toBe(GroupMemberStatus.PENDING_PAYMENT);
     });
   });
 
@@ -215,7 +213,9 @@ describe('GroupingService', () => {
       mockManager.count.mockResolvedValue(1);
       mockManager.exists.mockResolvedValue(false);
       mockManager.create.mockImplementation((_, data) => data);
-      mockManager.save.mockImplementation((entity, data) => Promise.resolve(data));
+      mockManager.save.mockImplementation((entity, data) =>
+        Promise.resolve(data),
+      );
 
       const result = await service.joinGroup(groupId, baseMockUser);
 
@@ -302,9 +302,9 @@ describe('GroupingService', () => {
     };
 
     it('should initiate a Stripe payment', async () => {
-      jest
-        .spyOn(groupMemberRepository, 'findOne')
-        .mockResolvedValue({ status: GroupMemberStatus.PENDING_PAYMENT } as GroupMember);
+      jest.spyOn(groupMemberRepository, 'findOne').mockResolvedValue({
+        status: GroupMemberStatus.PENDING_PAYMENT,
+      } as GroupMember);
       mockPaymentProviderService.createStripePaymentIntent.mockResolvedValue({
         client_secret: 'stripe-secret',
       });
@@ -328,7 +328,9 @@ describe('GroupingService', () => {
     };
 
     it('should verify a payment and activate the member', async () => {
-      const groupMember = { status: GroupMemberStatus.PENDING_PAYMENT } as GroupMember;
+      const groupMember = {
+        status: GroupMemberStatus.PENDING_PAYMENT,
+      } as GroupMember;
       const groupWallet = { balance: 2750 };
       jest
         .spyOn(groupMemberRepository, 'findOne')

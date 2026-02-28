@@ -6,17 +6,13 @@ import { DigitalValueTransaction } from './entities/digital-value-transaction.en
 import { RewardLinkage } from './entities/reward-linkage.entity';
 import { User } from '../users/entities/user.entity';
 import { Business } from '../listings/entities/listing.entity';
-import { DataSource, Repository, QueryRunner } from 'typeorm';
-import { DigitalValueType, DigitalValueStatus, DigitalValueTransactionType } from './digital-value.enums';
-import { NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
+import { DataSource, QueryRunner, Repository } from 'typeorm';
+import { DigitalValueType, DigitalValueStatus } from './digital-value.enums';
+import { NotFoundException, BadRequestException } from '@nestjs/common';
 
 describe('DigitalValueService', () => {
   let service: DigitalValueService;
-  let digitalValueRepository: Repository<DigitalValueMaster>;
-  let transactionRepository: Repository<DigitalValueTransaction>;
   let userRepository: Repository<User>;
-  let businessRepository: Repository<Business>;
-  let dataSource: DataSource;
   let queryRunner: QueryRunner;
 
   beforeEach(async () => {
@@ -27,7 +23,11 @@ describe('DigitalValueService', () => {
       rollbackTransaction: jest.fn(),
       release: jest.fn(),
       manager: {
-        save: jest.fn().mockImplementation((entityOrTarget, entity) => Promise.resolve({ id: '1', ...(entity || entityOrTarget) })),
+        save: jest
+          .fn()
+          .mockImplementation((entityOrTarget, entity) =>
+            Promise.resolve({ id: '1', ...(entity || entityOrTarget) }),
+          ),
         findOne: jest.fn(),
         create: jest.fn().mockImplementation((target, data) => data),
       },
@@ -52,28 +52,28 @@ describe('DigitalValueService', () => {
         {
           provide: getRepositoryToken(DigitalValueTransaction),
           useValue: {
-             create: jest.fn(),
-             save: jest.fn(),
-             find: jest.fn(),
+            create: jest.fn(),
+            save: jest.fn(),
+            find: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(RewardLinkage),
           useValue: {
-             create: jest.fn(),
+            create: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(User),
           useValue: {
-             findOneBy: jest.fn(),
+            findOneBy: jest.fn(),
           },
         },
         {
           provide: getRepositoryToken(Business),
           useValue: {
-             findOneBy: jest.fn(),
-             findOne: jest.fn(),
+            findOneBy: jest.fn(),
+            findOne: jest.fn(),
           },
         },
         {
@@ -84,11 +84,7 @@ describe('DigitalValueService', () => {
     }).compile();
 
     service = module.get<DigitalValueService>(DigitalValueService);
-    digitalValueRepository = module.get(getRepositoryToken(DigitalValueMaster));
-    transactionRepository = module.get(getRepositoryToken(DigitalValueTransaction));
     userRepository = module.get(getRepositoryToken(User));
-    businessRepository = module.get(getRepositoryToken(Business));
-    dataSource = module.get(DataSource);
   });
 
   it('should be defined', () => {
@@ -103,7 +99,9 @@ describe('DigitalValueService', () => {
       };
       const ownerId = 'user-1';
 
-      jest.spyOn(userRepository, 'findOneBy').mockResolvedValue({ id: ownerId } as User);
+      jest
+        .spyOn(userRepository, 'findOneBy')
+        .mockResolvedValue({ id: ownerId } as User);
 
       const result = await service.create(createDto, ownerId);
 
@@ -114,61 +112,73 @@ describe('DigitalValueService', () => {
     });
 
     it('should throw if owner not found', async () => {
-       jest.spyOn(userRepository, 'findOneBy').mockResolvedValue(null);
-       await expect(service.create({ type: DigitalValueType.GIFT_CARD, initialValue: 100 }, 'user-1')).rejects.toThrow(NotFoundException);
+      jest.spyOn(userRepository, 'findOneBy').mockResolvedValue(null);
+      await expect(
+        service.create(
+          { type: DigitalValueType.GIFT_CARD, initialValue: 100 },
+          'user-1',
+        ),
+      ).rejects.toThrow(NotFoundException);
     });
   });
 
   describe('redeem', () => {
-      it('should redeem successfully', async () => {
-          const id = 'dv-1';
-          const dto = { amount: 50, merchantId: 'm-1' };
-          const dv = {
-              id,
-              currentBalance: 100,
-              status: DigitalValueStatus.ACTIVE,
-              merchantId: 'm-1'
-          };
+    it('should redeem successfully', async () => {
+      const id = 'dv-1';
+      const dto = { amount: 50, merchantId: 'm-1' };
+      const dv = {
+        id,
+        currentBalance: 100,
+        status: DigitalValueStatus.ACTIVE,
+        merchantId: 'm-1',
+      };
 
-          (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
+      (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
 
-          await service.redeem(id, dto);
+      await service.redeem(id, dto);
 
-          expect(dv.currentBalance).toBe(50);
-          expect(dv.status).toBe(DigitalValueStatus.PARTIALLY_REDEEMED);
-          // Check that save was called with the entity type and the entity
-          expect(queryRunner.manager.save).toHaveBeenCalledWith(DigitalValueMaster, dv);
-          expect(queryRunner.commitTransaction).toHaveBeenCalled();
-      });
+      expect(dv.currentBalance).toBe(50);
+      expect(dv.status).toBe(DigitalValueStatus.PARTIALLY_REDEEMED);
+      // Check that save was called with the entity type and the entity
+      expect(queryRunner.manager.save).toHaveBeenCalledWith(
+        DigitalValueMaster,
+        dv,
+      );
+      expect(queryRunner.commitTransaction).toHaveBeenCalled();
+    });
 
-      it('should fail if insufficient balance', async () => {
-          const id = 'dv-1';
-          const dto = { amount: 150, merchantId: 'm-1' };
-          const dv = {
-              id,
-              currentBalance: 100,
-              status: DigitalValueStatus.ACTIVE
-          };
+    it('should fail if insufficient balance', async () => {
+      const id = 'dv-1';
+      const dto = { amount: 150, merchantId: 'm-1' };
+      const dv = {
+        id,
+        currentBalance: 100,
+        status: DigitalValueStatus.ACTIVE,
+      };
 
-          (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
+      (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
 
-          await expect(service.redeem(id, dto)).rejects.toThrow(BadRequestException);
-          expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
-      });
+      await expect(service.redeem(id, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+      expect(queryRunner.rollbackTransaction).toHaveBeenCalled();
+    });
 
-      it('should fail if merchant mismatch', async () => {
-          const id = 'dv-1';
-          const dto = { amount: 50, merchantId: 'm-2' };
-          const dv = {
-              id,
-              currentBalance: 100,
-              status: DigitalValueStatus.ACTIVE,
-              merchantId: 'm-1'
-          };
+    it('should fail if merchant mismatch', async () => {
+      const id = 'dv-1';
+      const dto = { amount: 50, merchantId: 'm-2' };
+      const dv = {
+        id,
+        currentBalance: 100,
+        status: DigitalValueStatus.ACTIVE,
+        merchantId: 'm-1',
+      };
 
-          (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
+      (queryRunner.manager.findOne as jest.Mock).mockResolvedValue(dv);
 
-          await expect(service.redeem(id, dto)).rejects.toThrow(BadRequestException);
-      });
+      await expect(service.redeem(id, dto)).rejects.toThrow(
+        BadRequestException,
+      );
+    });
   });
 });

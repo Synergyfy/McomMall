@@ -1,21 +1,31 @@
 import { Controller, Get, HttpStatus, Param, Query, Res } from '@nestjs/common';
 import { GooglePlacesService } from './google-places.service';
 import { Public } from '../../common/decorators/public.decorator';
-import { ApiOperation, ApiResponse, ApiTags, ApiQuery, ApiParam } from '@nestjs/swagger';
+import {
+  ApiOperation,
+  ApiResponse,
+  ApiTags,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { Response } from 'express';
 
 @ApiTags('listings')
 @Controller('google/google-business')
 @Public()
 export class ListingsGoogleController {
-  constructor(private readonly googlePlacesService: GooglePlacesService) { }
+  constructor(private readonly googlePlacesService: GooglePlacesService) {}
 
   @Public()
   @Get()
   @ApiOperation({ summary: 'Search for businesses using Google Places API' })
   @ApiQuery({ name: 'lat', type: Number, description: 'Latitude' })
   @ApiQuery({ name: 'lng', type: Number, description: 'Longitude' })
-  @ApiQuery({ name: 'queryText', type: String, description: 'Search text (e.g., "coffee shop")' })
+  @ApiQuery({
+    name: 'queryText',
+    type: String,
+    description: 'Search text (e.g., "coffee shop")',
+  })
   @ApiResponse({
     status: 200,
     description: 'Returns a list of Google Maps businesses.',

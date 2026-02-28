@@ -3,7 +3,6 @@ import { ProductService } from './product.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Product } from './entities/product.entity';
 import { User } from '../users/entities/user.entity';
-import { Repository } from 'typeorm';
 import { Business } from '../listings/entities/listing.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { PartnershipRequest } from '../partnership/entities/partnership-request.entity';
@@ -93,7 +92,8 @@ describe('ProductService', () => {
     }).compile();
 
     service = module.get<ProductService>(ProductService);
-    activityTimerService = module.get<ActivityTimerService>(ActivityTimerService);
+    activityTimerService =
+      module.get<ActivityTimerService>(ActivityTimerService);
   });
 
   afterEach(() => {
@@ -119,7 +119,10 @@ describe('ProductService', () => {
       const business = new Business();
       business.user = { id: 'user-id' } as User;
       mockProductRepository.create.mockReturnValue(createProductDto);
-      mockProductRepository.save.mockResolvedValue({ ...createProductDto, title: 'Test Product' });
+      mockProductRepository.save.mockResolvedValue({
+        ...createProductDto,
+        title: 'Test Product',
+      });
       mockActivitiesService.create.mockResolvedValue(undefined);
 
       await service.create(createProductDto, business);
@@ -140,7 +143,9 @@ describe('ProductService', () => {
       const products = [{ id: '1', price: 100 }];
       const total = 1;
 
-      mockProductRepository.findAndCount = jest.fn().mockResolvedValue([products, total]);
+      mockProductRepository.findAndCount = jest
+        .fn()
+        .mockResolvedValue([products, total]);
       mockPromotionService.findUserPromotions.mockResolvedValue([]);
       mockPromotionService.isProductQualified.mockReturnValue(true);
 

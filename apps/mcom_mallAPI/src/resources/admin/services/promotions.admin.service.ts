@@ -12,7 +12,13 @@ export class AdminPromotionsService {
 
   findAll() {
     return this.promotionsRepository.find({
-      relations: ['user', 'businesses', 'participants', 'excludedProducts', 'includedProducts'],
+      relations: [
+        'user',
+        'businesses',
+        'participants',
+        'excludedProducts',
+        'includedProducts',
+      ],
     });
   }
 }

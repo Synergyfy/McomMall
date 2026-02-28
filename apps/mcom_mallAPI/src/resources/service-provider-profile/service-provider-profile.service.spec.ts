@@ -94,7 +94,11 @@ describe('ServiceProviderProfileService', () => {
     });
 
     it('should throw ForbiddenException if user is not a service provider', async () => {
-      const nonProviderUser = { ...user, role: UserRole.CUSTOMER, populateName: jest.fn() } as unknown as User;
+      const nonProviderUser = {
+        ...user,
+        role: UserRole.CUSTOMER,
+        populateName: jest.fn(),
+      } as unknown as User;
       await expect(service.create(createDto, nonProviderUser)).rejects.toThrow(
         ForbiddenException,
       );
@@ -131,7 +135,9 @@ describe('ServiceProviderProfileService', () => {
     const existingProfile = { id: 'profile-id', user, serviceArea: 'NYC' };
 
     it('should update a profile successfully', async () => {
-      jest.spyOn(service, 'findMyProfile').mockResolvedValue(existingProfile as any);
+      jest
+        .spyOn(service, 'findMyProfile')
+        .mockResolvedValue(existingProfile as any);
       mockProfileRepository.merge.mockReturnValue({
         ...existingProfile,
         ...updateDto,

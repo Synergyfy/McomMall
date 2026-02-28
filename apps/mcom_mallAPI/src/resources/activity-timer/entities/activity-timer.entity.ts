@@ -1,5 +1,10 @@
-import { Entity, Column, PrimaryGeneratedColumn, CreateDateColumn, UpdateDateColumn, ManyToOne, JoinColumn } from 'typeorm';
-import { User } from '../../users/entities/user.entity';
+import {
+  Entity,
+  Column,
+  PrimaryGeneratedColumn,
+  CreateDateColumn,
+  UpdateDateColumn,
+} from 'typeorm';
 import { ActivityTimerType } from '../enums/activity-task-type.enum';
 import { ApiProperty } from '@nestjs/swagger';
 
@@ -13,7 +18,7 @@ export class ActivityTimer {
   @Column({
     type: 'enum',
     enum: ActivityTimerType,
-    default: ActivityTimerType.GENERAL
+    default: ActivityTimerType.GENERAL,
   })
   type: ActivityTimerType;
 

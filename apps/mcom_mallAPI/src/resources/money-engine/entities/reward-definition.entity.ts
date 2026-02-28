@@ -1,9 +1,4 @@
-import {
-  Column,
-  Entity,
-  JoinTable,
-  ManyToMany,
-} from 'typeorm';
+import { Column, Entity, JoinTable, ManyToMany } from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { ApiProperty } from '@nestjs/swagger';
@@ -32,7 +27,7 @@ export enum BurnStrategy {
 }
 
 export interface SplitRatioConfig {
-  real: number;   // e.g., 0.5 for 50%
+  real: number; // e.g., 0.5 for 50%
   reward: number; // e.g., 0.5 for 50%
 }
 

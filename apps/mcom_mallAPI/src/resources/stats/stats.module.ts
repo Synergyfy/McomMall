@@ -57,4 +57,4 @@ import { PromotionModule } from '../promotion/promotion.module';
   controllers: [StatsController],
   providers: [StatsService],
 })
-export class StatsModule { }
+export class StatsModule {}

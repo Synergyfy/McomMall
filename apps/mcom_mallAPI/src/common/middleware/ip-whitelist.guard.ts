@@ -1,10 +1,19 @@
-import { Injectable, CanActivate, ExecutionContext, ForbiddenException } from '@nestjs/common';
+import {
+  Injectable,
+  CanActivate,
+  ExecutionContext,
+  ForbiddenException,
+} from '@nestjs/common';
 import { Request } from 'express';
 
 @Injectable()
 export class IpWhitelistGuard implements CanActivate {
   // Define allowed IPs. In production, load this from environment variables (e.g., process.env.ALLOWED_IPS.split(','))
-  private readonly allowedIps = ['127.0.0.1', '::1', process.env.LOYALTY_API_IP];
+  private readonly allowedIps = [
+    '127.0.0.1',
+    '::1',
+    process.env.LOYALTY_API_IP,
+  ];
 
   canActivate(context: ExecutionContext): boolean {
     const request = context.switchToHttp().getRequest<Request>();
@@ -14,12 +23,12 @@ export class IpWhitelistGuard implements CanActivate {
 
     // Handle specific proxy headers if behind Nginx/Load Balancer
     if (request.headers['x-forwarded-for']) {
-        const forwarded = request.headers['x-forwarded-for'];
-        if (typeof forwarded === 'string') {
-            requestIp = forwarded.split(',')[0].trim();
-        } else {
-             requestIp = forwarded[0];
-        }
+      const forwarded = request.headers['x-forwarded-for'];
+      if (typeof forwarded === 'string') {
+        requestIp = forwarded.split(',')[0].trim();
+      } else {
+        requestIp = forwarded[0];
+      }
     }
 
     // Clean IPv6 mapped IPv4

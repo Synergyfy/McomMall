@@ -23,13 +23,19 @@ export class MarketplaceSection extends AbstractBaseEntity {
   @Column({ default: true })
   isVisible: boolean;
 
-  @ApiProperty({ example: { endTime: '2024-12-31T23:59:59Z' }, required: false })
+  @ApiProperty({
+    example: { endTime: '2024-12-31T23:59:59Z' },
+    required: false,
+  })
   @Column('jsonb', { nullable: true })
   config: any;
   // For Flash Sale: { endTime: Date }
   // For Promo: { itemsPerView: number }
 
-  @ApiProperty({ type: () => [Product], description: 'List of products featured in this section' })
+  @ApiProperty({
+    type: () => [Product],
+    description: 'List of products featured in this section',
+  })
   @ManyToMany(() => Product)
   @JoinTable({
     name: 'marketplace_section_products',

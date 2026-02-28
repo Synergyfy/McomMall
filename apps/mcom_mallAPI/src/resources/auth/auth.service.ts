@@ -16,7 +16,7 @@ export class AuthService {
     private readonly hashService: HashService,
     private readonly jwtService: JwtService,
     private readonly userService: UsersService,
-  ) { }
+  ) {}
 
   async comparePassword(password: string, email: string) {
     const user = await this.userRepository.findOne({
@@ -97,11 +97,11 @@ export class AuthService {
 
   async loginWithSso(ssoToken: string) {
     try {
-      const secret = process.env.SSO_SECRET || "shared-sso-secret";
+      const secret = process.env.SSO_SECRET || 'shared-sso-secret';
       const payload = this.jwtService.verify(ssoToken, { secret });
 
-      if (payload.iss !== "mcom-loyalty" || payload.aud !== "mcom-mall") {
-        throw new Error("Invalid SSO Token Issuer/Audience");
+      if (payload.iss !== 'mcom-loyalty' || payload.aud !== 'mcom-mall') {
+        throw new Error('Invalid SSO Token Issuer/Audience');
       }
 
       const email = payload.email;
@@ -110,9 +110,9 @@ export class AuthService {
       if (!user) {
         // Create User using transaction to ensure wallet and trial are created
         const role = payload.role?.toLowerCase();
-        const password = Math.random().toString(36).slice(-10) + "Aa1!";
+        const password = Math.random().toString(36).slice(-10) + 'Aa1!';
 
-        const fullName = payload.name || "Loyalty User";
+        const fullName = payload.name || 'Loyalty User';
         const nameParts = fullName.split(' ');
         const firstName = nameParts[0];
         const lastName = nameParts.slice(1).join(' ') || 'User'; // Default last name if missing
@@ -123,7 +123,9 @@ export class AuthService {
           lastName,
           password: password,
           confirm_password: password,
-          phoneNumber: payload.phoneNumber || `00000000${Math.floor(1000 + Math.random() * 9000)}`,
+          phoneNumber:
+            payload.phoneNumber ||
+            `00000000${Math.floor(1000 + Math.random() * 9000)}`,
           role: role === 'business' ? UserRole.OWNER : UserRole.CUSTOMER,
         });
       }
@@ -142,10 +144,9 @@ export class AuthService {
         ...tokens,
         email: user.email,
       };
-
     } catch (error) {
-      console.error("SSO Error", error);
-      throw new Error("SSO Failed");
+      console.error('SSO Error', error);
+      throw new Error('SSO Failed');
     }
   }
 }

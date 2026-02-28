@@ -13,7 +13,12 @@ import { CouponService } from './coupon.service';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { AuthenticatedRequest } from '../../common/types';
 import { CreateCouponDto } from './dto/create-coupon.dto';
-import { ApiBearerAuth, ApiOperation, ApiTags, ApiResponse } from '@nestjs/swagger';
+import {
+  ApiBearerAuth,
+  ApiOperation,
+  ApiTags,
+  ApiResponse,
+} from '@nestjs/swagger';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { RolesGuard } from '../../common/guards/roles.guard';
 import { Roles } from '../../common/decorators/roles.decorator';
@@ -23,9 +28,7 @@ import { Coupon } from './entities/coupon.entity';
 @ApiTags('Coupons')
 @Controller('coupons')
 export class CouponController {
-  constructor(
-    private readonly couponService: CouponService,
-  ) { }
+  constructor(private readonly couponService: CouponService) {}
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
@@ -33,7 +36,8 @@ export class CouponController {
   @Post()
   @ApiOperation({
     summary: 'Create a new Coupon',
-    description: 'Enforces tier-based capabilities for businesses. Admins can create platform coupons. Owners can create business coupons.'
+    description:
+      'Enforces tier-based capabilities for businesses. Admins can create platform coupons. Owners can create business coupons.',
   })
   @ApiResponse({ status: 201, type: Coupon })
   create(@Body() createCouponDto: CreateCouponDto) {
@@ -42,7 +46,10 @@ export class CouponController {
 
   @Public()
   @Get('list')
-  @ApiOperation({ summary: 'List all Coupons (Paginated)', description: 'Public endpoint.' })
+  @ApiOperation({
+    summary: 'List all Coupons (Paginated)',
+    description: 'Public endpoint.',
+  })
   findAll(@Query() pagination: PaginationQueryDto) {
     return this.couponService.findAll(pagination);
   }
@@ -52,13 +59,11 @@ export class CouponController {
   @Post('validate')
   @ApiOperation({
     summary: 'Validate a Coupon code',
-    description: 'Checks expiry, usage limits, stacking rules, and hyperlocal restrictions.'
+    description:
+      'Checks expiry, usage limits, stacking rules, and hyperlocal restrictions.',
   })
   @ApiResponse({ status: 200, type: Coupon })
-  validate(
-    @Body('code') code: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
+  validate(@Body('code') code: string, @Req() req: AuthenticatedRequest) {
     return this.couponService.validateCoupon(code, req.user);
   }
 
@@ -67,12 +72,10 @@ export class CouponController {
   @Post('save')
   @ApiOperation({
     summary: 'Save a Coupon',
-    description: 'Allows a customer to save a discovered coupon to their digital wallet/saved offers list.'
+    description:
+      'Allows a customer to save a discovered coupon to their digital wallet/saved offers list.',
   })
-  saveCoupon(
-    @Body('code') code: string,
-    @Req() req: AuthenticatedRequest,
-  ) {
+  saveCoupon(@Body('code') code: string, @Req() req: AuthenticatedRequest) {
     return this.couponService.saveCoupon(code, req.user);
   }
 
@@ -81,7 +84,7 @@ export class CouponController {
   @Post('remove-saved')
   @ApiOperation({
     summary: 'Remove a Saved Coupon',
-    description: 'Allows a customer to remove a coupon from their saved list.'
+    description: 'Allows a customer to remove a coupon from their saved list.',
   })
   removeSavedCoupon(
     @Body('code') code: string,
@@ -95,7 +98,7 @@ export class CouponController {
   @Get('saved')
   @ApiOperation({
     summary: 'Get Saved Coupons',
-    description: 'List all coupons saved by the customer.'
+    description: 'List all coupons saved by the customer.',
   })
   getSavedCoupons(@Req() req: AuthenticatedRequest) {
     return this.couponService.getSavedCoupons(req.user);
@@ -103,7 +106,10 @@ export class CouponController {
 
   @Public()
   @Get('detail/:code')
-  @ApiOperation({ summary: 'Get details of a specific Coupon by code', description: 'Public endpoint.' })
+  @ApiOperation({
+    summary: 'Get details of a specific Coupon by code',
+    description: 'Public endpoint.',
+  })
   @ApiResponse({ status: 200, type: Coupon })
   findOne(@Param('code') code: string) {
     return this.couponService.findCouponByCode(code);
@@ -111,7 +117,10 @@ export class CouponController {
 
   @Public()
   @Get('products/detail/:id')
-  @ApiOperation({ summary: 'Get details of a specific Coupon product (template)', description: 'Public endpoint.' })
+  @ApiOperation({
+    summary: 'Get details of a specific Coupon product (template)',
+    description: 'Public endpoint.',
+  })
   @ApiResponse({ status: 200, type: Coupon })
   getProductDetail(@Param('id') id: string) {
     return this.couponService.findProductById(id);
