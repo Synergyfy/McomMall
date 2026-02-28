@@ -1,21 +1,30 @@
 "use client";
 
-import React, { useMemo } from 'react';
+import React from 'react';
 import { AvailabilityProfile } from '@/service/services/types';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
-import { Clock } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
+import { useGetAvailableSlots } from '@/service/bookings/hook';
+import { format } from 'date-fns';
 
 interface TimeSlotGeneratorProps {
     availability?: AvailabilityProfile;
     selectedDate: Date | undefined;
     selectedSlot: string | undefined;
     onSlotSelect: (time: string) => void;
+    serviceId?: string;
 }
 
-export default function TimeSlotGenerator({ availability, selectedDate, selectedSlot, onSlotSelect }: TimeSlotGeneratorProps) {
+export default function TimeSlotGenerator({ availability, selectedDate, selectedSlot, onSlotSelect, serviceId }: TimeSlotGeneratorProps) {
+    const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
+    const { data: apiSlots, isLoading } = useGetAvailableSlots(serviceId || '', dateStr);
 
-    const slots = useMemo(() => {
+    const slots = React.useMemo(() => {
+        // Prefer API slots if available
+        if (apiSlots && apiSlots.length > 0) return apiSlots;
+        
+        // Fallback to local generation if API returns nothing or is not available
         if (!availability || !selectedDate || !availability.schedule) return [];
 
         const dayMap: Record<string, number> = {
@@ -40,10 +49,18 @@ export default function TimeSlotGenerator({ availability, selectedDate, selected
 
         return generatedSlots;
 
-    }, [availability, selectedDate]);
+    }, [availability, selectedDate, apiSlots]);
 
     if (!selectedDate) {
         return <div className="text-sm text-gray-500 text-center py-4">Select a date to see available times.</div>;
+    }
+
+    if (isLoading) {
+        return (
+            <div className="flex justify-center py-8">
+                <Loader2 className="animate-spin text-orange-600" />
+            </div>
+        );
     }
 
     if (slots.length === 0) {

@@ -14,4 +14,3 @@ export enum BookingStatus {
   /** The booking was refunded. */
   REFUNDED = 'refunded',
 }
-

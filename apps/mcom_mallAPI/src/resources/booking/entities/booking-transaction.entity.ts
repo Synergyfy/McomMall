@@ -29,6 +29,10 @@ export class BookingTransaction extends AbstractBaseEntity {
   @Column({ nullable: true })
   referenceId: string; // Stripe/PayPal ID
 
-  @Column({ type: 'enum', enum: TransactionStatus, default: TransactionStatus.PENDING })
+  @Column({
+    type: 'enum',
+    enum: TransactionStatus,
+    default: TransactionStatus.PENDING,
+  })
   status: TransactionStatus;
 }

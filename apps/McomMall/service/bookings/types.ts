@@ -5,7 +5,10 @@ export type BookingStatus =
   | 'confirmed'
   | 'declined'
   | 'cancelled'
-  | 'approved';
+  | 'approved'
+  | 'completed'
+  | 'refunded';
+
 export enum PaymentMethod {
   CREDIT_CARD = 'credit_card',
   PAYPAL = 'paypal',
@@ -20,25 +23,25 @@ export interface Service {
   businessId: string;
   name: string;
   description: string;
-  images: any[];
+  images: string[];
   isActive: boolean;
   pricingModel: string;
   fixedPrice: string;
-  pricePerHour: null;
-  pricePerUnit: null;
-  unitName: null;
+  pricePerHour: string | null;
+  pricePerUnit: string | null;
+  unitName: string | null;
   enableGuestPricing: boolean;
   guestPricingModel: string;
   minGuests: number;
   maxGuests: number;
   pricePerGuest: string;
-  fixedGroupPrice: null;
-  basePrice: null;
-  baseGuests: null;
-  additionalGuestPrice: null;
+  fixedGroupPrice: string | null;
+  basePrice: string | null;
+  baseGuests: number | null;
+  additionalGuestPrice: string | null;
   isQuoteModel: boolean;
-  bookingFee: null;
-  deletedAt: null;
+  bookingFee: string | null;
+  deletedAt: string | null;
 }
 
 export interface Payment {
@@ -78,10 +81,20 @@ export interface Booking {
   updatedAt: string;
   startTime: string;
   endTime: string;
-  status: string;
+  status: BookingStatus;
   user: User;
   service: Service;
   payment: Payment;
+  businessOwnerCompleted: boolean;
+  customerCompleted: boolean;
+  totalAmount?: number;
+  commissionAmount?: number;
+  providerAmount?: number;
+  paymentIntentId?: string;
+  transferId?: string;
+  refundId?: string;
+  payoutProcessed?: boolean;
+  refundProcessed?: boolean;
 }
 
 export interface CreateBookingPayload {

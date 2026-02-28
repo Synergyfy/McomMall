@@ -22,69 +22,6 @@ interface JoinCircleDialogProps {
     onJoined?: (circleId: string) => void;
 }
 
-const MOCK_DISCOVERABLE_CIRCLES = [
-    {
-        id: "disc-1",
-        name: "London Tech Growth",
-        ownerName: "Innovate UK",
-        type: "MARKETING",
-        memberCount: 42,
-        contributionAmount: 0,
-        description: "A circle focused on scaling tech businesses in the London area through collaborative marketing.",
-        tags: ["Tech", "Scaling", "London"],
-        terms: [
-            "Active participation in monthly campaigns is expected.",
-            "Must share at least one offer per quarter.",
-            "Respect and professional conduct within the group chat."
-        ]
-    },
-    {
-        id: "disc-2",
-        name: "Eco-Friendly Retailers",
-        ownerName: "Green Earth Ltd",
-        type: "ADVERTISING",
-        memberCount: 18,
-        contributionAmount: 0,
-        description: "Connecting sustainable retailers for cross-promotional advertising and shared customer bases.",
-        tags: ["Eco-friendly", "Retail", "Sustainability"],
-        terms: [
-            "Proof of sustainable practices required.",
-            "Shared advertising costs for group campaigns.",
-            "Mutual promotion on social media channels."
-        ]
-    },
-    {
-        id: "disc-3",
-        name: "SME Finance Support",
-        ownerName: "Capital Trust",
-        type: "SMART_MONEY",
-        memberCount: 12,
-        contributionAmount: 250,
-        description: "A Smart Money circle for small businesses to provide interest-free capital support to each other.",
-        tags: ["Finance", "SME", "Collaborative Capital"],
-        terms: [
-            "Mandatory £250 monthly contribution.",
-            "Draw order is decided by randomized ballot.",
-            "Default on contribution leads to immediate expulsion."
-        ]
-    },
-    {
-        id: "disc-4",
-        name: "West End Hospitality",
-        ownerName: "Soho Social Club",
-        type: "NEARBY",
-        memberCount: 29,
-        contributionAmount: 0,
-        description: "Hyperlocal collaboration for restaurants and bars in the West End to drive footfall.",
-        tags: ["Hospitality", "Nearby", "Footfall"],
-        terms: [
-            "Exclusive to businesses within 2 miles of Soho.",
-            "Joint weekend promotions participation.",
-            "Staff discounts for member businesses."
-        ]
-    }
-];
-
 export function JoinCircleDialog({ open, onOpenChange, groupCircleTypes, onJoined }: JoinCircleDialogProps) {
     const [search, setSearch] = useState("");
     const [step, setStep] = useState<"search" | "details" | "success">("search");
@@ -103,11 +40,9 @@ export function JoinCircleDialog({ open, onOpenChange, groupCircleTypes, onJoine
         if (!selectedCircle) return;
 
         setIsJoining(true);
-        // Simulate API delay for "perfect" feel
-        await new Promise(resolve => setTimeout(resolve, 1500));
 
         try {
-            // In a real app we'd use: await joinMutation.mutateAsync(selectedCircle.id);
+            await joinMutation.mutateAsync(selectedCircle.id);
             setStep("success");
             toast.success(`Successfully joined ${selectedCircle.name}!`);
         } catch (error) {
@@ -130,7 +65,7 @@ export function JoinCircleDialog({ open, onOpenChange, groupCircleTypes, onJoine
         }, 300);
     };
 
-    const filteredCircles = (discoverableData?.data.length ? discoverableData.data : MOCK_DISCOVERABLE_CIRCLES).filter(c =>
+    const filteredCircles = (discoverableData?.data || []).filter(c =>
         c.name.toLowerCase().includes(search.toLowerCase()) ||
         c.ownerName.toLowerCase().includes(search.toLowerCase())
     );

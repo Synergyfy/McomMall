@@ -194,7 +194,8 @@ describe('BookingController (e2e)', () => {
       .set('Authorization', `Bearer ${jwtToken}`) // Assuming admin or owner
       .expect(400);
 
-    expect(response.body.message).toContain('Only confirmed or cancelled bookings');
+    expect(response.body.message).toContain(
+      'Only confirmed or cancelled bookings',
+    );
   });
 });
-

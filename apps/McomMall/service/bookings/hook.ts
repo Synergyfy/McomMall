@@ -69,8 +69,19 @@ const markBookingComplete = async (bookingId: string) => {
   return data;
 };
 
+const refundBooking = async (bookingId: string) => {
+  const { data } = await api.post(`/bookings/${bookingId}/refund`);
+  return data;
+};
+
+const getAvailableSlots = async (serviceId: string, date: string): Promise<string[]> => {
+  const { data } = await api.get('/bookings/available-slots', { params: { serviceId, date } });
+  return data;
+};
+
 
 // --- Custom Hooks ---
+
 
 export const useCreateBooking = ({ onSuccess }: { onSuccess?: (data: any) => void } = {}) => {
   const queryClient = useQueryClient();
@@ -201,5 +212,29 @@ export const useMarkBookingComplete = () => {
       const errorMessage = error?.response?.data?.message || 'Failed to mark booking as complete. Please try again.';
       toast.error(errorMessage);
     },
+  });
+};
+
+export const useRefundBooking = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: refundBooking,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+      toast.success('Refund processed successfully!');
+    },
+    onError: (error: any) => {
+      const errorMessage = error?.response?.data?.message || 'Failed to process refund. Please try again.';
+      toast.error(errorMessage);
+    },
+  });
+};
+
+export const useGetAvailableSlots = (serviceId: string, date: string) => {
+  return useQuery({
+    queryKey: ['availableSlots', serviceId, date],
+    queryFn: () => getAvailableSlots(serviceId, date),
+    enabled: !!serviceId && !!date,
   });
 };

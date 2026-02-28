@@ -35,7 +35,6 @@ export class BookingController {
     return this.bookingService.getAvailableTimeSlots(serviceId, date);
   }
 
-
   @UseGuards(JwtAuthGuard)
   @Post()
   create(@Body() createBookingDto: CreateBookingDto, @Request() req) {
@@ -120,4 +119,3 @@ export class BookingController {
     return this.bookingService.refundBooking(id, req.user.id);
   }
 }
-

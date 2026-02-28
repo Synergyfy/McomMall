@@ -1,4 +1,11 @@
-import { Entity, Column, ManyToOne, OneToOne, JoinColumn, OneToMany } from 'typeorm';
+import {
+  Entity,
+  Column,
+  ManyToOne,
+  OneToOne,
+  JoinColumn,
+  OneToMany,
+} from 'typeorm';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Service } from '../../services/entities/service.entity';
@@ -35,6 +42,12 @@ export class ServiceBooking extends AbstractBaseEntity {
 
   @Column({ default: false })
   customerCompleted: boolean;
+
+  @Column({ type: 'int', default: 1 })
+  numberOfGuests: number;
+
+  @Column({ type: 'jsonb', nullable: true })
+  addonDetails: any; // Stores name and price of selected addons at time of booking
 
   @OneToOne(
     () => ProductServiceBooking,

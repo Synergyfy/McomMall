@@ -20,6 +20,7 @@ import { Switch } from "@/components/ui/switch";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 import { Separator } from "@/components/ui/separator";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 
@@ -30,7 +31,9 @@ import {
     useRemoveGroupCircleMember,
     useGetGroupCircleMessages,
     useSendMessage,
-    useAddCircleMember
+    useAddCircleMember,
+    useGetReferredBusinesses,
+    useDeleteGroupCircle
 } from "@/service/group-circle/hook";
 import {
     CreateGroupCircleDto,
@@ -40,21 +43,8 @@ import {
     SendMessageDto,
     AddMemberDto
 } from "@/service/group-circle/types";
-import { useGetMyPartners as useGetNetworkContacts } from "@/service/partnerships/hooks";
+import { useGetMyPartners as useGetNetworkContacts, useSearchOwners } from "@/service/partnerships/hooks";
 import { useGetUserProfile as useGetBusinessProfile } from "@/service/user/hook";
-
-interface ReferredBusiness {
-    businessId: string;
-    name: string;
-    relationshipTag?: string;
-}
-
-// Mock for missing affiliate stats
-const useAffiliateStats = () => ({
-    data: {
-        referredBusinesses: MOCK_REFERRED_BUSINESSES as ReferredBusiness[]
-    }
-});
 
 import { MultiLayerRadialGraph, Member, OrbitLevel } from "./components/MultiLayerRadialGraph";
 import { InviteMemberDialog } from "./components/InviteMemberDialog";
@@ -64,7 +54,6 @@ import { MemberSidebar } from "./components/MemberSidebar";
 import { MessagingOverlay } from "./components/MessagingOverlay";
 import { CircleCollaboration } from "./components/CircleCollaboration";
 import { JoinCircleDialog } from "./components/JoinCircleDialog";
-import { MOCK_USER_PROFILE, MOCK_NETWORK_CONTACTS, MOCK_GROUP_CIRCLES_RESPONSE, MOCK_REFERRED_BUSINESSES } from "./mocks";
 
 const GROUP_CIRCLE_TYPES = [
     { id: "MARKETING", name: "Marketing Circle", icon: Zap, color: "bg-blue-600", gradient: "from-blue-600 to-blue-800", mandatory: true },
@@ -77,11 +66,11 @@ const GROUP_CIRCLE_TYPES = [
 ];
 
 export default function GroupCirclesPage() {
-    const { data: circlesDataRaw, isLoading: isLoadingCircles } = useGetGroupCircles();
-    const circlesData = (circlesDataRaw?.data && circlesDataRaw.data.length > 0) ? circlesDataRaw : MOCK_GROUP_CIRCLES_RESPONSE;
+    const { data: circlesData, isLoading: isLoadingCircles } = useGetGroupCircles();
+    // const circlesData = (circlesDataRaw?.data && circlesDataRaw.data.length > 0) ? circlesDataRaw : MOCK_GROUP_CIRCLES_RESPONSE;
 
-    const { data: networkContactsDataApi } = useGetNetworkContacts();
-    const networkContactsDataRaw = (networkContactsDataApi && networkContactsDataApi.length > 0) ? networkContactsDataApi : MOCK_NETWORK_CONTACTS;
+    const { data: networkContactsDataRaw } = useGetNetworkContacts();
+    // const networkContactsDataRaw = (networkContactsDataApi && networkContactsDataApi.length > 0) ? networkContactsDataApi : MOCK_NETWORK_CONTACTS;
 
     const networkContactsData = useMemo(() => ({
         data: (networkContactsDataRaw || []).map((p: any) => ({
@@ -92,8 +81,8 @@ export default function GroupCirclesPage() {
         }))
     }), [networkContactsDataRaw]);
 
-    const { data: profileApi } = useGetBusinessProfile();
-    const profile = profileApi || MOCK_USER_PROFILE;
+    const { data: profile } = useGetBusinessProfile();
+    // const profile = profileApi || MOCK_USER_PROFILE;
 
     const [selectedCircleId, setSelectedCircleId] = useState<string | null>(null);
     const [circleSearch, setCircleSearch] = useState("");
@@ -116,8 +105,10 @@ export default function GroupCirclesPage() {
     const [createStep, setCreateStep] = useState(1);
     const [showGraphFilters, setShowGraphFilters] = useState(false);
     const [memberSelectionOpen, setMemberSelectionOpen] = useState(false);
-    const [selectionType, setSelectionType] = useState<"network" | "referred">("network");
+    const [selectionTab, setSelectionTab] = useState<"network" | "referred" | "global">("network");
     const [selectionSearch, setSelectionSearch] = useState("");
+
+    const { data: globalSearchResults, isLoading: isSearchingGlobal } = useSearchOwners(selectionSearch);
 
     const [newCircleData, setNewCircleData] = useState<Partial<CreateGroupCircleDto>>({
         duration: 'Summer',
@@ -126,14 +117,14 @@ export default function GroupCirclesPage() {
         referredBusinessIds: []
     });
 
-    const { data: affiliateStats } = useAffiliateStats();
+    const { data: referredBusinessesApi } = useGetReferredBusinesses();
+    const referredBusinesses = referredBusinessesApi || [];
     const createCircleMutation = useCreateGroupCircle();
     const updateCircleMutation = useUpdateGroupCircle();
     const removeMemberMutation = useRemoveGroupCircleMember();
     const addMemberMutation = useAddCircleMember();
     const sendMessageMutation = useSendMessage();
-
-    const [sessionCircles, setSessionCircles] = useState<any[]>([]);
+    const disbandCircleMutation = useDeleteGroupCircle();
 
     const { data: messagesData, isLoading: isLoadingMessages } = useGetGroupCircleMessages(
         selectedCircleId,
@@ -146,9 +137,8 @@ export default function GroupCirclesPage() {
 
     const circles = useMemo(() => {
         const baseCircles = circlesData?.data || [];
-        const allCircles = [...baseCircles, ...sessionCircles];
 
-        return allCircles.map(circle => ({
+        return baseCircles.map(circle => ({
             ...circle,
             type: (circle.type === 'SMART_MONEY' ? 'finance' : (circle.type?.toLowerCase() || 'marketing')) as any,
             durationDays: circle.duration,
@@ -168,7 +158,7 @@ export default function GroupCirclesPage() {
                     email: network.email || "",
                     role: (m.role.charAt(0).toUpperCase() + m.role.toLowerCase().slice(1)) as any,
                     orbit,
-                    status: (network.status === 'accepted' ? 'active' : 'offline') as any,
+                    status: (m.status === 'ACTIVE' ? 'active' : 'offline') as any,
                     category: network.businessName || network.relationshipTag || "Partner",
                     avatar: undefined,
                     contributions: Number(circle.contributionAmount),
@@ -269,39 +259,7 @@ export default function GroupCirclesPage() {
             } else {
                 await createCircleMutation.mutateAsync(newCircleData as CreateGroupCircleDto);
             }
-            toast.success(`${newCircleData.name} ${action}d! (API Success)`);
-        } catch (error) {
-            console.warn(`API ${action} failed, simulating success for testing:`, error);
-
-            if (!isEditing) {
-                // Add to local state for visualization during testing
-                const newCircle = {
-                    id: `local-${Date.now()}`,
-                    name: newCircleData.name,
-                    type: newCircleData.type,
-                    duration: newCircleData.duration,
-                    contributionAmount: newCircleData.contributionAmount,
-                    status: 'ACTIVE',
-                    currentRound: 1,
-                    members: [
-                        {
-                            id: `m-owner-${Date.now()}`,
-                            role: 'OWNER',
-                            network: {
-                                id: profile?.id || 'me',
-                                fullName: profile?.name || 'Me',
-                                email: profile?.email || '',
-                                status: 'accepted',
-                                locationTag: 'nearby'
-                            }
-                        }
-                    ]
-                };
-                setSessionCircles(prev => [newCircle, ...prev]);
-            }
-
-            toast.success(`${newCircleData.name} ${action}d! (Mock Success)`);
-        } finally {
+            toast.success(`Circle successfully ${action}d!`);
             setCreateOpen(false);
             setCreateStep(1);
             setNewCircleData({
@@ -310,6 +268,8 @@ export default function GroupCirclesPage() {
                 networkIds: [],
                 referredBusinessIds: []
             });
+        } catch (error) {
+            toast.error(`Failed to ${action} circle. Please try again.`);
         }
     }, [isEditing, selectedCircleId, newCircleData, updateCircleMutation, createCircleMutation, profile]);
 
@@ -320,10 +280,9 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 data: dto
             });
-            toast.success("Invitation sent! (API)");
+            toast.success("Invitation sent successfully!");
         } catch (error) {
-            console.warn("API invite failed, mocking success:", error);
-            toast.success("Invitation sent! (Mock)");
+            toast.error("Failed to send invitation. Please try again.");
         }
     }, [selectedCircleId, addMemberMutation]);
 
@@ -334,10 +293,9 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 memberId: activeMember.id
             });
-            toast.success("Member removed! (API)");
+            toast.success("Member removed successfully!");
         } catch (error) {
-            console.warn("API remove failed, mocking success:", error);
-            toast.success("Member removed! (Mock)");
+            toast.error("Failed to remove member. Please try again.");
         } finally {
             setActiveMember(null);
         }
@@ -356,11 +314,9 @@ export default function GroupCirclesPage() {
                 id: selectedCircleId,
                 data: payload
             });
-            console.log("Message sent to API");
-        } catch (error) {
-            console.warn("API send message failed, mocking success:", error);
-        } finally {
             setChatInput("");
+        } catch (error) {
+            toast.error("Failed to send message.");
         }
     }, [chatInput, selectedCircleId, chatType, chatMemberId, sendMessageMutation]);
 
@@ -658,7 +614,20 @@ export default function GroupCirclesPage() {
                                                     <Settings className="w-3.5 h-3.5 mr-2" /> Circle Settings
                                                 </DropdownMenuItem>
                                                 <Separator className="my-1" />
-                                                <DropdownMenuItem className="cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg">
+                                                <DropdownMenuItem
+                                                    onClick={async () => {
+                                                        if (confirm("Are you sure you want to disband this circle?")) {
+                                                            try {
+                                                                await disbandCircleMutation.mutateAsync(selectedCircle.id);
+                                                                setSelectedCircleId(null);
+                                                                toast.success("Circle disbanded successfully.");
+                                                            } catch (error) {
+                                                                toast.error("Failed to disband circle.");
+                                                            }
+                                                        }
+                                                    }}
+                                                    className="cursor-pointer text-red-600 hover:bg-red-50 hover:text-red-700 rounded-lg"
+                                                >
                                                     <AlertCircle className="w-3.5 h-3.5 mr-2" /> Disband Circle
                                                 </DropdownMenuItem>
                                             </DropdownMenuContent>
@@ -1032,7 +1001,7 @@ export default function GroupCirclesPage() {
                                             <Button
                                                 variant="outline"
                                                 className="w-full justify-between h-11 rounded-xl border-zinc-200"
-                                                onClick={() => { setSelectionType("network"); setMemberSelectionOpen(true); }}
+                                                onClick={() => { setSelectionTab("network"); setMemberSelectionOpen(true); }}
                                             >
                                                 <span className="truncate">{newCircleData.networkIds?.length || 0} Selected</span>
                                                 <Users className="w-4 h-4 text-zinc-400" />
@@ -1044,7 +1013,7 @@ export default function GroupCirclesPage() {
                                             <Button
                                                 variant="outline"
                                                 className="w-full justify-between h-11 rounded-xl border-zinc-200"
-                                                onClick={() => { setSelectionType("referred"); setMemberSelectionOpen(true); }}
+                                                onClick={() => { setSelectionTab("referred"); setMemberSelectionOpen(true); }}
                                             >
                                                 <span className="truncate">{newCircleData.referredBusinessIds?.length || 0} Selected</span>
                                                 <Briefcase className="w-4 h-4 text-zinc-400" />
@@ -1067,7 +1036,7 @@ export default function GroupCirclesPage() {
                                         <Button
                                             variant="outline"
                                             className="w-full justify-between h-14 rounded-2xl border-zinc-200 bg-zinc-50/50 hover:bg-zinc-50 hover:border-orange-200 transition-all group"
-                                            onClick={() => { setSelectionType("network"); setMemberSelectionOpen(true); }}
+                                            onClick={() => { setSelectionTab("network"); setMemberSelectionOpen(true); }}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
@@ -1087,7 +1056,7 @@ export default function GroupCirclesPage() {
                                         <Button
                                             variant="outline"
                                             className="w-full justify-between h-14 rounded-2xl border-zinc-200 bg-zinc-50/50 hover:bg-zinc-50 hover:border-indigo-200 transition-all group"
-                                            onClick={() => { setSelectionType("referred"); setMemberSelectionOpen(true); }}
+                                            onClick={() => { setSelectionTab("referred"); setMemberSelectionOpen(true); }}
                                         >
                                             <div className="flex items-center gap-3">
                                                 <div className="w-8 h-8 rounded-lg bg-white shadow-sm flex items-center justify-center">
@@ -1136,81 +1105,138 @@ export default function GroupCirclesPage() {
 
             {/* Member Selection Overlay */}
             <Dialog open={memberSelectionOpen} onOpenChange={setMemberSelectionOpen}>
-                <DialogContent className="sm:max-w-[500px] p-0 overflow-hidden rounded-3xl">
-                    <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
-                        <DialogTitle className="text-xl font-bold">Select {selectionType === "network" ? "Network Contacts" : "Referred Businesses"}</DialogTitle>
-                        <DialogDescription className="mt-1">Choose members to add to your new circle.</DialogDescription>
+                <DialogContent className="sm:max-w-[550px] p-0 overflow-hidden rounded-3xl">
+                    <Tabs value={selectionTab} onValueChange={(v: any) => setSelectionTab(v)} className="w-full">
+                        <div className="p-6 border-b border-zinc-100 bg-zinc-50/50">
+                            <DialogTitle className="text-xl font-bold">Select Members</DialogTitle>
+                            <DialogDescription className="mt-1">Choose members from your network or search globally.</DialogDescription>
 
-                        <div className="relative mt-4">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-                            <Input
-                                placeholder="Search by name or business..."
-                                className="pl-9 h-11 bg-white border-zinc-200 rounded-xl focus:ring-orange-500/20"
-                                value={selectionSearch}
-                                onChange={(e) => setSelectionSearch(e.target.value)}
-                            />
-                        </div>
-                    </div>
+                            <TabsList className="grid w-full grid-cols-3 mt-4 bg-zinc-100/80 rounded-xl p-1">
+                                <TabsTrigger value="network" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-orange-600 shadow-sm transition-all">Network</TabsTrigger>
+                                <TabsTrigger value="referred" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-indigo-600 shadow-sm transition-all">Referred</TabsTrigger>
+                                <TabsTrigger value="global" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-600 shadow-sm transition-all">Explore Global</TabsTrigger>
+                            </TabsList>
 
-                    <ScrollArea className="h-[400px]">
-                        <div className="p-4 space-y-2">
-                            {selectionType === "network" ? (
-                                networkContactsData?.data
-                                    .filter(c => c.fullName.toLowerCase().includes(selectionSearch.toLowerCase()) || c.businessName?.toLowerCase().includes(selectionSearch.toLowerCase()))
-                                    .map(contact => (
-                                        <div key={contact.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-orange-50 transition-colors border border-transparent hover:border-orange-100 group">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
-                                                    {contact.fullName[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-zinc-800">{contact.fullName}</p>
-                                                    {contact.businessName && <p className="text-[10px] text-zinc-500">{contact.businessName}</p>}
-                                                </div>
-                                            </div>
-                                            <Switch
-                                                checked={newCircleData.networkIds?.includes(contact.id)}
-                                                onCheckedChange={(checked) => {
-                                                    const currentIds = newCircleData.networkIds || [];
-                                                    setNewCircleData({
-                                                        ...newCircleData,
-                                                        networkIds: checked ? [...currentIds, contact.id] : currentIds.filter(id => id !== contact.id)
-                                                    });
-                                                }}
-                                                className="data-[state=checked]:bg-orange-600"
-                                            />
-                                        </div>
-                                    ))
-                            ) : (
-                                affiliateStats?.referredBusinesses
-                                    .filter(b => b.name.toLowerCase().includes(selectionSearch.toLowerCase()))
-                                    .map(referral => (
-                                        <div key={referral.businessId} className="flex items-center justify-between p-3 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100 group">
-                                            <div className="flex items-center gap-3">
-                                                <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
-                                                    {referral.name[0]}
-                                                </div>
-                                                <div>
-                                                    <p className="text-sm font-bold text-zinc-800">{referral.name}</p>
-                                                    <p className="text-[10px] text-zinc-500">{referral.relationshipTag || 'Referred Business'}</p>
-                                                </div>
-                                            </div>
-                                            <Switch
-                                                checked={newCircleData.referredBusinessIds?.includes(referral.businessId)}
-                                                onCheckedChange={(checked) => {
-                                                    const currentIds = newCircleData.referredBusinessIds || [];
-                                                    setNewCircleData({
-                                                        ...newCircleData,
-                                                        referredBusinessIds: checked ? [...currentIds, referral.businessId] : currentIds.filter(id => id !== referral.businessId)
-                                                    });
-                                                }}
-                                                className="data-[state=checked]:bg-indigo-600"
-                                            />
-                                        </div>
-                                    ))
-                            )}
+                            <div className="relative mt-4">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                                <Input
+                                    placeholder={selectionTab === "global" ? "Search by name, email or listing name..." : "Search by name or business..."}
+                                    className="pl-9 h-11 bg-white border-zinc-200 rounded-xl focus:ring-orange-500/20"
+                                    value={selectionSearch}
+                                    onChange={(e) => setSelectionSearch(e.target.value)}
+                                />
+                            </div>
                         </div>
-                    </ScrollArea>
+
+                        <ScrollArea className="h-[400px]">
+                            <div className="p-4">
+                                <TabsContent value="network" className="m-0 space-y-2">
+                                    {networkContactsData?.data
+                                        .filter(c => c.fullName.toLowerCase().includes(selectionSearch.toLowerCase()) || c.businessName?.toLowerCase().includes(selectionSearch.toLowerCase()))
+                                        .map(contact => (
+                                            <div key={contact.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-orange-50 transition-colors border border-transparent hover:border-orange-100 group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold group-hover:bg-orange-100 group-hover:text-orange-600 transition-colors">
+                                                        {contact.fullName[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-zinc-800">{contact.fullName}</p>
+                                                        {contact.businessName && <p className="text-[10px] text-zinc-500">{contact.businessName}</p>}
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={newCircleData.networkIds?.includes(contact.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        const currentIds = newCircleData.networkIds || [];
+                                                        setNewCircleData({
+                                                            ...newCircleData,
+                                                            networkIds: checked ? [...currentIds, contact.id] : currentIds.filter(id => id !== contact.id)
+                                                        });
+                                                    }}
+                                                    className="data-[state=checked]:bg-orange-600"
+                                                />
+                                            </div>
+                                        ))
+                                    }
+                                    {networkContactsData?.data.length === 0 && (
+                                        <div className="text-center py-10 text-muted-foreground">No network contacts found.</div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="referred" className="m-0 space-y-2">
+                                    {referredBusinesses
+                                        .filter(b => b.name.toLowerCase().includes(selectionSearch.toLowerCase()))
+                                        .map(referral => (
+                                            <div key={referral.businessId} className="flex items-center justify-between p-3 rounded-2xl hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-100 group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold group-hover:bg-indigo-100 group-hover:text-indigo-600 transition-colors">
+                                                        {referral.name[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-zinc-800">{referral.name}</p>
+                                                        <p className="text-[10px] text-zinc-500">{referral.relationshipTag || 'Referred Business'}</p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={newCircleData.referredBusinessIds?.includes(referral.businessId)}
+                                                    onCheckedChange={(checked) => {
+                                                        const currentIds = newCircleData.referredBusinessIds || [];
+                                                        setNewCircleData({
+                                                            ...newCircleData,
+                                                            referredBusinessIds: checked ? [...currentIds, referral.businessId] : currentIds.filter(id => id !== referral.businessId)
+                                                        });
+                                                    }}
+                                                    className="data-[state=checked]:bg-indigo-600"
+                                                />
+                                            </div>
+                                        ))
+                                    }
+                                    {referredBusinesses.length === 0 && (
+                                        <div className="text-center py-10 text-muted-foreground">No referred businesses found.</div>
+                                    )}
+                                </TabsContent>
+
+                                <TabsContent value="global" className="m-0 space-y-2">
+                                    {isSearchingGlobal ? (
+                                        <div className="flex items-center justify-center py-10">
+                                            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-emerald-600"></div>
+                                        </div>
+                                    ) : (
+                                        globalSearchResults?.map((owner: any) => (
+                                            <div key={owner.id} className="flex items-center justify-between p-3 rounded-2xl hover:bg-emerald-50 transition-colors border border-transparent hover:border-emerald-100 group">
+                                                <div className="flex items-center gap-3">
+                                                    <div className="w-10 h-10 rounded-full bg-zinc-100 flex items-center justify-center text-zinc-500 font-bold group-hover:bg-emerald-100 group-hover:text-emerald-600 transition-colors">
+                                                        {owner.firstName[0]}
+                                                    </div>
+                                                    <div>
+                                                        <p className="text-sm font-bold text-zinc-800">{owner.firstName} {owner.lastName}</p>
+                                                        <p className="text-[10px] text-zinc-500">{owner.email}</p>
+                                                    </div>
+                                                </div>
+                                                <Switch
+                                                    checked={newCircleData.networkIds?.includes(owner.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        const currentIds = newCircleData.networkIds || [];
+                                                        setNewCircleData({
+                                                            ...newCircleData,
+                                                            networkIds: checked ? [...currentIds, owner.id] : currentIds.filter(id => id !== owner.id)
+                                                        });
+                                                    }}
+                                                    className="data-[state=checked]:bg-emerald-600"
+                                                />
+                                            </div>
+                                        ))
+                                    )}
+                                    {!isSearchingGlobal && globalSearchResults?.length === 0 && selectionSearch.length >= 2 && (
+                                        <div className="text-center py-10 text-muted-foreground">No owners found matching your search.</div>
+                                    )}
+                                    {selectionSearch.length < 2 && selectionTab === "global" && (
+                                        <div className="text-center py-10 text-muted-foreground">Type at least 2 characters to search global owners.</div>
+                                    )}
+                                </TabsContent>
+                            </div>
+                        </ScrollArea>
+                    </Tabs>
 
                     <div className="p-4 border-t border-zinc-100 bg-zinc-50/50 flex justify-end">
                         <Button onClick={() => setMemberSelectionOpen(false)} className="bg-zinc-900 text-white rounded-xl h-10 px-6">

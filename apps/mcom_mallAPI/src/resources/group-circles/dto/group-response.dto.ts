@@ -13,4 +13,10 @@ export class GroupResponseDto extends Group {
     type: Number,
   })
   memberCount: number;
+
+  @ApiProperty({
+    description: 'Formatted members for frontend.',
+    type: [Object],
+  })
+  membersFormatted?: any[];
 }

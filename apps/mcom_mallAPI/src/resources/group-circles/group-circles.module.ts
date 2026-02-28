@@ -1,30 +1,31 @@
-import { Module, forwardRef } from '@nestjs/common';
-import { GroupingService } from './grouping.service';
-import { GroupingController } from './grouping.controller';
+import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GroupCirclesService } from './group-circles.service';
+import { GroupCirclesController } from './group-circles.controller';
 import { Group } from './entities/group.entity';
 import { GroupMember } from './entities/group-member.entity';
-import { User } from '../users/entities/user.entity';
 import { GroupWallet } from './entities/group-wallet.entity';
 import { GroupTransaction } from './entities/group-transaction.entity';
-import { Wallet } from '../wallet/entities/wallet.entity';
+import { GroupCircleMessage } from './entities/group-circle-message.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { CapabilityModule } from '../capability/capability.module';
+import { UsersModule } from '../users/users.module';
 
 @Module({
   imports: [
-    forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Group,
       GroupMember,
-      User,
       GroupWallet,
       GroupTransaction,
-      Wallet,
+      GroupCircleMessage,
     ]),
     PaymentsModule,
+    CapabilityModule,
+    UsersModule,
   ],
-  controllers: [GroupingController],
-  providers: [GroupingService],
+  controllers: [GroupCirclesController],
+  providers: [GroupCirclesService],
+  exports: [GroupCirclesService],
 })
-export class GroupingModule {}
+export class GroupCirclesModule {}

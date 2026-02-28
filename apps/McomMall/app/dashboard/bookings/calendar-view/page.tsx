@@ -58,6 +58,14 @@ const bookingStatusColors: Record<
     background: 'bg-red-100',
     text: 'text-red-800',
   },
+  completed: {
+    background: 'bg-emerald-100',
+    text: 'text-emerald-800',
+  },
+  refunded: {
+    background: 'bg-purple-100',
+    text: 'text-purple-800',
+  },
 };
 
 const CalendarView: FC = () => {

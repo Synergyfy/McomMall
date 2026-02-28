@@ -5,12 +5,15 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer } from 'lucide-react';
+import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer, Loader2 } from 'lucide-react';
 import { Service, AvailabilityProfile } from '@/service/services/types';
 import { toast } from 'sonner';
 import BookingCalendar from './BookingCalendar';
 import TimeSlotGenerator from './TimeSlotGenerator';
 import { format } from 'date-fns';
+import { useCreateBooking } from '@/service/bookings/hook';
+import { useRouter } from 'next/navigation';
+import BookingPaymentModal from '@/components/BookingPaymentModal';
 
 interface ServiceBookingWidgetProps {
     service: Service;
@@ -30,6 +33,7 @@ const DEFAULT_AVAILABILITY: AvailabilityProfile = {
 };
 
 export default function ServiceBookingWidget({ service }: ServiceBookingWidgetProps) {
+    const router = useRouter();
     // State for addons selection
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
 
@@ -41,6 +45,12 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
     const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
     const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
+
+    // Payment Modal State
+    const [paymentModalOpen, setPaymentModalOpen] = useState(false);
+    const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
+
+    const { mutateAsync: createBooking, isPending } = useCreateBooking();
 
     // Determine if we should show booking calendar
     // Show if explicit availability exists OR if pricing model implies time/booking
@@ -54,8 +64,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
             const expiry = new Date();
             expiry.setMinutes(expiry.getMinutes() + 15);
             setLockExpiry(expiry);
-
-            toast.success(`Slot ${selectedTime} held for 15 minutes.`);
+            toast.success(`Slot ${selectedTime} selected. Proceed to book.`);
         } else {
             setLockExpiry(null);
         }
@@ -78,7 +87,6 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     // Guest Pricing Calculation (simplified)
     const guestPrice = useMemo(() => {
         if (!service.enableGuestPricing) return 0;
-        // This is a simplified logic, real logic would handle 'perGuest', 'fixedGroup', etc.
         if (service.guestPricingModel === 'perGuest') {
             return parseFloat(service.pricePerGuest || '0') * guests;
         }
@@ -103,20 +111,44 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         setSelectedAddons(prev => ({ ...prev, [addonId]: checked }));
     };
 
-    const handleBookNow = () => {
+    const handleBookNow = async () => {
         if (showCalendar && (!selectedDate || !selectedTime)) {
             toast.error("Please select a date and time.");
             return;
         }
 
-        // In a real app, this would add to cart with all booking details
-        // For now, we mimic the ProductPage 'Add to Cart' / 'Buy Now' visual
-        // Show different message if manual approval is required
-        const message = service.requireApproval
-            ? `Booking request sent! The provider will confirm your slot for ${selectedDate ? format(selectedDate, 'PPP') : ''} at ${selectedTime}`
-            : `Booking confirmed for ${selectedDate ? format(selectedDate, 'PPP') : ''} at ${selectedTime}`;
+        try {
+            // Parse start time and end time
+            let start = new Date();
+            let end = new Date();
+            
+            if (selectedDate && selectedTime) {
+               const [hours, minutes] = selectedTime.split(':').map(Number);
+               start = new Date(selectedDate);
+               start.setHours(hours, minutes, 0, 0);
+               
+               end = new Date(start);
+               const duration = service.duration || 60; // default 60 mins
+               end.setMinutes(start.getMinutes() + duration);
+            }
 
-        toast.success(message);
+            const payload = {
+                serviceId: service.id,
+                startTime: start.toISOString(),
+                endTime: end.toISOString(),
+                numberOfGuests: guests,
+                addonIds: Object.keys(selectedAddons).filter(id => selectedAddons[id])
+            };
+
+            const booking = await createBooking(payload);
+            
+            if (booking && booking.id) {
+                setCreatedBookingId(booking.id);
+                setPaymentModalOpen(true);
+            }
+        } catch (error) {
+            // Error is handled by the hook via sonner toast
+        }
     };
 
     return (
@@ -160,6 +192,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                                     selectedDate={selectedDate}
                                     selectedSlot={selectedTime}
                                     onSlotSelect={setSelectedTime}
+                                    serviceId={service.id}
                                 />
                             </div>
                         )}
@@ -236,10 +269,11 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
             <div className="flex flex-col gap-3">
                 <Button
                     size="lg"
+                    disabled={isPending}
                     className="w-full py-6 text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-200"
                     onClick={handleBookNow}
                 >
-                    {service.requireApproval ? 'Request Booking' : 'Book Now'}
+                    {isPending ? <Loader2 className="animate-spin" /> : (service.requireApproval ? 'Request Booking' : 'Book Now')}
                 </Button>
                 <Button
                     size="lg"
@@ -250,6 +284,24 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                 </Button>
             </div>
 
+            {/* Payment Modal */}
+            {createdBookingId && (
+                <BookingPaymentModal
+                    isOpen={paymentModalOpen}
+                    onClose={() => {
+                        setPaymentModalOpen(false);
+                        router.push('/dashboard/my-bookings');
+                    }}
+                    bookingId={createdBookingId}
+                    onSuccess={() => {
+                        toast.success('Payment successful! Your booking is confirmed.');
+                        router.push('/dashboard/my-bookings');
+                    }}
+                />
+            )}
+
         </div>
     );
 }
+
+
