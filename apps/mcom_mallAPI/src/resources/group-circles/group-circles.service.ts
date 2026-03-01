@@ -388,9 +388,13 @@ export class GroupCirclesService {
 
           if (circle.founderPostcode) {
             // Clean postcodes for comparison (remove spaces, uppercase)
-            const cleanUserPostcode = postcode.replace(/\s+/g, '').toUpperCase();
-            const cleanFounderPostcode = circle.founderPostcode.replace(/\s+/g, '').toUpperCase();
-            
+            const cleanUserPostcode = postcode
+              .replace(/\s+/g, '')
+              .toUpperCase();
+            const cleanFounderPostcode = circle.founderPostcode
+              .replace(/\s+/g, '')
+              .toUpperCase();
+
             if (cleanUserPostcode === cleanFounderPostcode) {
               distance = 0;
               isExactPostcodeMatch = true;

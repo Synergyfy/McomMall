@@ -166,9 +166,11 @@ describe('GroupCircles (e2e)', () => {
 
       expect(res.body.data).toBeDefined();
       expect(Array.isArray(res.body.data)).toBe(true);
-      
+
       // Verification: Ensure the user's own groups are not returned in discovery
-      const ownGroupsInResults = res.body.data.filter((g: any) => g.founderId === ownerJwtToken); // Token is a proxy here
+      const ownGroupsInResults = res.body.data.filter(
+        (g: any) => g.founderId === ownerJwtToken,
+      ); // Token is a proxy here
       expect(ownGroupsInResults.length).toBe(0);
     });
   });
