@@ -428,7 +428,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should create a gift card associated with an owner', async () => {
-      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
 
       const result = await service.purchaseGiftCard(
         purchaseDto,

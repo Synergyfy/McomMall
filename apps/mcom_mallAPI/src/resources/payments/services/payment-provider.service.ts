@@ -146,7 +146,7 @@ export class PaymentProviderService {
           reason: 'Amount or currency mismatch for PayPal order',
         };
       }
-    } catch (e) {
+    } catch (_e) {
       return {
         ok: false,
         details: result,
@@ -154,5 +154,45 @@ export class PaymentProviderService {
       };
     }
     return { ok: true, details: result };
+  }
+
+  async createStripeTransfer(
+    amount: number,
+    currency: string,
+    destinationAccountId: string,
+    metadata?: Record<string, any>,
+  ): Promise<Stripe.Transfer> {
+    return this.stripe.transfers.create({
+      amount: Math.round(amount * 100),
+      currency,
+      destination: destinationAccountId,
+      metadata,
+    });
+  }
+
+  async refundStripePayment(
+    paymentIntentId: string,
+    amount?: number,
+  ): Promise<Stripe.Refund> {
+    const refundParams: Stripe.RefundCreateParams = {
+      payment_intent: paymentIntentId,
+    };
+    if (amount) {
+      refundParams.amount = Math.round(amount * 100);
+    }
+    return this.stripe.refunds.create(refundParams);
+  }
+
+  // Placeholder for PayPal Payouts and Refunds
+  async createPaypalPayout(
+    _amount: number,
+    _currency: string,
+    _receiverEmail: string,
+  ): Promise<any> {
+    return { batch_header: { payout_batch_id: 'mock_paypal_payout_id' } };
+  }
+
+  async refundPaypalOrder(_captureId: string, _amount?: number): Promise<any> {
+    return { id: 'mock_paypal_refund_id', status: 'COMPLETED' };
   }
 }

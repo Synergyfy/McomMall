@@ -9,24 +9,46 @@ import {
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { GroupStatus } from '../group-status.enum';
-import { IsIn } from 'class-validator';
+import { GroupType } from '../group-type.enum';
+import { PayoutFrequency } from '../payout-frequency.enum';
 import { GroupMember } from './group-member.entity';
 import { GroupWallet } from './group-wallet.entity';
-import { ApiProperty } from '@nestjs/swagger';
+import { GroupCircleMessage } from './group-circle-message.entity';
 
 @Entity('groups')
 export class Group extends AbstractBaseEntity {
   @Column()
   name: string;
 
-  @Column()
+  @Column({ type: 'enum', enum: GroupType, default: GroupType.MARKETING })
+  type: GroupType;
+
+  @Column({ nullable: true })
+  duration: string;
+
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0 })
+  contributionAmount: number;
+
+  @Column({
+    type: 'enum',
+    enum: PayoutFrequency,
+    default: PayoutFrequency.MONTHLY,
+  })
+  payoutFrequency: PayoutFrequency;
+
+  @Column({ type: 'int', default: 1 })
+  currentRound: number;
+
+  @Column({ type: 'timestamp', nullable: true })
+  startDate: Date;
+
+  @Column({ nullable: true })
   localArea: string;
 
-  @Column({ type: 'int' })
-  @IsIn([6, 12])
+  @Column({ type: 'int', default: 6 })
   size: number;
 
-  @Column()
+  @Column({ nullable: true })
   recruitmentDeadline: Date;
 
   @Column({ nullable: true })
@@ -47,4 +69,7 @@ export class Group extends AbstractBaseEntity {
 
   @OneToOne(() => GroupWallet, (wallet) => wallet.group)
   wallet: GroupWallet;
+
+  @OneToMany(() => GroupCircleMessage, (message) => message.group)
+  messages: GroupCircleMessage[];
 }

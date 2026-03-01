@@ -62,6 +62,7 @@ const navItems: NavItem[] = [
     { title: 'Listings', href: '/admin/listings', icon: ListChecks },
     { title: 'Products', href: '/admin/products', icon: Package },
     { title: 'Services', href: '/admin/services', icon: Briefcase },
+    { title: 'Bookings', href: '/admin/bookings', icon: Clock },
     { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
     { title: 'Terminal Cashback', href: '/admin/terminal-cashback', icon: QrCode },
     { title: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },

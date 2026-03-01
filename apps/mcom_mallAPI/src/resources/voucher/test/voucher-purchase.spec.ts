@@ -133,7 +133,7 @@ describe('VoucherService - Purchase and Redemption', () => {
       const mockVoucherProduct = {
         id: 'prod-123',
         isEnabled: true,
-        user: { id: 'owner-123' },
+        user: { id: 'owner-123', isActive: true },
         expiryDays: 365,
       };
       const verifyDto: VerifyVoucherPurchaseDto = {

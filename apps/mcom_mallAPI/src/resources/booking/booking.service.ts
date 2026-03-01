@@ -28,6 +28,7 @@ import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { Service } from '../services/entities/service.entity';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { EmailService } from '../email/email.service';
 import { BlockSlotDto } from './dto/block-slot.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -39,6 +40,11 @@ import { BlockedSlot } from './entities/blocked-slot.entity';
 import { PriceModifier } from './entities/price-modifier.entity';
 import { ServiceBooking } from './entities/service-booking.entity';
 import { ServicePayment } from './entities/service-payment.entity';
+import {
+  BookingTransaction,
+  TransactionType,
+  TransactionStatus,
+} from './entities/booking-transaction.entity';
 
 @Injectable()
 export class BookingService {
@@ -51,6 +57,8 @@ export class BookingService {
     private readonly bookingRepository: Repository<ServiceBooking>,
     @InjectRepository(ServicePayment)
     private readonly servicePaymentRepository: Repository<ServicePayment>,
+    @InjectRepository(BookingTransaction)
+    private readonly bookingTransactionRepository: Repository<BookingTransaction>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
     @InjectRepository(Service)
@@ -59,6 +67,7 @@ export class BookingService {
     private readonly notificationService: NotificationService,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
+    private readonly emailService: EmailService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
   ) {}
@@ -66,19 +75,70 @@ export class BookingService {
   async checkAvailability(
     checkAvailabilityDto: CheckAvailabilityDto,
   ): Promise<{ isAvailable: boolean; priceMultiplier: number }> {
+    // ... previous code
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
-      where: { id: serviceId },
-      relations: ['business', 'business.user'],
+      where: { id: serviceId, isActive: true },
+      relations: ['business', 'business.user', 'business.businessHours'],
     });
 
     if (!service) {
-      throw new NotFoundException('Service not found.');
+      throw new NotFoundException('Active service not found.');
+    }
+
+    if (service.business.status !== BusinessStatus.PUBLISHED) {
+      throw new BadRequestException(
+        'Business is not currently active and cannot accept bookings.',
+      );
+    }
+
+    if (!service.business.user || !service.business.user.isActive) {
+      throw new BadRequestException('The owner of the business is not active.');
     }
 
     const start = new Date(startTime);
     const end = new Date(endTime);
+
+    // Check Business Hours
+    if (
+      service.business.businessHours &&
+      service.business.businessHours.length > 0
+    ) {
+      const days = [
+        'SUNDAY',
+        'MONDAY',
+        'TUESDAY',
+        'WEDNESDAY',
+        'THURSDAY',
+        'FRIDAY',
+        'SATURDAY',
+      ];
+      const dayOfWeek = days[start.getDay()] as any;
+      const businessHour = service.business.businessHours.find(
+        (bh) => bh.dayOfWeek === dayOfWeek,
+      );
+
+      if (!businessHour) {
+        return { isAvailable: false, priceMultiplier: 1 }; // Not open on this day
+      }
+
+      if (!businessHour.is24h) {
+        // Simple time string comparison (e.g., '09:00:00' <= '10:00:00')
+        const formatTime = (date: Date) => {
+          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
+        };
+        const startTimeStr = formatTime(start);
+        const endTimeStr = formatTime(end);
+
+        if (
+          startTimeStr < businessHour.openTime ||
+          endTimeStr > businessHour.closeTime
+        ) {
+          return { isAvailable: false, priceMultiplier: 1 }; // Outside business hours
+        }
+      }
+    }
 
     const blockedSlot = await this.blockedSlotRepository.findOne({
       where: {
@@ -89,6 +149,24 @@ export class BookingService {
     });
 
     if (blockedSlot) {
+      return { isAvailable: false, priceMultiplier: 1 };
+    }
+
+    // Check existing bookings for overlapping time
+    const overlappingBooking = await this.bookingRepository.findOne({
+      where: {
+        service: { id: serviceId },
+        startTime: LessThan(end),
+        endTime: MoreThan(start),
+        status: In([
+          BookingStatus.PENDING,
+          BookingStatus.APPROVED,
+          BookingStatus.CONFIRMED,
+        ]),
+      },
+    });
+
+    if (overlappingBooking) {
       return { isAvailable: false, priceMultiplier: 1 };
     }
 
@@ -104,6 +182,138 @@ export class BookingService {
       isAvailable: true,
       priceMultiplier: priceModifier ? priceModifier.priceMultiplier : 1,
     };
+  }
+
+  async getAvailableTimeSlots(
+    serviceId: string,
+    dateStr: string,
+  ): Promise<string[]> {
+    const service = await this.serviceRepository.findOne({
+      where: { id: serviceId, isActive: true },
+      relations: ['business', 'business.user', 'business.businessHours'],
+    });
+
+    if (
+      !service ||
+      service.business.status !== BusinessStatus.PUBLISHED ||
+      !service.business.user?.isActive
+    ) {
+      return []; // Return empty slots if service or business is invalid
+    }
+
+    // Parse date properly to avoid timezone shifts
+    const [year, month, day] = dateStr.split('-').map(Number);
+    const targetDate = new Date(year, month - 1, day);
+    const startOfDay = new Date(year, month - 1, day, 0, 0, 0, 0);
+    const endOfDay = new Date(year, month - 1, day, 23, 59, 59, 999);
+
+    const days = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+    ];
+    const dayOfWeekName = days[targetDate.getDay()];
+
+    let openTimeStr = '';
+    let closeTimeStr = '';
+    let is24h = false;
+
+    // 1. Try to get from Business Hours relation
+    const businessHour = service.business.businessHours?.find(
+      (bh) => bh.dayOfWeek === (dayOfWeekName as any),
+    );
+
+    if (businessHour && businessHour.dayOfWeek === (dayOfWeekName as any)) {
+      openTimeStr = businessHour.openTime;
+      closeTimeStr = businessHour.closeTime;
+      is24h = businessHour.is24h;
+    }
+    // 2. Fallback to Service level availability JSON if it exists
+    else if (service.availability?.schedule) {
+      const sched = service.availability.schedule.find(
+        (s: any) => s.day.toUpperCase() === dayOfWeekName,
+      );
+      if (sched && sched.enabled) {
+        openTimeStr = sched.startTime;
+        closeTimeStr = sched.endTime;
+      }
+    }
+
+    // If still no hours found, return empty
+    if (!openTimeStr && !is24h) {
+      return [];
+    }
+
+    const durationMinutes = service.duration || 60;
+    const availableSlots: string[] = [];
+
+    // Parse open/close times
+    let openTimeMinutes = 0;
+    let closeTimeMinutes = 24 * 60;
+
+    if (!is24h) {
+      const parseTimeStr = (tStr: string) => {
+        if (!tStr) return 0;
+        const [h, m] = tStr.split(':').map(Number);
+        return h * 60 + m;
+      };
+      openTimeMinutes = parseTimeStr(openTimeStr);
+      closeTimeMinutes = parseTimeStr(closeTimeStr);
+    }
+
+    // Get blocked slots and existing bookings for the day
+    const blockedSlots = await this.blockedSlotRepository.find({
+      where: {
+        business: { id: service.business.id },
+        startTime: LessThan(endOfDay),
+        endTime: MoreThan(startOfDay),
+      },
+    });
+
+    const existingBookings = await this.bookingRepository.find({
+      where: {
+        service: { id: serviceId },
+        startTime: LessThan(endOfDay),
+        endTime: MoreThan(startOfDay),
+        status: In([
+          BookingStatus.PENDING,
+          BookingStatus.APPROVED,
+          BookingStatus.CONFIRMED,
+        ]),
+      },
+    });
+
+    // Generate slots
+    for (
+      let m = openTimeMinutes;
+      m + durationMinutes <= closeTimeMinutes;
+      m += durationMinutes
+    ) {
+      const slotStart = new Date(startOfDay);
+      slotStart.setHours(Math.floor(m / 60), m % 60, 0, 0);
+
+      const slotEnd = new Date(slotStart.getTime() + durationMinutes * 60000);
+
+      // Check for overlap
+      const isBlocked = blockedSlots.some(
+        (bs) => slotStart < bs.endTime && slotEnd > bs.startTime,
+      );
+      const isBooked = existingBookings.some(
+        (eb) => slotStart < eb.endTime && slotEnd > eb.startTime,
+      );
+
+      if (!isBlocked && !isBooked) {
+        availableSlots.push(
+          `${slotStart.getHours().toString().padStart(2, '0')}:${slotStart.getMinutes().toString().padStart(2, '0')}`,
+        );
+      }
+    }
+
+    return availableSlots;
   }
 
   /**
@@ -174,13 +384,19 @@ export class BookingService {
     userId: string,
     transactionalEntityManager: EntityManager,
   ): Promise<ServiceBooking> {
-    const { serviceId, startTime, endTime } = createBookingDto;
+    const { serviceId, startTime, endTime, numberOfGuests, addonIds } =
+      createBookingDto;
 
     const service = await transactionalEntityManager.findOne(Service, {
-      where: { id: serviceId },
-      relations: ['business', 'business.user'],
+      where: { id: serviceId, isActive: true },
+      relations: [
+        'business',
+        'business.user',
+        'business.businessHours',
+        'configurableAddons',
+      ],
     });
-    if (!service) throw new NotFoundException('Service not found.');
+    if (!service) throw new NotFoundException('Active service not found.');
 
     const business = service.business;
     if (!business)
@@ -206,24 +422,73 @@ export class BookingService {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
-    const blockedSlot = await transactionalEntityManager.findOne(BlockedSlot, {
-      where: {
-        business: { id: business.id },
-        startTime: LessThan(end),
-        endTime: MoreThan(start),
-      },
+    // Check Availability using existing method logic
+    const availability = await this.checkAvailability({
+      serviceId,
+      startTime,
+      endTime,
     });
-    if (blockedSlot)
-      throw new ConflictException('The selected time slot is not available.');
+    if (!availability.isAvailable) {
+      throw new ConflictException(
+        'The selected time slot is not available or outside business hours.',
+      );
+    }
+
+    // Process Addons
+    const selectedAddons = [];
+    if (addonIds && addonIds.length > 0) {
+      for (const addonId of addonIds) {
+        const addon = service.configurableAddons.find((a) => a.id === addonId);
+        if (addon) {
+          selectedAddons.push({
+            id: addon.id,
+            name: addon.name,
+            price: Number(addon.price),
+          });
+        }
+      }
+    }
 
     const booking = transactionalEntityManager.create(ServiceBooking, {
       user: { id: userId },
       service: { id: serviceId },
       startTime: start,
       endTime: end,
+      numberOfGuests: numberOfGuests || 1,
+      numberOfStaff: createBookingDto.numberOfStaff || 1,
+      addonDetails: selectedAddons.length > 0 ? selectedAddons : null,
+      address: createBookingDto.address,
+      phone: createBookingDto.phone,
+      problemDescription: createBookingDto.problemDescription,
+      photos: createBookingDto.photos,
+      config: createBookingDto.config,
     });
 
     const savedBooking = await transactionalEntityManager.save(booking);
+
+    // Fetch full booking details for email
+    const fullBooking = await transactionalEntityManager.findOne(
+      ServiceBooking,
+      {
+        where: { id: savedBooking.id },
+        relations: [
+          'user',
+          'service',
+          'service.business',
+          'service.business.user',
+        ],
+      },
+    );
+
+    if (fullBooking) {
+      // Send emails to both customer and business owner
+      try {
+        await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+        await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+      } catch (error) {
+        console.error('Failed to send booking notification emails:', error);
+      }
+    }
 
     await this.notificationService.create({
       recipientId: business.user.id,
@@ -261,6 +526,7 @@ export class BookingService {
     return this.bookingRepository.find({
       where,
       relations: ['user', 'service', 'payment'],
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -279,6 +545,7 @@ export class BookingService {
     return this.bookingRepository.find({
       where,
       relations: ['user', 'service', 'payment', 'service.business'],
+      order: { created_at: 'DESC' },
     });
   }
 
@@ -339,10 +606,10 @@ export class BookingService {
    * This method is wrapped in a transaction for consistency.
    */
   async cancel(bookingId: string, userId: string): Promise<ServiceBooking> {
-    return this.dataSource.transaction(async (transactionalEntityManager) => {
-      const booking = await transactionalEntityManager.findOne(ServiceBooking, {
+    return this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
-        relations: ['user'],
+        relations: ['user', 'payment'],
       });
 
       if (!booking) {
@@ -355,8 +622,53 @@ export class BookingService {
         );
       }
 
+      const wasPaid = !!booking.payment || !!booking.paymentIntentId;
+      const canRefund =
+        wasPaid && !booking.refundProcessed && !booking.payoutProcessed;
+
       booking.status = BookingStatus.CANCELLED;
-      return transactionalEntityManager.save(booking);
+
+      if (canRefund && booking.paymentIntentId) {
+        try {
+          const transactionRepo = manager.getRepository(BookingTransaction);
+          let refundResult;
+
+          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+            refundResult =
+              await this.paymentProviderService.refundStripePayment(
+                booking.paymentIntentId,
+              );
+            booking.refundId = refundResult.id;
+          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+            refundResult = await this.paymentProviderService.refundPaypalOrder(
+              booking.paymentIntentId,
+            );
+            booking.refundId = refundResult.id;
+          }
+
+          if (refundResult) {
+            booking.refundProcessed = true;
+            booking.status = BookingStatus.REFUNDED;
+
+            const refundTx = transactionRepo.create({
+              booking,
+              type: TransactionType.REFUND,
+              amount: booking.totalAmount,
+              referenceId: booking.refundId,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(refundTx);
+          }
+        } catch (error) {
+          console.error(
+            `Automatic refund failed for booking ${bookingId}:`,
+            error,
+          );
+          // We still cancel the booking even if refund fails (admin can force it later)
+        }
+      }
+
+      return manager.save(booking);
     });
   }
 
@@ -447,6 +759,7 @@ export class BookingService {
     clientSecret?: string;
     orderId?: string;
     provider: PaymentMethod;
+    amount: number;
   }> {
     const { bookingId, paymentProvider } = initiateDto;
 
@@ -471,26 +784,150 @@ export class BookingService {
       );
     }
 
-    // This is a placeholder for the actual amount calculation
-    const amount = booking.service.fixedPrice;
+    // Calculate amounts based on actual service configuration
+    let baseAmount = 0;
+    const pricingModel = booking.service.pricingModel;
+
+    if (pricingModel === 'fixed') {
+      baseAmount = Number(booking.service.fixedPrice || 0);
+    } else if (pricingModel === 'perHour') {
+      const durationHours =
+        (booking.endTime.getTime() - booking.startTime.getTime()) /
+        (1000 * 60 * 60);
+      baseAmount = Number(booking.service.pricePerHour || 0) * durationHours;
+    } else if (pricingModel === 'perUnit') {
+      // For perUnit we use numberOfGuests or quantity if we had it. Using numberOfGuests as proxy for units if applicable.
+      baseAmount = Number(booking.service.pricePerUnit || 0);
+    }
+
+    // Apply Pricing Rules (Weekend / Night)
+    let multiplier = 1;
+    let surcharge = 0;
+    const pricingRules = booking.service.pricingRules;
+
+    if (pricingRules) {
+      const bookingDate = new Date(booking.startTime);
+      const isWeekend =
+        bookingDate.getDay() === 0 || bookingDate.getDay() === 6;
+      if (isWeekend && pricingRules.weekendMultiplier) {
+        multiplier = pricingRules.weekendMultiplier;
+      }
+
+      const startHour = bookingDate.getHours();
+      if ((startHour >= 18 || startHour < 7) && pricingRules.nightSurcharge) {
+        surcharge += Number(pricingRules.nightSurcharge);
+      }
+    }
+
+    // Guest Pricing
+    let guestAmount = 0;
+    if (
+      booking.service.enableGuestPricing &&
+      booking.service.guestPricingModel === 'perGuest'
+    ) {
+      guestAmount =
+        Number(booking.service.pricePerGuest || 0) *
+        (booking.numberOfGuests || 1);
+    }
+
+    // Addons Pricing
+    let addonsAmount = 0;
+    if (booking.addonDetails && Array.isArray(booking.addonDetails)) {
+      addonsAmount = booking.addonDetails.reduce(
+        (sum, addon) => sum + Number(addon.price || 0),
+        0,
+      );
+    }
+
+    const bookingFee = Number(booking.service.bookingFee || 0);
+    const travelFee =
+      (booking.service.deliveryConfig?.mode === 'onsite'
+        ? booking.service.deliveryConfig?.travelFee
+        : 0) || 0;
+
+    const totalAmount =
+      (baseAmount * multiplier + guestAmount + addonsAmount + surcharge) *
+        (booking.numberOfStaff || 1) +
+      bookingFee +
+      Number(travelFee);
+
+    if (totalAmount <= 0) {
+      throw new BadRequestException(
+        'Total booking amount must be greater than zero.',
+      );
+    }
+
+    const commissionRate = 0.1; // 10% commission
+    const commissionAmount = parseFloat(
+      (totalAmount * commissionRate).toFixed(2),
+    );
+    const providerAmount = parseFloat(
+      (totalAmount - commissionAmount).toFixed(2),
+    );
     const currency = 'GBP';
 
+    booking.totalAmount = totalAmount;
+    booking.commissionAmount = commissionAmount;
+    booking.providerAmount = providerAmount;
+
     if (paymentProvider === PaymentMethod.STRIPE) {
+      // Check if we already have a valid intent for this booking
+      if (
+        booking.paymentIntentId &&
+        booking.paymentIntentId.startsWith('pi_')
+      ) {
+        try {
+          const existingIntent =
+            await this.paymentProviderService.verifyStripePaymentIntent(
+              booking.paymentIntentId,
+              totalAmount,
+              currency,
+            );
+          // If it's already succeeded or still processing, we can return it (though succeeded should be handled by verify)
+          if (
+            existingIntent.ok ||
+            existingIntent.reason?.includes('status succeeded')
+          ) {
+            return {
+              clientSecret: (existingIntent.details as any).client_secret,
+              provider: PaymentMethod.STRIPE,
+              amount: totalAmount,
+            };
+          }
+        } catch (_e) {
+          // If retrieval fails or amount mismatch, we'll just create a new one below
+        }
+      }
+
       const paymentIntent =
         await this.paymentProviderService.createStripePaymentIntent(
-          amount,
+          totalAmount,
           currency,
+          { bookingId: booking.id },
         );
+      booking.paymentIntentId = paymentIntent.id;
+      await this.bookingRepository.save(booking);
+
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
+        amount: totalAmount,
       };
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
+      // For PayPal, we usually create a new order unless we want to track capture state
       const order = await this.paymentProviderService.createPaypalOrder(
-        amount,
+        totalAmount,
         currency,
+        { bookingId: booking.id },
       );
-      return { orderId: order.id, provider: PaymentMethod.PAYPAL };
+      booking.paymentIntentId = order.id;
+      await this.bookingRepository.save(booking);
+
+      return {
+        orderId: order.id,
+        provider: PaymentMethod.PAYPAL,
+        amount: totalAmount,
+      };
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -556,6 +993,7 @@ export class BookingService {
 
     return this.dataSource.transaction(async (manager) => {
       const paymentRepo = manager.getRepository(ServicePayment);
+      const transactionRepo = manager.getRepository(BookingTransaction);
 
       const newPayment = paymentRepo.create({
         user: { id: userId },
@@ -566,14 +1004,59 @@ export class BookingService {
       });
       const savedPayment = await paymentRepo.save(newPayment);
 
+      const newTransaction = transactionRepo.create({
+        booking,
+        type: TransactionType.PAYMENT,
+        amount,
+        referenceId: transactionId,
+        status: TransactionStatus.COMPLETED,
+      });
+      await transactionRepo.save(newTransaction);
+
       booking.payment = savedPayment;
+      booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
+
+      // Ensure amounts are synced to the booking entity if they weren't set during initiation
+      if (!booking.totalAmount || booking.totalAmount === 0) {
+        booking.totalAmount = amount;
+        const commissionRate = 0.1; // 10% commission
+        booking.commissionAmount = parseFloat(
+          (amount * commissionRate).toFixed(2),
+        );
+        booking.providerAmount = parseFloat(
+          (amount - booking.commissionAmount).toFixed(2),
+        );
+      }
+
       await manager.save(booking);
+
+      // Fetch full booking details for email update
+      const fullBooking = await manager.findOne(ServiceBooking, {
+        where: { id: booking.id },
+        relations: [
+          'user',
+          'service',
+          'service.business',
+          'service.business.user',
+          'payment',
+        ],
+      });
+
+      if (fullBooking) {
+        // Send updated emails to both customer and business owner
+        try {
+          await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+          await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+        } catch (error) {
+          console.error('Failed to send booking verification emails:', error);
+        }
+      }
 
       await this.walletService.creditEarning({
         userId: booking.service.business.user.id,
-        amount,
+        amount: booking.providerAmount, // Only credit provider amount for earnings info (though it's in escrow)
         type: WalletTransactionType.EARNING_BOOKING,
-        description: `Pending payment for booking #${booking.id}`,
+        description: `Pending payment in escrow for booking #${booking.id}`,
       });
 
       // Process Cashback
@@ -602,6 +1085,7 @@ export class BookingService {
           'service',
           'service.business',
           'service.business.user',
+          'payment',
         ],
       });
 
@@ -628,6 +1112,55 @@ export class BookingService {
 
       if (booking.businessOwnerCompleted && booking.customerCompleted) {
         booking.status = BookingStatus.COMPLETED;
+
+        // --- Escrow Payout Logic ---
+        if (!booking.payoutProcessed && !booking.refundProcessed) {
+          const transactionRepo = manager.getRepository(BookingTransaction);
+
+          let transferResult;
+          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+            // Assuming business user has a stripeAccountId property, defaulting to mock for now
+            const stripeAccountId = 'mock_acct_id';
+            transferResult =
+              await this.paymentProviderService.createStripeTransfer(
+                booking.providerAmount,
+                'gbp',
+                stripeAccountId,
+                { bookingId: booking.id },
+              );
+            booking.transferId = transferResult.id;
+          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+            transferResult =
+              await this.paymentProviderService.createPaypalPayout(
+                booking.providerAmount,
+                'gbp',
+                booking.service.business.user.email,
+              );
+            booking.transferId = transferResult.batch_header.payout_batch_id;
+          }
+
+          if (transferResult) {
+            booking.payoutProcessed = true;
+
+            const payoutTx = transactionRepo.create({
+              booking,
+              type: TransactionType.PAYOUT,
+              amount: booking.providerAmount,
+              referenceId: booking.transferId,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(payoutTx);
+
+            const commissionTx = transactionRepo.create({
+              booking,
+              type: TransactionType.COMMISSION,
+              amount: booking.commissionAmount,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(commissionTx);
+          }
+        }
+
         await this.walletService.releaseBookingPayment(booking.id);
       }
 
@@ -656,6 +1189,76 @@ export class BookingService {
         status: BookingStatus.COMPLETED,
       },
       relations: ['payment'],
+    });
+  }
+
+  async refundBooking(
+    bookingId: string,
+    _adminId: string, // assuming refund is initiated by admin
+  ): Promise<ServiceBooking> {
+    return this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(ServiceBooking, {
+        where: { id: bookingId },
+        relations: ['user', 'payment'],
+      });
+
+      if (!booking) {
+        throw new NotFoundException('Booking not found.');
+      }
+
+      if (
+        booking.status !== BookingStatus.CONFIRMED &&
+        booking.status !== BookingStatus.CANCELLED
+      ) {
+        throw new BadRequestException(
+          'Only confirmed or cancelled bookings can be refunded.',
+        );
+      }
+
+      if (booking.payoutProcessed) {
+        throw new BadRequestException(
+          'Cannot refund after payout has been processed.',
+        );
+      }
+
+      if (booking.refundProcessed) {
+        throw new BadRequestException('Refund already processed.');
+      }
+
+      if (!booking.paymentIntentId) {
+        throw new BadRequestException('No payment intent found to refund.');
+      }
+
+      const transactionRepo = manager.getRepository(BookingTransaction);
+      let refundResult;
+
+      if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+        refundResult = await this.paymentProviderService.refundStripePayment(
+          booking.paymentIntentId,
+        );
+        booking.refundId = refundResult.id;
+      } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+        refundResult = await this.paymentProviderService.refundPaypalOrder(
+          booking.paymentIntentId,
+        );
+        booking.refundId = refundResult.id;
+      }
+
+      if (refundResult) {
+        booking.refundProcessed = true;
+        booking.status = BookingStatus.REFUNDED;
+
+        const refundTx = transactionRepo.create({
+          booking,
+          type: TransactionType.REFUND,
+          amount: booking.totalAmount,
+          referenceId: booking.refundId,
+          status: TransactionStatus.COMPLETED,
+        });
+        await transactionRepo.save(refundTx);
+      }
+
+      return manager.save(booking);
     });
   }
 }

@@ -78,4 +78,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   provisionCode?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Referral code of the user who invited this user.',
+  })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }

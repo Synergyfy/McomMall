@@ -23,6 +23,7 @@ export interface User {
   voucher: boolean;
   promotion: boolean;
   coupons: boolean;
+  shippingAddresses?: any[]; // Allow shippingAddresses
 }
 
 export interface UpdateUserDto {

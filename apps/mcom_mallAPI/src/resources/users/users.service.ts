@@ -95,11 +95,22 @@ export class UsersService {
     }
 
     const createdUser = await this.dataSource.transaction(async (manager) => {
-      const { password } = payload;
+      const { password, referralCode: signupReferralCode } = payload;
       const hashed = await this.hashService.hashPassword(password);
+
+      // Handle referred by
+      let referredBy = null;
+      if (signupReferralCode) {
+        referredBy = await manager.findOne(User, {
+          where: { referralCode: signupReferralCode },
+        });
+      }
+
       const user = manager.create(User, {
         ...payload,
         password: hashed,
+        referredBy,
+        referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
       });
       const savedUser = await manager.save(user);
 
@@ -339,7 +350,11 @@ export class UsersService {
   }
 
   async searchOwners(query: string, currentUserId: string): Promise<User[]> {
-    const queryBuilder = this.userRepository.createQueryBuilder('u');
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('u')
+      .leftJoin('u.businesses', 'b')
+      .leftJoin('b.products', 'p')
+      .leftJoin('b.services', 's');
 
     queryBuilder.where('u.role = :role', { role: UserRole.OWNER });
     queryBuilder.andWhere('u.id != :currentUserId', { currentUserId });
@@ -351,7 +366,9 @@ export class UsersService {
         new Brackets((qb) => {
           qb.where('u.firstName ILIKE :searchTerm', { searchTerm })
             .orWhere('u.lastName ILIKE :searchTerm', { searchTerm })
-            .orWhere('u.email ILIKE :searchTerm', { searchTerm });
+            .orWhere('u.email ILIKE :searchTerm', { searchTerm })
+            .orWhere('p.title ILIKE :searchTerm', { searchTerm })
+            .orWhere('s.name ILIKE :searchTerm', { searchTerm });
         }),
       );
     }
@@ -541,6 +558,22 @@ export class UsersService {
 
     this.userRepository.merge(user, updateUserFeaturesDto);
     return this.userRepository.save(user);
+  }
+
+  async getReferredBusinesses(userId: string): Promise<any[]> {
+    const referredUsers = await this.userRepository.find({
+      where: { referredById: userId, role: UserRole.OWNER },
+      relations: ['businesses'],
+    });
+
+    return referredUsers.map((u) => ({
+      businessId: u.id,
+      name:
+        u.businesses?.[0]?.businessName ||
+        `${u.firstName} ${u.lastName}'s Business`,
+      ownerName: `${u.firstName} ${u.lastName}`,
+      relationshipTag: 'Referred Business',
+    }));
   }
 
   async updateLastLogin(id: string) {

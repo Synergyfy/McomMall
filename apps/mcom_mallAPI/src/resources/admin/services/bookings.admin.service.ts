@@ -18,7 +18,7 @@ export class AdminBookingsService {
       relations: ['user', 'service', 'service.business'],
     });
     const serviceBookings = await this.serviceBookingRepository.find({
-      relations: ['user', 'service', 'service.business'],
+      relations: ['user', 'service', 'service.business', 'payment'],
     });
     return { rentalBookings, serviceBookings };
   }

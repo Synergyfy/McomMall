@@ -170,7 +170,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(nonReloadableVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(nonReloadableProduct);
 
       await expect(

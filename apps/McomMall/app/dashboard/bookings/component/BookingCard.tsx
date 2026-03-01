@@ -213,7 +213,7 @@ const BookingCard: FC<{
                       e.stopPropagation();
                       setIsConfirmOpen(true);
                     }}
-                    disabled={booking.status.toUpperCase() !== "APPROVED"}
+                    disabled={booking.status.toUpperCase() !== "APPROVED" && booking.status.toUpperCase() !== "CONFIRMED"}
                   >
                     <CheckCircle className="mr-2 h-4 w-4" />
                     Mark as Complete

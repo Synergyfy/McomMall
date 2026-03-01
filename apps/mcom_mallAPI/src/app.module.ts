@@ -37,7 +37,7 @@ import { ExchangeModule } from './resources/exchange/exchange.module';
 import { PartnershipModule } from './resources/partnership/partnership.module';
 import { ServiceProviderProfileModule } from './resources/service-provider-profile/service-provider-profile.module';
 import { MembershipModule } from './resources/membership/membership.module';
-import { GroupingModule } from './resources/grouping/grouping.module';
+import { GroupCirclesModule } from './resources/group-circles/group-circles.module';
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
 import { TierModule } from './resources/tier/tier.module';
@@ -65,7 +65,7 @@ import { DigitalValueModule } from './resources/digital-value/digital-value.modu
     TierModule,
     DisputeModule,
     SearchModule,
-    GroupingModule,
+    GroupCirclesModule,
     MembershipModule,
     ServiceProviderProfileModule,
     PartnershipModule,

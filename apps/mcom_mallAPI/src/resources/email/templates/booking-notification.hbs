@@ -1,0 +1,180 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8">
+    <title>Booking Notification</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            color: #333;
+            margin: 0;
+            padding: 0;
+            background-color: #f9f9f9;
+        }
+        .container {
+            max-width: 600px;
+            margin: 20px auto;
+            background: #fff;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+        }
+        .header {
+            background-color: #f48c25;
+            color: white;
+            padding: 30px;
+            text-align: center;
+        }
+        .header h1 {
+            margin: 0;
+            font-size: 24px;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+        .content {
+            padding: 30px;
+        }
+        .welcome {
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 20px;
+        }
+        .details-card {
+            background-color: #f8f9fa;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+            border: 1px solid #eee;
+        }
+        .detail-row {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #f0f0f0;
+            padding-bottom: 8px;
+        }
+        .detail-row:last-child {
+            border-bottom: none;
+        }
+        .label {
+            font-weight: bold;
+            color: #666;
+            font-size: 14px;
+        }
+        .value {
+            font-weight: 600;
+            color: #111;
+            text-align: right;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            text-transform: uppercase;
+        }
+        .status-paid {
+            background-color: #e6fffa;
+            color: #047481;
+        }
+        .status-unpaid {
+            background-color: #fff5f5;
+            color: #c53030;
+        }
+        .footer {
+            background-color: #f1f1f1;
+            padding: 20px;
+            text-align: center;
+            font-size: 12px;
+            color: #888;
+        }
+        .button {
+            display: block;
+            width: 200px;
+            margin: 30px auto 0;
+            padding: 12px 20px;
+            background-color: #111;
+            color: white;
+            text-decoration: none;
+            border-radius: 6px;
+            font-weight: bold;
+            text-align: center;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>McomMall</h1>
+        </div>
+        <div class="content">
+            <p class="welcome">Hello {{receiverName}},</p>
+            
+            {{#if isOwner}}
+            <p>You have received a new booking request for your service <strong>{{serviceName}}</strong>.</p>
+            {{else}}
+            <p>Your booking for <strong>{{serviceName}}</strong> has been created successfully.</p>
+            {{/if}}
+
+            <div class="details-card">
+                <div class="detail-row">
+                    <span class="label">Booking ID</span>
+                    <span class="value">#{{bookingId}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Date</span>
+                    <span class="value">{{date}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Time</span>
+                    <span class="value">{{time}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Guests</span>
+                    <span class="value">{{guests}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Staff Requested</span>
+                    <span class="value">{{staff}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Total Amount</span>
+                    <span class="value">£{{totalAmount}}</span>
+                </div>
+                <div class="detail-row">
+                    <span class="label">Payment Status</span>
+                    <span class="value">
+                        {{#if isPaid}}
+                        <span class="status-badge status-paid">PAID</span>
+                        {{else}}
+                        <span class="status-badge status-unpaid">UNPAID</span>
+                        {{/if}}
+                    </span>
+                </div>
+            </div>
+
+            {{#if address}}
+            <div style="margin-top: 20px;">
+                <p style="margin-bottom: 5px; font-weight: bold; color: #666;">Service Address:</p>
+                <p style="margin-top: 0; font-weight: 500;">{{address}}</p>
+            </div>
+            {{/if}}
+
+            {{#if problemDescription}}
+            <div style="margin-top: 20px;">
+                <p style="margin-bottom: 5px; font-weight: bold; color: #666;">Description/Special Requirements:</p>
+                <p style="margin-top: 0; font-style: italic;">"{{problemDescription}}"</p>
+            </div>
+            {{/if}}
+
+            <a href="#" class="button">View Booking Details</a>
+        </div>
+        <div class="footer">
+            <p>&copy; {{year}} McomMall. All rights reserved.</p>
+            <p>This is an automated message, please do not reply.</p>
+        </div>
+    </div>
+</body>
+</html>

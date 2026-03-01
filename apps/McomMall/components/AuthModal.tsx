@@ -39,6 +39,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
     phoneNumber: '',
     password: '',
     confirmPassword: '',
+    referralCode: '',
     otp: '',
   });
 
@@ -99,6 +100,7 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
           password: formData.password,
           confirm_password: formData.confirmPassword,
           role: selectedRole,
+          referralCode: formData.referralCode,
         });
         await sendOtpAsync({ email: formData.email, type: 'VERIFICATION' });
         setEmailForVerification(formData.email);
@@ -147,11 +149,18 @@ export function AuthModal({ isOpen, onClose, onSuccess, initialMode = 'register'
             </>
           )}
 
-          <div className="grid gap-2">
-            <Label htmlFor="email">Email</Label>
-            <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="name@example.com" />
-            {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
-          </div>
+            <div className="grid gap-2">
+              <Label htmlFor="email">Email</Label>
+              <Input id="email" name="email" type="email" value={formData.email} onChange={handleInputChange} placeholder="name@example.com" />
+              {errors.email && <p className="text-red-500 text-xs">{errors.email}</p>}
+            </div>
+
+            {mode === 'register' && (
+              <div className="grid gap-2">
+                <Label htmlFor="referralCode">Referral Code (Optional)</Label>
+                <Input id="referralCode" name="referralCode" value={formData.referralCode} onChange={handleInputChange} placeholder="REF123" />
+              </div>
+            )}
 
           {(mode === 'login' || mode === 'register') && (
             <div className="grid gap-2">

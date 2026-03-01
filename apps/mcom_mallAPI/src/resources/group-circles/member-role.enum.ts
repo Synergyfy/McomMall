@@ -1,0 +1,10 @@
+export enum MemberRole {
+  OWNER = 'OWNER',
+  ADMIN = 'ADMIN',
+  MEMBER = 'MEMBER',
+  BANKER = 'BANKER',
+  GUEST = 'GUEST',
+  PERIPHERAL = 'PERIPHERAL',
+  CORE = 'CORE',
+  PARTNER = 'PARTNER',
+}

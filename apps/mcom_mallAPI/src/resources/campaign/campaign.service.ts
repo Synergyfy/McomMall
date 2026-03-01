@@ -140,7 +140,8 @@ export class CampaignService {
   async createMarketingCampaign(
     dto: CreateMarketingCampaignDto,
   ): Promise<MarketingCampaign> {
-    let { startDate, endDate, seasonId, ...rest } = dto;
+    const { seasonId, ...rest } = dto;
+    let { startDate, endDate } = dto;
     let season: Season | null = null;
 
     if (seasonId) {
