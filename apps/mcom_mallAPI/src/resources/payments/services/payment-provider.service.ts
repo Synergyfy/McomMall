@@ -45,7 +45,11 @@ export class PaymentProviderService {
     });
   }
 
-  async createPaypalOrder(amount: number, currency: string, metadata?: Record<string, any>): Promise<any> {
+  async createPaypalOrder(
+    amount: number,
+    currency: string,
+    metadata?: Record<string, any>,
+  ): Promise<any> {
     const request: OrderRequest = {
       intent: CheckoutPaymentIntent.Capture,
       purchaseUnits: [
@@ -78,16 +82,22 @@ export class PaymentProviderService {
       return { ok: false, reason: 'Stripe payment intent not found' };
     }
     if (intent.status !== 'succeeded') {
-      return { ok: false, details: intent, reason: `Stripe intent status ${intent.status}` };
+      return {
+        ok: false,
+        details: intent,
+        reason: `Stripe intent status ${intent.status}`,
+      };
     }
 
     const expectedAmountInCents = Math.round(expectedAmount * 100);
-        const intentAmountInGBP = intent.amount / 100;
-    const isAmount100xLarger = Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
+    const intentAmountInGBP = intent.amount / 100;
+    const isAmount100xLarger =
+      Math.abs(intentAmountInGBP - expectedAmount * 100) < 1; // Allow for small floating point differences
 
-    const amountMatches = intent.amount_received === expectedAmountInCents || isAmount100xLarger;
-    const currencyMatches = intent.currency.toLowerCase() === currency.toLowerCase();
-
+    const amountMatches =
+      intent.amount_received === expectedAmountInCents || isAmount100xLarger;
+    const currencyMatches =
+      intent.currency.toLowerCase() === currency.toLowerCase();
 
     if (!amountMatches || !currencyMatches) {
       return {
@@ -113,15 +123,22 @@ export class PaymentProviderService {
     // Basic validations based on PayPal capture response
     const status = result?.status;
     if (status !== 'COMPLETED') {
-      return { ok: false, details: result, reason: `PayPal order status ${status}` };
+      return {
+        ok: false,
+        details: result,
+        reason: `PayPal order status ${status}`,
+      };
     }
     try {
       const captureAmount = Number(
         result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.value,
       );
-      const captureCurrency = result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount?.currency_code;
+      const captureCurrency =
+        result?.purchase_units?.[0]?.payments?.captures?.[0]?.amount
+          ?.currency_code;
       const amountMatches = captureAmount === Number(expectedAmount);
-      const currencyMatches = (captureCurrency || '').toLowerCase() === currency.toLowerCase();
+      const currencyMatches =
+        (captureCurrency || '').toLowerCase() === currency.toLowerCase();
       if (!amountMatches || !currencyMatches) {
         return {
           ok: false,
@@ -129,9 +146,53 @@ export class PaymentProviderService {
           reason: 'Amount or currency mismatch for PayPal order',
         };
       }
-    } catch (e) {
-      return { ok: false, details: result, reason: 'Unable to parse PayPal capture amount' };
+    } catch (_e) {
+      return {
+        ok: false,
+        details: result,
+        reason: 'Unable to parse PayPal capture amount',
+      };
     }
     return { ok: true, details: result };
+  }
+
+  async createStripeTransfer(
+    amount: number,
+    currency: string,
+    destinationAccountId: string,
+    metadata?: Record<string, any>,
+  ): Promise<Stripe.Transfer> {
+    return this.stripe.transfers.create({
+      amount: Math.round(amount * 100),
+      currency,
+      destination: destinationAccountId,
+      metadata,
+    });
+  }
+
+  async refundStripePayment(
+    paymentIntentId: string,
+    amount?: number,
+  ): Promise<Stripe.Refund> {
+    const refundParams: Stripe.RefundCreateParams = {
+      payment_intent: paymentIntentId,
+    };
+    if (amount) {
+      refundParams.amount = Math.round(amount * 100);
+    }
+    return this.stripe.refunds.create(refundParams);
+  }
+
+  // Placeholder for PayPal Payouts and Refunds
+  async createPaypalPayout(
+    _amount: number,
+    _currency: string,
+    _receiverEmail: string,
+  ): Promise<any> {
+    return { batch_header: { payout_batch_id: 'mock_paypal_payout_id' } };
+  }
+
+  async refundPaypalOrder(_captureId: string, _amount?: number): Promise<any> {
+    return { id: 'mock_paypal_refund_id', status: 'COMPLETED' };
   }
 }

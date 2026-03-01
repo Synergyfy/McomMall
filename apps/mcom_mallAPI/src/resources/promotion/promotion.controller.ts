@@ -32,7 +32,7 @@ import { Promotion } from './entities/promotion.entity';
 @ApiTags('promotions')
 @Controller('promotions')
 export class PromotionController {
-  constructor(private readonly promotionService: PromotionService) { }
+  constructor(private readonly promotionService: PromotionService) {}
 
   @Public()
   @Get('check')
@@ -45,154 +45,104 @@ export class PromotionController {
   }
 
   @Post()
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
   @ApiOperation({ summary: 'Create a new loyalty promotion campaign' })
-
   @ApiResponse({
-
     status: 201,
 
     description: 'The promotion has been successfully created.',
 
-    type: Promotion
-
+    type: Promotion,
   })
-
-  @ApiResponse({ status: 403, description: 'Forbidden. Check capability limits or membership status.' })
-
+  @ApiResponse({
+    status: 403,
+    description: 'Forbidden. Check capability limits or membership status.',
+  })
   create(
-
     @CurrentUser() user: User,
 
     @Body() createPromotionDto: CreatePromotionDto,
-
   ) {
-
     return this.promotionService.create(user.id, createPromotionDto);
-
   }
-
-
 
   @Get()
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
-  @ApiOperation({ summary: "Get all of the current user's promotions (as an owner)" })
-
+  @ApiOperation({
+    summary: "Get all of the current user's promotions (as an owner)",
+  })
   @ApiResponse({ status: 200, type: [Promotion] })
-
   findAll(@CurrentUser() user: User) {
-
     return this.promotionService.findAll(user.id);
-
   }
-
-
 
   @Get(':id')
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
   @ApiOperation({ summary: 'Get details of a specific promotion' })
-
   @ApiResponse({ status: 200, type: Promotion })
-
   @ApiResponse({ status: 404, description: 'Promotion not found.' })
-
   findOne(@CurrentUser() user: User, @Param('id') id: string) {
-
     return this.promotionService.findOne(user.id, id);
-
   }
 
-
-
   @Patch(':id')
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
   @ApiOperation({ summary: 'Update an existing promotion' })
-
   @ApiResponse({ status: 200, type: Promotion })
-
   update(
-
     @CurrentUser() user: User,
 
     @Param('id') id: string,
 
     @Body() updatePromotionDto: UpdatePromotionDto,
-
   ) {
-
     return this.promotionService.update(user.id, id, updatePromotionDto);
-
   }
-
-
 
   @Delete(':id')
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
   @ApiOperation({ summary: 'Delete a promotion' })
-
-  @ApiResponse({ status: 200, description: 'The promotion has been successfully deleted.' })
-
+  @ApiResponse({
+    status: 200,
+    description: 'The promotion has been successfully deleted.',
+  })
   remove(@CurrentUser() user: User, @Param('id') id: string) {
-
     return this.promotionService.remove(user.id, id);
-
   }
 
-
-
   @Post(':id/participate')
-
   @UseGuards(JwtAuthGuard)
-
   @ApiBearerAuth()
-
   @ApiOperation({ summary: 'Join a loyalty program as a customer' })
-
   @ApiResponse({
-
     status: 201,
 
     description: 'The user successfully joined the promotion.',
 
     schema: {
-
       example: {
         id: 'uuid',
         pointsEarned: 0,
         user: { id: 'uuid', firstName: 'John', lastName: 'Doe' },
-        promotion: { id: 'uuid', name: 'Summer Sale', description: 'Get 50% off' },
+        promotion: {
+          id: 'uuid',
+          name: 'Summer Sale',
+          description: 'Get 50% off',
+        },
       },
-
-    }
-
+    },
   })
-
-  @ApiResponse({ status: 400, description: 'Bad Request. User already joined or promotion not active.' })
-
+  @ApiResponse({
+    status: 400,
+    description: 'Bad Request. User already joined or promotion not active.',
+  })
   participate(@CurrentUser() user: User, @Param('id') id: string) {
-
     return this.promotionService.participate(user.id, id);
-
   }
 
   @Get(':id/summary-statistics')

@@ -2,15 +2,16 @@
 
 import React, { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Search, Check, Users, ArrowRight } from "lucide-react";
+import { Search, Check, Users, ArrowRight, Globe, MapPin } from "lucide-react";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { cn } from "@/lib/utils";
-import { useGetMyPartners as useGetNetworkContacts } from "@/service/partnerships/hooks";
+import { useGetMyPartners as useGetNetworkContacts, useSearchOwners } from "@/service/partnerships/hooks";
 import { AddMemberDto } from "@/service/group-circle/types";
 
 interface InviteMemberDialogProps {
@@ -35,8 +36,11 @@ export const InviteMemberDialog = React.memo(({
     const [selectedContactId, setSelectedContactId] = useState<string | null>(null);
     const [selectedRole, setSelectedRole] = useState<'CORE' | 'PERIPHERAL' | 'BANKER' | 'PARTNER'>('PERIPHERAL');
     const [searchQuery, setSearchQuery] = useState("");
+    const [activeTab, setActiveTab] = useState<"network" | "global">("network");
+    const [selectedGlobalContact, setSelectedGlobalContact] = useState<any>(null);
 
     const { data: networkContactsDataRaw, isLoading: isLoadingContacts } = useGetNetworkContacts();
+    const { data: globalSearchResults, isLoading: isSearchingGlobal } = useSearchOwners(activeTab === 'global' ? searchQuery : '');
 
     const networkContactsData = React.useMemo(() => {
         if (!networkContactsDataRaw) return { data: [] };
@@ -52,14 +56,15 @@ export const InviteMemberDialog = React.memo(({
     const reset = () => {
         setStep(1);
         setSelectedContactId(null);
+        setSelectedGlobalContact(null);
         setSelectedRole('PERIPHERAL');
         setSearchQuery("");
     };
 
     const handleInvite = () => {
-        if (!selectedContactId) return;
+        if (!selectedContact) return;
         onInvite({
-            networkId: selectedContactId,
+            networkId: selectedContact.id,
             role: selectedRole
         });
         reset();
@@ -87,63 +92,135 @@ export const InviteMemberDialog = React.memo(({
                                 exit={{ opacity: 0, x: 20 }}
                                 className="space-y-4 px-6"
                             >
-                                <div className="relative">
-                                    <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
-                                    <Input
-                                        placeholder="Search My Network..."
-                                        className="pl-9 h-11 rounded-xl"
-                                        value={searchQuery}
-                                        onChange={(e) => setSearchQuery(e.target.value)}
-                                    />
-                                </div>
-                                <div className="space-y-2">
-                                    <Label className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Network Contacts</Label>
-                                    <ScrollArea className="h-[250px] -mx-2 pr-2">
-                                        <div className="grid grid-cols-1 gap-1.5 px-2">
-                                            {isLoadingContacts ? (
-                                                <div className="flex flex-col items-center justify-center py-10 gap-2">
-                                                    <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
-                                                    <p className="text-[10px] font-bold text-zinc-400 uppercase">Searching...</p>
-                                                </div>
-                                            ) : filteredContacts.length > 0 ? (
-                                                filteredContacts.map((contact) => (
-                                                    <div
-                                                        key={contact.id}
-                                                        onClick={() => setSelectedContactId(contact.id)}
-                                                        className={cn(
-                                                            "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
-                                                            selectedContactId === contact.id
-                                                                ? "border-orange-500 bg-orange-50 shadow-sm"
-                                                                : "border-zinc-100 hover:border-orange-200 hover:bg-zinc-50/50"
-                                                        )}
-                                                    >
-                                                        <div className="flex items-center gap-3">
-                                                            <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
-                                                                {contact.fullName[0]}
-                                                            </div>
-                                                            <div>
-                                                                <p className="font-bold text-sm text-zinc-800">{contact.fullName}</p>
-                                                                <p className="text-[10px] text-muted-foreground font-medium">{contact.businessName || 'Independent Partner'}</p>
-                                                            </div>
+                                <Tabs value={activeTab} onValueChange={(v: any) => setActiveTab(v)} className="w-full">
+                                    <TabsList className="grid w-full grid-cols-2 mb-4 bg-zinc-100/80 rounded-xl p-1">
+                                        <TabsTrigger value="network" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-orange-600 shadow-sm transition-all">My Network</TabsTrigger>
+                                        <TabsTrigger value="global" className="rounded-lg text-xs font-bold data-[state=active]:bg-white data-[state=active]:text-emerald-600 shadow-sm transition-all">Global Owners</TabsTrigger>
+                                    </TabsList>
+
+                                    <div className="relative mb-4">
+                                        <Search className="absolute left-3 top-3 h-4 w-4 text-muted-foreground" />
+                                        <Input
+                                            placeholder={activeTab === 'network' ? "Search My Network..." : "Search by name, email or listing..."}
+                                            className="pl-9 h-11 rounded-xl"
+                                            value={searchQuery}
+                                            onChange={(e) => setSearchQuery(e.target.value)}
+                                        />
+                                    </div>
+
+                                    <TabsContent value="network" className="m-0">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Network Contacts</Label>
+                                            <ScrollArea className="h-[250px] -mx-2 pr-2">
+                                                <div className="grid grid-cols-1 gap-1.5 px-2">
+                                                    {isLoadingContacts ? (
+                                                        <div className="flex flex-col items-center justify-center py-10 gap-2">
+                                                            <div className="w-6 h-6 border-2 border-orange-500 border-t-transparent rounded-full animate-spin" />
+                                                            <p className="text-[10px] font-bold text-zinc-400 uppercase">Searching...</p>
                                                         </div>
-                                                        {selectedContactId === contact.id ? (
-                                                            <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
-                                                                <Check className="w-3 h-3 text-white" />
+                                                    ) : filteredContacts.length > 0 ? (
+                                                        filteredContacts.map((contact) => (
+                                                            <div
+                                                                key={contact.id}
+                                                                onClick={() => setSelectedContactId(contact.id)}
+                                                                className={cn(
+                                                                    "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
+                                                                    selectedContactId === contact.id
+                                                                        ? "border-orange-500 bg-orange-50 shadow-sm"
+                                                                        : "border-zinc-100 hover:border-orange-200 hover:bg-zinc-50/50"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 rounded-xl bg-orange-100 flex items-center justify-center text-orange-600 font-bold text-sm">
+                                                                        {contact.fullName[0]}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-sm text-zinc-800">{contact.fullName}</p>
+                                                                        <p className="text-[10px] text-muted-foreground font-medium">{contact.businessName || 'Independent Partner'}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {selectedContactId === contact.id ? (
+                                                                    <div className="w-5 h-5 rounded-full bg-orange-500 flex items-center justify-center">
+                                                                        <Check className="w-3 h-3 text-white" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-5 h-5 rounded-full border border-zinc-200 group-hover:border-orange-300 transition-colors" />
+                                                                )}
                                                             </div>
-                                                        ) : (
-                                                            <div className="w-5 h-5 rounded-full border border-zinc-200 group-hover:border-orange-300 transition-colors" />
-                                                        )}
-                                                    </div>
-                                                ))
-                                            ) : (
-                                                <div className="text-center py-10 bg-zinc-50 rounded-2xl">
-                                                    <Users className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
-                                                    <p className="text-xs text-zinc-500 italic">No contacts found in network.</p>
+                                                        ))
+                                                    ) : (
+                                                        <div className="text-center py-10 bg-zinc-50 rounded-2xl">
+                                                            <Users className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                                                            <p className="text-xs text-zinc-500 italic">No contacts found in network.</p>
+                                                        </div>
+                                                    )}
                                                 </div>
-                                            )}
+                                            </ScrollArea>
                                         </div>
-                                    </ScrollArea>
-                                </div>
+                                    </TabsContent>
+
+                                    <TabsContent value="global" className="m-0">
+                                        <div className="space-y-2">
+                                            <Label className="text-[10px] text-muted-foreground uppercase font-black tracking-widest">Available Owners</Label>
+                                            <ScrollArea className="h-[250px] -mx-2 pr-2">
+                                                <div className="grid grid-cols-1 gap-1.5 px-2">
+                                                    {isSearchingGlobal ? (
+                                                        <div className="flex flex-col items-center justify-center py-10 gap-2">
+                                                            <div className="w-6 h-6 border-2 border-emerald-500 border-t-transparent rounded-full animate-spin" />
+                                                            <p className="text-[10px] font-bold text-zinc-400 uppercase">Searching Owners...</p>
+                                                        </div>
+                                                    ) : globalSearchResults && globalSearchResults.length > 0 ? (
+                                                        globalSearchResults.map((owner: any) => (
+                                                            <div
+                                                                key={owner.id}
+                                                                onClick={() => {
+                                                                    setSelectedGlobalContact({
+                                                                        id: owner.id,
+                                                                        fullName: `${owner.firstName} ${owner.lastName}`,
+                                                                        businessName: owner.email
+                                                                    });
+                                                                }}
+                                                                className={cn(
+                                                                    "flex items-center justify-between p-3 rounded-2xl border transition-all cursor-pointer group",
+                                                                    selectedGlobalContact?.id === owner.id
+                                                                        ? "border-emerald-500 bg-emerald-50 shadow-sm"
+                                                                        : "border-zinc-100 hover:border-emerald-200 hover:bg-zinc-50/50"
+                                                                )}
+                                                            >
+                                                                <div className="flex items-center gap-3">
+                                                                    <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm">
+                                                                        {owner.firstName[0]}
+                                                                    </div>
+                                                                    <div>
+                                                                        <p className="font-bold text-sm text-zinc-800">{owner.firstName} {owner.lastName}</p>
+                                                                        <p className="text-[10px] text-muted-foreground font-medium">{owner.email}</p>
+                                                                    </div>
+                                                                </div>
+                                                                {selectedGlobalContact?.id === owner.id ? (
+                                                                    <div className="w-5 h-5 rounded-full bg-emerald-500 flex items-center justify-center">
+                                                                        <Check className="w-3 h-3 text-white" />
+                                                                    </div>
+                                                                ) : (
+                                                                    <div className="w-5 h-5 rounded-full border border-zinc-200 group-hover:border-emerald-300 transition-colors" />
+                                                                )}
+                                                            </div>
+                                                        ))
+                                                    ) : searchQuery.length >= 2 ? (
+                                                        <div className="text-center py-10 bg-zinc-50 rounded-2xl">
+                                                            <Globe className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                                                            <p className="text-xs text-zinc-500 italic">No owners found matching "{searchQuery}"</p>
+                                                        </div>
+                                                    ) : (
+                                                        <div className="text-center py-10 bg-zinc-50 rounded-2xl">
+                                                            <Search className="w-8 h-8 text-zinc-300 mx-auto mb-2" />
+                                                            <p className="text-xs text-zinc-500 italic">Type to search for business owners globally.</p>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </ScrollArea>
+                                        </div>
+                                    </TabsContent>
+                                </Tabs>
                             </motion.div>
                         ) : (
                             <motion.div
@@ -222,7 +299,7 @@ export const InviteMemberDialog = React.memo(({
 
                     <Button
                         onClick={() => step === 1 ? setStep(2) : handleInvite()}
-                        disabled={step === 1 && !selectedContactId}
+                        disabled={step === 1 && !selectedContact}
                         className="h-11 px-8 rounded-xl font-bold bg-zinc-900 text-white hover:bg-black transition-all flex-[2] shadow-lg shadow-zinc-200"
                     >
                         {step === 1 ? (

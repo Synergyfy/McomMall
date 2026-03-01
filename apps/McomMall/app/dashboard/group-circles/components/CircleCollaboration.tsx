@@ -28,52 +28,14 @@ interface CircleCollaborationProps {
     myMemberId: string | null;
 }
 
-interface SharedCampaign {
-    id: string;
-    ownerId: string;
-    businessName: string;
-    campaignName: string;
-    description: string;
-    bannerUrl: string;
-    rewards: string[];
-    status: string;
-    participants: number;
-    endsAt: string;
-}
-
-// Mock data for shared campaigns in this circle
-const MOCK_SHARED_CAMPAIGNS = [
-    {
-        id: "shared-1",
-        ownerId: "owner-1",
-        businessName: "The Coffee Spot",
-        campaignName: "Morning Perks Collaboration",
-        description: "Join our morning campaign! Share our 'Buy 5 Get 1 Free' reward with your customers.",
-        bannerUrl: "https://placehold.co/600x200?text=Morning+Perks",
-        rewards: ["Free Latte", "10% Discount"],
-        status: "ACTIVE",
-        participants: 12,
-        endsAt: "2026-03-15T00:00:00Z"
-    },
-    {
-        id: "shared-2",
-        ownerId: "owner-2",
-        businessName: "Local Threads",
-        campaignName: "Spring Fashion Week",
-        description: "Promote our new collection and earn matching points for every customer referral.",
-        bannerUrl: "https://placehold.co/600x200?text=Spring+Fashion",
-        rewards: ["£10 Voucher", "Loyalty Badge"],
-        status: "ACTIVE",
-        participants: 8,
-        endsAt: "2026-04-01T00:00:00Z"
-    }
-];
-
 export function CircleCollaboration({ circleId, members, myMemberId }: CircleCollaborationProps) {
     const [isShareModalOpen, setIsShareModalOpen] = useState(false);
     const [isAdoptModalOpen, setIsAdoptModalOpen] = useState(false);
     const [selectedCampaignToAdopt, setSelectedCampaignToAdopt] = useState<any>(null);
     const [searchQuery, setSearchQuery] = useState("");
+    
+    // We use all the campaigns the user has created or has access to as a baseline for collaboration.
+    // In a fully built out system, this would be a specific hook like useGetCircleCampaigns(circleId)
     const { data: myCampaigns, isLoading: isLoadingMyCampaigns } = useGetMyCreatedCampaigns(1, 20);
 
     const handleAdoptClick = (campaign: any) => {
@@ -83,17 +45,20 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
 
     const confirmAdoption = () => {
         if (selectedCampaignToAdopt) {
-            // In a real app, this would call an API
-            const adoptedList = JSON.parse(localStorage.getItem('adopted_campaigns') || '[]');
-            localStorage.setItem('adopted_campaigns', JSON.stringify([...adoptedList, selectedCampaignToAdopt]));
-
+            // Placeholder for API integration
+            // e.g., await adoptCampaignMutation.mutateAsync(selectedCampaignToAdopt.id);
             toast.success(`Collaboration Confirmed!`, {
-                description: `You have successfully adopted "${selectedCampaignToAdopt.campaignName}". It is now available in your Partner Offers.`
+                description: `You have successfully adopted "${selectedCampaignToAdopt.name || selectedCampaignToAdopt.campaignName}".`
             });
             setIsAdoptModalOpen(false);
             setSelectedCampaignToAdopt(null);
         }
     };
+
+    const displayCampaigns = myCampaigns?.data || [];
+    const filteredCampaigns = displayCampaigns.filter((c: any) => 
+        (c.name || c.campaignName || '').toLowerCase().includes(searchQuery.toLowerCase())
+    );
 
     return (
         <div className="space-y-6">
@@ -148,74 +113,84 @@ export function CircleCollaboration({ circleId, members, myMemberId }: CircleCol
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-6">
-                {MOCK_SHARED_CAMPAIGNS.map((campaign: SharedCampaign) => (
-                    <Card key={campaign.id} className="overflow-hidden border-zinc-200/60 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 group flex flex-col">
-                        <div className="relative h-44 w-full overflow-hidden">
-                            <Image
-                                src={campaign.bannerUrl}
-                                alt={campaign.campaignName}
-                                fill
-                                className="object-cover group-hover:scale-110 transition-transform duration-700"
-                            />
-                            <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                            <div className="absolute bottom-4 left-4 right-4">
-                                <div className="flex items-center gap-2 mb-1.5">
-                                    <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
-                                    <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Live Offer</span>
-                                </div>
-                                <h4 className="text-white font-bold text-base leading-tight group-hover:text-orange-200 transition-colors line-clamp-1">{campaign.campaignName}</h4>
-                            </div>
-                        </div>
-                        <CardContent className="p-5 flex-1 flex flex-col gap-4">
-                            <div className="flex items-center gap-2.5">
-                                <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-[10px] font-black text-orange-600 border border-orange-200/50">
-                                    {campaign.businessName[0]}
-                                </div>
-                                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{campaign.businessName}</span>
-                            </div>
-
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed italic">
-                                "{campaign.description}"
-                            </p>
-
-                            <div className="flex flex-wrap gap-1.5 mt-auto">
-                                {campaign.rewards.map((reward, i) => (
-                                    <Badge key={i} variant="secondary" className="bg-zinc-100/80 dark:bg-zinc-800/80 text-[10px] py-0 h-5 px-2 font-medium text-zinc-600 border-none">
-                                        <Gift className="w-2.5 h-2.5 mr-1 text-orange-500" /> {reward}
-                                    </Badge>
-                                ))}
-                            </div>
-
-                            <div className="pt-4 mt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                                <div className="flex flex-col gap-1">
-                                    <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
-                                        <Users className="w-3 h-3 text-orange-500/70" /> {campaign.participants} Partners
+                {isLoadingMyCampaigns ? (
+                    <div className="col-span-full flex justify-center py-10">
+                        <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                    </div>
+                ) : filteredCampaigns.length === 0 ? (
+                    <div className="col-span-full text-center py-10 text-muted-foreground">
+                        No shared campaigns found. Be the first to share one!
+                    </div>
+                ) : (
+                    filteredCampaigns.map((campaign: any) => (
+                        <Card key={campaign.id} className="overflow-hidden border-zinc-200/60 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md rounded-[2rem] hover:shadow-2xl hover:shadow-orange-500/10 transition-all duration-500 group flex flex-col">
+                            <div className="relative h-44 w-full overflow-hidden">
+                                <Image
+                                    src={campaign.campaign_image || "https://placehold.co/600x200?text=Campaign"}
+                                    alt={campaign.name || "Campaign"}
+                                    fill
+                                    className="object-cover group-hover:scale-110 transition-transform duration-700"
+                                />
+                                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                                <div className="absolute bottom-4 left-4 right-4">
+                                    <div className="flex items-center gap-2 mb-1.5">
+                                        <div className="h-1.5 w-1.5 rounded-full bg-orange-500 animate-pulse" />
+                                        <span className="text-[10px] font-black text-orange-400 uppercase tracking-[0.2em]">Live Offer</span>
                                     </div>
-                                    <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
-                                        <Calendar className="w-3 h-3 text-orange-500/70" /> {new Date(campaign.endsAt).toLocaleDateString()}
-                                    </div>
+                                    <h4 className="text-white font-bold text-base leading-tight group-hover:text-orange-200 transition-colors line-clamp-1">{campaign.name || campaign.campaignName}</h4>
                                 </div>
-                                <TooltipProvider>
-                                    <Tooltip>
-                                        <TooltipTrigger asChild>
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() => handleAdoptClick(campaign)}
-                                                className="rounded-xl h-9 px-4 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold text-xs"
-                                            >
-                                                Adopt
-                                            </Button>
-                                        </TooltipTrigger>
-                                        <TooltipContent>
-                                            <p className="text-xs">Add this partner's campaign to your offers and earn rewards for referrals.</p>
-                                        </TooltipContent>
-                                    </Tooltip>
-                                </TooltipProvider>
                             </div>
-                        </CardContent>
-                    </Card>
-                ))}
+                            <CardContent className="p-5 flex-1 flex flex-col gap-4">
+                                <div className="flex items-center gap-2.5">
+                                    <div className="w-7 h-7 rounded-lg bg-orange-100 dark:bg-orange-950/30 flex items-center justify-center text-[10px] font-black text-orange-600 border border-orange-200/50">
+                                        {(campaign.businessName || "Partner")[0]}
+                                    </div>
+                                    <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 truncate">{campaign.businessName || "Partner Business"}</span>
+                                </div>
+
+                                <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed italic">
+                                    "{campaign.campaign_message || campaign.description || 'No description provided.'}"
+                                </p>
+
+                                <div className="flex flex-wrap gap-1.5 mt-auto">
+                                    {(campaign.rewards || ["Reward"]).map((reward: string, i: number) => (
+                                        <Badge key={i} variant="secondary" className="bg-zinc-100/80 dark:bg-zinc-800/80 text-[10px] py-0 h-5 px-2 font-medium text-zinc-600 border-none">
+                                            <Gift className="w-2.5 h-2.5 mr-1 text-orange-500" /> {reward}
+                                        </Badge>
+                                    ))}
+                                </div>
+
+                                <div className="pt-4 mt-2 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                                    <div className="flex flex-col gap-1">
+                                        <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
+                                            <Users className="w-3 h-3 text-orange-500/70" /> {campaign.participants || 0} Partners
+                                        </div>
+                                        <div className="flex items-center gap-1.5 text-[9px] text-zinc-400 font-bold uppercase tracking-wider">
+                                            <Calendar className="w-3 h-3 text-orange-500/70" /> {new Date(campaign.endDate || campaign.endsAt || Date.now()).toLocaleDateString()}
+                                        </div>
+                                    </div>
+                                    <TooltipProvider>
+                                        <Tooltip>
+                                            <TooltipTrigger asChild>
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() => handleAdoptClick(campaign)}
+                                                    className="rounded-xl h-9 px-4 bg-orange-50 text-orange-600 hover:bg-orange-600 hover:text-white transition-all duration-300 font-bold text-xs"
+                                                >
+                                                    Adopt
+                                                </Button>
+                                            </TooltipTrigger>
+                                            <TooltipContent>
+                                                <p className="text-xs">Add this partner's campaign to your offers and earn rewards for referrals.</p>
+                                            </TooltipContent>
+                                        </Tooltip>
+                                    </TooltipProvider>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    ))
+                )}
             </div>
 
             {/* Share Campaign Dialog */}

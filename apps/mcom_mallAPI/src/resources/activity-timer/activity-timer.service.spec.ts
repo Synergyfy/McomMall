@@ -2,16 +2,18 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { ActivityTimerService } from './activity-timer.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { ActivityTimer } from './entities/activity-timer.entity';
+import { UserActivity } from './entities/user-activity.entity';
 import { User } from '../users/entities/user.entity';
 import { ActivityTimerType } from './enums/activity-task-type.enum';
-import { NotFoundException, BadRequestException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 // Define MockRepository type locally
-type MockRepository<T = any> = Partial<Record<keyof any, jest.Mock>>;
+type MockRepository = Partial<Record<keyof any, jest.Mock>>;
 
 describe('ActivityTimerService', () => {
   let service: ActivityTimerService;
   let timerRepository: MockRepository;
+  let userActivityRepository: MockRepository;
   let managerMock: any;
 
   beforeEach(async () => {
@@ -31,6 +33,28 @@ describe('ActivityTimerService', () => {
             save: jest.fn(),
             count: jest.fn(),
             manager: managerMock,
+            createQueryBuilder: jest.fn(() => ({
+              select: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              andWhere: jest.fn().mockReturnThis(),
+              orderBy: jest.fn().mockReturnThis(),
+              getMany: jest.fn(),
+            })),
+          },
+        },
+        {
+          provide: getRepositoryToken(UserActivity),
+          useValue: {
+            find: jest.fn(),
+            findOne: jest.fn(),
+            save: jest.fn(),
+            create: jest.fn(),
+            createQueryBuilder: jest.fn(() => ({
+              leftJoinAndSelect: jest.fn().mockReturnThis(),
+              where: jest.fn().mockReturnThis(),
+              select: jest.fn().mockReturnThis(),
+              getMany: jest.fn(),
+            })),
           },
         },
       ],
@@ -38,6 +62,7 @@ describe('ActivityTimerService', () => {
 
     service = module.get<ActivityTimerService>(ActivityTimerService);
     timerRepository = module.get(getRepositoryToken(ActivityTimer));
+    userActivityRepository = module.get(getRepositoryToken(UserActivity));
   });
 
   it('should be defined', () => {
@@ -46,22 +71,42 @@ describe('ActivityTimerService', () => {
 
   describe('getUserActiveTasks', () => {
     it('should return trial tasks with dynamic expiry', async () => {
-      const user = { id: 'user-1', created_at: new Date('2026-01-01T00:00:00Z') } as User;
+      const user = {
+        id: 'user-1',
+        created_at: new Date('2026-01-01T00:00:00Z'),
+      } as unknown as User;
       const tasks = [
         {
           id: 'task-1',
           type: ActivityTimerType.TRIAL,
           isActive: true,
-          expiresAt: null
-        }
+          expiresAt: null,
+        },
       ] as ActivityTimer[];
 
       managerMock.findOne.mockResolvedValue({
         ...user,
-        membership: { tier: { configuration: { trialDurationDays: 10 } } },
-        trialPauses: []
+        membership: {
+          isTrial: true,
+          isActive: true,
+          expiresAt: new Date('2026-01-11T00:00:00Z'),
+          tier: { configuration: { trialDurationDays: 10 } },
+        },
       });
-      timerRepository.find.mockResolvedValue(tasks);
+      timerRepository.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(tasks),
+      });
+
+      userActivityRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getUserActiveTasks(user);
 
@@ -71,19 +116,32 @@ describe('ActivityTimerService', () => {
     });
 
     it('should return general tasks with fixed expiry', async () => {
-      const user = { id: 'user-1', created_at: new Date() } as User;
+      const user = { id: 'user-1', created_at: new Date() } as unknown as User;
       const fixedExpiry = new Date(Date.now() + 100000);
       const tasks = [
         {
           id: 'task-2',
           type: ActivityTimerType.GENERAL,
           isActive: true,
-          expiresAt: fixedExpiry
-        }
+          expiresAt: fixedExpiry,
+        },
       ] as ActivityTimer[];
 
       managerMock.findOne.mockResolvedValue(user);
-      timerRepository.find.mockResolvedValue(tasks);
+      timerRepository.createQueryBuilder.mockReturnValue({
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        orderBy: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue(tasks),
+      });
+
+      userActivityRepository.createQueryBuilder.mockReturnValue({
+        leftJoinAndSelect: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        select: jest.fn().mockReturnThis(),
+        getMany: jest.fn().mockResolvedValue([]),
+      });
 
       const result = await service.getUserActiveTasks(user);
 
@@ -91,60 +149,17 @@ describe('ActivityTimerService', () => {
     });
   });
 
-  describe('pauseTrial', () => {
-    it('should pause trial if not already paused', async () => {
-      const user = { id: 'user-1', trialPauses: [] } as User;
-      managerMock.findOne.mockResolvedValue(user);
-      managerMock.save.mockImplementation((u) => u);
-
-      await service.pauseTrial(user.id);
-
-      expect(user.trialPauses).toHaveLength(1);
-      expect(user.trialPauses[0].resumedAt).toBeNull();
-      expect(managerMock.save).toHaveBeenCalledWith(user);
-    });
-
-    it('should throw BadRequestException if already paused', async () => {
-      const user = {
-        id: 'user-1',
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
-      } as User;
-      managerMock.findOne.mockResolvedValue(user);
-
-      await expect(service.pauseTrial(user.id)).rejects.toThrow(BadRequestException);
-    });
-  });
-
-  describe('resumeTrial', () => {
-    it('should resume trial if currently paused', async () => {
-      const user = {
-        id: 'user-1',
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
-      } as User;
-      managerMock.findOne.mockResolvedValue(user);
-      managerMock.save.mockImplementation((u) => u);
-
-      await service.resumeTrial(user.id);
-
-      expect(user.trialPauses[0].resumedAt).toBeInstanceOf(Date);
-      expect(managerMock.save).toHaveBeenCalledWith(user);
-    });
-
-    it('should throw BadRequestException if not paused', async () => {
-      const user = { id: 'user-1', trialPauses: [] } as User;
-      managerMock.findOne.mockResolvedValue(user);
-
-      await expect(service.resumeTrial(user.id)).rejects.toThrow(BadRequestException);
-    });
-  });
-
   describe('isRestricted', () => {
-    it('should return true if trial is paused', async () => {
-      const user = { id: 'user-1' } as User;
+    it('should return true if trial has expired', async () => {
+      const user = { id: 'user-1' } as unknown as User;
       const fullUser = {
         ...user,
         created_at: new Date(),
-        trialPauses: [{ pausedAt: new Date(), resumedAt: null }]
+        membership: {
+          isActive: true,
+          isTrial: true,
+          expiresAt: new Date(Date.now() - 100000), // Expired in the past
+        },
       };
 
       managerMock.findOne.mockResolvedValue(fullUser);
@@ -156,8 +171,16 @@ describe('ActivityTimerService', () => {
     it('should return false for paid users', async () => {
       const user = {
         id: 'user-1',
-        membership: { tierId: 'paid-tier' }
-      } as User;
+        membership: {
+          isActive: true,
+          isTrial: false,
+          tierId: 'paid-tier',
+        },
+      } as unknown as User;
+
+      managerMock.findOne.mockResolvedValue({
+        ...user,
+      });
 
       const result = await service.isRestricted(user);
       expect(result).toBe(false);

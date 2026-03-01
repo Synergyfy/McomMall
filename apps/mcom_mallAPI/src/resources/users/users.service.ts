@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { User } from './entities/user.entity';
@@ -17,7 +21,6 @@ import { UserRole } from '../../common/role.enum';
 import { Wallet } from '../wallet/entities/wallet.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
 import { ProvisionService } from '../provision/provision.service';
-import { ProvisionType } from '../provision/entities/provision.entity';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { TierService } from '../tier/tier.service';
 import { MembershipService } from '../membership/membership.service';
@@ -46,32 +49,36 @@ export class UsersService {
     private readonly activityTimerService: ActivityTimerService,
     private readonly tierService: TierService,
     private readonly membershipService: MembershipService,
-  ) { }
+  ) {}
 
   async checkEmailExists(email: string): Promise<boolean> {
+    if (!email) {
+      throw new BadRequestException('Email is required');
+    }
     try {
-      if (!email) {
-        throw new Error('Email is required');
-      }
       const emailExists = await this.userRepository.exists({
         where: { email },
       });
       return emailExists;
     } catch (error) {
-      throw new Error(`Failed to check email existence: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to check email existence: ${error.message}`,
+      );
     }
   }
   async checkPhoneNumberExists(phoneNumber: string): Promise<boolean> {
+    if (!phoneNumber) {
+      throw new BadRequestException('Phone number is required');
+    }
     try {
-      if (!phoneNumber) {
-        throw new Error('Phone number is required');
-      }
-      const emailExists = await this.userRepository.exists({
+      const exists = await this.userRepository.exists({
         where: { phoneNumber },
       });
-      return emailExists;
+      return exists;
     } catch (error) {
-      throw new Error(`Failed to check email existence: ${error.message}`);
+      throw new BadRequestException(
+        `Failed to check phone number existence: ${error.message}`,
+      );
     }
   }
 
@@ -81,26 +88,38 @@ export class UsersService {
     if (payload.provisionCode) {
       provision = await this.provisionService.findByCode(payload.provisionCode);
       if (!provision) throw new BadRequestException('Invalid provision code');
-      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
-      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+      if (provision.isRedeemed)
+        throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt)
+        throw new BadRequestException('Provision code expired');
     }
 
     const createdUser = await this.dataSource.transaction(async (manager) => {
-      const { password, role } = payload;
+      const { password, referralCode: signupReferralCode } = payload;
       const hashed = await this.hashService.hashPassword(password);
+
+      // Handle referred by
+      let referredBy = null;
+      if (signupReferralCode) {
+        referredBy = await manager.findOne(User, {
+          where: { referralCode: signupReferralCode },
+        });
+      }
+
       const user = manager.create(User, {
         ...payload,
         password: hashed,
+        referredBy,
+        referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
       });
       const savedUser = await manager.save(user);
 
       // Redeem provision code inside transaction
-      let trialDuration = 14;
       if (provision) {
-        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
-        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
-          trialDuration = provision.payload.durationDays;
-        }
+        await this.provisionService.validateAndMarkRedeemed(
+          provision.code,
+          savedUser.id,
+        );
       }
 
       const wallet = manager.create(Wallet, {
@@ -123,14 +142,21 @@ export class UsersService {
           // Join the trial membership
           // Note: joinTrial handles creating the membership entity
           await this.membershipService.joinTrial(trialTier.id, createdUser);
-          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`);
+          console.log(
+            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Owner ${createdUser.id}`,
+          );
         } else {
-          console.log(`[UsersService] No active Trial Tier found for auto-assignment.`);
+          console.log(
+            `[UsersService] No active Trial Tier found for auto-assignment.`,
+          );
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
-        console.error('Failed to auto-assign activity timer or trial membership:', error);
+        console.error(
+          'Failed to auto-assign activity timer or trial membership:',
+          error,
+        );
       }
     }
 
@@ -143,12 +169,14 @@ export class UsersService {
     if (payload.provisionCode) {
       provision = await this.provisionService.findByCode(payload.provisionCode);
       if (!provision) throw new BadRequestException('Invalid provision code');
-      if (provision.isRedeemed) throw new BadRequestException('Provision code already redeemed');
-      if (new Date() > provision.expiresAt) throw new BadRequestException('Provision code expired');
+      if (provision.isRedeemed)
+        throw new BadRequestException('Provision code already redeemed');
+      if (new Date() > provision.expiresAt)
+        throw new BadRequestException('Provision code expired');
     }
 
     const createdUser = await this.dataSource.transaction(async (manager) => {
-      const { password, role } = payload;
+      const { password } = payload;
       const hashed = await this.hashService.hashPassword(password);
       const user = manager.create(User, {
         ...payload,
@@ -158,12 +186,11 @@ export class UsersService {
       const savedUser = await manager.save(user);
 
       // Redeem provision code inside transaction
-      let trialDuration = 14;
       if (provision) {
-        await this.provisionService.validateAndMarkRedeemed(provision.code, savedUser.id);
-        if (provision.type === ProvisionType.TRIAL_EXTENSION && provision.payload?.durationDays) {
-          trialDuration = provision.payload.durationDays;
-        }
+        await this.provisionService.validateAndMarkRedeemed(
+          provision.code,
+          savedUser.id,
+        );
       }
 
       const wallet = manager.create(Wallet, {
@@ -186,12 +213,17 @@ export class UsersService {
         const trialTier = await this.tierService.findTrialTier();
         if (trialTier) {
           await this.membershipService.joinTrial(trialTier.id, createdUser);
-          console.log(`[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`);
+          console.log(
+            `[UsersService] Auto-assigned Trial Tier (${trialTier.name}) to new Admin-Created Owner ${createdUser.id}`,
+          );
         }
 
         await this.activityTimerService.getUserActiveTasks(createdUser);
       } catch (error) {
-        console.error('Failed to auto-assign activity timer or trial membership:', error);
+        console.error(
+          'Failed to auto-assign activity timer or trial membership:',
+          error,
+        );
       }
     }
 
@@ -295,13 +327,19 @@ export class UsersService {
           skills.forEach((skill, index) => {
             const skillParam = `skill_${index}`;
             if (index === 0) {
-              qb.where(`LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`, {
-                [skillParam]: `%${skill}%`,
-              });
+              qb.where(
+                `LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`,
+                {
+                  [skillParam]: `%${skill}%`,
+                },
+              );
             } else {
-              qb.orWhere(`LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`, {
-                [skillParam]: `%${skill}%`,
-              });
+              qb.orWhere(
+                `LOWER(serviceProviderProfile.skills) LIKE LOWER(:${skillParam})`,
+                {
+                  [skillParam]: `%${skill}%`,
+                },
+              );
             }
           });
         }),
@@ -312,7 +350,11 @@ export class UsersService {
   }
 
   async searchOwners(query: string, currentUserId: string): Promise<User[]> {
-    const queryBuilder = this.userRepository.createQueryBuilder('u');
+    const queryBuilder = this.userRepository
+      .createQueryBuilder('u')
+      .leftJoin('u.businesses', 'b')
+      .leftJoin('b.products', 'p')
+      .leftJoin('b.services', 's');
 
     queryBuilder.where('u.role = :role', { role: UserRole.OWNER });
     queryBuilder.andWhere('u.id != :currentUserId', { currentUserId });
@@ -324,7 +366,9 @@ export class UsersService {
         new Brackets((qb) => {
           qb.where('u.firstName ILIKE :searchTerm', { searchTerm })
             .orWhere('u.lastName ILIKE :searchTerm', { searchTerm })
-            .orWhere('u.email ILIKE :searchTerm', { searchTerm });
+            .orWhere('u.email ILIKE :searchTerm', { searchTerm })
+            .orWhere('p.title ILIKE :searchTerm', { searchTerm })
+            .orWhere('s.name ILIKE :searchTerm', { searchTerm });
         }),
       );
     }
@@ -500,7 +544,10 @@ export class UsersService {
     };
   }
 
-  async updateFeatures(id: string, updateUserFeaturesDto: UpdateUserFeaturesDto) {
+  async updateFeatures(
+    id: string,
+    updateUserFeaturesDto: UpdateUserFeaturesDto,
+  ) {
     const user = await this.userRepository.findOne({
       where: { id },
     });
@@ -511,6 +558,22 @@ export class UsersService {
 
     this.userRepository.merge(user, updateUserFeaturesDto);
     return this.userRepository.save(user);
+  }
+
+  async getReferredBusinesses(userId: string): Promise<any[]> {
+    const referredUsers = await this.userRepository.find({
+      where: { referredById: userId, role: UserRole.OWNER },
+      relations: ['businesses'],
+    });
+
+    return referredUsers.map((u) => ({
+      businessId: u.id,
+      name:
+        u.businesses?.[0]?.businessName ||
+        `${u.firstName} ${u.lastName}'s Business`,
+      ownerName: `${u.firstName} ${u.lastName}`,
+      relationshipTag: 'Referred Business',
+    }));
   }
 
   async updateLastLogin(id: string) {

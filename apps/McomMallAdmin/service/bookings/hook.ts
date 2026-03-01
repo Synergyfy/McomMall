@@ -58,6 +58,16 @@ const cancelBooking = async (bookingId: string): Promise<Booking> => {
     return data;
 };
 
+const markBookingComplete = async (bookingId: string): Promise<Booking> => {
+    const { data } = await api.put(`/bookings/${bookingId}/complete`);
+    return data;
+};
+
+const refundBooking = async (bookingId: string): Promise<Booking> => {
+    const { data } = await api.post(`/bookings/${bookingId}/refund`);
+    return data;
+};
+
 // --- Custom Hooks ---
 
 export const useCreateBooking = ({ onSuccess }: { onSuccess?: () => void } = {}) => {
@@ -67,6 +77,7 @@ export const useCreateBooking = ({ onSuccess }: { onSuccess?: () => void } = {})
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
       queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
       toast.success('Booking created successfully!');
       onSuccess?.();
     },
@@ -110,6 +121,7 @@ export const useApproveBooking = () => {
     mutationFn: approveBooking,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
       toast.success('Booking approved successfully!');
     },
     onError: (error: any) => {
@@ -125,6 +137,7 @@ export const useDeclineBooking = () => {
     mutationFn: declineBooking,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+      queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
       toast.success('Booking declined successfully!');
     },
     onError: (error: any) => {
@@ -140,6 +153,7 @@ export const useCancelBooking = () => {
         mutationFn: cancelBooking,
         onSuccess: () => {
             queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+            queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
             toast.success('Booking cancelled successfully!');
         },
         onError: (error: any) => {
@@ -148,3 +162,36 @@ export const useCancelBooking = () => {
         },
     });
 };
+
+export const useMarkBookingComplete = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: markBookingComplete,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['businessBookings'] });
+            queryClient.invalidateQueries({ queryKey: ['customerBookings'] });
+            queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
+            toast.success('Booking marked as complete successfully!');
+        },
+        onError: (error: any) => {
+            const errorMessage = error?.response?.data?.message || 'Failed to complete booking. Please try again.';
+            toast.error(errorMessage);
+        },
+    });
+};
+
+export const useRefundBooking = () => {
+    const queryClient = useQueryClient();
+    return useMutation({
+        mutationFn: refundBooking,
+        onSuccess: () => {
+            queryClient.invalidateQueries({ queryKey: ['all-admin-bookings'] });
+            toast.success('Booking refunded successfully!');
+        },
+        onError: (error: any) => {
+            const errorMessage = error?.response?.data?.message || 'Failed to refund booking. Please try again.';
+            toast.error(errorMessage);
+        },
+    });
+};
+

@@ -17,15 +17,12 @@ import { ProvisionService } from '../provision/provision.service';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 import { TierService } from '../tier/tier.service';
 import { MembershipService } from '../membership/membership.service';
-import { Wallet } from '../wallet/entities/wallet.entity';
 
 describe('UsersService', () => {
   let service: UsersService;
   let userRepository: Repository<User>;
   let socialRepository: Repository<Social>;
-  let transactionRepository: Repository<Transaction>;
   let emailService: EmailService;
-  let dataSource: DataSource;
   let transactionManager: { save: jest.Mock; create: jest.Mock };
 
   const mockUser = {
@@ -99,8 +96,8 @@ describe('UsersService', () => {
         {
           provide: ProvisionService,
           useValue: {
-              findByCode: jest.fn(),
-              validateAndMarkRedeemed: jest.fn(),
+            findByCode: jest.fn(),
+            validateAndMarkRedeemed: jest.fn(),
           },
         },
         {
@@ -112,7 +109,9 @@ describe('UsersService', () => {
         {
           provide: TierService,
           useValue: {
-            findTrialTier: jest.fn().mockResolvedValue({ id: 'tier-1', name: 'Trial' }),
+            findTrialTier: jest
+              .fn()
+              .mockResolvedValue({ id: 'tier-1', name: 'Trial' }),
           },
         },
         {
@@ -158,10 +157,6 @@ describe('UsersService', () => {
     socialRepository = module.get<Repository<Social>>(
       getRepositoryToken(Social),
     );
-    transactionRepository = module.get<Repository<Transaction>>(
-      getRepositoryToken(Transaction),
-    );
-    dataSource = module.get<DataSource>(DataSource);
   });
 
   it('should be defined', () => {
@@ -252,15 +247,20 @@ describe('UsersService', () => {
         email: 'test@example.com',
         password: 'password',
         phoneNumber: '1234567890',
-        confirm_password: 'password'
+        confirm_password: 'password',
       };
 
       const result = await service.create(createUserDto as any);
 
-      expect(transactionManager.create).toHaveBeenCalledWith(User, {
-        ...createUserDto,
-        password: 'hashedpassword',
-      });
+      expect(transactionManager.create).toHaveBeenCalledWith(
+        User,
+        expect.objectContaining({
+          ...createUserDto,
+          password: 'hashedpassword',
+          referredBy: null,
+          referralCode: expect.any(String),
+        }),
+      );
       expect(transactionManager.save).toHaveBeenCalledWith(mockUser);
       expect(emailService.sendUserWelcomeEmail).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual(mockUser);

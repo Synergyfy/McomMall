@@ -4,9 +4,6 @@ import * as path from 'path';
 
 dotenv.config();
 
-const isDevelopment = process.env.NODE_ENV === 'development';
-const isTest = process.env.NODE_ENV === 'test';
-
 const dataSource = new DataSource({
   type: 'postgres',
   port: parseInt(process.env.POSTGRES_PORT || '5432'),
@@ -18,7 +15,7 @@ const dataSource = new DataSource({
   //migrations: [process.env.DB_MIGRATIONS],
   migrations: [path.resolve(__dirname, 'migrations', '*{.ts,.js}')],
   migrationsRun: false,
-  synchronize: false,
+  synchronize: process.env.NODE_ENV === 'test',
   // migrationsTableName: 'migrations',
   //   ssl: process.env.DB_SSL === 'true',
   // Reduce connection footprint when using pgBouncer (Session mode limits pool size)

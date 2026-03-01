@@ -3,6 +3,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { User } from '../../users/entities/user.entity';
 import { Group } from './group.entity';
 import { GroupMemberStatus } from '../group-member-status.enum';
+import { MemberRole } from '../member-role.enum';
 
 @Entity('group_members')
 export class GroupMember extends AbstractBaseEntity {
@@ -26,4 +27,14 @@ export class GroupMember extends AbstractBaseEntity {
     default: GroupMemberStatus.PENDING_PAYMENT,
   })
   status: GroupMemberStatus;
+
+  @Column({
+    type: 'enum',
+    enum: MemberRole,
+    default: MemberRole.MEMBER,
+  })
+  role: MemberRole;
+
+  @Column({ type: 'timestamp', nullable: true })
+  drawDate: Date;
 }

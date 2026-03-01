@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { In, Repository, DataSource } from 'typeorm';
+import { Repository, DataSource } from 'typeorm';
 import { CheckoutService } from './checkout.service';
 import { User } from '../users/entities/user.entity';
 import { Offer } from '../offer/entities/offer.entity';
@@ -10,11 +10,10 @@ import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
+import { ProductService } from '../product/product.service';
+import { CouponService } from '../coupon/coupon.service';
 import { CreateCheckoutDto } from './dto/create-checkout.dto';
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrderStatus } from '../order/enums/order-status.enum';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import { Business } from '../listings/entities/listing.entity';
@@ -73,7 +72,14 @@ describe('CheckoutService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CheckoutService,
-        { provide: getRepositoryToken(User), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(User),
+          useValue: {
+            findOne: jest.fn().mockResolvedValue({ id: 'user-1' }),
+            create: jest.fn(),
+            save: jest.fn(),
+          },
+        },
         { provide: getRepositoryToken(Offer), useFactory: mockRepository },
         { provide: getRepositoryToken(Product), useFactory: mockRepository },
         {
@@ -88,6 +94,14 @@ describe('CheckoutService', () => {
           useValue: mockPaymentProviderService,
         },
         { provide: DataSource, useValue: mockDataSource },
+        {
+          provide: ProductService,
+          useValue: {
+            calculatePromotionalPrice: jest.fn().mockReturnValue(10),
+            calculatePrice: jest.fn().mockReturnValue(10),
+          },
+        },
+        { provide: CouponService, useValue: { validateCoupon: jest.fn() } },
       ],
     }).compile();
 
@@ -115,7 +129,9 @@ describe('CheckoutService', () => {
       const dto: CreateCheckoutDto = {
         items: [{ productId: 'prod-1', quantity: 2 }], // Total: 20
       };
-      jest.spyOn(productRepository, 'find').mockResolvedValue([mockProducts[0]]);
+      jest
+        .spyOn(productRepository, 'find')
+        .mockResolvedValue([mockProducts[0]]);
       jest
         .spyOn(paymentProviderService, 'createStripePaymentIntent')
         .mockResolvedValue({ client_secret: 'secret' } as any);
@@ -125,10 +141,9 @@ describe('CheckoutService', () => {
       expect(dataSource.transaction).toHaveBeenCalled();
       expect(orderRepository.save).toHaveBeenCalled();
       expect(orderItemRepository.save).toHaveBeenCalled();
-      expect(paymentProviderService.createStripePaymentIntent).toHaveBeenCalledWith(
-        20,
-        'GBP',
-      );
+      expect(
+        paymentProviderService.createStripePaymentIntent,
+      ).toHaveBeenCalledWith(20, 'GBP');
       expect(result.paymentRequired).toBe(true);
       expect(result.clientSecret).toBe('secret');
       expect(result.remainingTotal).toBe(20);
@@ -139,10 +154,15 @@ describe('CheckoutService', () => {
         items: [{ productId: 'prod-1', quantity: 2 }], // Total: 20
         giftCardCode: 'GC123',
       };
-      jest.spyOn(productRepository, 'find').mockResolvedValue([mockProducts[0]]);
       jest
-        .spyOn(giftCardService, 'checkBalance')
-        .mockResolvedValue({ currentBalance: 50, initialBalance: 50, currency: 'GBP', expiryDate: null });
+        .spyOn(productRepository, 'find')
+        .mockResolvedValue([mockProducts[0]]);
+      jest.spyOn(giftCardService, 'checkBalance').mockResolvedValue({
+        currentBalance: 50,
+        initialBalance: 50,
+        currency: 'GBP',
+        expiryDate: null,
+      });
 
       const result = await service.initiateCheckout(mockUserId, dto);
 
@@ -159,10 +179,15 @@ describe('CheckoutService', () => {
         items: [{ productId: 'prod-1', quantity: 3 }], // Total: 30
         giftCardCode: 'GC123',
       };
-      jest.spyOn(productRepository, 'find').mockResolvedValue([mockProducts[0]]);
       jest
-        .spyOn(giftCardService, 'checkBalance')
-        .mockResolvedValue({ currentBalance: 20, initialBalance: 50, currency: 'GBP', expiryDate: null });
+        .spyOn(productRepository, 'find')
+        .mockResolvedValue([mockProducts[0]]);
+      jest.spyOn(giftCardService, 'checkBalance').mockResolvedValue({
+        currentBalance: 20,
+        initialBalance: 50,
+        currency: 'GBP',
+        expiryDate: null,
+      });
       jest
         .spyOn(paymentProviderService, 'createStripePaymentIntent')
         .mockResolvedValue({ client_secret: 'secret' } as any);
@@ -171,10 +196,9 @@ describe('CheckoutService', () => {
 
       expect(result.paymentRequired).toBe(true);
       expect(result.remainingTotal).toBe(10);
-      expect(paymentProviderService.createStripePaymentIntent).toHaveBeenCalledWith(
-        10,
-        'GBP',
-      );
+      expect(
+        paymentProviderService.createStripePaymentIntent,
+      ).toHaveBeenCalledWith(10, 'GBP');
       const savedOrder = (orderRepository.save as jest.Mock).mock.calls[0][0];
       expect(savedOrder.giftCardAmountApplied).toBe(20);
     });
@@ -201,42 +225,46 @@ describe('CheckoutService', () => {
         transactionId: 'pi_123',
       };
 
-      jest.spyOn(orderRepository, 'findOne')
+      jest
+        .spyOn(orderRepository, 'findOne')
         .mockResolvedValueOnce(pendingOrder)
         .mockResolvedValueOnce(orderWithItems);
-      jest.spyOn(paymentProviderService, 'verifyStripePaymentIntent').mockResolvedValue({ ok: true });
+      jest
+        .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
+        .mockResolvedValue({ ok: true });
 
       const result = await service.completeCheckout(mockUserId, dto);
 
-      expect(paymentProviderService.verifyStripePaymentIntent).toHaveBeenCalledWith(
-        'pi_123',
-        10,
-        'GBP',
-      );
+      expect(
+        paymentProviderService.verifyStripePaymentIntent,
+      ).toHaveBeenCalledWith('pi_123', 10, 'GBP');
       expect(giftCardService.redeem).toHaveBeenCalledWith(
         { code: 'GC123', amount: 20 },
         expect.any(Object),
-        'business-1'
+        'business-1',
+        expect.any(Object),
       );
       expect(result.status).toBe(OrderStatus.COMPLETED);
     });
 
     it('should fail order if payment verification fails', async () => {
-        const pendingOrder = {
-            id: 'order-1',
-            total: 30,
-            giftCardAmountApplied: 0,
-            status: OrderStatus.PENDING,
-          } as Order;
-      const dto: CompleteCheckoutDto = { orderId: 'order-1', transactionId: 'pi_123', paymentProvider: PaymentMethod.STRIPE };
+      const pendingOrder = {
+        id: 'order-1',
+        total: 30,
+        giftCardAmountApplied: 0,
+        status: OrderStatus.PENDING,
+      } as Order;
+      const dto: CompleteCheckoutDto = {
+        orderId: 'order-1',
+        transactionId: 'pi_123',
+        paymentProvider: PaymentMethod.STRIPE,
+      };
       jest.spyOn(orderRepository, 'findOne').mockResolvedValue(pendingOrder);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
         .mockResolvedValue({ ok: false, reason: 'card_declined' });
 
-      await expect(
-        service.completeCheckout(mockUserId, dto),
-      ).rejects.toThrow(
+      await expect(service.completeCheckout(mockUserId, dto)).rejects.toThrow(
         new BadRequestException('Payment verification failed: card_declined'),
       );
       expect(orderRepository.save).toHaveBeenCalledWith(
@@ -245,12 +273,12 @@ describe('CheckoutService', () => {
     });
 
     it('should throw not found if order is not pending', async () => {
-        const dto: CompleteCheckoutDto = { orderId: 'order-1' };
-        (orderRepository.findOne as jest.Mock).mockResolvedValue(null);
+      const dto: CompleteCheckoutDto = { orderId: 'order-1' };
+      (orderRepository.findOne as jest.Mock).mockResolvedValue(null);
 
-        await expect(service.completeCheckout(mockUserId, dto)).rejects.toThrow(
-            new NotFoundException('Pending order not found.')
-        );
+      await expect(service.completeCheckout(mockUserId, dto)).rejects.toThrow(
+        new NotFoundException('Pending order not found.'),
+      );
     });
   });
 });

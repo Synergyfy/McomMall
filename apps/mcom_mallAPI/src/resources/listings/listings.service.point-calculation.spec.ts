@@ -1,3 +1,6 @@
+import { Sector } from '../taxonomy/entities/sector.entity';
+import { TaxonomyCategory } from '../taxonomy/entities/taxonomy-category.entity';
+import { TaxonomySubcategory } from '../taxonomy/entities/taxonomy-subcategory.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ListingsService } from './listing.service';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -22,48 +25,29 @@ describe('ListingsService - Points Calculation', () => {
   const mockOwnerA = { id: 'owner-A' } as User;
   const mockOwnerB = { id: 'owner-B' } as User;
 
-  const mockBusinessA: Business = {
+  const mockBusinessA = {
+    sectorId: 'sector-1',
+    categoryId: 'category-1',
+    subCategoryId: 'sub-category-1',
     id: 'business-A',
     user: mockOwnerA,
     listingType: [ListingType.PRODUCT],
     businessName: 'Business A',
     shortDescription: 'Short description',
     businessPhone: '1234567890',
-    products: [{ id: 'product-A1' } as Product, { id: 'product-A2' } as Product],
+    products: [
+      { id: 'product-A1' } as Product,
+      { id: 'product-A2' } as Product,
+    ],
     status: BusinessStatus.PUBLISHED,
     isGoogleVerified: false,
     isClaimed: true,
     isVerified: false,
     location: null,
     socialLinks: [],
-    categories: [],
-    businessHours: [],
-    specialDays: [],
-    campaigns: [],
-    services: [],
-    promotions: [],
-    reviews: [],
-    offers: [],
-    created_at: new Date(),
-    updated_at: new Date(),
-    deleted_at: null,
-  };
-
-  const mockBusinessB: Business = {
-    id: 'business-B',
-    user: mockOwnerB,
-    listingType: [ListingType.PRODUCT],
-    businessName: 'Business B',
-    shortDescription: 'Short description',
-    businessPhone: '1234567890',
-    products: [{ id: 'product-B1' } as Product],
-    status: BusinessStatus.PUBLISHED,
-    isGoogleVerified: false,
-    isClaimed: true,
-    isVerified: false,
-    location: null,
-    socialLinks: [],
-    categories: [],
+    sector: null,
+    category: null,
+    subCategory: null,
     businessHours: [],
     specialDays: [],
     campaigns: [],
@@ -97,7 +81,10 @@ describe('ListingsService - Points Calculation', () => {
         { provide: getRepositoryToken(User), useValue: {} },
         { provide: DataSource, useValue: { createQueryRunner: jest.fn() } },
         { provide: ActivitiesService, useValue: { create: jest.fn() } },
-        { provide: ActivityTimerService, useValue: { completeTaskByKey: jest.fn() } },
+        {
+          provide: ActivityTimerService,
+          useValue: { completeTaskByKey: jest.fn() },
+        },
         {
           provide: PromotionService,
           useValue: {
@@ -106,6 +93,18 @@ describe('ListingsService - Points Calculation', () => {
           },
         },
         { provide: CapabilityService, useValue: {} },
+        {
+          provide: getRepositoryToken(Sector),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomyCategory),
+          useValue: {},
+        },
+        {
+          provide: getRepositoryToken(TaxonomySubcategory),
+          useValue: {},
+        },
       ],
     }).compile();
 
@@ -136,8 +135,8 @@ describe('ListingsService - Points Calculation', () => {
       .spyOn(promotionService, 'findUserPromotions')
       .mockResolvedValue(mockPromotions);
     (promotionService.isProductQualified as jest.Mock).mockImplementation(
-      (product, promotion, business) =>
-        (service as any).isProductQualified(product, promotion, business),
+      (product, promotion, _business) =>
+        (service as any).isProductQualified(product, promotion, _business),
     );
 
     const result = await service.findOnePublic('business-A', mockUser);
@@ -162,8 +161,8 @@ describe('ListingsService - Points Calculation', () => {
       .spyOn(promotionService, 'findUserPromotions')
       .mockResolvedValue(mockPromotions);
     (promotionService.isProductQualified as jest.Mock).mockImplementation(
-      (product, promotion, business) => {
-        return promotion.user.id === business.user.id;
+      (product, promotion, _business) => {
+        return promotion.user.id === _business.user.id;
       },
     );
 

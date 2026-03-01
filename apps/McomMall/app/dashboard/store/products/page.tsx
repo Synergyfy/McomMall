@@ -51,6 +51,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { getProductMainImage } from '@/lib/utils';
 
 // --- HELPER COMPONENTS & TYPES ---
 type ProductStatus = 'All' | 'Online' | 'Draft' | 'Pending Review' | 'In stock';
@@ -68,10 +69,6 @@ const PlaceholderImage = ({ className }: { className?: string }) => (
   </svg>
 );
 
-const isImageUrl = (url: string) => {
-    if (!url) return false;
-    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
-}
 
 const formatDate = (dateString: string) => {
   if (!dateString) return 'N/A';
@@ -130,7 +127,7 @@ export default function StoreDashboard() {
       tempProducts = tempProducts.filter(
         p =>
           p.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-           (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
+          (p.sku && p.sku.toLowerCase().includes(searchTerm.toLowerCase()))
       );
     }
 
@@ -272,17 +269,16 @@ export default function StoreDashboard() {
                   <button
                     key={tab}
                     onClick={() => setActiveTab(tab)}
-                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${
-                      activeTab === tab
-                        ? 'bg-gray-100 font-semibold text-gray-800'
-                        : ''
-                    }`}
+                    className={`pb-2 sm:pb-0 px-3 py-2 rounded-md mb-2 ${activeTab === tab
+                      ? 'bg-gray-100 font-semibold text-gray-800'
+                      : ''
+                      }`}
                   >
                     {tab} (
                     {tab === 'All'
                       ? products?.length || 0
                       : products?.filter(p => p.productStatus === tab).length ||
-                        0}
+                      0}
                     )
                   </button>
                 ))}
@@ -426,205 +422,205 @@ export default function StoreDashboard() {
                     </TableRow>
                   ) : filteredProducts.length > 0 ? (
                     filteredProducts.map(product => {
-                      const firstImageUrl = product.fileUrls?.find(isImageUrl) || product.imageUrl;
+                      const firstImageUrl = getProductMainImage(product);
                       return (
-                      <TableRow
-                        key={product.id}
-                        className={`mobile-table-card md:table-row ${
-                          product.productStatus === 'Pending Review'
+                        <TableRow
+                          key={product.id}
+                          className={`mobile-table-card md:table-row ${product.productStatus === 'Pending Review'
                             ? 'bg-red-50'
                             : ''
-                        }`}
-                        data-state={
-                          selectedRows.includes(product.id) ? 'selected' : ''
-                        }
-                      >
-                        <TableCell className="mobile-table-cell-checkbox md:table-cell">
-                          <Checkbox
-                            checked={selectedRows.includes(product.id)}
-                            onCheckedChange={checked =>
-                              handleSelectRow(product.id, !!checked)
-                            }
-                            aria-label={`Select row for ${product.title}`}
-                          />
-                        </TableCell>
-                        <TableCell
-                          data-label="Image"
-                          className="mobile-table-cell md:table-cell"
+                            }`}
+                          data-state={
+                            selectedRows.includes(product.id) ? 'selected' : ''
+                          }
                         >
-                          <Link
-                            href={`/dashboard/product/${product.id}`}
-                            passHref
+                          <TableCell className="mobile-table-cell-checkbox md:table-cell">
+                            <Checkbox
+                              checked={selectedRows.includes(product.id)}
+                              onCheckedChange={checked =>
+                                handleSelectRow(product.id, !!checked)
+                              }
+                              aria-label={`Select row for ${product.title}`}
+                            />
+                          </TableCell>
+                          <TableCell
+                            data-label="Image"
+                            className="mobile-table-cell md:table-cell"
                           >
-                            <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
-                              {firstImageUrl ? (
-                                <img
-                                  src={firstImageUrl}
-                                  alt={product.title}
-                                  className="w-full h-full object-cover rounded-md"
-                                />
+                            <Link
+                              href={`/dashboard/product/${product.id}`}
+                              passHref
+                            >
+                              <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer">
+                                {firstImageUrl ? (
+                                  <img
+                                    src={firstImageUrl}
+                                    alt={product.title}
+                                    className="w-full h-full object-cover rounded-md"
+                                  />
+                                ) : (
+                                  <PlaceholderImage className="w-8 h-8 text-gray-400" />
+                                )}
+                              </div>
+                            </Link>
+                          </TableCell>
+                          <TableCell
+                            data-label="Name"
+                            className="mobile-table-cell md:table-cell font-medium text-gray-800"
+                          >
+                            <Link
+                              href={`/dashboard/product/${product.id}`}
+                              className="hover:underline"
+                            >
+                              {product.title}
+                            </Link>
+                          </TableCell>
+                          <TableCell
+                            data-label="Status"
+                            className="mobile-table-cell md:table-cell"
+                          >
+                            <Badge
+                              variant={
+                                product.productStatus === 'Pending Review'
+                                  ? 'destructive'
+                                  : product.productStatus === 'Online' ||
+                                    product.productStatus === 'In stock'
+                                    ? 'default'
+                                    : 'secondary'
+                              }
+                              className={
+                                product.productStatus === 'Online' ||
+                                  product.productStatus === 'In stock'
+                                  ? 'bg-green-100 text-green-800'
+                                  : ''
+                              }
+                            >
+                              {product.productStatus}
+                            </Badge>
+                          </TableCell>
+                          <TableCell
+                            data-label="SKU"
+                            className="mobile-table-cell md:table-cell text-gray-600"
+                          >
+                            {product.sku}
+                          </TableCell>
+                          <TableCell
+                            data-label="Stock"
+                            className="mobile-table-cell md:table-cell text-gray-600"
+                          >
+                            {product.stock && product.stock > 0 ? (
+                              <span className="text-green-600 font-semibold">
+                                In stock
+                              </span>
+                            ) : (
+                              <span className="text-red-600 font-semibold">
+                                Out of stock
+                              </span>
+                            )}
+                            {` (${product.stock || 0})`}
+                          </TableCell>
+                          <TableCell
+                            data-label="Price"
+                            className="mobile-table-cell md:table-cell text-gray-600"
+                          >
+                            <div className="flex flex-col items-end md:items-start">
+                              {product.variations && product.variations.length > 0 ? (
+                                (() => {
+                                  const prices = product.variations.map((v: any) => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter((p: number) => p > 0);
+                                  if (prices.length === 0) return <span>£{(product.salePrice || product.price || 0).toFixed(2)}</span>;
+                                  const min = Math.min(...prices);
+                                  const max = Math.max(...prices);
+                                  return (
+                                    <span className="font-semibold text-orange-600">
+                                      {min === max ? `£${min.toFixed(2)}` : `£${min.toFixed(2)} - £${max.toFixed(2)}`}
+                                    </span>
+                                  );
+                                })()
                               ) : (
-                                <PlaceholderImage className="w-8 h-8 text-gray-400" />
+                                <>
+                                  {product.price !== product.salePrice &&
+                                    product.salePrice && (
+                                      <span className="line-through text-gray-400">
+                                        £{product.price.toFixed(2)}
+                                      </span>
+                                    )}
+                                  <span>
+                                    £{(product.salePrice || product.price || 0).toFixed(2)}
+                                  </span>
+                                </>
                               )}
                             </div>
-                          </Link>
-                        </TableCell>
-                        <TableCell
-                          data-label="Name"
-                          className="mobile-table-cell md:table-cell font-medium text-gray-800"
-                        >
-                          <Link
-                            href={`/dashboard/product/${product.id}`}
-                            className="hover:underline"
+                          </TableCell>
+                          <TableCell
+                            data-label="Type"
+                            className="mobile-table-cell md:table-cell lg:table-cell hidden text-gray-600"
                           >
-                            {product.title}
-                          </Link>
-                        </TableCell>
-                        <TableCell
-                          data-label="Status"
-                          className="mobile-table-cell md:table-cell"
-                        >
-                          <Badge
-                            variant={
-                              product.productStatus === 'Pending Review'
-                                ? 'destructive'
-                                : product.productStatus === 'Online' ||
-                                  product.productStatus === 'In stock'
-                                ? 'default'
-                                : 'secondary'
-                            }
-                            className={
-                              product.productStatus === 'Online' ||
-                              product.productStatus === 'In stock'
-                                ? 'bg-green-100 text-green-800'
-                                : ''
-                            }
+                            {product.category}
+                          </TableCell>
+                          <TableCell
+                            data-label="Views"
+                            className="mobile-table-cell md:table-cell lg:table-cell hidden text-gray-600"
                           >
-                            {product.productStatus}
-                          </Badge>
-                        </TableCell>
-                        <TableCell
-                          data-label="SKU"
-                          className="mobile-table-cell md:table-cell text-gray-600"
-                        >
-                          {product.sku}
-                        </TableCell>
-                        <TableCell
-                          data-label="Stock"
-                          className="mobile-table-cell md:table-cell text-gray-600"
-                        >
-                          {product.stock && product.stock > 0 ? (
-                            <span className="text-green-600 font-semibold">
-                              In stock
-                            </span>
-                          ) : (
-                            <span className="text-red-600 font-semibold">
-                              Out of stock
-                            </span>
-                          )}
-                          {` (${product.stock || 0})`}
-                        </TableCell>
-                        <TableCell
-                          data-label="Price"
-                          className="mobile-table-cell md:table-cell text-gray-600"
-                        >
-                          <div className="flex flex-col items-end md:items-start">
-                            {product.variations && product.variations.length > 0 ? (
-                                (() => {
-                                    const prices = product.variations.map((v: any) => v.salePrice && v.salePrice < v.price ? v.salePrice : v.price).filter((p: number) => p > 0);
-                                    if (prices.length === 0) return <span>£{(product.salePrice || product.price || 0).toFixed(2)}</span>;
-                                    const min = Math.min(...prices);
-                                    const max = Math.max(...prices);
-                                    return (
-                                        <span className="font-semibold text-orange-600">
-                                            {min === max ? `£${min.toFixed(2)}` : `£${min.toFixed(2)} - £${max.toFixed(2)}`}
-                                        </span>
-                                    );
-                                })()
-                            ) : (
-                                <>
-                                    {product.price !== product.salePrice &&
-                                    product.salePrice && (
-                                        <span className="line-through text-gray-400">
-                                        £{product.price.toFixed(2)}
-                                        </span>
-                                    )}
-                                    <span>
-                                    £{(product.salePrice || product.price || 0).toFixed(2)}
-                                    </span>
-                                </>
-                            )}
-                          </div>
-                        </TableCell>
-                        <TableCell
-                          data-label="Type"
-                          className="mobile-table-cell md:table-cell lg:table-cell hidden text-gray-600"
-                        >
-                          {product.category}
-                        </TableCell>
-                        <TableCell
-                          data-label="Views"
-                          className="mobile-table-cell md:table-cell lg:table-cell hidden text-gray-600"
-                        >
-                          {product.views || 0}
-                        </TableCell>
-                        <TableCell
-                          data-label="Date"
-                          className="mobile-table-cell md:table-cell text-gray-600"
-                        >
-                          <div className="flex flex-col text-xs items-end md:items-start">
-                            <span>
-                              {formatDate(
-                                product.updatedAt || product.createdAt || ''
-                              )}
-                            </span>
-                            <span className="text-gray-400">Last Modified</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="mobile-table-cell md:table-cell">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  const url = `/dashboard/product/${product.id}`;
-                                  window.open(url, '_blank');
-                                }}
-                              >
-                                <Eye className="mr-2 h-4 w-4" />
-                                View Product
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  router.push(
-                                    `/dashboard/store/products/edit/${product.id}`
-                                  )
-                                }
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  setSelectedProduct(product.id);
-                                  setShowDeleteConfirmation(true);
-                                }}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    )})
+                            {product.views || 0}
+                          </TableCell>
+                          <TableCell
+                            data-label="Date"
+                            className="mobile-table-cell md:table-cell text-gray-600"
+                          >
+                            <div className="flex flex-col text-xs items-end md:items-start">
+                              <span>
+                                {formatDate(
+                                  product.updatedAt || product.createdAt || ''
+                                )}
+                              </span>
+                              <span className="text-gray-400">Last Modified</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="mobile-table-cell md:table-cell">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    const url = `/dashboard/product/${product.id}`;
+                                    window.open(url, '_blank');
+                                  }}
+                                >
+                                  <Eye className="mr-2 h-4 w-4" />
+                                  View Product
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    router.push(
+                                      `/dashboard/store/products/edit/${product.id}`
+                                    )
+                                  }
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSelectedProduct(product.id);
+                                    setShowDeleteConfirmation(true);
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow className="block md:table-row">
                       <TableCell

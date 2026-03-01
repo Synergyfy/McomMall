@@ -25,7 +25,7 @@ import { EmailModule } from '../email/email.module';
       ItemPartnershipRequest,
       Product,
       Service,
-      User
+      User,
     ]),
     forwardRef(() => ProductModule),
     forwardRef(() => ServicesModule),

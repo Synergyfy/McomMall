@@ -24,17 +24,24 @@ export class SupportTicketsController {
   @Post()
   @ApiOperation({ summary: 'Create a new support ticket' })
   create(@Req() req, @Body() createSupportTicketDto: CreateSupportTicketDto) {
-    return this.supportTicketsService.createTicket(req.user, createSupportTicketDto);
+    return this.supportTicketsService.createTicket(
+      req.user,
+      createSupportTicketDto,
+    );
   }
 
   @Get()
-  @ApiOperation({ summary: 'List all support tickets for the current user (or all for admin)' })
+  @ApiOperation({
+    summary: 'List all support tickets for the current user (or all for admin)',
+  })
   findAll(@Req() req) {
     return this.supportTicketsService.findAll(req.user);
   }
 
   @Get(':id')
-  @ApiOperation({ summary: 'Get details of a specific support ticket including messages' })
+  @ApiOperation({
+    summary: 'Get details of a specific support ticket including messages',
+  })
   findOne(@Req() req, @Param('id') id: string) {
     return this.supportTicketsService.findOne(req.user, id);
   }
@@ -46,7 +53,11 @@ export class SupportTicketsController {
     @Param('id') id: string,
     @Body() createSupportMessageDto: CreateSupportMessageDto,
   ) {
-    return this.supportTicketsService.addMessage(req.user, id, createSupportMessageDto);
+    return this.supportTicketsService.addMessage(
+      req.user,
+      id,
+      createSupportMessageDto,
+    );
   }
 
   @Patch(':id/resolve')

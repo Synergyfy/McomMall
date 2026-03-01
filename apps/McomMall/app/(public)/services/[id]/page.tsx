@@ -14,6 +14,7 @@ import ServiceSellerCard from './components/ServiceSellerCard';
 import ServiceSafetyCard from './components/ServiceSafetyCard';
 import ServiceFacts from './components/ServiceFacts';
 import ServiceBookingWidget from './components/ServiceBookingWidget';
+import ServiceAvailabilityOverview from './components/ServiceAvailabilityOverview';
 import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
 import { useGetServicePlusItems } from '@/service/partnerships/hooks';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
@@ -112,6 +113,9 @@ export default function ServicePage() {
             <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
                 <ServiceFacts service={service} />
             </div>
+
+            {/* Availability Overview */}
+            <ServiceAvailabilityOverview service={service} />
 
             {/* Plus Items Section */}
             {plusItems && plusItems.length > 0 && (

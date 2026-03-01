@@ -1,26 +1,27 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { CouponController } from './coupon.controller';
 import { CouponService } from './coupon.service';
-import { CouponProductService } from './coupon-product.service';
-import { InitiateCouponPurchaseDto } from './dto/initiate-coupon-purchase.dto';
 import { User } from '../users/entities/user.entity';
-import { AuthenticatedRequest } from 'src/common/types';
+import { AuthenticatedRequest } from '../../common/types';
+import { CreateCouponDto } from './dto/create-coupon.dto';
+import { CouponSourceType, DiscountType } from './coupon.enum';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 describe('CouponController', () => {
   let controller: CouponController;
   let service: CouponService;
-  let productService: CouponProductService;
 
   const mockUser = new User();
   mockUser.id = '1';
 
   const mockRequest = {
     user: mockUser,
-  };
+  } as AuthenticatedRequest;
 
   const mockCoupon = {
     id: '1',
     code: 'TESTCODE',
+    title: 'Test Coupon',
   };
 
   beforeEach(async () => {
@@ -30,18 +31,20 @@ describe('CouponController', () => {
         {
           provide: CouponService,
           useValue: {
-            initiateCouponPurchase: jest.fn().mockResolvedValue({}),
-            verifyAndCompletePurchase: jest.fn().mockResolvedValue(mockCoupon),
-            initiateCouponReload: jest.fn().mockResolvedValue({}),
-            verifyAndCompleteReload: jest.fn().mockResolvedValue(mockCoupon),
-            findUserCoupons: jest.fn().mockResolvedValue([mockCoupon]),
+            create: jest.fn().mockResolvedValue(mockCoupon),
+            findAll: jest
+              .fn()
+              .mockResolvedValue({ data: [mockCoupon], meta: {} }),
+            validateCoupon: jest.fn().mockResolvedValue(mockCoupon),
+            saveCoupon: jest
+              .fn()
+              .mockResolvedValue({ id: 'save-1', coupon: mockCoupon }),
+            removeSavedCoupon: jest.fn().mockResolvedValue(undefined),
+            getSavedCoupons: jest
+              .fn()
+              .mockResolvedValue([{ id: 'save-1', coupon: mockCoupon }]),
             findCouponByCode: jest.fn().mockResolvedValue(mockCoupon),
-          },
-        },
-        {
-          provide: CouponProductService,
-          useValue: {
-            findCouponProductsByBusiness: jest.fn().mockResolvedValue([]),
+            findProductById: jest.fn().mockResolvedValue(mockCoupon),
           },
         },
       ],
@@ -49,86 +52,83 @@ describe('CouponController', () => {
 
     controller = module.get<CouponController>(CouponController);
     service = module.get<CouponService>(CouponService);
-    productService = module.get<CouponProductService>(CouponProductService);
   });
 
   it('should be defined', () => {
     expect(controller).toBeDefined();
   });
 
-  describe('initiatePurchase', () => {
-    it('should initiate a coupon purchase', async () => {
-      const initiateDto: InitiateCouponPurchaseDto = {
-        couponProductId: '1',
-        amount: 10,
-        paymentMethod: 'stripe',
+  describe('create', () => {
+    it('should create a coupon', async () => {
+      const createDto: CreateCouponDto = {
+        title: 'Test Coupon',
+        code: 'TESTCODE',
+        sourceType: CouponSourceType.PLATFORM,
+        discountValue: 10,
+        discountType: DiscountType.FIXED,
       };
-      await controller.initiatePurchase(initiateDto);
-      expect(service.initiateCouponPurchase).toHaveBeenCalledWith(initiateDto);
-    });
-  });
-
-  describe('verifyPurchase', () => {
-    it('should verify a coupon purchase', async () => {
-      const verifyDto = {};
-      const result = await controller.verifyPurchase(verifyDto, mockRequest as any);
+      const result = await controller.create(createDto);
       expect(result).toEqual(mockCoupon);
-      expect(service.verifyAndCompletePurchase).toHaveBeenCalledWith(
-        verifyDto,
-        mockUser.id,
-      );
+      expect(service.create).toHaveBeenCalledWith(createDto);
     });
   });
 
-  describe('initiateReload', () => {
-    it('should initiate a coupon reload', async () => {
-      const initiateDto = {};
-      await controller.initiateReload('TESTCODE', initiateDto);
-      expect(service.initiateCouponReload).toHaveBeenCalledWith(
-        'TESTCODE',
-        initiateDto,
-      );
+  describe('findAll', () => {
+    it('should return paginated coupons', async () => {
+      const paginationDto: PaginationQueryDto = { page: 1, limit: 10 };
+      const result = await controller.findAll(paginationDto);
+      expect(result.data).toEqual([mockCoupon]);
+      expect(service.findAll).toHaveBeenCalledWith(paginationDto);
     });
   });
 
-  describe('verifyReload', () => {
-    it('should verify a coupon reload', async () => {
-      const verifyDto = {};
-      const result = await controller.verifyReload(
-        'TESTCODE',
-        verifyDto,
-        mockRequest as any,
-      );
+  describe('validate', () => {
+    it('should validate a coupon code', async () => {
+      const result = await controller.validate('TESTCODE', mockRequest);
       expect(result).toEqual(mockCoupon);
-      expect(service.verifyAndCompleteReload).toHaveBeenCalledWith(
+      expect(service.validateCoupon).toHaveBeenCalledWith('TESTCODE', mockUser);
+    });
+  });
+
+  describe('saveCoupon', () => {
+    it('should save a coupon for the user', async () => {
+      const result = await controller.saveCoupon('TESTCODE', mockRequest);
+      expect(result.coupon).toEqual(mockCoupon);
+      expect(service.saveCoupon).toHaveBeenCalledWith('TESTCODE', mockUser);
+    });
+  });
+
+  describe('removeSavedCoupon', () => {
+    it('should remove a saved coupon', async () => {
+      await controller.removeSavedCoupon('TESTCODE', mockRequest);
+      expect(service.removeSavedCoupon).toHaveBeenCalledWith(
         'TESTCODE',
-        verifyDto,
-        mockUser.id,
+        mockUser,
       );
     });
   });
 
-  describe('findUserCoupons', () => {
-    it('should return an array of coupons', async () => {
-      const result = await controller.findUserCoupons(mockRequest as any);
-      expect(result).toEqual([mockCoupon]);
-      expect(service.findUserCoupons).toHaveBeenCalledWith(mockUser.id);
+  describe('getSavedCoupons', () => {
+    it('should return saved coupons for the user', async () => {
+      const result = await controller.getSavedCoupons(mockRequest);
+      expect(result[0].coupon).toEqual(mockCoupon);
+      expect(service.getSavedCoupons).toHaveBeenCalledWith(mockUser);
     });
   });
 
-  describe('findCouponByCode', () => {
-    it('should return a coupon', async () => {
-      const result = await controller.findCouponByCode('TESTCODE');
+  describe('findOne', () => {
+    it('should return a coupon by code', async () => {
+      const result = await controller.findOne('TESTCODE');
       expect(result).toEqual(mockCoupon);
       expect(service.findCouponByCode).toHaveBeenCalledWith('TESTCODE');
     });
   });
 
-  describe('findCouponProductsByBusiness', () => {
-    it('should return an array of coupon products for a business', async () => {
-      const result = await controller.findCouponProductsByBusiness('1');
-      expect(result).toEqual([]);
-      expect(productService.findCouponProductsByBusiness).toHaveBeenCalledWith('1');
+  describe('getProductDetail', () => {
+    it('should return coupon product detail', async () => {
+      const result = await controller.getProductDetail('1');
+      expect(result).toEqual(mockCoupon);
+      expect(service.findProductById).toHaveBeenCalledWith('1');
     });
   });
 });

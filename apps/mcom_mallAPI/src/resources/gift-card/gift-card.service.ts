@@ -33,8 +33,12 @@ import { CreateGiftCardTemplateDto } from './dto/create-gift-card-template.dto';
 import { UpdateGiftCardTemplateDto } from './dto/update-gift-card-template.dto';
 import { UpdateGiftCardSettingsDto } from './dto/update-gift-card-settings.dto';
 import { User } from '../users/entities/user.entity';
+import { UserRole } from '../../common/role.enum';
 import { customAlphabet } from 'nanoid';
-import { CapabilityService, ActionType } from '../capability/capability.service';
+import {
+  CapabilityService,
+  ActionType,
+} from '../capability/capability.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CashbackEvent } from '../../common/enums/cashback-event.enum';
@@ -64,7 +68,10 @@ import { GiftCardTemplateSearchDto } from './dto/gift-card-template-search.dto';
 import { DigitalValueService } from '../digital-value/digital-value.service';
 import { DigitalValueType } from '../digital-value/digital-value.enums';
 
-const generateNanoId = customAlphabet('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 16);
+const generateNanoId = customAlphabet(
+  '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ',
+  16,
+);
 
 @Injectable()
 export class GiftCardService {
@@ -95,7 +102,7 @@ export class GiftCardService {
     private readonly digitalValueService: DigitalValueService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) { }
+  ) {}
 
   // --- System Integration Methods ---
 
@@ -110,7 +117,9 @@ export class GiftCardService {
     const { recipientEmail, recipientName, message, businessName } = payload;
 
     // Find User to link
-    const user = await this.businessRepository.manager.getRepository(User).findOne({ where: { email: recipientEmail } });
+    const user = await this.businessRepository.manager
+      .getRepository(User)
+      .findOne({ where: { email: recipientEmail } });
 
     // We need an "Owner" for the GiftCard entity constraints.
     // If User exists, use them. If not... GiftCard entity says `owner` is User.
@@ -125,37 +134,46 @@ export class GiftCardService {
       // Note: This logic duplicates SSO/Auth logic slightly but necessary for system integrity.
       // Ideally inject UsersService but to avoid circular deps, use Repo.
       // Using a random password and stub data.
-      const nameStr = recipientName || "Loyalty Recipient";
+      const nameStr = recipientName || 'Loyalty Recipient';
       const nameParts = nameStr.split(' ');
       const firstName = nameParts[0];
       const lastName = nameParts.slice(1).join(' ') || '';
 
-      const newUser = this.businessRepository.manager.getRepository(User).create({
-        email: recipientEmail,
-        firstName,
-        lastName,
-        password: randomBytes(16).toString('hex'), // Random password
-        phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`, // Placeholder
-        isActive: true,
-        isEmailVerified: true, // Trusted system
-        role: 'customer' as any, // UserRole.CUSTOMER
-      });
-      const savedUser = await this.businessRepository.manager.getRepository(User).save(newUser);
+      const newUser = this.businessRepository.manager
+        .getRepository(User)
+        .create({
+          email: recipientEmail,
+          firstName,
+          lastName,
+          password: randomBytes(16).toString('hex'), // Random password
+          phoneNumber: `0000000000${Math.floor(Math.random() * 1000)}`, // Placeholder
+          isActive: true,
+          isEmailVerified: true, // Trusted system
+          role: UserRole.CUSTOMER,
+        });
+      const savedUser = await this.businessRepository.manager
+        .getRepository(User)
+        .save(newUser);
       ownerId = savedUser.id;
     }
 
-    const dv = await this.digitalValueService.create({
-      type: DigitalValueType.GIFT_CARD,
-      initialValue: amount,
-      ownerId,
-      metadata: {
-        recipientEmail,
-        recipientName,
-        personalMessage: message,
-        businessName,
+    const dv = await this.digitalValueService.create(
+      {
+        type: DigitalValueType.GIFT_CARD,
+        initialValue: amount,
+        ownerId,
+        metadata: {
+          recipientEmail,
+          recipientName,
+          personalMessage: message,
+          businessName,
+        },
+        expiryDate: new Date(
+          new Date().setFullYear(new Date().getFullYear() + 1),
+        ).toISOString(),
       },
-      expiryDate: new Date(new Date().setFullYear(new Date().getFullYear() + 1)).toISOString(),
-    }, ownerId);
+      ownerId,
+    );
 
     const giftCard = this.giftCardRepository.create({
       code: dv.code,
@@ -192,14 +210,26 @@ export class GiftCardService {
 
   async initiateGiftCardPurchase(
     initiateDto: InitiatePurchaseDto,
-    userId: string,
-  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
-    const template = await this.templateRepository.findOneBy({
-      id: initiateDto.templateId,
-      isActive: true,
+    _userId: string,
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    provider: PaymentMethod;
+  }> {
+    const template = await this.templateRepository.findOne({
+      where: { id: initiateDto.templateId, isActive: true },
+      relations: ['owner'],
     });
     if (!template) {
-      throw new NotFoundException('Gift card template not found or is inactive.');
+      throw new NotFoundException(
+        'Gift card template not found or is inactive.',
+      );
+    }
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card template is not currently active and cannot accept purchases.',
+      );
     }
 
     this.validatePurchaseAmount(initiateDto.amount, template);
@@ -207,10 +237,11 @@ export class GiftCardService {
     const currency = 'GBP';
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
-        initiateDto.amount,
-        currency,
-      );
+      const paymentIntent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          initiateDto.amount,
+          currency,
+        );
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
@@ -233,12 +264,20 @@ export class GiftCardService {
     const { purchaseDetails, paymentProvider, transactionId } = verifyDto;
     const { templateId, amount, assetId } = purchaseDetails;
 
-    const template = await this.templateRepository.findOneBy({
-      id: templateId,
-      isActive: true,
+    const template = await this.templateRepository.findOne({
+      where: { id: templateId, isActive: true },
+      relations: ['owner'],
     });
     if (!template) {
-      throw new NotFoundException('Gift card template not found or is inactive.');
+      throw new NotFoundException(
+        'Gift card template not found or is inactive.',
+      );
+    }
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card template is no longer active. Payment cannot be verified.',
+      );
     }
 
     if (assetId) {
@@ -264,17 +303,19 @@ export class GiftCardService {
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.verifyStripePaymentIntent(
+          transactionId,
+          amount,
+          currency,
+        );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.captureAndVerifyPaypalOrder(
+          transactionId,
+          amount,
+          currency,
+        );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -328,23 +369,27 @@ export class GiftCardService {
 
       const expiryDate = template.expiryPeriodDays
         ? new Date(
-          new Date().setDate(
-            new Date().getDate() + template.expiryPeriodDays,
-          ),
-        )
+            new Date().setDate(
+              new Date().getDate() + template.expiryPeriodDays,
+            ),
+          )
         : null;
 
-      const dv = await this.digitalValueService.create({
-        type: DigitalValueType.GIFT_CARD,
-        initialValue: finalAmount,
-        ownerId: business.user.id,
-        metadata: {
-          ...purchaseDto,
-          purchaserId: userId,
-          templateId: template.id,
+      const dv = await this.digitalValueService.create(
+        {
+          type: DigitalValueType.GIFT_CARD,
+          initialValue: finalAmount,
+          ownerId: business.user.id,
+          metadata: {
+            ...purchaseDto,
+            purchaserId: userId,
+            templateId: template.id,
+          },
+          expiryDate: expiryDate ? expiryDate.toISOString() : null,
         },
-        expiryDate: expiryDate ? expiryDate.toISOString() : null,
-      }, business.user.id, manager);
+        business.user.id,
+        manager,
+      );
 
       const giftCard = giftCardRepo.create({
         ...purchaseDto,
@@ -402,12 +447,23 @@ export class GiftCardService {
   async initiateGiftCardReload(
     code: string,
     initiateDto: InitiateReloadDto,
-    userId: string,
-  ): Promise<{ clientSecret?: string; orderId?: string; provider: PaymentMethod }> {
+    _userId: string,
+  ): Promise<{
+    clientSecret?: string;
+    orderId?: string;
+    provider: PaymentMethod;
+  }> {
     const giftCard = await this.findActiveCardByCode(code);
-    const template = await this.templateRepository.findOneBy({
-      id: giftCard.templateId,
+    const template = await this.templateRepository.findOne({
+      where: { id: giftCard.templateId },
+      relations: ['owner'],
     });
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card is not currently active and cannot accept reloads.',
+      );
+    }
 
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
@@ -416,10 +472,11 @@ export class GiftCardService {
     const currency = 'GBP';
 
     if (initiateDto.paymentProvider === PaymentMethod.STRIPE) {
-      const paymentIntent = await this.paymentProviderService.createStripePaymentIntent(
-        initiateDto.amount,
-        currency,
-      );
+      const paymentIntent =
+        await this.paymentProviderService.createStripePaymentIntent(
+          initiateDto.amount,
+          currency,
+        );
       return {
         clientSecret: paymentIntent.client_secret,
         provider: PaymentMethod.STRIPE,
@@ -444,9 +501,16 @@ export class GiftCardService {
     const { amount } = reloadDetails;
 
     const giftCard = await this.findActiveCardByCode(code);
-    const template = await this.templateRepository.findOneBy({
-      id: giftCard.templateId,
+    const template = await this.templateRepository.findOne({
+      where: { id: giftCard.templateId },
+      relations: ['owner'],
     });
+
+    if (!template.owner || !template.owner.isActive) {
+      throw new BadRequestException(
+        'The owner of this gift card is no longer active. Reload payment cannot be verified.',
+      );
+    }
 
     if (!template.allowReloading) {
       throw new BadRequestException('This gift card cannot be reloaded.');
@@ -456,17 +520,19 @@ export class GiftCardService {
     let verificationResult;
 
     if (paymentProvider === PaymentMethod.STRIPE) {
-      verificationResult = await this.paymentProviderService.verifyStripePaymentIntent(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.verifyStripePaymentIntent(
+          transactionId,
+          amount,
+          currency,
+        );
     } else if (paymentProvider === PaymentMethod.PAYPAL) {
-      verificationResult = await this.paymentProviderService.captureAndVerifyPaypalOrder(
-        transactionId,
-        amount,
-        currency,
-      );
+      verificationResult =
+        await this.paymentProviderService.captureAndVerifyPaypalOrder(
+          transactionId,
+          amount,
+          currency,
+        );
     } else {
       throw new BadRequestException('Invalid payment provider specified.');
     }
@@ -503,7 +569,11 @@ export class GiftCardService {
         const dv = await this.digitalValueService.getByCode(code);
         await this.digitalValueService.fund(dv.id, { amount }, manager);
       } catch (e) {
-        if (e instanceof NotFoundException) { /* ignore legacy */ } else { throw e; }
+        if (e instanceof NotFoundException) {
+          /* ignore legacy */
+        } else {
+          throw e;
+        }
       }
 
       const user = await manager.findOne(User, { where: { id: userId } });
@@ -566,8 +636,7 @@ export class GiftCardService {
       where: { ownerId, isActive: true },
     });
 
-    return templates
-
+    return templates;
   }
 
   async purchaseGiftCard(
@@ -583,7 +652,9 @@ export class GiftCardService {
       isActive: true,
     });
     if (!template) {
-      throw new NotFoundException('Gift card template not found or is inactive.');
+      throw new NotFoundException(
+        'Gift card template not found or is inactive.',
+      );
     }
 
     this.validatePurchaseAmount(purchaseDto.amount, template);
@@ -602,21 +673,25 @@ export class GiftCardService {
 
     const expiryDate = template.expiryPeriodDays
       ? new Date(
-        new Date().setDate(new Date().getDate() + template.expiryPeriodDays),
-      )
+          new Date().setDate(new Date().getDate() + template.expiryPeriodDays),
+        )
       : null;
 
     return this.dataSource.transaction(async (manager) => {
-      const dv = await this.digitalValueService.create({
-        type: DigitalValueType.GIFT_CARD,
-        initialValue: finalAmount,
-        ownerId,
-        metadata: {
-          ...purchaseDto,
-          templateId: template.id,
+      const dv = await this.digitalValueService.create(
+        {
+          type: DigitalValueType.GIFT_CARD,
+          initialValue: finalAmount,
+          ownerId,
+          metadata: {
+            ...purchaseDto,
+            templateId: template.id,
+          },
+          expiryDate: expiryDate ? expiryDate.toISOString() : null,
         },
-        expiryDate: expiryDate ? expiryDate.toISOString() : null,
-      }, ownerId, manager);
+        ownerId,
+        manager,
+      );
 
       const giftCard = this.giftCardRepository.create({
         ...purchaseDto,
@@ -689,13 +764,18 @@ export class GiftCardService {
 
     if (giftCard.templateId) {
       if (!redeemingBusinessId) {
-        throw new BadRequestException('Redeeming business ID is required for this gift card.');
+        throw new BadRequestException(
+          'Redeeming business ID is required for this gift card.',
+        );
       }
       const redeemingBusiness = await this.businessRepository.findOne({
         where: { id: redeemingBusinessId },
-        relations: ['user']
+        relations: ['user'],
       });
-      if (!redeemingBusiness || redeemingBusiness.user.id !== giftCard.ownerId) {
+      if (
+        !redeemingBusiness ||
+        redeemingBusiness.user.id !== giftCard.ownerId
+      ) {
         throw new ForbiddenException(
           'This gift card cannot be redeemed at this business.',
         );
@@ -711,7 +791,9 @@ export class GiftCardService {
       throw new BadRequestException('Redemption amount exceeds balance.');
     }
     if (order.total < redeemDto.amount) {
-      throw new BadRequestException('Redemption amount cannot exceed order total.');
+      throw new BadRequestException(
+        'Redemption amount cannot exceed order total.',
+      );
     }
     this.validateRedemptionRules(settings, order);
 
@@ -721,10 +803,14 @@ export class GiftCardService {
       // Update Digital Value Master
       try {
         const dv = await this.digitalValueService.getByCode(redeemDto.code);
-        await this.digitalValueService.redeem(dv.id, {
-          amount: redeemDto.amount,
-          merchantId: redeemingBusinessId,
-        }, transactionalManager);
+        await this.digitalValueService.redeem(
+          dv.id,
+          {
+            amount: redeemDto.amount,
+            merchantId: redeemingBusinessId,
+          },
+          transactionalManager,
+        );
       } catch (e) {
         // If DV not found (legacy card?) or other error.
         // If legacy card doesn't exist in DV, we should perhaps skip or fail?
@@ -756,7 +842,10 @@ export class GiftCardService {
     });
   }
 
-  async processScheduledDeliveries(): Promise<{ delivered: number; failed: number }> {
+  async processScheduledDeliveries(): Promise<{
+    delivered: number;
+    failed: number;
+  }> {
     const cardsToDeliver = await this.giftCardRepository.find({
       where: {
         deliveryStatus: GiftCardDeliveryStatus.PENDING,
@@ -802,7 +891,9 @@ export class GiftCardService {
   }
 
   public async getSettings(ownerId: string): Promise<GiftCardSettings> {
-    const settings = await this.settingsRepository.findOne({ where: { ownerId } });
+    const settings = await this.settingsRepository.findOne({
+      where: { ownerId },
+    });
     if (!settings) {
       return this.settingsRepository.save(
         this.settingsRepository.create({ ownerId, isEnabled: false }),
@@ -811,7 +902,10 @@ export class GiftCardService {
     return settings;
   }
 
-  private validatePurchaseAmount(amount: number, template: GiftCardTemplate): void {
+  private validatePurchaseAmount(
+    amount: number,
+    template: GiftCardTemplate,
+  ): void {
     const {
       fixedAmounts,
       allowCustomAmount,
@@ -870,7 +964,9 @@ export class GiftCardService {
     const rules = settings.redemptionRules;
     if (!rules) return;
     if (order.appliedOffer && !rules.canBeUsedWithDiscounts) {
-      throw new BadRequestException('Gift card cannot be used with discount coupons.');
+      throw new BadRequestException(
+        'Gift card cannot be used with discount coupons.',
+      );
     }
   }
 
@@ -881,11 +977,11 @@ export class GiftCardService {
     });
     if (!giftCard) return;
 
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const mailOptions: any = {
       to: giftCard.recipientEmail,
-      subject: `You've received a gift card from ${giftCard.senderName || giftCard.purchaseBusiness.businessName
-        }!`,
+      subject: `You've received a gift card from ${
+        giftCard.senderName || giftCard.purchaseBusiness.businessName
+      }!`,
     };
 
     if (giftCard.htmlBody) {
@@ -913,7 +1009,10 @@ export class GiftCardService {
   }
   // --- Merchant/Owner-Facing Methods ---
 
-  async createTemplate(createDto: CreateGiftCardTemplateDto, ownerId: string): Promise<GiftCardTemplate> {
+  async createTemplate(
+    createDto: CreateGiftCardTemplateDto,
+    ownerId: string,
+  ): Promise<GiftCardTemplate> {
     const business = await this.businessRepository.findOne({
       where: { user: { id: ownerId } },
     });
@@ -923,9 +1022,13 @@ export class GiftCardService {
 
     // Check capability using ownerId
     const currentTemplateCount = await this.templateRepository.count({
-      where: { owner: { id: ownerId } }
+      where: { owner: { id: ownerId } },
     });
-    await this.capabilityService.checkPermission(ownerId, ActionType.CREATE_GIFT_CARD_TEMPLATE, { currentCount: currentTemplateCount });
+    await this.capabilityService.checkPermission(
+      ownerId,
+      ActionType.CREATE_GIFT_CARD_TEMPLATE,
+      { currentCount: currentTemplateCount },
+    );
 
     const template = this.templateRepository.create({
       ...createDto,
@@ -934,7 +1037,11 @@ export class GiftCardService {
     return this.templateRepository.save(template);
   }
 
-  async updateTemplate(templateId: string, updateDto: UpdateGiftCardTemplateDto, ownerId: string): Promise<GiftCardTemplate> {
+  async updateTemplate(
+    templateId: string,
+    updateDto: UpdateGiftCardTemplateDto,
+    ownerId: string,
+  ): Promise<GiftCardTemplate> {
     const template = await this.findTemplateByIdForOwner(templateId, ownerId);
     Object.assign(template, updateDto);
     return this.templateRepository.save(template);
@@ -983,10 +1090,10 @@ export class GiftCardService {
           deliveryStatus: GiftCardDeliveryStatus.DELIVERED, // Manually created
           expiryDate: template.expiryPeriodDays
             ? new Date(
-              new Date().setDate(
-                new Date().getDate() + template.expiryPeriodDays,
-              ),
-            )
+                new Date().setDate(
+                  new Date().getDate() + template.expiryPeriodDays,
+                ),
+              )
             : null,
         });
         const savedGiftCard = await giftCardRepo.save(giftCard);
@@ -1070,10 +1177,10 @@ export class GiftCardService {
             deliveryStatus: GiftCardDeliveryStatus.DELIVERED,
             expiryDate: template.expiryPeriodDays
               ? new Date(
-                new Date().setDate(
-                  new Date().getDate() + template.expiryPeriodDays,
-                ),
-              )
+                  new Date().setDate(
+                    new Date().getDate() + template.expiryPeriodDays,
+                  ),
+                )
               : null,
           });
           const savedGiftCard = await giftCardRepo.save(giftCard);
@@ -1148,7 +1255,10 @@ export class GiftCardService {
     return new PageDto(data, pageMetaDto);
   }
 
-  async findGiftCardDetailsForOwner(id: string, ownerId: string): Promise<GiftCard> {
+  async findGiftCardDetailsForOwner(
+    id: string,
+    ownerId: string,
+  ): Promise<GiftCard> {
     const giftCard = await this.giftCardRepository.findOne({
       where: { id, ownerId },
       relations: ['transactions', 'purchaseOrder', 'purchaseBusiness'],
@@ -1159,7 +1269,13 @@ export class GiftCardService {
     return giftCard;
   }
 
-  async adjustBalance(id: string, ownerId: string, amount: number, notes: string, processedById: string): Promise<GiftCard> {
+  async adjustBalance(
+    id: string,
+    ownerId: string,
+    amount: number,
+    notes: string,
+    processedById: string,
+  ): Promise<GiftCard> {
     const giftCard = await this.findGiftCardDetailsForOwner(id, ownerId);
     if (amount < 0) {
       throw new BadRequestException('Balance cannot be negative.');
@@ -1198,15 +1314,16 @@ export class GiftCardService {
     await this.sendGiftCardEmail(giftCard.id);
   }
 
-  async updateSettings(ownerId: string, updateDto: UpdateGiftCardSettingsDto): Promise<GiftCardSettings> {
+  async updateSettings(
+    ownerId: string,
+    updateDto: UpdateGiftCardSettingsDto,
+  ): Promise<GiftCardSettings> {
     const settings = await this.getSettings(ownerId);
     Object.assign(settings, updateDto);
     return this.settingsRepository.save(settings);
   }
 
-  async getOwnerStats(
-    ownerId: string,
-  ): Promise<GiftCardStatsDto> {
+  async getOwnerStats(ownerId: string): Promise<GiftCardStatsDto> {
     const liabilityResult = await this.giftCardRepository
       .createQueryBuilder('giftCard')
       .select('SUM(giftCard.currentBalance)', 'sum')
@@ -1231,7 +1348,10 @@ export class GiftCardService {
     let totalRedeemed = 0;
 
     for (const t of transactionsResult) {
-      if (t.type === GiftCardTransactionType.PURCHASE || t.type === GiftCardTransactionType.RELOAD) {
+      if (
+        t.type === GiftCardTransactionType.PURCHASE ||
+        t.type === GiftCardTransactionType.RELOAD
+      ) {
         totalSold += parseFloat(t.sum);
       }
       if (t.type === GiftCardTransactionType.REDEEM) {
@@ -1326,7 +1446,10 @@ export class GiftCardService {
       let customerName = 'N/A';
       let customerEmail = 'N/A';
 
-      if (t.type === GiftCardTransactionType.REDEEM || t.type === GiftCardTransactionType.RELOAD) {
+      if (
+        t.type === GiftCardTransactionType.REDEEM ||
+        t.type === GiftCardTransactionType.RELOAD
+      ) {
         if (t.order?.user) {
           customerName = t.order.user.name;
           customerEmail = t.order.user.email;
@@ -1366,7 +1489,10 @@ export class GiftCardService {
     };
   }
 
-  async findTemplateByIdForOwner(id: string, ownerId: string): Promise<GiftCardTemplate> {
+  async findTemplateByIdForOwner(
+    id: string,
+    ownerId: string,
+  ): Promise<GiftCardTemplate> {
     const template = await this.templateRepository.findOneBy({ id, ownerId });
     if (!template) {
       throw new NotFoundException('Gift card template not found.');
@@ -1380,10 +1506,29 @@ export class GiftCardService {
 
   // --- Admin-Facing Methods ---
 
-  async getPlatformStats(): Promise<{ totalLiability: number; totalRedeemed: number; totalIssued: number }> {
-    const totalLiabilityResult = await this.giftCardRepository.createQueryBuilder('giftCard').select('SUM(giftCard.currentBalance)', 'sum').getRawOne();
-    const redeemedResult = await this.transactionRepository.createQueryBuilder('transaction').select('SUM(transaction.amount)', 'sum').where('transaction.type = :type', { type: GiftCardTransactionType.REDEEM }).getRawOne();
-    const issuedResult = await this.transactionRepository.createQueryBuilder('transaction').select('SUM(transaction.amount)', 'sum').where('transaction.type = :type', { type: GiftCardTransactionType.PURCHASE }).getRawOne();
+  async getPlatformStats(): Promise<{
+    totalLiability: number;
+    totalRedeemed: number;
+    totalIssued: number;
+  }> {
+    const totalLiabilityResult = await this.giftCardRepository
+      .createQueryBuilder('giftCard')
+      .select('SUM(giftCard.currentBalance)', 'sum')
+      .getRawOne();
+    const redeemedResult = await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .select('SUM(transaction.amount)', 'sum')
+      .where('transaction.type = :type', {
+        type: GiftCardTransactionType.REDEEM,
+      })
+      .getRawOne();
+    const issuedResult = await this.transactionRepository
+      .createQueryBuilder('transaction')
+      .select('SUM(transaction.amount)', 'sum')
+      .where('transaction.type = :type', {
+        type: GiftCardTransactionType.PURCHASE,
+      })
+      .getRawOne();
     return {
       totalLiability: parseFloat(totalLiabilityResult.sum) || 0,
       totalRedeemed: Math.abs(parseFloat(redeemedResult.sum)) || 0,
@@ -1392,21 +1537,37 @@ export class GiftCardService {
   }
 
   async findGiftCardByCodeAsAdmin(code: string): Promise<GiftCard> {
-    const giftCard = await this.giftCardRepository.findOne({ where: { code }, relations: ['owner', 'transactions', 'purchaseBusiness'] });
+    const giftCard = await this.giftCardRepository.findOne({
+      where: { code },
+      relations: ['owner', 'transactions', 'purchaseBusiness'],
+    });
     if (!giftCard) {
       throw new NotFoundException('Gift card not found.');
     }
     return giftCard;
   }
 
-  async toggleGiftCardFeatureForOwner(ownerId: string, isEnabled: boolean): Promise<GiftCardSettings> {
+  async toggleGiftCardFeatureForOwner(
+    ownerId: string,
+    isEnabled: boolean,
+  ): Promise<GiftCardSettings> {
     const settings = await this.getSettings(ownerId);
     settings.isEnabled = isEnabled;
     return this.settingsRepository.save(settings);
   }
 
-  async findAllPublicTemplates(searchDto: GiftCardTemplateSearchDto): Promise<PageDto<GiftCardTemplate>> {
-    const { page, limit, search, minAmount, maxAmount, businessId, businessName } = searchDto;
+  async findAllPublicTemplates(
+    searchDto: GiftCardTemplateSearchDto,
+  ): Promise<PageDto<GiftCardTemplate>> {
+    const {
+      page,
+      limit,
+      search,
+      minAmount,
+      maxAmount,
+      businessId,
+      businessName,
+    } = searchDto;
 
     const queryBuilder = this.templateRepository.createQueryBuilder('template');
 
@@ -1423,11 +1584,15 @@ export class GiftCardService {
     }
 
     if (minAmount !== undefined) {
-      queryBuilder.andWhere('template.minCustomAmount >= :minAmount', { minAmount });
+      queryBuilder.andWhere('template.minCustomAmount >= :minAmount', {
+        minAmount,
+      });
     }
 
     if (maxAmount !== undefined) {
-      queryBuilder.andWhere('template.maxCustomAmount <= :maxAmount', { maxAmount });
+      queryBuilder.andWhere('template.maxCustomAmount <= :maxAmount', {
+        maxAmount,
+      });
     }
 
     if (businessId) {

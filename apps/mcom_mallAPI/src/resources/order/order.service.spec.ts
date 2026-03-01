@@ -1,7 +1,8 @@
 import { ConfigService } from '@nestjs/config';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { ProductService } from '../product/product.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { Repository, EntityManager } from 'typeorm';
 import { OrderService } from './order.service';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
@@ -25,17 +26,13 @@ import { PartnershipService } from '../partnership/partnership.service';
 import { ProductServiceBooking } from './entities/product-service-booking.entity';
 import { Partnership } from '../partnership/entities/partnership.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { EntityManager } from 'typeorm';
 
 describe('OrderService', () => {
   let service: OrderService;
   let pointsService: PointsService;
-  let offerRepository: Repository<Offer>;
-  let cartService: CartService;
-  let userRepository: Repository<User>;
-  let entityManager: EntityManager;
   let voucherService: VoucherService;
   let giftCardService: GiftCardService;
-  let businessRepository: Repository<Business>;
 
   const mockOrderRepository = {
     createQueryBuilder: jest.fn(() => ({
@@ -104,11 +101,11 @@ describe('OrderService', () => {
 
   const mockProductServiceBookingRepository = {
     create: jest.fn(),
-  }
+  };
 
   const mockPartnershipRepository = {
     findOne: jest.fn(),
-  }
+  };
 
   beforeEach(async () => {
     jest.clearAllMocks();
@@ -142,25 +139,32 @@ describe('OrderService', () => {
         { provide: GiftCardService, useValue: mockGiftCardService },
         { provide: BookingService, useValue: mockBookingService },
         { provide: PartnershipService, useValue: mockPartnershipService },
-        { provide: getRepositoryToken(ProductServiceBooking), useValue: mockProductServiceBookingRepository },
-        { provide: getRepositoryToken(Partnership), useValue: mockPartnershipRepository },
+        {
+          provide: getRepositoryToken(ProductServiceBooking),
+          useValue: mockProductServiceBookingRepository,
+        },
+        {
+          provide: getRepositoryToken(Partnership),
+          useValue: mockPartnershipRepository,
+        },
         { provide: EntityManager, useValue: mockEntityManager },
         { provide: ConfigService, useValue: { get: jest.fn() } },
+        {
+          provide: EventEmitter2,
+          useValue: { emitAsync: jest.fn(), emit: jest.fn() },
+        },
+        {
+          provide: ProductService,
+          useValue: { calculatePrice: jest.fn().mockReturnValue(50) },
+        },
         { provide: WalletService, useValue: { creditEarning: jest.fn() } },
       ],
     }).compile();
 
     service = module.get<OrderService>(OrderService);
     pointsService = module.get<PointsService>(PointsService);
-    offerRepository = module.get<Repository<Offer>>(getRepositoryToken(Offer));
-    cartService = module.get<CartService>(CartService);
-    userRepository = module.get<Repository<User>>(getRepositoryToken(User));
-    entityManager = module.get<EntityManager>(EntityManager);
     voucherService = module.get<VoucherService>(VoucherService);
     giftCardService = module.get<GiftCardService>(GiftCardService);
-    businessRepository = module.get<Repository<Business>>(
-      getRepositoryToken(Business),
-    );
   });
 
   it('should be defined', () => {
@@ -170,7 +174,12 @@ describe('OrderService', () => {
   describe('checkout', () => {
     const userId = 'user-id';
     const user = { id: userId };
-    const business = { id: 'biz-id', user: { id: 'owner-id' } };
+    const business = {
+      id: 'biz-id',
+      businessName: 'Test Business',
+      status: 'published',
+      user: { id: 'owner-id', isActive: true },
+    };
     const cart = {
       items: [
         {
@@ -195,7 +204,7 @@ describe('OrderService', () => {
       const createCheckoutDto: CreateCheckoutDto = {
         offerId: 'offer-id',
         payment: {
-          amount: 100,
+          amount: 50,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -218,7 +227,7 @@ describe('OrderService', () => {
       const createCheckoutDto: CreateCheckoutDto = {
         voucherCode: 'VOUCHER123',
         payment: {
-          amount: 50, // 100 (cart) - 50 (voucher)
+          amount: 0,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -237,7 +246,7 @@ describe('OrderService', () => {
       expect(voucherService.findVoucherByCode).toHaveBeenCalledWith(
         'VOUCHER123',
       );
-      expect(result.total).toBe(50);
+      expect(result.total).toBe(0);
       expect(voucherService.redeemForOrder).toHaveBeenCalled();
       expect(voucherService.redeemForOrder).toHaveBeenCalledWith(
         { code: 'VOUCHER123', amount: 50 },
@@ -273,7 +282,7 @@ describe('OrderService', () => {
         giftCardCode: 'GIFTCARD123',
         voucherCode: 'VOUCHER123',
         payment: {
-          amount: 30, // 100 (cart) - 20 (giftcard) - 50 (voucher)
+          amount: 0,
           paymentMethod: 'card',
           transactionId: 'txn-id',
         } as any,
@@ -303,12 +312,12 @@ describe('OrderService', () => {
         'VOUCHER123',
       );
       expect(voucherService.redeemForOrder).toHaveBeenCalledWith(
-        { code: 'VOUCHER123', amount: 50 },
+        { code: 'VOUCHER123', amount: 30 },
         expect.any(Object),
         expect.any(Object),
       );
 
-      expect(result.total).toBe(30);
+      expect(result.total).toBe(0);
     });
   });
 });

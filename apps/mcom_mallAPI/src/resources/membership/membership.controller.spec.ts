@@ -11,7 +11,6 @@ import { Membership } from './entities/membership.entity';
 
 describe('MembershipController', () => {
   let controller: MembershipController;
-  let service: MembershipService;
 
   const mockUser: User = {
     id: 'user-id',
@@ -36,7 +35,6 @@ describe('MembershipController', () => {
     }).compile();
 
     controller = module.get<MembershipController>(MembershipController);
-    service = module.get<MembershipService>(MembershipService);
   });
 
   afterEach(() => {
@@ -76,10 +74,9 @@ describe('MembershipController', () => {
 
       const result = await controller.initiatePayment(initiateDto, mockUser);
 
-      expect(mockMembershipService.initiateMembershipPayment).toHaveBeenCalledWith(
-        initiateDto,
-        mockUser,
-      );
+      expect(
+        mockMembershipService.initiateMembershipPayment,
+      ).toHaveBeenCalledWith(initiateDto, mockUser);
       expect(result).toEqual(expectedResponse);
     });
   });
@@ -101,10 +98,9 @@ describe('MembershipController', () => {
 
       const result = await controller.verifyPayment(verifyDto, mockUser);
 
-      expect(mockMembershipService.verifyAndCreateMembership).toHaveBeenCalledWith(
-        verifyDto,
-        mockUser,
-      );
+      expect(
+        mockMembershipService.verifyAndCreateMembership,
+      ).toHaveBeenCalledWith(verifyDto, mockUser);
       expect(result).toEqual(createdMembership);
     });
   });

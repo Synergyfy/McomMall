@@ -8,7 +8,10 @@ import { PromotionParticipant } from './entities/promotion-participant.entity';
 import { PromotionActivity } from './entities/promotion-activity.entity';
 import { PromotionScope } from './promotion.enum';
 import { Product } from '../product/entities/product.entity';
-import { PointTransaction, PointTransactionType } from '../transaction/entities/point-transaction.entity';
+import {
+  PointTransaction,
+  PointTransactionType,
+} from '../transaction/entities/point-transaction.entity';
 
 @Injectable()
 export class PromotionEngineService {
@@ -118,16 +121,14 @@ export class PromotionEngineService {
           switch (promotion.promotionScope) {
             case 'ALL_LISTINGS':
               if (
-                promotion.businesses?.some(
-                  (b) => b.id === product.business?.id,
-                )
+                promotion.businesses?.some((b) => b.id === product.business?.id)
               ) {
                 isEligible = true;
                 this.logger.log(
                   `Promotion ${promotion.id} is eligible (ALL_LISTINGS).`,
                 );
               } else {
-                 this.logger.log(
+                this.logger.log(
                   `Promotion ${promotion.id} not eligible (ALL_LISTINGS). Product business ${product.business?.id} not in promotion businesses.`,
                 );
               }

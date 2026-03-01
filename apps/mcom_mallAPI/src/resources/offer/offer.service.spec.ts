@@ -7,8 +7,7 @@ import { Business } from '../listings/entities/listing.entity';
 import { User } from '../users/entities/user.entity';
 import { TransactionService } from '../transaction/transaction.service';
 import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
-import { Repository } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { NotFoundException } from '@nestjs/common';
 import { ActivitiesService } from '../activities/activities.service';
 import { ActivityTimerService } from '../activity-timer/activity-timer.service';
 
@@ -27,9 +26,6 @@ const mockPromotionParticipantRepository = {
 
 describe('OfferService', () => {
   let service: OfferService;
-  let offerRepository: Repository<Offer>;
-  let promotionParticipantRepository: Repository<PromotionParticipant>;
-  let productRepository: Repository<Product>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -66,13 +62,6 @@ describe('OfferService', () => {
     }).compile();
 
     service = module.get<OfferService>(OfferService);
-    offerRepository = module.get<Repository<Offer>>(getRepositoryToken(Offer));
-    promotionParticipantRepository = module.get<
-      Repository<PromotionParticipant>
-    >(getRepositoryToken(PromotionParticipant));
-    productRepository = module.get<Repository<Product>>(
-      getRepositoryToken(Product),
-    );
   });
 
   it('should be defined', () => {

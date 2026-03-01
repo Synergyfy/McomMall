@@ -39,6 +39,8 @@ export class CreateUserDto {
     example: '+2347033486488',
     description: 'Phone number of the user',
   })
+  @IsString()
+  @IsNotEmpty()
   phoneNumber: string;
 
   @ApiProperty({
@@ -76,4 +78,12 @@ export class CreateUserDto {
   @IsString()
   @IsOptional()
   provisionCode?: string;
+
+  @ApiProperty({
+    required: false,
+    description: 'Referral code of the user who invited this user.',
+  })
+  @IsString()
+  @IsOptional()
+  referralCode?: string;
 }

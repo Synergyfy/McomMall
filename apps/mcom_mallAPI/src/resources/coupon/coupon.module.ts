@@ -33,4 +33,4 @@ import { BusinessCouponController } from './business-coupon.controller';
   providers: [CouponService],
   exports: [CouponService],
 })
-export class CouponModule { }
+export class CouponModule {}

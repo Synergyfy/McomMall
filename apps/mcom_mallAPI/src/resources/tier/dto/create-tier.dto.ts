@@ -1,4 +1,12 @@
-import { IsBoolean, IsNotEmpty, IsNumber, IsObject, IsOptional, IsString, IsArray } from 'class-validator';
+import {
+  IsBoolean,
+  IsNotEmpty,
+  IsNumber,
+  IsObject,
+  IsOptional,
+  IsString,
+  IsArray,
+} from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 import { TierConfig } from '../interfaces/tier-config.interface';
 import { TierType } from '../enums/tier-type.enum';

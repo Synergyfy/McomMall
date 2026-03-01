@@ -1,7 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
-import { BadRequestException, NotFoundException } from '@nestjs/common';
+import { BadRequestException } from '@nestjs/common';
 
 import { VoucherService } from '../voucher.service';
 import { Voucher, VoucherStatus } from '../entities/voucher.entity';
@@ -16,16 +16,17 @@ import { WalletService } from '../../wallet/wallet.service';
 import { InitiateReloadDto } from '../dto/initiate-reload.dto';
 import { PaymentMethod } from '../../order/entities/order-payment.entity';
 import { VerifyReloadDto } from '../dto/verify-reload.dto';
+import { DigitalValueService } from '../../digital-value/digital-value.service';
+import { CentralIntegrationService } from '../../../resources/payments/services/central-integration.service';
 
 describe('VoucherService Reloads', () => {
   let service: VoucherService;
-  let voucherRepository: Repository<Voucher>;
   let voucherProductRepository: Repository<VoucherProduct>;
   let paymentProviderService: PaymentProviderService;
   let walletService: WalletService;
   let dataSource: DataSource;
 
-  const mockUser = { id: 'user-id', name: 'Test User' } as User;
+  const mockUser = { id: 'user-id', name: 'Test User', isActive: true } as User;
   const mockVoucherProduct = {
     id: 'product-id',
     allowReloading: true,
@@ -87,23 +88,40 @@ describe('VoucherService Reloads', () => {
           },
         },
         {
+          provide: DigitalValueService,
+          useValue: {
+            getByCode: jest
+              .fn()
+              .mockResolvedValue({ id: 'dv-id', code: 'RELOAD123' }),
+            fund: jest.fn().mockResolvedValue({}),
+          },
+        },
+        {
+          provide: CentralIntegrationService,
+          useValue: { processCashback: jest.fn() },
+        },
+        {
           provide: DataSource,
           useValue: {
-            transaction: jest.fn().mockImplementation((callback) => callback({})),
+            transaction: jest.fn().mockImplementation((callback) =>
+              callback({
+                findOne: jest.fn().mockResolvedValue({ id: 'user-1' }),
+                save: jest.fn(),
+                create: jest.fn(),
+              }),
+            ),
           },
         },
       ],
     }).compile();
 
     service = module.get<VoucherService>(VoucherService);
-    voucherRepository = module.get<Repository<Voucher>>(
-      getRepositoryToken(Voucher),
-    );
     voucherProductRepository = module.get<Repository<VoucherProduct>>(
       getRepositoryToken(VoucherProduct),
     );
-    paymentProviderService =
-      module.get<PaymentProviderService>(PaymentProviderService);
+    paymentProviderService = module.get<PaymentProviderService>(
+      PaymentProviderService,
+    );
     walletService = module.get<WalletService>(WalletService);
     dataSource = module.get<DataSource>(DataSource);
   });
@@ -119,7 +137,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'createStripePaymentIntent')
@@ -139,7 +157,10 @@ describe('VoucherService Reloads', () => {
         amount: 25,
         paymentProvider: PaymentMethod.STRIPE,
       };
-      const nonReloadableProduct = { ...mockVoucherProduct, allowReloading: false };
+      const nonReloadableProduct = {
+        ...mockVoucherProduct,
+        allowReloading: false,
+      };
       const nonReloadableVoucher = {
         ...mockVoucher,
         voucherProduct: nonReloadableProduct,
@@ -149,7 +170,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(nonReloadableVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(nonReloadableProduct);
 
       await expect(
@@ -170,7 +191,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
@@ -180,6 +201,7 @@ describe('VoucherService Reloads', () => {
         .mockResolvedValue(new VoucherTransaction());
 
       const mockEntityManager = {
+        findOne: jest.fn().mockResolvedValue({ id: 'user-id' }),
         getRepository: jest.fn().mockReturnValue({
           create: jest.fn((entity) => entity),
           save: jest.fn((entity) => Promise.resolve(entity)),
@@ -189,18 +211,12 @@ describe('VoucherService Reloads', () => {
       jest
         .spyOn(dataSource as any, 'transaction')
         .mockImplementation(
-          async (
-            runInTransaction: (entityManager: any) => Promise<any>,
-          ) => {
+          async (runInTransaction: (entityManager: any) => Promise<any>) => {
             return runInTransaction(mockEntityManager);
           },
         );
 
-      await service.verifyAndCompleteReload(
-        'RELOAD123',
-        verifyDto,
-        'user-id',
-      );
+      await service.verifyAndCompleteReload('RELOAD123', verifyDto, 'user-id');
 
       expect(walletService.creditEarning).toHaveBeenCalled();
     });
@@ -216,7 +232,7 @@ describe('VoucherService Reloads', () => {
         .spyOn(service as any, 'findActiveVoucherByCode')
         .mockResolvedValue(mockVoucher as any);
       jest
-        .spyOn(voucherProductRepository, 'findOneBy')
+        .spyOn(voucherProductRepository, 'findOne')
         .mockResolvedValue(mockVoucherProduct);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')

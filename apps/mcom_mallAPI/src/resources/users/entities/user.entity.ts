@@ -1,4 +1,14 @@
-import { Column, Entity, OneToMany, OneToOne, AfterLoad, BeforeInsert, BeforeUpdate } from 'typeorm';
+import {
+  Column,
+  Entity,
+  OneToMany,
+  OneToOne,
+  AfterLoad,
+  BeforeInsert,
+  BeforeUpdate,
+  ManyToOne,
+  JoinColumn,
+} from 'typeorm';
 import { Promotion } from '../../promotion/entities/promotion.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Offer } from '../../offer/entities/offer.entity';
@@ -121,7 +131,9 @@ export class User extends AbstractBaseEntity {
   )
   serviceProviderProfile: ServiceProviderProfile;
 
-  @OneToOne(() => Membership, (membership) => membership.user, { cascade: true })
+  @OneToOne(() => Membership, (membership) => membership.user, {
+    cascade: true,
+  })
   membership: Membership;
 
   @OneToMany(() => ShippingAddress, (address) => address.user)
@@ -141,4 +153,17 @@ export class User extends AbstractBaseEntity {
 
   @Column({ type: 'int', default: 100 })
   trustScore: number;
+
+  @Column({ unique: true, nullable: true })
+  referralCode: string;
+
+  @Column({ nullable: true })
+  referredById: string;
+
+  @ManyToOne(() => User, (user) => user.referredUsers)
+  @JoinColumn({ name: 'referredById' })
+  referredBy: User;
+
+  @OneToMany(() => User, (user) => user.referredBy)
+  referredUsers: User[];
 }

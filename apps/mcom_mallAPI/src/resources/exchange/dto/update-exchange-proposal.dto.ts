@@ -6,7 +6,8 @@ export class UpdateExchangeProposalDto {
   @IsEnum(ProposalStatus)
   @IsIn([ProposalStatus.ACCEPTED, ProposalStatus.REJECTED])
   @ApiProperty({
-    description: 'The new status for the proposal. Must be either ACCEPTED or REJECTED.',
+    description:
+      'The new status for the proposal. Must be either ACCEPTED or REJECTED.',
     enum: [ProposalStatus.ACCEPTED, ProposalStatus.REJECTED],
     example: ProposalStatus.ACCEPTED,
   })

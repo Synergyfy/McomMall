@@ -2,6 +2,7 @@ import { VoucherProduct } from '../vouchers/types';
 import { GiftCardTemplate } from '../gift-cards/types';
 import { CouponProduct } from '../coupons/types';
 import { Service } from '../services/types';
+import { Product } from '../listings/types';
 
 export interface PageMetaDto {
   totalItems: number;
@@ -95,4 +96,5 @@ export interface MarketplacePublicData {
   giftCards: GiftCardTemplate[];
   coupons: CouponProduct[];
   services: Service[];
+  products: Product[];
 }

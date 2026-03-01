@@ -1,13 +1,37 @@
-import { Controller, Post, Body, UseGuards, Get, Query, Param, Patch, BadRequestException } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Body,
+  UseGuards,
+  Get,
+  Query,
+  Param,
+  Patch,
+  BadRequestException,
+} from '@nestjs/common';
 import { AdminService } from './admin.service';
 import { CreateAdminDto, LoginAdminDto } from './dto/admin.dto';
 import { AdminDashboardResponseDto } from './dto/dashboard.dto';
 import { UserStatsDto, UserQueryDto, PaginatedUsersDto } from './dto/users.dto';
-import { BusinessStatsDto, BusinessQueryDto, PaginatedBusinessesDto, AdminBusinessListingDto } from './dto/businesses.dto';
-import { ListingStatsDto, ListingQueryDto, PaginatedListingsDto } from './dto/listings.dto';
+import {
+  BusinessStatsDto,
+  BusinessQueryDto,
+  PaginatedBusinessesDto,
+  AdminBusinessListingDto,
+} from './dto/businesses.dto';
+import {
+  ListingStatsDto,
+  ListingQueryDto,
+  PaginatedListingsDto,
+} from './dto/listings.dto';
 import { UpdateBusinessAdminDto } from './dto/update-business.dto';
 import { RolesGuard } from 'src/common/guards/roles.guard';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { Public } from 'src/common/decorators/public.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'src/common/role.enum';
@@ -18,10 +42,13 @@ import { BusinessStatus } from '../listings/listing.enum';
 @Controller('admin')
 @UseGuards(RolesGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) { }
+  constructor(private readonly adminService: AdminService) {}
 
   @ApiOperation({ summary: 'Create a new super admin' })
-  @ApiResponse({ status: 201, description: 'Super admin created successfully.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Super admin created successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Invalid input.' })
   @Public()
   @Post('signup')
@@ -30,7 +57,10 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Authenticate as super admin' })
-  @ApiResponse({ status: 201, description: 'Super admin authenticated successfully.' })
+  @ApiResponse({
+    status: 201,
+    description: 'Super admin authenticated successfully.',
+  })
   @ApiResponse({ status: 400, description: 'Invalid credentials.' })
   @Public()
   @Post('login')
@@ -39,7 +69,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get admin dashboard data' })
-  @ApiResponse({ status: 200, description: 'Dashboard data retrieved successfully.', type: AdminDashboardResponseDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Dashboard data retrieved successfully.',
+    type: AdminDashboardResponseDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('dashboard')
   async getDashboardData() {
@@ -47,7 +81,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get user statistics' })
-  @ApiResponse({ status: 200, description: 'User statistics retrieved successfully.', type: UserStatsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'User statistics retrieved successfully.',
+    type: UserStatsDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('users/stats')
   async getUserStats() {
@@ -55,7 +93,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get paginated list of users with filters' })
-  @ApiResponse({ status: 200, description: 'Users retrieved successfully.', type: PaginatedUsersDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Users retrieved successfully.',
+    type: PaginatedUsersDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('users')
   async getUsers(@Query() query: UserQueryDto) {
@@ -63,7 +105,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get business statistics' })
-  @ApiResponse({ status: 200, description: 'Business statistics retrieved successfully.', type: BusinessStatsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Business statistics retrieved successfully.',
+    type: BusinessStatsDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('businesses/stats')
   async getBusinessStats() {
@@ -71,7 +117,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get paginated list of businesses with filters' })
-  @ApiResponse({ status: 200, description: 'Businesses retrieved successfully.', type: PaginatedBusinessesDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Businesses retrieved successfully.',
+    type: PaginatedBusinessesDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('businesses')
   async getBusinesses(@Query() query: BusinessQueryDto) {
@@ -79,7 +129,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get all listings for a business' })
-  @ApiResponse({ status: 200, description: 'Listings retrieved successfully.', type: [AdminBusinessListingDto] })
+  @ApiResponse({
+    status: 200,
+    description: 'Listings retrieved successfully.',
+    type: [AdminBusinessListingDto],
+  })
   @Roles(UserRole.ADMIN)
   @Get('businesses/:id/listings')
   async getBusinessListings(@Param('id') id: string) {
@@ -87,18 +141,30 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Verify or unverify a business' })
-  @ApiResponse({ status: 200, description: 'Business verification updated successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Business verification updated successfully.',
+  })
   @Roles(UserRole.ADMIN)
   @Patch('businesses/:id/verify')
-  async verifyBusiness(@Param('id') id: string, @Body('isVerified') isVerified: boolean) {
+  async verifyBusiness(
+    @Param('id') id: string,
+    @Body('isVerified') isVerified: boolean,
+  ) {
     return this.adminService.verifyBusiness(id, isVerified);
   }
 
   @ApiOperation({ summary: 'Update business status' })
-  @ApiResponse({ status: 200, description: 'Business status updated successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Business status updated successfully.',
+  })
   @Roles(UserRole.ADMIN)
   @Patch('businesses/:id/status')
-  async updateStatus(@Param('id') id: string, @Body('status') status: BusinessStatus) {
+  async updateStatus(
+    @Param('id') id: string,
+    @Body('status') status: BusinessStatus,
+  ) {
     return this.adminService.updateBusinessStatus(id, status);
   }
 
@@ -106,12 +172,19 @@ export class AdminController {
   @ApiResponse({ status: 200, description: 'Business updated successfully.' })
   @Roles(UserRole.ADMIN)
   @Patch('businesses/:id')
-  async updateBusiness(@Param('id') id: string, @Body() updateBusinessAdminDto: UpdateBusinessAdminDto) {
+  async updateBusiness(
+    @Param('id') id: string,
+    @Body() updateBusinessAdminDto: UpdateBusinessAdminDto,
+  ) {
     return this.adminService.updateBusiness(id, updateBusinessAdminDto);
   }
 
   @ApiOperation({ summary: 'Get listing statistics' })
-  @ApiResponse({ status: 200, description: 'Listing statistics retrieved successfully.', type: ListingStatsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing statistics retrieved successfully.',
+    type: ListingStatsDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('listings/stats')
   async getListingStats() {
@@ -119,7 +192,11 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Get paginated list of listings with filters' })
-  @ApiResponse({ status: 200, description: 'Listings retrieved successfully.', type: PaginatedListingsDto })
+  @ApiResponse({
+    status: 200,
+    description: 'Listings retrieved successfully.',
+    type: PaginatedListingsDto,
+  })
   @Roles(UserRole.ADMIN)
   @Get('listings')
   async getListings(@Query() query: ListingQueryDto) {
@@ -127,7 +204,10 @@ export class AdminController {
   }
 
   @ApiOperation({ summary: 'Update listing status' })
-  @ApiResponse({ status: 200, description: 'Listing status updated successfully.' })
+  @ApiResponse({
+    status: 200,
+    description: 'Listing status updated successfully.',
+  })
   @Roles(UserRole.ADMIN)
   @Patch('listings/:id/status')
   async updateListingStatus(

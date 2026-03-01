@@ -25,6 +25,7 @@ const mockPromotionRepository = () => ({
   find: jest.fn(),
   findOne: jest.fn(),
   remove: jest.fn(),
+  count: jest.fn(),
   createQueryBuilder: jest.fn(() => ({
     leftJoin: jest.fn().mockReturnThis(),
     innerJoin: jest.fn().mockReturnThis(),
@@ -54,11 +55,14 @@ const mockPromotionParticipantRepository = () => ({
   create: jest.fn(),
   save: jest.fn(),
   findOne: jest.fn(),
+  find: jest.fn(),
   createQueryBuilder: jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
     innerJoinAndSelect: jest.fn().mockReturnThis(),
     innerJoin: jest.fn().mockReturnThis(),
     where: jest.fn().mockReturnThis(),
     getMany: jest.fn(),
+    getRawOne: jest.fn(),
   })),
 });
 
@@ -68,16 +72,17 @@ const mockPromotionActivityRepository = () => ({
 });
 
 const mockPointTransactionRepository = () => ({
-  createQueryBuilder: jest.fn().mockReturnThis(),
-  select: jest.fn().mockReturnThis(),
-  where: jest.fn().mockReturnThis(),
-  andWhere: jest.fn().mockReturnThis(),
-  getRawOne: jest.fn(),
-  leftJoinAndSelect: jest.fn().mockReturnThis(),
-  orderBy: jest.fn().mockReturnThis(),
-  skip: jest.fn().mockReturnThis(),
-  take: jest.fn().mockReturnThis(),
-  getManyAndCount: jest.fn(),
+  createQueryBuilder: jest.fn(() => ({
+    select: jest.fn().mockReturnThis(),
+    where: jest.fn().mockReturnThis(),
+    andWhere: jest.fn().mockReturnThis(),
+    getRawOne: jest.fn(),
+    leftJoinAndSelect: jest.fn().mockReturnThis(),
+    orderBy: jest.fn().mockReturnThis(),
+    skip: jest.fn().mockReturnThis(),
+    take: jest.fn().mockReturnThis(),
+    getManyAndCount: jest.fn(),
+  })),
 });
 
 const mockActivitiesService = () => ({
@@ -261,6 +266,7 @@ describe('PromotionService', () => {
       (promotionRepository.create as jest.Mock).mockReturnValue(promotion);
       (businessRepository.findBy as jest.Mock).mockResolvedValue(businesses);
       (promotionRepository.save as jest.Mock).mockResolvedValue(promotion);
+      (promotionRepository.count as jest.Mock).mockResolvedValue(0);
 
       const result = await service.create(userId, createPromotionDto as any);
 
@@ -289,13 +295,13 @@ describe('PromotionService', () => {
       (promotionRepository.create as jest.Mock).mockReturnValue(promotion);
       (businessRepository.find as jest.Mock).mockResolvedValue(businesses);
       (promotionRepository.save as jest.Mock).mockResolvedValue(promotion);
+      (promotionRepository.count as jest.Mock).mockResolvedValue(0);
 
       const result = await service.create(userId, createPromotionDto as any);
 
       expect(promotionRepository.create).toHaveBeenCalled();
       expect(businessRepository.find).toHaveBeenCalledWith({
         where: { user: { id: userId } },
-        relations: ['products'],
       });
       expect(promotionRepository.save).toHaveBeenCalledWith(promotion);
       expect(result).toEqual(promotion);
@@ -316,6 +322,7 @@ describe('PromotionService', () => {
       (promotionRepository.create as jest.Mock).mockReturnValue(promotion);
       (productRepository.findBy as jest.Mock).mockResolvedValue(products);
       (promotionRepository.save as jest.Mock).mockResolvedValue(promotion);
+      (promotionRepository.count as jest.Mock).mockResolvedValue(0);
 
       const result = await service.create(userId, createPromotionDto as any);
 
@@ -337,6 +344,7 @@ describe('PromotionService', () => {
 
       expect(promotionRepository.find).toHaveBeenCalledWith({
         where: { user: { id: userId } },
+        order: { created_at: 'DESC' },
       });
       expect(result).toEqual(promotions);
     });
@@ -548,7 +556,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ businessId: 'business-1' });
 
-      expect(result).toEqual(promotions);
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions for a given productId', async () => {
@@ -565,7 +575,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ productId: 'product-1' });
 
-      expect(result).toEqual(promotions);
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions with ALL_LISTINGS scope', async () => {
@@ -584,7 +596,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ businessId: 'business-1' });
 
-      expect(result).toEqual(promotions);
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should return promotions with ALL_PRODUCTS scope', async () => {
@@ -603,7 +617,9 @@ describe('PromotionService', () => {
 
       const result = await service.check({ productId: 'product-1' });
 
-      expect(result).toEqual(promotions);
+      expect(result).toEqual(
+        promotions.map((p) => ({ ...p, isParticipating: false })),
+      );
     });
 
     it('should not return inactive promotions', async () => {
@@ -727,24 +743,25 @@ describe('PromotionService', () => {
       (promotionRepository.findOne as jest.Mock).mockResolvedValue({
         id: promotionId,
       });
-      (pointTransactionRepository.createQueryBuilder as jest.Mock)
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          andWhere: jest.fn().mockReturnThis(),
-          getRawOne: jest.fn().mockResolvedValue({ total: '1000' }),
-        })
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          andWhere: jest.fn().mockReturnThis(),
-          getRawOne: jest.fn().mockResolvedValue({ total: '500' }),
-        })
-        .mockReturnValueOnce({
-          select: jest.fn().mockReturnThis(),
-          where: jest.fn().mockReturnThis(),
-          getRawOne: jest.fn().mockResolvedValue({ total: '50' }),
-        });
+
+      const mockQueryBuilder = {
+        select: jest.fn().mockReturnThis(),
+        where: jest.fn().mockReturnThis(),
+        andWhere: jest.fn().mockReturnThis(),
+        getRawOne: jest.fn(),
+      };
+
+      (
+        promotionParticipantRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(mockQueryBuilder);
+      (
+        pointTransactionRepository.createQueryBuilder as jest.Mock
+      ).mockReturnValue(mockQueryBuilder);
+
+      mockQueryBuilder.getRawOne
+        .mockResolvedValueOnce({ total: '1000' }) // earned
+        .mockResolvedValueOnce({ total: '500' }) // redeemed
+        .mockResolvedValueOnce({ total: '50' }); // participants
 
       const result = await service.getSummaryStatistics(promotionId);
 

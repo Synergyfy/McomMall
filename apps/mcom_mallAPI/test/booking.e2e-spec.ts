@@ -6,8 +6,6 @@ import { UsersService } from '../src/resources/users/users.service';
 import { clearDatabase } from './test-utils';
 import { CreateUserDto } from '../src/resources/users/dto/create-user.dto';
 import { UserRole } from '../src/common/role.enum';
-import { CreateBookingDto } from 'src/resources/booking/dto/create-booking.dto';
-import { BookingService } from 'src/resources/booking/booking.service';
 import { Service } from 'src/resources/services/entities/service.entity';
 import { PricingModel } from 'src/resources/services/service.enum';
 import { Business } from 'src/resources/listings/entities/listing.entity';
@@ -15,7 +13,10 @@ import { User } from 'src/resources/users/entities/user.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ServiceBooking } from 'src/resources/booking/entities/service-booking.entity';
-import { ListingType } from 'src/resources/listings/listing.enum';
+import {
+  ListingType,
+  BusinessStatus,
+} from 'src/resources/listings/listing.enum';
 
 describe('BookingController (e2e)', () => {
   let app: INestApplication;
@@ -26,6 +27,7 @@ describe('BookingController (e2e)', () => {
   let user: User;
   let customer: User;
   let bookingRepository: Repository<ServiceBooking>;
+  let booking3: ServiceBooking;
 
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -92,6 +94,7 @@ describe('BookingController (e2e)', () => {
       listingType: [ListingType.SERVICE],
       shortDescription: 'Test short description',
       businessPhone: '+441234567890',
+      status: BusinessStatus.PUBLISHED,
     });
     await businessRepository.save(business);
 
@@ -121,7 +124,7 @@ describe('BookingController (e2e)', () => {
         now.getTime() - 20 * 24 * 60 * 60 * 1000 + 60 * 60 * 1000,
       ),
     });
-    const booking3 = bookingRepository.create({
+    booking3 = bookingRepository.create({
       user: customer,
       service,
       startTime: new Date(now.getTime() - 40 * 24 * 60 * 60 * 1000), // 40 days ago
@@ -170,5 +173,57 @@ describe('BookingController (e2e)', () => {
       .expect(200);
 
     expect(response.body.length).toBe(2);
+  });
+
+  it('should return available slots for a given day', async () => {
+    // Make sure we have business hours set for the business to make this pass properly
+    // This is just a minimal check for the public endpoint
+    const date = new Date().toISOString().split('T')[0];
+    const response = await request(app.getHttpServer())
+      .get(`/bookings/available-slots?serviceId=${service.id}&date=${date}`)
+      .expect(200);
+
+    // It should at least be an array (even if empty due to no business hours)
+    expect(Array.isArray(response.body)).toBe(true);
+  });
+
+  it('should create a booking with full configuration', async () => {
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+    const payload = {
+      serviceId: service.id,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      numberOfGuests: 2,
+      address: '123 Test Street, London',
+      phone: '07123456789',
+      problemDescription: 'Test problem description',
+      config: { 'Custom Question': 'Answer' },
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${customerJwtToken}`)
+      .send(payload)
+      .expect(201);
+
+    expect(response.body.address).toBe(payload.address);
+    expect(response.body.phone).toBe(payload.phone);
+    expect(response.body.problemDescription).toBe(payload.problemDescription);
+    expect(response.body.config).toEqual(payload.config);
+  });
+
+  it('should prevent refunding a booking without a payment intent', async () => {
+    // We expect a 400 because there is no payment intent
+    const response = await request(app.getHttpServer())
+      .post(`/bookings/${booking3.id}/refund`)
+      .set('Authorization', `Bearer ${jwtToken}`) // Assuming admin or owner
+      .expect(400);
+
+    expect(response.body.message).toContain(
+      'Only confirmed or cancelled bookings',
+    );
   });
 });

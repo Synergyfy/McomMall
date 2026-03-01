@@ -1,4 +1,12 @@
-import { Body, Controller, Get, Post, Query, Res } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Post,
+  Query,
+  Res,
+} from '@nestjs/common';
 import { Response } from 'express';
 import { GoogleOAuthService } from './google-oauth.service';
 import { BusinessVerificationService } from './business-verification.service';
@@ -37,6 +45,13 @@ export class ClaimController {
     @Query('state') state: string,
     @Res() res: Response,
   ) {
+    if (!state) {
+      throw new BadRequestException('State is required');
+    }
+    if (!code) {
+      throw new BadRequestException('Code is required');
+    }
+
     const { placeId, returnUrl } = JSON.parse(
       Buffer.from(state, 'base64url').toString('utf8'),
     );

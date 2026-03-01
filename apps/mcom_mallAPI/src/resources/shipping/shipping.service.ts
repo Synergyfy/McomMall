@@ -53,7 +53,10 @@ export class ShippingService {
     const riskThreshold = 500; // Example: Orders > £500 need high trust
     const minTrustScore = 80;
 
-    if (Number(order.total) > riskThreshold && user.trustScore < minTrustScore) {
+    if (
+      Number(order.total) > riskThreshold &&
+      user.trustScore < minTrustScore
+    ) {
       this.logger.warn(
         `Fraud Risk: Order ${order.id} total ${order.total} exceeds threshold for user ${user.id} (Trust: ${user.trustScore})`,
       );
@@ -69,7 +72,9 @@ export class ShippingService {
    */
   private createShipmentPayload(order: Order, business: Business) {
     if (!business.location) {
-      throw new BadRequestException('Business location is missing for shipping.');
+      throw new BadRequestException(
+        'Business location is missing for shipping.',
+      );
     }
 
     const storeId = this.configService.get<string>('SHIPSTATION_STORE_ID');
@@ -121,12 +126,12 @@ export class ShippingService {
         country: business.location.countryCode,
         phone: business.businessPhone,
       },
-      carrierCode: order.carrierCode || "stamps_com", // Default or from order
-      serviceCode: "usps_priority_mail", // This should be passed from frontend/order
+      carrierCode: order.carrierCode || 'stamps_com', // Default or from order
+      serviceCode: 'usps_priority_mail', // This should be passed from frontend/order
       weight: {
         value: 10, // Calculate from items
-        units: "ounces"
-      }
+        units: 'ounces',
+      },
     };
   }
 
@@ -138,7 +143,13 @@ export class ShippingService {
     // 1. Fetch Order with necessary relations
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['user', 'items', 'items.product', 'business', 'business.location'],
+      relations: [
+        'user',
+        'items',
+        'items.product',
+        'business',
+        'business.location',
+      ],
     });
 
     if (!order) {
@@ -146,7 +157,9 @@ export class ShippingService {
     }
 
     if (!order.business) {
-        throw new BadRequestException(`Order ${orderId} is not linked to a business.`);
+      throw new BadRequestException(
+        `Order ${orderId} is not linked to a business.`,
+      );
     }
 
     // 2. Run Fraud Check
@@ -161,7 +174,9 @@ export class ShippingService {
     const apiSecret = this.configService.get<string>('SHIPSTATION_API_SECRET');
 
     if (!apiKey || !apiSecret) {
-      throw new InternalServerErrorException('ShipStation API credentials not configured');
+      throw new InternalServerErrorException(
+        'ShipStation API credentials not configured',
+      );
     }
 
     const authHeader = `Basic ${Buffer.from(`${apiKey}:${apiSecret}`).toString('base64')}`;
@@ -169,15 +184,21 @@ export class ShippingService {
     try {
       // First create the order in ShipStation
       const createOrderResponse = await lastValueFrom(
-        this.httpService.post(`${this.shipStationApiUrl}/orders/createorder`, payload, {
-          headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/json',
+        this.httpService.post(
+          `${this.shipStationApiUrl}/orders/createorder`,
+          payload,
+          {
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
           },
-        }),
+        ),
       );
 
-      this.logger.log(`Order created in ShipStation: ${createOrderResponse.data.orderId}`);
+      this.logger.log(
+        `Order created in ShipStation: ${createOrderResponse.data.orderId}`,
+      );
 
       // Then generate the label for the created order
       // Note: In a real flow, you might separate creation and label generation.
@@ -189,12 +210,16 @@ export class ShippingService {
       // Let's use shipments/createlabel directly with full payload for speed/statelessness as requested.
 
       const labelResponse = await lastValueFrom(
-        this.httpService.post(`${this.shipStationApiUrl}/shipments/createlabel`, payload, {
-          headers: {
-            Authorization: authHeader,
-            'Content-Type': 'application/json',
+        this.httpService.post(
+          `${this.shipStationApiUrl}/shipments/createlabel`,
+          payload,
+          {
+            headers: {
+              Authorization: authHeader,
+              'Content-Type': 'application/json',
+            },
           },
-        }),
+        ),
       );
 
       const shipmentData = labelResponse.data;
@@ -216,13 +241,14 @@ export class ShippingService {
       });
 
       return savedOrder;
-
     } catch (error) {
       this.logger.error(
         `ShipStation API Error: ${error.response?.data?.ExceptionMessage || error.message}`,
-        error.response?.data
+        error.response?.data,
       );
-      throw new InternalServerErrorException('Failed to generate shipping label via ShipStation');
+      throw new InternalServerErrorException(
+        'Failed to generate shipping label via ShipStation',
+      );
     }
   }
 

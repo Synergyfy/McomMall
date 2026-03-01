@@ -18,7 +18,7 @@ export class EmailService {
     @InjectRepository(Otp)
     private readonly otpRepository: Repository<Otp>,
     private readonly hashService: HashService,
-  ) { }
+  ) {}
 
   async sendUserWelcomeEmail(user: User) {
     await this.mailerService.sendMail({
@@ -67,15 +67,15 @@ export class EmailService {
 
     let otpDetails;
     if (user) {
-        otpDetails = await this.otpRepository.findOne({
-          where: { user: { id: user.id }, otp, type },
-          order: { expiresAt: 'DESC' },
-        });
+      otpDetails = await this.otpRepository.findOne({
+        where: { user: { id: user.id }, otp, type },
+        order: { expiresAt: 'DESC' },
+      });
     } else {
-        otpDetails = await this.otpRepository.findOne({
-            where: { email, otp, type },
-            order: { expiresAt: 'DESC' },
-        });
+      otpDetails = await this.otpRepository.findOne({
+        where: { email, otp, type },
+        order: { expiresAt: 'DESC' },
+      });
     }
 
     if (!otpDetails) {
@@ -111,14 +111,17 @@ export class EmailService {
   async sendPartnershipRequestEmail(
     receiver: User,
     sender: User,
-    itemDetails?: { baseItemName: string; plusItemName: string }
+    itemDetails?: { baseItemName: string; plusItemName: string },
   ) {
     const actionUrl = `${process.env.FRONTEND_URL || 'http://localhost:4200'}/dashboard/marketing/my-partners`;
-    const senderInitials = (sender.firstName?.[0] || 'U') + (sender.lastName?.[0] || '');
+    const senderInitials =
+      (sender.firstName?.[0] || 'U') + (sender.lastName?.[0] || '');
 
     await this.mailerService.sendMail({
       to: receiver.email,
-      subject: itemDetails ? `Proposal: Connect ${itemDetails.baseItemName} + ${itemDetails.plusItemName}` : `New Partnership Request from ${sender.firstName}`,
+      subject: itemDetails
+        ? `Proposal: Connect ${itemDetails.baseItemName} + ${itemDetails.plusItemName}`
+        : `New Partnership Request from ${sender.firstName}`,
       template: './partnership-request',
       context: {
         receiverName: receiver.firstName,
@@ -129,6 +132,50 @@ export class EmailService {
         baseItemName: itemDetails?.baseItemName,
         plusItemName: itemDetails?.plusItemName,
         actionUrl,
+        year: new Date().getFullYear(),
+      },
+    });
+  }
+
+  async sendBookingNotification(booking: any, isOwner: boolean) {
+    const receiver = isOwner ? booking.service.business.user : booking.user;
+    const subject = isOwner
+      ? `New Booking Request: ${booking.service.name}`
+      : `Booking Confirmation: ${booking.service.name}`;
+
+    const startTime = new Date(booking.startTime);
+    const dateFormatted = startTime.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const timeFormatted = startTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const isPaid = !!booking.payment || !!booking.paymentIntentId;
+
+    await this.mailerService.sendMail({
+      to: receiver.email,
+      subject,
+      template: './booking-notification',
+      context: {
+        receiverName: receiver.firstName,
+        isOwner,
+        serviceName: booking.service.name,
+        bookingId: booking.id.slice(0, 8).toUpperCase(),
+        date: dateFormatted,
+        time: timeFormatted,
+        address: booking.address,
+        phone: booking.phone,
+        guests: booking.numberOfGuests,
+        staff: booking.numberOfStaff,
+        totalAmount: (booking.totalAmount || 0).toFixed(2),
+        isPaid,
+        status: booking.status,
+        problemDescription: booking.problemDescription,
         year: new Date().getFullYear(),
       },
     });

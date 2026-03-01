@@ -15,19 +15,32 @@ export class UserStatsDto {
 }
 
 export class UserQueryDto {
-  @ApiPropertyOptional({ example: 'john', description: 'Search query for name or email' })
+  @ApiPropertyOptional({
+    example: 'john',
+    description: 'Search query for name or email',
+  })
   search?: string;
 
-  @ApiPropertyOptional({ example: 'active', description: 'Filter by status (all, active, suspended, pending)' })
+  @ApiPropertyOptional({
+    example: 'active',
+    description: 'Filter by status (all, active, suspended, pending)',
+  })
   status?: string;
 
-  @ApiPropertyOptional({ example: 'customer', description: 'Filter by account type (all, customer, business, admin)' })
+  @ApiPropertyOptional({
+    example: 'customer',
+    description: 'Filter by account type (all, customer, business, admin)',
+  })
   type?: string;
 
   @ApiPropertyOptional({ example: 1, description: 'Page number', default: 1 })
   page?: number;
 
-  @ApiPropertyOptional({ example: 10, description: 'Items per page', default: 10 })
+  @ApiPropertyOptional({
+    example: 10,
+    description: 'Items per page',
+    default: 10,
+  })
   limit?: number;
 }
 
@@ -44,13 +57,19 @@ export class AdminUserDto {
   @ApiProperty({ example: '+1234567890' })
   phone: string;
 
-  @ApiProperty({ example: 'customer', description: 'customer | business | admin' })
+  @ApiProperty({
+    example: 'customer',
+    description: 'customer | business | admin',
+  })
   accountType: string;
 
-  @ApiProperty({ example: 'active', description: 'active | suspended | pending' })
+  @ApiProperty({
+    example: 'active',
+    description: 'active | suspended | pending',
+  })
   status: string;
 
-  @ApiProperty({ example: 250.50 })
+  @ApiProperty({ example: 250.5 })
   walletBalance: number;
 
   @ApiProperty({ example: '2026-01-11T10:00:00Z', nullable: true })

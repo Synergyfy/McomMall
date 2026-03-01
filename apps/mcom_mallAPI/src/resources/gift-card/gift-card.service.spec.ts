@@ -1,12 +1,11 @@
+import { DigitalValueService } from '../digital-value/digital-value.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository, DataSource } from 'typeorm';
 import { GiftCardService } from './gift-card.service';
 import { GiftCard } from './entities/gift-card.entity';
 import { GiftCardTemplate } from './entities/gift-card-template.entity';
-import {
-  GiftCardTransaction,
-} from './entities/gift-card-transaction.entity';
+import { GiftCardTransaction } from './entities/gift-card-transaction.entity';
 import { GiftCardSettings } from './entities/gift-card-settings.entity';
 import { Business } from '../listings/entities/listing.entity';
 import { Order } from '../order/entities/order.entity';
@@ -29,7 +28,7 @@ import { WalletService } from '../wallet/wallet.service';
 import { CentralIntegrationService } from '../payments/services/central-integration.service';
 import { CapabilityService } from '../capability/capability.service';
 
-const mockOwner = { id: 'owner-1' } as User;
+const mockOwner = { id: 'owner-1', isActive: true } as User;
 const mockPurchaserId = 'purchaser-user-id-1';
 const mockBusiness = {
   id: 'business-1',
@@ -41,7 +40,7 @@ const mockOtherBusiness = {
 } as unknown as Business;
 const mockWrongBusiness = {
   id: 'business-3',
-  user: { id: 'owner-2' },
+  user: { id: 'owner-2', isActive: true },
 } as unknown as Business;
 
 const mockOrder = {
@@ -53,6 +52,7 @@ const mockOrder = {
 const mockTemplate = {
   id: 'template-1',
   ownerId: mockOwner.id,
+  owner: mockOwner,
   isActive: true,
   allowCustomAmount: true,
   minCustomAmount: 10,
@@ -129,6 +129,15 @@ describe('GiftCardService (User-Centric)', () => {
         GiftCardService,
         { provide: getRepositoryToken(GiftCard), useFactory: mockRepository },
         {
+          provide: DigitalValueService,
+          useValue: {
+            create: jest.fn().mockResolvedValue({ id: 'dv-id' }),
+            fund: jest.fn(),
+            redeem: jest.fn(),
+            getByCode: jest.fn().mockResolvedValue({ id: 'dv-id' }),
+          },
+        },
+        {
           provide: getRepositoryToken(GiftCardTemplate),
           useFactory: mockRepository,
         },
@@ -142,12 +151,18 @@ describe('GiftCardService (User-Centric)', () => {
         },
         { provide: getRepositoryToken(Business), useFactory: mockRepository },
         { provide: getRepositoryToken(Order), useFactory: mockRepository },
-        { provide: getRepositoryToken(OrderPayment), useFactory: mockRepository },
+        {
+          provide: getRepositoryToken(OrderPayment),
+          useFactory: mockRepository,
+        },
         {
           provide: getRepositoryToken(GiftCardAsset),
           useFactory: mockRepository,
         },
-        { provide: PaymentProviderService, useValue: mockPaymentProviderService },
+        {
+          provide: PaymentProviderService,
+          useValue: mockPaymentProviderService,
+        },
         { provide: MailerService, useValue: mockMailerService },
         { provide: DataSource, useValue: mockDataSource },
         {
@@ -178,9 +193,8 @@ describe('GiftCardService (User-Centric)', () => {
     }).compile();
 
     service = module.get<GiftCardService>(GiftCardService);
-    giftCardAssetService = module.get<GiftCardAssetService>(
-      GiftCardAssetService,
-    );
+    giftCardAssetService =
+      module.get<GiftCardAssetService>(GiftCardAssetService);
     templateRepo = module.get<Repository<GiftCardTemplate>>(
       getRepositoryToken(GiftCardTemplate),
     );
@@ -256,7 +270,9 @@ describe('GiftCardService (User-Centric)', () => {
       };
       expect(() =>
         (service as any).validatePurchaseAmount(25, template),
-      ).toThrow('Invalid amount. Must be one of: 10, 20 or a custom amount between 30 and 50.');
+      ).toThrow(
+        'Invalid amount. Must be one of: 10, 20 or a custom amount between 30 and 50.',
+      );
     });
 
     it('should throw if amount is below min custom amount', () => {
@@ -297,7 +313,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should create a stripe payment intent', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       const result = await service.initiateGiftCardPurchase(
         initiateDto,
         mockPurchaserId,
@@ -310,7 +326,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should create a paypal order', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       const result = await service.initiateGiftCardPurchase(
         {
           ...initiateDto,
@@ -340,7 +356,7 @@ describe('GiftCardService (User-Centric)', () => {
     };
 
     it('should verify payment and create a gift card with correct purchaser', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
 
       const result = await service.verifyAndCompletePurchase(
@@ -359,7 +375,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should save the htmlBody when provided', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
 
       const verifyDtoWithHtml: VerifyPurchaseDto = {
@@ -379,7 +395,7 @@ describe('GiftCardService (User-Centric)', () => {
     });
 
     it('should throw if payment verification fails', async () => {
-      jest.spyOn(templateRepo, 'findOneBy').mockResolvedValue(mockTemplate);
+      jest.spyOn(templateRepo, 'findOne').mockResolvedValue(mockTemplate);
       jest.spyOn(businessRepo, 'findOne').mockResolvedValue(mockBusiness);
       jest
         .spyOn(paymentProviderService, 'verifyStripePaymentIntent')
@@ -491,9 +507,10 @@ describe('GiftCardService (User-Centric)', () => {
         'some-user',
       );
 
-      expect(
-        (service as any).findTemplateByIdForOwner,
-      ).toHaveBeenCalledWith('template-1', 'some-user');
+      expect((service as any).findTemplateByIdForOwner).toHaveBeenCalledWith(
+        'template-1',
+        'some-user',
+      );
       expect(giftCardAssetService.findAssetsByOwner).toHaveBeenCalledWith(
         'owner-id-123',
       );
@@ -656,11 +673,20 @@ describe('GiftCardService (User-Centric)', () => {
         .spyOn(service as any, 'findGiftCardDetailsForOwner')
         .mockResolvedValue(mockGiftCard);
 
-      await service.adjustBalance('gc-1', mockOwner.id, 30, 'Test adjustment', mockOwner.id);
+      await service.adjustBalance(
+        'gc-1',
+        mockOwner.id,
+        30,
+        'Test adjustment',
+        mockOwner.id,
+      );
 
       expect(dataSource.transaction).toHaveBeenCalled();
-      const savedCard: GiftCard = (mockManager.save as jest.Mock).mock.calls[0][0];
-      const savedTransaction: GiftCardTransaction = (mockManager.save as jest.Mock).mock.calls[1][0];
+      const savedCard: GiftCard = (mockManager.save as jest.Mock).mock
+        .calls[0][0];
+      const savedTransaction: GiftCardTransaction = (
+        mockManager.save as jest.Mock
+      ).mock.calls[1][0];
 
       expect(savedCard.currentBalance).toBe(30);
       expect(savedTransaction.amount).toBe(-20);

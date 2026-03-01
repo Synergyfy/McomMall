@@ -46,6 +46,16 @@ function CheckoutForm({ clientSecret, onPaymentSuccess }: StripeCheckoutFormProp
     setIsLoading(true);
 
     try {
+      // 1. Retrieve the payment intent first to check its current status
+      const { paymentIntent: currentIntent } = await stripe.retrievePaymentIntent(clientSecret);
+      
+      if (currentIntent?.status === 'succeeded') {
+        onPaymentSuccess(currentIntent.id);
+        setIsLoading(false);
+        return;
+      }
+
+      // 2. Only confirm if not already succeeded
       const { error, paymentIntent } = await stripe.confirmPayment({
         elements,
         redirect: 'if_required',

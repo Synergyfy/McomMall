@@ -50,6 +50,14 @@ export interface Booking {
   user: BookingUser; // Nested user
   service: BookingService; // Nested service
   payment?: any; // Payment is not in the provided response, marked as optional
+  totalAmount?: number;
+  commissionAmount?: number;
+  providerAmount?: number;
+  paymentIntentId?: string;
+  transferId?: string;
+  refundId?: string;
+  payoutProcessed?: boolean;
+  refundProcessed?: boolean;
 }
 
 // Payload for creating a new booking
