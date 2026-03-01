@@ -2,6 +2,7 @@ import { forwardRef, Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 
 import { NotificationModule } from '../notification/notification.module';
+import { EmailModule } from '../email/email.module';
 import { Business } from '../listings/entities/listing.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { Service } from '../services/entities/service.entity';
@@ -30,6 +31,7 @@ import { BookingTransaction } from './entities/booking-transaction.entity';
 
     NotificationModule,
     PaymentsModule,
+    EmailModule,
     forwardRef(() => WalletModule),
   ],
   controllers: [BookingController],

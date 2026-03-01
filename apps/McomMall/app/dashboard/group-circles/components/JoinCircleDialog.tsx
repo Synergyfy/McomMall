@@ -10,6 +10,7 @@ import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Search, Users, Globe, Loader2, Plus, Zap, Banknote, ShieldCheck, ArrowRight, CheckCircle2, Info } from "lucide-react";
 import { useGetDiscoverableCircles, useJoinGroupCircle } from "@/service/group-circle/hook";
+import { useGetUserProfile } from "@/service/user/hook";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
@@ -28,7 +29,10 @@ export function JoinCircleDialog({ open, onOpenChange, groupCircleTypes, onJoine
     const [selectedCircle, setSelectedCircle] = useState<any>(null);
     const [isJoining, setIsJoining] = useState(false);
 
-    const { data: discoverableData, isLoading } = useGetDiscoverableCircles();
+    const { data: user } = useGetUserProfile();
+    const userPostcode = user?.shippingAddresses?.find(a => a.isMain)?.postalCode || user?.shippingAddresses?.[0]?.postalCode;
+
+    const { data: discoverableData, isLoading } = useGetDiscoverableCircles(userPostcode);
     const joinMutation = useJoinGroupCircle();
 
     const handleSelectCircle = (circle: any) => {

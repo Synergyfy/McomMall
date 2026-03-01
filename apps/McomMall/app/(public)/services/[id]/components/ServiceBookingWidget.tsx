@@ -50,6 +50,13 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
+    // Configuration State
+    const [address, setAddress] = useState('');
+    const [phone, setPhone] = useState('');
+    const [problemDescription, setProblemDescription] = useState('');
+    const [config, setConfig] = useState<Record<string, string>>({});
+    const [staffCount, setStaffCount] = useState(1);
+
     const { mutateAsync: createBooking, isPending } = useCreateBooking();
 
     // Determine if we should show booking calendar
@@ -84,6 +91,29 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         }
     }, [service, quantity]);
 
+    // Pricing Rules and Multipliers
+    const pricingAdjustments = useMemo(() => {
+        if (!selectedDate || !service.pricingRules) return { multiplier: 1, surcharge: 0 };
+        
+        let multiplier = 1;
+        let surcharge = 0;
+        
+        const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
+        if (isWeekend && service.pricingRules.weekendMultiplier) {
+            multiplier = service.pricingRules.weekendMultiplier;
+        }
+
+        // Night surcharge (simplified check for evening hours)
+        if (selectedTime) {
+            const hour = parseInt(selectedTime.split(':')[0]);
+            if ((hour >= 18 || hour < 7) && service.pricingRules.nightSurcharge) {
+                surcharge += parseFloat(service.pricingRules.nightSurcharge.toString());
+            }
+        }
+
+        return { multiplier, surcharge };
+    }, [selectedDate, selectedTime, service.pricingRules]);
+
     // Guest Pricing Calculation (simplified)
     const guestPrice = useMemo(() => {
         if (!service.enableGuestPricing) return 0;
@@ -105,7 +135,10 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     }, [service, selectedAddons]);
 
     const bookingFee = parseFloat(service.bookingFee || '0');
-    const totalPrice = basePrice + guestPrice + addonsPrice + bookingFee;
+    const travelFee = (service.deliveryConfig?.mode === 'onsite' ? service.deliveryConfig?.travelFee : 0) || 0;
+    
+    const subtotal = (basePrice * pricingAdjustments.multiplier) + guestPrice + addonsPrice + pricingAdjustments.surcharge;
+    const totalPrice = subtotal + bookingFee + travelFee;
 
     const handleAddonToggle = (addonId: string, checked: boolean) => {
         setSelectedAddons(prev => ({ ...prev, [addonId]: checked }));
@@ -114,6 +147,20 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     const handleBookNow = async () => {
         if (showCalendar && (!selectedDate || !selectedTime)) {
             toast.error("Please select a date and time.");
+            return;
+        }
+
+        // Validation for requirements
+        if (service.bookingRequirements?.requireAddress && !address) {
+            toast.error("Service address is required.");
+            return;
+        }
+        if (service.bookingRequirements?.requirePhone && !phone) {
+            toast.error("Phone number is required.");
+            return;
+        }
+        if (service.bookingRequirements?.requireProblemDescription && !problemDescription) {
+            toast.error("Please provide a description of the problem/request.");
             return;
         }
 
@@ -137,7 +184,12 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                 startTime: start.toISOString(),
                 endTime: end.toISOString(),
                 numberOfGuests: guests,
-                addonIds: Object.keys(selectedAddons).filter(id => selectedAddons[id])
+                numberOfStaff: staffCount,
+                addonIds: Object.keys(selectedAddons).filter(id => selectedAddons[id]),
+                address,
+                phone,
+                problemDescription,
+                config
             };
 
             const booking = await createBooking(payload);
@@ -169,7 +221,18 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                                 ' total'}
                     </span>
                 </div>
+                {pricingAdjustments.multiplier !== 1 && (
+                    <p className="text-xs text-orange-500 font-bold mt-1">
+                        Applied {pricingAdjustments.multiplier}x weekend rate
+                    </p>
+                )}
+                {pricingAdjustments.surcharge > 0 && (
+                    <p className="text-xs text-orange-500 font-bold mt-1">
+                        + £{pricingAdjustments.surcharge.toFixed(2)} night surcharge included
+                    </p>
+                )}
                 {bookingFee > 0 && <p className="text-xs text-gray-400 mt-1">+ £{bookingFee.toFixed(2)} booking fee</p>}
+                {travelFee > 0 && <p className="text-xs text-gray-400 mt-1">+ £{travelFee.toFixed(2)} travel fee</p>}
             </div>
 
             {/* Configuration Inputs */}
@@ -205,6 +268,56 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                     </div>
                 )}
 
+                {/* Service Requirements (New) */}
+                {(service.bookingRequirements?.requireAddress || service.deliveryConfig?.mode === 'onsite') && (
+                    <div className="space-y-2">
+                        <Label className="text-sm font-semibold text-gray-700">Service Address {service.bookingRequirements?.requireAddress && <span className="text-red-500">*</span>}</Label>
+                        <Input 
+                            placeholder="Enter the full service address"
+                            value={address}
+                            onChange={(e) => setAddress(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {service.bookingRequirements?.requirePhone && (
+                    <div className="space-y-2">
+                        <Label className="text-sm font-semibold text-gray-700">Contact Phone <span className="text-red-500">*</span></Label>
+                        <Input 
+                            type="tel"
+                            placeholder="Your phone number"
+                            value={phone}
+                            onChange={(e) => setPhone(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {service.bookingRequirements?.requireProblemDescription && (
+                    <div className="space-y-2">
+                        <Label className="text-sm font-semibold text-gray-700">Description of Request <span className="text-red-500">*</span></Label>
+                        <textarea 
+                            className="w-full min-h-[100px] p-3 rounded-md border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
+                            placeholder="Tell the provider more about what you need..."
+                            value={problemDescription}
+                            onChange={(e) => setProblemDescription(e.target.value)}
+                        />
+                    </div>
+                )}
+
+                {/* Custom Questions (New) */}
+                {service.bookingRequirements?.customQuestions?.map((q, idx) => (
+                    <div key={idx} className="space-y-2">
+                        <Label className="text-sm font-semibold text-gray-700">
+                            {q.question} {q.required && <span className="text-red-500">*</span>}
+                        </Label>
+                        <Input 
+                            placeholder="Your answer..."
+                            value={config[q.question] || ''}
+                            onChange={(e) => setConfig(prev => ({ ...prev, [q.question]: e.target.value }))}
+                        />
+                    </div>
+                ))}
+
                 {/* Quantity / Hours Input */}
                 {service.pricingModel === 'perHour' && (
                     <div className="space-y-2">
@@ -233,7 +346,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                 {/* Guests Input */}
                 {service.enableGuestPricing && (
                     <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Users className="w-4 h-4" /> Guests</Label>
+                        <Label className="flex items-center gap-2"><Users className="w-4 h-4" /> Guests / People Involved</Label>
                         <Input
                             type="number"
                             min={service.minGuests || 1}
@@ -241,8 +354,22 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                             value={guests}
                             onChange={(e) => setGuests(Math.max(service.minGuests || 1, parseInt(e.target.value) || 1))}
                         />
+                        <p className="text-[10px] text-gray-400 font-medium italic">Please specify how many people are involved in this booking.</p>
                     </div>
                 )}
+
+                {/* Staff Required Input (Optional based on business logic) */}
+                <div className="space-y-2">
+                    <Label className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Professional Staff Required</Label>
+                    <Input
+                        type="number"
+                        min={1}
+                        max={service.availability?.staffPerBooking || 10}
+                        value={staffCount}
+                        onChange={(e) => setStaffCount(Math.max(1, parseInt(e.target.value) || 1))}
+                    />
+                    <p className="text-[10px] text-gray-400 font-medium italic">How many staff members do you require for this service?</p>
+                </div>
 
                 {/* Addons */}
                 {service.configurableAddons && service.configurableAddons.length > 0 && (

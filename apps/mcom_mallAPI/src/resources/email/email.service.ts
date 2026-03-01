@@ -136,4 +136,48 @@ export class EmailService {
       },
     });
   }
+
+  async sendBookingNotification(booking: any, isOwner: boolean) {
+    const receiver = isOwner ? booking.service.business.user : booking.user;
+    const subject = isOwner
+      ? `New Booking Request: ${booking.service.name}`
+      : `Booking Confirmation: ${booking.service.name}`;
+
+    const startTime = new Date(booking.startTime);
+    const dateFormatted = startTime.toLocaleDateString('en-GB', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+    const timeFormatted = startTime.toLocaleTimeString('en-GB', {
+      hour: '2-digit',
+      minute: '2-digit',
+    });
+
+    const isPaid = !!booking.payment || !!booking.paymentIntentId;
+
+    await this.mailerService.sendMail({
+      to: receiver.email,
+      subject,
+      template: './booking-notification',
+      context: {
+        receiverName: receiver.firstName,
+        isOwner,
+        serviceName: booking.service.name,
+        bookingId: booking.id.slice(0, 8).toUpperCase(),
+        date: dateFormatted,
+        time: timeFormatted,
+        address: booking.address,
+        phone: booking.phone,
+        guests: booking.numberOfGuests,
+        staff: booking.numberOfStaff,
+        totalAmount: (booking.totalAmount || 0).toFixed(2),
+        isPaid,
+        status: booking.status,
+        problemDescription: booking.problemDescription,
+        year: new Date().getFullYear(),
+      },
+    });
+  }
 }

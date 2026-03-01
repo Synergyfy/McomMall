@@ -30,6 +30,7 @@ import {
   GroupMessageType,
 } from './entities/group-circle-message.entity';
 import { UsersService } from '../users/users.service';
+import { GeolocationService } from './geolocation.service';
 
 @Injectable()
 export class GroupCirclesService {
@@ -47,6 +48,7 @@ export class GroupCirclesService {
     private readonly centralIntegrationService: CentralIntegrationService,
     private readonly capabilityService: CapabilityService,
     private readonly usersService: UsersService,
+    private readonly geolocationService: GeolocationService,
   ) {}
 
   async getReferredBusinesses(user: User): Promise<any[]> {
@@ -336,22 +338,91 @@ export class GroupCirclesService {
     return this.messageRepository.save(message);
   }
 
-  async discover(): Promise<any> {
+  async discover(user: User, postcode?: string): Promise<any> {
     const circles = await this.groupRepository.find({
-      take: 10,
-      relations: ['founder', 'members', 'members.user', 'wallet'],
+      take: 100, // Fetch more to allow for filtering and distance sorting
+      relations: [
+        'founder',
+        'founder.shippingAddresses',
+        'founder.businesses',
+        'founder.businesses.location',
+        'members',
+        'members.user',
+        'wallet',
+      ],
       order: { created_at: 'DESC' },
     });
 
+    // Filter out circles where the user is the founder or already a member
+    const filteredCircles = circles.filter((c) => {
+      const isFounder = c.founderId === user.id;
+      const isMember = (c.members || []).some((m) => m.userId === user.id);
+      return !isFounder && !isMember;
+    });
+
+    let mappedCircles = filteredCircles.map((c) => ({
+      ...this.formatGroupCircle(c),
+      ownerName: `${c.founder.firstName} ${c.founder.lastName}`,
+      memberCount: c.members.length,
+      isPublic: true,
+      founderPostcode:
+        c.founder.businesses?.[0]?.location?.postcode ||
+        c.founder.shippingAddresses?.find((a) => a.isMain)?.postalCode ||
+        c.founder.shippingAddresses?.[0]?.postalCode,
+    }));
+
+    if (postcode) {
+      const userCoords = await this.geolocationService.getCoordinates(postcode);
+      if (userCoords) {
+        // Collect unique founder postcodes
+        const founderPostcodes = mappedCircles
+          .map((c) => c.founderPostcode)
+          .filter(Boolean);
+        const coordMap =
+          await this.geolocationService.getBulkCoordinates(founderPostcodes);
+
+        // Calculate distance for each circle
+        const circlesWithDistance = mappedCircles.map((circle) => {
+          let distance = Infinity;
+          let isExactPostcodeMatch = false;
+
+          if (circle.founderPostcode) {
+            // Clean postcodes for comparison (remove spaces, uppercase)
+            const cleanUserPostcode = postcode.replace(/\s+/g, '').toUpperCase();
+            const cleanFounderPostcode = circle.founderPostcode.replace(/\s+/g, '').toUpperCase();
+            
+            if (cleanUserPostcode === cleanFounderPostcode) {
+              distance = 0;
+              isExactPostcodeMatch = true;
+            } else {
+              const founderCoords = coordMap.get(circle.founderPostcode);
+              if (founderCoords) {
+                distance = this.geolocationService.calculateDistance(
+                  userCoords.lat,
+                  userCoords.lng,
+                  founderCoords.lat,
+                  founderCoords.lng,
+                );
+              }
+            }
+          }
+          return { ...circle, distance, isExactPostcodeMatch };
+        });
+
+        // Sort: Exact postcode matches first, then by distance
+        circlesWithDistance.sort((a, b) => {
+          if (a.isExactPostcodeMatch && !b.isExactPostcodeMatch) return -1;
+          if (!a.isExactPostcodeMatch && b.isExactPostcodeMatch) return 1;
+          return a.distance - b.distance;
+        });
+        mappedCircles = circlesWithDistance;
+      }
+    }
+
     return {
-      data: circles.map((c) => ({
-        ...this.formatGroupCircle(c),
-        ownerName: `${c.founder.firstName} ${c.founder.lastName}`,
-        memberCount: c.members.length,
-        isPublic: true,
-      })),
+      data: mappedCircles.slice(0, 10), // Return top 10 closest
       meta: {
-        total: circles.length,
+        total: mappedCircles.length,
         page: 1,
         lastPage: 1,
       },

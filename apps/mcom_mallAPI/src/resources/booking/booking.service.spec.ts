@@ -123,12 +123,6 @@ describe('BookingService', () => {
     priceModifierRepository = module.get<Repository<PriceModifier>>(
       getRepositoryToken(PriceModifier),
     );
-    servicePaymentRepository = module.get<Repository<ServicePayment>>(
-      getRepositoryToken(ServicePayment),
-    );
-    businessRepository = module.get<Repository<Business>>(
-      getRepositoryToken(Business),
-    );
     serviceRepository = module.get<Repository<Service>>(
       getRepositoryToken(Service),
     );
@@ -335,6 +329,31 @@ describe('BookingService', () => {
       const result = await service.cancel('1', '1');
       expect(result).toEqual(cancelledBooking);
     });
+
+    it('should trigger automatic refund if booking was paid', async () => {
+      const booking = {
+        id: 'booking-1',
+        user: { id: 'user-1' },
+        status: BookingStatus.CONFIRMED,
+        paymentIntentId: 'pi_123',
+        payment: { paymentMethod: PaymentMethod.STRIPE },
+        totalAmount: 100,
+      } as any;
+
+      mockEntityManager.findOne.mockResolvedValue(booking);
+      jest
+        .spyOn(paymentProviderService, 'refundStripePayment')
+        .mockResolvedValue({ id: 'ref_123' } as any);
+      mockEntityManager.save.mockImplementation((b) => b);
+
+      const result = await service.cancel('booking-1', 'user-1');
+
+      expect(paymentProviderService.refundStripePayment).toHaveBeenCalledWith(
+        'pi_123',
+      );
+      expect(result.refundProcessed).toBe(true);
+      expect(result.status).toBe(BookingStatus.REFUNDED);
+    });
   });
 
   describe('initiatePayment', () => {
@@ -392,6 +411,41 @@ describe('BookingService', () => {
       );
 
       expect(result.orderId).toBe('order-id');
+    });
+
+    it('should calculate price with weekend multiplier and travel fee', async () => {
+      const nextSaturday = new Date();
+      nextSaturday.setDate(
+        nextSaturday.getDate() + ((6 - nextSaturday.getDay() + 7) % 7),
+      );
+      nextSaturday.setHours(12, 0, 0, 0);
+
+      const booking = {
+        startTime: nextSaturday,
+        endTime: new Date(nextSaturday.getTime() + 60 * 60 * 1000),
+        service: {
+          pricingModel: 'fixed',
+          fixedPrice: 100,
+          bookingFee: 5,
+          pricingRules: { weekendMultiplier: 1.5 },
+          deliveryConfig: { mode: 'onsite', travelFee: 10 },
+          business: { status: 'published', user: { isActive: true } },
+        },
+      } as any;
+
+      jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
+      jest
+        .spyOn(paymentProviderService, 'createStripePaymentIntent')
+        .mockResolvedValue({ client_secret: 'sec', id: 'pi_1' } as any);
+      jest.spyOn(bookingRepository, 'save').mockResolvedValue(booking);
+
+      const result = await service.initiatePayment(
+        { bookingId: '1', paymentProvider: PaymentMethod.STRIPE },
+        '1',
+      );
+
+      // (100 * 1.5) + 5 + 10 = 165
+      expect(result.amount).toBe(165);
     });
   });
 

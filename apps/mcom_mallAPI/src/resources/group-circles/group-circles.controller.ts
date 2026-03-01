@@ -82,8 +82,11 @@ export class GroupCirclesController {
   @Get('discover')
   @Roles(UserRole.OWNER)
   @ApiOperation({ summary: 'Find discoverable group circles' })
-  discover(): Promise<any> {
-    return this.groupCirclesService.discover();
+  discover(
+    @CurrentUser() user: User,
+    @Query('postcode') postcode?: string,
+  ): Promise<any> {
+    return this.groupCirclesService.discover(user, postcode);
   }
 
   @Get('referred-businesses')

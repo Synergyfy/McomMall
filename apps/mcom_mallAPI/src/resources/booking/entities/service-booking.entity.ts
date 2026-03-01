@@ -46,8 +46,26 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ type: 'int', default: 1 })
   numberOfGuests: number;
 
+  @Column({ type: 'int', default: 1 })
+  numberOfStaff: number;
+
   @Column({ type: 'jsonb', nullable: true })
   addonDetails: any; // Stores name and price of selected addons at time of booking
+
+  @Column({ nullable: true })
+  address: string;
+
+  @Column({ nullable: true })
+  phone: string;
+
+  @Column({ type: 'text', nullable: true })
+  problemDescription: string;
+
+  @Column({ type: 'jsonb', nullable: true })
+  photos: string[];
+
+  @Column({ type: 'jsonb', nullable: true })
+  config: any; // Stores answers to custom questions
 
   @OneToOne(
     () => ProductServiceBooking,

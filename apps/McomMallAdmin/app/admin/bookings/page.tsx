@@ -103,11 +103,12 @@ function BookingDetailSheet({
                     {/* Quick Stats */}
                     <div className="grid grid-cols-2 gap-4">
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
-                            <p className="text-sm text-slate-500 mb-1 font-medium">Total Paid</p>
-                            <p className="text-2xl font-bold text-slate-900">
-                                £{booking.totalAmount?.toFixed(2) || (booking.payment?.amount || 0).toFixed(2)}
-                            </p>
+                        <p className="text-sm text-slate-500 mb-1 font-medium">Total Paid</p>
+                        <p className="text-2xl font-bold text-slate-900">
+                        £{(booking.totalAmount || booking.payment?.amount || 0).toFixed(2)}
+                        </p>
                         </div>
+
                         <div className="p-4 rounded-xl bg-slate-50 border border-slate-100">
                             <p className="text-sm text-slate-500 mb-1 font-medium">Escrow Status</p>
                             <div className="flex items-center gap-2 mt-1">
@@ -302,6 +303,7 @@ export default function AdminBookingsPage() {
                                     <TableHead>Customer</TableHead>
                                     <TableHead>Date & Time</TableHead>
                                     <TableHead>Amount</TableHead>
+                                    <TableHead>Payment</TableHead>
                                     <TableHead>Status</TableHead>
                                     <TableHead className="text-right">Actions</TableHead>
                                 </TableRow>
@@ -314,6 +316,7 @@ export default function AdminBookingsPage() {
                                             <TableCell><div className="h-6 w-32 bg-slate-100 animate-pulse rounded" /></TableCell>
                                             <TableCell><div className="h-6 w-24 bg-slate-100 animate-pulse rounded" /></TableCell>
                                             <TableCell><div className="h-6 w-32 bg-slate-100 animate-pulse rounded" /></TableCell>
+                                            <TableCell><div className="h-6 w-16 bg-slate-100 animate-pulse rounded" /></TableCell>
                                             <TableCell><div className="h-6 w-16 bg-slate-100 animate-pulse rounded" /></TableCell>
                                             <TableCell><div className="h-6 w-20 bg-slate-100 animate-pulse rounded" /></TableCell>
                                             <TableCell><div className="h-8 w-20 bg-slate-100 animate-pulse rounded ml-auto" /></TableCell>
@@ -342,9 +345,20 @@ export default function AdminBookingsPage() {
                                             </TableCell>
                                             <TableCell>
                                                 <div className="flex flex-col">
-                                                    <span className="font-semibold text-slate-900">£{booking.totalAmount?.toFixed(2) || booking.payment?.amount?.toFixed(2) || '0.00'}</span>
+                                                    <span className="font-semibold text-slate-900">£{(booking.totalAmount || booking.payment?.amount || 0).toFixed(2)}</span>
                                                     {booking.payoutProcessed && <span className="text-[10px] text-emerald-600 font-bold">PAID OUT</span>}
                                                 </div>
+                                            </TableCell>
+                                            <TableCell>
+                                                {booking.payment ? (
+                                                    <Badge className="bg-emerald-100 text-emerald-700 hover:bg-emerald-100 border-emerald-200">
+                                                        PAID
+                                                    </Badge>
+                                                ) : (
+                                                    <Badge variant="outline" className="text-slate-400 border-slate-200">
+                                                        UNPAID
+                                                    </Badge>
+                                                )}
                                             </TableCell>
                                             <TableCell>
                                                 <BookingStatusBadge status={booking.status} />

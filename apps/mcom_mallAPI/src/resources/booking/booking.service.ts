@@ -28,6 +28,7 @@ import { CashbackEvent } from '../../common/enums/cashback-event.enum';
 import { Service } from '../services/entities/service.entity';
 import { WalletTransactionType } from '../wallet/entities/wallet-transaction.entity';
 import { WalletService } from '../wallet/wallet.service';
+import { EmailService } from '../email/email.service';
 import { BlockSlotDto } from './dto/block-slot.dto';
 import { CheckAvailabilityDto } from './dto/check-availability.dto';
 import { CreateBookingDto } from './dto/create-booking.dto';
@@ -66,6 +67,7 @@ export class BookingService {
     private readonly notificationService: NotificationService,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly centralIntegrationService: CentralIntegrationService,
+    private readonly emailService: EmailService,
     @Inject(forwardRef(() => WalletService))
     private readonly walletService: WalletService,
   ) {}
@@ -453,10 +455,40 @@ export class BookingService {
       startTime: start,
       endTime: end,
       numberOfGuests: numberOfGuests || 1,
+      numberOfStaff: createBookingDto.numberOfStaff || 1,
       addonDetails: selectedAddons.length > 0 ? selectedAddons : null,
+      address: createBookingDto.address,
+      phone: createBookingDto.phone,
+      problemDescription: createBookingDto.problemDescription,
+      photos: createBookingDto.photos,
+      config: createBookingDto.config,
     });
 
     const savedBooking = await transactionalEntityManager.save(booking);
+
+    // Fetch full booking details for email
+    const fullBooking = await transactionalEntityManager.findOne(
+      ServiceBooking,
+      {
+        where: { id: savedBooking.id },
+        relations: [
+          'user',
+          'service',
+          'service.business',
+          'service.business.user',
+        ],
+      },
+    );
+
+    if (fullBooking) {
+      // Send emails to both customer and business owner
+      try {
+        await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+        await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+      } catch (error) {
+        console.error('Failed to send booking notification emails:', error);
+      }
+    }
 
     await this.notificationService.create({
       recipientId: business.user.id,
@@ -574,10 +606,10 @@ export class BookingService {
    * This method is wrapped in a transaction for consistency.
    */
   async cancel(bookingId: string, userId: string): Promise<ServiceBooking> {
-    return this.dataSource.transaction(async (transactionalEntityManager) => {
-      const booking = await transactionalEntityManager.findOne(ServiceBooking, {
+    return this.dataSource.transaction(async (manager) => {
+      const booking = await manager.findOne(ServiceBooking, {
         where: { id: bookingId },
-        relations: ['user'],
+        relations: ['user', 'payment'],
       });
 
       if (!booking) {
@@ -590,8 +622,53 @@ export class BookingService {
         );
       }
 
+      const wasPaid = !!booking.payment || !!booking.paymentIntentId;
+      const canRefund =
+        wasPaid && !booking.refundProcessed && !booking.payoutProcessed;
+
       booking.status = BookingStatus.CANCELLED;
-      return transactionalEntityManager.save(booking);
+
+      if (canRefund && booking.paymentIntentId) {
+        try {
+          const transactionRepo = manager.getRepository(BookingTransaction);
+          let refundResult;
+
+          if (booking.payment?.paymentMethod === PaymentMethod.STRIPE) {
+            refundResult =
+              await this.paymentProviderService.refundStripePayment(
+                booking.paymentIntentId,
+              );
+            booking.refundId = refundResult.id;
+          } else if (booking.payment?.paymentMethod === PaymentMethod.PAYPAL) {
+            refundResult = await this.paymentProviderService.refundPaypalOrder(
+              booking.paymentIntentId,
+            );
+            booking.refundId = refundResult.id;
+          }
+
+          if (refundResult) {
+            booking.refundProcessed = true;
+            booking.status = BookingStatus.REFUNDED;
+
+            const refundTx = transactionRepo.create({
+              booking,
+              type: TransactionType.REFUND,
+              amount: booking.totalAmount,
+              referenceId: booking.refundId,
+              status: TransactionStatus.COMPLETED,
+            });
+            await transactionRepo.save(refundTx);
+          }
+        } catch (error) {
+          console.error(
+            `Automatic refund failed for booking ${bookingId}:`,
+            error,
+          );
+          // We still cancel the booking even if refund fails (admin can force it later)
+        }
+      }
+
+      return manager.save(booking);
     });
   }
 
@@ -719,8 +796,27 @@ export class BookingService {
         (1000 * 60 * 60);
       baseAmount = Number(booking.service.pricePerHour || 0) * durationHours;
     } else if (pricingModel === 'perUnit') {
-      // For perUnit we assume 1 unit if not specified elsewhere, or use quantity if we added it to entity
+      // For perUnit we use numberOfGuests or quantity if we had it. Using numberOfGuests as proxy for units if applicable.
       baseAmount = Number(booking.service.pricePerUnit || 0);
+    }
+
+    // Apply Pricing Rules (Weekend / Night)
+    let multiplier = 1;
+    let surcharge = 0;
+    const pricingRules = booking.service.pricingRules;
+
+    if (pricingRules) {
+      const bookingDate = new Date(booking.startTime);
+      const isWeekend =
+        bookingDate.getDay() === 0 || bookingDate.getDay() === 6;
+      if (isWeekend && pricingRules.weekendMultiplier) {
+        multiplier = pricingRules.weekendMultiplier;
+      }
+
+      const startHour = bookingDate.getHours();
+      if ((startHour >= 18 || startHour < 7) && pricingRules.nightSurcharge) {
+        surcharge += Number(pricingRules.nightSurcharge);
+      }
     }
 
     // Guest Pricing
@@ -744,7 +840,16 @@ export class BookingService {
     }
 
     const bookingFee = Number(booking.service.bookingFee || 0);
-    const totalAmount = baseAmount + guestAmount + addonsAmount + bookingFee;
+    const travelFee =
+      (booking.service.deliveryConfig?.mode === 'onsite'
+        ? booking.service.deliveryConfig?.travelFee
+        : 0) || 0;
+
+    const totalAmount =
+      (baseAmount * multiplier + guestAmount + addonsAmount + surcharge) *
+        (booking.numberOfStaff || 1) +
+      bookingFee +
+      Number(travelFee);
 
     if (totalAmount <= 0) {
       throw new BadRequestException(
@@ -910,7 +1015,42 @@ export class BookingService {
 
       booking.payment = savedPayment;
       booking.status = BookingStatus.CONFIRMED; // Mark booking as CONFIRMED upon successful payment
+
+      // Ensure amounts are synced to the booking entity if they weren't set during initiation
+      if (!booking.totalAmount || booking.totalAmount === 0) {
+        booking.totalAmount = amount;
+        const commissionRate = 0.1; // 10% commission
+        booking.commissionAmount = parseFloat(
+          (amount * commissionRate).toFixed(2),
+        );
+        booking.providerAmount = parseFloat(
+          (amount - booking.commissionAmount).toFixed(2),
+        );
+      }
+
       await manager.save(booking);
+
+      // Fetch full booking details for email update
+      const fullBooking = await manager.findOne(ServiceBooking, {
+        where: { id: booking.id },
+        relations: [
+          'user',
+          'service',
+          'service.business',
+          'service.business.user',
+          'payment',
+        ],
+      });
+
+      if (fullBooking) {
+        // Send updated emails to both customer and business owner
+        try {
+          await this.emailService.sendBookingNotification(fullBooking, false); // Customer
+          await this.emailService.sendBookingNotification(fullBooking, true); // Business Owner
+        } catch (error) {
+          console.error('Failed to send booking verification emails:', error);
+        }
+      }
 
       await this.walletService.creditEarning({
         userId: booking.service.business.user.id,
@@ -1054,7 +1194,7 @@ export class BookingService {
 
   async refundBooking(
     bookingId: string,
-    adminId: string, // assuming refund is initiated by admin
+    _adminId: string, // assuming refund is initiated by admin
   ): Promise<ServiceBooking> {
     return this.dataSource.transaction(async (manager) => {
       const booking = await manager.findOne(ServiceBooking, {

@@ -15,9 +15,11 @@ const fetchGroupCircles = async (params: GroupCirclesQueryParams): Promise<Group
     return response.data;
 };
 
-const fetchDiscoverableCircles = async (): Promise<DiscoverableCirclesResponse> => {
+const fetchDiscoverableCircles = async (postcode?: string): Promise<DiscoverableCirclesResponse> => {
     // This endpoint should return circles the user can join
-    const response = await api.get<DiscoverableCirclesResponse>('group-circles/discover');
+    const response = await api.get<DiscoverableCirclesResponse>('group-circles/discover', {
+        params: { postcode }
+    });
     return response.data;
 };
 
@@ -179,10 +181,10 @@ export const useVerifyGroupCircleContribution = () => {
     });
 };
 
-export const useGetDiscoverableCircles = () => {
+export const useGetDiscoverableCircles = (postcode?: string) => {
     return useQuery({
-        queryKey: [DISCOVERABLE_CIRCLES_QUERY_KEY],
-        queryFn: fetchDiscoverableCircles,
+        queryKey: [DISCOVERABLE_CIRCLES_QUERY_KEY, postcode],
+        queryFn: () => fetchDiscoverableCircles(postcode),
     });
 };
 

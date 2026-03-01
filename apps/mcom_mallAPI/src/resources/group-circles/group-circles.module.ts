@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { HttpModule } from '@nestjs/axios';
 import { GroupCirclesService } from './group-circles.service';
 import { GroupCirclesController } from './group-circles.controller';
 import { Group } from './entities/group.entity';
@@ -10,6 +11,7 @@ import { GroupCircleMessage } from './entities/group-circle-message.entity';
 import { PaymentsModule } from '../payments/payments.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { UsersModule } from '../users/users.module';
+import { GeolocationService } from './geolocation.service';
 
 @Module({
   imports: [
@@ -20,12 +22,13 @@ import { UsersModule } from '../users/users.module';
       GroupTransaction,
       GroupCircleMessage,
     ]),
+    HttpModule,
     PaymentsModule,
     CapabilityModule,
     UsersModule,
   ],
   controllers: [GroupCirclesController],
-  providers: [GroupCirclesService],
+  providers: [GroupCirclesService, GeolocationService],
   exports: [GroupCirclesService],
 })
 export class GroupCirclesModule {}

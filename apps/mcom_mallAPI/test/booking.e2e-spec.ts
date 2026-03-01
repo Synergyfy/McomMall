@@ -187,6 +187,34 @@ describe('BookingController (e2e)', () => {
     expect(Array.isArray(response.body)).toBe(true);
   });
 
+  it('should create a booking with full configuration', async () => {
+    const now = new Date();
+    const startTime = new Date(now.getTime() + 2 * 24 * 60 * 60 * 1000); // 2 days from now
+    const endTime = new Date(startTime.getTime() + 60 * 60 * 1000);
+
+    const payload = {
+      serviceId: service.id,
+      startTime: startTime.toISOString(),
+      endTime: endTime.toISOString(),
+      numberOfGuests: 2,
+      address: '123 Test Street, London',
+      phone: '07123456789',
+      problemDescription: 'Test problem description',
+      config: { 'Custom Question': 'Answer' },
+    };
+
+    const response = await request(app.getHttpServer())
+      .post('/bookings')
+      .set('Authorization', `Bearer ${customerJwtToken}`)
+      .send(payload)
+      .expect(201);
+
+    expect(response.body.address).toBe(payload.address);
+    expect(response.body.phone).toBe(payload.phone);
+    expect(response.body.problemDescription).toBe(payload.problemDescription);
+    expect(response.body.config).toEqual(payload.config);
+  });
+
   it('should prevent refunding a booking without a payment intent', async () => {
     // We expect a 400 because there is no payment intent
     const response = await request(app.getHttpServer())
