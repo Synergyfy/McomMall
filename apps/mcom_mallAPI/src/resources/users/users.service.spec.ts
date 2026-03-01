@@ -252,10 +252,15 @@ describe('UsersService', () => {
 
       const result = await service.create(createUserDto as any);
 
-      expect(transactionManager.create).toHaveBeenCalledWith(User, {
-        ...createUserDto,
-        password: 'hashedpassword',
-      });
+      expect(transactionManager.create).toHaveBeenCalledWith(
+        User,
+        expect.objectContaining({
+          ...createUserDto,
+          password: 'hashedpassword',
+          referredBy: null,
+          referralCode: expect.any(String),
+        }),
+      );
       expect(transactionManager.save).toHaveBeenCalledWith(mockUser);
       expect(emailService.sendUserWelcomeEmail).toHaveBeenCalledWith(mockUser);
       expect(result).toEqual(mockUser);

@@ -28,8 +28,8 @@ describe('BookingService', () => {
   let blockedSlotRepository: Repository<BlockedSlot>;
   let priceModifierRepository: Repository<PriceModifier>;
   let serviceRepository: Repository<Service>;
-  let _servicePaymentRepository: Repository<ServicePayment>;
-  let _businessRepository: Repository<Business>;
+  let servicePaymentRepository: Repository<ServicePayment>;
+  let businessRepository: Repository<Business>;
   let paymentProviderService: PaymentProviderService;
   let walletService: WalletService;
 
@@ -149,9 +149,9 @@ describe('BookingService', () => {
         startTime: '2025-01-01T10:00:00Z',
         endTime: '2025-01-01T11:00:00Z',
       };
-      jest
-        .spyOn(serviceRepository, 'findOne')
-        .mockResolvedValue({ business: { id: '1' } } as Service);
+      jest.spyOn(serviceRepository, 'findOne').mockResolvedValue({
+        business: { id: '1', status: 'published', user: { isActive: true } },
+      } as any);
       jest
         .spyOn(blockedSlotRepository, 'findOne')
         .mockResolvedValue({} as BlockedSlot);
@@ -165,9 +165,9 @@ describe('BookingService', () => {
         startTime: '2025-01-01T10:00:00Z',
         endTime: '2025-01-01T11:00:00Z',
       };
-      jest
-        .spyOn(serviceRepository, 'findOne')
-        .mockResolvedValue({ business: { id: '1' } } as Service);
+      jest.spyOn(serviceRepository, 'findOne').mockResolvedValue({
+        business: { id: '1', status: 'published', user: { isActive: true } },
+      } as any);
       jest.spyOn(blockedSlotRepository, 'findOne').mockResolvedValue(null);
       jest
         .spyOn(priceModifierRepository, 'findOne')
@@ -194,12 +194,13 @@ describe('BookingService', () => {
         listingType: [ListingType.SERVICE],
         user: { id: 'business-owner-id', isActive: true },
       },
-    } as Service;
+    } as any;
 
     it('should throw a ConflictException if the slot is not available', async () => {
-      mockEntityManager.findOne
-        .mockResolvedValueOnce(serviceMock)
-        .mockResolvedValueOnce({} as BlockedSlot);
+      mockEntityManager.findOne.mockResolvedValue(serviceMock);
+      jest
+        .spyOn(service, 'checkAvailability')
+        .mockResolvedValue({ isAvailable: false, priceMultiplier: 1 });
       await expect(service.create(createBookingDto, userId)).rejects.toThrow(
         ConflictException,
       );
@@ -210,11 +211,11 @@ describe('BookingService', () => {
       const payment = { id: 'payment-1' } as ServicePayment;
       const finalBooking = { ...booking, payment };
 
-      mockEntityManager.findOne
-        .mockResolvedValueOnce(serviceMock) // Service in _createBooking
-        .mockResolvedValueOnce(null) // BlockedSlot in _createBooking
-        .mockResolvedValueOnce(serviceMock) // Service in create
-        .mockResolvedValueOnce(null); // PriceModifier in create
+      mockEntityManager.findOne.mockResolvedValue(serviceMock);
+
+      jest
+        .spyOn(service, 'checkAvailability')
+        .mockResolvedValue({ isAvailable: true, priceMultiplier: 1 });
 
       mockEntityManager.create
         .mockReturnValueOnce(booking) // ServiceBooking
@@ -237,7 +238,10 @@ describe('BookingService', () => {
           listingType: [ListingType.PRODUCT],
         },
       };
-      mockEntityManager.findOne.mockResolvedValueOnce(nonServiceBusinessMock);
+      mockEntityManager.findOne.mockResolvedValue(nonServiceBusinessMock);
+      jest
+        .spyOn(service, 'checkAvailability')
+        .mockResolvedValue({ isAvailable: true, priceMultiplier: 1 });
       await expect(service.create(createBookingDto, userId)).rejects.toThrow(
         ForbiddenException,
       );
@@ -255,7 +259,7 @@ describe('BookingService', () => {
     it('should throw ForbiddenException if user is not the business owner', async () => {
       const booking = {
         service: { business: { user: { id: '2' } } },
-      } as ServiceBooking;
+      } as any;
       mockEntityManager.findOne.mockResolvedValue(booking);
       await expect(service.decline('1', '1')).rejects.toThrow(
         ForbiddenException,
@@ -266,12 +270,12 @@ describe('BookingService', () => {
       const booking = {
         service: { business: { user: { id: '1' } } },
         status: BookingStatus.PENDING,
-      } as ServiceBooking;
+      } as any;
       const declinedBooking = { ...booking, status: BookingStatus.DECLINED };
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockResolvedValue(declinedBooking);
       const result = await service.decline('1', '1');
-      expect(result.status).toBe(BookingStatus.DECLINED);
+      expect(result).toEqual(declinedBooking);
     });
   });
 
@@ -286,7 +290,7 @@ describe('BookingService', () => {
     it('should throw ForbiddenException if user is not the business owner', async () => {
       const booking = {
         service: { business: { user: { id: '2' } } },
-      } as ServiceBooking;
+      } as any;
       mockEntityManager.findOne.mockResolvedValue(booking);
       await expect(service.approve('1', '1')).rejects.toThrow(
         ForbiddenException,
@@ -297,12 +301,12 @@ describe('BookingService', () => {
       const booking = {
         service: { business: { user: { id: '1' } } },
         status: BookingStatus.PENDING,
-      } as ServiceBooking;
+      } as any;
       const approvedBooking = { ...booking, status: BookingStatus.APPROVED };
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockResolvedValue(approvedBooking);
       const result = await service.approve('1', '1');
-      expect(result.status).toBe(BookingStatus.APPROVED);
+      expect(result).toEqual(approvedBooking);
     });
   });
 
@@ -313,7 +317,7 @@ describe('BookingService', () => {
     });
 
     it('should throw ForbiddenException if user is not the one who made the booking', async () => {
-      const booking = { user: { id: '2' } } as unknown as ServiceBooking;
+      const booking = { user: { id: '2' } } as any;
       mockEntityManager.findOne.mockResolvedValue(booking);
       await expect(service.cancel('1', '1')).rejects.toThrow(
         ForbiddenException,
@@ -324,12 +328,12 @@ describe('BookingService', () => {
       const booking = {
         user: { id: '1' },
         status: BookingStatus.PENDING,
-      } as unknown as ServiceBooking;
+      } as any;
       const cancelledBooking = { ...booking, status: BookingStatus.CANCELLED };
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockResolvedValue(cancelledBooking);
       const result = await service.cancel('1', '1');
-      expect(result.status).toBe(BookingStatus.CANCELLED);
+      expect(result).toEqual(cancelledBooking);
     });
   });
 
@@ -345,11 +349,19 @@ describe('BookingService', () => {
     });
 
     it('should return a Stripe client secret', async () => {
-      const booking = { service: { price: 100 } } as unknown as ServiceBooking;
+      const booking = {
+        service: {
+          pricingModel: 'fixed',
+          fixedPrice: 100,
+          price: 100,
+          business: { status: 'published', user: { isActive: true } },
+        },
+      } as any;
       jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
       jest
         .spyOn(paymentProviderService, 'createStripePaymentIntent')
-        .mockResolvedValue({ client_secret: 'secret' } as any);
+        .mockResolvedValue({ client_secret: 'secret', id: 'pi_123' } as any);
+      jest.spyOn(bookingRepository, 'save').mockResolvedValue(booking);
 
       const result = await service.initiatePayment(
         { bookingId: '1', paymentProvider: PaymentMethod.STRIPE },
@@ -360,11 +372,19 @@ describe('BookingService', () => {
     });
 
     it('should return a PayPal order ID', async () => {
-      const booking = { service: { price: 100 } } as unknown as ServiceBooking;
+      const booking = {
+        service: {
+          pricingModel: 'fixed',
+          fixedPrice: 100,
+          price: 100,
+          business: { status: 'published', user: { isActive: true } },
+        },
+      } as any;
       jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
       jest
         .spyOn(paymentProviderService, 'createPaypalOrder')
         .mockResolvedValue({ id: 'order-id' } as any);
+      jest.spyOn(bookingRepository, 'save').mockResolvedValue(booking);
 
       const result = await service.initiatePayment(
         { bookingId: '1', paymentProvider: PaymentMethod.PAYPAL },
@@ -394,7 +414,9 @@ describe('BookingService', () => {
       const booking = {
         id: '1',
         user: { email: 'test@test.com' },
-        service: { business: { user: { id: '2' } } },
+        service: {
+          business: { user: { id: '2', isActive: true }, status: 'published' },
+        },
       } as any;
       const payment = {} as ServicePayment;
       jest.spyOn(bookingRepository, 'findOne').mockResolvedValue(booking);
@@ -432,7 +454,7 @@ describe('BookingService', () => {
         user: { id: '2' },
         businessOwnerCompleted: false,
         customerCompleted: false,
-      } as ServiceBooking;
+      } as any;
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockImplementation((booking) => booking);
 
@@ -447,7 +469,7 @@ describe('BookingService', () => {
         user: { id: '2' },
         businessOwnerCompleted: false,
         customerCompleted: true,
-      } as ServiceBooking;
+      } as any;
       mockEntityManager.findOne.mockResolvedValue(booking);
       mockEntityManager.save.mockImplementation((booking) => booking);
       jest
