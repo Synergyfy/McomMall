@@ -34,6 +34,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
+import { getProductMainImage } from '@/lib/utils';
 
 const WishlistPage = () => {
   const { data: wishlist, isLoading, isError, refetch, isFetching } = useGetWishlist();
@@ -186,7 +187,7 @@ const WishlistPage = () => {
                           <div className="flex items-center gap-6">
                             <div className="relative h-24 w-24 rounded-[1.5rem] overflow-hidden ring-1 ring-gray-100 dark:ring-zinc-800 shadow-xl group-hover:scale-105 transition-transform duration-500">
                               <Image
-                                src={displayProduct?.media?.[0] || displayProduct?.imageUrl || '/placeholder.svg'}
+                                src={getProductMainImage(displayProduct) || '/placeholder.svg'}
                                 alt={title || 'Product Image'}
                                 fill
                                 className="object-cover"

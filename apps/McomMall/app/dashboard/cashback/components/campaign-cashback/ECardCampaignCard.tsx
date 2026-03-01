@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Sparkles, ExternalLink, Gift } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { cn } from '@/lib/utils';
+import { CampaignTimer } from './CampaignTimer';
 
 interface Props {
     campaign: CampaignCashback;
@@ -47,7 +48,7 @@ const ECardCampaignCard: React.FC<Props> = ({ campaign, onUnlockClick }) => {
         <div className={`relative w-full max-w-2xl mx-auto rounded-3xl overflow-hidden shadow-xl border border-gray-100 bg-white flex flex-col ${isExpired ? 'opacity-70 grayscale-[0.5]' : ''}`}>
 
             {/* Gift Card Visual */}
-            <div className="relative p-6 px-4 sm:px-8 bg-gray-50/80 overflow-hidden">
+            <div className="relative p-6 px-4 sm:px-8 bg-gray-50/50 overflow-hidden">
                 <div className={cn(
                     "w-full rounded-2xl shadow-xl p-6 relative overflow-hidden transition-all duration-500 min-h-[220px]",
                     gradientClass
@@ -91,8 +92,16 @@ const ECardCampaignCard: React.FC<Props> = ({ campaign, onUnlockClick }) => {
 
             {/* Content Details */}
             <div className="p-5 sm:p-7 pt-2 flex flex-col z-10 relative">
-                <div className="text-xs font-medium text-slate-500 mb-3 px-1">
-                    Valid thru: <span className="text-slate-800 font-bold">{new Date(campaign.expiryDate).toLocaleDateString()}</span>
+                <div className="flex flex-wrap items-center justify-between gap-2 mb-3 px-1">
+                    <div className="text-xs font-medium text-slate-500">
+                        Valid thru: <span className="text-slate-800 font-bold">{new Date(campaign.expiryDate).toLocaleDateString()}</span>
+                    </div>
+                    <CampaignTimer
+                        expiryDate={campaign.expiryDate}
+                        activationTimerDate={campaign.activationTimerDate}
+                        isActivationRequired={campaign.isActivationRequired}
+                        activationTasks={campaign.activationTasks}
+                    />
                 </div>
 
                 <div className="bg-white rounded-xl mb-6">

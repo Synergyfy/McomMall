@@ -5,6 +5,7 @@ import { CampaignChannelBalances } from './CampaignChannelBalances';
 import { Button } from '@/components/ui/button';
 import { ExternalLink } from 'lucide-react';
 import { QRCode } from 'react-qrcode-logo';
+import { CampaignTimer } from './CampaignTimer';
 
 interface Props {
     campaign: CampaignCashback;
@@ -12,13 +13,13 @@ interface Props {
 }
 
 const VerticalRedRibbon = () => (
-    <div className="absolute top-0 left-[6%] bottom-0 w-2.5 z-20 pointer-events-none border-x border-black/10">
+    <div className="absolute top-0 left-[4%] bottom-0 w-2.5 z-20 pointer-events-none border-x border-black/10">
         <div className="w-full h-full bg-gradient-to-r from-red-500 via-red-600 to-red-800 shadow-[1px_0_10px_rgba(0,0,0,0.2)]" />
     </div>
 );
 
 const RedBow = () => (
-    <div className="absolute top-1/2 left-[6%] -translate-x-1/2 -translate-y-1/2 z-30 scale-[0.55] sm:scale-[0.55] pointer-events-none">
+    <div className="absolute top-1/2 left-[4%] -translate-x-1/2 -translate-y-1/2 z-30 scale-[0.55] sm:scale-[0.55] pointer-events-none">
         <div className="relative w-24 h-16 flex items-center justify-center">
             <div className="absolute -left-1.5 w-12 h-12 border-[3px] border-red-700 rounded-full bg-gradient-to-br from-red-500 to-red-900 rotate-[-15deg] shadow-lg" />
             <div className="absolute -right-1.5 w-12 h-12 border-[3px] border-red-700 rounded-full bg-gradient-to-bl from-red-500 to-red-900 rotate-[15deg] shadow-lg" />
@@ -76,10 +77,18 @@ const VoucherCampaignCard: React.FC<Props> = ({ campaign, onUnlockClick }) => {
                 </div>
 
                 <div className="relative z-10 pl-4 md:pl-6 mt-1 space-y-3">
-                    <div className="inline-block bg-gray-50 rounded-lg px-2 py-0.5 border border-gray-100">
-                        <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">
-                            Expires: <span className="text-red-600">{new Date(campaign.expiryDate).toLocaleDateString()}</span>
-                        </p>
+                    <div className="flex flex-wrap items-center gap-3">
+                        <div className="inline-block bg-gray-50 rounded-lg px-2 py-0.5 border border-gray-100">
+                            <p className="text-[10px] text-gray-600 font-bold uppercase tracking-wider">
+                                Expires: <span className="text-red-600">{new Date(campaign.expiryDate).toLocaleDateString()}</span>
+                            </p>
+                        </div>
+                        <CampaignTimer
+                            expiryDate={campaign.expiryDate}
+                            activationTimerDate={campaign.activationTimerDate}
+                            isActivationRequired={campaign.isActivationRequired}
+                            activationTasks={campaign.activationTasks}
+                        />
                     </div>
 
                     {/* 3 Values Breakdown embedded inside Voucher UI */}

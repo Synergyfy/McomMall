@@ -96,6 +96,10 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
         v3: 'Hyperlocal, Nearby, Online',
     });
 
+    // New: Activation Settings
+    const [activationTimerDays, setActivationTimerDays] = useState('2');
+    const [activationTasks, setActivationTasks] = useState(['Verify your linked account', 'Share campaign to 1 friend']);
+
     const [isSubmitting, setIsSubmitting] = useState(false);
 
     // Auto split logic
@@ -368,6 +372,55 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                                 <Label htmlFor="cd-ecard" className="cursor-pointer">E-Gift Card UI</Label>
                             </div>
                         </RadioGroup>
+                    </div>
+
+                    {/* ── Activation Timer & Tasks ── */}
+                    <div className="space-y-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100 md:col-span-2">
+                        <div className="flex items-center gap-2 mb-2">
+                            <CalendarRange className="w-5 h-5 text-orange-600" />
+                            <h4 className="font-bold text-sm text-orange-900 uppercase tracking-wider text-sm">Activation Timer & Reactivation Tasks</h4>
+                        </div>
+
+                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <Label htmlFor="timerDays" className="text-xs font-bold text-gray-600 uppercase">Usage Timer (Days)</Label>
+                                <Input
+                                    id="timerDays"
+                                    type="number"
+                                    value={activationTimerDays}
+                                    onChange={e => setActivationTimerDays(e.target.value)}
+                                    className="bg-white"
+                                    min="1"
+                                />
+                                <p className="text-[10px] text-orange-700 italic">Card deactivates after these days of inactivity.</p>
+                            </div>
+
+                            <div className="md:col-span-2 space-y-3">
+                                <Label className="text-xs font-bold text-gray-600 uppercase">Reactivation Tasks (Required: 2)</Label>
+                                <div className="space-y-2">
+                                    <Input
+                                        placeholder="Task 1 description..."
+                                        value={activationTasks[0]}
+                                        onChange={e => {
+                                            const newTasks = [...activationTasks];
+                                            newTasks[0] = e.target.value;
+                                            setActivationTasks(newTasks);
+                                        }}
+                                        className="bg-white text-sm"
+                                    />
+                                    <Input
+                                        placeholder="Task 2 description..."
+                                        value={activationTasks[1]}
+                                        onChange={e => {
+                                            const newTasks = [...activationTasks];
+                                            newTasks[1] = e.target.value;
+                                            setActivationTasks(newTasks);
+                                        }}
+                                        className="bg-white text-sm"
+                                    />
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </section>

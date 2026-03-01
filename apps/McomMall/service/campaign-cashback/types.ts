@@ -50,6 +50,9 @@ export interface CampaignCashback {
     externalRedemptionUrl?: string; // If true, disable spend and show link
 
     expiryDate: string;
+    activationTimerDate?: string; // New: secondary timer for activation
+    isActivationRequired?: boolean; // New: flag if card needs reactivation
+    activationTasks?: string[]; // New: tasks to reactivate
     status: CampaignStatus;
 
     // Wallets broken down by channel
