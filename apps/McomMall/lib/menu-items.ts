@@ -241,7 +241,6 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Analytics', href: '/dashboard/vouchers/analytics' },
       { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
       { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
-      { title: 'Redeem Voucher', href: '/dashboard/vouchers/redeem' },
     ],
   },
   {

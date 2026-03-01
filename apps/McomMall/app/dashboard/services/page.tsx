@@ -43,8 +43,10 @@ import {
 import { Service } from '@/service/services/types';
 
 const isImageUrl = (url: string) => {
-    if (!url) return false;
-    return /\.(jpeg|jpg|gif|png|webp)$/i.test(url);
+  if (!url) return false;
+  // More permissive: check for common image extensions OR protocol indicating an external image
+  // Some CDN URLs might not have clean extensions
+  return /\.(jpeg|jpg|gif|png|webp|svg|bmp)$/i.test(url) || url.startsWith('http') || url.startsWith('data:image');
 }
 
 const formatDate = (dateString: string) => {
@@ -187,139 +189,140 @@ export default function ServicesDashboard() {
                     </TableRow>
                   ) : services.length > 0 ? (
                     services.map(service => {
-                      const firstImageUrl = (service.media && service.media.length > 0) 
-                        ? service.media.find(isImageUrl) 
+                      const firstImageUrl = (service.media && service.media.length > 0)
+                        ? service.media.find(isImageUrl) || service.media[0]
                         : (service.images && service.images.length > 0)
-                          ? service.images.find(isImageUrl)
+                          ? service.images.find(isImageUrl) || service.images[0]
                           : null;
                       return (
-                      <TableRow
-                        key={service.id}
-                        className="mobile-table-card md:table-row"
-                        data-state={
-                          selectedRows.includes(service.id) ? 'selected' : ''
-                        }
-                      >
-                        <TableCell className="mobile-table-cell-checkbox md:table-cell">
-                          <Checkbox
-                            checked={selectedRows.includes(service.id)}
-                            onCheckedChange={checked =>
-                              handleSelectRow(service.id, !!checked)
-                            }
-                            aria-label={`Select row for ${service.name}`}
-                          />
-                        </TableCell>
-                        <TableCell
+                        <TableRow
+                          key={service.id}
+                          className="mobile-table-card md:table-row"
+                          data-state={
+                            selectedRows.includes(service.id) ? 'selected' : ''
+                          }
+                        >
+                          <TableCell className="mobile-table-cell-checkbox md:table-cell">
+                            <Checkbox
+                              checked={selectedRows.includes(service.id)}
+                              onCheckedChange={checked =>
+                                handleSelectRow(service.id, !!checked)
+                              }
+                              aria-label={`Select row for ${service.name}`}
+                            />
+                          </TableCell>
+                          <TableCell
                             data-label="Image"
                             className="mobile-table-cell md:table-cell"
-                        >
+                          >
                             <Link href={`/services/${service.id}`} passHref>
-                                <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer overflow-hidden border border-gray-100">
-                                    {firstImageUrl ? (
-                                        <img
-                                            src={firstImageUrl}
-                                            alt={service.name}
-                                            className="w-full h-full object-cover"
-                                        />
-                                    ) : (
-                                        <div className="w-8 h-8 text-gray-400 bg-gray-100 rounded flex items-center justify-center">
-                                          <MoreHorizontal className="w-4 h-4 opacity-20" />
-                                        </div>
-                                    )}
-                                </div>
+                              <div className="w-10 h-10 bg-gray-200 rounded-md flex items-center justify-center cursor-pointer overflow-hidden border border-gray-100">
+                                {firstImageUrl ? (
+                                  <img
+                                    src={firstImageUrl}
+                                    alt={service.name}
+                                    className="w-full h-full object-cover"
+                                  />
+                                ) : (
+                                  <div className="w-8 h-8 text-gray-400 bg-gray-100 rounded flex items-center justify-center">
+                                    <MoreHorizontal className="w-4 h-4 opacity-20" />
+                                  </div>
+                                )}
+                              </div>
                             </Link>
-                        </TableCell>
-                        <TableCell
-                          data-label="Name"
-                          className="mobile-table-cell md:table-cell font-medium text-gray-800"
-                        >
-                          <Link
-                            href={`/services/${service.id}`}
-                            className="hover:underline"
+                          </TableCell>
+                          <TableCell
+                            data-label="Name"
+                            className="mobile-table-cell md:table-cell font-medium text-gray-800"
                           >
-                            {service.name}
-                          </Link>
-                        </TableCell>
-                        <TableCell
-                          data-label="Status"
-                          className="mobile-table-cell md:table-cell"
-                        >
-                          <Badge
-                            variant={
-                              service.isActive ? 'default' : 'secondary'
-                            }
-                            className={
-                              service.isActive
-                                ? 'bg-green-100 text-green-800 border-none px-3'
-                                : 'px-3'
-                            }
+                            <Link
+                              href={`/services/${service.id}`}
+                              className="hover:underline"
+                            >
+                              {service.name}
+                            </Link>
+                          </TableCell>
+                          <TableCell
+                            data-label="Status"
+                            className="mobile-table-cell md:table-cell"
                           >
-                            {service.isActive ? 'Active' : 'Inactive'}
-                          </Badge>
-                        </TableCell>
-                        <TableCell
-                          data-label="Pricing Model"
-                          className="mobile-table-cell md:table-cell text-gray-600 capitalize"
-                        >
-                          {service.pricingModel?.replace(/([A-Z])/g, ' $1').trim()}
-                        </TableCell>
-                        <TableCell
-                          data-label="Price"
-                          className="mobile-table-cell md:table-cell text-gray-900 font-bold"
-                        >
-                          {service.pricingModel === 'fixed' &&
-                            `£${service.fixedPrice}`}
-                          {service.pricingModel === 'perHour' &&
-                            `£${service.pricePerHour}/hr`}
-                          {service.pricingModel === 'perUnit' &&
-                            `£${service.pricePerUnit}/${service.unitName}`}
-                        </TableCell>
-                        <TableCell
-                          data-label="Date"
-                          className="mobile-table-cell md:table-cell text-gray-600"
-                        >
-                          <div className="flex flex-col text-xs items-end md:items-start">
-                            <span className="font-medium text-gray-900">
-                              {formatDate(service.created_at || '')}
-                            </span>
-                            <span className="text-gray-400 text-[10px] uppercase tracking-tighter">Created</span>
-                          </div>
-                        </TableCell>
-                        <TableCell className="mobile-table-cell md:table-cell">
-                          <DropdownMenu>
-                            <DropdownMenuTrigger asChild>
-                              <Button variant="ghost" size="icon">
-                                <MoreHorizontal className="h-4 w-4" />
-                              </Button>
-                            </DropdownMenuTrigger>
-                            <DropdownMenuContent align="end">
-                              <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                              <DropdownMenuSeparator />
-                              <DropdownMenuItem
-                                onSelect={() =>
-                                  router.push(
-                                    `/dashboard/services/edit/${service.id}`
-                                  )
-                                }
-                              >
-                                <Edit className="mr-2 h-4 w-4" />
-                                Edit
-                              </DropdownMenuItem>
-                              <DropdownMenuItem
-                                onSelect={() => {
-                                  setSelectedService(service.id);
-                                  setShowDeleteConfirmation(true);
-                                }}
-                                className="text-red-600"
-                              >
-                                <Trash2 className="mr-2 h-4 w-4" />
-                                Delete
-                              </DropdownMenuItem>
-                            </DropdownMenuContent>
-                          </DropdownMenu>
-                        </TableCell>
-                      </TableRow>
-                    )})
+                            <Badge
+                              variant={
+                                service.isActive ? 'default' : 'secondary'
+                              }
+                              className={
+                                service.isActive
+                                  ? 'bg-green-100 text-green-800 border-none px-3'
+                                  : 'px-3'
+                              }
+                            >
+                              {service.isActive ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </TableCell>
+                          <TableCell
+                            data-label="Pricing Model"
+                            className="mobile-table-cell md:table-cell text-gray-600 capitalize"
+                          >
+                            {service.pricingModel?.replace(/([A-Z])/g, ' $1').trim()}
+                          </TableCell>
+                          <TableCell
+                            data-label="Price"
+                            className="mobile-table-cell md:table-cell text-gray-900 font-bold"
+                          >
+                            {service.pricingModel === 'fixed' &&
+                              `£${service.fixedPrice}`}
+                            {service.pricingModel === 'perHour' &&
+                              `£${service.pricePerHour}/hr`}
+                            {service.pricingModel === 'perUnit' &&
+                              `£${service.pricePerUnit}/${service.unitName}`}
+                          </TableCell>
+                          <TableCell
+                            data-label="Date"
+                            className="mobile-table-cell md:table-cell text-gray-600"
+                          >
+                            <div className="flex flex-col text-xs items-end md:items-start">
+                              <span className="font-medium text-gray-900">
+                                {formatDate(service.created_at || (service as any).createdAt || '')}
+                              </span>
+                              <span className="text-gray-400 text-[10px] uppercase tracking-tighter">Created</span>
+                            </div>
+                          </TableCell>
+                          <TableCell className="mobile-table-cell md:table-cell">
+                            <DropdownMenu>
+                              <DropdownMenuTrigger asChild>
+                                <Button variant="ghost" size="icon">
+                                  <MoreHorizontal className="h-4 w-4" />
+                                </Button>
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end">
+                                <DropdownMenuLabel>Actions</DropdownMenuLabel>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() =>
+                                    router.push(
+                                      `/dashboard/services/edit/${service.id}`
+                                    )
+                                  }
+                                >
+                                  <Edit className="mr-2 h-4 w-4" />
+                                  Edit
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSelectedService(service.id);
+                                    setShowDeleteConfirmation(true);
+                                  }}
+                                  className="text-red-600"
+                                >
+                                  <Trash2 className="mr-2 h-4 w-4" />
+                                  Delete
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
+                          </TableCell>
+                        </TableRow>
+                      )
+                    })
                   ) : (
                     <TableRow className="block md:table-row">
                       <TableCell
