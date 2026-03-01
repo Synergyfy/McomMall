@@ -25,6 +25,8 @@ export const useGetCampaignCashbacks = (params: { targetType?: CampaignTargetTyp
                         contributionPaid: false,
                         externalCampaign: false,
                         expiryDate: '2026-12-31T23:59:59Z',
+                        activationTimerDate: new Date(Date.now() + 172800000).toISOString(), // 2 days from now
+                        activationTasks: ['Complete profile verification', 'Invite 2 friends'],
                         status: 'ACTIVE' as any,
                         wallets: [
                             { channelType: 'HYPERLOCAL' as any, value1Balance: 5, value2Balance: 0, value3Balance: 0 },

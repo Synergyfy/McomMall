@@ -28,6 +28,7 @@ import { Terminal } from "lucide-react";
 import { useGetGiftCardAssets, useDeleteGiftCardAsset } from '@/service/gift-card/asset-hook';
 import { GiftCardAsset } from '@/service/gift-card/asset-types';
 import { AssetForm } from './components/asset-form';
+import { GiftCardAssetCard } from './components/GiftCardAssetCard';
 import { CategoryList } from './components/category-list';
 
 const GiftCardAssetsPage = () => {
@@ -121,47 +122,13 @@ const GiftCardAssetsPage = () => {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
           {assets.map((asset) => (
-            <Card key={asset.id} className="overflow-hidden shadow-lg hover:shadow-xl transition-shadow duration-300 flex flex-col">
-              <CardHeader className="p-0 relative">
-                <Image src={asset.url} alt={asset.name} className="w-full h-48 object-cover" width={300} height={200} />
-              </CardHeader>
-              <CardContent className="p-4 flex flex-col flex-grow">
-                <CardTitle className="text-lg font-semibold text-gray-800 mb-2">{asset.name}</CardTitle>
-                <div className="flex flex-wrap gap-1">
-                  {asset.categories?.map((category) => (
-                    <Badge key={category.id} variant="secondary">{category.name}</Badge>
-                  ))}
-                </div>
-              </CardContent>
-              <CardFooter className="border-t pt-4 mt-auto">
-                <div className="flex justify-end w-full gap-2">
-                  <Button variant="outline" size="sm" onClick={() => handleEdit(asset)}>
-                    <Pencil className="mr-2 h-4 w-4" /> Edit
-                  </Button>
-                  <AlertDialog>
-                    <AlertDialogTrigger asChild>
-                      <Button variant="destructive" size="sm" disabled={isDeleting}>
-                        <Trash2 className="mr-2 h-4 w-4" /> Delete
-                      </Button>
-                    </AlertDialogTrigger>
-                    <AlertDialogContent>
-                      <AlertDialogHeader>
-                        <AlertDialogTitle>Are you sure?</AlertDialogTitle>
-                        <AlertDialogDescription>
-                          This action cannot be undone. This will permanently delete the gift card asset.
-                        </AlertDialogDescription>
-                      </AlertDialogHeader>
-                      <AlertDialogFooter>
-                        <AlertDialogCancel>Cancel</AlertDialogCancel>
-                        <AlertDialogAction onClick={() => handleDelete(asset.id)} disabled={isDeleting}>
-                          {isDeleting ? 'Deleting...' : 'Delete'}
-                        </AlertDialogAction>
-                      </AlertDialogFooter>
-                    </AlertDialogContent>
-                  </AlertDialog>
-                </div>
-              </CardFooter>
-            </Card>
+            <GiftCardAssetCard
+              key={asset.id}
+              asset={asset}
+              onEdit={handleEdit}
+              onDelete={handleDelete}
+              isDeleting={isDeleting}
+            />
           ))}
         </div>
       )}
