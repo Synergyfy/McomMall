@@ -114,15 +114,30 @@ describe('GroupCirclesService', () => {
     it('should return discoverable circles excluding those owned or joined by the user', async () => {
       const user = { id: 'user-1' } as User;
       const circles = [
-        { id: 'group-1', founderId: 'user-1', members: [], founder: { firstName: 'Me' } }, // Owned by user
-        { id: 'group-2', founderId: 'user-2', members: [{ userId: 'user-1' }], founder: { firstName: 'Friend' } }, // User is a member
-        { id: 'group-3', founderId: 'user-3', members: [], founder: { firstName: 'Owner', lastName: '3' } }, // Valid
+        {
+          id: 'group-1',
+          founderId: 'user-1',
+          members: [],
+          founder: { firstName: 'Me' },
+        }, // Owned by user
+        {
+          id: 'group-2',
+          founderId: 'user-2',
+          members: [{ userId: 'user-1' }],
+          founder: { firstName: 'Friend' },
+        }, // User is a member
+        {
+          id: 'group-3',
+          founderId: 'user-3',
+          members: [],
+          founder: { firstName: 'Owner', lastName: '3' },
+        }, // Valid
       ] as any;
 
       jest.spyOn(groupRepo, 'find').mockResolvedValue(circles);
 
       const result = await service.discover(user);
-      
+
       // Expected behavior: Filter logic should remove group-1 and group-2
       expect(result.data).toHaveLength(1);
       expect(result.data[0].id).toBe('group-3');
@@ -132,26 +147,42 @@ describe('GroupCirclesService', () => {
       const user = { id: 'user-1' } as User;
       const userPostcode = 'SW1A 1AA';
       const circles = [
-        { 
-            id: 'group-far', founderId: 'user-2', members: [], 
-            founder: { firstName: 'A', lastName: 'B', businesses: [{ location: { postcode: 'M1 1AG' } }] } 
+        {
+          id: 'group-far',
+          founderId: 'user-2',
+          members: [],
+          founder: {
+            firstName: 'A',
+            lastName: 'B',
+            businesses: [{ location: { postcode: 'M1 1AG' } }],
+          },
         },
-        { 
-            id: 'group-exact', founderId: 'user-3', members: [], 
-            founder: { firstName: 'C', lastName: 'D', businesses: [{ location: { postcode: 'SW1A 1AA' } }] } 
+        {
+          id: 'group-exact',
+          founderId: 'user-3',
+          members: [],
+          founder: {
+            firstName: 'C',
+            lastName: 'D',
+            businesses: [{ location: { postcode: 'SW1A 1AA' } }],
+          },
         },
       ] as any;
 
       jest.spyOn(groupRepo, 'find').mockResolvedValue(circles);
-      jest.spyOn(geolocationService, 'getCoordinates').mockResolvedValue({ lat: 51.5, lng: -0.1 });
-      jest.spyOn(geolocationService, 'getBulkCoordinates').mockResolvedValue(new Map([
+      jest
+        .spyOn(geolocationService, 'getCoordinates')
+        .mockResolvedValue({ lat: 51.5, lng: -0.1 });
+      jest.spyOn(geolocationService, 'getBulkCoordinates').mockResolvedValue(
+        new Map([
           ['M1 1AG', { lat: 53.4, lng: -2.2 }],
-          ['SW1A 1AA', { lat: 51.5, lng: -0.1 }]
-      ]));
+          ['SW1A 1AA', { lat: 51.5, lng: -0.1 }],
+        ]),
+      );
       jest.spyOn(geolocationService, 'calculateDistance').mockReturnValue(262); // Distance for M1 1AG
 
       const result = await service.discover(user, userPostcode);
-      
+
       // Expected behavior: Exact string match on postcode gives priority 1
       expect(result.data[0].id).toBe('group-exact');
       expect(result.data[1].id).toBe('group-far');

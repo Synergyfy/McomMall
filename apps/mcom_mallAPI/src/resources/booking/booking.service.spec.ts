@@ -21,6 +21,7 @@ import { CentralIntegrationService } from '../payments/services/central-integrat
 import { WalletService } from '../wallet/wallet.service';
 import { PaymentMethod } from '../order/entities/order-payment.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { EmailService } from '../email/email.service';
 
 describe('BookingService', () => {
   let service: BookingService;
@@ -102,6 +103,16 @@ describe('BookingService', () => {
         {
           provide: CentralIntegrationService,
           useValue: { processCashback: jest.fn() },
+        },
+        {
+          provide: EmailService,
+          useValue: {
+            sendBookingConfirmation: jest.fn(),
+            sendBookingNotificationToBusiness: jest.fn(),
+            sendBookingCancellation: jest.fn(),
+            sendBookingUpdate: jest.fn(),
+            sendReviewRequest: jest.fn(),
+          },
         },
         {
           provide: WalletService,
