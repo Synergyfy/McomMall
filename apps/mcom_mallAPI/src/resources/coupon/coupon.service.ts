@@ -56,7 +56,7 @@ export class CouponService {
     private readonly dataSource: DataSource,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
-  ) {}
+  ) { }
 
   async create(dto: CreateCouponDto): Promise<Coupon> {
     const {
@@ -479,5 +479,26 @@ export class CouponService {
     }
 
     return coupon;
+  }
+
+  async findAllForUser(user: User, pagination: PaginationQueryDto): Promise<PageDto<Coupon>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.couponRepository.findAndCount({
+      where: { business: { user: { id: user.id } } },
+      skip,
+      take: limit,
+      relations: ['campaign', 'business', 'branding', 'branding.business'],
+      order: { created_at: 'DESC' },
+    });
+
+    const pageMetaDto = new PageMetaDto({
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination as any,
+    });
+
+    return new PageDto(items, pageMetaDto);
   }
 }
