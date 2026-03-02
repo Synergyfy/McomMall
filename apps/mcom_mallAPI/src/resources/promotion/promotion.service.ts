@@ -133,9 +133,11 @@ export class PromotionService {
       savedPromotion.name,
     );
     await this.activityTimerService.completeTaskByKey(
-      userId,
-      'createdPromotion',
+      user.id,
+      'createdLoyalty',
+      true,
     );
+
     return savedPromotion;
   }
 

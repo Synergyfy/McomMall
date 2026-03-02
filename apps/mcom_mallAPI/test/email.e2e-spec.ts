@@ -1,10 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { User } from '../src/resources/users/entities/user.entity';
 import { Repository } from 'typeorm';
+import { UserRole } from '../src/common/role.enum';
 
 describe('Email (e2e)', () => {
   let app: INestApplication;
@@ -35,24 +37,29 @@ describe('Email (e2e)', () => {
   });
 
   it('should send a welcome email to a new user', async () => {
+    const timestamp = Date.now();
     const createUserDto = {
-      name: 'Test User',
-      email: 'test@example.com',
+      firstName: 'Test',
+      lastName: 'User',
+      email: `test-${timestamp}@example.com`,
       password: 'password',
-      phoneNumber: '1234567890',
+      confirm_password: 'password',
+      phoneNumber: `07${timestamp.toString().slice(-9)}`,
     };
 
     // Mock the user creation
     const user = new User();
     user.id = '1';
-    user.name = createUserDto.name;
+    user.firstName = createUserDto.firstName;
+    user.lastName = createUserDto.lastName;
     user.email = createUserDto.email;
+    user.role = UserRole.CUSTOMER;
 
     jest.spyOn(userRepository, 'create').mockReturnValue(user);
     jest.spyOn(userRepository, 'save').mockResolvedValue(user);
 
     await request(app.getHttpServer())
-      .post('/users')
+      .post('/users/create')
       .send(createUserDto)
       .expect(201);
 
@@ -61,7 +68,7 @@ describe('Email (e2e)', () => {
       subject: 'Welcome to McomMall!',
       template: './welcome',
       context: {
-        name: createUserDto.name,
+        name: createUserDto.firstName,
       },
     });
   });

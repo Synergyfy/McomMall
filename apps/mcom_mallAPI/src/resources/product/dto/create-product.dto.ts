@@ -107,7 +107,7 @@ export class CreateProductDto {
   })
   @IsString()
   @IsNotEmpty()
-  bussinessId: string;
+  businessId: string;
 
   @ApiPropertyOptional({
     description: 'The title of the product (frontend style).',

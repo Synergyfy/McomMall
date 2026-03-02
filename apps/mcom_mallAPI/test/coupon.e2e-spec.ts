@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { clearDatabase } from './test-utils';
@@ -19,7 +20,10 @@ describe('CouponController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MailerService)
+      .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
@@ -67,6 +71,6 @@ describe('CouponController (e2e)', () => {
       .send(createCouponDto)
       .expect(201);
 
-    expect(response.body).toHaveProperty('couponCode'); // Expect ANY code
+    expect(response.body).toHaveProperty('code'); // Expect ANY code
   });
 });

@@ -1,5 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/resources/users/users.service';
@@ -32,7 +33,10 @@ describe('BookingController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MailerService)
+      .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());

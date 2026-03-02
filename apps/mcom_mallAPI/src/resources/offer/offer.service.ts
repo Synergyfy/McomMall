@@ -104,7 +104,11 @@ export class OfferService {
       'offer',
       savedOffer.name,
     );
-    await this.activityTimerService.completeTaskByKey(user.id, 'createdOffer');
+    await this.activityTimerService.completeTaskByKey(
+      user.id,
+      'createdOffer',
+      true,
+    );
     return savedOffer;
   }
 

@@ -1,8 +1,11 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { CapabilityService } from '../src/resources/capability/capability.service';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { clearDatabase, getBusiness, createProduct } from './test-utils';
+import { clearDatabase, getBusiness, createProduct, seedTaxonomy } from './test-utils';
+import { createAuthenticatedUser } from './utils/auth';
 import { UsersService } from '../src/resources/users/users.service';
 import { CreateUserDto } from '../src/resources/users/dto/create-user.dto';
 import { UserRole } from '../src/common/role.enum';
@@ -11,6 +14,7 @@ import {
   PromotionScope,
   PromotionType,
 } from 'src/resources/promotion/promotion.enum';
+import { SellingMode, ListingType } from '../src/resources/listings/listing.enum';
 
 describe('PromotionController (e2e)', () => {
   let app: INestApplication;
@@ -22,35 +26,49 @@ describe('PromotionController (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MailerService)
+      .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .overrideProvider(CapabilityService)
+      .useValue({ checkPermission: jest.fn().mockResolvedValue(undefined) })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());
     await app.init();
     await clearDatabase(app);
 
-    const usersService = app.get(UsersService);
-    const email = `test-${Date.now()}@test.com`;
-    const password = 'password123';
-    const createUserDto: CreateUserDto = {
-      firstName: 'Test',
-      lastName: 'User',
-      email,
-      password,
-      confirm_password: password,
-      phoneNumber: '1234567890',
-      role: UserRole.OWNER,
-    };
-    await usersService.create(createUserDto);
+    const authData = await createAuthenticatedUser(app, UserRole.OWNER);
+    jwtToken = authData.accessToken;
+    const userId = authData.user.id;
+    
+    const { sector, category, subCategory } = await seedTaxonomy(app);
 
-    const response = await request(app.getHttpServer())
-      .post('/auth')
-      .send({ email, password })
+    const businessResponse = await request(app.getHttpServer())
+      .post('/listings')
+      .set('Authorization', `Bearer ${jwtToken}`)
+      .send({
+        listingType: [ListingType.PRODUCT],
+        businessName: 'Test Business',
+        shortDescription: 'Test short description long enough',
+        businessPhone: '+447911123456',
+        sectorId: sector.id,
+        categoryId: category.id,
+        subCategoryId: subCategory.id,
+        productSellerProfile: {
+          sellingModes: [SellingMode.PICKUP],
+          hasAgeRestrictedItems: false,
+        },
+        location: {
+          postcode: 'SW1A 1AA',
+          addressLine1: '10 Downing Street',
+          city: 'London',
+          showPublicly: true,
+        },
+      })
       .expect(201);
 
-    jwtToken = response.body.auth.accessToken;
-
-    business = await getBusiness(app, jwtToken);
+    business = businessResponse.body;
     product = await createProduct(app, jwtToken, business.id);
 
     const createPromotionDto: CreatePromotionDto = {

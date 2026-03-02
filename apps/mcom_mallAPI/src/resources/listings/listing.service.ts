@@ -3,6 +3,8 @@ import {
   ForbiddenException,
   Injectable,
   NotFoundException,
+  Inject,
+  forwardRef,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Business } from './entities/listing.entity';
@@ -42,6 +44,7 @@ export class ListingsService {
     private readonly dataSource: DataSource,
     private readonly activitiesService: ActivitiesService,
     private readonly promotionService: PromotionService,
+    @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly activityTimerService: ActivityTimerService,
   ) {}
@@ -160,6 +163,7 @@ export class ListingsService {
       await this.activityTimerService.completeTaskByKey(
         userId,
         'createdBusiness',
+        true,
       );
 
       await queryRunner.commitTransaction();
@@ -224,11 +228,14 @@ export class ListingsService {
     if (!business) {
       throw new NotFoundException(`Business with ID ${id} not found.`);
     }
+
+    // Explicitly check for user ownership
     if (business.user.id !== userId) {
       throw new ForbiddenException(
         'You do not have permission to access this resource.',
       );
     }
+    
     return business;
   }
 
