@@ -23,10 +23,10 @@ const getCustomerBookings = async (days?: number): Promise<Booking[]> => {
 };
 
 const checkAvailability = async (payload: {
-  businessId: string;
+  serviceId: string;
   startTime: string;
   endTime: string;
-}): Promise<boolean> => {
+}): Promise<any> => {
   const { data } = await api.post('/bookings/check-availability', payload);
   return data;
 };
@@ -117,13 +117,6 @@ export const useGetCustomerBookings = (days?: number) => {
 export const useCheckAvailability = () => {
   return useMutation({
     mutationFn: checkAvailability,
-    onSuccess: (data) => {
-      if (data) {
-        toast.success('Slot is available!');
-      } else {
-        toast.error('Slot is not available.');
-      }
-    }
   });
 };
 

@@ -16,13 +16,13 @@ import {
     MapPin, 
     ShieldCheck, 
     Info,
-    Package
+    Package,
+    XCircle
 } from 'lucide-react';
 import { Service, AvailabilityProfile } from '@/service/services/types';
 import { toast } from 'sonner';
 import BookingCalendar from './BookingCalendar';
 import TimeSlotGenerator from './TimeSlotGenerator';
-import { differenceInMinutes, parse } from 'date-fns';
 import { useCreateBooking, useCheckAvailability } from '@/service/bookings/hook';
 import { useRouter } from 'next/navigation';
 import { cn } from '@/lib/utils';
@@ -72,6 +72,15 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     
     const activeTier = useMemo(() => 
         service.tiers?.find(t => t.id === selectedTier), [service.tiers, selectedTier]);
+
+    // Filter tiers based on price > 0 or having features
+    const displayTiers = useMemo(() => {
+        return service.tiers?.filter(tier => {
+            const hasPrice = tier.price && parseFloat(tier.price) > 0;
+            const hasFeatures = tier.features && tier.features.length > 0;
+            return hasPrice || hasFeatures;
+        }) || [];
+    }, [service.tiers]);
 
     // Metadata Display
     const meta = {
@@ -129,15 +138,22 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         return () => clearTimeout(timeoutId);
     }, [selectedDate, startTime, endTime, service.id, checkAvailability]);
 
+    // Safe parseFloat helper
+    const safePrice = (p: string | number | null | undefined): number => {
+        if (p === null || p === undefined) return 0;
+        if (typeof p === 'number') return p;
+        return parseFloat(p) || 0;
+    };
+
     // Dynamic Price Calculation
     const pricingBreakdown = useMemo(() => {
         let base = 0;
-        if (selectedTier && activeTier) base = parseFloat(activeTier.price);
-        else if (selectedVariant && activeVariant) base = parseFloat(activeVariant.price);
+        if (selectedTier && activeTier) base = safePrice(activeTier.price);
+        else if (selectedVariant && activeVariant) base = safePrice(activeVariant.price);
         else {
-            if (service.pricingModel === 'fixed') base = parseFloat(service.fixedPrice || '0');
-            else if (service.pricingModel === 'perHour') base = parseFloat(service.pricePerHour || '0');
-            else if (service.pricingModel === 'perUnit') base = parseFloat(service.pricePerUnit || '0');
+            if (service.pricingModel === 'fixed') base = safePrice(service.fixedPrice);
+            else if (service.pricingModel === 'perHour') base = safePrice(service.pricePerHour);
+            else if (service.pricingModel === 'perUnit') base = safePrice(service.pricePerUnit);
         }
 
         let durationMins = 0;
@@ -161,19 +177,19 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         let guestPrice = 0;
         if (service.enableGuestPricing) {
             if (service.guestPricingModel === 'perGuest') {
-                guestPrice = parseFloat(service.pricePerGuest || '0') * guests;
+                guestPrice = safePrice(service.pricePerGuest) * guests;
             } else if (service.guestPricingModel === 'baseWithAdditional') {
-                const extra = Math.max(0, guests - (service.baseGuests || 0));
-                guestPrice = extra * parseFloat(service.additionalGuestPrice || '0');
+                const extra = Math.max(0, guests - (parseInt(service.baseGuests || '0') || 0));
+                guestPrice = extra * safePrice(service.additionalGuestPrice);
             }
         }
 
         let addonsPrice = 0;
         service.configurableAddons?.forEach(addon => {
-            if (selectedAddons[addon.id]) addonsPrice += parseFloat(addon.price || '0');
+            if (selectedAddons[addon.id]) addonsPrice += safePrice(addon.price);
         });
 
-        const fee = parseFloat(service.bookingFee || '0');
+        const fee = safePrice(service.bookingFee);
         const travelFee = (service.deliveryConfig?.mode === 'onsite' ? service.deliveryConfig?.travelFee : 0) || 0;
         const total = calculatedBase + guestPrice + addonsPrice + fee + travelFee;
 
@@ -268,13 +284,13 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
             <div className="flex flex-col gap-8">
                 
                 {/* 1. Tiers / Packages */}
-                {service.tiers && service.tiers.length > 0 && (
+                {displayTiers.length > 0 && (
                     <div className="space-y-3">
                         <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
                             <Package className="w-4 h-4" /> Select Package
                         </Label>
                         <RadioGroup value={selectedTier} onValueChange={setSelectedTier} className="grid grid-cols-1 gap-2">
-                            {service.tiers.map(tier => (
+                            {displayTiers.map(tier => (
                                 <Label key={tier.id} htmlFor={tier.id} className={cn(
                                     "flex flex-col gap-1 p-4 rounded-xl border-2 transition-all cursor-pointer hover:bg-slate-50",
                                     selectedTier === tier.id ? "border-orange-500 bg-orange-50/30" : "border-slate-100"
@@ -282,7 +298,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                                     <div className="flex justify-between items-center">
                                         <span className="font-bold text-slate-900">{tier.name}</span>
                                         <RadioGroupItem value={tier.id} id={tier.id} className="sr-only" />
-                                        <span className="font-black text-orange-600">£{parseFloat(tier.price).toFixed(2)}</span>
+                                        <span className="font-black text-orange-600">£{safePrice(tier.price).toFixed(2)}</span>
                                     </div>
                                     <span className="text-xs text-slate-500 leading-relaxed">{tier.description}</span>
                                 </Label>
@@ -306,7 +322,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                                     )}
                                 >
                                     {v.name}
-                                    <div className="text-xs font-normal opacity-70">£{parseFloat(v.price).toFixed(2)}</div>
+                                    <div className="text-xs font-normal opacity-70">£{safePrice(v.price).toFixed(2)}</div>
                                 </button>
                             ))}
                         </div>
@@ -434,7 +450,7 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                                         <Checkbox checked={selectedAddons[addon.id] || false} className="border-slate-300" />
                                         <span className="text-sm font-bold">{addon.name}</span>
                                     </div>
-                                    <span className="text-xs font-black opacity-80">+£{parseFloat(addon.price).toFixed(2)}</span>
+                                    <span className="text-xs font-black opacity-80">+£{safePrice(addon.price).toFixed(2)}</span>
                                 </div>
                             ))}
                         </div>
@@ -476,5 +492,3 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
         </div>
     );
 }
-
-import { XCircle } from 'lucide-react';

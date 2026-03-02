@@ -9,6 +9,8 @@ import {
 } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
 import { Business } from '../../listings/entities/listing.entity';
+import { Product } from '../../product/entities/product.entity';
+import { Service } from '../../services/entities/service.entity';
 import { ApiProperty } from '@nestjs/swagger';
 
 export enum ReviewStatus {
@@ -43,10 +45,20 @@ export class Review {
   @JoinColumn({ name: 'user_id' })
   user: User;
 
-  @ApiProperty({ type: () => Business })
-  @ManyToOne(() => Business, (business) => business.reviews)
+  @ApiProperty({ type: () => Business, required: false })
+  @ManyToOne(() => Business, { nullable: true })
   @JoinColumn({ name: 'business_id' })
   business: Business;
+
+  @ApiProperty({ type: () => Product, required: false })
+  @ManyToOne(() => Product, { nullable: true })
+  @JoinColumn({ name: 'product_id' })
+  product: Product;
+
+  @ApiProperty({ type: () => Service, required: false })
+  @ManyToOne(() => Service, { nullable: true })
+  @JoinColumn({ name: 'service_id' })
+  service: Service;
 
   @ApiProperty()
   @CreateDateColumn({ name: 'created_at' })

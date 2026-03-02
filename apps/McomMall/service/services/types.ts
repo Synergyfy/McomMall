@@ -72,6 +72,7 @@ export interface ServiceDeliveryConfig {
 }
 
 export interface ServiceVariant {
+  id: string;
   name: string; // e.g. "1 Hour", "2 Technicians"
   type: 'time' | 'resource';
   price: number;
@@ -129,7 +130,7 @@ export interface CreateServiceDto {
 
   // Tiers (Packages)
   enableTieredPackages?: boolean;
-  tiers?: { name: string; description?: string; price: number; features: string[] }[]; // Existing, covers "Package Builder"
+  tiers?: { name: string; description?: string; price: number | string; features: string[] }[]; // Existing, covers "Package Builder"
 
   // New Sections
   deliveryConfig?: ServiceDeliveryConfig;
@@ -155,6 +156,14 @@ export interface ConfigurableAddon {
   deletedAt: string | null;
   created_at: string;
   updated_at: string;
+}
+
+export interface ServiceTier {
+  id: string;
+  name: string;
+  description?: string;
+  price: string;
+  features: string[];
 }
 
 export interface Service {
@@ -203,6 +212,7 @@ export interface Service {
   pricingRules?: ServicePricingRules;
   bookingRequirements?: BookingRequirements;
   variants?: ServiceVariant[];
+  tiers?: ServiceTier[];
 
   hotspots?: Hotspot[];
   deletedAt: string | null;
@@ -214,4 +224,6 @@ export interface Service {
   isFeatured?: boolean;
   business?: IBusiness;
   availability?: AvailabilityProfile;
-}
+  averageRating?: number;
+  reviewCount?: number;
+  }

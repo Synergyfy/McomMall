@@ -12,22 +12,29 @@ import {
 import { ReviewForm } from './ReviewForm';
 
 interface AddReviewModalProps {
-  businessId: string;
+  businessId?: string;
+  productId?: string;
+  serviceId?: string;
 }
 
-export function AddReviewModal({ businessId }: AddReviewModalProps) {
+export function AddReviewModal({ businessId, productId, serviceId }: AddReviewModalProps) {
   const [isOpen, setIsOpen] = useState(false);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
       <DialogTrigger asChild>
-        <Button>Write a Review</Button>
+        <Button variant="outline" className="border-primary text-primary hover:bg-primary/5">Write a Review</Button>
       </DialogTrigger>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
           <DialogTitle>Write a Review</DialogTitle>
         </DialogHeader>
-        <ReviewForm businessId={businessId} onSuccess={() => setIsOpen(false)} />
+        <ReviewForm 
+            businessId={businessId} 
+            productId={productId} 
+            serviceId={serviceId} 
+            onSuccess={() => setIsOpen(false)} 
+        />
       </DialogContent>
     </Dialog>
   );
