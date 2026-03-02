@@ -1,7 +1,8 @@
 import { Business } from '../../listings/entities/listing.entity';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
-import { Column, Entity, ManyToOne } from 'typeorm';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { User } from '../../users/entities/user.entity';
+import { Review } from '../../reviews/entities/review.entity';
 
 import {
   ProductVariantConfig,
@@ -132,6 +133,15 @@ export class Product extends AbstractBaseEntity {
 
   @Column('boolean', { default: true })
   enableReviews: boolean;
+
+  @Column('float', { default: 0 })
+  averageRating: number;
+
+  @Column('int', { default: 0 })
+  reviewCount: number;
+
+  @OneToMany(() => Review, (review) => review.product)
+  reviews: Review[];
 
   @Column('simple-array', { nullable: true })
   tags?: string[];

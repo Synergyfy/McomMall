@@ -1,5 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { INestApplication, ValidationPipe } from '@nestjs/common';
+import { MailerService } from '@nestjs-modules/mailer';
+import { CapabilityService } from '../src/resources/capability/capability.service';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
 import { UsersService } from '../src/resources/users/users.service';
@@ -16,7 +18,12 @@ describe('GroupCircles (e2e)', () => {
   beforeAll(async () => {
     const moduleFixture: TestingModule = await Test.createTestingModule({
       imports: [AppModule],
-    }).compile();
+    })
+      .overrideProvider(MailerService)
+      .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .overrideProvider(CapabilityService)
+      .useValue({ checkPermission: jest.fn().mockResolvedValue(undefined) })
+      .compile();
 
     app = moduleFixture.createNestApplication();
     app.useGlobalPipes(new ValidationPipe());

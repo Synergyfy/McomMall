@@ -17,6 +17,7 @@ import { Request } from 'express';
 import { ListingsService } from '../listings/listing.service';
 import { ErrorFactory } from '../../common/errors/error.factory';
 import { Public } from '../../common/decorators/public.decorator';
+import { JwtAuthGuard } from 'src/common/guards/jwt-auth.guard';
 import { OptionalJwtAuthGuard } from '../../common/guards/optional-jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
@@ -41,6 +42,7 @@ export class ProductController {
   ) {}
 
   @Post()
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Create a new product' })
   @ApiResponse({
     status: 201,
@@ -78,15 +80,17 @@ export class ProductController {
     @Body() createProductDto: CreateProductDto,
     @Req() req: Request,
   ) {
-    const userId = req.user['id'];
-    const { bussinessId, productType } = createProductDto;
-    const business = await this.listingsService.findOne(bussinessId, userId);
+    const userId = req.user?.['userId'];
+    const { businessId, productType } = createProductDto;
+    const business = await this.listingsService.findOne(businessId, userId);
+
     if (!business) throw ErrorFactory.businessError();
 
     return this.productService.create(createProductDto, business);
   }
 
   @Get('/mine')
+  @UseGuards(JwtAuthGuard)
   findAllByUser(@Req() req: Request) {
     const userId = req.user['id'];
     return this.productService.findAllByUser(userId);
@@ -112,6 +116,7 @@ export class ProductController {
   }
 
   @Patch(':id')
+  @UseGuards(JwtAuthGuard)
   update(
     @Param('id') id: string,
     @Body() updateProductDto: UpdateProductDto,
@@ -122,6 +127,7 @@ export class ProductController {
   }
 
   @Delete(':id')
+  @UseGuards(JwtAuthGuard)
   remove(@Param('id') id: string, @Req() req: Request) {
     const userId = req.user['id'];
     return this.productService.remove(id, userId);

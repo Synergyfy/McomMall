@@ -5,6 +5,8 @@ export type Review = {
   createdAt: string;
   updatedAt: string;
   businessId?: string;
+  productId?: string;
+  serviceId?: string;
   author?: {
     id: string;
     name: string;
@@ -29,5 +31,7 @@ export type PaginatedReviews = {
 export type CreateReviewPayload = {
   rating: number;
   comment: string;
-  businessId: string;
+  businessId?: string;
+  productId?: string;
+  serviceId?: string;
 };

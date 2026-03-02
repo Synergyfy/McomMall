@@ -124,6 +124,12 @@ export class Business extends AbstractBaseEntity {
   @Column({ default: false })
   isVerified: boolean;
 
+  @Column('float', { default: 0 })
+  averageRating: number;
+
+  @Column('int', { default: 0 })
+  reviewCount: number;
+
   // --- Relationships ---
 
   @OneToOne(() => Location, (location) => location.business, {

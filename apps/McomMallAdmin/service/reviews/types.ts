@@ -13,13 +13,21 @@ export type Review = {
     email: string;
     profilePictureUrl: string | null;
   };
-  business: {
+  business?: {
     id: string;
     businessName: string;
     logoUrl: string;
   };
-  status?: 'PENDING' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'; // inferring status types, can be adjusted
-  replies?: any[]; // Placeholder for replies if needed
+  product?: {
+    id: string;
+    title: string;
+  };
+  service?: {
+    id: string;
+    name: string;
+  };
+  status?: 'pending' | 'published' | 'PENDING' | 'PUBLISHED' | 'UNPUBLISHED' | 'ARCHIVED'; // standardizing based on backend enum but keeping case flexibility
+  replies?: any[]; 
 };
 
 export type PaginatedReviews = {
@@ -38,5 +46,7 @@ export type PaginatedReviews = {
 export type CreateReviewPayload = {
   rating: number;
   comment: string;
-  businessId: string;
+  businessId?: string;
+  productId?: string;
+  serviceId?: string;
 };

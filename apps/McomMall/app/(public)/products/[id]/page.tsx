@@ -20,6 +20,7 @@ import ProductFacts from './components/ProductFacts';
 import SafetyCard from './components/SafetyCard';
 import VisualVariantSelector from './components/VisualVariantSelector';
 import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
+import UnifiedReviewSection from '@/components/UnifiedReviewSection';
 import { useGetProductPlusItems } from '@/service/partnerships/hooks';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 
@@ -412,6 +413,16 @@ export default function ProductPage() {
             {/* Product Facts */}
             <div className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
               <ProductFacts product={product} variation={displayVariation || undefined} />
+            </div>
+
+            {/* Reviews Section */}
+            <div id="reviews" className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                <UnifiedReviewSection 
+                    productId={product.id} 
+                    averageRating={product.averageRating} 
+                    reviewCount={product.reviewCount} 
+                    ownerId={product.business?.user?.id || product.serviceProvider?.id}
+                />
             </div>
 
             {/* Plus Items Section */}

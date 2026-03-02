@@ -27,14 +27,8 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
   const isOutOfStock = product.items_left === 0;
   const isLowStock = product.items_left > 0 && product.items_left < 5;
 
-  // Mock rating
-  const idNum = typeof product.id === 'number'
-    ? product.id
-    : String(product.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-  const pseudoRandom = (idNum * 9301 + 49297) % 233280 / 233280;
-  const rating = 3.5 + (pseudoRandom * 1.5);
-  const reviewCount = Math.floor(pseudoRandom * 200) + 10;
+  const rating = product.averageRating || 0;
+  const reviewCount = product.reviewCount || 0;
 
   const productLink = product.link || `/products/${product.id}`;
 

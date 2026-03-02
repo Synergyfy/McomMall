@@ -157,6 +157,7 @@ export class ProductService {
     await this.activityTimerService.completeTaskByKey(
       business.user.id,
       'createdProductOrService',
+      true,
     );
 
     return savedProduct;

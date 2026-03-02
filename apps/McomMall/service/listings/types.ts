@@ -366,6 +366,8 @@ export interface Product {
   visibility: string;
   purchaseNote?: string;
   enableReviews?: boolean;
+  averageRating?: number;
+  reviewCount?: number;
   tags?: string[];
   brand?: string;
   gender?: string;
@@ -377,6 +379,7 @@ export interface Product {
   variations?: ProductVariation[];
   useVariantPricing?: boolean;
   serviceProviderId?: string;
+  serviceProvider?: User;
   sizeGuide?: SizeGuideConfig;
   points?: number;
   bonusThreshold?: number;

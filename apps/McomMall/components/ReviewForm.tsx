@@ -27,11 +27,13 @@ const reviewSchema = z.object({
 type ReviewFormValues = z.infer<typeof reviewSchema>;
 
 interface ReviewFormProps {
-  businessId: string;
+  businessId?: string;
+  productId?: string;
+  serviceId?: string;
   onSuccess?: () => void;
 }
 
-export function ReviewForm({ businessId, onSuccess }: ReviewFormProps) {
+export function ReviewForm({ businessId, productId, serviceId, onSuccess }: ReviewFormProps) {
   const [hoveredRating, setHoveredRating] = useState(0);
   const createReview = useCreateReview();
 
@@ -45,7 +47,7 @@ export function ReviewForm({ businessId, onSuccess }: ReviewFormProps) {
 
   const onSubmit = (values: ReviewFormValues) => {
     createReview.mutate(
-      { ...values, businessId },
+      { ...values, businessId, productId, serviceId },
       {
         onSuccess: () => {
           toast.success('Review submitted successfully!');
@@ -95,7 +97,7 @@ export function ReviewForm({ businessId, onSuccess }: ReviewFormProps) {
               <FormControl>
                 <Textarea
                   placeholder="Tell us about your experience"
-                  className="resize-none"
+                  className="resize-none min-h-[120px]"
                   {...field}
                 />
               </FormControl>
@@ -105,7 +107,7 @@ export function ReviewForm({ businessId, onSuccess }: ReviewFormProps) {
         />
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-primary hover:bg-primary/90 text-white font-bold py-6 rounded-xl shadow-lg transition-all"
           disabled={createReview.isPending}
         >
           {createReview.isPending ? 'Submitting...' : 'Submit Review'}

@@ -16,6 +16,7 @@ import ServiceFacts from './components/ServiceFacts';
 import ServiceBookingWidget from './components/ServiceBookingWidget';
 import ServiceAvailabilityOverview from './components/ServiceAvailabilityOverview';
 import PlusItemsSection from '@/components/marketplace/PlusItemsSection';
+import UnifiedReviewSection from '@/components/UnifiedReviewSection';
 import { useGetServicePlusItems } from '@/service/partnerships/hooks';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
 import { useRouter } from 'next/navigation';
@@ -116,6 +117,16 @@ export default function ServicePage() {
 
             {/* Availability Overview */}
             <ServiceAvailabilityOverview service={service} />
+
+            {/* Reviews Section */}
+            <div id="reviews" className="bg-white rounded-xl p-6 md:p-8 border border-gray-100 shadow-sm">
+                <UnifiedReviewSection 
+                    serviceId={service.id} 
+                    averageRating={service.averageRating} 
+                    reviewCount={service.reviewCount} 
+                    ownerId={service.business?.userId}
+                />
+            </div>
 
             {/* Plus Items Section */}
             {plusItems && plusItems.length > 0 && (
