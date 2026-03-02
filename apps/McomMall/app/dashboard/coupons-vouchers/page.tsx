@@ -76,7 +76,9 @@ import { toPng } from 'html-to-image';
 import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
+import { useGetAllCoupons, useSaveCoupon } from '@/service/coupons/hook';
 import { UserVoucherResponseDto } from '@/service/money-engine/types';
+import { DiscountType } from '@/service/coupons/types';
 
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
@@ -156,7 +158,17 @@ export default function CouponsVouchersPage() {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<VoucherDisplayData | null>(null);
 
-    const [shopIdInput, setShopIdInput] = useState('');
+    const { coupons: publicCoupons, isLoading: isPublicCouponsLoading } = useGetAllCoupons(1, 20);
+    const saveCoupon = useSaveCoupon();
+
+    const handleSaveCoupon = async (code: string) => {
+        try {
+            await saveCoupon(code);
+            toast.success('Coupon saved to your digital wallet!');
+        } catch (error) {
+            toast.error('Failed to save coupon');
+        }
+    };
     const [isCustomerSpendModalOpen, setIsCustomerSpendModalOpen] = useState(false);
 
     // Scanner State
@@ -472,6 +484,7 @@ export default function CouponsVouchersPage() {
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <TabsList className="bg-white/50 backdrop-blur-md p-1 rounded-xl shadow-inner border border-white/20">
                             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">Overview</TabsTrigger>
+                            <TabsTrigger value="marketplace" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
                             <TabsTrigger value="transactions" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">History</TabsTrigger>
                         </TabsList>
 
@@ -611,6 +624,53 @@ export default function CouponsVouchersPage() {
                                 </CardContent>
                             </Card>
                         </div>                    </TabsContent>
+
+                    <TabsContent value="marketplace" className="space-y-6">
+                        <div className="w-full">
+                            <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+                                <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Marketplace Discovery</CardTitle>
+                                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Coupons for you</span>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    {isPublicCouponsLoading ? (
+                                        <div className="py-20 text-center font-bold text-gray-400">Loading coupons...</div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {publicCoupons?.map((coupon) => (
+                                                <CouponTicketSplit
+                                                    key={coupon.id}
+                                                    title={coupon.title}
+                                                    subtitle={coupon.business?.businessName || 'McomMall Partner'}
+                                                    valueLabel={coupon.discountType === DiscountType.PERCENTAGE ? `${coupon.discountValue}% OFF` : `£${coupon.discountValue}`}
+                                                    validUntil={coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Active'}
+                                                    barcodeId={coupon.code}
+                                                    showStars
+                                                >
+                                                    <div className="w-full">
+                                                        <Button
+                                                            size="sm"
+                                                            className="w-full h-10 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md transition-all font-bold text-xs flex items-center justify-center gap-2"
+                                                            onClick={() => handleSaveCoupon(coupon.code)}
+                                                        >
+                                                            <PlusCircle className="w-4 h-4" /> Save Coupon
+                                                        </Button>
+                                                    </div>
+                                                </CouponTicketSplit>
+                                            ))}
+                                            {(!publicCoupons || publicCoupons.length === 0) && (
+                                                <div className="col-span-full py-20 text-center text-gray-400 font-bold">
+                                                    No public coupons available at the moment.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
                 </Tabs>
 
                 {/* MODALS */}

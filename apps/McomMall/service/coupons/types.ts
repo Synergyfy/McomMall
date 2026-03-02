@@ -1,59 +1,83 @@
-interface CouponBusiness {
+export enum DiscountType {
+  PERCENTAGE = 'percentage',
+  FIXED = 'fixed',
+}
+
+export enum CouponStatus {
+  DRAFT = 'draft',
+  SCHEDULED = 'scheduled',
+  ACTIVE = 'active',
+  REDEEMED = 'redeemed',
+  EXPIRED = 'expired',
+  ARCHIVED = 'archived',
+  DISABLED = 'disabled',
+}
+
+export enum CouponSourceType {
+  PLATFORM = 'platform',
+  BUSINESS = 'business',
+}
+
+export interface MarketingCampaign {
+  id: string;
+  name: string;
+  type: string;
+  startDate: string;
+  endDate: string;
+  status: string;
+  targetPostalCodes?: string[];
+}
+
+export interface Business {
   id: string;
   businessName: string;
-  // Add other properties from the JSON if they are needed for display
+  status: string;
 }
 
 export interface Coupon {
   id: string;
-  couponCode: string;
-  couponDescription?: string;
-  widgetBackgroundUrl?: string;
-  discountType: 'percentage' | 'fixed';
-  couponAmount: string;
-  expiryDate: string;
-  minSpend?: number;
-  maxSpend?: number;
-  individualUseOnly: boolean;
-  allowedEmails?: string;
-  usageLimitPerCoupon?: number;
-  usageLimitPerUser?: number;
-  usageCount?: number; // Not present in the new JSON, making it optional
-  businesses: CouponBusiness[];
+  code: string;
+  title: string;
+  description?: string;
+  sourceType: CouponSourceType;
+  discountValue: number | string;
+  discountType: DiscountType;
+  usageLimit: number;
+  perUserLimit: number;
+  status: CouponStatus;
+  expiresAt: string | null;
+  business?: Business | null;
+  campaign?: MarketingCampaign | null;
   created_at: string;
   updated_at: string;
-  media?: string[] | null;
 }
 
-// Alias for discovery endpoints
-export type CouponProduct = Coupon;
+export interface SavedCoupon {
+  id: string;
+  savedAt: string;
+  coupon: Coupon;
+}
 
 export interface CreateCouponDto {
-  couponCode: string;
-  couponDescription?: string;
-  widgetBackgroundUrl?: string;
-  discountType: 'percentage' | 'fixed';
-  couponAmount: number;
-  expiryDate: number;
-  minSpend?: number;
-  maxSpend?: number;
-  products?: string;
-  individualUseOnly?: boolean;
-  allowedEmails?: string;
-  usageLimitPerCoupon?: number;
-  usageLimitPerUser?: number;
-  businessIds: string[];
+  title: string;
+  description?: string;
+  code: string;
+  sourceType: CouponSourceType;
+  discountValue: number;
+  discountType: DiscountType;
+  usageLimit?: number;
+  perUserLimit?: number;
+  startDate?: string;
+  expiresAt?: string;
+  campaignId?: string;
+  businessId?: string;
+  brandingBusinessId?: string;
 }
 
 export type UpdateCouponDto = Partial<CreateCouponDto>;
 
 export interface ValidateCouponDto {
-  productIds: string[];
-  couponCode: string;
+  code: string;
 }
 
-export interface ValidateCouponResponse {
-  originalPrice: number;
-  discountedPrice: number;
-  discountAmount: number;
-}
+export interface ValidateCouponResponse extends Coupon { }

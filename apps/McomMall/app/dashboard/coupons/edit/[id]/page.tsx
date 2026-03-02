@@ -12,13 +12,15 @@ import {
   ChevronsUpDown,
   Check,
   ChevronRight,
+  CalendarIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { format } from 'date-fns';
 import {
   useGetCoupon,
   useEditCoupon,
 } from '@/service/coupons/hook';
-import { UpdateCouponDto } from '@/service/coupons/types';
+import { UpdateCouponDto, DiscountType, CouponSourceType } from '@/service/coupons/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -53,28 +55,33 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipTrigger,
+} from '@/components/ui/tooltip';
+import { Calendar } from '@/components/ui/calendar';
 import { cn } from '@/lib/utils';
 
 interface FormData {
-  couponCode: string;
-  couponDescription: string;
-  discountType: 'percentage' | 'fixed' | '';
-  couponAmount: string;
-  expiryDate: string;
-  minSpend: string;
-  maxSpend: string;
-  individualUseOnly: boolean;
-  allowedEmails: string;
-  usageLimitPerCoupon: string;
-  usageLimitPerUser: string;
-  businessIds: string[];
+  title: string;
+  code: string;
+  description: string;
+  discountType: DiscountType | '';
+  discountValue: string;
+  expiresAt: string;
+  usageLimit: string;
+  perUserLimit: string;
+  businessId: string;
 }
 
 interface FormErrors {
-  couponCode?: string;
+  title?: string;
+  code?: string;
   discountType?: string;
-  couponAmount?: string;
-  expiryDate?: string;
+  discountValue?: string;
+  expiresAt?: string;
+  businessId?: string;
 }
 
 function EditCouponPage() {
@@ -92,23 +99,20 @@ function EditCouponPage() {
   const [open, setOpen] = React.useState(false);
 
   useEffect(() => {
-    if (coupon) {
+    if (coupon && !formData) {
       setFormData({
-        couponCode: coupon.couponCode,
-        couponDescription: coupon.couponDescription || '',
-        discountType: coupon.discountType,
-        couponAmount: coupon.couponAmount.toString(),
-        expiryDate: new Date(coupon.expiryDate).toISOString().split('T')[0],
-        minSpend: coupon.minSpend?.toString() || '',
-        maxSpend: coupon.maxSpend?.toString() || '',
-        individualUseOnly: coupon.individualUseOnly,
-        allowedEmails: coupon.allowedEmails || '',
-        usageLimitPerCoupon: coupon.usageLimitPerCoupon?.toString() || '',
-        usageLimitPerUser: coupon.usageLimitPerUser?.toString() || '',
-        businessIds: coupon.businesses?.map(b => b.id) || [],
+        title: coupon.title,
+        code: coupon.code,
+        description: coupon.description || '',
+        discountType: coupon.discountType as DiscountType,
+        discountValue: coupon.discountValue.toString(),
+        expiresAt: coupon.expiresAt ? new Date(coupon.expiresAt).toISOString() : '',
+        usageLimit: coupon.usageLimit?.toString() || '',
+        perUserLimit: coupon.perUserLimit?.toString() || '1',
+        businessId: coupon.business?.id || '',
       });
     }
-  }, [coupon]);
+  }, [coupon, formData]);
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -121,24 +125,26 @@ function EditCouponPage() {
     setFormData(prev => (prev ? { ...prev, [name]: value } : null));
   };
 
-  const handleSwitchChange = (checked: boolean) => {
-    setFormData(prev => (prev ? { ...prev, individualUseOnly: checked } : null));
-  };
-
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
     if (!formData) return {};
-    if (!formData.couponCode.trim()) {
-      newErrors.couponCode = 'Coupon code is required.';
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required.';
+    }
+    if (!formData.code.trim()) {
+      newErrors.code = 'Coupon code is required.';
     }
     if (!formData.discountType) {
       newErrors.discountType = 'Discount type is required.';
     }
-    if (!formData.couponAmount || parseFloat(formData.couponAmount) <= 0) {
-      newErrors.couponAmount = 'Coupon amount must be greater than 0.';
+    if (!formData.discountValue || parseFloat(formData.discountValue) <= 0) {
+      newErrors.discountValue = 'Discount value must be greater than 0.';
     }
-    if (!formData.expiryDate) {
-      newErrors.expiryDate = 'Expiry date is required.';
+    if (!formData.expiresAt) {
+      newErrors.expiresAt = 'Expiry date is required.';
+    }
+    if (!formData.businessId) {
+      newErrors.businessId = 'Please select a business listing.';
     }
     return newErrors;
   };
@@ -153,18 +159,16 @@ function EditCouponPage() {
     if (Object.keys(validationErrors).length === 0) {
       try {
         const couponData: UpdateCouponDto = {
-          couponCode: formData.couponCode,
-          couponDescription: formData.couponDescription,
-          discountType: formData.discountType as 'percentage' | 'fixed',
-          couponAmount: parseFloat(formData.couponAmount),
-          expiryDate: new Date(formData.expiryDate).getTime(),
-          minSpend: formData.minSpend ? parseFloat(formData.minSpend) : undefined,
-          maxSpend: formData.maxSpend ? parseFloat(formData.maxSpend) : undefined,
-          individualUseOnly: formData.individualUseOnly,
-          allowedEmails: formData.allowedEmails,
-          usageLimitPerCoupon: formData.usageLimitPerCoupon ? parseInt(formData.usageLimitPerCoupon) : undefined,
-          usageLimitPerUser: formData.usageLimitPerUser ? parseInt(formData.usageLimitPerUser) : undefined,
-          businessIds: formData.businessIds,
+          title: formData.title,
+          description: formData.description,
+          code: formData.code.toUpperCase(),
+          discountType: formData.discountType as DiscountType,
+          discountValue: parseFloat(formData.discountValue),
+          expiresAt: formData.expiresAt,
+          usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
+          perUserLimit: formData.perUserLimit ? parseInt(formData.perUserLimit) : 1,
+          businessId: formData.businessId,
+          sourceType: CouponSourceType.BUSINESS,
         };
         await editCoupon(id, couponData);
         setIsSuccess(true);
@@ -213,26 +217,39 @@ function EditCouponPage() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="couponCode">Coupon code</Label>
+                <Label htmlFor="title">Coupon Title</Label>
                 <Input
-                  id="couponCode"
-                  name="couponCode"
-                  value={formData.couponCode}
+                  id="title"
+                  name="title"
+                  placeholder="e.g. Winter Sale"
+                  value={formData.title}
                   onChange={handleInputChange}
                 />
-                {errors.couponCode && (
-                  <p className="text-base text-red-600 mt-1">
-                    {errors.couponCode}
-                  </p>
+                {errors.title && (
+                  <p className="text-sm text-red-600 mt-1">{errors.title}</p>
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="couponDescription">Coupon Description</Label>
+                <Label htmlFor="code">Coupon code</Label>
+                <Input
+                  id="code"
+                  name="code"
+                  placeholder="e.g. WINTER26"
+                  className="uppercase"
+                  value={formData.code}
+                  onChange={handleInputChange}
+                />
+                {errors.code && (
+                  <p className="text-sm text-red-600 mt-1">{errors.code}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Coupon Description</Label>
                 <Textarea
-                  id="couponDescription"
-                  name="couponDescription"
+                  id="description"
+                  name="description"
                   placeholder="Description (optional)"
-                  value={formData.couponDescription}
+                  value={formData.description}
                   onChange={handleInputChange}
                 />
               </div>
@@ -250,46 +267,74 @@ function EditCouponPage() {
                       <SelectValue placeholder="Select a type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percentage">
+                      <SelectItem value={DiscountType.PERCENTAGE}>
                         Percentage discount
                       </SelectItem>
-                      <SelectItem value="fixed">Fixed cart discount</SelectItem>
+                      <SelectItem value={DiscountType.FIXED}>Fixed cart discount</SelectItem>
                     </SelectContent>
                   </Select>
                   {errors.discountType && (
-                    <p className="text-base text-red-600 mt-1">
+                    <p className="text-sm text-red-600 mt-1">
                       {errors.discountType}
                     </p>
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="couponAmount">Coupon amount</Label>
+                  <Label htmlFor="discountValue">Discount value</Label>
                   <Input
-                    id="couponAmount"
-                    name="couponAmount"
+                    id="discountValue"
+                    name="discountValue"
                     type="number"
-                    value={formData.couponAmount}
+                    value={formData.discountValue}
                     onChange={handleInputChange}
                   />
-                  {errors.couponAmount && (
-                    <p className="text-base text-red-600 mt-1">
-                      {errors.couponAmount}
+                  {errors.discountValue && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.discountValue}
                     </p>
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="expiryDate">Coupon expiry date</Label>
-                  <Input
-                    id="expiryDate"
-                    name="expiryDate"
-                    type="date"
-                    placeholder="YYYY-MM-DD"
-                    value={formData.expiryDate}
-                    onChange={handleInputChange}
-                  />
-                  {errors.expiryDate && (
-                    <p className="text-base text-red-600 mt-1">
-                      {errors.expiryDate}
+                  <Label htmlFor="expiresAt">Coupon expiry date</Label>
+                  <Popover>
+                    <PopoverTrigger asChild>
+                      <Button
+                        variant={'outline'}
+                        className={cn(
+                          'w-full justify-start text-left font-normal h-12',
+                          !formData.expiresAt && 'text-muted-foreground'
+                        )}
+                      >
+                        <CalendarIcon className="mr-2 h-4 w-4" />
+                        {formData.expiresAt ? (
+                          format(new Date(formData.expiresAt), 'PPP p')
+                        ) : (
+                          <span>Pick a date</span>
+                        )}
+                      </Button>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-auto p-0">
+                      <Calendar
+                        mode="single"
+                        selected={
+                          formData.expiresAt
+                            ? new Date(formData.expiresAt)
+                            : undefined
+                        }
+                        onSelect={date => {
+                          const newDate = date ? new Date(date) : new Date();
+                          handleSelectChange(
+                            'expiresAt',
+                            newDate.toISOString()
+                          );
+                        }}
+                        initialFocus
+                      />
+                    </PopoverContent>
+                  </Popover>
+                  {errors.expiresAt && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.expiresAt}
                     </p>
                   )}
                 </div>
@@ -306,33 +351,20 @@ function EditCouponPage() {
               </h2>
             </CardHeader>
             <CardContent className="space-y-6">
-               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="minSpend">Minimum spend</Label>
-                  <Input
-                    id="minSpend"
-                    name="minSpend"
-                    placeholder="No minimum"
-                    value={formData.minSpend}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="maxSpend">Maximum spend</Label>
-                  <Input
-                    id="maxSpend"
-                    name="maxSpend"
-                    placeholder="No maximum"
-                    value={formData.maxSpend}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
-                 <div className="grid gap-2">
-                  <Label htmlFor="products" className="flex items-center">
-                    For products{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                <div className="grid gap-2">
+                  <Label htmlFor="businessId" className="flex items-center">
+                    Select Listing{' '}
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>
+                          Choose which listing this coupon is associated with.
+                        </p>
+                      </TooltipContent>
+                    </Tooltip>
                   </Label>
                   <Popover open={open} onOpenChange={setOpen}>
                     <PopoverTrigger asChild>
@@ -342,9 +374,9 @@ function EditCouponPage() {
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        {formData.businessIds.length > 0
-                          ? `${formData.businessIds.length} listing(s) selected`
-                          : 'Select listings...'}
+                        {formData.businessId
+                          ? listings?.data?.find((l: UserListing) => l.id === formData.businessId)?.businessName || 'Select listing...'
+                          : 'Select listing...'}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -360,20 +392,14 @@ function EditCouponPage() {
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {
-                                  const businessIds = formData.businessIds.includes(
-                                    listing.id
-                                  )
-                                    ? formData.businessIds.filter(
-                                        id => id !== listing.id
-                                      )
-                                    : [...formData.businessIds, listing.id];
-                                  setFormData({ ...formData, businessIds });
+                                  setFormData({ ...formData, businessId: listing.id });
+                                  setOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    formData.businessIds.includes(listing.id)
+                                    formData.businessId === listing.id
                                       ? 'opacity-100'
                                       : 'opacity-0'
                                   )}
@@ -386,39 +412,10 @@ function EditCouponPage() {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {errors.businessId && (
+                    <p className="text-sm text-red-600 mt-1">{errors.businessId}</p>
+                  )}
                 </div>
-                <div className="grid gap-2">
-                  <Label
-                    htmlFor="individualUseOnly"
-                    className="flex items-center"
-                  >
-                    Individual use only{' '}
-                    <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                  </Label>
-                  <div className="flex items-center space-x-2 pt-2">
-                    <Switch
-                      id="individualUseOnly"
-                      checked={formData.individualUseOnly}
-                      onCheckedChange={handleSwitchChange}
-                    />
-                    <span className="text-base text-gray-600">
-                      This coupon cannot be used with other coupons.
-                    </span>
-                  </div>
-                </div>
-              </div>
-              <div className="grid gap-2">
-                <Label htmlFor="allowedEmails" className="flex items-center">
-                  Allowed emails{' '}
-                  <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                </Label>
-                <Input
-                  id="allowedEmails"
-                  name="allowedEmails"
-                  placeholder="No restrictions"
-                  value={formData.allowedEmails}
-                  onChange={handleInputChange}
-                />
               </div>
             </CardContent>
           </Card>
@@ -433,24 +430,24 @@ function EditCouponPage() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerCoupon">
+                <Label htmlFor="usageLimit">
                   Usage limit per coupon
                 </Label>
                 <Input
-                  id="usageLimitPerCoupon"
-                  name="usageLimitPerCoupon"
+                  id="usageLimit"
+                  name="usageLimit"
                   placeholder="Unlimited usage"
-                  value={formData.usageLimitPerCoupon}
+                  value={formData.usageLimit}
                   onChange={handleInputChange}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerUser">Usage limit per user</Label>
+                <Label htmlFor="perUserLimit">Usage limit per user</Label>
                 <Input
-                  id="usageLimitPerUser"
-                  name="usageLimitPerUser"
+                  id="perUserLimit"
+                  name="perUserLimit"
                   placeholder="Unlimited usage"
-                  value={formData.usageLimitPerUser}
+                  value={formData.perUserLimit}
                   onChange={handleInputChange}
                 />
               </div>
