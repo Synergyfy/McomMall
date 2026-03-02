@@ -30,15 +30,15 @@ export const useGetCoupons = (page: number = 1, limit: number = 10) => {
   };
 };
 
-export const useGetCoupon = (id: string) => {
+export const useGetCoupon = (id: string, enabled: boolean = true) => {
   const { data: coupon, error } = useSWR<Coupon>(
-    id ? `/coupons/${id}` : null,
+    (id && enabled) ? `/coupons/${id}` : null,
     fetcher
   );
 
   return {
     coupon,
-    isLoading: !error && !coupon,
+    isLoading: !error && !coupon && enabled,
     isError: error,
   };
 };
@@ -89,10 +89,10 @@ export const useGetAllCoupons = (page: number = 1, limit: number = 10) => {
   };
 };
 
-export const useGetSavedCoupons = () => {
+export const useGetSavedCoupons = (page: number = 1, limit: number = 10) => {
   const token = useSelector((state: RootState) => state.auth.accessToken);
   const { data: savedCoupons, error } = useSWR<SavedCoupon[]>(
-    token ? '/coupons/saved' : null,
+    token ? `/coupons/saved?page=${page}&limit=${limit}` : null,
     fetcher
   );
 

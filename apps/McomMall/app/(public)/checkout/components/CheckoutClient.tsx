@@ -72,28 +72,28 @@ export default function CheckoutClient() {
 
   // Validation Logic
   useEffect(() => {
-      setValidationError(null);
-      if (product) {
-          // Check Variation Stock
-          if (product.variations && product.variations.length > 0) {
-              const currentVariation = product.variations.find(v =>
-                  Object.entries(v.combination).every(([key, val]) => selectedVariants[key] === val)
-              );
+    setValidationError(null);
+    if (product) {
+      // Check Variation Stock
+      if (product.variations && product.variations.length > 0) {
+        const currentVariation = product.variations.find(v =>
+          Object.entries(v.combination).every(([key, val]) => selectedVariants[key] === val)
+        );
 
-              if (currentVariation) {
-                  if (currentVariation.stock < quantity) {
-                      setValidationError(`Only ${currentVariation.stock} left in stock for this option.`);
-                  }
-              } else if (Object.keys(selectedVariants).length > 0) {
-                  // Variation mismatch or incomplete?
-                  // We assume if passed from URL it was valid, but maybe not found if changed?
-              }
+        if (currentVariation) {
+          if (currentVariation.stock < quantity) {
+            setValidationError(`Only ${currentVariation.stock} left in stock for this option.`);
           }
-          // Check General Stock
-          else if (product.enableStockManagement && (product.stock || 0) < quantity) {
-              setValidationError(`Only ${product.stock} left in stock.`);
-          }
+        } else if (Object.keys(selectedVariants).length > 0) {
+          // Variation mismatch or incomplete?
+          // We assume if passed from URL it was valid, but maybe not found if changed?
+        }
       }
+      // Check General Stock
+      else if (product.enableStockManagement && (product.stock || 0) < quantity) {
+        setValidationError(`Only ${product.stock} left in stock.`);
+      }
+    }
   }, [product, selectedVariants, quantity]);
 
   const [couponCode, setCouponCode] = useState('');
@@ -132,8 +132,8 @@ export default function CheckoutClient() {
   const productIds = fromCart
     ? cart?.items.map((item) => item.product.id) || []
     : productId
-    ? [productId]
-    : [];
+      ? [productId]
+      : [];
 
   const { data: applicableOffers, isLoading: areOffersLoading } =
     useGetApplicableOffers(productIds);
@@ -153,46 +153,46 @@ export default function CheckoutClient() {
       ? item.product.salePrice
       : item.product.price;
     if (item.selectedVariants && item.product.variants) {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        (item.product.variants as any[]).forEach((v: any) => {
-            const selectedOption = item.selectedVariants?.[v.name];
-            if (selectedOption) {
-                // eslint-disable-next-line @typescript-eslint/no-explicit-any
-                const option = v.options.find((o: any) => o.name === selectedOption);
-                if (option) {
-                    price += Number(option.priceModifier) || 0;
-                }
-            }
-        });
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (item.product.variants as any[]).forEach((v: any) => {
+        const selectedOption = item.selectedVariants?.[v.name];
+        if (selectedOption) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          const option = v.options.find((o: any) => o.name === selectedOption);
+          if (option) {
+            price += Number(option.priceModifier) || 0;
+          }
+        }
+      });
     }
     return price;
   }, []);
 
   const calculateProductPrice = useCallback((product: Product, variants: Record<string, string>) => {
-     let price = product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
-     if (product.variants) {
-        product.variants.forEach((v) => {
-            const selectedOptionName = variants[v.name];
-            if (selectedOptionName) {
-                const option = v.options.find((o) => o.name === selectedOptionName);
-                if (option) {
-                    price += Number(option.priceModifier) || 0;
-                }
-            }
-        });
-     }
-     return price;
+    let price = product.salePrice && product.salePrice < product.price ? product.salePrice : product.price;
+    if (product.variants) {
+      product.variants.forEach((v) => {
+        const selectedOptionName = variants[v.name];
+        if (selectedOptionName) {
+          const option = v.options.find((o) => o.name === selectedOptionName);
+          if (option) {
+            price += Number(option.priceModifier) || 0;
+          }
+        }
+      });
+    }
+    return price;
   }, []);
 
   const basePrice = useMemo(() => {
     return (fromCart
       ? cart?.items.reduce(
-          (acc, item) => acc + calculateItemPrice(item) * item.quantity,
-          0
-        )
+        (acc, item) => acc + calculateItemPrice(item) * item.quantity,
+        0
+      )
       : product
-      ? calculateProductPrice(product, selectedVariants) * quantity
-      : 0) || 0;
+        ? calculateProductPrice(product, selectedVariants) * quantity
+        : 0) || 0;
   }, [fromCart, cart, product, selectedVariants, quantity, calculateItemPrice, calculateProductPrice]);
 
   const subtotal = basePrice + servicesTotalPrice;
@@ -251,7 +251,7 @@ export default function CheckoutClient() {
     setCouponLoading(true);
     try {
       const result = await validateCoupon({
-        couponCode: code,
+        code,
         productIds,
       });
       setCouponDiscount(result.discountAmount);
@@ -422,10 +422,10 @@ export default function CheckoutClient() {
                   Payment Information
                 </h2>
                 {validationError ? (
-                    <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium text-center">
-                        {validationError}
-                        <div className="mt-2 text-sm text-red-500">Please adjust your order to proceed.</div>
-                    </div>
+                  <div className="p-4 bg-red-50 border border-red-200 rounded-lg text-red-600 font-medium text-center">
+                    {validationError}
+                    <div className="mt-2 text-sm text-red-500">Please adjust your order to proceed.</div>
+                  </div>
                 ) : isStripeLoading ? (
                   <div className="flex justify-center items-center h-48">
                     <Loader className="animate-spin text-orange-600" size={32} />

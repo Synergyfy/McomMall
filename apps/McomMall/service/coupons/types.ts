@@ -78,6 +78,9 @@ export type UpdateCouponDto = Partial<CreateCouponDto>;
 
 export interface ValidateCouponDto {
   code: string;
+  productIds?: string[];
 }
 
-export interface ValidateCouponResponse extends Coupon { }
+export interface ValidateCouponResponse extends Coupon {
+  discountAmount: number;
+}

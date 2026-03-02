@@ -21,7 +21,8 @@ import { CURRENCY } from '@/lib/utils';
 import { toast } from 'sonner';
 import { MyPurchase } from '@/service/gift-card/types';
 import { Voucher } from '@/service/vouchers/types';
-import { Coupon } from '@/service/my-coupons/types';
+import { Coupon as MyCoupon } from '@/service/my-coupons/types';
+import { Coupon, DiscountType } from '@/service/coupons/types';
 import QRCode from 'react-qr-code';
 import * as htmlToImage from 'html-to-image';
 
@@ -390,12 +391,6 @@ export const HistoryVoucher: React.FC<HistoryVoucherProps> = ({
     );
 };
 
-
-import { Coupon, DiscountType } from '@/service/coupons/types';
-import QRCode from 'react-qr-code';
-import * as htmlToImage from 'html-to-image';
-
-// ... (Pattern components remain the same) ...
 
 // --- COUPON HISTORY COMPONENT ---
 
