@@ -5,7 +5,10 @@ import * as request from 'supertest';
 import { Sector } from '../src/resources/taxonomy/entities/sector.entity';
 import { TaxonomyCategory } from '../src/resources/taxonomy/entities/taxonomy-category.entity';
 import { TaxonomySubcategory } from '../src/resources/taxonomy/entities/taxonomy-subcategory.entity';
-import { ListingType, SellingMode } from '../src/resources/listings/listing.enum';
+import {
+  ListingType,
+  SellingMode,
+} from '../src/resources/listings/listing.enum';
 
 export async function clearDatabase(app: INestApplication) {
   const dataSource = app.get(DataSource);
@@ -28,10 +31,16 @@ export async function seedTaxonomy(app: INestApplication) {
   const sector = sectorRepo.create({ name: 'Test Sector' });
   await sectorRepo.save(sector);
 
-  const category = categoryRepo.create({ name: 'Test Category', sectorId: sector.id });
+  const category = categoryRepo.create({
+    name: 'Test Category',
+    sectorId: sector.id,
+  });
   await categoryRepo.save(category);
 
-  const subCategory = subCategoryRepo.create({ name: 'Test SubCategory', categoryId: category.id });
+  const subCategory = subCategoryRepo.create({
+    name: 'Test SubCategory',
+    categoryId: category.id,
+  });
   await subCategoryRepo.save(subCategory);
 
   return { sector, category, subCategory };
@@ -60,7 +69,7 @@ export async function getBusiness(app: INestApplication, jwtToken: string) {
         addressLine1: '10 Downing Street',
         city: 'London',
         showPublicly: true,
-      }
+      },
     })
     .expect(201);
   return response.body;

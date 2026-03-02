@@ -83,7 +83,7 @@ export class ProductController {
     const userId = req.user?.['userId'];
     const { businessId, productType } = createProductDto;
     const business = await this.listingsService.findOne(businessId, userId);
-    
+
     if (!business) throw ErrorFactory.businessError();
 
     return this.productService.create(createProductDto, business);

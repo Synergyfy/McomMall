@@ -235,7 +235,7 @@ export class ListingsService {
         'You do not have permission to access this resource.',
       );
     }
-    
+
     return business;
   }
 

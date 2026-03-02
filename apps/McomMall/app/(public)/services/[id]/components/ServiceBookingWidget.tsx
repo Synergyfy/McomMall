@@ -5,21 +5,33 @@ import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
-import { Calendar as CalendarIcon, Clock, Users, Briefcase, Timer, Loader2 } from 'lucide-react';
+import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
+import { 
+    Calendar as CalendarIcon, 
+    Clock, 
+    Users, 
+    Briefcase, 
+    Timer, 
+    Loader2, 
+    MapPin, 
+    ShieldCheck, 
+    Info,
+    Package
+} from 'lucide-react';
 import { Service, AvailabilityProfile } from '@/service/services/types';
 import { toast } from 'sonner';
 import BookingCalendar from './BookingCalendar';
 import TimeSlotGenerator from './TimeSlotGenerator';
-import { format } from 'date-fns';
-import { useCreateBooking } from '@/service/bookings/hook';
+import { differenceInMinutes, parse } from 'date-fns';
+import { useCreateBooking, useCheckAvailability } from '@/service/bookings/hook';
 import { useRouter } from 'next/navigation';
+import { cn } from '@/lib/utils';
 import BookingPaymentModal from '@/components/BookingPaymentModal';
 
 interface ServiceBookingWidgetProps {
     service: Service;
 }
 
-// Default profile for services that don't have one yet but need booking
 const DEFAULT_AVAILABILITY: AvailabilityProfile = {
     schedule: ['monday', 'tuesday', 'wednesday', 'thursday', 'friday'].map(day => ({
         day: day as any,
@@ -34,149 +46,166 @@ const DEFAULT_AVAILABILITY: AvailabilityProfile = {
 
 export default function ServiceBookingWidget({ service }: ServiceBookingWidgetProps) {
     const router = useRouter();
-    // State for addons selection
+    
+    // Configuration State
+    const [selectedVariant, setSelectedVariant] = useState<string | undefined>(undefined);
+    const [selectedTier, setSelectedTier] = useState<string | undefined>(undefined);
     const [selectedAddons, setSelectedAddons] = useState<Record<string, boolean>>({});
-
-    // State for quantity/guests depending on model
-    const [quantity, setQuantity] = useState<number>(1); // For perUnit or perHour
+    const [quantity, setQuantity] = useState<number>(1);
     const [guests, setGuests] = useState<number>(service.minGuests || 1);
 
     // Booking State
     const [selectedDate, setSelectedDate] = useState<Date | undefined>(undefined);
-    const [selectedTime, setSelectedTime] = useState<string | undefined>(undefined);
-    const [lockExpiry, setLockExpiry] = useState<Date | null>(null);
+    const [startTime, setStartTime] = useState<string | undefined>(undefined);
+    const [endTime, setEndTime] = useState<string | undefined>(undefined);
+    const [availabilityStatus, setAvailabilityStatus] = useState<{ isAvailable: boolean; reason?: string } | null>(null);
+
+    const { mutateAsync: createBooking, isPending: isCreating } = useCreateBooking();
+    const { mutateAsync: checkAvailability, isPending: isChecking } = useCheckAvailability();
+
+    const showCalendar = !!service.availability || ['perHour', 'perUnit'].includes(service.pricingModel);
+    const availabilityProfile = service.availability || DEFAULT_AVAILABILITY;
+
+    // Derived Selection Data
+    const activeVariant = useMemo(() => 
+        service.variants?.find(v => v.id === selectedVariant), [service.variants, selectedVariant]);
+    
+    const activeTier = useMemo(() => 
+        service.tiers?.find(t => t.id === selectedTier), [service.tiers, selectedTier]);
+
+    // Metadata Display
+    const meta = {
+        duration: service.duration || availabilityProfile.slotDuration || 60,
+        buffer: availabilityProfile.bufferTime || 0,
+        maxBookings: availabilityProfile.maxBookingsPerSlot || 1,
+        radius: availabilityProfile.serviceRadiusKm || 0,
+        staff: availabilityProfile.staffPerBooking || 1
+    };
+
+    // Helper to format minutes into human readable duration
+    const formatDuration = (totalMinutes: number) => {
+        const hours = Math.floor(totalMinutes / 60);
+        const mins = totalMinutes % 60;
+        let result = '';
+        if (hours > 0) result += `${hours} hour${hours > 1 ? 's' : ''}`;
+        if (mins > 0) result += `${hours > 0 ? ' ' : ''}${mins} minute${mins > 1 ? 's' : ''}`;
+        return result || '0 minutes';
+    };
+
+    // Automatic availability check when time range changes
+    useEffect(() => {
+        const verifySlot = async () => {
+            if (selectedDate && startTime && endTime) {
+                const [sH, sM] = startTime.split(':').map(Number);
+                const [eH, eM] = endTime.split(':').map(Number);
+                
+                const start = new Date(selectedDate);
+                start.setHours(sH, sM, 0, 0);
+                
+                const end = new Date(selectedDate);
+                end.setHours(eH, eM, 0, 0);
+
+                if (start >= end) {
+                    setAvailabilityStatus({ isAvailable: false, reason: 'End time must be after start time' });
+                    return;
+                }
+
+                try {
+                    const res = await checkAvailability({
+                        serviceId: service.id,
+                        startTime: start.toISOString(),
+                        endTime: end.toISOString()
+                    });
+                    setAvailabilityStatus(res);
+                } catch (e) {
+                    setAvailabilityStatus({ isAvailable: false, reason: 'Failed to verify availability' });
+                }
+            } else {
+                setAvailabilityStatus(null);
+            }
+        };
+
+        const timeoutId = setTimeout(verifySlot, 500); // Debounce check
+        return () => clearTimeout(timeoutId);
+    }, [selectedDate, startTime, endTime, service.id, checkAvailability]);
+
+    // Dynamic Price Calculation
+    const pricingBreakdown = useMemo(() => {
+        let base = 0;
+        if (selectedTier && activeTier) base = parseFloat(activeTier.price);
+        else if (selectedVariant && activeVariant) base = parseFloat(activeVariant.price);
+        else {
+            if (service.pricingModel === 'fixed') base = parseFloat(service.fixedPrice || '0');
+            else if (service.pricingModel === 'perHour') base = parseFloat(service.pricePerHour || '0');
+            else if (service.pricingModel === 'perUnit') base = parseFloat(service.pricePerUnit || '0');
+        }
+
+        let durationMins = 0;
+        let units = 1;
+        if (startTime && endTime) {
+            const startMins = parseInt(startTime.split(':')[0]) * 60 + parseInt(startTime.split(':')[1]);
+            const endMins = parseInt(endTime.split(':')[0]) * 60 + parseInt(endTime.split(':')[1]);
+            durationMins = endMins - startMins;
+            
+            if (service.pricingModel === 'perHour') {
+                units = Math.max(0, durationMins / 60);
+            }
+        }
+        
+        if (service.pricingModel === 'perUnit') {
+            units = quantity;
+        }
+
+        const calculatedBase = base * units;
+
+        let guestPrice = 0;
+        if (service.enableGuestPricing) {
+            if (service.guestPricingModel === 'perGuest') {
+                guestPrice = parseFloat(service.pricePerGuest || '0') * guests;
+            } else if (service.guestPricingModel === 'baseWithAdditional') {
+                const extra = Math.max(0, guests - (service.baseGuests || 0));
+                guestPrice = extra * parseFloat(service.additionalGuestPrice || '0');
+            }
+        }
+
+        let addonsPrice = 0;
+        service.configurableAddons?.forEach(addon => {
+            if (selectedAddons[addon.id]) addonsPrice += parseFloat(addon.price || '0');
+        });
+
+        const fee = parseFloat(service.bookingFee || '0');
+        const travelFee = (service.deliveryConfig?.mode === 'onsite' ? service.deliveryConfig?.travelFee : 0) || 0;
+        const total = calculatedBase + guestPrice + addonsPrice + fee + travelFee;
+
+        return { calculatedBase, guestPrice, addonsPrice, fee, total, units, durationMins };
+    }, [service, selectedVariant, activeVariant, selectedTier, activeTier, selectedAddons, quantity, guests, startTime, endTime]);
 
     // Payment Modal State
     const [paymentModalOpen, setPaymentModalOpen] = useState(false);
     const [createdBookingId, setCreatedBookingId] = useState<string | null>(null);
 
-    // Configuration State
-    const [address, setAddress] = useState('');
-    const [phone, setPhone] = useState('');
-    const [problemDescription, setProblemDescription] = useState('');
-    const [config, setConfig] = useState<Record<string, string>>({});
-    const [staffCount, setStaffCount] = useState(1);
-
-    const { mutateAsync: createBooking, isPending } = useCreateBooking();
-
-    // Determine if we should show booking calendar
-    // Show if explicit availability exists OR if pricing model implies time/booking
-    const showCalendar = !!service.availability || ['perHour', 'perUnit'].includes(service.pricingModel);
-    const availabilityProfile = service.availability || DEFAULT_AVAILABILITY;
-
-    // Simulate Slot Locking
-    useEffect(() => {
-        if (selectedDate && selectedTime) {
-            // Lock for 15 minutes from now
-            const expiry = new Date();
-            expiry.setMinutes(expiry.getMinutes() + 15);
-            setLockExpiry(expiry);
-            toast.success(`Slot ${selectedTime} selected. Proceed to book.`);
-        } else {
-            setLockExpiry(null);
-        }
-    }, [selectedDate, selectedTime]);
-
-    // Base Price Calculation
-    const basePrice = useMemo(() => {
-        switch (service.pricingModel) {
-            case 'fixed':
-                return parseFloat(service.fixedPrice || '0');
-            case 'perHour':
-                return parseFloat(service.pricePerHour || '0') * quantity;
-            case 'perUnit':
-                return parseFloat(service.pricePerUnit || '0') * quantity;
-            default:
-                return 0;
-        }
-    }, [service, quantity]);
-
-    // Pricing Rules and Multipliers
-    const pricingAdjustments = useMemo(() => {
-        if (!selectedDate || !service.pricingRules) return { multiplier: 1, surcharge: 0 };
-        
-        let multiplier = 1;
-        let surcharge = 0;
-        
-        const isWeekend = selectedDate.getDay() === 0 || selectedDate.getDay() === 6;
-        if (isWeekend && service.pricingRules.weekendMultiplier) {
-            multiplier = service.pricingRules.weekendMultiplier;
-        }
-
-        // Night surcharge (simplified check for evening hours)
-        if (selectedTime) {
-            const hour = parseInt(selectedTime.split(':')[0]);
-            if ((hour >= 18 || hour < 7) && service.pricingRules.nightSurcharge) {
-                surcharge += parseFloat(service.pricingRules.nightSurcharge.toString());
-            }
-        }
-
-        return { multiplier, surcharge };
-    }, [selectedDate, selectedTime, service.pricingRules]);
-
-    // Guest Pricing Calculation (simplified)
-    const guestPrice = useMemo(() => {
-        if (!service.enableGuestPricing) return 0;
-        if (service.guestPricingModel === 'perGuest') {
-            return parseFloat(service.pricePerGuest || '0') * guests;
-        }
-        return 0;
-    }, [service, guests]);
-
-    // Addons Price Calculation
-    const addonsPrice = useMemo(() => {
-        let total = 0;
-        service.configurableAddons?.forEach(addon => {
-            if (selectedAddons[addon.id]) {
-                total += parseFloat(addon.price || '0');
-            }
-        });
-        return total;
-    }, [service, selectedAddons]);
-
-    const bookingFee = parseFloat(service.bookingFee || '0');
-    const travelFee = (service.deliveryConfig?.mode === 'onsite' ? service.deliveryConfig?.travelFee : 0) || 0;
-    
-    const subtotal = (basePrice * pricingAdjustments.multiplier) + guestPrice + addonsPrice + pricingAdjustments.surcharge;
-    const totalPrice = subtotal + bookingFee + travelFee;
-
-    const handleAddonToggle = (addonId: string, checked: boolean) => {
-        setSelectedAddons(prev => ({ ...prev, [addonId]: checked }));
-    };
-
     const handleBookNow = async () => {
-        if (showCalendar && (!selectedDate || !selectedTime)) {
-            toast.error("Please select a date and time.");
+        if (showCalendar && (!selectedDate || !startTime || !endTime)) {
+            toast.error("Please select a date and valid time range.");
             return;
         }
 
-        // Validation for requirements
-        if (service.bookingRequirements?.requireAddress && !address) {
-            toast.error("Service address is required.");
-            return;
-        }
-        if (service.bookingRequirements?.requirePhone && !phone) {
-            toast.error("Phone number is required.");
-            return;
-        }
-        if (service.bookingRequirements?.requireProblemDescription && !problemDescription) {
-            toast.error("Please provide a description of the problem/request.");
+        if (availabilityStatus && !availabilityStatus.isAvailable) {
+            toast.error(availabilityStatus.reason || "Slot is not available.");
             return;
         }
 
         try {
-            // Parse start time and end time
             let start = new Date();
             let end = new Date();
             
-            if (selectedDate && selectedTime) {
-               const [hours, minutes] = selectedTime.split(':').map(Number);
+            if (selectedDate && startTime && endTime) {
+               const [sH, sM] = startTime.split(':').map(Number);
+               const [eH, eM] = endTime.split(':').map(Number);
                start = new Date(selectedDate);
-               start.setHours(hours, minutes, 0, 0);
-               
-               end = new Date(start);
-               const duration = service.duration || 60; // default 60 mins
-               end.setMinutes(start.getMinutes() + duration);
+               start.setHours(sH, sM, 0, 0);
+               end = new Date(selectedDate);
+               end.setHours(eH, eM, 0, 0);
             }
 
             const payload = {
@@ -184,231 +213,248 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
                 startTime: start.toISOString(),
                 endTime: end.toISOString(),
                 numberOfGuests: guests,
-                numberOfStaff: staffCount,
-                addonIds: Object.keys(selectedAddons).filter(id => selectedAddons[id]),
-                address,
-                phone,
-                problemDescription,
-                config
+                quantity: quantity,
+                variantId: selectedVariant,
+                tierId: selectedTier,
+                addonIds: Object.keys(selectedAddons).filter(id => selectedAddons[id])
             };
 
             const booking = await createBooking(payload);
-            
             if (booking && booking.id) {
                 setCreatedBookingId(booking.id);
                 setPaymentModalOpen(true);
             }
-        } catch (error) {
-            // Error is handled by the hook via sonner toast
-        }
+        } catch (error) {}
     };
 
     return (
-        <div className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm">
-
-            {/* Header: Price */}
-            <div className="mb-6">
-                <h1 className="text-2xl font-bold text-gray-900 hidden lg:block">{service.name}</h1>
-                <p className="text-gray-500 mt-1 hidden lg:block">Service</p>
-
-                <div className="mt-4 flex items-baseline gap-2">
-                    <span className="text-3xl font-bold text-orange-600">
-                        £{totalPrice.toFixed(2)}
+        <div className="bg-white rounded-2xl p-5 md:p-8 border border-gray-100 shadow-xl shadow-slate-200/50 flex flex-col gap-6 sticky top-24">
+            
+            {/* Price Display */}
+            <div className="flex flex-col gap-1">
+                <div className="flex items-baseline gap-2">
+                    <span className="text-4xl font-black text-slate-900 tracking-tight">
+                        £{pricingBreakdown.total.toFixed(2)}
                     </span>
-                    <span className="text-sm text-gray-500">
-                        {service.pricingModel === 'perHour' ? '/ hour' :
-                            service.pricingModel === 'perUnit' ? `/ ${service.unitName || 'unit'}` :
-                                ' total'}
+                    <span className="text-sm font-medium text-slate-500 uppercase tracking-wider">
+                        {service.pricingModel === 'perHour' ? 'Total Est.' : 'Total'}
                     </span>
                 </div>
-                {pricingAdjustments.multiplier !== 1 && (
-                    <p className="text-xs text-orange-500 font-bold mt-1">
-                        Applied {pricingAdjustments.multiplier}x weekend rate
-                    </p>
+                {pricingBreakdown.fee > 0 && (
+                    <p className="text-xs text-slate-400 font-medium">Includes £{pricingBreakdown.fee.toFixed(2)} platform fee</p>
                 )}
-                {pricingAdjustments.surcharge > 0 && (
-                    <p className="text-xs text-orange-500 font-bold mt-1">
-                        + £{pricingAdjustments.surcharge.toFixed(2)} night surcharge included
-                    </p>
-                )}
-                {bookingFee > 0 && <p className="text-xs text-gray-400 mt-1">+ £{bookingFee.toFixed(2)} booking fee</p>}
-                {travelFee > 0 && <p className="text-xs text-gray-400 mt-1">+ £{travelFee.toFixed(2)} travel fee</p>}
             </div>
 
-            {/* Configuration Inputs */}
-            <div className="space-y-6 border-t border-gray-100 pt-6 mb-6">
+            {/* Service Metadata Chips */}
+            <div className="flex flex-wrap gap-2">
+                <div className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-50 rounded-full border border-slate-100 text-[11px] font-bold text-slate-600 uppercase">
+                    <Timer className="w-3.5 h-3.5" /> {meta.duration}m Duration
+                </div>
+                {meta.buffer > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 rounded-full border border-amber-100 text-[11px] font-bold text-amber-700 uppercase">
+                        <ShieldCheck className="w-3.5 h-3.5" /> {meta.buffer}m Buffer
+                    </div>
+                )}
+                {meta.radius > 0 && (
+                    <div className="flex items-center gap-1.5 px-3 py-1.5 bg-blue-50 rounded-full border border-blue-100 text-[11px] font-bold text-blue-700 uppercase">
+                        <MapPin className="w-3.5 h-3.5" /> {meta.radius}km Radius
+                    </div>
+                )}
+            </div>
 
-                {/* Booking Calendar System */}
+            <div className="h-px bg-slate-100" />
+
+            {/* Selection Steps */}
+            <div className="flex flex-col gap-8">
+                
+                {/* 1. Tiers / Packages */}
+                {service.tiers && service.tiers.length > 0 && (
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                            <Package className="w-4 h-4" /> Select Package
+                        </Label>
+                        <RadioGroup value={selectedTier} onValueChange={setSelectedTier} className="grid grid-cols-1 gap-2">
+                            {service.tiers.map(tier => (
+                                <Label key={tier.id} htmlFor={tier.id} className={cn(
+                                    "flex flex-col gap-1 p-4 rounded-xl border-2 transition-all cursor-pointer hover:bg-slate-50",
+                                    selectedTier === tier.id ? "border-orange-500 bg-orange-50/30" : "border-slate-100"
+                                )}>
+                                    <div className="flex justify-between items-center">
+                                        <span className="font-bold text-slate-900">{tier.name}</span>
+                                        <RadioGroupItem value={tier.id} id={tier.id} className="sr-only" />
+                                        <span className="font-black text-orange-600">£{parseFloat(tier.price).toFixed(2)}</span>
+                                    </div>
+                                    <span className="text-xs text-slate-500 leading-relaxed">{tier.description}</span>
+                                </Label>
+                            ))}
+                        </RadioGroup>
+                    </div>
+                )}
+
+                {/* 2. Variants */}
+                {service.variants && service.variants.length > 0 && (
+                    <div className="space-y-3">
+                        <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Options</Label>
+                        <div className="grid grid-cols-2 gap-2">
+                            {service.variants.map(v => (
+                                <button
+                                    key={v.id}
+                                    onClick={() => setSelectedVariant(selectedVariant === v.id ? undefined : v.id)}
+                                    className={cn(
+                                        "px-4 py-3 rounded-xl border-2 text-sm font-bold transition-all text-left",
+                                        selectedVariant === v.id ? "border-orange-500 bg-orange-50 text-orange-700" : "border-slate-100 text-slate-600 hover:border-slate-200"
+                                    )}
+                                >
+                                    {v.name}
+                                    <div className="text-xs font-normal opacity-70">£{parseFloat(v.price).toFixed(2)}</div>
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {/* 3. Date & Time Range */}
                 {showCalendar && (
                     <div className="space-y-4">
-                        <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">Select Date & Time</Label>
+                        <div className="flex justify-between items-center">
+                            <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <CalendarIcon className="w-4 h-4" /> Schedule Slot
+                            </Label>
+                            {isChecking && <Loader2 className="w-3 h-3 animate-spin text-orange-500" />}
+                        </div>
+                        
                         <BookingCalendar
                             availability={availabilityProfile}
                             selectedDate={selectedDate}
-                            onDateSelect={(d) => { setSelectedDate(d); setSelectedTime(undefined); }}
+                            onDateSelect={(d) => { setSelectedDate(d); setStartTime(undefined); setEndTime(undefined); }}
                         />
+                        
                         {selectedDate && (
-                            <div className="animate-in fade-in slide-in-from-top-2">
-                                <Label className="text-xs text-gray-500 mb-2 block">Available Slots</Label>
-                                <TimeSlotGenerator
-                                    availability={availabilityProfile}
-                                    selectedDate={selectedDate}
-                                    selectedSlot={selectedTime}
-                                    onSlotSelect={setSelectedTime}
-                                    serviceId={service.id}
-                                />
+                            <div className="space-y-4 animate-in fade-in slide-in-from-top-2 duration-300">
+                                <div className="grid grid-cols-2 gap-3">
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold text-slate-500 uppercase">Start Time</Label>
+                                        <TimeSlotGenerator
+                                            availability={availabilityProfile}
+                                            selectedDate={selectedDate}
+                                            selectedSlot={startTime}
+                                            onSlotSelect={setStartTime}
+                                            serviceId={service.id}
+                                        />
+                                    </div>
+                                    <div className="space-y-1.5">
+                                        <Label className="text-[10px] font-bold text-slate-500 uppercase">End Time</Label>
+                                        <TimeSlotGenerator
+                                            availability={availabilityProfile}
+                                            selectedDate={selectedDate}
+                                            selectedSlot={endTime}
+                                            onSlotSelect={setEndTime}
+                                            minTime={startTime}
+                                            serviceId={service.id}
+                                        />
+                                    </div>
+                                </div>
+                                
+                                {startTime && endTime && (
+                                    <div className={cn(
+                                        "flex flex-col gap-1 p-3 rounded-xl border transition-all",
+                                        availabilityStatus?.isAvailable === false ? "bg-red-50 border-red-100" : "bg-emerald-50 border-emerald-100"
+                                    )}>
+                                        <div className="flex items-center gap-2 text-[11px] font-bold uppercase tracking-tight">
+                                            {availabilityStatus?.isAvailable === false ? (
+                                                <><XCircle className="w-3.5 h-3.5 text-red-600" /> <span className="text-red-700">Not Available</span></>
+                                            ) : (
+                                                <><Info className="w-3.5 h-3.5 text-emerald-600" /> <span className="text-emerald-700">Slot Available</span></>
+                                            )}
+                                        </div>
+                                        <p className={cn(
+                                            "text-xs font-medium",
+                                            availabilityStatus?.isAvailable === false ? "text-red-600" : "text-emerald-600"
+                                        )}>
+                                            {availabilityStatus?.isAvailable === false 
+                                                ? availabilityStatus.reason 
+                                                : `Booking for ${formatDuration(pricingBreakdown.durationMins)}`
+                                            }
+                                        </p>
+                                    </div>
+                                )}
                             </div>
                         )}
-                        {lockExpiry && (
-                            <div className="flex items-center gap-2 text-xs text-green-600 bg-green-50 p-2 rounded-md">
-                                <Timer className="w-3 h-3" />
-                                Slot held. Complete booking in 15 mins.
-                            </div>
-                        )}
                     </div>
                 )}
 
-                {/* Service Requirements (New) */}
-                {(service.bookingRequirements?.requireAddress || service.deliveryConfig?.mode === 'onsite') && (
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-gray-700">Service Address {service.bookingRequirements?.requireAddress && <span className="text-red-500">*</span>}</Label>
-                        <Input 
-                            placeholder="Enter the full service address"
-                            value={address}
-                            onChange={(e) => setAddress(e.target.value)}
-                        />
-                    </div>
-                )}
-
-                {service.bookingRequirements?.requirePhone && (
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-gray-700">Contact Phone <span className="text-red-500">*</span></Label>
-                        <Input 
-                            type="tel"
-                            placeholder="Your phone number"
-                            value={phone}
-                            onChange={(e) => setPhone(e.target.value)}
-                        />
-                    </div>
-                )}
-
-                {service.bookingRequirements?.requireProblemDescription && (
-                    <div className="space-y-2">
-                        <Label className="text-sm font-semibold text-gray-700">Description of Request <span className="text-red-500">*</span></Label>
-                        <textarea 
-                            className="w-full min-h-[100px] p-3 rounded-md border border-gray-200 text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500 transition-all"
-                            placeholder="Tell the provider more about what you need..."
-                            value={problemDescription}
-                            onChange={(e) => setProblemDescription(e.target.value)}
-                        />
-                    </div>
-                )}
-
-                {/* Custom Questions (New) */}
-                {service.bookingRequirements?.customQuestions?.map((q, idx) => (
-                    <div key={idx} className="space-y-2">
-                        <Label className="text-sm font-semibold text-gray-700">
-                            {q.question} {q.required && <span className="text-red-500">*</span>}
-                        </Label>
-                        <Input 
-                            placeholder="Your answer..."
-                            value={config[q.question] || ''}
-                            onChange={(e) => setConfig(prev => ({ ...prev, [q.question]: e.target.value }))}
-                        />
-                    </div>
-                ))}
-
-                {/* Quantity / Hours Input */}
-                {service.pricingModel === 'perHour' && (
-                    <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Clock className="w-4 h-4" /> Hours</Label>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                        />
-                    </div>
-                )}
-
-                {service.pricingModel === 'perUnit' && (
-                    <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Number of {service.unitName || 'Units'}</Label>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={quantity}
-                            onChange={(e) => setQuantity(Math.max(1, parseInt(e.target.value) || 1))}
-                        />
-                    </div>
-                )}
-
-                {/* Guests Input */}
-                {service.enableGuestPricing && (
-                    <div className="space-y-2">
-                        <Label className="flex items-center gap-2"><Users className="w-4 h-4" /> Guests / People Involved</Label>
-                        <Input
-                            type="number"
-                            min={service.minGuests || 1}
-                            max={service.maxGuests || 100}
-                            value={guests}
-                            onChange={(e) => setGuests(Math.max(service.minGuests || 1, parseInt(e.target.value) || 1))}
-                        />
-                        <p className="text-[10px] text-gray-400 font-medium italic">Please specify how many people are involved in this booking.</p>
-                    </div>
-                )}
-
-                {/* Staff Required Input (Optional based on business logic) */}
-                <div className="space-y-2">
-                    <Label className="flex items-center gap-2"><Briefcase className="w-4 h-4" /> Professional Staff Required</Label>
-                    <Input
-                        type="number"
-                        min={1}
-                        max={service.availability?.staffPerBooking || 10}
-                        value={staffCount}
-                        onChange={(e) => setStaffCount(Math.max(1, parseInt(e.target.value) || 1))}
-                    />
-                    <p className="text-[10px] text-gray-400 font-medium italic">How many staff members do you require for this service?</p>
+                {/* 4. Guests & Units */}
+                <div className="grid grid-cols-2 gap-4">
+                    {service.enableGuestPricing && (
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Users className="w-4 h-4" /> Guests
+                            </Label>
+                            <Input
+                                type="number"
+                                min={service.minGuests || 1}
+                                max={service.maxGuests || 100}
+                                value={guests}
+                                onChange={(e) => setGuests(parseInt(e.target.value) || 1)}
+                                className="bg-slate-50 border-none h-12 font-bold"
+                            />
+                        </div>
+                    )}
+                    {service.pricingModel === 'perUnit' && (
+                        <div className="space-y-2">
+                            <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest flex items-center gap-2">
+                                <Briefcase className="w-4 h-4" /> {service.unitName || 'Units'}
+                            </Label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={quantity}
+                                onChange={(e) => setQuantity(parseInt(e.target.value) || 1)}
+                                className="bg-slate-50 border-none h-12 font-bold"
+                            />
+                        </div>
+                    )}
                 </div>
 
-                {/* Addons */}
+                {/* 5. Add-ons */}
                 {service.configurableAddons && service.configurableAddons.length > 0 && (
                     <div className="space-y-3">
-                        <Label className="text-sm font-semibold uppercase text-gray-700 tracking-wide">Add-ons</Label>
-                        {service.configurableAddons.map(addon => (
-                            <div key={addon.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-gray-50 cursor-pointer" onClick={() => handleAddonToggle(addon.id, !selectedAddons[addon.id])}>
-                                <div className="flex items-center gap-3">
-                                    <Checkbox
-                                        id={`addon-${addon.id}`}
-                                        checked={selectedAddons[addon.id] || false}
-                                        onCheckedChange={(c) => handleAddonToggle(addon.id, c as boolean)}
-                                    />
-                                    <Label htmlFor={`addon-${addon.id}`} className="cursor-pointer font-medium">{addon.name}</Label>
+                        <Label className="text-xs font-bold text-slate-400 uppercase tracking-widest">Extra Add-ons</Label>
+                        <div className="grid gap-2">
+                            {service.configurableAddons.map(addon => (
+                                <div 
+                                    key={addon.id} 
+                                    onClick={() => setSelectedAddons(prev => ({ ...prev, [addon.id]: !prev[addon.id] }))}
+                                    className={cn(
+                                        "flex items-center justify-between p-3 rounded-xl border-2 transition-all cursor-pointer",
+                                        selectedAddons[addon.id] ? "border-slate-900 bg-slate-900 text-white" : "border-slate-100 hover:border-slate-200"
+                                    )}
+                                >
+                                    <div className="flex items-center gap-3">
+                                        <Checkbox checked={selectedAddons[addon.id] || false} className="border-slate-300" />
+                                        <span className="text-sm font-bold">{addon.name}</span>
+                                    </div>
+                                    <span className="text-xs font-black opacity-80">+£{parseFloat(addon.price).toFixed(2)}</span>
                                 </div>
-                                <span className="text-sm font-semibold text-gray-600">+£{parseFloat(addon.price || '0').toFixed(2)}</span>
-                            </div>
-                        ))}
+                            ))}
+                        </div>
                     </div>
                 )}
             </div>
 
-            {/* Actions */}
-            <div className="flex flex-col gap-3">
+            {/* CTA */}
+            <div className="flex flex-col gap-3 pt-4">
                 <Button
                     size="lg"
-                    disabled={isPending}
-                    className="w-full py-6 text-lg bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-200"
+                    disabled={isCreating || isChecking || (availabilityStatus?.isAvailable === false)}
+                    className="w-full py-8 text-lg font-black bg-orange-600 hover:bg-orange-700 text-white rounded-2xl shadow-lg shadow-orange-200 transition-transform active:scale-[0.98] disabled:opacity-50 disabled:grayscale"
                     onClick={handleBookNow}
                 >
-                    {isPending ? <Loader2 className="animate-spin" /> : (service.requireApproval ? 'Request Booking' : 'Book Now')}
+                    {isCreating || isChecking ? <Loader2 className="animate-spin" /> : 'Confirm Booking'}
                 </Button>
-                <Button
-                    size="lg"
-                    variant="outline"
-                    className="w-full py-6 text-lg border-2 border-orange-100 text-orange-700 hover:bg-orange-50 hover:text-orange-800"
-                >
-                    Contact Provider
-                </Button>
+                <p className="text-[10px] text-center text-slate-400 font-bold uppercase tracking-widest">
+                    Funds held in escrow until completion
+                </p>
             </div>
 
             {/* Payment Modal */}
@@ -431,4 +477,4 @@ export default function ServiceBookingWidget({ service }: ServiceBookingWidgetPr
     );
 }
 
-
+import { XCircle } from 'lucide-react';

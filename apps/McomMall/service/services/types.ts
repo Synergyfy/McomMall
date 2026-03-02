@@ -30,6 +30,10 @@ export type DaySchedule = {
   startTime: string; // Main start time
   endTime: string;   // Main end time
   breaks?: (TimeRange | string)[]; // Can be TimeRange objects or "HH:mm-HH:mm" strings
+  maxBookings?: number; // Granular: max concurrent bookings for this day
+  staffPerBooking?: number; // Granular: staff required for this day
+  slotDuration?: number; // Granular: duration for this day
+  bufferTime?: number; // Granular: buffer for this day
 }
 
 export interface AvailabilityProfile {

@@ -4,7 +4,12 @@ import { MailerService } from '@nestjs-modules/mailer';
 import { CapabilityService } from '../src/resources/capability/capability.service';
 import * as request from 'supertest';
 import { AppModule } from '../src/app.module';
-import { clearDatabase, getBusiness, createProduct, seedTaxonomy } from './test-utils';
+import {
+  clearDatabase,
+  getBusiness,
+  createProduct,
+  seedTaxonomy,
+} from './test-utils';
 import { createAuthenticatedUser } from './utils/auth';
 import { UsersService } from '../src/resources/users/users.service';
 import { CreateUserDto } from '../src/resources/users/dto/create-user.dto';
@@ -14,7 +19,10 @@ import {
   PromotionScope,
   PromotionType,
 } from 'src/resources/promotion/promotion.enum';
-import { SellingMode, ListingType } from '../src/resources/listings/listing.enum';
+import {
+  SellingMode,
+  ListingType,
+} from '../src/resources/listings/listing.enum';
 
 describe('PromotionController (e2e)', () => {
   let app: INestApplication;
@@ -41,7 +49,7 @@ describe('PromotionController (e2e)', () => {
     const authData = await createAuthenticatedUser(app, UserRole.OWNER);
     jwtToken = authData.accessToken;
     const userId = authData.user.id;
-    
+
     const { sector, category, subCategory } = await seedTaxonomy(app);
 
     const businessResponse = await request(app.getHttpServer())
