@@ -28,7 +28,7 @@ import { Coupon } from './entities/coupon.entity';
 @ApiTags('Coupons')
 @Controller('coupons')
 export class CouponController {
-  constructor(private readonly couponService: CouponService) {}
+  constructor(private readonly couponService: CouponService) { }
 
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(UserRole.ADMIN, UserRole.OWNER)
@@ -44,7 +44,6 @@ export class CouponController {
     return this.couponService.create(createCouponDto);
   }
 
-  @Public()
   @Get('list')
   @ApiOperation({
     summary: 'List all Coupons (Paginated)',
@@ -52,6 +51,17 @@ export class CouponController {
   })
   findAll(@Query() pagination: PaginationQueryDto) {
     return this.couponService.findAll(pagination);
+  }
+
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @Get('mine')
+  @ApiOperation({
+    summary: 'List Coupons owned by the current user',
+    description: 'Returns a paginated list of coupons created by the authenticated owner.',
+  })
+  findMine(@Query() pagination: PaginationQueryDto, @Req() req: AuthenticatedRequest) {
+    return this.couponService.findAllForUser(req.user, pagination);
   }
 
   @UseGuards(JwtAuthGuard)
