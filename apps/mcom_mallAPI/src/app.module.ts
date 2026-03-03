@@ -48,6 +48,7 @@ import { ProvisionModule } from './resources/provision/provision.module';
 import { ShippingAddressModule } from './resources/shipping-address/shipping-address.module';
 import { HelpRequestsModule } from './help-requests/help-requests.module';
 import { TerminalCashbackModule } from './resources/terminal-cashback/terminal-cashback.module';
+import { CampaignCashbackModule } from './resources/campaign-cashback/campaign-cashback.module';
 import { ActivityTimerModule } from './resources/activity-timer/activity-timer.module';
 import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.guard';
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
@@ -111,6 +112,7 @@ import { DigitalValueModule } from './resources/digital-value/digital-value.modu
     VoucherModule,
     ExchangeModule,
     TerminalCashbackModule,
+    CampaignCashbackModule,
     SeasonsModule,
   ],
   controllers: [AppController],

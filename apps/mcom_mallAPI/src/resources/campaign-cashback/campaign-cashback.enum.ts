@@ -1,0 +1,46 @@
+export enum CampaignTargetType {
+  CUSTOMER = 'CUSTOMER',
+  BUSINESS = 'BUSINESS',
+  ALL = 'ALL',
+  SPECIFIC_USERS = 'SPECIFIC_USERS',
+}
+
+export enum CampaignDisplayType {
+  VOUCHER = 'VOUCHER',
+  E_CARD = 'E_CARD',
+}
+
+export enum CampaignUnlockMode {
+  REQUIRE_FULL_UNLOCK = 'REQUIRE_FULL_UNLOCK',
+  ALLOW_PRELOADED_USAGE = 'ALLOW_PRELOADED_USAGE',
+}
+
+export enum CampaignStatus {
+  NOT_ACTIVE = 'NOT_ACTIVE',
+  LOCKED = 'LOCKED',
+  ACTIVE = 'ACTIVE',
+  PARTIALLY_USED = 'PARTIALLY_USED',
+  FULLY_USED = 'FULLY_USED',
+  EXPIRED = 'EXPIRED',
+}
+
+export enum SpendingChannel {
+  HYPERLOCAL = 'HYPERLOCAL',
+  NEARBY = 'NEARBY',
+  ONLINE = 'ONLINE',
+}
+
+export enum CampaignCategory {
+  REGULAR = 'REGULAR',
+  SEASONAL = 'SEASONAL',
+}
+
+export enum CampaignUsageType {
+  ORDER_PRODUCT = 'ORDER_PRODUCT',
+  BOOK_SERVICE = 'BOOK_SERVICE',
+  BUY_GIFT_CARD = 'BUY_GIFT_CARD',
+  BUY_VOUCHER = 'BUY_VOUCHER',
+  BUY_DIGITAL_VALUE = 'BUY_DIGITAL_VALUE',
+  EXCHANGE_ITEM = 'EXCHANGE_ITEM',
+  ANYWHERE = 'ANYWHERE',
+}

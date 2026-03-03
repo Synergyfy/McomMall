@@ -51,4 +51,8 @@ export class CreateBookingDto {
 
   @IsOptional()
   config?: Record<string, any>;
+
+  @IsOptional()
+  @IsUUID()
+  campaignCashbackId?: string;
 }

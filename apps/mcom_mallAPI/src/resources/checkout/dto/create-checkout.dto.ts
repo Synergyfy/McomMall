@@ -46,4 +46,11 @@ export class CreateCheckoutDto {
   @IsString()
   @IsOptional()
   couponCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'The ID of the User Campaign Cashback to use for payment.',
+  })
+  @IsUUID()
+  @IsOptional()
+  campaignCashbackId?: string;
 }
