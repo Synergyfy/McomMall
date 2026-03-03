@@ -11,6 +11,7 @@ import { PricingModel } from 'src/resources/services/service.enum';
 import { Business } from 'src/resources/listings/entities/listing.entity';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
+import { PaymentProviderService } from 'src/resources/payments/services/payment-provider.service';
 import { ServiceBooking } from 'src/resources/booking/entities/service-booking.entity';
 import {
   ListingType,
@@ -41,6 +42,10 @@ describe('Booking Lifecycle (e2e)', () => {
     })
       .overrideProvider(MailerService)
       .useValue({ sendMail: jest.fn().mockResolvedValue({}) })
+      .overrideProvider(PaymentProviderService)
+      .useValue({
+        createStripePaymentIntent: jest.fn().mockResolvedValue({ client_secret: 'mock_secret' })
+      })
       .compile();
 
     app = moduleFixture.createNestApplication();
@@ -197,6 +202,18 @@ describe('Booking Lifecycle (e2e)', () => {
         isActive: true,
         pricingModel: PricingModel.PER_HOUR,
         pricePerHour: 50,
+        availability: {
+          maxBookingsPerSlot: 10,
+          schedule: [
+            {
+              day: 'SATURDAY',
+              enabled: true,
+              startTime: '00:00',
+              endTime: '23:59',
+              maxBookings: 10,
+            }
+          ]
+        }
       }),
     );
 
