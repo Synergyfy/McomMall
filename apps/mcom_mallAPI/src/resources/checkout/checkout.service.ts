@@ -22,6 +22,7 @@ import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import { RedeemGiftCardDto } from '../gift-card/dto/redeem-gift-card.dto';
 import { CouponService } from '../coupon/coupon.service';
 import { DiscountType } from '../coupon/coupon.enum';
+import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 
 @Injectable()
 export class CheckoutService {
@@ -38,6 +39,8 @@ export class CheckoutService {
     private readonly orderRepository: Repository<Order>,
     @InjectRepository(OrderItem)
     private readonly orderItemRepository: Repository<OrderItem>,
+    @InjectRepository(ShippingAddress)
+    private readonly shippingAddressRepository: Repository<ShippingAddress>,
     private readonly giftCardService: GiftCardService,
     private readonly paymentProviderService: PaymentProviderService,
     private readonly dataSource: DataSource,
@@ -46,9 +49,25 @@ export class CheckoutService {
   ) {}
 
   async initiateCheckout(userId: string, createCheckoutDto: CreateCheckoutDto) {
-    const { items, giftCardCode, couponCode } = createCheckoutDto;
+    const {
+      items,
+      giftCardCode,
+      couponCode,
+      shippingAddressId,
+      carrierCode,
+    } = createCheckoutDto;
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
+
+    let shippingAddress: ShippingAddress | null = null;
+    if (shippingAddressId) {
+      shippingAddress = await this.shippingAddressRepository.findOne({
+        where: { id: shippingAddressId, user: { id: userId } },
+      });
+      if (!shippingAddress) {
+        throw new NotFoundException('Shipping address not found');
+      }
+    }
 
     const productIds = items.map((item) => item.productId);
     const products = await this.productRepository.find({
@@ -94,18 +113,25 @@ export class CheckoutService {
 
     const totalAfterCoupon = Math.max(0, subtotal - couponDiscount);
 
+    // Shipping Fee Calculation
+    let estimatedShippingFee = 0;
+    if (carrierCode === 'royalmail') {
+      estimatedShippingFee = 4.5; // Placeholder flat rate for Tracked 48
+    }
+
     // Apply gift card if provided
     let giftCardAmountToApply = 0;
     if (giftCardCode) {
       const balanceResponse =
         await this.giftCardService.checkBalance(giftCardCode);
       giftCardAmountToApply = Math.min(
-        totalAfterCoupon,
+        totalAfterCoupon + estimatedShippingFee,
         balanceResponse.currentBalance,
       );
     }
 
-    const remainingTotal = totalAfterCoupon - giftCardAmountToApply;
+    const remainingTotal =
+      totalAfterCoupon + estimatedShippingFee - giftCardAmountToApply;
 
     // Create pending order in a transaction
     const newOrder = await this.dataSource.transaction(async (manager) => {
@@ -114,13 +140,16 @@ export class CheckoutService {
 
       const order = orderRepo.create({
         user: { id: userId } as User,
-        total: subtotal,
+        total: subtotal + estimatedShippingFee,
         items: [],
         status: OrderStatus.PENDING,
         giftCardAmountApplied: giftCardAmountToApply,
         giftCardCode: giftCardAmountToApply > 0 ? giftCardCode : null,
         couponCode: couponDiscount > 0 ? couponCode : null,
         couponDiscountApplied: couponDiscount,
+        shippingAddress,
+        carrierCode,
+        estimatedShippingFee,
       });
       const savedOrder = await orderRepo.save(order);
 

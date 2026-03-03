@@ -23,6 +23,7 @@ import { PartnershipModule } from '../partnership/partnership.module';
 import { WalletModule } from '../wallet/wallet.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { ProductModule } from '../product/product.module';
+import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 
 @Module({
   imports: [
@@ -36,6 +37,7 @@ import { ProductModule } from '../product/product.module';
       Business,
       ProductServiceBooking,
       Partnership,
+      ShippingAddress,
     ]),
     EventEmitterModule.forRoot(),
     CartModule,

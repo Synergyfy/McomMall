@@ -38,6 +38,7 @@ import { ProductService } from '../product/product.service';
 import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 import { PageDto } from '../../common/dto/page.dto';
 import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 
 import { Service } from '../services/entities/service.entity';
 
@@ -62,6 +63,8 @@ export class OrderService {
     private readonly productServiceBookingRepository: Repository<ProductServiceBooking>,
     @InjectRepository(Partnership)
     private readonly partnershipRepository: Repository<Partnership>,
+    @InjectRepository(ShippingAddress)
+    private readonly shippingAddressRepository: Repository<ShippingAddress>,
     private readonly cartService: CartService,
     @Inject(forwardRef(() => CouponService))
     private readonly couponService: CouponService,
@@ -114,8 +117,13 @@ export class OrderService {
     userId: string,
     createCheckoutDto: CreateCheckoutDto,
   ): Promise<Order> {
-    const { directPurchase, giftCardPurchases, serviceBookings } =
-      createCheckoutDto;
+    const {
+      directPurchase,
+      giftCardPurchases,
+      serviceBookings,
+      shippingAddressId,
+      carrierCode,
+    } = createCheckoutDto;
     const cart = await this.cartService.getCart(userId);
 
     const isCartCheckout = !directPurchase && cart && cart.items.length > 0;
@@ -280,6 +288,14 @@ export class OrderService {
 
     const totalAfterDiscounts = totalBeforeRedemption - couponAmountToApply;
 
+    // Shipping Fee Calculation
+    let estimatedShippingFee = 0;
+    if (carrierCode === 'royalmail') {
+      estimatedShippingFee = 4.5; // Placeholder flat rate
+    }
+
+    const totalWithShipping = totalAfterDiscounts + estimatedShippingFee;
+
     let giftCardAmountToApply = 0;
     if (createCheckoutDto.giftCardCode) {
       try {
@@ -291,12 +307,12 @@ export class OrderService {
             throw new BadRequestException('Gift card amount exceeds balance.');
           }
           giftCardAmountToApply = Math.min(
-            totalAfterDiscounts,
+            totalWithShipping,
             createCheckoutDto.giftCardAmount,
           );
         } else {
           giftCardAmountToApply = Math.min(
-            totalAfterDiscounts,
+            totalWithShipping,
             balance.currentBalance,
           );
         }
@@ -307,7 +323,7 @@ export class OrderService {
       }
     }
 
-    const totalAfterGiftCard = totalAfterDiscounts - giftCardAmountToApply;
+    const totalAfterGiftCard = totalWithShipping - giftCardAmountToApply;
 
     let voucherAmountToApply = 0;
     if (createCheckoutDto.voucherCode) {
@@ -351,6 +367,16 @@ export class OrderService {
     const user = await this.userRepository.findOneBy({ id: userId });
     if (!user) throw new NotFoundException('User not found');
 
+    let shippingAddress: ShippingAddress | null = null;
+    if (shippingAddressId) {
+      shippingAddress = await this.shippingAddressRepository.findOne({
+        where: { id: shippingAddressId, user: { id: userId } },
+      });
+      if (!shippingAddress) {
+        throw new NotFoundException('Shipping address not found');
+      }
+    }
+
     let offer: Offer | null = null;
     if (createCheckoutDto.offerId) {
       offer = await this.offerRepository.findOneBy({
@@ -373,6 +399,9 @@ export class OrderService {
         items: [],
         total: finalAmount,
         payment: savedPayment,
+        shippingAddress,
+        carrierCode,
+        estimatedShippingFee,
       };
       if (offer) {
         orderData.appliedOffer = offer;
@@ -535,7 +564,6 @@ export class OrderService {
     });
   }
 
-  // ... (other methods remain the same)
   async getOrdersForCustomer(
     customerId: string,
     pagination: PaginationQueryDto,
@@ -580,6 +608,28 @@ export class OrderService {
       .take(limit);
 
     const [items, total] = await queryBuilder.getManyAndCount();
+
+    const pageMetaDto = new PageMetaDto({
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination as any,
+    });
+
+    return new PageDto(items, pageMetaDto);
+  }
+
+  async getOrdersForAdmin(
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<Order>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.orderRepository.findAndCount({
+      relations: ['user', 'items', 'items.product', 'items.product.business'],
+      skip,
+      take: limit,
+      order: { created_at: 'DESC' },
+    });
 
     const pageMetaDto = new PageMetaDto({
       itemCount: items.length,

@@ -36,13 +36,31 @@ import { Public } from 'src/common/decorators/public.decorator';
 import { Roles } from 'src/common/decorators/roles.decorator';
 import { UserRole } from 'src/common/role.enum';
 import { BusinessStatus } from '../listings/listing.enum';
+import { OrderService } from '../order/order.service';
+import { PaginationQueryDto } from 'src/common/dto/pagination-query.dto';
+import { Order } from '../order/entities/order.entity';
+import { PageDto } from 'src/common/dto/page.dto';
 
 @ApiTags('admin')
 @ApiBearerAuth()
 @Controller('admin')
 @UseGuards(RolesGuard)
 export class AdminController {
-  constructor(private readonly adminService: AdminService) {}
+  constructor(
+    private readonly adminService: AdminService,
+    private readonly orderService: OrderService,
+  ) {}
+
+  @ApiOperation({
+    summary: 'Get all orders across the platform',
+    description: 'Returns a paginated list of all orders. Roles: ADMIN only.',
+  })
+  @ApiResponse({ status: 200, type: PageDto, description: 'List of all platform orders.' })
+  @Roles(UserRole.ADMIN)
+  @Get('orders')
+  async getAllOrders(@Query() pagination: PaginationQueryDto) {
+    return this.orderService.getOrdersForAdmin(pagination);
+  }
 
   @ApiOperation({ summary: 'Create a new super admin' })
   @ApiResponse({

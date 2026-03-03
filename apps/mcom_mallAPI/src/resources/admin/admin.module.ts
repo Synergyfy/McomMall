@@ -33,6 +33,7 @@ import { RentalBooking } from '../booking/entities/rental-booking.entity';
 import { ServiceBooking } from '../booking/entities/service-booking.entity';
 import { Promotion } from '../promotion/entities/promotion.entity';
 import { MembershipPayment } from '../membership/entities/membership-payment.entity';
+import { OrderModule } from '../order/order.module';
 
 @Module({
   imports: [
@@ -51,6 +52,7 @@ import { MembershipPayment } from '../membership/entities/membership-payment.ent
     HashModule,
     AuthModule,
     UsersModule,
+    OrderModule,
   ],
   controllers: [
     AdminController,

@@ -14,6 +14,7 @@ import { OrderItem } from '../order/entities/order-item.entity';
 import { GiftCardModule } from '../gift-card/gift-card.module';
 import { PaymentsModule } from '../payments/payments.module';
 import { CouponModule } from '../coupon/coupon.module';
+import { ShippingAddress } from '../shipping-address/entities/shipping-address.entity';
 
 @Module({
   imports: [
@@ -24,6 +25,7 @@ import { CouponModule } from '../coupon/coupon.module';
       PromotionParticipant,
       Order,
       OrderItem,
+      ShippingAddress,
     ]),
     UsersModule,
     OfferModule,
