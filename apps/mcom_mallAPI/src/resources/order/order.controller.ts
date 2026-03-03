@@ -33,9 +33,9 @@ export class OrderController {
   @Post('checkout')
   @ApiOperation({
     summary: 'Checkout process',
-    description: 'Processes cart or direct purchase. Roles: CUSTOMER, OWNER.',
+    description: 'Processes cart or direct purchase. Calculates shipping fees for Royal Mail if applicable. Roles: CUSTOMER, OWNER.',
   })
-  @ApiResponse({ status: 201, type: Order })
+  @ApiResponse({ status: 201, type: Order, description: 'The created order object with shipping details.' })
   checkout(@Body() createCheckoutDto: CreateCheckoutDto, @Req() req) {
     const userId = req.user.id;
     return this.orderService.checkout(userId, createCheckoutDto);
@@ -44,7 +44,7 @@ export class OrderController {
   @Post()
   @ApiOperation({
     summary: 'Create a direct order',
-    description: 'Roles: CUSTOMER, OWNER.',
+    description: 'Directly creates an order for products. Roles: CUSTOMER, OWNER.',
   })
   @ApiResponse({ status: 201, type: Order })
   createOrder(@Body() createOrderDto: CreateOrderDto, @Req() req) {
@@ -56,11 +56,14 @@ export class OrderController {
   @ApiOperation({
     summary: 'Get order history (Paginated)',
     description:
-      'Returns orders for the authenticated user. If OWNER, returns orders for their business products.',
+      'Returns orders based on role. If ADMIN, returns all platform orders. If OWNER, returns orders for their products. If CUSTOMER, returns their own purchase history.',
   })
-  @ApiResponse({ status: 200, type: PageDto<Order> })
+  @ApiResponse({ status: 200, type: PageDto, description: 'Paginated list of orders including tracking and shipping info.' })
   getOrders(@Req() req, @Query() pagination: PaginationQueryDto) {
     const user = req.user;
+    if (user.role === UserRole.ADMIN) {
+      return this.orderService.getOrdersForAdmin(pagination);
+    }
     if (user.role === UserRole.OWNER) {
       return this.orderService.getOrdersForOwner(user.id, pagination);
     }

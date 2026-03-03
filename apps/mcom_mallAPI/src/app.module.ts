@@ -54,6 +54,7 @@ import { ActivityTimerGuard } from './resources/activity-timer/activity-timer.gu
 import { SupportTicketsModule } from './resources/support-tickets/support-tickets.module';
 import { SeasonsModule } from './resources/seasons/seasons.module';
 import { DigitalValueModule } from './resources/digital-value/digital-value.module';
+import { ShippingModule } from './resources/shipping/shipping.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import { DigitalValueModule } from './resources/digital-value/digital-value.modu
     AdminModule,
     ProvisionModule,
     ShippingAddressModule,
+    ShippingModule,
     HelpRequestsModule,
     ConfigModule.forRoot({
       isGlobal: true,
