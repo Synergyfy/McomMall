@@ -428,6 +428,43 @@ export class WalletService {
     });
   }
 
+  async spendBalance(
+    userId: string,
+    amount: number,
+    description: string,
+    type: WalletTransactionType = WalletTransactionType.SPEND,
+    manager?: EntityManager,
+  ): Promise<Wallet> {
+    const finalManager = manager || this.dataSource.manager;
+    const walletRepo = finalManager.getRepository(Wallet);
+
+    const wallet = await walletRepo.findOne({
+      where: { user: { id: userId } },
+    });
+
+    if (!wallet) {
+      throw new NotFoundException('Wallet not found');
+    }
+
+    if (Number(wallet.spendableBalance) < amount) {
+      throw new BadRequestException('Insufficient spendable balance');
+    }
+
+    wallet.spendableBalance = Number(wallet.spendableBalance) - amount;
+    const savedWallet = await walletRepo.save(wallet);
+
+    await this.createTransaction(
+      savedWallet,
+      amount,
+      type,
+      description,
+      savedWallet.spendableBalance,
+      finalManager,
+    );
+
+    return savedWallet;
+  }
+
   private async createTransaction(
     wallet: Wallet,
     amount: number,

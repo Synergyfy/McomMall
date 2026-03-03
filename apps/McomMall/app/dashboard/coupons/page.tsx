@@ -25,7 +25,8 @@ import { useRouter } from 'next/navigation';
 
 export default function CouponsPage() {
   const router = useRouter();
-  const { coupons, isLoading, isError } = useGetCoupons();
+  const [page, setPage] = useState(1);
+  const { coupons, meta, isLoading, isError } = useGetCoupons(page, 15);
   const deleteCoupon = useDeleteCoupon();
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [selectedCouponId, setSelectedCouponId] = useState<string | null>(null);
@@ -40,6 +41,7 @@ export default function CouponsPage() {
       await deleteCoupon(selectedCouponId);
       setIsDeleteDialogOpen(false);
       setSelectedCouponId(null);
+      toast.success('Coupon deleted successfully');
     }
   };
 
@@ -69,30 +71,25 @@ export default function CouponsPage() {
     };
 
     const headers = [
-      'ID', 'Coupon Code', 'Description', 'Discount Type', 'Amount',
-      'Expiry Date', 'Min Spend', 'Max Spend', 'Individual Use',
-      'Allowed Emails', 'Usage Limit', 'Per User Limit', 'Usage Count',
-      'Created At', 'Updated At'
+      'ID', 'Code', 'Title', 'Description', 'Source', 'Discount Type', 'Value',
+      'Usage Limit', 'Per User Limit', 'Status', 'Expires At', 'Created At'
     ];
 
     const csvContent = [
       headers.join(','),
       ...coupons.map(c => [
         escapeCsvValue(c.id),
-        escapeCsvValue(c.couponCode),
-        escapeCsvValue(c.couponDescription),
+        escapeCsvValue(c.code),
+        escapeCsvValue(c.title),
+        escapeCsvValue(c.description),
+        escapeCsvValue(c.sourceType),
         escapeCsvValue(c.discountType),
-        escapeCsvValue(c.couponAmount),
-        escapeCsvValue(new Date(c.expiryDate).toISOString()),
-        escapeCsvValue(c.minSpend),
-        escapeCsvValue(c.maxSpend),
-        escapeCsvValue(c.individualUseOnly),
-        escapeCsvValue(c.allowedEmails),
-        escapeCsvValue(c.usageLimitPerCoupon),
-        escapeCsvValue(c.usageLimitPerUser),
-        escapeCsvValue(c.usageCount),
+        escapeCsvValue(c.discountValue),
+        escapeCsvValue(c.usageLimit),
+        escapeCsvValue(c.perUserLimit),
+        escapeCsvValue(c.status),
+        escapeCsvValue(c.expiresAt ? new Date(c.expiresAt).toISOString() : 'Never'),
         escapeCsvValue(c.created_at),
-        escapeCsvValue(c.updated_at),
       ].join(','))
     ].join('\n');
 
@@ -100,7 +97,7 @@ export default function CouponsPage() {
     const link = document.createElement('a');
     const url = URL.createObjectURL(blob);
     link.setAttribute('href', url);
-    link.setAttribute('download', 'coupons.csv');
+    link.setAttribute('download', 'coupons_export.csv');
     link.style.visibility = 'hidden';
     document.body.appendChild(link);
     link.click();
@@ -143,7 +140,7 @@ export default function CouponsPage() {
               key={coupon.id}
               coupon={coupon}
               onEdit={() => handleEditClick(coupon)}
-              onDelete={handleDeleteClick}
+              onDelete={() => handleDeleteClick(coupon.id)}
             />
           ))}
           {!isLoading && coupons?.length === 0 && (

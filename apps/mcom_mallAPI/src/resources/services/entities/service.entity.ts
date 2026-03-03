@@ -10,6 +10,7 @@ import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Business } from '../../listings/entities/listing.entity';
 import { BundledService } from './bundled-service.entity';
 import { ConfigurableAddon } from './configurable-addon.entity';
+import { Review } from '../../reviews/entities/review.entity';
 import { GuestPricingModel, PricingModel } from '../service.enum';
 import { Length, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -155,6 +156,15 @@ export class Service extends AbstractBaseEntity {
 
   @Column('decimal', { precision: 12, scale: 2, nullable: true })
   bookingFee?: number;
+
+  @Column('float', { default: 0 })
+  averageRating: number;
+
+  @Column('int', { default: 0 })
+  reviewCount: number;
+
+  @OneToMany(() => Review, (review) => review.service)
+  reviews: Review[];
 
   @OneToMany(() => BundledService, (bundled) => bundled.service, {
     cascade: true,

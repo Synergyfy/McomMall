@@ -40,6 +40,8 @@ import {
     AlertCircle,
     MessageSquare,
     Store,
+    ShoppingCart,
+    Briefcase,
     Calendar,
     ChevronLeft,
     ChevronRight,
@@ -53,9 +55,13 @@ import { toast } from 'sonner';
 function StatusBadge({ status }: { status: string | undefined }) {
     const statusConfig: Record<string, { label: string; className: string }> = {
         PUBLISHED: { label: 'Published', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
+        published: { label: 'Published', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
         UNPUBLISHED: { label: 'Unpublished', className: 'bg-slate-100 text-slate-700 border-slate-200' },
+        unpublished: { label: 'Unpublished', className: 'bg-slate-100 text-slate-700 border-slate-200' },
         PENDING: { label: 'Pending', className: 'bg-amber-100 text-amber-700 border-amber-200' },
+        pending: { label: 'Pending', className: 'bg-amber-100 text-amber-700 border-amber-200' },
         ARCHIVED: { label: 'Archived', className: 'bg-red-100 text-red-700 border-red-200' },
+        archived: { label: 'Archived', className: 'bg-red-100 text-red-700 border-red-200' },
     };
 
     const config = statusConfig[status || 'PENDING'] || { label: status || 'Unknown', className: 'bg-slate-100 text-slate-700 border-slate-200' };
@@ -133,7 +139,7 @@ export default function ReviewsPage() {
                             <TableHeader>
                                 <TableRow>
                                     <TableHead>Author</TableHead>
-                                    <TableHead>Business</TableHead>
+                                    <TableHead>Target</TableHead>
                                     <TableHead>Rating</TableHead>
                                     <TableHead className="w-[30%]">Comment</TableHead>
                                     <TableHead>Status</TableHead>
@@ -168,9 +174,28 @@ export default function ReviewsPage() {
                                             </div>
                                         </TableCell>
                                         <TableCell>
-                                            <div className="flex items-center gap-2 text-slate-600">
-                                                <Store className="h-4 w-4" />
-                                                <span className="text-sm">{review.business?.businessName || 'Unknown Business'}</span>
+                                            <div className="flex flex-col gap-1">
+                                                {review.business && (
+                                                    <div className="flex items-center gap-2 text-slate-600">
+                                                        <Store className="h-3.5 w-3.5" />
+                                                        <span className="text-xs font-medium">{review.business.businessName}</span>
+                                                    </div>
+                                                )}
+                                                {review.product && (
+                                                    <div className="flex items-center gap-2 text-blue-600">
+                                                        <ShoppingCart className="h-3.5 w-3.5" />
+                                                        <span className="text-xs font-medium">{review.product.title}</span>
+                                                    </div>
+                                                )}
+                                                {review.service && (
+                                                    <div className="flex items-center gap-2 text-orange-600">
+                                                        <Briefcase className="h-3.5 w-3.5" />
+                                                        <span className="text-xs font-medium">{review.service.name}</span>
+                                                    </div>
+                                                )}
+                                                {!review.business && !review.product && !review.service && (
+                                                    <span className="text-xs text-slate-400">General</span>
+                                                )}
                                             </div>
                                         </TableCell>
                                         <TableCell>

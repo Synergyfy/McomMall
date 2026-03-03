@@ -6,7 +6,7 @@ import { useAuth } from '../auth/hook';
 // Get all reviews for a business
 export const useGetReviewsForBusiness = (businessId: string) => {
   return useQuery<Review[], Error>({
-    queryKey: ['reviews', businessId],
+    queryKey: ['reviews', 'business', businessId],
     queryFn: async () => {
       const { data } = await api.get<Review[]>(
         `/reviews/business/${businessId}`
@@ -14,6 +14,34 @@ export const useGetReviewsForBusiness = (businessId: string) => {
       return data;
     },
     enabled: !!businessId,
+  });
+};
+
+// Get all reviews for a product
+export const useGetReviewsForProduct = (productId: string) => {
+  return useQuery<Review[], Error>({
+    queryKey: ['reviews', 'product', productId],
+    queryFn: async () => {
+      const { data } = await api.get<Review[]>(
+        `/reviews/product/${productId}`
+      );
+      return data;
+    },
+    enabled: !!productId,
+  });
+};
+
+// Get all reviews for a service
+export const useGetReviewsForService = (serviceId: string) => {
+  return useQuery<Review[], Error>({
+    queryKey: ['reviews', 'service', serviceId],
+    queryFn: async () => {
+      const { data } = await api.get<Review[]>(
+        `/reviews/service/${serviceId}`
+      );
+      return data;
+    },
+    enabled: !!serviceId,
   });
 };
 
@@ -63,11 +91,28 @@ export const useCreateReview = () => {
       return data;
     },
     onSuccess: (data, variables) => {
-      // Invalidate the query for the specific business's reviews
-      queryClient.invalidateQueries({
-        queryKey: ['reviews', variables.businessId],
-      });
-      // Optionally, invalidate the query for the user's reviews if they are on that page
+      if (variables.businessId) {
+        queryClient.invalidateQueries({
+          queryKey: ['reviews', 'business', variables.businessId],
+        });
+      }
+      if (variables.productId) {
+        queryClient.invalidateQueries({
+          queryKey: ['reviews', 'product', variables.productId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['product', variables.productId],
+        });
+      }
+      if (variables.serviceId) {
+        queryClient.invalidateQueries({
+          queryKey: ['reviews', 'service', variables.serviceId],
+        });
+        queryClient.invalidateQueries({
+          queryKey: ['service', variables.serviceId],
+        });
+      }
+      
       queryClient.invalidateQueries({
         queryKey: ['reviews', 'user'],
       });

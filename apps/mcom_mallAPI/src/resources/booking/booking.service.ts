@@ -72,10 +72,11 @@ export class BookingService {
     private readonly walletService: WalletService,
   ) {}
 
-  async checkAvailability(
-    checkAvailabilityDto: CheckAvailabilityDto,
-  ): Promise<{ isAvailable: boolean; priceMultiplier: number }> {
-    // ... previous code
+  async checkAvailability(checkAvailabilityDto: CheckAvailabilityDto): Promise<{
+    isAvailable: boolean;
+    priceMultiplier: number;
+    reason?: string;
+  }> {
     const { serviceId, startTime, endTime } = checkAvailabilityDto;
 
     const service = await this.serviceRepository.findOne({
@@ -100,46 +101,79 @@ export class BookingService {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
-    // Check Business Hours
-    if (
-      service.business.businessHours &&
-      service.business.businessHours.length > 0
-    ) {
-      const days = [
-        'SUNDAY',
-        'MONDAY',
-        'TUESDAY',
-        'WEDNESDAY',
-        'THURSDAY',
-        'FRIDAY',
-        'SATURDAY',
-      ];
-      const dayOfWeek = days[start.getDay()] as any;
-      const businessHour = service.business.businessHours.find(
-        (bh) => bh.dayOfWeek === dayOfWeek,
+    if (start >= end) {
+      throw new BadRequestException('End time must be after start time.');
+    }
+
+    const days = [
+      'SUNDAY',
+      'MONDAY',
+      'TUESDAY',
+      'WEDNESDAY',
+      'THURSDAY',
+      'FRIDAY',
+      'SATURDAY',
+    ];
+    const dayOfWeekName = days[start.getDay()];
+
+    // Get Capacity (max concurrent bookings) for this day
+    let maxConcurrent = 1;
+    let isOpen = false;
+    let openTimeStr = '';
+    let closeTimeStr = '';
+    let is24h = false;
+
+    // 1. Check from Business Hours
+    const businessHour = service.business.businessHours?.find(
+      (bh) => bh.dayOfWeek === (dayOfWeekName as any),
+    );
+
+    if (businessHour) {
+      isOpen = true;
+      openTimeStr = businessHour.openTime;
+      closeTimeStr = businessHour.closeTime;
+      is24h = businessHour.is24h;
+    }
+
+    // 2. Check Service Level Availability JSON (granular day settings)
+    if (service.availability?.schedule) {
+      const daySched = service.availability.schedule.find(
+        (s: any) => s.day.toUpperCase() === dayOfWeekName,
       );
-
-      if (!businessHour) {
-        return { isAvailable: false, priceMultiplier: 1 }; // Not open on this day
-      }
-
-      if (!businessHour.is24h) {
-        // Simple time string comparison (e.g., '09:00:00' <= '10:00:00')
-        const formatTime = (date: Date) => {
-          return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
-        };
-        const startTimeStr = formatTime(start);
-        const endTimeStr = formatTime(end);
-
-        if (
-          startTimeStr < businessHour.openTime ||
-          endTimeStr > businessHour.closeTime
-        ) {
-          return { isAvailable: false, priceMultiplier: 1 }; // Outside business hours
-        }
+      if (daySched) {
+        isOpen = daySched.enabled;
+        if (daySched.startTime) openTimeStr = daySched.startTime;
+        if (daySched.endTime) closeTimeStr = daySched.endTime;
+        if (daySched.maxBookings) maxConcurrent = daySched.maxBookings;
+        else if (service.availability.maxBookingsPerSlot)
+          maxConcurrent = service.availability.maxBookingsPerSlot;
       }
     }
 
+    if (!isOpen)
+      return {
+        isAvailable: false,
+        priceMultiplier: 1,
+        reason: 'Business is closed on this day.',
+      };
+
+    if (!is24h && openTimeStr && closeTimeStr) {
+      const formatTime = (date: Date) => {
+        return `${date.getHours().toString().padStart(2, '0')}:${date.getMinutes().toString().padStart(2, '0')}:00`;
+      };
+      const requestedStart = formatTime(start);
+      const requestedEnd = formatTime(end);
+
+      if (requestedStart < openTimeStr || requestedEnd > closeTimeStr) {
+        return {
+          isAvailable: false,
+          priceMultiplier: 1,
+          reason: 'Requested time is outside business hours.',
+        };
+      }
+    }
+
+    // Check Blocked Slots (Hard block, regardless of capacity)
     const blockedSlot = await this.blockedSlotRepository.findOne({
       where: {
         business: { id: service.business.id },
@@ -149,11 +183,16 @@ export class BookingService {
     });
 
     if (blockedSlot) {
-      return { isAvailable: false, priceMultiplier: 1 };
+      return {
+        isAvailable: false,
+        priceMultiplier: 1,
+        reason: 'The business has manually blocked this time slot.',
+      };
     }
 
-    // Check existing bookings for overlapping time
-    const overlappingBooking = await this.bookingRepository.findOne({
+    // Capacity Check: Find max concurrent bookings at any point during requested range
+    // We check how many existing bookings overlap with the requested range
+    const overlappingBookings = await this.bookingRepository.find({
       where: {
         service: { id: serviceId },
         startTime: LessThan(end),
@@ -166,8 +205,30 @@ export class BookingService {
       },
     });
 
-    if (overlappingBooking) {
-      return { isAvailable: false, priceMultiplier: 1 };
+    if (overlappingBookings.length > 0) {
+      // Logic: For every 1-minute interval in the requested range, check if count >= maxConcurrent
+      // For efficiency, we only check the points where existing bookings start or end
+      const points = new Set<number>();
+      points.add(start.getTime());
+      overlappingBookings.forEach((b) => {
+        if (b.startTime > start && b.startTime < end)
+          points.add(b.startTime.getTime());
+      });
+
+      for (const time of Array.from(points)) {
+        const testTime = new Date(time);
+        const concurrentAtThisPoint = overlappingBookings.filter(
+          (b) => testTime >= b.startTime && testTime < b.endTime,
+        ).length;
+
+        if (concurrentAtThisPoint >= maxConcurrent) {
+          return {
+            isAvailable: false,
+            priceMultiplier: 1,
+            reason: `Service reached capacity (${maxConcurrent} max) during this range.`,
+          };
+        }
+      }
     }
 
     const priceModifier = await this.priceModifierRepository.findOne({
@@ -455,6 +516,9 @@ export class BookingService {
       startTime: start,
       endTime: end,
       numberOfGuests: numberOfGuests || 1,
+      variantId: createBookingDto.variantId,
+      tierId: createBookingDto.tierId,
+      quantity: createBookingDto.quantity || 1,
       numberOfStaff: createBookingDto.numberOfStaff || 1,
       addonDetails: selectedAddons.length > 0 ? selectedAddons : null,
       address: createBookingDto.address,
@@ -788,19 +852,43 @@ export class BookingService {
     let baseAmount = 0;
     const pricingModel = booking.service.pricingModel;
 
-    if (pricingModel === 'fixed') {
-      baseAmount = Number(booking.service.fixedPrice || 0);
-    } else if (pricingModel === 'perHour') {
+    // 1. Base Price Selection (Tier/Variant or Default)
+    if (booking.tierId && booking.service.tiers) {
+      const tier = booking.service.tiers.find(
+        (t: any) => t.id === booking.tierId,
+      );
+      if (tier) baseAmount = Number(tier.price || 0);
+    } else if (booking.variantId && booking.service.variants) {
+      const variant = booking.service.variants.find(
+        (v: any) => v.id === booking.variantId,
+      );
+      if (variant) baseAmount = Number(variant.price || 0);
+    }
+
+    if (baseAmount === 0) {
+      if (pricingModel === 'fixed') {
+        baseAmount = Number(booking.service.fixedPrice || 0);
+      } else if (pricingModel === 'perHour') {
+        baseAmount = Number(booking.service.pricePerHour || 0);
+      } else if (pricingModel === 'perUnit') {
+        baseAmount = Number(booking.service.pricePerUnit || 0);
+      }
+    }
+
+    // 2. Duration/Quantity Multiplier
+    let units = 1;
+    if (pricingModel === 'perHour') {
       const durationHours =
         (booking.endTime.getTime() - booking.startTime.getTime()) /
         (1000 * 60 * 60);
-      baseAmount = Number(booking.service.pricePerHour || 0) * durationHours;
+      units = Math.max(1, durationHours);
     } else if (pricingModel === 'perUnit') {
-      // For perUnit we use numberOfGuests or quantity if we had it. Using numberOfGuests as proxy for units if applicable.
-      baseAmount = Number(booking.service.pricePerUnit || 0);
+      units = booking.quantity || 1;
     }
 
-    // Apply Pricing Rules (Weekend / Night)
+    const calculatedBase = baseAmount * units;
+
+    // 3. Apply Pricing Rules (Weekend / Night)
     let multiplier = 1;
     let surcharge = 0;
     const pricingRules = booking.service.pricingRules;
@@ -819,18 +907,26 @@ export class BookingService {
       }
     }
 
-    // Guest Pricing
+    // 4. Guest Pricing
     let guestAmount = 0;
     if (
       booking.service.enableGuestPricing &&
-      booking.service.guestPricingModel === 'perGuest'
+      booking.service.guestPricingModel
     ) {
-      guestAmount =
-        Number(booking.service.pricePerGuest || 0) *
-        (booking.numberOfGuests || 1);
+      const guests = booking.numberOfGuests || 1;
+      if (booking.service.guestPricingModel === 'perGuest') {
+        guestAmount = Number(booking.service.pricePerGuest || 0) * guests;
+      } else if (booking.service.guestPricingModel === 'baseWithAdditional') {
+        const extraGuests = Math.max(
+          0,
+          guests - (booking.service.baseGuests || 0),
+        );
+        guestAmount =
+          extraGuests * Number(booking.service.additionalGuestPrice || 0);
+      }
     }
 
-    // Addons Pricing
+    // 5. Addons Pricing
     let addonsAmount = 0;
     if (booking.addonDetails && Array.isArray(booking.addonDetails)) {
       addonsAmount = booking.addonDetails.reduce(
@@ -846,8 +942,10 @@ export class BookingService {
         : 0) || 0;
 
     const totalAmount =
-      (baseAmount * multiplier + guestAmount + addonsAmount + surcharge) *
-        (booking.numberOfStaff || 1) +
+      calculatedBase * multiplier +
+      guestAmount +
+      addonsAmount +
+      surcharge +
       bookingFee +
       Number(travelFee);
 

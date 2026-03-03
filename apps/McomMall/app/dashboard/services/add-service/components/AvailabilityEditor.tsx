@@ -77,11 +77,15 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
         const source = profile.schedule[index];
         if (!source) return;
         const newSchedule = profile.schedule.map(d => ({
-            day: d.day,
+            ...d,
             enabled: source.enabled,
             startTime: source.startTime,
             endTime: source.endTime,
-            breaks: source.breaks ? [...source.breaks] : []
+            breaks: source.breaks ? [...source.breaks] : [],
+            maxBookings: source.maxBookings,
+            staffPerBooking: source.staffPerBooking,
+            slotDuration: source.slotDuration,
+            bufferTime: source.bufferTime,
         }));
         updateProfile({ ...profile, schedule: newSchedule });
     };
@@ -101,13 +105,13 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                 <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Label>Slot Duration (min)</Label>
+                            <Label>Global Slot (min)</Label>
                             <Tooltip>
                                 <TooltipTrigger asChild>
                                     <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
                                 </TooltipTrigger>
                                 <TooltipContent>
-                                    The length of time allocated for a single appointment or service session.
+                                    Default duration for a single session. Can be overridden per day below.
                                 </TooltipContent>
                             </Tooltip>
                         </div>
@@ -120,79 +124,47 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Label>Buffer Time (min)</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    Extra time added after each appointment for cleaning, prep, or travel.
-                                </TooltipContent>
-                            </Tooltip>
+                            <Label>Global Buffer (min)</Label>
+                            <Input
+                                type="number"
+                                min={0}
+                                value={profile.bufferTime}
+                                onChange={(e) => updateProfile({ ...profile, bufferTime: parseInt(e.target.value) || 0 })}
+                            />
                         </div>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={profile.bufferTime}
-                            onChange={(e) => updateProfile({ ...profile, bufferTime: parseInt(e.target.value) || 0 })}
-                        />
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Label>Max Bookings/Slot</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    The maximum number of customers that can book the same time slot.
-                                </TooltipContent>
-                            </Tooltip>
+                            <Label>Global Max Bookings</Label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={profile.maxBookingsPerSlot}
+                                onChange={(e) => updateProfile({ ...profile, maxBookingsPerSlot: parseInt(e.target.value) || 1 })}
+                            />
                         </div>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={profile.maxBookingsPerSlot}
-                            onChange={(e) => updateProfile({ ...profile, maxBookingsPerSlot: parseInt(e.target.value) || 1 })}
-                        />
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
-                            <Label>Staff per Booking</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    The number of staff members required to perform this service.
-                                </TooltipContent>
-                            </Tooltip>
+                            <Label>Global Staff/Booking</Label>
+                            <Input
+                                type="number"
+                                min={1}
+                                value={profile.staffPerBooking || 1}
+                                onChange={(e) => updateProfile({ ...profile, staffPerBooking: parseInt(e.target.value) || 1 })}
+                            />
                         </div>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={profile.staffPerBooking || 1}
-                            onChange={(e) => updateProfile({ ...profile, staffPerBooking: parseInt(e.target.value) || 1 })}
-                        />
                     </div>
                     <div className="space-y-2">
                         <div className="flex items-center gap-2">
                             <Label>Service Radius (km)</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    The maximum distance from your base location that you are willing to travel.
-                                </TooltipContent>
-                            </Tooltip>
+                            <Input
+                                type="number"
+                                min={0}
+                                value={profile.serviceRadiusKm || 0}
+                                onChange={(e) => updateProfile({ ...profile, serviceRadiusKm: parseInt(e.target.value) || 0 })}
+                            />
                         </div>
-                        <Input
-                            type="number"
-                            min={0}
-                            value={profile.serviceRadiusKm || 0}
-                            onChange={(e) => updateProfile({ ...profile, serviceRadiusKm: parseInt(e.target.value) || 0 })}
-                        />
                     </div>
                 </div>
 
@@ -200,17 +172,19 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
 
                 {/* Schedule Grid */}
                 <div className="space-y-4">
-                    <div className="hidden md:grid grid-cols-[100px_1fr_1fr_100px_60px_auto] gap-4 items-center font-medium text-sm text-gray-500 mb-2 px-2">
+                    <div className="hidden md:grid grid-cols-[100px_1fr_1fr_100px_100px_100px_60px_auto] gap-4 items-center font-medium text-sm text-gray-500 mb-2 px-2">
                         <div>Day</div>
                         <div>Start</div>
                         <div>End</div>
                         <div className="text-center">Breaks</div>
+                        <div className="text-center">Max Bookings</div>
+                        <div className="text-center">Staff</div>
                         <div className="text-center">Active</div>
                         <div></div>
                     </div>
 
                     {profile.schedule.map((day, index) => (
-                        <div key={day.day} className="flex flex-col md:grid md:grid-cols-[100px_1fr_1fr_100px_60px_auto] gap-4 items-center p-3 rounded-lg hover:bg-slate-50 border border-gray-100 md:border-transparent md:hover:border-slate-100 transition-colors">
+                        <div key={day.day} className="flex flex-col md:grid md:grid-cols-[100px_1fr_1fr_100px_100px_100px_60px_auto] gap-4 items-center p-3 rounded-lg hover:bg-slate-50 border border-gray-100 md:border-transparent md:hover:border-slate-100 transition-colors">
                             <div className="capitalize font-medium w-full md:w-auto flex justify-between md:block">
                                 {day.day}
                                 <div className="md:hidden">
@@ -299,6 +273,32 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                 </Popover>
                             </div>
 
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <div className="md:hidden w-16 text-sm text-gray-500">Max Bookings:</div>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder={profile.maxBookingsPerSlot.toString()}
+                                    value={day.maxBookings}
+                                    onChange={(e) => handleScheduleChange(index, 'maxBookings', parseInt(e.target.value) || undefined)}
+                                    disabled={!day.enabled}
+                                    className="h-9"
+                                />
+                            </div>
+
+                            <div className="flex items-center gap-2 w-full md:w-auto">
+                                <div className="md:hidden w-16 text-sm text-gray-500">Staff:</div>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    placeholder={profile.staffPerBooking?.toString()}
+                                    value={day.staffPerBooking}
+                                    onChange={(e) => handleScheduleChange(index, 'staffPerBooking', parseInt(e.target.value) || undefined)}
+                                    disabled={!day.enabled}
+                                    className="h-9"
+                                />
+                            </div>
+
                             <div className="hidden md:flex justify-center">
                                 <Switch
                                     checked={day.enabled}
@@ -309,8 +309,8 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                             <button
                                 type="button"
                                 onClick={() => applyToAll(index)}
-                                className="text-xs text-primary hover:underline whitespace-nowrap w-full md:w-auto text-right md:text-left mt-2 md:mt-0"
-                                title="Copy these hours and breaks to all other days of the week"
+                                className="text-xs text-primary hover:underline whitespace-nowrap w-full md:w-auto text-right md:text-left mt-2 md:mt-0 font-bold"
+                                title="Copy these hours, breaks, and capacity to all other days"
                             >
                                 Apply to All
                             </button>
@@ -322,6 +322,7 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
         </Card>
     );
 }
+
 
 function Separator() {
     return <div className="h-[1px] w-full bg-gray-100 my-4" />;

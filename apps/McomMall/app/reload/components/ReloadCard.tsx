@@ -63,8 +63,8 @@ const ReloadCard: React.FC<ReloadCardProps> = ({ type, cardId }) => {
         : type === 'coupon' && coupon
           ? {
             title: 'Coupon',
-            balance: parseFloat(coupon.couponAmount),
-            image: coupon.widgetBackgroundUrl ?? '',
+            balance: parseFloat((coupon as any).couponAmount),
+            image: (coupon as any).widgetBackgroundUrl ?? '',
           }
           : null;
 

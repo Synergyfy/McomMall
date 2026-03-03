@@ -67,6 +67,15 @@ export class ServiceBooking extends AbstractBaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   config: any; // Stores answers to custom questions
 
+  @Column({ nullable: true })
+  variantId: string;
+
+  @Column({ nullable: true })
+  tierId: string;
+
+  @Column({ type: 'int', default: 1 })
+  quantity: number;
+
   @OneToOne(
     () => ProductServiceBooking,
     (productServiceBooking) => productServiceBooking.serviceBooking,

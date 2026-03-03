@@ -108,8 +108,10 @@ export class UsersService {
 
       const user = manager.create(User, {
         ...payload,
+        fullName: `${payload.firstName} ${payload.lastName}`,
         password: hashed,
         referredBy,
+        role: payload.role || UserRole.CUSTOMER,
         referralCode: Math.random().toString(36).substring(2, 10).toUpperCase(),
       });
       const savedUser = await manager.save(user);

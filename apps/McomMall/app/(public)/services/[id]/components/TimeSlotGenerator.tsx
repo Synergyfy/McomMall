@@ -14,48 +14,60 @@ interface TimeSlotGeneratorProps {
     selectedSlot: string | undefined;
     onSlotSelect: (time: string) => void;
     serviceId?: string;
+    minTime?: string; // If provided, only show slots after this time
 }
 
-export default function TimeSlotGenerator({ availability, selectedDate, selectedSlot, onSlotSelect, serviceId }: TimeSlotGeneratorProps) {
+export default function TimeSlotGenerator({ availability, selectedDate, selectedSlot, onSlotSelect, serviceId, minTime }: TimeSlotGeneratorProps) {
     const dateStr = selectedDate ? format(selectedDate, 'yyyy-MM-dd') : '';
     const { data: apiSlots, isLoading } = useGetAvailableSlots(serviceId || '', dateStr);
 
     const slots = React.useMemo(() => {
-        // Prefer API slots if available
-        if (apiSlots && apiSlots.length > 0) return apiSlots;
-        
-        // Fallback to local generation if API returns nothing or is not available
-        if (!availability || !selectedDate || !availability.schedule) return [];
+        let baseSlots: string[] = [];
 
-        const dayMap: Record<string, number> = {
-            sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6
-        };
+        // 1. If API returns slots, use them
+        if (apiSlots && apiSlots.length > 0) {
+            baseSlots = apiSlots;
+        } else {
+            // 2. Fallback to local generation if API returns nothing or is not enabled
+            if (!availability || !selectedDate || !availability.schedule) return [];
 
-        const dayName = Object.keys(dayMap).find(key => dayMap[key] === selectedDate.getDay());
-        const schedule = availability.schedule.find(s => s.day === dayName);
+            const dayMap: Record<string, number> = {
+                sunday: 0, monday: 1, tuesday: 2, wednesday: 3, thursday: 4, friday: 5, saturday: 6
+            };
 
-        if (!schedule || !schedule.enabled) return [];
+            const dayName = Object.keys(dayMap).find(key => dayMap[key] === selectedDate.getDay());
+            // Case-insensitive find
+            const schedule = availability.schedule.find(s => s.day.toLowerCase() === dayName?.toLowerCase());
 
-        const startMins = toMinutes(schedule.startTime);
-        const endMins = toMinutes(schedule.endTime);
-        const duration = availability.slotDuration || 60;
-        const buffer = availability.bufferTime || 0;
-        const step = duration + buffer;
+            if (!schedule || !schedule.enabled) return [];
 
-        const generatedSlots: string[] = [];
-        for (let time = startMins; time + duration <= endMins; time += step) {
-            generatedSlots.push(toTime(time));
+            const startMins = toMinutes(schedule.startTime || '09:00');
+            const endMins = toMinutes(schedule.endTime || '17:00');
+            const duration = schedule.slotDuration || availability.slotDuration || 60;
+            const buffer = schedule.bufferTime || availability.bufferTime || 0;
+            const step = duration + buffer;
+
+            for (let time = startMins; time + duration <= endMins; time += step) {
+                baseSlots.push(toTime(time));
+            }
         }
 
-        return generatedSlots;
+        // Apply minTime filter if provided (for End Time selection)
+        if (minTime) {
+            const minMins = toMinutes(minTime);
+            return baseSlots.filter(s => toMinutes(s) > minMins);
+        }
 
-    }, [availability, selectedDate, apiSlots]);
+        return baseSlots;
+
+    }, [availability, selectedDate, apiSlots, minTime]);
 
     if (!selectedDate) {
         return <div className="text-sm text-gray-500 text-center py-4">Select a date to see available times.</div>;
     }
 
-    if (isLoading) {
+    // Only show loading if we have a serviceId (meaning we expect an API response)
+    if (isLoading && serviceId) {
         return (
             <div className="flex justify-center py-8">
                 <Loader2 className="animate-spin text-orange-600" />
@@ -64,22 +76,24 @@ export default function TimeSlotGenerator({ availability, selectedDate, selected
     }
 
     if (slots.length === 0) {
-        return <div className="text-sm text-red-500 text-center py-4">No slots available on this date.</div>;
+        return <div className="text-sm text-red-500 text-center py-4 px-2">No {minTime ? 'later' : ''} slots available on this date.</div>;
     }
 
     return (
-        <div className="grid grid-cols-3 sm:grid-cols-4 gap-3 max-h-[300px] overflow-y-auto p-1">
+        <div className="grid grid-cols-2 gap-2 max-h-[200px] overflow-y-auto p-1 scrollbar-thin scrollbar-thumb-slate-200">
             {slots.map((time) => (
                 <Button
                     key={time}
                     variant={selectedSlot === time ? 'default' : 'outline'}
+                    size="sm"
                     className={cn(
-                        "text-sm font-medium",
-                        selectedSlot === time ? "bg-orange-600 hover:bg-orange-700 text-white" : "hover:border-orange-200 hover:bg-orange-50"
+                        "text-xs font-bold py-4 rounded-xl transition-all border-2",
+                        selectedSlot === time 
+                            ? "bg-slate-900 border-slate-900 text-white hover:bg-slate-800" 
+                            : "border-slate-100 hover:border-slate-200 text-slate-600 bg-slate-50/50"
                     )}
                     onClick={() => onSlotSelect(time)}
                 >
-                    <Clock className="w-3 h-3 mr-2" />
                     {time}
                 </Button>
             ))}
@@ -88,8 +102,9 @@ export default function TimeSlotGenerator({ availability, selectedDate, selected
 }
 
 const toMinutes = (time: string) => {
+    if (!time) return 0;
     const [h, m] = time.split(':').map(Number);
-    return h * 60 + m;
+    return (h || 0) * 60 + (m || 0);
 }
 
 const toTime = (mins: number) => {

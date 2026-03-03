@@ -34,8 +34,25 @@ export class CreateBookingDto {
   problemDescription?: string;
 
   @IsOptional()
+  @IsUUID()
+  variantId?: string;
+
+  @IsOptional()
+  @IsUUID()
+  tierId?: string;
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  quantity?: number;
+
+  @IsOptional()
   photos?: string[];
 
   @IsOptional()
-  config?: any;
+  config?: Record<string, any>;
+
+  @IsOptional()
+  @IsUUID()
+  campaignCashbackId?: string;
 }

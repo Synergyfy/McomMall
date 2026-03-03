@@ -46,4 +46,21 @@ export class CreateCheckoutDto {
   @IsString()
   @IsOptional()
   couponCode?: string;
+
+  @ApiPropertyOptional({
+    description: 'The ID of the User Campaign Cashback to use for payment.',
+  })
+  @IsUUID()
+  @IsOptional()
+  campaignCashbackId?: string;
+
+  @ApiPropertyOptional({ description: 'The ID of the shipping address.' })
+  @IsUUID()
+  @IsOptional()
+  shippingAddressId?: string;
+
+  @ApiPropertyOptional({ description: 'The carrier code (e.g., royalmail).' })
+  @IsString()
+  @IsOptional()
+  carrierCode?: string;
 }

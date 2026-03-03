@@ -21,7 +21,8 @@ import { CURRENCY } from '@/lib/utils';
 import { toast } from 'sonner';
 import { MyPurchase } from '@/service/gift-card/types';
 import { Voucher } from '@/service/vouchers/types';
-import { Coupon } from '@/service/my-coupons/types';
+import { Coupon as MyCoupon } from '@/service/my-coupons/types';
+import { Coupon, DiscountType } from '@/service/coupons/types';
 import QRCode from 'react-qr-code';
 import * as htmlToImage from 'html-to-image';
 
@@ -396,14 +397,12 @@ export const HistoryVoucher: React.FC<HistoryVoucherProps> = ({
 interface HistoryCouponProps {
     coupon: Coupon;
     onShare: (id: string) => void;
-    onReload: (coupon: Coupon) => void;
     isShared?: boolean;
 }
 
 export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
     coupon,
     onShare,
-    onReload,
     isShared
 }) => {
     const cardRef = useRef<HTMLDivElement>(null);
@@ -430,7 +429,11 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
             .catch(() => toast.error('Failed to export coupon.'));
     };
 
-    const cardName = coupon.couponProduct?.name || coupon.couponProduct?.user?.businessName || 'McomMall Card';
+    const discountDisplay = coupon.discountType === DiscountType.PERCENTAGE
+        ? `${coupon.discountValue}%`
+        : `${CURRENCY}${coupon.discountValue}`;
+
+    const businessName = coupon.business?.businessName || 'McomMall Merchant';
 
     return (
         <div className="w-full max-w-[340px] space-y-4">
@@ -445,9 +448,9 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                 >
                     {/* Left Black Section */}
                     <div className="w-[25%] bg-[#121212] relative flex items-center justify-center">
-                        <div className="w-20 h-20 rounded-full bg-red-600 shadow-2xl border-4 border-white/20 flex flex-col items-center justify-center text-white z-10">
-                            <span className="font-black text-2xl italic leading-none">{CURRENCY}{Math.floor(Number(coupon.balance))}</span>
-                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-80">VALUE</span>
+                        <div className="w-20 h-20 rounded-full bg-red-600 shadow-2xl border-4 border-white/20 flex flex-col items-center justify-center text-white z-10 text-center">
+                            <span className="font-black text-xl italic leading-none">{discountDisplay}</span>
+                            <span className="text-[10px] font-bold uppercase tracking-tighter opacity-80">OFF</span>
                         </div>
                     </div>
 
@@ -469,8 +472,8 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                             <div className="flex items-center gap-2">
                                 <div className="w-3.5 h-3.5 bg-red-600 rounded-sm shadow-sm" />
                                 <div className="flex flex-col">
-                                    <span className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-none">{cardName}</span>
-                                    <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">Digital Marketing</span>
+                                    <span className="text-[11px] font-black text-gray-900 uppercase tracking-tight leading-none truncate max-w-[120px]">{coupon.title}</span>
+                                    <span className="text-[7.5px] font-bold text-gray-400 uppercase tracking-widest leading-none mt-0.5">{businessName}</span>
                                 </div>
                             </div>
 
@@ -482,11 +485,11 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
 
                         {/* Main Title Area */}
                         <div className="text-center py-0.5 relative z-10">
-                            <h2 className="text-5xl font-black text-gray-900 tracking-[-0.06em] uppercase italic leading-[0.85]">
-                                COUPON
+                            <h2 className="text-3xl font-black text-gray-900 tracking-[-0.06em] uppercase italic leading-[0.85]">
+                                {coupon.discountType === DiscountType.PERCENTAGE ? 'DISCOUNT' : 'CASH COUPON'}
                             </h2>
-                            <p className="text-[8px] text-gray-400 font-bold mt-1 pr-6 max-w-[220px] mx-auto leading-relaxed uppercase tracking-wider">
-                                This voucher is applicable for all premium services and products across our platform.
+                            <p className="text-[8px] text-gray-400 font-bold mt-1 pr-6 max-w-[220px] mx-auto leading-relaxed uppercase tracking-wider line-clamp-2">
+                                {coupon.description || `Enjoy ${discountDisplay} off your next purchase at ${businessName}.`}
                             </p>
                         </div>
 
@@ -494,7 +497,7 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                         <div className="flex items-end justify-between relative z-10">
                             <div className="space-y-1">
                                 <div className="px-5 py-1.5 rounded-full border-2 border-gray-900 text-gray-900 font-black uppercase tracking-[0.15em] text-[9px]">
-                                    {cardName}
+                                    COUPON
                                 </div>
                             </div>
                             <div className="text-right flex flex-col items-end gap-1.5">
@@ -505,7 +508,7 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                                     </button>
                                 </div>
                                 <span className="text-[8px] font-black text-gray-400 uppercase tracking-widest bg-gray-50 px-2 py-0.5 rounded-md">
-                                    Validity: {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'LIFETIME'}
+                                    Expires: {coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'LIFETIME'}
                                 </span>
                             </div>
                         </div>
@@ -531,15 +534,6 @@ export const HistoryCoupon: React.FC<HistoryCouponProps> = ({
                 >
                     {isShared ? <Check size={20} /> : <Share2 size={20} />}
                 </Button>
-                {coupon.couponProduct?.allowReloading && (
-                    <Button
-                        onClick={() => onReload(coupon)}
-                        variant="default"
-                        className="h-10 px-4 rounded-[1.25rem] bg-red-600 hover:bg-red-700 text-white shadow-xl shadow-red-500/20 font-black uppercase text-[10px] tracking-widest flex items-center"
-                    >
-                        <PlusCircle size={18} className="mr-2" /> Top Up
-                    </Button>
-                )}
             </div>
         </div>
     );

@@ -51,15 +51,12 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
     const title = service.title || service.name || 'Untitled Service';
     const category = service.category || service.subcategory || 'Professional Service';
 
+    const rating = service.averageRating || 0;
+    const reviewCount = service.reviewCount || 0;
 
-    // Mock rating
     const idNum = typeof service.id === 'number'
         ? service.id
         : String(service.id).split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
-
-    const pseudoRandom = (idNum * 9301 + 49297) % 233280 / 233280;
-    const rating = 4.2 + (pseudoRandom * 0.8);
-    const completedJobs = Math.floor(pseudoRandom * 150) + 20;
 
     // Delivery modes
     const deliveryModes = ['onsite', 'remote', 'hybrid'];
@@ -127,7 +124,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                                         />
                                     ))}
                                     <span className="text-sm text-gray-600 ml-1">
-                                        {rating.toFixed(1)} ({completedJobs} jobs)
+                                        {rating.toFixed(1)} ({reviewCount} reviews)
                                     </span>
                                 </div>
                             </div>
@@ -214,7 +211,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                             />
                         ))}
                         <span className="text-[10px] md:text-xs text-gray-500 ml-1">
-                            {rating.toFixed(1)} ({completedJobs})
+                            {rating.toFixed(1)} ({reviewCount})
                         </span>
                     </div>
 

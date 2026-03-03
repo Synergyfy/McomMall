@@ -17,6 +17,7 @@ import {
 } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAddCoupon } from '@/service/coupons/hook';
+import { DiscountType, CouponSourceType } from '@/service/coupons/types';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -64,26 +65,29 @@ import { cn } from '@/lib/utils';
 // --- Main Coupon Form Component ---
 
 interface FormData {
-  couponCode: string;
-  couponDescription: string;
+  title: string;
+  code: string;
+  description: string;
   widgetBackground: File | null;
-  discountType: 'percentage' | 'fixed' | '';
-  couponAmount: string;
-  expiryDate: string;
+  discountType: DiscountType | '';
+  discountValue: string;
+  expiresAt: string;
   minSpend: string;
   maxSpend: string;
-  businessIds: string[];
+  businessId: string;
   individualUseOnly: boolean;
   allowedEmails: string;
-  usageLimitPerCoupon: string;
-  usageLimitPerUser: string;
+  usageLimit: string;
+  perUserLimit: string;
 }
 
 interface FormErrors {
-  couponCode?: string;
+  title?: string;
+  code?: string;
   discountType?: string;
-  couponAmount?: string;
-  expiryDate?: string;
+  discountValue?: string;
+  expiresAt?: string;
+  businessId?: string;
 }
 
 export default function CouponForm() {
@@ -94,19 +98,20 @@ export default function CouponForm() {
   const [open, setOpen] = React.useState(false);
 
   const [formData, setFormData] = useState<FormData>({
-    couponCode: '',
-    couponDescription: '',
+    title: '',
+    code: '',
+    description: '',
     widgetBackground: null,
     discountType: '',
-    couponAmount: '0',
-    expiryDate: '',
+    discountValue: '0',
+    expiresAt: '',
     minSpend: '',
     maxSpend: '',
-    businessIds: [],
+    businessId: '',
     individualUseOnly: false,
     allowedEmails: '',
-    usageLimitPerCoupon: '',
-    usageLimitPerUser: '',
+    usageLimit: '',
+    perUserLimit: '',
   });
 
   const [errors, setErrors] = useState<FormErrors>({});
@@ -129,7 +134,6 @@ export default function CouponForm() {
 
   const handleFileChange = (file: File | null) => {
     if (file) {
-      // You can add validation for file type and size here if needed
       setFormData(prev => ({ ...prev, widgetBackground: file }));
     }
   };
@@ -155,25 +159,31 @@ export default function CouponForm() {
   const handleRemoveImage = () => {
     setFormData(prev => ({ ...prev, widgetBackground: null }));
     if (fileInputRef.current) {
-      fileInputRef.current.value = ''; // Reset the file input so the same file can be re-added
+      fileInputRef.current.value = '';
     }
   };
 
   const validateForm = (): FormErrors => {
     const newErrors: FormErrors = {};
-    if (!formData.couponCode.trim()) {
-      newErrors.couponCode = 'Coupon code is required.';
+    if (!formData.title.trim()) {
+      newErrors.title = 'Title is required.';
+    }
+    if (!formData.code.trim()) {
+      newErrors.code = 'Coupon code is required.';
     }
     if (!formData.discountType) {
       newErrors.discountType = 'Discount type is required.';
     }
-    if (!formData.couponAmount || parseFloat(formData.couponAmount) <= 0) {
-      newErrors.couponAmount = 'Coupon amount must be greater than 0.';
+    if (!formData.discountValue || parseFloat(formData.discountValue) <= 0) {
+      newErrors.discountValue = 'Discount value must be greater than 0.';
     }
-    if (!formData.expiryDate) {
-      newErrors.expiryDate = 'Expiry date is required.';
-    } else if (new Date(formData.expiryDate) <= new Date()) {
-      newErrors.expiryDate = 'Expiry date must be in the future.';
+    if (!formData.expiresAt) {
+      newErrors.expiresAt = 'Expiry date is required.';
+    } else if (new Date(formData.expiresAt) <= new Date()) {
+      newErrors.expiresAt = 'Expiry date must be in the future.';
+    }
+    if (!formData.businessId) {
+      newErrors.businessId = 'Please select a business listing.';
     }
     return newErrors;
   };
@@ -186,31 +196,20 @@ export default function CouponForm() {
     if (Object.keys(validationErrors).length === 0) {
       try {
         await createCoupon({
-          couponCode: formData.couponCode,
-          couponDescription: formData.couponDescription,
-          discountType: formData.discountType as 'percentage' | 'fixed',
-          couponAmount: parseFloat(formData.couponAmount),
-          expiryDate: new Date(formData.expiryDate).getTime(),
-          minSpend: formData.minSpend
-            ? parseFloat(formData.minSpend)
-            : undefined,
-          maxSpend: formData.maxSpend
-            ? parseFloat(formData.maxSpend)
-            : undefined,
-          individualUseOnly: formData.individualUseOnly,
-          allowedEmails: formData.allowedEmails,
-          usageLimitPerCoupon: formData.usageLimitPerCoupon
-            ? parseInt(formData.usageLimitPerCoupon)
-            : undefined,
-          usageLimitPerUser: formData.usageLimitPerUser
-            ? parseInt(formData.usageLimitPerUser)
-            : undefined,
-          businessIds: formData.businessIds,
+          title: formData.title,
+          description: formData.description,
+          code: formData.code.toUpperCase(),
+          sourceType: CouponSourceType.BUSINESS,
+          discountValue: parseFloat(formData.discountValue),
+          discountType: formData.discountType as DiscountType,
+          usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : undefined,
+          perUserLimit: formData.perUserLimit ? parseInt(formData.perUserLimit) : 1,
+          expiresAt: formData.expiresAt,
+          businessId: formData.businessId,
         });
         setIsSuccess(true);
       } catch (error) {
         console.error('Failed to create coupon:', error);
-        // Handle error state in UI, e.g., show a toast notification
       }
     } else {
       console.log('Form has validation errors:', validationErrors);
@@ -245,33 +244,48 @@ export default function CouponForm() {
             </CardHeader>
             <CardContent className="space-y-6">
               <div className="grid gap-2">
-                <Label htmlFor="couponCode">Coupon code</Label>
+                <Label htmlFor="title">Coupon Title</Label>
                 <p className="text-sm text-gray-500">
-                  Code Name that shoppers can be applied at the shopping cart
-                  or checkout page.
+                  A public-facing name for this coupon (e.g., "Winter Special 2026").
                 </p>
                 <Input
-                  id="couponCode"
-                  name="couponCode"
-                  value={formData.couponCode}
+                  id="title"
+                  name="title"
+                  placeholder="e.g. Winter Sale"
+                  value={formData.title}
                   onChange={handleInputChange}
                 />
-                {errors.couponCode && (
-                  <p className="text-base text-red-600 mt-1">
-                    {errors.couponCode}
-                  </p>
+                {errors.title && (
+                  <p className="text-sm text-red-600 mt-1">{errors.title}</p>
                 )}
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="couponDescription">Coupon Description</Label>
+                <Label htmlFor="code">Coupon code</Label>
                 <p className="text-sm text-gray-500">
-                  A brief description of the coupon and what it offers.
+                  The unique code shoppers apply at checkout (e.g. WINTER26).
+                </p>
+                <Input
+                  id="code"
+                  name="code"
+                  placeholder="e.g. WINTER26"
+                  className="uppercase"
+                  value={formData.code}
+                  onChange={handleInputChange}
+                />
+                {errors.code && (
+                  <p className="text-sm text-red-600 mt-1">{errors.code}</p>
+                )}
+              </div>
+              <div className="grid gap-2">
+                <Label htmlFor="description">Coupon Description</Label>
+                <p className="text-sm text-gray-500">
+                  Detailed description of the offer (internal or external).
                 </p>
                 <Textarea
-                  id="couponDescription"
-                  name="couponDescription"
+                  id="description"
+                  name="description"
                   placeholder="Description (optional)"
-                  value={formData.couponDescription}
+                  value={formData.description}
                   onChange={handleInputChange}
                 />
               </div>
@@ -339,83 +353,72 @@ export default function CouponForm() {
                       <SelectValue placeholder="Select a type" />
                     </SelectTrigger>
                     <SelectContent>
-                      <SelectItem value="percentage">
+                      <SelectItem value={DiscountType.PERCENTAGE}>
                         Percentage discount
                       </SelectItem>
-                      <SelectItem value="fixed">Fixed cart discount</SelectItem>
+                      <SelectItem value={DiscountType.FIXED}>Fixed cart discount</SelectItem>
                     </SelectContent>
                   </Select>
-                  {formData.discountType === 'fixed' && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      This could provide a discount on a purchase. How much you
-                      want to remove from the purchase.
-                    </p>
-                  )}
-                  {formData.discountType === 'percentage' && (
-                    <p className="text-sm text-gray-500 mt-1">
-                      This could be % code off the purchase.
-                    </p>
-                  )}
                   {errors.discountType && (
-                    <p className="text-base text-red-600 mt-1">
+                    <p className="text-sm text-red-600 mt-1">
                       {errors.discountType}
                     </p>
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="couponAmount">Coupon amount</Label>
+                  <Label htmlFor="discountValue">Discount value</Label>
                   <div className="relative">
                     <Input
-                      id="couponAmount"
-                      name="couponAmount"
+                      id="discountValue"
+                      name="discountValue"
                       type="number"
-                      value={formData.couponAmount}
+                      value={formData.discountValue}
                       onChange={e => {
-                        if (formData.discountType === 'percentage') {
+                        if (formData.discountType === DiscountType.PERCENTAGE) {
                           const value = Math.max(
                             0,
                             Math.min(100, Number(e.target.value))
                           );
                           setFormData(prev => ({
                             ...prev,
-                            couponAmount: value.toString(),
+                            discountValue: value.toString(),
                           }));
                         } else {
                           handleInputChange(e);
                         }
                       }}
                       className={
-                        formData.discountType === 'percentage'
+                        formData.discountType === DiscountType.PERCENTAGE
                           ? 'pr-8'
                           : ''
                       }
                     />
-                    {formData.discountType === 'percentage' && (
+                    {formData.discountType === DiscountType.PERCENTAGE && (
                       <span className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-500">
                         %
                       </span>
                     )}
                   </div>
-                  {errors.couponAmount && (
-                    <p className="text-base text-red-600 mt-1">
-                      {errors.couponAmount}
+                  {errors.discountValue && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.discountValue}
                     </p>
                   )}
                 </div>
                 <div className="grid gap-2">
-                  <Label htmlFor="expiryDate">Coupon expiry date</Label>
+                  <Label htmlFor="expiresAt">Coupon expiry date</Label>
                   <Popover>
                     <PopoverTrigger asChild>
                       <Button
                         variant={'outline'}
                         className={cn(
                           'w-full justify-start text-left font-normal h-12',
-                          !formData.expiryDate && 'text-muted-foreground'
+                          !formData.expiresAt && 'text-muted-foreground'
                         )}
                       >
                         <CalendarIcon className="mr-2 h-4 w-4" />
-                        {formData.expiryDate ? (
-                          format(new Date(formData.expiryDate), 'PPP p')
+                        {formData.expiresAt ? (
+                          format(new Date(formData.expiresAt), 'PPP p')
                         ) : (
                           <span>Pick a date</span>
                         )}
@@ -425,76 +428,29 @@ export default function CouponForm() {
                       <Calendar
                         mode="single"
                         selected={
-                          formData.expiryDate
-                            ? new Date(formData.expiryDate)
+                          formData.expiresAt
+                            ? new Date(formData.expiresAt)
                             : undefined
                         }
                         onSelect={date => {
                           const newDate = date ? new Date(date) : new Date();
-                          const oldDate = formData.expiryDate
-                            ? new Date(formData.expiryDate)
+                          const oldDate = formData.expiresAt
+                            ? new Date(formData.expiresAt)
                             : new Date();
                           newDate.setHours(oldDate.getHours());
                           newDate.setMinutes(oldDate.getMinutes());
                           handleSelectChange(
-                            'expiryDate',
+                            'expiresAt',
                             newDate.toISOString()
                           );
                         }}
                         initialFocus
                       />
-                      <div className="p-2 border-t border-border">
-                        <div className="flex items-center justify-center space-x-2">
-                          <Input
-                            type="number"
-                            min="0"
-                            max="23"
-                            value={
-                              formData.expiryDate
-                                ? new Date(formData.expiryDate).getHours()
-                                : '00'
-                            }
-                            onChange={e => {
-                              const newDate = formData.expiryDate
-                                ? new Date(formData.expiryDate)
-                                : new Date();
-                              newDate.setHours(parseInt(e.target.value));
-                              handleSelectChange(
-                                'expiryDate',
-                                newDate.toISOString()
-                              );
-                            }}
-                            className="w-16"
-                          />
-                          <span>:</span>
-                          <Input
-                            type="number"
-                            min="0"
-                            max="59"
-                            value={
-                              formData.expiryDate
-                                ? new Date(formData.expiryDate).getMinutes()
-                                : '00'
-                            }
-                            onChange={e => {
-                              const newDate = formData.expiryDate
-                                ? new Date(formData.expiryDate)
-                                : new Date();
-                              newDate.setMinutes(parseInt(e.target.value));
-                              handleSelectChange(
-                                'expiryDate',
-                                newDate.toISOString()
-                              );
-                            }}
-                            className="w-16"
-                          />
-                        </div>
-                      </div>
                     </PopoverContent>
                   </Popover>
-                  {errors.expiryDate && (
-                    <p className="text-base text-red-600 mt-1">
-                      {errors.expiryDate}
+                  {errors.expiresAt && (
+                    <p className="text-sm text-red-600 mt-1">
+                      {errors.expiresAt}
                     </p>
                   )}
                 </div>
@@ -514,47 +470,17 @@ export default function CouponForm() {
               </p>
             </CardHeader>
             <CardContent className="space-y-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div className="grid gap-2">
-                  <Label htmlFor="minSpend">Minimum spend</Label>
-                  <p className="text-sm text-gray-500">
-                    The minimum amount that must be spent for the coupon to be
-                    valid.
-                  </p>
-                  <Input
-                    id="minSpend"
-                    name="minSpend"
-                    placeholder="No minimum"
-                    value={formData.minSpend}
-                    onChange={handleInputChange}
-                  />
-                </div>
-                <div className="grid gap-2">
-                  <Label htmlFor="maxSpend">Maximum spend</Label>
-                  <p className="text-sm text-gray-500">
-                    The maximum amount that can be spent for the coupon to be
-                    valid.
-                  </p>
-                  <Input
-                    id="maxSpend"
-                    name="maxSpend"
-                    placeholder="No maximum"
-                    value={formData.maxSpend}
-                    onChange={handleInputChange}
-                  />
-                </div>
-              </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6 items-start">
                 <div className="grid gap-2">
-                  <Label htmlFor="products" className="flex items-center">
-                    For Listings{' '}
+                  <Label htmlFor="businessId" className="flex items-center">
+                    Select Listing{' '}
                     <Tooltip>
                       <TooltipTrigger asChild>
                         <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
                       </TooltipTrigger>
                       <TooltipContent>
                         <p>
-                          Choose which listings this coupon can be applied to.
+                          Choose which listing this coupon is associated with.
                         </p>
                       </TooltipContent>
                     </Tooltip>
@@ -567,9 +493,9 @@ export default function CouponForm() {
                         aria-expanded={open}
                         className="w-full justify-between"
                       >
-                        {formData.businessIds.length > 0
-                          ? `${formData.businessIds.length} listing(s) selected`
-                          : 'Select listings...'}
+                        {formData.businessId
+                          ? listings?.data?.find((l: UserListing) => l.id === formData.businessId)?.businessName || 'Select listing...'
+                          : 'Select listing...'}
                         <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                       </Button>
                     </PopoverTrigger>
@@ -581,29 +507,23 @@ export default function CouponForm() {
                           {isLoadingListings ? (
                             <CommandItem>Loading...</CommandItem>
                           ) : (
-                          listings?.data?.map((listing: UserListing) => (
+                            listings?.data?.map((listing: UserListing) => (
                               <CommandItem
                                 key={listing.id}
                                 onSelect={() => {
-                                  const businessIds = formData.businessIds.includes(
-                                    listing.id
-                                  )
-                                    ? formData.businessIds.filter(
-                                        id => id !== listing.id
-                                      )
-                                    : [...formData.businessIds, listing.id];
-                                  setFormData({ ...formData, businessIds });
+                                  setFormData({ ...formData, businessId: listing.id });
+                                  setOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    formData.businessIds.includes(listing.id)
+                                    formData.businessId === listing.id
                                       ? 'opacity-100'
                                       : 'opacity-0'
                                   )}
                                 />
-                              {listing.businessName}
+                                {listing.businessName}
                               </CommandItem>
                             ))
                           )}
@@ -611,6 +531,9 @@ export default function CouponForm() {
                       </Command>
                     </PopoverContent>
                   </Popover>
+                  {errors.businessId && (
+                    <p className="text-sm text-red-600 mt-1">{errors.businessId}</p>
+                  )}
                 </div>
                 <div className="grid gap-2">
                   <Label
@@ -642,29 +565,6 @@ export default function CouponForm() {
                   </div>
                 </div>
               </div>
-              <div className="grid gap-2">
-                <Label htmlFor="allowedEmails" className="flex items-center">
-                  Allowed emails{' '}
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-4 w-4 ml-1 text-gray-400" />
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>
-                        A comma-separated list of email addresses that are
-                        allowed to use this coupon.
-                      </p>
-                    </TooltipContent>
-                  </Tooltip>
-                </Label>
-                <Input
-                  id="allowedEmails"
-                  name="allowedEmails"
-                  placeholder="No restrictions"
-                  value={formData.allowedEmails}
-                  onChange={handleInputChange}
-                />
-              </div>
             </CardContent>
           </Card>
 
@@ -681,30 +581,30 @@ export default function CouponForm() {
             </CardHeader>
             <CardContent className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerCoupon">
+                <Label htmlFor="usageLimit">
                   Usage limit per coupon
                 </Label>
                 <p className="text-sm text-gray-500">
                   The total number of times the coupon can be used.
                 </p>
                 <Input
-                  id="usageLimitPerCoupon"
-                  name="usageLimitPerCoupon"
+                  id="usageLimit"
+                  name="usageLimit"
                   placeholder="Unlimited usage"
-                  value={formData.usageLimitPerCoupon}
+                  value={formData.usageLimit}
                   onChange={handleInputChange}
                 />
               </div>
               <div className="grid gap-2">
-                <Label htmlFor="usageLimitPerUser">Usage limit per user</Label>
+                <Label htmlFor="perUserLimit">Usage limit per user</Label>
                 <p className="text-sm text-gray-500">
                   The number of times a single user can use the coupon.
                 </p>
                 <Input
-                  id="usageLimitPerUser"
-                  name="usageLimitPerUser"
+                  id="perUserLimit"
+                  name="perUserLimit"
                   placeholder="Unlimited usage"
-                  value={formData.usageLimitPerUser}
+                  value={formData.perUserLimit}
                   onChange={handleInputChange}
                 />
               </div>

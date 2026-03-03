@@ -290,9 +290,13 @@ export class ActivityTimerService {
   /**
    * Complete activity by KEY
    */
-  async completeTaskByKey(userId: string, key: string): Promise<void> {
+  async completeTaskByKey(
+    userId: string,
+    key: string,
+    isSystem = false,
+  ): Promise<void> {
     // Only allow manual completion for "OTHER" tasks as per requirement
-    if (key !== 'OTHER') {
+    if (!isSystem && key !== 'OTHER') {
       throw new BadRequestException(
         'This task type is handled automatically by the system and cannot be marked manually.',
       );

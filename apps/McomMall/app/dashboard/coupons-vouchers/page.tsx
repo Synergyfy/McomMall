@@ -68,15 +68,19 @@ import {
     Download,
     Maximize,
     Globe,
+    Search,
 } from 'lucide-react';
 import QRCode from "react-qr-code";
 import { Html5QrcodeScanner } from "html5-qrcode";
 import { toast } from 'sonner';
 import { toPng } from 'html-to-image';
+import { HistoryCoupon, HistoryVoucher } from '@/app/dashboard/component/HistoryMarketingCards';
 import { useGetMyVouchers, useTransferMoney, useGiveCashback, usePurchaseVoucher, useGetBusinessStats, useGetOwnerRewardDefinitions, useGetCustomerStats, useGetPublicRewardDefinitions, useSpendVoucher } from '@/service/money-engine/hook';
 import { useCreateStripeIntent, useCreatePaypalOrder } from '@/service/payment/hook';
 import { useGetUserProfile } from '@/service/user/hook';
+import { useGetAllCoupons, useSaveCoupon, useGetSavedCoupons, useGetCoupons } from '@/service/coupons/hook';
 import { UserVoucherResponseDto } from '@/service/money-engine/types';
+import { DiscountType, Coupon } from '@/service/coupons/types';
 
 import { StripeCheckoutForm } from '@/components/StripeCheckoutForm';
 import { PayPalCheckoutButton } from '@/components/PayPalCheckoutButton';
@@ -147,6 +151,7 @@ export default function CouponsVouchersPage() {
     const { userRole } = useSelector((state: RootState) => state.auth);
     const [cashbackAmount, setCashbackAmount] = useState('');
     const [selectedUserVoucher, setSelectedUserVoucher] = useState('');
+    const [historyPage, setHistoryPage] = useState(1);
     const [isCashbackModalOpen, setIsCashbackModalOpen] = useState(false);
     const [isTopUpModalOpen, setIsTopUpModalOpen] = useState(false);
     const [isTransferModalOpen, setIsTransferModalOpen] = useState(false);
@@ -156,7 +161,17 @@ export default function CouponsVouchersPage() {
     const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
     const [selectedVoucherForDetails, setSelectedVoucherForDetails] = useState<VoucherDisplayData | null>(null);
 
-    const [shopIdInput, setShopIdInput] = useState('');
+    const { coupons: publicCoupons, isLoading: isPublicCouponsLoading } = useGetAllCoupons(1, 20);
+    const saveCoupon = useSaveCoupon();
+
+    const handleSaveCoupon = async (code: string) => {
+        try {
+            await saveCoupon(code);
+            toast.success('Coupon saved to your digital wallet!');
+        } catch (error) {
+            toast.error('Failed to save coupon');
+        }
+    };
     const [isCustomerSpendModalOpen, setIsCustomerSpendModalOpen] = useState(false);
 
     // Scanner State
@@ -178,9 +193,12 @@ export default function CouponsVouchersPage() {
     const transferMutation = useTransferMoney();
     const cashbackMutation = useGiveCashback();
     const purchaseMutation = usePurchaseVoucher();
+    const { coupons: myCoupons, isLoading: isMyCouponsLoading } = useGetCoupons(historyPage, 10);
+
     const createStripeIntentMutation = useCreateStripeIntent();
     const createPaypalOrderMutation = useCreatePaypalOrder();
     const spendMutation = useSpendVoucher();
+    const { savedCoupons, isLoading: isSavedCouponsLoading } = useGetSavedCoupons();
 
     // Form states
     const [topUpAmount, setTopUpAmount] = useState('50');
@@ -194,6 +212,7 @@ export default function CouponsVouchersPage() {
     const [stripeClientSecret, setStripeClientSecret] = useState<string | null>(null);
     const [paypalOrderId, setPaypalOrderId] = useState<string | null>(null);
     const [copiedId, setCopiedId] = useState<string | null>(null);
+    const [shopIdInput, setShopIdInput] = useState('');
 
     const handleCopy = (text: string) => {
         navigator.clipboard.writeText(text);
@@ -472,6 +491,7 @@ export default function CouponsVouchersPage() {
                     <div className="flex items-center justify-between flex-wrap gap-4">
                         <TabsList className="bg-white/50 backdrop-blur-md p-1 rounded-xl shadow-inner border border-white/20">
                             <TabsTrigger value="overview" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">Overview</TabsTrigger>
+                            <TabsTrigger value="marketplace" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">Marketplace</TabsTrigger>
                             <TabsTrigger value="transactions" className="rounded-lg data-[state=active]:bg-orange-600 data-[state=active]:text-white">History</TabsTrigger>
                         </TabsList>
 
@@ -578,39 +598,129 @@ export default function CouponsVouchersPage() {
                                         </div>
                                     ) : (<div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                                         {myVouchers.map((cv) => (
-                                            <CouponTicketSplit
+                                            <HistoryVoucher
                                                 key={cv.id}
-                                                title={cv.name}
-                                                subtitle={cv.description || 'McomMall Voucher'}
-                                                valueLabel={`£${typeof cv.balance === 'number' ? cv.balance.toFixed(2) : cv.balance}`}
-                                                validUntil="Active"
-                                                barcodeId={cv.id}
-                                                showStars
-                                            >
-                                                <div className="grid grid-cols-2 gap-2">
-                                                    <Button
-                                                        size="sm"
-                                                        className="h-9 bg-[#2563eb] hover:bg-[#1d4ed8] text-white rounded-xl shadow-md transition-all font-bold text-xs"
-                                                        onClick={() => { setSelectedVoucherForQR(cv); setIsQRModalOpen(true); }}
-                                                    >
-                                                        <QrCode className="w-3.5 h-3.5 mr-1" /> Pay
-                                                    </Button>
-                                                    <Button
-                                                        size="sm"
-                                                        variant="outline"
-                                                        className="h-9 border-blue-200 hover:bg-blue-50 hover:border-[#2563eb] hover:text-[#2563eb] text-slate-600 rounded-xl font-bold text-xs"
-                                                        onClick={() => { setSelectedVoucherForDetails(cv); setIsDetailsModalOpen(true); }}
-                                                    >
-                                                        Details
-                                                    </Button>
-                                                </div>
-                                            </CouponTicketSplit>
+                                                voucher={{
+                                                    id: cv.id,
+                                                    code: cv.id, // Vouchers here use the ID as code for now
+                                                    balance: cv.balance,
+                                                    status: cv.status.toLowerCase(),
+                                                    expiresAt: null,
+                                                    voucherProduct: {
+                                                        name: cv.name,
+                                                        description: cv.description || ''
+                                                    }
+                                                } as any}
+                                                onShare={(id) => handleCopy(id)}
+                                            />
                                         ))}
                                     </div>
                                     )}
                                 </CardContent>
                             </Card>
-                        </div>                    </TabsContent>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="transactions" className="space-y-6">
+                        <div className="w-full">
+                            <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+                                <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+                                    <CardTitle>{isBusiness ? 'My Created Coupons' : 'Saved Coupons History'}</CardTitle>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    {isBusiness ? (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {isMyCouponsLoading ? (
+                                                <div className="col-span-full py-20 text-center font-bold text-gray-400">Loading created coupons...</div>
+                                            ) : (
+                                                myCoupons?.map((coupon) => (
+                                                    <HistoryCoupon
+                                                        key={coupon.id}
+                                                        coupon={coupon as any}
+                                                        onShare={(id) => handleCopy(id)}
+                                                    />
+                                                ))
+                                            )}
+                                            {(!myCoupons || myCoupons.length === 0) && !isMyCouponsLoading && (
+                                                <div className="col-span-full py-20 text-center text-gray-400 font-bold">You haven't created any coupons yet.</div>
+                                            )}
+                                        </div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+                                            {isSavedCouponsLoading ? (
+                                                <div className="col-span-full py-20 text-center font-bold text-gray-400">Loading saved coupons...</div>
+                                            ) : (
+                                                savedCoupons?.map((saved) => (
+                                                    <HistoryCoupon
+                                                        key={saved.id}
+                                                        coupon={saved.coupon as any}
+                                                        onShare={(id) => handleCopy(id)}
+                                                        isShared={copiedId === saved.coupon.id}
+                                                    />
+                                                ))
+                                            )}
+                                            {(!savedCoupons || savedCoupons.length === 0) && !isSavedCouponsLoading && (
+                                                <div className="col-span-full py-24 bg-gray-50/30 rounded-[2.5rem] border border-dashed border-gray-200">
+                                                    <div className="text-center">
+                                                        <Search className="mx-auto text-gray-200 mb-6" size={64} />
+                                                        <h3 className="text-xl font-black text-gray-900">No History Found</h3>
+                                                        <p className="text-gray-500 font-bold mt-2">Browse the marketplace to find and save coupons!</p>
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
+
+                    <TabsContent value="marketplace" className="space-y-6">
+                        <div className="w-full">
+                            <Card className="border-none shadow-lg bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden">
+                                <CardHeader className="border-b border-gray-100 bg-gray-50/50">
+                                    <div className="flex items-center justify-between">
+                                        <CardTitle>Marketplace Discovery</CardTitle>
+                                        <span className="text-[10px] font-black text-orange-600 uppercase tracking-widest">Coupons for you</span>
+                                    </div>
+                                </CardHeader>
+                                <CardContent className="p-6">
+                                    {isPublicCouponsLoading ? (
+                                        <div className="py-20 text-center font-bold text-gray-400">Loading coupons...</div>
+                                    ) : (
+                                        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                            {publicCoupons?.map((coupon) => (
+                                                <CouponTicketSplit
+                                                    key={coupon.id}
+                                                    title={coupon.title}
+                                                    subtitle={coupon.business?.businessName || 'McomMall Partner'}
+                                                    valueLabel={coupon.discountType === DiscountType.PERCENTAGE ? `${coupon.discountValue}% OFF` : `£${coupon.discountValue}`}
+                                                    validUntil={coupon.expiresAt ? new Date(coupon.expiresAt).toLocaleDateString() : 'Active'}
+                                                    barcodeId={coupon.code}
+                                                    showStars
+                                                >
+                                                    <div className="w-full">
+                                                        <Button
+                                                            size="sm"
+                                                            className="w-full h-10 bg-orange-600 hover:bg-orange-700 text-white rounded-xl shadow-md transition-all font-bold text-xs flex items-center justify-center gap-2"
+                                                            onClick={() => handleSaveCoupon(coupon.code)}
+                                                        >
+                                                            <PlusCircle className="w-4 h-4" /> Save Coupon
+                                                        </Button>
+                                                    </div>
+                                                </CouponTicketSplit>
+                                            ))}
+                                            {(!publicCoupons || publicCoupons.length === 0) && (
+                                                <div className="col-span-full py-20 text-center text-gray-400 font-bold">
+                                                    No public coupons available at the moment.
+                                                </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </CardContent>
+                            </Card>
+                        </div>
+                    </TabsContent>
                 </Tabs>
 
                 {/* MODALS */}

@@ -14,6 +14,7 @@ export enum WalletTransactionType {
   SPEND = 'spend',
   FUNDING = 'funding',
   ADJUSTMENT = 'adjustment',
+  CAMPAIGN_CASHBACK_CONTRIBUTION = 'campaign_cashback_contribution',
 }
 
 @Entity('wallet_transactions')

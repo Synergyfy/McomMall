@@ -130,6 +130,8 @@ export interface Service extends AbstractBaseEntity {
   bookingFee: string | null;
   bundledServices: BundledService[];
   configurableAddons: ConfigurableAddon[];
+  averageRating?: number;
+  reviewCount?: number;
   deletedAt: string | null;
 }
 

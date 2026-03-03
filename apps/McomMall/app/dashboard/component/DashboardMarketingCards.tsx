@@ -7,6 +7,7 @@ import { Gift, Ticket, Sparkles, Tag, Zap, Timer, ShieldCheck, Pencil, Trash2, C
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { CURRENCY } from '@/lib/utils';
+import { DiscountType } from '@/service/coupons/types';
 
 // --- Gift Card Dashboard Component ---
 interface GiftCardProps {
@@ -299,17 +300,21 @@ export const DashboardVoucher: React.FC<VoucherProps> = ({ product, onEdit, onDe
 interface CouponProps {
     coupon: {
         id: string;
-        couponCode?: string;
-        name?: string;
-        couponAmount: string | number;
+        code?: string;
+        title?: string;
+        discountValue: string | number;
         discountType: string;
-        isActive?: boolean;
+        status?: string;
     };
     onEdit: (id: string) => void;
     onDelete: (id: string) => void;
 }
 
 export const DashboardCoupon: React.FC<CouponProps> = ({ coupon, onEdit, onDelete }) => {
+    const displayValue = coupon.discountType === DiscountType.PERCENTAGE
+        ? `${coupon.discountValue}% OFF`
+        : `${CURRENCY}${Number(coupon.discountValue).toFixed(2)}`;
+
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.95 }}
@@ -324,7 +329,9 @@ export const DashboardCoupon: React.FC<CouponProps> = ({ coupon, onEdit, onDelet
                     <div className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-xl border border-white/20">
                         <div className="flex items-center gap-2">
                             <Zap className="text-yellow-400 fill-yellow-400" size={14} />
-                            <span className="text-[9px] font-black text-white uppercase tracking-widest">Dashboard Preview</span>
+                            <span className="text-[9px] font-black text-white uppercase tracking-widest">
+                                {coupon.status || 'Active'}
+                            </span>
                         </div>
                     </div>
                     <div className="flex items-center gap-1.5 text-white/60 text-[9px] font-black uppercase tracking-tighter">
@@ -334,9 +341,11 @@ export const DashboardCoupon: React.FC<CouponProps> = ({ coupon, onEdit, onDelet
 
                 <div className="text-center py-2">
                     <h3 className="text-2xl font-black text-white leading-tight">
-                        {coupon.couponCode || coupon.name || 'Flash Coupon'}
+                        {coupon.code || coupon.title || 'Flash Coupon'}
                     </h3>
-                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">Value: {CURRENCY}{coupon.couponAmount}</p>
+                    <p className="text-white/60 text-[10px] font-bold uppercase tracking-[0.2em] mt-1">
+                        Value: {displayValue}
+                    </p>
                 </div>
 
                 <div className="flex items-center justify-between mt-auto">

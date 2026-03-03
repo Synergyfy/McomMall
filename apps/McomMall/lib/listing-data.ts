@@ -99,6 +99,8 @@ export interface PromotionalItem {
   items_left: number;
   hotspots?: Hotspot[];
   link?: string;
+  averageRating?: number;
+  reviewCount?: number;
   pricingModel?: 'fixed' | 'perHour' | 'perUnit';
   unitName?: string;
   bonusThreshold?: number;
