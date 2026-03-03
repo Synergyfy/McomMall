@@ -1,4 +1,4 @@
-import { Controller, Get, HttpStatus, Param, Query, Res } from '@nestjs/common';
+import { Controller, Get, HttpException, HttpStatus, Param, Query, Res } from '@nestjs/common';
 import { GooglePlacesService } from './google-places.service';
 import { Public } from '../../common/decorators/public.decorator';
 import {
@@ -131,7 +131,10 @@ export class ListingsGoogleController {
 
       photoResponse.data.pipe(res);
     } catch (error) {
-      const status = error?.response?.status ?? 500;
+      const status = error instanceof HttpException
+        ? error.getStatus()
+        : (error?.getStatus?.() || error?.status || error?.response?.status || 500);
+
       res.status(Number(status)).send({
         message: 'Failed to load image.',
         error: error?.message || 'Unknown error',

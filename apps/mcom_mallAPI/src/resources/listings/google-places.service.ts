@@ -67,7 +67,7 @@ export class GooglePlacesService {
     const apiKey = this.configService.get<string>('GOOGLE_API_KEY');
 
     if (!apiKey) {
-      throw new Error('Server configuration error: Missing Google API Key.');
+      throw new BadRequestException('Server configuration error: Missing Google API Key.');
     }
 
     const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${payload.photo_reference}&key=${apiKey}`;
