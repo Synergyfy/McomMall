@@ -142,8 +142,8 @@ describe('Shipping (e2e)', () => {
   });
 
   afterAll(async () => {
-    await dataSource.destroy();
-    await app.close();
+    await dataSource?.destroy();
+    await app?.close();
   });
 
   it('/order/checkout (POST) - should initiate checkout with Royal Mail shipping', async () => {
