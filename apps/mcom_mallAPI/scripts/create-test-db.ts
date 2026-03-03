@@ -1,4 +1,3 @@
-
 import { Client } from 'pg';
 import * as dotenv from 'dotenv';
 import * as path from 'path';
@@ -26,17 +25,20 @@ async function createTestDb() {
   try {
     await client.connect();
 
-    const res = await client.query(
-      `SELECT datname FROM pg_catalog.pg_database WHERE datname = '${dbName}'`
-    );
+    // Kill all connections to the test database
+    await client.query(`
+      SELECT pg_terminate_backend(pg_stat_activity.pid)
+      FROM pg_stat_activity
+      WHERE pg_stat_activity.datname = '${dbName}'
+        AND pid <> pg_backend_pid();
+    `);
 
-    if (res.rowCount === 0) {
-      console.log(`Database "${dbName}" does not exist. Creating...`);
-      await client.query(`CREATE DATABASE "${dbName}"`);
-      console.log(`Database "${dbName}" created successfully.`);
-    } else {
-      console.log(`Database "${dbName}" already exists.`);
-    }
+    console.log(`Dropping database "${dbName}"...`);
+    await client.query(`DROP DATABASE IF EXISTS "${dbName}"`);
+    
+    console.log(`Creating database "${dbName}"...`);
+    await client.query(`CREATE DATABASE "${dbName}"`);
+    console.log(`Database "${dbName}" created successfully.`);
   } catch (err) {
     console.error('Error creating test database:', err);
     process.exit(1);

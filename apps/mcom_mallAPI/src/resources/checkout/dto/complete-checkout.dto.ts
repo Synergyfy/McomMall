@@ -31,4 +31,11 @@ export class CompleteCheckoutDto {
   @IsString()
   @IsNotEmpty()
   transactionId?: string;
+
+  @ApiPropertyOptional({
+    description: 'The ID of the User Campaign Cashback to use for payment.',
+  })
+  @IsUUID()
+  @IsOptional()
+  campaignCashbackId?: string;
 }
