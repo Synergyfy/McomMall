@@ -2,6 +2,7 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
@@ -12,6 +13,7 @@ import { Lock, Unlock, Globe, Info, Layers, Search, X, Check, ChevronDown, Chevr
 import { useGetAdminUsers, useGetAdminBusinesses } from '@/service/admin/hook';
 import { useGetTiers } from '@/service/tiers/hook';
 import { useCreateCampaignCashback } from '@/service/campaign-cashback/hook';
+import { useCreateSeason, useGetSeasons } from '@/service/seasons/hook';
 import {
     CampaignCategory,
     CampaignTargetType as BackendTargetType,
@@ -144,6 +146,8 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
     };
 
     const { mutate: createCampaign, isPending } = useCreateCampaignCashback();
+    const { mutateAsync: createSeasonAsync } = useCreateSeason();
+    const { data: liveSeasons = [] } = useGetSeasons();
 
     const parseChannels = (str: string): BackendChannel[] => {
         const list = str.split(',').map(s => s.trim().toUpperCase());
@@ -157,6 +161,27 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
 
+        let finalSeasonId = season?.id;
+
+        // Auto-provision hardcoded seasons if they don't exist in live DB
+        // The backend returns "Season not found" because these templates aren't in the DB yet.
+        if (season && !liveSeasons.some(ls => ls.id === season.id)) {
+            try {
+                toast.loading('Provisioning season template...', { id: 'season-provisioning' });
+                const newSeason = await createSeasonAsync({
+                    name: season.name,
+                    startDate: season.startDate,
+                    endDate: season.endDate,
+                    description: `Auto-provisioned template for ${season.name}`
+                });
+                finalSeasonId = newSeason.id;
+                toast.success('Season activated for this campaign!', { id: 'season-provisioning' });
+            } catch (err) {
+                toast.error('Could not activate season template. Please try a Regular campaign.', { id: 'season-provisioning' });
+                return;
+            }
+        }
+
         // Target type mapping
         let backendTargetType = BackendTargetType.CUSTOMER;
         if (targetType === CampaignTargetType.BUSINESS) {
@@ -164,15 +189,13 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
         } else if (targetType === CampaignTargetType.CONSUMERS) {
             backendTargetType = selectAll ? BackendTargetType.CUSTOMER : BackendTargetType.SPECIFIC_USERS;
         } else if (targetType === CampaignTargetType.SUBSCRIPTION || targetType === CampaignTargetType.LOCATION) {
-            // Note: Currently backend targetType doesn't support these separately.
-            // For now, mapping to CUSTOMER as fallback.
             backendTargetType = BackendTargetType.CUSTOMER;
         }
 
         const payload: CreateCampaignCashbackDto = {
             name,
             type: season ? CampaignCategory.SEASONAL : CampaignCategory.REGULAR,
-            seasonId: season?.id,
+            seasonId: finalSeasonId,
             startDate: season?.startDate || new Date().toISOString(),
             endDate: season?.endDate || new Date(expiryDate).toISOString(),
             targetType: backendTargetType,
@@ -187,21 +210,19 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
             selectAll,
             targetIds: !selectAll ? selectedIds : undefined,
 
-            // Value 1
+            // Values
             value1Title: titles.v1,
             value1Description: descriptions.v1 || 'Benefit funded by 247GBS',
             value1UsageText: usages.v1 || 'Redeemable at participating merchants',
             value1Channels: parseChannels(channels.v1),
             value1UsageTypes: [CampaignUsageType.ANYWHERE],
 
-            // Value 2
             value2Title: titles.v2,
             value2Description: descriptions.v2 || 'Internal system reward',
             value2UsageText: usages.v2 || 'Spend across online services',
             value2Channels: parseChannels(channels.v2),
             value2UsageTypes: [CampaignUsageType.ANYWHERE],
 
-            // Value 3
             value3Title: titles.v3,
             value3Description: descriptions.v3 || 'User funded balance',
             value3UsageText: usages.v3 || 'Use for any platform transaction',
