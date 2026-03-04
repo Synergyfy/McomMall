@@ -57,7 +57,7 @@ export class CampaignCashbackService {
     private walletService: WalletService,
     private paymentProviderService: PaymentProviderService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   async create(
     createDto: CreateCampaignCashbackDto,
@@ -163,8 +163,8 @@ export class CampaignCashbackService {
       contributionPaid: false,
       activationTimerDate: campaign.activationTimerDays
         ? new Date(
-            Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
-          )
+          Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
+        )
         : null,
     });
 
@@ -487,5 +487,12 @@ export class CampaignCashbackService {
     const campaign = await this.campaignRepository.findOne({ where: { id } });
     if (!campaign) throw new NotFoundException('Campaign not found');
     await this.campaignRepository.remove(campaign);
+  }
+
+  async findAllTemplates(): Promise<CampaignCashback[]> {
+    return this.campaignRepository.find({
+      relations: ['season'],
+      order: { created_at: 'DESC' },
+    });
   }
 }

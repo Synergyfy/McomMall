@@ -20,8 +20,8 @@ import { MarketplaceService } from './marketplace.service';
 import {
   CreateBannerDto,
   UpdateBannerDto,
-  CreateCategoryDto,
-  UpdateCategoryDto,
+  CreateMarketplaceCategoryDto,
+  UpdateMarketplaceCategoryDto,
   UpdateSectionDto,
   MarketplacePublicViewDto,
 } from './dto/dtos';
@@ -43,7 +43,7 @@ import { Public } from 'src/common/decorators/public.decorator';
 @ApiTags('Marketplace Page CMS')
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) {}
+  constructor(private readonly marketplaceService: MarketplaceService) { }
 
   // ===========================================================================
   // PUBLIC ENDPOINTS
@@ -129,9 +129,9 @@ export class MarketplaceController {
     description:
       'Add a custom category to the left sidebar. Can link to a real Taxonomy ID.',
   })
-  @ApiBody({ type: CreateCategoryDto })
+  @ApiBody({ type: CreateMarketplaceCategoryDto })
   @ApiResponse({ status: 201, type: MarketplaceCategory })
-  async createCategory(@Body() dto: CreateCategoryDto) {
+  async createCategory(@Body() dto: CreateMarketplaceCategoryDto) {
     return this.marketplaceService.createCategory(dto);
   }
 
@@ -151,7 +151,7 @@ export class MarketplaceController {
   @ApiOperation({ summary: 'Update Category' })
   async updateCategory(
     @Param('id') id: string,
-    @Body() dto: UpdateCategoryDto,
+    @Body() dto: UpdateMarketplaceCategoryDto,
   ) {
     return this.marketplaceService.updateCategory(id, dto);
   }

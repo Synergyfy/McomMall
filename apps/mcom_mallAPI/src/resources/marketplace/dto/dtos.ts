@@ -56,7 +56,7 @@ export class CreateBannerDto {
   isActive?: boolean;
 }
 
-export class UpdateBannerDto extends PartialType(CreateBannerDto) {}
+export class UpdateBannerDto extends PartialType(CreateBannerDto) { }
 
 // --- SECTION DTOs ---
 
@@ -86,7 +86,7 @@ export class UpdateSectionDto {
 
 // --- CATEGORY DTOs ---
 
-export class CreateCategoryDto {
+export class CreateMarketplaceCategoryDto {
   @ApiProperty({ description: 'Display name' })
   @IsString()
   name: string;
@@ -114,7 +114,9 @@ export class CreateCategoryDto {
   isVisible?: boolean;
 }
 
-export class UpdateCategoryDto extends PartialType(CreateCategoryDto) {}
+export class UpdateMarketplaceCategoryDto extends PartialType(
+  CreateMarketplaceCategoryDto,
+) { }
 
 // --- PUBLIC VIEW RESPONSE ---
 

@@ -32,7 +32,7 @@ import { ContributeDto } from './dto/contribute.dto';
 @Controller('campaign-cashback')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignCashbackController {
-  constructor(private readonly service: CampaignCashbackService) {}
+  constructor(private readonly service: CampaignCashbackService) { }
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -105,6 +105,18 @@ export class CampaignCashbackController {
     @Query('targetType') targetType?: CampaignTargetType,
   ) {
     return this.service.findAllForUser(user, targetType);
+  }
+
+  @Get('templates/all')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get all campaign templates (Admin Only)',
+    description:
+      'Returns the full list of all campaign templates in the system, including those not yet started or already expired.',
+  })
+  @ApiResponse({ status: 200, description: 'List of all campaign templates' })
+  findAllTemplates() {
+    return this.service.findAllTemplates();
   }
 
   @Get(':id')
