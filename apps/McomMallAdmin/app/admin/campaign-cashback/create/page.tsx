@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import CampaignForm from './CampaignForm';
 import { CampaignTypeModal } from './CampaignTypeModal';
 import { Season } from '@/service/seasons/api';
@@ -8,6 +9,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Layers, CalendarRange } from 'lucide-react';
 
 export default function CreateCampaignCashbackPage() {
+    const router = useRouter();
     // null = modal not yet resolved, 'regular' | season object = chosen
     const [campaignCategory, setCampaignCategory] = useState<null | 'regular' | Season>(null);
 
@@ -19,6 +21,7 @@ export default function CreateCampaignCashbackPage() {
             {/* Type selection modal */}
             <CampaignTypeModal
                 isOpen={modalOpen}
+                onClose={() => router.push('/admin/campaign-cashback')}
                 onSelectRegular={() => setCampaignCategory('regular')}
                 onSelectSeasonal={(s) => setCampaignCategory(s)}
             />

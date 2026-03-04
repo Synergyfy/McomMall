@@ -1,6 +1,6 @@
 export enum CampaignTargetType {
-    B2C = 'B2C',
-    B2B = 'B2B',
+    CUSTOMER = 'CUSTOMER',
+    BUSINESS = 'BUSINESS',
 }
 
 export enum CampaignDisplayType {
