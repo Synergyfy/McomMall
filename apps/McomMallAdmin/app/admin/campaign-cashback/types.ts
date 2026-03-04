@@ -1,6 +1,8 @@
 export enum CampaignTargetType {
     CONSUMERS = 'CONSUMERS',
     BUSINESS = 'BUSINESS',
+    SUBSCRIPTION = 'SUBSCRIPTION',
+    LOCATION = 'LOCATION',
 }
 
 export enum CampaignDisplayType {
