@@ -39,6 +39,9 @@ import {
   PaymentMethod,
 } from '../order/entities/order-payment.entity';
 import { UserRole } from '../../common/role.enum';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { PageDto } from '../../common/dto/page.dto';
 
 @Injectable()
 export class CampaignCashbackService {
@@ -489,10 +492,25 @@ export class CampaignCashbackService {
     await this.campaignRepository.remove(campaign);
   }
 
-  async findAllTemplates(): Promise<CampaignCashback[]> {
-    return this.campaignRepository.find({
+  async findAllTemplates(
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<CampaignCashback>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.campaignRepository.findAndCount({
       relations: ['season'],
+      skip,
+      take: limit,
       order: { created_at: 'DESC' },
     });
+
+    const pageMetaDto = new PageMetaDto({
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination,
+    });
+
+    return new PageDto(items, pageMetaDto);
   }
 }
