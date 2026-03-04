@@ -5,41 +5,32 @@ import { X, CalendarRange, Ticket, Sparkles, Plus, ChevronDown } from 'lucide-re
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { useGetSeasons, useCreateSeason } from '@/service/seasons/hook';
 import { Season } from '@/service/seasons/api';
 import { cn } from '@/lib/utils';
+
+const HARDCODED_SEASONS: Season[] = [
+    { id: 'spring-2026', name: 'Spring Season (UK)', startDate: '2026-03-01', endDate: '2026-05-31' } as Season,
+    { id: 'easter-2026', name: 'Easter Sale Period', startDate: '2026-03-25', endDate: '2026-04-12' } as Season,
+    { id: 'summer-2026', name: 'Summer Season (UK)', startDate: '2026-06-01', endDate: '2026-08-31' } as Season,
+    { id: 'autumn-2026', name: 'Autumn Season (UK)', startDate: '2026-09-01', endDate: '2026-11-30' } as Season,
+    { id: 'black-friday-2026', name: 'Black Friday Week', startDate: '2026-11-23', endDate: '2026-11-30' } as Season,
+    { id: 'winter-2026', name: 'Winter Season (UK)', startDate: '2026-12-01', endDate: '2027-02-28' } as Season,
+    { id: 'boxing-day-jan-2026', name: 'Boxing Day & January Sales', startDate: '2026-12-26', endDate: '2027-01-31' } as Season,
+];
 
 export type CampaignCategory = 'regular' | 'seasonal';
 
 interface Props {
     isOpen: boolean;
+    onClose: () => void;
     onSelectRegular: () => void;
     onSelectSeasonal: (season: Season) => void;
 }
 
-export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onSelectRegular, onSelectSeasonal }) => {
+export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onClose, onSelectRegular, onSelectSeasonal }) => {
     const [step, setStep] = useState<'type' | 'season-pick'>('type');
-    const [showNewSeasonForm, setShowNewSeasonForm] = useState(false);
-
-    // New season form state
-    const [newSeasonName, setNewSeasonName] = useState('');
-    const [newSeasonStart, setNewSeasonStart] = useState('');
-    const [newSeasonEnd, setNewSeasonEnd] = useState('');
-
-    const { data: seasons = [], isLoading: seasonsLoading } = useGetSeasons();
-    const { mutateAsync: createSeason, isPending: creating } = useCreateSeason();
 
     if (!isOpen) return null;
-
-    const handleCreateSeason = async () => {
-        if (!newSeasonName || !newSeasonStart || !newSeasonEnd) return;
-        const season = await createSeason({
-            name: newSeasonName,
-            startDate: newSeasonStart,
-            endDate: newSeasonEnd,
-        });
-        onSelectSeasonal(season);
-    };
 
     const formatDate = (d: string) =>
         new Date(d).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
@@ -49,11 +40,20 @@ export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onSelectRegular, on
             <div className="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-200">
 
                 {/* Header */}
-                <div className="px-6 py-5 border-b bg-gradient-to-r from-slate-800 to-slate-900 text-white">
-                    <h2 className="text-lg font-bold">Choose Campaign Type</h2>
-                    <p className="text-sm text-slate-300 mt-0.5">
-                        {step === 'type' ? 'Select how this campaign will run' : 'Pick or create a season for this campaign'}
-                    </p>
+                <div className="px-6 py-5 border-b bg-gradient-to-r from-slate-800 to-slate-900 text-white flex justify-between items-center">
+                    <div>
+                        <h2 className="text-lg font-bold">Choose Campaign Type</h2>
+                        <p className="text-sm text-slate-300 mt-0.5">
+                            {step === 'type' ? 'Select how this campaign will run' : 'Pick or create a season for this campaign'}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className="p-2 hover:bg-white/10 rounded-full transition-colors"
+                        aria-label="Close modal"
+                    >
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
                 {/* Step 1 — Type selection */}
@@ -92,100 +92,29 @@ export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onSelectRegular, on
                 {/* Step 2 — Season pick */}
                 {step === 'season-pick' && (
                     <div className="p-6 space-y-4">
-                        {/* Existing seasons */}
-                        {seasonsLoading ? (
-                            <div className="text-center py-8 text-slate-400 text-sm">Loading seasons...</div>
-                        ) : seasons.length === 0 && !showNewSeasonForm ? (
-                            <div className="text-center py-6 text-slate-500 text-sm">
-                                No seasons defined yet.
-                            </div>
-                        ) : (
-                            <div className="space-y-2 max-h-60 overflow-y-auto pr-1">
-                                {seasons.map(season => (
-                                    <button
-                                        key={season.id}
-                                        onClick={() => onSelectSeasonal(season)}
-                                        className="w-full flex items-center justify-between border rounded-xl px-4 py-3 hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
-                                    >
-                                        <div>
-                                            <div className="font-semibold text-slate-800 flex items-center gap-2">
-                                                <Sparkles className="w-4 h-4 text-orange-500" />
-                                                {season.name}
-                                            </div>
-                                            <div className="text-xs text-slate-500 mt-0.5">
-                                                {formatDate(season.startDate)} → {formatDate(season.endDate)}
-                                            </div>
+                        <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
+                            {HARDCODED_SEASONS.map(season => (
+                                <button
+                                    key={season.id}
+                                    onClick={() => onSelectSeasonal(season)}
+                                    className="w-full flex items-center justify-between border rounded-xl px-4 py-3 hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
+                                >
+                                    <div>
+                                        <div className="font-semibold text-slate-800 flex items-center gap-2">
+                                            <Sparkles className="w-4 h-4 text-orange-500" />
+                                            {season.name}
                                         </div>
-                                        <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-orange-500 transition-colors" />
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-
-                        {/* Create new season */}
-                        {!showNewSeasonForm ? (
-                            <button
-                                onClick={() => setShowNewSeasonForm(true)}
-                                className="w-full flex items-center justify-center gap-2 border-2 border-dashed rounded-xl py-3 text-sm font-medium text-slate-500 hover:border-orange-400 hover:text-orange-600 transition-all"
-                            >
-                                <Plus className="w-4 h-4" /> Create New Season
-                            </button>
-                        ) : (
-                            <div className="border rounded-xl p-4 space-y-3 bg-orange-50/40">
-                                <h4 className="font-bold text-sm text-slate-700">New Season</h4>
-                                <div>
-                                    <Label className="text-xs font-semibold">Season Name</Label>
-                                    <Input
-                                        placeholder="e.g., Summer 2026"
-                                        value={newSeasonName}
-                                        onChange={e => setNewSeasonName(e.target.value)}
-                                        className="mt-1 h-9"
-                                    />
-                                </div>
-                                <div className="grid grid-cols-2 gap-2">
-                                    <div>
-                                        <Label className="text-xs font-semibold">Start Date</Label>
-                                        <Input
-                                            type="date"
-                                            value={newSeasonStart}
-                                            onChange={e => setNewSeasonStart(e.target.value)}
-                                            className="mt-1 h-9"
-                                        />
+                                        <div className="text-xs text-slate-500 mt-0.5">
+                                            {formatDate(season.startDate)} → {formatDate(season.endDate)}
+                                        </div>
                                     </div>
-                                    <div>
-                                        <Label className="text-xs font-semibold">End Date</Label>
-                                        <Input
-                                            type="date"
-                                            value={newSeasonEnd}
-                                            min={newSeasonStart}
-                                            onChange={e => setNewSeasonEnd(e.target.value)}
-                                            className="mt-1 h-9"
-                                        />
-                                    </div>
-                                </div>
-                                <div className="flex gap-2 pt-1">
-                                    <Button
-                                        type="button"
-                                        onClick={handleCreateSeason}
-                                        disabled={creating || !newSeasonName || !newSeasonStart || !newSeasonEnd}
-                                        className="bg-orange-500 hover:bg-orange-600 text-white flex-1 h-9"
-                                    >
-                                        {creating ? 'Creating...' : 'Create & Use This Season'}
-                                    </Button>
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        onClick={() => setShowNewSeasonForm(false)}
-                                        className="h-9"
-                                    >
-                                        Cancel
-                                    </Button>
-                                </div>
-                            </div>
-                        )}
+                                    <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-orange-500 transition-colors" />
+                                </button>
+                            ))}
+                        </div>
 
                         <button
-                            onClick={() => { setStep('type'); setShowNewSeasonForm(false); }}
+                            onClick={() => setStep('type')}
                             className="text-xs text-slate-400 hover:text-slate-600 transition-colors"
                         >
                             ← Back to type selection

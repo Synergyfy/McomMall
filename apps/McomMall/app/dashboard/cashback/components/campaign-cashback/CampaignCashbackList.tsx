@@ -15,8 +15,8 @@ export const CampaignCashbackList: React.FC = () => {
     // Map standard auth UserRole to the new Campaign target types
     const role = userRole?.toLowerCase();
     const targetType = (role === 'owner' || role === 'admin')
-        ? CampaignTargetType.B2B
-        : CampaignTargetType.B2C;
+        ? CampaignTargetType.BUSINESS
+        : CampaignTargetType.CUSTOMER;
 
     const { data, isLoading, error } = useGetCampaignCashbacks({ targetType });
     const campaigns = data?.data || [];
