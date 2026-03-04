@@ -8,14 +8,17 @@ import { Label } from '@/components/ui/label';
 import { Season } from '@/service/seasons/api';
 import { cn } from '@/lib/utils';
 
+import { useGetSeasons } from '@/service/seasons/hook';
+import { Loader2 } from 'lucide-react';
+
 const HARDCODED_SEASONS: Season[] = [
-    { id: 'spring-2026', name: 'Spring Season (UK)', startDate: '2026-03-01', endDate: '2026-05-31' } as Season,
-    { id: 'easter-2026', name: 'Easter Sale Period', startDate: '2026-03-25', endDate: '2026-04-12' } as Season,
-    { id: 'summer-2026', name: 'Summer Season (UK)', startDate: '2026-06-01', endDate: '2026-08-31' } as Season,
-    { id: 'autumn-2026', name: 'Autumn Season (UK)', startDate: '2026-09-01', endDate: '2026-11-30' } as Season,
-    { id: 'black-friday-2026', name: 'Black Friday Week', startDate: '2026-11-23', endDate: '2026-11-30' } as Season,
-    { id: 'winter-2026', name: 'Winter Season (UK)', startDate: '2026-12-01', endDate: '2027-02-28' } as Season,
-    { id: 'boxing-day-jan-2026', name: 'Boxing Day & January Sales', startDate: '2026-12-26', endDate: '2027-01-31' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440000', name: 'Spring Season (UK)', startDate: '2026-03-01', endDate: '2026-05-31' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Easter Sale Period', startDate: '2026-03-25', endDate: '2026-04-12' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Summer Season (UK)', startDate: '2026-06-01', endDate: '2026-08-31' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Autumn Season (UK)', startDate: '2026-09-01', endDate: '2026-11-30' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Black Friday Week', startDate: '2026-11-23', endDate: '2026-11-30' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440005', name: 'Winter Season (UK)', startDate: '2026-12-01', endDate: '2027-02-28' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440006', name: 'Boxing Day & Jan Sales', startDate: '2026-12-26', endDate: '2027-01-31' } as Season,
 ];
 
 export type CampaignCategory = 'regular' | 'seasonal';
@@ -29,6 +32,13 @@ interface Props {
 
 export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onClose, onSelectRegular, onSelectSeasonal }) => {
     const [step, setStep] = useState<'type' | 'season-pick'>('type');
+    const { data: liveSeasons = [], isLoading } = useGetSeasons();
+
+    // Merge live seasons with hardcoded ones, avoiding duplicates by name
+    const seasons = [
+        ...liveSeasons,
+        ...HARDCODED_SEASONS.filter(hs => !liveSeasons.some(ls => ls.name === hs.name))
+    ];
 
     if (!isOpen) return null;
 
@@ -93,24 +103,45 @@ export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onClose, onSelectRe
                 {step === 'season-pick' && (
                     <div className="p-6 space-y-4">
                         <div className="space-y-2 max-h-[400px] overflow-y-auto pr-1">
-                            {HARDCODED_SEASONS.map(season => (
-                                <button
-                                    key={season.id}
-                                    onClick={() => onSelectSeasonal(season)}
-                                    className="w-full flex items-center justify-between border rounded-xl px-4 py-3 hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
-                                >
-                                    <div>
-                                        <div className="font-semibold text-slate-800 flex items-center gap-2">
-                                            <Sparkles className="w-4 h-4 text-orange-500" />
-                                            {season.name}
+                            {isLoading ? (
+                                <div className="flex flex-col items-center justify-center py-12 text-slate-400 gap-3">
+                                    <Loader2 className="w-8 h-8 animate-spin text-orange-500" />
+                                    <p className="text-sm font-medium">Fetching active seasons...</p>
+                                </div>
+                            ) : seasons.length > 0 ? (
+                                seasons.map(season => (
+                                    <button
+                                        key={season.id}
+                                        onClick={() => onSelectSeasonal(season)}
+                                        className="w-full flex items-center justify-between border rounded-xl px-4 py-3 hover:border-orange-400 hover:bg-orange-50 transition-all text-left group"
+                                    >
+                                        <div>
+                                            <div className="font-semibold text-slate-800 flex items-center gap-2">
+                                                <Sparkles className="w-4 h-4 text-orange-500" />
+                                                {season.name}
+                                            </div>
+                                            <div className="text-xs text-slate-500 mt-0.5">
+                                                {formatDate(season.startDate)} → {formatDate(season.endDate)}
+                                            </div>
                                         </div>
-                                        <div className="text-xs text-slate-500 mt-0.5">
-                                            {formatDate(season.startDate)} → {formatDate(season.endDate)}
-                                        </div>
-                                    </div>
-                                    <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-orange-500 transition-colors" />
-                                </button>
-                            ))}
+                                        <ChevronDown className="w-4 h-4 text-slate-400 -rotate-90 group-hover:text-orange-500 transition-colors" />
+                                    </button>
+                                ))
+                            ) : (
+                                <div className="text-center py-12 border-2 border-dashed rounded-2xl bg-slate-50 border-slate-200">
+                                    <CalendarRange className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                                    <p className="text-sm font-bold text-slate-500">No Seasons Found</p>
+                                    <p className="text-xs text-slate-400 mt-1 px-4">You need to create a season template in the Seasons module before you can launch seasonal campaigns.</p>
+                                    <Button
+                                        variant="outline"
+                                        size="sm"
+                                        className="mt-4 h-8 text-xs border-orange-200 text-orange-600 hover:bg-orange-50"
+                                        onClick={() => window.location.href = '/admin/seasons'}
+                                    >
+                                        Go to Seasons
+                                    </Button>
+                                </div>
+                            )}
                         </div>
 
                         <button
