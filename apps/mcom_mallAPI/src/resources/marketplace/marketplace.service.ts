@@ -12,8 +12,8 @@ import {
 import {
   CreateBannerDto,
   UpdateBannerDto,
-  CreateCategoryDto,
-  UpdateCategoryDto,
+  CreateMarketplaceCategoryDto,
+  UpdateMarketplaceCategoryDto,
   UpdateSectionDto,
 } from './dto/dtos';
 import { Product } from '../product/entities/product.entity';
@@ -26,7 +26,7 @@ import { BusinessStatus } from '../listings/listing.enum';
 
 @Injectable()
 export class MarketplaceService {
-  constructor(private readonly dataSource: DataSource) {}
+  constructor(private readonly dataSource: DataSource) { }
 
   // --- PUBLIC AGGREGATION ---
 
@@ -184,7 +184,7 @@ export class MarketplaceService {
 
   // --- CATEGORIES ---
 
-  async createCategory(dto: CreateCategoryDto) {
+  async createCategory(dto: CreateMarketplaceCategoryDto) {
     const category = new MarketplaceCategory();
     Object.assign(category, dto);
     return await this.dataSource.manager.save(category);
@@ -196,7 +196,7 @@ export class MarketplaceService {
     });
   }
 
-  async updateCategory(id: string, dto: UpdateCategoryDto) {
+  async updateCategory(id: string, dto: UpdateMarketplaceCategoryDto) {
     const category = await this.dataSource.manager.findOne(
       MarketplaceCategory,
       { where: { id } },

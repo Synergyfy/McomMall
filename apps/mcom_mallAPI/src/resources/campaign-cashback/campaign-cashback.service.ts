@@ -39,6 +39,9 @@ import {
   PaymentMethod,
 } from '../order/entities/order-payment.entity';
 import { UserRole } from '../../common/role.enum';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
+import { PageMetaDto } from '../../common/dto/page-meta.dto';
+import { PageDto } from '../../common/dto/page.dto';
 
 @Injectable()
 export class CampaignCashbackService {
@@ -57,7 +60,7 @@ export class CampaignCashbackService {
     private walletService: WalletService,
     private paymentProviderService: PaymentProviderService,
     private dataSource: DataSource,
-  ) {}
+  ) { }
 
   async create(
     createDto: CreateCampaignCashbackDto,
@@ -163,8 +166,8 @@ export class CampaignCashbackService {
       contributionPaid: false,
       activationTimerDate: campaign.activationTimerDays
         ? new Date(
-            Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
-          )
+          Date.now() + campaign.activationTimerDays * 24 * 60 * 60 * 1000,
+        )
         : null,
     });
 
@@ -487,5 +490,27 @@ export class CampaignCashbackService {
     const campaign = await this.campaignRepository.findOne({ where: { id } });
     if (!campaign) throw new NotFoundException('Campaign not found');
     await this.campaignRepository.remove(campaign);
+  }
+
+  async findAllTemplates(
+    pagination: PaginationQueryDto,
+  ): Promise<PageDto<CampaignCashback>> {
+    const { page, limit } = pagination;
+    const skip = (page - 1) * limit;
+
+    const [items, total] = await this.campaignRepository.findAndCount({
+      relations: ['season'],
+      skip,
+      take: limit,
+      order: { created_at: 'DESC' },
+    });
+
+    const pageMetaDto = new PageMetaDto({
+      itemCount: items.length,
+      totalItems: total,
+      pageOptionsDto: pagination,
+    });
+
+    return new PageDto(items, pageMetaDto);
   }
 }

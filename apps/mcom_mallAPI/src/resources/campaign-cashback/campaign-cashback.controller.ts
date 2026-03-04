@@ -26,13 +26,14 @@ import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
 import { CampaignTargetType } from './campaign-cashback.enum';
 import { ContributeDto } from './dto/contribute.dto';
+import { PaginationQueryDto } from '../../common/dto/pagination-query.dto';
 
 @ApiTags('Campaign Cashback')
 @ApiBearerAuth()
 @Controller('campaign-cashback')
 @UseGuards(JwtAuthGuard, RolesGuard)
 export class CampaignCashbackController {
-  constructor(private readonly service: CampaignCashbackService) {}
+  constructor(private readonly service: CampaignCashbackService) { }
 
   @Post()
   @Roles(UserRole.ADMIN)
@@ -105,6 +106,18 @@ export class CampaignCashbackController {
     @Query('targetType') targetType?: CampaignTargetType,
   ) {
     return this.service.findAllForUser(user, targetType);
+  }
+
+  @Get('templates/all')
+  @Roles(UserRole.ADMIN)
+  @ApiOperation({
+    summary: 'Get all campaign templates (Admin Only)',
+    description:
+      'Returns a paginated list of all campaign templates in the system, including those not yet started or already expired.',
+  })
+  @ApiResponse({ status: 200, description: 'Paginated list of all campaign templates' })
+  findAllTemplates(@Query() pagination: PaginationQueryDto) {
+    return this.service.findAllTemplates(pagination);
   }
 
   @Get(':id')
