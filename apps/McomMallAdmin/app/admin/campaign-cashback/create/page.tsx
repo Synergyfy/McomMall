@@ -28,7 +28,7 @@ export default function CreateCampaignCashbackPage() {
 
             <div className="flex items-center justify-between space-y-2">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight">Create Campaign Cashback</h2>
+                    <h2 className="text-3xl font-bold tracking-tight">Create Loyalty Cashback</h2>
                     <p className="text-muted-foreground">
                         Configure a new 3-tier promotional campaign with preloaded values and locked customer contributions.
                     </p>
