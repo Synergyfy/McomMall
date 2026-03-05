@@ -31,7 +31,7 @@ export default function CampaignCashbackAdminPage() {
         <div className="flex-1 space-y-8 p-4 md:p-8 pt-6 bg-slate-50/30 min-h-screen">
             <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div>
-                    <h2 className="text-3xl font-bold tracking-tight text-slate-900">Campaign Cashback</h2>
+                    <h2 className="text-3xl font-bold tracking-tight text-slate-900">Loyalty Cashback</h2>
                     <p className="text-muted-foreground mt-1">
                         View and manage active promotional campaign cards eligible for users.
                     </p>

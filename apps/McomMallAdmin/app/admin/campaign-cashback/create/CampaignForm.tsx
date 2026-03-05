@@ -48,7 +48,7 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
     const [unlockMode, setUnlockMode] = useState<CampaignUnlockMode>(CampaignUnlockMode.REQUIRE_FULL_UNLOCK);
 
     // Audience Selection
-    const [selectAll, setSelectAll] = useState(true);
+    const [audienceFilter, setAudienceFilter] = useState<'all' | 'specific' | 'subscription' | 'location' | 'level'>('all');
     const [selectedIds, setSelectedIds] = useState<string[]>([]);
     const [audienceSearch, setAudienceSearch] = useState('');
     const [dropdownOpen, setDropdownOpen] = useState(false);
@@ -76,7 +76,7 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
     // Reset audience selections when type changes
     useEffect(() => {
         setSelectedIds([]);
-        setSelectAll(true);
+        setAudienceFilter('all');
         setAudienceSearch('');
     }, [targetType]);
 
@@ -92,14 +92,14 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
     }, []);
 
     const toggleId = (id: string) => {
-        setSelectAll(false);
+        setAudienceFilter('specific');
         setSelectedIds(prev =>
             prev.includes(id) ? prev.filter(x => x !== id) : [...prev, id]
         );
     };
 
     const handleSelectAll = () => {
-        setSelectAll(true);
+        setAudienceFilter('all');
         setSelectedIds([]);
     };
 
@@ -182,15 +182,12 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
             }
         }
 
+        const isSelectAll = audienceFilter === 'all' || audienceFilter === 'subscription' || audienceFilter === 'location' || audienceFilter === 'level';
+
         // Target type mapping
-        let backendTargetType = BackendTargetType.CUSTOMER;
-        if (targetType === CampaignTargetType.BUSINESS) {
-            backendTargetType = selectAll ? BackendTargetType.BUSINESS : BackendTargetType.SPECIFIC_USERS;
-        } else if (targetType === CampaignTargetType.CONSUMERS) {
-            backendTargetType = selectAll ? BackendTargetType.CUSTOMER : BackendTargetType.SPECIFIC_USERS;
-        } else if (targetType === CampaignTargetType.SUBSCRIPTION || targetType === CampaignTargetType.LOCATION) {
-            backendTargetType = BackendTargetType.CUSTOMER;
-        }
+        let backendTargetType = targetType === CampaignTargetType.BUSINESS ?
+            (isSelectAll ? BackendTargetType.BUSINESS : BackendTargetType.SPECIFIC_USERS) :
+            (isSelectAll ? BackendTargetType.CUSTOMER : BackendTargetType.SPECIFIC_USERS);
 
         const payload: CreateCampaignCashbackDto = {
             name,
@@ -203,12 +200,12 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
             totalValue: parseFloat(totalValueStr),
             unlockMode: unlockMode as any,
             expiryDate: new Date(expiryDate).toISOString(),
-            activationTimerDays: activationTimerUnit === 'days'
-                ? parseFloat(activationTimerValue)
-                : parseFloat(activationTimerValue) / 24,
-            activationTasks: activationTasks.filter(t => t.trim() !== ''),
-            selectAll,
-            targetIds: !selectAll ? selectedIds : undefined,
+            activationTimerDays: timerTargetFilter
+                ? (activationTimerUnit === 'days' ? parseFloat(activationTimerValue) : parseFloat(activationTimerValue) / 24)
+                : undefined,
+            activationTasks: timerTargetFilter ? activationTasks.filter(t => t.trim() !== '') : [],
+            selectAll: isSelectAll,
+            targetIds: !isSelectAll ? selectedIds : undefined,
 
             // Values
             value1Title: titles.v1,
@@ -299,7 +296,6 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                                         "flex items-center gap-2 border-2 p-3 rounded-lg cursor-pointer transition-all max-w-sm",
                                         targetType === CampaignTargetType.BUSINESS ? 'border-emerald-500 bg-emerald-50' : 'border-gray-200 hover:bg-gray-50'
                                     )}
-                                // Removed outer onClick to prevent conflicts with internal buttons
                                 >
                                     <RadioGroupItem value={CampaignTargetType.BUSINESS} id="business" />
                                     <Label htmlFor="business" className="cursor-pointer flex items-center gap-1.5 font-bold flex-1">
@@ -308,36 +304,36 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                                 </div>
 
                                 {targetType === CampaignTargetType.BUSINESS && (
-                                    <div className="flex gap-2 pl-9 animate-in fade-in slide-in-from-left-2 duration-200">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleSelectAll(); }}
-                                            className={cn(
-                                                "py-1.5 px-4 rounded-md border text-xs font-semibold transition-all",
-                                                selectAll
-                                                    ? "border-emerald-500 bg-emerald-50 text-emerald-700"
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            All Businesses
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); setSelectAll(false); setDropdownOpen(o => !o); }}
-                                            className={cn(
-                                                "py-1.5 px-4 rounded-md border text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
-                                                (!selectAll && !dropdownOpen) || (!selectAll && dropdownOpen)
-                                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            Specific
-                                            {!selectAll && selectedIds.length > 0 && (
-                                                <span className="bg-blue-600 text-white text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">
-                                                    {selectedIds.length}
-                                                </span>
-                                            )}
-                                        </button>
+                                    <div className="flex flex-col gap-3 pl-9 animate-in fade-in slide-in-from-left-2 duration-200">
+                                        <div className="flex flex-wrap gap-2">
+                                            <button type="button" onClick={() => handleSelectAll()} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'all' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>All Businesses</button>
+                                            <button type="button" onClick={() => { setAudienceFilter('specific'); setDropdownOpen(o => !o); }} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all flex items-center justify-center gap-1.5", audienceFilter === 'specific' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Specific {audienceFilter === 'specific' && selectedIds.length > 0 && (<span className="bg-emerald-600 text-white text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">{selectedIds.length}</span>)}</button>
+                                            <button type="button" onClick={() => setAudienceFilter('subscription')} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'subscription' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Based on Subscription</button>
+                                            <button type="button" onClick={() => setAudienceFilter('location')} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'location' ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Based on Location</button>
+                                        </div>
+
+                                        {audienceFilter === 'subscription' && (
+                                            <div className="max-w-sm">
+                                                <Select value={selectedSubscriptionTier} onValueChange={setSelectedSubscriptionTier} disabled={isLoadingTiers}>
+                                                    <SelectTrigger className="bg-white text-sm"><SelectValue placeholder={isLoadingTiers ? "Loading tiers..." : "Select Tier"} /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Tiers (Global)</SelectItem>
+                                                        {tiers.map(tier => (<SelectItem key={tier.id} value={tier.id}>{tier.name}</SelectItem>))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        {audienceFilter === 'location' && (
+                                            <div className="max-w-sm space-y-2">
+                                                <div className="flex gap-2">
+                                                    <Input placeholder="Enter City/Region..." className="bg-white text-sm" />
+                                                    <Button size="sm" variant="outline" type="button">Add</Button>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] rounded-full font-bold uppercase tracking-wider">London</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
@@ -357,106 +353,45 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                                 </div>
 
                                 {targetType === CampaignTargetType.CONSUMERS && (
-                                    <div className="flex gap-2 pl-9 animate-in fade-in slide-in-from-left-2 duration-200">
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); handleSelectAll(); }}
-                                            className={cn(
-                                                "py-1.5 px-4 rounded-md border text-xs font-semibold transition-all",
-                                                selectAll
-                                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            All Consumers
-                                        </button>
-                                        <button
-                                            type="button"
-                                            onClick={(e) => { e.stopPropagation(); setSelectAll(false); setDropdownOpen(o => !o); }}
-                                            className={cn(
-                                                "py-1.5 px-4 rounded-md border text-xs font-semibold transition-all flex items-center justify-center gap-1.5",
-                                                !selectAll
-                                                    ? "border-blue-500 bg-blue-50 text-blue-700"
-                                                    : "border-gray-200 text-gray-500 hover:bg-gray-50"
-                                            )}
-                                        >
-                                            Specific
-                                            {!selectAll && selectedIds.length > 0 && (
-                                                <span className="bg-blue-600 text-white text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">
-                                                    {selectedIds.length}
-                                                </span>
-                                            )}
-                                        </button>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* ── Subscription Category ── */}
-                            <div className="space-y-2">
-                                <div
-                                    className={cn(
-                                        "flex items-center gap-2 border-2 p-3 rounded-lg cursor-pointer transition-all max-w-sm",
-                                        targetType === CampaignTargetType.SUBSCRIPTION ? 'border-amber-500 bg-amber-50' : 'border-gray-200 hover:bg-gray-50'
-                                    )}
-                                >
-                                    <RadioGroupItem value={CampaignTargetType.SUBSCRIPTION} id="sub" />
-                                    <Label htmlFor="sub" className="cursor-pointer flex items-center gap-1.5 font-bold flex-1">
-                                        <Crown className="w-4 h-4 text-amber-600" /> Based on Subscription
-                                    </Label>
-                                </div>
-                                {targetType === CampaignTargetType.SUBSCRIPTION && (
-                                    <div className="pl-9 max-w-sm animate-in fade-in slide-in-from-left-2 duration-200">
-                                        <Select
-                                            value={selectedSubscriptionTier}
-                                            onValueChange={setSelectedSubscriptionTier}
-                                            disabled={isLoadingTiers}
-                                        >
-                                            <SelectTrigger className="bg-white">
-                                                <SelectValue placeholder={isLoadingTiers ? "Loading tiers..." : "Select Tier"} />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="all">All Tiers (Global)</SelectItem>
-                                                {tiers.map(tier => (
-                                                    <SelectItem key={tier.id} value={tier.id}>
-                                                        {tier.name}
-                                                    </SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* ── Location Category ── */}
-                            <div className="space-y-2">
-                                <div
-                                    className={cn(
-                                        "flex items-center gap-2 border-2 p-3 rounded-lg cursor-pointer transition-all max-w-sm",
-                                        targetType === CampaignTargetType.LOCATION ? 'border-indigo-500 bg-indigo-50' : 'border-gray-200 hover:bg-gray-50'
-                                    )}
-                                >
-                                    <RadioGroupItem value={CampaignTargetType.LOCATION} id="loc" />
-                                    <Label htmlFor="loc" className="cursor-pointer flex items-center gap-1.5 font-bold flex-1">
-                                        <Navigation className="w-4 h-4 text-indigo-600" /> Based on Location
-                                    </Label>
-                                </div>
-                                {targetType === CampaignTargetType.LOCATION && (
-                                    <div className="pl-9 max-w-sm space-y-2 animate-in fade-in slide-in-from-left-2 duration-200">
-                                        <div className="flex gap-2">
-                                            <Input placeholder="Enter City/Region..." className="bg-white text-sm" />
-                                            <Button size="sm" variant="outline">Add</Button>
+                                    <div className="flex flex-col gap-3 pl-9 animate-in fade-in slide-in-from-left-2 duration-200">
+                                        <div className="flex flex-wrap gap-2">
+                                            <button type="button" onClick={() => handleSelectAll()} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'all' ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>All Consumers</button>
+                                            <button type="button" onClick={() => { setAudienceFilter('specific'); setDropdownOpen(o => !o); }} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all flex items-center justify-center gap-1.5", audienceFilter === 'specific' ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Specific {audienceFilter === 'specific' && selectedIds.length > 0 && (<span className="bg-blue-600 text-white text-[10px] rounded-full w-3.5 h-3.5 flex items-center justify-center font-bold">{selectedIds.length}</span>)}</button>
+                                            <button type="button" onClick={() => setAudienceFilter('level')} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'level' ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Based on Level</button>
+                                            <button type="button" onClick={() => setAudienceFilter('location')} className={cn("py-1.5 px-4 rounded-md border text-xs font-semibold transition-all", audienceFilter === 'location' ? "border-blue-500 bg-blue-50 text-blue-700" : "border-gray-200 text-gray-500 hover:bg-gray-50")}>Based on Location</button>
                                         </div>
-                                        <div className="flex flex-wrap gap-1.5">
-                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] rounded-full font-bold uppercase tracking-wider">London</span>
-                                            <span className="px-2 py-0.5 bg-indigo-100 text-indigo-700 text-[10px] rounded-full font-bold uppercase tracking-wider">Manchester</span>
-                                        </div>
+
+                                        {audienceFilter === 'level' && (
+                                            <div className="max-w-sm">
+                                                <Select value="all">
+                                                    <SelectTrigger className="bg-white text-sm"><SelectValue placeholder="Select Level" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="all">All Levels (Global)</SelectItem>
+                                                        <SelectItem value="bronze">Bronze Level</SelectItem>
+                                                        <SelectItem value="silver">Silver Level</SelectItem>
+                                                        <SelectItem value="gold">Gold Level</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                        )}
+                                        {audienceFilter === 'location' && (
+                                            <div className="max-w-sm space-y-2">
+                                                <div className="flex gap-2">
+                                                    <Input placeholder="Enter City/Region..." className="bg-white text-sm" />
+                                                    <Button size="sm" variant="outline" type="button">Add</Button>
+                                                </div>
+                                                <div className="flex flex-wrap gap-1.5">
+                                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] rounded-full font-bold uppercase tracking-wider">London</span>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
                                 )}
                             </div>
                         </RadioGroup>
 
                         {/* Dropdown — only when "Specific" is active */}
-                        {!selectAll && (
+                        {audienceFilter === 'specific' && (
                             <div ref={dropdownRef} className="relative">
                                 {dropdownOpen && (
                                     <div className="border rounded-xl shadow-lg overflow-hidden bg-white">
@@ -523,7 +458,7 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                         )}
 
                         {/* Selected chips */}
-                        {!selectAll && selectedIds.length > 0 && (
+                        {audienceFilter === 'specific' && selectedIds.length > 0 && (
                             <div className="flex flex-wrap gap-1.5">
                                 {selectedIds.map(id => {
                                     const item = audienceItems.find(a => a.id === id);
@@ -612,12 +547,36 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
 
                     {/* ── Activation Timer & Tasks ── */}
                     <div className="space-y-4 bg-orange-50/50 p-4 rounded-xl border border-orange-100 md:col-span-2">
-                        <div className="flex items-center gap-2 mb-2">
-                            <CalendarRange className="w-5 h-5 text-orange-600" />
-                            <h4 className="font-bold text-sm text-orange-900 uppercase tracking-wider">Loyalty Cashback Activity Timer & Tasks</h4>
+                        {/* Target Toggle Header */}
+                        <div className="flex items-center justify-between mb-4 pb-4 border-b border-orange-200/50">
+                            <div className="flex items-center gap-2">
+                                <CalendarRange className="w-5 h-5 text-orange-600" />
+                                <h4 className="font-bold text-sm text-orange-900 uppercase tracking-wider">Loyalty Cashback Timer Reactivation Targeting</h4>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                                <span className="text-[10px] font-bold text-orange-900 uppercase tracking-widest leading-tight text-right w-24">
+                                    Use timer?
+                                </span>
+                                <div
+                                    onClick={() => setTimerTargetFilter(!timerTargetFilter)}
+                                    className={cn(
+                                        "w-12 h-6 rounded-full p-1 transition-colors relative cursor-pointer shrink-0 border border-orange-200",
+                                        timerTargetFilter ? "bg-orange-500 border-orange-600" : "bg-white"
+                                    )}>
+                                    <div className={cn(
+                                        "w-4 h-4 rounded-full transition-transform shadow-sm",
+                                        timerTargetFilter ? "translate-x-6 bg-white" : "translate-x-0 bg-gray-300"
+                                    )} />
+                                </div>
+                            </div>
                         </div>
 
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+                        {/* Blurable Section */}
+                        <div className={cn(
+                            "grid grid-cols-1 md:grid-cols-3 gap-8 transition-all duration-300",
+                            !timerTargetFilter && "blur-[2px] opacity-40 pointer-events-none select-none"
+                        )}>
                             {/* Timer Value & Unit */}
                             <div className="space-y-2">
                                 <Label htmlFor="timerValue" className="text-xs font-bold text-gray-600 uppercase">Usage Timer</Label>
@@ -690,81 +649,6 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
                                 </div>
                                 <p className="text-[10px] text-gray-400">Tasks users must complete to reactivate their card if it expires due to inactivity.</p>
                             </div>
-                        </div>
-
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 pt-4 border-t border-orange-200/50">
-                            {/* Target Toggle */}
-                            <div className="space-y-3">
-                                <Label className="text-[10px] font-bold text-orange-900 uppercase tracking-widest block">Timer Activation Targeting</Label>
-                                <div
-                                    onClick={() => setTimerTargetFilter(!timerTargetFilter)}
-                                    className={cn(
-                                        "flex items-center justify-between p-3 rounded-lg border-2 cursor-pointer transition-all",
-                                        timerTargetFilter ? "border-orange-500 bg-white" : "border-gray-200 bg-gray-50 opacity-60"
-                                    )}
-                                >
-                                    <span className="text-xs font-bold text-gray-700">Apply ONLY to specific users?</span>
-                                    <div className={cn(
-                                        "w-10 h-5 rounded-full p-1 transition-colors relative",
-                                        timerTargetFilter ? "bg-orange-500" : "bg-gray-300"
-                                    )}>
-                                        <div className={cn(
-                                            "w-3 h-3 bg-white rounded-full transition-transform",
-                                            timerTargetFilter ? "translate-x-5" : "translate-x-0"
-                                        )} />
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Conditional Filters for Timer */}
-                            {timerTargetFilter && (
-                                <div className="md:col-span-2 space-y-3 animate-in fade-in slide-in-from-left-2 duration-300">
-                                    <div className="flex flex-col sm:flex-row gap-4">
-                                        <div className="flex-1 space-y-2">
-                                            <Label className="text-[10px] font-bold text-gray-400 uppercase">Targeting Filter</Label>
-                                            <Select value={timerTargetType} onValueChange={setTimerTargetType}>
-                                                <SelectTrigger className="bg-white h-9">
-                                                    <SelectValue />
-                                                </SelectTrigger>
-                                                <SelectContent>
-                                                    <SelectItem value="subscription">Subscription Tier</SelectItem>
-                                                    <SelectItem value="location">Specific Locations</SelectItem>
-                                                </SelectContent>
-                                            </Select>
-                                        </div>
-                                        <div className="flex-[2] space-y-2">
-                                            <Label className="text-[10px] font-bold text-gray-400 uppercase">Selected Values</Label>
-                                            {timerTargetType === 'subscription' ? (
-                                                <Select
-                                                    value={timerSubscriptionTier}
-                                                    onValueChange={setTimerSubscriptionTier}
-                                                    disabled={isLoadingTiers}
-                                                >
-                                                    <SelectTrigger className="bg-white h-9">
-                                                        <SelectValue placeholder={isLoadingTiers ? "Loading..." : "Select"} />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="all">All Tiers (Global)</SelectItem>
-                                                        {tiers.map(tier => (
-                                                            <SelectItem key={tier.id} value={tier.id}>
-                                                                {tier.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            ) : (
-                                                <div className="flex gap-2">
-                                                    <Input placeholder="Search locations..." className="bg-white h-9 text-xs" />
-                                                    <div className="flex items-center gap-1.5 px-3 bg-orange-100 text-orange-700 text-[10px] rounded-md font-bold">
-                                                        LONDON <X className="w-3 h-3 cursor-pointer" />
-                                                    </div>
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                    <p className="text-[10px] text-orange-600 font-medium">Card activity tracking will ONLY be enabled for users matching these criteria.</p>
-                                </div>
-                            )}
                         </div>
                     </div>
                 </div>
@@ -932,7 +816,7 @@ export default function CampaignForm({ season }: CampaignFormProps = {}) {
             <div className="pt-8 border-t border-slate-200 flex justify-end">
                 <Button type="button" variant="ghost" onClick={() => router.back()} className="mr-4">Cancel</Button>
                 <Button type="submit" disabled={isPending} className="bg-emerald-600 hover:bg-emerald-700 text-white font-bold h-11 px-6 shadow-md">
-                    {isPending ? 'Creating Campaign...' : 'Generate New Campaign Cashback'}
+                    {isPending ? 'Creating Loyalty Cashback...' : 'Generate New Loyalty Cashback'}
                 </Button>
             </div>
 

@@ -12,13 +12,10 @@ import { useGetSeasons } from '@/service/seasons/hook';
 import { Loader2 } from 'lucide-react';
 
 const HARDCODED_SEASONS: Season[] = [
-    { id: '550e8400-e29b-41d4-a716-446655440000', name: 'Spring Season (UK)', startDate: '2026-03-01', endDate: '2026-05-31' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Easter Sale Period', startDate: '2026-03-25', endDate: '2026-04-12' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Summer Season (UK)', startDate: '2026-06-01', endDate: '2026-08-31' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Autumn Season (UK)', startDate: '2026-09-01', endDate: '2026-11-30' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440004', name: 'Black Friday Week', startDate: '2026-11-23', endDate: '2026-11-30' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440005', name: 'Winter Season (UK)', startDate: '2026-12-01', endDate: '2027-02-28' } as Season,
-    { id: '550e8400-e29b-41d4-a716-446655440006', name: 'Boxing Day & Jan Sales', startDate: '2026-12-26', endDate: '2027-01-31' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440000', name: 'Winter Season', startDate: '2025-12-21', endDate: '2026-03-19' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440001', name: 'Spring Season', startDate: '2026-03-20', endDate: '2026-06-20' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440002', name: 'Summer Season', startDate: '2026-06-21', endDate: '2026-09-21' } as Season,
+    { id: '550e8400-e29b-41d4-a716-446655440003', name: 'Autumn Season', startDate: '2026-09-22', endDate: '2026-12-20' } as Season,
 ];
 
 export type CampaignCategory = 'regular' | 'seasonal';
@@ -34,11 +31,12 @@ export const CampaignTypeModal: React.FC<Props> = ({ isOpen, onClose, onSelectRe
     const [step, setStep] = useState<'type' | 'season-pick'>('type');
     const { data: liveSeasons = [], isLoading } = useGetSeasons();
 
-    // Merge live seasons with hardcoded ones, avoiding duplicates by name
-    const seasons = [
-        ...liveSeasons,
-        ...HARDCODED_SEASONS.filter(hs => !liveSeasons.some(ls => ls.name === hs.name))
-    ];
+    // Forcefully display only the 4 specified seasons, keeping their specific order.
+    // We check if they exist in liveSeasons to keep their DB IDs if possible, but we don't map over liveSeasons directly.
+    const seasons = HARDCODED_SEASONS.map(hs => {
+        const liveMatch = liveSeasons.find(ls => ls.name === hs.name);
+        return liveMatch ? { ...hs, id: liveMatch.id } : hs;
+    });
 
     if (!isOpen) return null;
 

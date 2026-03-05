@@ -24,7 +24,7 @@ export const useDeleteCampaignCashback = () => {
     return useMutation({
         mutationFn: (id: string) => campaignCashbackApi.delete(id),
         onSuccess: () => {
-            toast.success('Campaign Cashback template deleted successfully!');
+            toast.success('Loyalty Cashback template deleted successfully!');
             queryClient.invalidateQueries({ queryKey: ['CAMPAIGN_CASHBACK_LIST'] });
         },
         onError: (error: any) => {
@@ -41,7 +41,7 @@ export const useCreateCampaignCashback = () => {
     return useMutation({
         mutationFn: (payload: CreateCampaignCashbackDto) => campaignCashbackApi.create(payload),
         onSuccess: () => {
-            toast.success('Campaign Cashback template created successfully!');
+            toast.success('Loyalty Cashback template created successfully!');
             queryClient.invalidateQueries({ queryKey: ['CAMPAIGN_CASHBACK_TEMPLATES'] });
             router.push('/admin/campaign-cashback');
         },
