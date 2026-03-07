@@ -28,18 +28,66 @@ interface Step1Props {
   userListings?: any[];
 }
 
+const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
+  const lowerName = name.toLowerCase();
+  // Check female first because "women" contains "men"
+  if (/\b(women|woman|female|lady|ladies|girls|girl)\b/i.test(lowerName)) return 'female';
+  if (/\b(men|man|male|gent|gents|gentlemen|boys|boy)\b/i.test(lowerName)) return 'male';
+  if (/\b(unisex|kids|children)\b/i.test(lowerName)) return 'unisex';
+  return 'none';
+};
+
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings }: Step1Props) {
   const { data: categories, isLoading: isLoadingCats } = useGetCategories();
   const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
+
+  const isGenderRelated = React.useMemo(() => {
+    if (!formData.categoryName && !formData.subCategoryName) return false;
+    const combined = `${formData.categoryName} ${formData.subCategoryName}`.toLowerCase();
+    const genderKeywords = /\b(men|man|male|women|woman|female|lady|ladies|girl|boy|kids|children|unisex|gent|gentlemen|clothing|apparel|wear|dress|shirt|pants|trousers|skirt|suit|jacket|coat|sweater|hoodie|shoes|footwear|boots|sneakers|sandals|slippers|accessories|watch|jewelry|jewellery|bags|handbags|fashion|beauty|cosmetics|fragrance|perfume|underwear|lingerie|outerwear|activewear|sportswear)\b/i;
+    return genderKeywords.test(combined);
+  }, [formData.categoryName, formData.subCategoryName]);
+
+  useEffect(() => {
+    if (!isGenderRelated && formData.gender !== 'none') {
+      updateFormData({ gender: 'none' });
+    }
+  }, [isGenderRelated, formData.gender, updateFormData]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { id, value } = e.target;
     if (id === 'category') {
       const cat = categories?.find(c => c.id === value);
-      updateFormData({ category: value, categoryName: cat?.name || '', subCategory: '', subCategoryName: '' });
+      const name = cat?.name || '';
+      const detected = detectGender(name);
+
+      const updates: any = {
+        category: value,
+        categoryName: name,
+        subCategory: '',
+        subCategoryName: ''
+      };
+
+      if (detected !== 'none') {
+        updates.gender = detected;
+      }
+
+      updateFormData(updates);
     } else if (id === 'subCategory') {
       const sub = subCategories?.find(s => s.id === value);
-      updateFormData({ subCategory: value, subCategoryName: sub?.name || '' });
+      const name = sub?.name || '';
+      const detected = detectGender(name);
+
+      const updates: any = {
+        subCategory: value,
+        subCategoryName: name
+      };
+
+      if (detected !== 'none') {
+        updates.gender = detected;
+      }
+
+      updateFormData(updates);
     } else {
       updateFormData({ [id]: value });
     }
@@ -282,10 +330,11 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
                 </label>
                 <div className="relative">
                   <select
-                    className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
+                    className={`w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 pr-10 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all border outline-none ${!isGenderRelated ? 'opacity-50 cursor-not-allowed bg-gray-100 dark:bg-gray-800' : 'cursor-pointer'}`}
                     id="gender"
                     value={formData.gender || ''}
                     onChange={handleChange}
+                    disabled={!isGenderRelated}
                   >
                     <option value="none">None</option>
                     <option value="male">Male</option>
