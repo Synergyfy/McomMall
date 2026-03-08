@@ -13,13 +13,13 @@ interface VoucherCardProps {
 }
 
 const VerticalRedRibbon = () => (
-  <div className="absolute top-0 left-[25%] bottom-0 w-3 z-20 pointer-events-none">
+  <div className="absolute top-0 left-[-5%] bottom-0 w-3 z-20 pointer-events-none">
     <div className="w-full h-full bg-gradient-to-r from-red-500 via-red-600 to-red-800 shadow-[2px_0_10px_rgba(0,0,0,0.3)]" />
   </div>
 );
 
 const RedBow = () => (
-  <div className="absolute top-1/2 left-[25%] -translate-x-1/2 -translate-y-1/2 z-30 scale-50 sm:scale-[0.6] pointer-events-none">
+  <div className="absolute top-1/2 left-[-5%] -translate-x-1/2 -translate-y-1/2 z-30 scale-50 sm:scale-[0.6] pointer-events-none">
     <div className="relative w-24 h-16 flex items-center justify-center">
       <div className="absolute -left-2 w-12 h-12 border-[4px] border-red-700 rounded-full bg-gradient-to-br from-red-500 to-red-900 rotate-[-15deg] shadow-lg" />
       <div className="absolute -right-2 w-12 h-12 border-[4px] border-red-700 rounded-full bg-gradient-to-bl from-red-500 to-red-900 rotate-[15deg] shadow-lg" />
@@ -48,7 +48,7 @@ export const VoucherCard: React.FC<VoucherCardProps> = ({ voucher }) => {
 
           {/* Circular Balance Badge */}
           <div className="relative z-40 bg-red-600 w-16 h-16 rounded-full border-4 border-white/20 flex flex-col items-center justify-center shadow-2xl mb-8 translate-x-4">
-            <span className="text-white text-[10px] font-black leading-none drop-shadow">£{Number(voucher.balance).toFixed(0)}</span>
+            <span className="text-white text-[10px] font-black leading-none drop-shadow">£{Number(voucher.balance).toFixed(2)}</span>
             <span className="text-white text-[6px] font-bold uppercase tracking-widest mt-0.5">Balance</span>
           </div>
         </div>

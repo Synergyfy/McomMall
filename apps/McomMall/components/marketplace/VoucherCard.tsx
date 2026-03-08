@@ -15,13 +15,13 @@ interface VoucherCardProps {
 }
 
 const VerticalRedRibbon = () => (
-    <div className="absolute top-0 left-[25%] bottom-0 w-3 z-20 pointer-events-none">
+    <div className="absolute top-0 left-[-5%] bottom-0 w-3 z-20 pointer-events-none">
         <div className="w-full h-full bg-gradient-to-r from-red-500 via-red-600 to-red-800 shadow-[2px_0_10px_rgba(0,0,0,0.3)]" />
     </div>
 );
 
 const RedBow = () => (
-    <div className="absolute top-1/2 left-[25%] -translate-x-1/2 -translate-y-1/2 z-30 scale-[0.6] pointer-events-none">
+    <div className="absolute top-1/2 left-[-5%] -translate-x-1/2 -translate-y-1/2 z-30 scale-[0.6] pointer-events-none">
         <div className="relative w-24 h-16 flex items-center justify-center">
             <div className="absolute -left-2 w-12 h-12 border-[4px] border-red-700 rounded-full bg-gradient-to-br from-red-500 to-red-900 rotate-[-15deg] shadow-lg" />
             <div className="absolute -right-2 w-12 h-12 border-[4px] border-red-700 rounded-full bg-gradient-to-bl from-red-500 to-red-900 rotate-[15deg] shadow-lg" />
@@ -96,7 +96,9 @@ export default function VoucherCard({ voucher, viewMode = 'grid', type = 'vouche
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const valueLabel = discountPercentage > 0 ? `${discountPercentage}%` : `£${Number(price).toFixed(0)}`;
+    const faceValue = `£${Number(voucher.price || 0).toFixed(2)}`;
+    const salePrice = `£${Number(voucher.discountedPrice || voucher.price || 0).toFixed(2)}`;
+    const valueLabel = faceValue;
 
     // --- COUPON DESIGN (Keep as Ticket) ---
     if (type === 'coupons') {
@@ -207,7 +209,7 @@ export default function VoucherCard({ voucher, viewMode = 'grid', type = 'vouche
                             className="h-8 md:h-10 rounded-xl border-red-100 hover:border-red-600 hover:text-red-600 font-bold text-[10px] px-3 transition-colors"
                         >
                             {copied ? <Check size={14} className="mr-1" /> : <Tag size={14} className="mr-1" />}
-                            {copied ? 'COPIED' : 'GET CODE'}
+                            {copied ? 'COPIED' : `BUY FOR ${salePrice}`}
                         </Button>
                     </div>
 
