@@ -4,6 +4,7 @@
 
 import React from 'react';
 import Image from 'next/image';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -234,19 +235,23 @@ export default function WinterExhibitionPage() {
             — for businesses & consumers.
           </p>
           <div className="mt-8 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Join the Winter Exhibition
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Discover Winter Deals
-            </Button>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6 w-full"
+              >
+                Join the Winter Exhibition
+              </Button>
+            </Link>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6 w-full"
+              >
+                Discover Winter Deals
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </section>
@@ -491,9 +496,8 @@ export default function WinterExhibitionPage() {
                 transition={{ duration: 0.5, delay: index * 0.2 }}
               >
                 <div
-                  className={`relative flex items-center justify-between ${
-                    index % 2 === 0 ? 'md:flex-row-reverse' : 'md:flex-row'
-                  }`}
+                  className={`relative flex items-center justify-between ${index % 2 === 0 ? 'md:flex-row-reverse' : 'md:flex-row'
+                    }`}
                 >
                   <div className="md:w-5/12"></div>
                   <div className="absolute left-6 md:left-1/2 top-1/2 transform -translate-x-1/2 -translate-y-1/2 z-10">
@@ -512,12 +516,14 @@ export default function WinterExhibitionPage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Join as a Business
-            </Button>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
+              >
+                Join as a Business
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -550,13 +556,15 @@ export default function WinterExhibitionPage() {
             ))}
           </div>
           <div className="text-center mt-12">
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Start Exploring Deals
-            </Button>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
+              >
+                Start Exploring Deals
+              </Button>
+            </Link>
           </div>
         </div>
       </section>
@@ -582,19 +590,23 @@ export default function WinterExhibitionPage() {
             Make This Winter Unforgettable with MCOM Virtual Exhibition
           </h2>
           <div className="mt-10 flex flex-col sm:flex-row gap-4 justify-center">
-            <Button
-              size="lg"
-              className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6"
-            >
-              Showcase Your Business
-            </Button>
-            <Button
-              size="lg"
-              variant="outline"
-              className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6"
-            >
-              Discover Offers
-            </Button>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                className="bg-sky-500 hover:bg-sky-600 text-white font-bold text-lg px-8 py-6 w-full"
+              >
+                Showcase Your Business
+              </Button>
+            </Link>
+            <Link href="https://247-gbs-expo.vercel.app/events/national" target="_blank">
+              <Button
+                size="lg"
+                variant="outline"
+                className="text-white border-sky-400 bg-transparent hover:bg-white hover:text-sky-700 transition-colors duration-300 font-bold text-lg px-8 py-6 w-full"
+              >
+                Discover Offers
+              </Button>
+            </Link>
           </div>
         </motion.div>
       </section>
