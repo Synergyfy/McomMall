@@ -4,10 +4,6 @@ import { Search, MapPin, ArrowRight, Heart, ArrowUp } from 'lucide-react';
 import { motion, AnimatePresence, useInView } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import Winter from '@/public/homepage/WinterSale.png';
-import Summer from '@/public/homepage/SummerBanner.png';
-import Spring from '@/public/homepage/SpringBanner.png';
-import Autumn from '@/public/homepage/AutumnBanner.png';
 import { useGetRecentListings } from '@/service/listings/hook';
 import { useGetCategories } from '@/service/taxonomy/hook';
 
@@ -122,7 +118,12 @@ export default function HomePage() {
 
   const { data: categories } = useGetCategories();
 
-  const backgroundImages = [Autumn, Summer, Spring, Winter];
+  const backgroundImages = [
+    '/homepage/AutumnBanner.png',
+    '/homepage/SummerBanner.png',
+    '/homepage/SpringBanner.png',
+    '/homepage/WinterSale.png'
+  ];
 
   useEffect(() => {
     const timer = setInterval(() => {
@@ -183,7 +184,7 @@ export default function HomePage() {
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
-              <img src={backgroundImages[currentImageIndex]?.src} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={backgroundImages[currentImageIndex]} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
