@@ -3,7 +3,6 @@ import React, { useState, useCallback } from 'react';
 import { IService } from '@/service/services/types';
 import { Card, CardContent, CardHeader, CardTitle } from './ui/card';
 import { Badge } from './ui/badge';
-import Image from 'next/image';
 import { Button } from './ui/button';
 import { Zap, Tag, Clock, Users, Calendar, CheckCircle } from 'lucide-react';
 import { DateTimePicker } from './ui/date-time-picker';
@@ -41,13 +40,7 @@ const ServiceBooking: React.FC<ServiceBookingProps> = ({ service, onBookingConfi
       <div className="grid md:grid-cols-12">
         <div className="md:col-span-4">
           <div className="relative h-full min-h-[250px]">
-            <Image
-              src={service.media && service.media.length > 0 ? service.media[0] : 'https://via.placeholder.com/400x400.png?text=Service'}
-              alt={service.name}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-l-2xl"
-            />
+            <img src={service.media && service.media.length > 0 ? service.media[0] : 'https://via.placeholder.com/400x400.png?text=Service'} alt={service.name} className="absolute inset-0 w-full h-full object-cover rounded-l-2xl" />
           </div>
         </div>
         <div className="md:col-span-8 flex flex-col">

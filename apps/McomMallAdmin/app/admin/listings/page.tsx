@@ -141,7 +141,7 @@ function ListingDetailSheet({
                         />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center">
-                            <ImageIcon className="h-12 w-12 text-slate-300" />
+                            <img Icon />
                         </div>
                     )}
                 </div>
@@ -543,7 +543,7 @@ export default function ListingsPage() {
                                                     />
                                                 ) : (
                                                     <div className="w-full h-full flex items-center justify-center">
-                                                        <ImageIcon className="h-5 w-5 text-slate-300" />
+                                                        <img Icon />
                                                     </div>
                                                 )}
                                             </div>

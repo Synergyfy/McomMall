@@ -2,7 +2,6 @@ import React, { useRef, useEffect, useState } from 'react';
 import { Card, CardContent, CardFooter } from '../../../components/ui/card';
 import { Button } from '../../../components/ui/button';
 import { motion, Variants } from 'framer-motion';
-import Image from 'next/image';
 import { Mail, Phone, MapPin, Calendar, Share2, Download } from 'lucide-react';
 
 const people = [
@@ -228,13 +227,7 @@ export default function McomEgiftCard() {
                           )}`}
                         >
                           <div className="rounded-full bg-white/20 p-[2px]">
-                            <Image
-                              src={p.image}
-                              alt={p.name}
-                              className="w-28 h-28 rounded-full object-cover shadow-xl"
-                              width={112}
-                              height={112}
-                            />
+                            <img src={p.image} alt={p.name} width={112} height={112} />
                           </div>
                         </div>
                         {/* corner sparkle */}

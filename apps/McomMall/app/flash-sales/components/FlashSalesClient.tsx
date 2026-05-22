@@ -1,6 +1,5 @@
 'use client';
 import { useState, useEffect } from 'react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { promotionalItems } from '@/lib/listing-data';
 
@@ -39,13 +38,7 @@ export default function FlashSalesClient() {
               <Link key={item.id} href={`/products/${item.id}`}>
                 <div className="bg-white rounded-lg shadow-md overflow-hidden group cursor-pointer">
                   <div className="w-full h-48 bg-gray-50 flex items-center justify-center overflow-hidden">
-                    <Image
-                      src={item.image}
-                      alt={item.title}
-                      width={200}
-                      height={200}
-                      className="object-cover transition-transform duration-300 group-hover:scale-110"
-                    />
+                    <img src={item.image} alt={item.title} width={200} height={200} />
                   </div>
                   <div className="p-4">
                     <p className="text-sm font-medium group-hover:underline">{item.title}</p>

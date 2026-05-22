@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 import { useGetServiceById } from '@/service/services/hook';
 import { Button } from '@/components/ui/button';
 import { Star, Heart, Clock, Users, Award } from 'lucide-react';
@@ -73,12 +72,7 @@ export default function ServiceDetails({ serviceId }: ServiceDetailsProps) {
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-start">
           {/* Service Image */}
           <div className="aspect-square relative w-full rounded-2xl overflow-hidden shadow-2xl bg-gray-100">
-            <Image
-              src={firstImageUrl}
-              alt={service.name}
-              fill
-              className="object-cover transition-transform duration-500 hover:scale-105"
-            />
+            <img src={firstImageUrl} alt={service.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 hover:scale-105" />
           </div>
 
           {/* Service Info */}

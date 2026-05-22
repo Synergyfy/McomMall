@@ -74,7 +74,7 @@ export function ImageUpload({ value, onChange, disabled }: ImageUploadProps) {
                     </div>
                 ) : (
                     <div className="w-24 h-24 rounded-lg border-2 border-dashed border-slate-200 flex items-center justify-center bg-slate-50 text-slate-400">
-                        <ImageIcon className="w-8 h-8" />
+                        <img Icon />
                     </div>
                 )}
 

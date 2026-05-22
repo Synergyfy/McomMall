@@ -1,7 +1,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Gift, Ticket, Sparkles, Tag, Zap, Timer, ShieldCheck, Pencil, Trash2, Clock } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -65,12 +64,7 @@ export const DashboardGiftCard: React.FC<GiftCardProps> = ({ template, onEdit, o
             className="group relative aspect-[1.58/1] w-full max-w-[340px] mx-auto"
         >
             <div className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-xl border-4 border-white/10 bg-white">
-                <Image
-                    src={template.backgroundImageUrl || 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80'}
-                    alt={template.name}
-                    fill
-                    className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
-                />
+                <img src={template.backgroundImageUrl || 'https://images.unsplash.com/photo-1556742044-3c52d6e88c62?auto=format&fit=crop&w=800&q=80'} alt={template.name} className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" />
 
                 <div className="absolute inset-0 bg-gradient-to-br from-black/40 via-transparent to-black/60" />
                 <PinstripePattern />

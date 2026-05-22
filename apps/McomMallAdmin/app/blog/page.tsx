@@ -2,7 +2,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import Image from 'next/image';
 import Footer from '@/components/Footer';
 
 const blogPosts = [
@@ -106,13 +105,7 @@ const BlogPage = () => {
               variants={itemVariant}
             >
               <div className="relative">
-                <Image
-                  src={post.image}
-                  alt={post.title}
-                  width={800}
-                  height={400}
-                  className="w-full h-56 object-cover"
-                />
+                <img src={post.image} alt={post.title} width={800} height={400} />
                 <div className="absolute top-4 right-4 bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
                   {post.date}
                 </div>

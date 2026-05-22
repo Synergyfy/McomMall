@@ -210,7 +210,7 @@ export default function SizeGuideBuilder({ value, onChange, detectedSizes = [], 
                                     </div>
                                 ) : (
                                     <label className="w-20 h-20 border-2 border-dashed rounded-md flex flex-col items-center justify-center bg-gray-50 hover:bg-gray-100 cursor-pointer transition-colors">
-                                        <ImageIcon className="w-6 h-6 text-gray-400" />
+                                        <img Icon />
                                         <span className="text-[10px] text-gray-500 mt-1 uppercase font-bold">Upload</span>
                                         <input
                                             type="file"

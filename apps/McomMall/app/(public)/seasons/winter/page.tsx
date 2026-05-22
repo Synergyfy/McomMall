@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -210,14 +209,7 @@ export default function WinterExhibitionPage() {
     <div className="bg-slate-900 text-white font-sans">
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
-          src="https://images.unsplash.com/photo-1445543949571-ffc3e0e2f55e?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          alt="Winter city lights at night"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-50"
-          priority
-        />
+        <img src="https://images.unsplash.com/photo-1445543949571-ffc3e0e2f55e?q=80&w=1169&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Winter city lights at night" className="absolute inset-0 w-full h-full object-cover z-0 opacity-50" />
         <FallingSnow />
         <div className="absolute inset-0 bg-gradient-to-t from-slate-900 via-slate-900/60 to-transparent z-10"></div>
         <motion.div
@@ -316,13 +308,7 @@ export default function WinterExhibitionPage() {
             transition={{ duration: 0.7 }}
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
-            <Image
-              src="https://images.unsplash.com/photo-1576562331281-d09e46af9854?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              alt="Digital marketplace illustration"
-              width={800}
-              height={600}
-              className="w-full h-full object-cover"
-            />
+            <img src="https://images.unsplash.com/photo-1576562331281-d09e46af9854?q=80&w=1332&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Digital marketplace illustration" width={800} height={600} />
           </motion.div>
         </div>
       </section>
@@ -434,13 +420,7 @@ export default function WinterExhibitionPage() {
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
                     <Card className="relative overflow-hidden bg-white text-slate-900 border-blue-200 h-[400px] group">
-                      <Image
-                        src={benefit.image}
-                        alt={benefit.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="z-0 transition-transform duration-500 group-hover:scale-110"
-                      />
+                      <img src={benefit.image} alt={benefit.title} className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 z-10 bg-gradient-to-t from-blue-700/90 to-blue-500/20 transition-all duration-500 ease-in-out h-1/2 group-hover:h-full flex flex-col justify-end">
                         <div className="flex items-center gap-3 mb-2">
                           <benefit.icon className="w-8 h-8 text-blue-100" />
@@ -563,13 +543,7 @@ export default function WinterExhibitionPage() {
 
       {/* 8. Closing Section */}
       <section className="relative py-24 px-6 text-center">
-        <Image
-          src="https://source.unsplash.com/random/1920x1080/?snowy,winter,landscape"
-          alt="Snowy winter landscape"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-40"
-        />
+        <img src="https://source.unsplash.com/random/1920x1080/?snowy,winter,landscape" alt="Snowy winter landscape" className="absolute inset-0 w-full h-full object-cover z-0 opacity-40" />
         <div className="absolute inset-0 bg-slate-900/70 z-10"></div>
         <motion.div
           className="relative z-20"

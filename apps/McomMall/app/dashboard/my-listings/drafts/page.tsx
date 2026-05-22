@@ -10,7 +10,6 @@ import {
     Plus,
 } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import Image from 'next/image';
 import { useDeleteListing, useGetUserListings } from '@/service/listings/hook';
 import { UserListing } from '@/service/listings/types';
 import {
@@ -100,13 +99,7 @@ const ListingCard: React.FC<{
                 <div className="flex flex-col md:flex-row items-center gap-6 p-5">
                     <div className="relative h-24 w-24 md:h-28 md:w-28 shrink-0 overflow-hidden rounded-xl border border-slate-100 bg-slate-50">
                         {imgSrc ? (
-                            <Image
-                                src={imgSrc}
-                                alt={listing.businessName}
-                                fill
-                                className="object-cover"
-                                onError={() => setImgSrc(null)}
-                            />
+                            <img src={imgSrc} alt={listing.businessName} onError={() => setImgSrc(null)} className="absolute inset-0 w-full h-full object-cover" />
                         ) : (
                             <div className="flex h-full w-full items-center justify-center">
                                 <Building2 className="h-10 w-10 text-slate-300" />

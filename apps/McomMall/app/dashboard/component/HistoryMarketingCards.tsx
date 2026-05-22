@@ -2,7 +2,6 @@
 
 import React, { useRef, useState } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import {
     Gift,
     Ticket,
@@ -124,12 +123,7 @@ export const HistoryGiftCard: React.FC<HistoryGiftCardProps> = ({
                         className="absolute inset-0 rounded-[2rem] overflow-hidden shadow-2xl border border-white/20 bg-black"
                     >
                         {purchase.template?.backgroundImageUrl ? (
-                            <Image
-                                src={purchase.template?.backgroundImageUrl || ''}
-                                alt="Gift Card"
-                                fill
-                                className="object-cover opacity-90 transition-transform duration-700 group-hover:scale-105"
-                            />
+                            <img src={purchase.template?.backgroundImageUrl || ''} alt="Gift Card" className="absolute inset-0 w-full h-full object-cover opacity-90 transition-transform duration-700 group-hover:scale-105" />
                         ) : (
                             <div className="absolute inset-0 bg-gradient-to-br from-[#800000] to-[#4a0000]" />
                         )}

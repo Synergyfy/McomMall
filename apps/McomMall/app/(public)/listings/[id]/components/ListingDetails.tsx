@@ -277,7 +277,7 @@ export default function ClientListingDetail({
               <section id="media">
                 <div className="mb-12">
                   <h2 className="text-3xl font-black text-gray-900 mb-2 flex items-center gap-3">
-                    <ImageIcon className="text-[#f58220]" /> Visual Gallery
+                    <img Icon /> Visual Gallery
                   </h2>
                   <p className="text-gray-500 font-medium">Explore the venue and products through our lens.</p>
                 </div>

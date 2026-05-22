@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { Card, CardContent } from '@/components/ui/card';
 import {
   Tooltip,
@@ -118,13 +117,7 @@ export default function ListingCard({
       <Link href={href} className="block">
         <Card className="w-full overflow-hidden shadow-md border rounded-xl hover:shadow-xl transition-shadow duration-300 flex flex-col md:flex-row">
           <div className="relative md:w-1/3">
-            <Image
-              src={imgUrl}
-              alt={altText}
-              width={400}
-              height={250}
-              className="object-cover w-full h-56 md:h-full"
-            />
+            <img src={imgUrl} alt={altText} width={400} height={250} />
             <div className="absolute top-4 left-4 z-10">
               <span className="px-3 py-1 text-xs text-white bg-red-500 rounded-md">
                 {category}
@@ -218,13 +211,7 @@ export default function ListingCard({
           </TooltipProvider>
 
           {/* Listing Image */}
-          <Image
-            src={imgUrl}
-            alt={altText}
-            width={400}
-            height={250}
-            className="object-cover w-full h-56"
-          />
+          <img src={imgUrl} alt={altText} width={400} height={250} />
         </div>
 
         {/* Card Content */}

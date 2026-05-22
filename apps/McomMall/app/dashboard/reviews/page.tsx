@@ -3,7 +3,6 @@
 import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Star } from 'lucide-react';
-import Image from 'next/image';
 import {
   useGetReviewsForUser,
   useGetReviewsForBusinessOwner,
@@ -49,13 +48,7 @@ const ReviewCard: React.FC<{ review: Review; isBusinessOwnerView: boolean }> = (
     >
       <div className="flex items-start space-x-4">
         <div className="flex-shrink-0">
-          <Image
-            src={avatar}
-            alt={name}
-            width={50}
-            height={50}
-            className="h-12 w-12 rounded-full object-cover ring-2 ring-white"
-          />
+          <img src={avatar} alt={name} width={50} height={50} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex flex-col items-start gap-1 sm:flex-row sm:items-center sm:justify-between">

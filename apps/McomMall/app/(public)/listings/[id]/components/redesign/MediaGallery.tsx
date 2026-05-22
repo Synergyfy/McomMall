@@ -1,7 +1,6 @@
 'use client';
 
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { useState } from 'react';
 import { Maximize2, X, ChevronLeft, ChevronRight, ImageIcon } from 'lucide-react';
 import { AnimatePresence } from 'framer-motion';
@@ -68,20 +67,13 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
               {/* Shimmer Loading State */}
               {!loadedImages[index] && (
                 <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
-                  <ImageIcon className="text-gray-300 w-10 h-10" />
+                  <img Icon />
                 </div>
               )}
               
-              <Image
-                src={url}
-                alt={`Gallery image ${index + 1}`}
-                fill
-                className={`object-cover transition-all duration-700 group-hover:scale-110 ${
+              <img src={url} alt={`Gallery image ${index + 1}`} onLoadingComplete={() => handleImageLoad(index)} sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" className={`absolute inset-0 w-full h-full ${`object-cover transition-all duration-700 group-hover:scale-110 ${
                   loadedImages[index] ? 'opacity-100' : 'opacity-0'
-                }`}
-                onLoadingComplete={() => handleImageLoad(index)}
-                sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw"
-              />
+                }`}`} />
               
               <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-all duration-300 flex items-center justify-center backdrop-blur-[2px]">
                 <div className="w-12 h-12 rounded-2xl bg-white/20 backdrop-blur-md flex items-center justify-center text-white border border-white/30 scale-50 group-hover:scale-100 transition-transform duration-500">
@@ -131,14 +123,7 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
                 exit={{ opacity: 0, scale: 0.9, x: -20 }}
                 className="relative w-full h-full"
               >
-                <Image
-                  src={media[selectedImageIndex]}
-                  alt="Enlarged gallery image"
-                  fill
-                  className="object-contain"
-                  priority
-                  sizes="100vw"
-                />
+                <img src={media[selectedImageIndex]} alt="Enlarged gallery image" sizes="100vw" className="absolute inset-0 w-full h-full object-contain" />
               </motion.div>
             </div>
 

@@ -3,7 +3,6 @@
 import React, { useMemo } from 'react';
 import { motion } from 'framer-motion';
 import { Card, CardContent } from '@/components/ui/card';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ChevronLeft, ChevronRight, Loader2 } from 'lucide-react';
 import {
@@ -153,20 +152,12 @@ export function McomEgiftCard() {
                   <div
                     className={`aspect-[16/10] overflow-hidden ${card.backgroundStyle}`}
                   >
-                    <Image
-                      src={card.imageUrl}
-                      alt={card.title}
-                      width={400}
-                      height={250}
-                      loading="lazy"
-                      className="w-full h-full object-contain p-4 sm:p-6 transition-transform duration-300 group-hover:scale-105"
-                      onError={e => {
+                    <img src={card.imageUrl} alt={card.title} width={400} height={250} loading="lazy" onError={e => {
                         const target = e.target as HTMLImageElement;
                         target.onerror = null;
                         target.src =
                           'https://placehold.co/400x250/CCCCCC/FFFFFF?text=Image+Error';
-                      }}
-                    />
+                      }} />
                   </div>
                   <CardContent className="flex-grow flex flex-col justify-between">
                     <div>

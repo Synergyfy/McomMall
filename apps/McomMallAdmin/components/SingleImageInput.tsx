@@ -2,7 +2,6 @@
 
 import React, { useState, ChangeEvent } from 'react';
 import { motion } from 'framer-motion';
-import Image from 'next/image';
 import { LucideImage } from 'lucide-react';
 import clsx from 'clsx';
 
@@ -63,13 +62,7 @@ const SingleImageInput: React.FC<SingleImageInputProps> = ({
       onClick={handleClick}
     >
       {preview ? (
-        <Image
-          src={preview}
-          alt="Selected"
-          width={256}
-          height={256}
-          className="object-cover rounded-lg w-full h-full"
-        />
+        <img src={preview} alt="Selected" width={256} height={256} />
       ) : (
         <div className="flex flex-col items-center text-gray-400">
           <LucideImage size={24} />

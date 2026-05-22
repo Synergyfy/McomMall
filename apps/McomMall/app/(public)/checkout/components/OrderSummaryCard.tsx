@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Product } from '@/service/listings/types';
 import { Cart } from '@/hooks/useCart';
@@ -124,12 +123,7 @@ export default function OrderSummaryCard({
               className="flex items-center space-x-4"
             >
               <div className="relative w-16 h-16">
-                <Image
-                  src={item.product.imageUrl || (item.product.fileUrls && item.product.fileUrls[0]) || '/placeholder.svg'}
-                  alt={item.product.title}
-                  layout="fill"
-                  className="object-cover rounded-lg shadow-sm"
-                />
+                <img src={item.product.imageUrl || (item.product.fileUrls && item.product.fileUrls[0]) || '/placeholder.svg'} alt={item.product.title} className="absolute inset-0 w-full h-full object-cover rounded-lg shadow-sm" />
               </div>
               <div className="flex-1">
                 <h3 className="font-semibold text-gray-800">
@@ -159,12 +153,7 @@ export default function OrderSummaryCard({
           <>
             <div className="flex items-center space-x-4">
               <div className="relative w-24 h-24">
-                <Image
-                  src={product.imageUrl || (product.fileUrls && product.fileUrls[0]) || '/placeholder.svg'}
-                  alt={product.title}
-                  layout="fill"
-                  className="object-cover rounded-lg shadow-sm"
-                />
+                <img src={product.imageUrl || (product.fileUrls && product.fileUrls[0]) || '/placeholder.svg'} alt={product.title} className="absolute inset-0 w-full h-full object-cover rounded-lg shadow-sm" />
               </div>
               <div className="flex-1">
                 <h3 className="text-lg font-bold text-gray-800">

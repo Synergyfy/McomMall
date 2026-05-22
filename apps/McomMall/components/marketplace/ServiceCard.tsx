@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Briefcase, Clock, MapPin, Star, Calendar, CheckCircle2, User } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -78,12 +77,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
                     <div className="flex flex-col sm:flex-row">
                         {/* Left - Service Image */}
                         <div className="relative w-full sm:w-64 h-48 sm:h-auto bg-gradient-to-br from-orange-50 to-amber-50 flex-shrink-0">
-                            <Image
-                                src={imageSrc}
-                                alt={title}
-                                fill
-                                className="object-cover group-hover:scale-105 transition-transform duration-500"
-                            />
+                            <img src={imageSrc} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                             <div className="absolute inset-0 bg-gradient-to-t from-black/20 to-transparent" />
 
                             {/* Service Type Badge */}
@@ -159,12 +153,7 @@ export default function ServiceCard({ service, viewMode = 'grid' }: ServiceCardP
 
                 {/* Service Image */}
                 <div className="relative h-40 bg-gradient-to-br from-orange-50 to-amber-50 overflow-hidden">
-                    <Image
-                        src={imageSrc}
-                        alt={title}
-                        fill
-                        className="object-cover group-hover:scale-110 transition-transform duration-500"
-                    />
+                    <img src={imageSrc} alt={title} className="absolute inset-0 w-full h-full object-cover group-hover:scale-110 transition-transform duration-500" />
                     <div className="absolute inset-0 bg-gradient-to-t from-black/30 to-transparent" />
 
                     {/* Badges */}

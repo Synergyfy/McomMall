@@ -106,10 +106,7 @@ function SectorDialog({
                     </div>
                     <div className="space-y-2">
                         <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
+                        <img Upload value={formData.image} onChange={(url) => setFormData({ ...formData, image: url })} />
                     </div>
                 </div>
 
@@ -184,10 +181,7 @@ function CategoryDialog({
                     </div>
                     <div className="space-y-2">
                         <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
+                        <img Upload value={formData.image} onChange={(url) => setFormData({ ...formData, image: url })} />
                     </div>
                 </div>
 
@@ -262,10 +256,7 @@ function SubcategoryDialog({
                     </div>
                     <div className="space-y-2">
                         <Label>Image</Label>
-                        <ImageUpload
-                            value={formData.image}
-                            onChange={(url) => setFormData({ ...formData, image: url })}
-                        />
+                        <img Upload value={formData.image} onChange={(url) => setFormData({ ...formData, image: url })} />
                     </div>
                 </div>
 
@@ -489,7 +480,7 @@ export default function ContentPage() {
                         <span className="hidden sm:inline">Pages</span>
                     </TabsTrigger>
                     <TabsTrigger value="banners" className="gap-2">
-                        <ImageIcon className="h-4 w-4" />
+                        <img Icon />
                         <span className="hidden sm:inline">Banners</span>
                     </TabsTrigger>
                     <TabsTrigger value="faqs" className="gap-2">

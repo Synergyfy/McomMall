@@ -7,7 +7,6 @@ import { useGetWishlist, useAddToWishlist, useRemoveFromWishlist } from '@/servi
 import { Service } from '@/service/services/types';
 import { useState, useEffect } from 'react';
 import { BookingModal } from '@/components/BookingModal';
-import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Calendar, Clock, ArrowRight, ShieldCheck, ChevronLeft, ChevronRight, Wrench, Heart } from 'lucide-react';
 import { useSelector } from 'react-redux';
@@ -141,12 +140,7 @@ export default function ServicesSection({ businessId }: ServicesSectionProps) {
                 className="h-full bg-white rounded-[2.5rem] overflow-hidden border border-gray-100 shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.1)] transition-all duration-500 flex flex-col cursor-pointer"
               >
                 <div className="relative h-64 overflow-hidden">
-                  <Image
-                    src={firstImageUrl}
-                    alt={service.name}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
+                  <img src={firstImageUrl} alt={service.name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   
                   <div className="absolute top-5 left-5">

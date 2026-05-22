@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { User } from 'lucide-react';
 import { IBusiness } from '@/service/merchant/types';
 
@@ -19,7 +18,7 @@ export default function ServiceSellerCard({ business }: ServiceSellerCardProps) 
       <div className="flex items-center gap-4">
         <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
           {logoUrl ? (
-             <Image src={logoUrl} alt={displayName} fill className="object-cover" />
+             <img src={logoUrl} alt={displayName} className="absolute inset-0 w-full h-full object-cover" />
           ) : (
              <div className="w-full h-full flex items-center justify-center text-gray-400">
                <User size={32} />

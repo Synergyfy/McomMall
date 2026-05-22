@@ -1,5 +1,4 @@
 import React, { useRef } from 'react';
-import Image from 'next/image';
 
 // Mock data for the feature cards
 const features = [
@@ -59,13 +58,7 @@ const FeatureCard = ({
 }) => (
   <div className="w-[80vw] flex-shrink-0 rounded-2xl bg-white p-6 text-center shadow-sm transition-shadow duration-300 hover:shadow-lg sm:w-64">
     <div className="flex justify-center mb-4">
-      <Image
-        src={imageUrl}
-        alt={title}
-        width={80}
-        height={80}
-        className="rounded-full object-cover"
-      />
+      <img src={imageUrl} alt={title} width={80} height={80} />
     </div>
     <h3 className="text-lg font-semibold text-gray-800 mb-2">{title}</h3>
     <p className="text-sm text-gray-500">{description}</p>

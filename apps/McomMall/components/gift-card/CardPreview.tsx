@@ -1,7 +1,6 @@
 "use client";
 
 import React from "react";
-import Image from "next/image";
 import { Gift } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { CURRENCY } from "@/lib/utils";
@@ -42,13 +41,7 @@ const CardPreview = ({
       <CardContent className="space-y-4 pt-6">
         <div className="text-center">
           {customImage ? (
-            <Image
-              src={customImage}
-              alt="Custom design"
-              width={400}
-              height={200}
-              className="mx-auto w-full h-auto rounded-lg"
-            />
+            <img src={customImage} alt="Custom design" width={400} height={200} />
           ) : SelectedSvg ? (
             <SelectedSvg className="mx-auto w-full h-auto rounded-lg" />
           ) : (

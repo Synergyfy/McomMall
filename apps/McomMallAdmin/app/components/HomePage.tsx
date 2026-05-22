@@ -8,7 +8,6 @@ import Winter from '@/public/homepage/WinterSale.png';
 import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
-import Image from 'next/image';
 import { businessCategories } from '@/lib/business-categories';
 import { useGetRecentListings } from '@/service/listings/hook';
 
@@ -187,13 +186,7 @@ export default function HomePage() {
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
-              <Image
-                src={backgroundImages[currentImageIndex]}
-                layout="fill"
-                objectFit="cover"
-                priority
-                alt="Seasonal background"
-              />
+              <img src={backgroundImages[currentImageIndex]?.src || backgroundImages[currentImageIndex]} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
@@ -324,14 +317,7 @@ export default function HomePage() {
                       transition={{ duration: 0.3 }}
                       className="bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow"
                     >
-                      <Image
-                        src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`}
-                        alt={ad.businessName}
-                        width={300}
-                        height={200}
-                        loading="lazy"
-                        className="w-full h-48 object-cover"
-                      />
+                      <img src={`https://source.unsplash.com/random/300x200?sig=${ad.id}`} alt={ad.businessName} width={300} height={200} loading="lazy" />
                       <div className="flex flex-col justify-between w-full p-4">
                         <div>
                           <div className="flex justify-between items-start">
@@ -398,14 +384,7 @@ export default function HomePage() {
                 className="bg-white rounded-2xl shadow-md overflow-hidden group"
               >
                 <div className="relative">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    width={300}
-                    height={200}
-                    loading="lazy"
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
+                  <img src={post.image} alt={post.title} width={300} height={200} loading="lazy" />
                   <div className="absolute top-4 right-4 bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
                     {post.date}
                   </div>

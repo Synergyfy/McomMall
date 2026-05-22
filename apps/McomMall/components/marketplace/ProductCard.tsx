@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { Heart, ShoppingCart, Star, Eye } from 'lucide-react';
 import { Button } from '@/components/ui/button';
@@ -40,12 +39,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     return (
       <div className="group flex flex-col sm:flex-row bg-white rounded-xl border border-gray-100 hover:shadow-lg transition-all duration-300 overflow-hidden">
         <div className="relative w-full sm:w-64 h-64 sm:h-auto flex-shrink-0 bg-gray-50 overflow-hidden">
-          <Image
-            src={product.image}
-            alt={product.title}
-            fill
-            className="object-cover transition-transform duration-500 group-hover:scale-110"
-          />
+          <img src={product.image} alt={product.title} className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
           <div className="absolute top-3 left-3 flex gap-2 z-10">
             {discountPercentage > 0 && (
               <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 rounded-md px-2 py-1">
@@ -124,15 +118,10 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
     <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-[340px] md:h-[400px] relative w-full">
       {/* Image Container - Fixed Height */}
       <div className="relative h-[160px] md:h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
-        <Image
-          src={product.image}
-          alt={product.title}
-          fill
-          className={cn(
+        <img src={product.image} alt={product.title} className={`absolute inset-0 w-full h-full ${cn(
             "object-cover transition-transform duration-700 group-hover:scale-110",
             isOutOfStock && "grayscale opacity-70"
-          )}
-        />
+          )}`} />
 
         {/* Badges */}
         <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 md:gap-2 z-10">

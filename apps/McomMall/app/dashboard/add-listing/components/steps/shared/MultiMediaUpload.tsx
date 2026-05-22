@@ -1,7 +1,6 @@
 'use client';
 import React, { useState, ChangeEvent, useEffect, useCallback } from 'react';
 import { Plus, X, UploadCloud, Crop } from 'lucide-react';
-import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import MediaCropper from './MediaCropper';
 
@@ -163,13 +162,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
         {initialMediaFiles.map((url, index) => (
           <div key={`initial-${index}`} className="relative aspect-square">
-            <Image
-              src={url}
-              alt={`initial preview ${index}`}
-              layout="fill"
-              objectFit="cover"
-              className="rounded-lg"
-            />
+            <img src={url} alt={`initial preview ${index}`} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
             <button
               type="button"
               onClick={() => setInitialMediaFiles(initialMediaFiles.filter((_, i) => i !== index))}
@@ -183,13 +176,7 @@ const MultiMediaUpload: React.FC<MultiMediaUploadProps> = ({
         {mediaFiles.map((mediaFile, index) => (
           <div key={index} className="relative aspect-square">
             {mediaFile.type === 'image' ? (
-              <Image
-                src={mediaFile.previewUrl}
-                alt={`preview ${index}`}
-                layout="fill"
-                objectFit="cover"
-                className="rounded-lg"
-              />
+              <img src={mediaFile.previewUrl} alt={`preview ${index}`} className="absolute inset-0 w-full h-full object-cover rounded-lg" />
             ) : (
               <video
                 src={mediaFile.previewUrl}

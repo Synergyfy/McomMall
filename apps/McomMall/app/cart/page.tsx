@@ -4,7 +4,6 @@ import { useCart, CartItem } from '@/hooks/useCart';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Trash2, Plus, Minus } from 'lucide-react';
-import Image from 'next/image';
 import Link from 'next/link';
 import { useCallback } from 'react';
 
@@ -80,17 +79,11 @@ export default function CartPage() {
               >
                 <div className="flex items-center space-x-4">
                   <Link href={`/products/${item.product.id}`}>
-                    <Image
-                      src={
+                    <img src={
                         item.product.imageUrl ||
                         (item.product.fileUrls && item.product.fileUrls[0]) ||
                         'https://via.placeholder.com/100'
-                      }
-                      alt={item.product.title}
-                      width={100}
-                      height={100}
-                      className="rounded-md object-cover"
-                    />
+                      } alt={item.product.title} width={100} height={100} />
                   </Link>
                   <div>
                     <Link href={`/products/${item.product.id}`}>

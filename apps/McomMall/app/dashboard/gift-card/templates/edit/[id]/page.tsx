@@ -13,7 +13,6 @@ import { useEffect } from 'react';
 import { Label } from "@/components/ui/label";
 import { X } from 'lucide-react';
 import { toast } from "sonner";
-import Image from "next/image";
 
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import GiftCardPreview from '@/components/gift-card/gift-card-preview';
@@ -469,7 +468,7 @@ const EditGiftCardTemplatePage = () => {
                 <Input id="image" type="file" onChange={handleImageChange} className="mt-1" disabled={isUpdating || isUploading || isFetching} />
                 {imagePreview && (
                   <div className="mt-4">
-                    <Image src={imagePreview} alt="Image preview" className="w-full h-48 object-cover rounded-md" width={500} height={300} />
+                    <img src={imagePreview} alt="Image preview" width={500} height={300} />
                   </div>
                 )}
                 {errors.imageUrl && <p className="text-red-500 text-xs mt-1">{errors.imageUrl}</p>}

@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import { Card } from '@/components/ui/card';
 import {
   Tooltip,
@@ -89,12 +88,7 @@ export default function ListingCard({
           <Card className="w-full overflow-hidden border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.1)] hover:shadow-[0_20px_40px_-12px_rgba(0,0,0,0.15)] transition-all duration-500 rounded-3xl flex flex-col md:flex-row h-full">
             <div className="relative md:w-80 h-64 md:h-auto overflow-hidden bg-gray-100">
               {finalImgUrl && (
-                <Image
-                  src={finalImgUrl}
-                  alt={name}
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
-                />
+                <img src={finalImgUrl} alt={name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
               )}
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
               {category && (
@@ -173,12 +167,7 @@ export default function ListingCard({
         <Card className="h-full overflow-hidden border-none bg-white shadow-[0_4px_20px_-4px_rgba(0,0,0,0.08)] hover:shadow-[0_24px_48px_-12px_rgba(0,0,0,0.12)] transition-all duration-500 rounded-[2.5rem] flex flex-col">
           <div className="relative aspect-[4/3] overflow-hidden bg-gray-100">
             {finalImgUrl && (
-              <Image
-                src={finalImgUrl}
-                alt={name}
-                fill
-                className="object-cover transition-transform duration-700 group-hover:scale-110"
-              />
+              <img src={finalImgUrl} alt={name} className="absolute inset-0 w-full h-full object-cover transition-transform duration-700 group-hover:scale-110" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
             

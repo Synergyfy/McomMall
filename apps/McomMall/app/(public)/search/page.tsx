@@ -6,7 +6,6 @@ import { Search, MapPin } from 'lucide-react';
 import { useSearch } from '@/service/search/hook';
 import { Product, Service } from '@/service/search/types';
 import { CURRENCY } from '@/lib/utils';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { useCart } from '@/hooks/useCart';
 import { toast } from 'sonner';
@@ -162,12 +161,7 @@ const SearchResultsPage = () => {
                   onClick={() => handleCardClick(item)}
                 >
                   <div className="relative h-48 w-full">
-                    <Image
-                      src={getImageUrl(item)}
-                      alt={'title' in item ? item.title : item.name}
-                      layout="fill"
-                      objectFit="cover"
-                    />
+                    <img src={getImageUrl(item)} alt={'title' in item ? item.title : item.name} className="absolute inset-0 w-full h-full object-cover" />
                   </div>
                   <div className="p-4 flex flex-col flex-grow">
                     <h2 className="font-bold text-lg mb-2 truncate">{'title' in item ? item.title : item.name}</h2>

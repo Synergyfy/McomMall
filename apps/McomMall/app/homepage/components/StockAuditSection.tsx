@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useRef } from 'react';
-import Image from 'next/image';
 import { motion, useScroll, useTransform } from 'framer-motion';
 import {
   ClipboardCheck,
@@ -97,12 +96,7 @@ export function StockAuditSection() {
 
           <div className="lg:col-span-5">
             <div className="relative h-[500px] w-full overflow-hidden rounded-3xl">
-              <Image
-                src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-                alt="Warehouse inventory being audited"
-                fill
-                className="object-cover"
-              />
+              <img src="https://images.unsplash.com/photo-1517245386807-bb43f82c33c4?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Warehouse inventory being audited" className="absolute inset-0 w-full h-full object-cover" />
             </div>
           </div>
         </div>

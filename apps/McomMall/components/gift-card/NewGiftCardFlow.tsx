@@ -10,7 +10,6 @@ import { cn } from "@/lib/utils";
 import GiftCardEmail from "./GiftCardEmail";
 import { useGetGiftCardAssets } from "@/service/hooks/useGiftCardService";
 import { AssetCategory, InitiatePurchaseDto } from "@/service/gift-cards/types";
-import Image from "next/image";
 import PaymentModal from "./PaymentModal";
 import SuccessAnimation from "./SuccessAnimation";
 
@@ -535,13 +534,7 @@ const NewGiftCardFlow = ({ template }: NewGiftCardFlowProps) => {
                                   : "border-gray-200"
                               )}
                             >
-                              <Image
-                                src={asset.url}
-                                alt={asset.name}
-                                width={150}
-                                height={100}
-                                className="w-full h-auto rounded-md"
-                              />
+                              <img src={asset.url} alt={asset.name} width={150} height={100} />
                             </div>
                           ))}
                         </div>

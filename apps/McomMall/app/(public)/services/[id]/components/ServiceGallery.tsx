@@ -1,7 +1,6 @@
 'use client';
 
 import { useState } from 'react';
-import Image from 'next/image';
 
 interface ServiceGalleryProps {
   images: string[];
@@ -17,13 +16,7 @@ export default function ServiceGallery({ images, title }: ServiceGalleryProps) {
     <div className="space-y-4">
       {/* Main Image */}
       <div className="relative bg-white rounded-lg overflow-hidden border border-gray-100 shadow-sm w-full h-[300px] sm:h-[400px] lg:h-[500px]">
-        <Image
-          src={images[currentImageIndex]}
-          alt={title}
-          fill
-          className="object-contain p-2"
-          priority
-        />
+        <img src={images[currentImageIndex]} alt={title} className="absolute inset-0 w-full h-full object-contain p-2" />
       </div>
 
       {/* Thumbnails */}
@@ -39,12 +32,7 @@ export default function ServiceGallery({ images, title }: ServiceGalleryProps) {
                   : 'border-transparent opacity-70 hover:opacity-100 hover:border-gray-200'
               }`}
             >
-              <Image
-                src={img}
-                alt={`${title} view ${index + 1}`}
-                fill
-                className="object-cover"
-              />
+              <img src={img} alt={`${title} view ${index + 1}`} className="absolute inset-0 w-full h-full object-cover" />
             </button>
           ))}
         </div>

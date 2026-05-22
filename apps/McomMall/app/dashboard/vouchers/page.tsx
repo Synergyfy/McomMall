@@ -20,7 +20,6 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '@/components/ui/accordion';
-import Image from 'next/image';
 
 interface Variation {
   id: number;
@@ -167,17 +166,10 @@ export default function ProductDataForm() {
                   </AccordionTrigger>
                   <AccordionContent className="p-4 md:p-6 grid grid-cols-1 md:grid-cols-12 gap-6 bg-white rounded-b-lg">
                     <div className="md:col-span-1 flex justify-center items-start">
-                      <Image
-                        src="https://placehold.co/100x100/e2e8f0/334155?text=T-Shirt"
-                        alt="Product image"
-                        width={100}
-                        height={100}
-                        className="object-cover rounded-md"
-                        onError={e => {
+                      <img src="https://placehold.co/100x100/e2e8f0/334155?text=T-Shirt" alt="Product image" width={100} height={100} onError={e => {
                           e.currentTarget.src =
                             'https://placehold.co/100x100/e2e8f0/334155?text=Img';
-                        }}
-                      />
+                        }} />
                     </div>
                     <div className="md:col-span-11 space-y-6">
                       <p className="text-sm text-gray-600 font-mono">

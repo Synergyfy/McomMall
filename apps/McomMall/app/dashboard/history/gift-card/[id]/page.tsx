@@ -26,7 +26,6 @@ import { Badge } from '@/components/ui/badge';
 import { toast } from 'sonner';
 import QRCode from 'react-qr-code';
 import * as htmlToImage from 'html-to-image';
-import Image from 'next/image';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const PinstripePattern = () => (
@@ -201,12 +200,7 @@ export default function GiftCardDetailPage() {
                                 className="relative aspect-[1.58/1] w-full rounded-[2.5rem] overflow-hidden shadow-[0_25px_60px_-15px_rgba(0,0,0,0.3)] border border-white/20 bg-black group transition-transform duration-500 hover:scale-[1.02]"
                             >
                                 {purchase.template?.backgroundImageUrl ? (
-                                    <Image
-                                        src={purchase.template.backgroundImageUrl}
-                                        alt="Gift Card"
-                                        fill
-                                        className="object-cover opacity-90 group-hover:scale-110 transition-transform duration-700"
-                                    />
+                                    <img src={purchase.template.backgroundImageUrl} alt="Gift Card" className="absolute inset-0 w-full h-full object-cover opacity-90 group-hover:scale-110 transition-transform duration-700" />
                                 ) : (
                                     <div className="absolute inset-0 bg-gradient-to-br from-[#800000] to-[#4a0000]" />
                                 )}

@@ -104,7 +104,7 @@ export default function ListingPage({
         </header>
 
         {/* Image Gallery */}
-        <ImageGallery images={imageUrls} />
+        <img Gallery images={imageUrls} />
 
         {/* Main Content Layout */}
         <div className="mt-12 grid grid-cols-1 lg:grid-cols-3 gap-12">

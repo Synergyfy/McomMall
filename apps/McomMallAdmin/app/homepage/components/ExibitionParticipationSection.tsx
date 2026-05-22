@@ -3,7 +3,6 @@
 
 import { useState } from 'react';
 import { motion, AnimatePresence, Variants } from 'framer-motion';
-import Image from 'next/image';
 import { Button } from '@/components/ui/button';
 import { ArrowRight } from 'lucide-react';
 
@@ -107,13 +106,7 @@ export const ParticipationSection = () => {
                 className="absolute inset-0 h-full w-full"
               >
                 {/* Full-bleed Image */}
-                <Image
-                  src={activeContent.imageUrl}
-                  alt={activeContent.imageAlt}
-                  fill
-                  className="object-cover transition-transform duration-500 ease-in-out group-hover:scale-105"
-                  priority // Prioritize loading the first image
-                />
+                <img src={activeContent.imageUrl} alt={activeContent.imageAlt} // Prioritize loading the first image className="absolute inset-0 w-full h-full object-cover transition-transform duration-500 ease-in-out group-hover:scale-105" />
 
                 {/* Gradient Overlay for Text Readability */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-transparent" />

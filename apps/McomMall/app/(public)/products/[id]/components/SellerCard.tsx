@@ -1,6 +1,5 @@
 'use client';
 
-import Image from 'next/image';
 import Link from 'next/link';
 import { User, ChevronRight, UserCircle } from 'lucide-react';
 import { InHouseBusiness } from '@/service/listings/types';
@@ -25,7 +24,7 @@ export default function SellerCard({ business }: SellerCardProps) {
       <div className="flex items-center gap-4 mb-4">
         <div className="relative w-16 h-16 rounded-full overflow-hidden bg-gray-100 border border-gray-200 flex-shrink-0">
           {logoUrl ? (
-            <Image src={logoUrl} alt={displayName} fill className="object-cover" />
+            <img src={logoUrl} alt={displayName} className="absolute inset-0 w-full h-full object-cover" />
           ) : (
             <div className="w-full h-full flex items-center justify-center text-gray-400">
               <User size={32} />

@@ -260,7 +260,7 @@ function VariantGroupRows({
                   <img src={variation.image} alt="Variant" className="w-full h-full object-cover rounded-md border border-gray-200" />
                 ) : (
                   <div className="w-full h-full bg-gray-50 rounded-md flex items-center justify-center border border-dashed border-gray-300">
-                    <ImageIcon className="w-3 h-3 text-gray-300" />
+                    <img Icon />
                   </div>
                 )}
                 <label className="absolute inset-0 cursor-pointer flex items-center justify-center bg-black/50 opacity-0 group-hover:opacity-100 rounded-md transition-opacity">

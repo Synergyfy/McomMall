@@ -633,7 +633,7 @@ function VariantGroupRows({
                         {/* Data Inputs matching the UI */}
                         <TableCell className="text-center">
                             <div className="w-9 h-9 border rounded-lg border-dashed border-slate-200 flex items-center justify-center text-slate-300 hover:border-orange-200 hover:text-orange-400 cursor-pointer transition-all">
-                                <ImageIcon className="h-4 w-4" />
+                                <img Icon />
                             </div>
                         </TableCell>
 

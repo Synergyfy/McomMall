@@ -8,7 +8,6 @@ import Winter from '@/public/homepage/WinterSale.png';
 import Summer from '@/public/homepage/SummerBanner.png';
 import Spring from '@/public/homepage/SpringBanner.png';
 import Autumn from '@/public/homepage/AutumnBanner.png';
-import Image from 'next/image';
 import { useGetRecentListings } from '@/service/listings/hook';
 import { useGetCategories } from '@/service/taxonomy/hook';
 
@@ -184,13 +183,7 @@ export default function HomePage() {
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
-              <Image
-                src={backgroundImages[currentImageIndex]}
-                layout="fill"
-                objectFit="cover"
-                priority
-                alt="Seasonal background"
-              />
+              <img src={backgroundImages[currentImageIndex]?.src || backgroundImages[currentImageIndex]} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />
@@ -339,20 +332,14 @@ export default function HomePage() {
                           className="min-w-[300px] max-w-[300px] bg-white rounded-2xl shadow-md overflow-hidden flex flex-col hover:shadow-xl transition-shadow border border-gray-100"
                         >
                           <div className="relative h-48 w-full">
-                            <Image
-                              src={
+                            <img src={
                                 ad.logoUrl ||
                                 ad.bannerUrl ||
                                 (ad.media && ad.media.length > 0
                                   ? ad.media[0]
                                   : '') ||
                                 'https://via.placeholder.com/300x200?text=No+Image'
-                              }
-                              alt={ad.businessName}
-                              layout="fill"
-                              objectFit="cover"
-                              loading="lazy"
-                            />
+                              } alt={ad.businessName} loading="lazy" className="absolute inset-0 w-full h-full object-cover" />
                             <div className="absolute top-4 left-4">
                               <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
                                 {ad.categories?.[0]?.name || 'Uncategorized'}
@@ -455,14 +442,7 @@ export default function HomePage() {
                 className="bg-white rounded-2xl shadow-md overflow-hidden group"
               >
                 <div className="relative">
-                  <Image
-                    src={post.image}
-                    alt={post.title}
-                    width={300}
-                    height={200}
-                    loading="lazy"
-                    className="w-full h-48 object-cover group-hover:scale-110 transition-transform duration-300"
-                  />
+                  <img src={post.image} alt={post.title} width={300} height={200} loading="lazy" />
                   <div className="absolute top-4 right-4 bg-gray-800 text-white text-xs px-3 py-1 rounded-full">
                     {post.date}
                   </div>

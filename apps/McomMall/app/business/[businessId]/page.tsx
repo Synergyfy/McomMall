@@ -10,7 +10,6 @@ import { useCart } from '@/hooks/useCart';
 import { Product } from '@/service/listings/types';
 import { Building2, Mail, Phone, Globe, MapPin, CheckCircle, User, ChevronLeft } from 'lucide-react';
 import Link from 'next/link';
-import Image from 'next/image';
 
 const BusinessStorefrontPage = () => {
   const { businessId } = useParams();
@@ -70,12 +69,7 @@ const BusinessStorefrontPage = () => {
             {/* Banner */}
             {business.bannerUrl && (
               <div className="relative w-full h-48 md:h-64 bg-gradient-to-r from-orange-500 to-red-500">
-                <Image
-                  src={business.bannerUrl}
-                  alt={business.bannerAltText || business.businessName}
-                  fill
-                  className="object-cover"
-                />
+                <img src={business.bannerUrl} alt={business.bannerAltText || business.businessName} className="absolute inset-0 w-full h-full object-cover" />
               </div>
             )}
 
@@ -84,7 +78,7 @@ const BusinessStorefrontPage = () => {
                 {/* Logo */}
                 <div className="relative w-24 h-24 md:w-32 md:h-32 rounded-full overflow-hidden bg-gray-100 border-4 border-white shadow-lg flex-shrink-0 -mt-16 md:-mt-20">
                   {business.logoUrl ? (
-                    <Image src={business.logoUrl} alt={business.logoAltText || business.businessName} fill className="object-cover" />
+                    <img src={business.logoUrl} alt={business.logoAltText || business.businessName} className="absolute inset-0 w-full h-full object-cover" />
                   ) : (
                     <div className="w-full h-full flex items-center justify-center text-gray-400">
                       <Building2 size={48} />

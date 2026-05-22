@@ -3,7 +3,6 @@
 'use client';
 
 import React from 'react';
-import Image from 'next/image';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -226,14 +225,7 @@ export default function SummerExhibitionPage() {
     <div className="bg-blue-950 text-slate-100 font-sans">
       {/* 1. Hero Section */}
       <section className="relative h-screen min-h-[600px] flex items-center justify-center text-center overflow-hidden">
-        <Image
-          src="https://images.unsplash.com/photo-1580737123512-b720ac34049a?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-          alt="Summer city lights at night"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-50"
-          priority
-        />
+        <img src="https://images.unsplash.com/photo-1580737123512-b720ac34049a?q=80&w=1170&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Summer city lights at night" className="absolute inset-0 w-full h-full object-cover z-0 opacity-50" />
         <RisingBubbles />
         <div className="absolute inset-0 bg-gradient-to-t from-blue-950 via-blue-950/60 to-transparent z-10"></div>
         <motion.div
@@ -332,13 +324,7 @@ export default function SummerExhibitionPage() {
             transition={{ duration: 0.7 }}
             className="h-80 lg:h-full rounded-xl overflow-hidden"
           >
-            <Image
-              src="https://images.unsplash.com/photo-1553426971-e1937d26f49b?q=80&w=1331&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D"
-              alt="Digital marketplace illustration"
-              width={800}
-              height={600}
-              className="w-full h-full object-cover"
-            />
+            <img src="https://images.unsplash.com/photo-1553426971-e1937d26f49b?q=80&w=1331&auto=format&fit=crop&ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D" alt="Digital marketplace illustration" width={800} height={600} />
           </motion.div>
         </div>
       </section>
@@ -449,13 +435,7 @@ export default function SummerExhibitionPage() {
                 <CarouselItem key={index} className="md:basis-1/2 lg:basis-1/3">
                   <div className="p-1">
                     <Card className="relative overflow-hidden bg-slate-100 text-slate-900 border-cyan-200 h-[400px] group">
-                      <Image
-                        src={benefit.image}
-                        alt={benefit.title}
-                        layout="fill"
-                        objectFit="cover"
-                        className="z-0 transition-transform duration-500 group-hover:scale-110"
-                      />
+                      <img src={benefit.image} alt={benefit.title} className="absolute inset-0 w-full h-full object-cover z-0 transition-transform duration-500 group-hover:scale-110" />
                       <div className="absolute bottom-0 left-0 right-0 p-6 z-10 bg-gradient-to-t from-teal-800/90 to-cyan-600/20 transition-all duration-500 ease-in-out h-1/2 group-hover:h-full flex flex-col justify-end">
                         <div className="flex items-center gap-3 mb-2">
                           <benefit.icon className="w-8 h-8 text-cyan-100" />
@@ -578,13 +558,7 @@ export default function SummerExhibitionPage() {
 
       {/* 8. Closing Section */}
       <section className="relative py-24 px-6 text-center">
-        <Image
-          src="https://source.unsplash.com/random/1920x1080/?summer,beach,sun"
-          alt="Summer beach landscape"
-          layout="fill"
-          objectFit="cover"
-          className="z-0 opacity-40"
-        />
+        <img src="https://source.unsplash.com/random/1920x1080/?summer,beach,sun" alt="Summer beach landscape" className="absolute inset-0 w-full h-full object-cover z-0 opacity-40" />
         <div className="absolute inset-0 bg-blue-950/70 z-10"></div>
         <motion.div
           className="relative z-20"

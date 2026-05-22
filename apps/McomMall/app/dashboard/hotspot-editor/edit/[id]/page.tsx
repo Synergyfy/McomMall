@@ -6,7 +6,6 @@ import { promotionalItems, PromotionalItem, Hotspot } from '@/lib/listing-data';
 import { useGetServiceById, useUpdateService } from '@/service/services/hook';
 import { UpdateServiceDto } from '@/service/services/types';
 import { useGetBusinessData, useEditListing } from '@/service/listings/hook';
-import Image from 'next/image';
 import { Input } from '@/components/ui/input';
 import { Button } from '@/components/ui/button';
 import { X, Eye, Save } from 'lucide-react';
@@ -218,13 +217,7 @@ const HotspotEditorContent = () => {
           onClick={handleImageClick}
           style={{ cursor: 'crosshair' }}
         >
-          <Image
-            src={item.imageUrl}
-            alt={item.name}
-            layout="fill"
-            objectFit="contain"
-            onError={(e) => e.currentTarget.src = '/placeholder.svg'}
-          />
+          <img src={item.imageUrl} alt={item.name} onError={(e) => e.currentTarget.src = '/placeholder.svg'} className="absolute inset-0 w-full h-full object-contain" />
           {item.hotspots.map(hotspot => (
             <div
               key={hotspot.id}
@@ -273,13 +266,7 @@ const HotspotEditorContent = () => {
       {isPreviewing && (
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50" onClick={() => setIsPreviewing(false)}>
           <div className="relative w-full max-w-5xl aspect-video" onClick={e => e.stopPropagation()}>
-            <Image
-                src={item.imageUrl}
-                alt={item.name}
-                layout="fill"
-                objectFit="contain"
-                onError={(e) => e.currentTarget.src = '/placeholder.svg'}
-            />
+            <img src={item.imageUrl} alt={item.name} onError={(e) => e.currentTarget.src = '/placeholder.svg'} className="absolute inset-0 w-full h-full object-contain" />
             {item.hotspots.map(hotspot => (
               <a
                 key={hotspot.id}

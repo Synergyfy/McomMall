@@ -3,7 +3,6 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import Image from 'next/image';
 
 const blogPosts = [
   {
@@ -52,13 +51,7 @@ export default function BlogSection() {
           {blogPosts.map((post) => (
             <Card key={post.id} className="group overflow-hidden border-0 shadow-lg hover:shadow-xl transition-all duration-300">
               <div className="relative">
-                <Image
-                  src={post.image}
-                  alt={post.title}
-                  width={400}
-                  height={240}
-                  className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
-                />
+                <img src={post.image} alt={post.title} width={400} height={240} />
 
                 {/* Category Badge */}
                 <Badge className={`absolute top-4 left-4 ${post.categoryColor} text-white`}>
