@@ -67,11 +67,11 @@ export default function MediaGallery({ media }: MediaGalleryProps) {
               {/* Shimmer Loading State */}
               {!loadedImages[index] && (
                 <div className="absolute inset-0 bg-gray-100 animate-pulse flex items-center justify-center">
-                  <img Icon />
+                  <ImageIcon className="h-5 w-5 text-gray-400" />
                 </div>
               )}
               
-              <img src={url} alt={`Gallery image ${index + 1}`} onLoadingComplete={() => handleImageLoad(index)} sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" className={`absolute inset-0 w-full h-full ${`object-cover transition-all duration-700 group-hover:scale-110 ${
+              <img src={url} alt={`Gallery image ${index + 1}`} onLoad={() => handleImageLoad(index)} sizes="(max-width: 768px) 50vw, (max-width: 1200px) 33vw, 25vw" className={`absolute inset-0 w-full h-full ${`object-cover transition-all duration-700 group-hover:scale-110 ${
                   loadedImages[index] ? 'opacity-100' : 'opacity-0'
                 }`}`} />
               

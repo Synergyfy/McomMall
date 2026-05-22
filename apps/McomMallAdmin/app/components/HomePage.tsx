@@ -186,7 +186,7 @@ export default function HomePage() {
               exit={{ opacity: 0, scale: 1.05 }}
               transition={{ duration: 1.5, ease: 'easeInOut' }}
             >
-              <img src={backgroundImages[currentImageIndex]?.src || backgroundImages[currentImageIndex]} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
+              <img src={backgroundImages[currentImageIndex]?.src} alt="Seasonal background" className="absolute inset-0 w-full h-full object-cover" />
             </motion.div>
           </AnimatePresence>
           <div className="absolute inset-0 bg-black/40" />

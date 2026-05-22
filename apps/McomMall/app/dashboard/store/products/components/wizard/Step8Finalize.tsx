@@ -246,7 +246,7 @@ function VariantTableRow({ label, variation, onUpdate, onDelete, readOnlyPricing
                     {variation.image ? (
                         <img src={variation.image} className="w-full h-full object-cover" />
                     ) : (
-                        <img Plus />
+                        <ImagePlus className="w-5 h-5 text-gray-400" />
                     )}
                 </div>
             </td>

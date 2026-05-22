@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { PlusCircle, Pencil, Trash2 } from 'lucide-react';
-import Image from 'next/image';
+
 import {
   AlertDialog,
   AlertDialogAction,

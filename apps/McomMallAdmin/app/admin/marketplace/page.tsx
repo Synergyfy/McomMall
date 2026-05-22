@@ -24,7 +24,7 @@ export default function MarketplacePage() {
             <Tabs value={activeTab} onValueChange={setActiveTab} className="flex-1 flex flex-col overflow-hidden">
                 <TabsList className="grid w-full grid-cols-3 lg:w-auto lg:inline-flex flex-shrink-0">
                     <TabsTrigger value="banners" className="gap-2">
-                        <img Icon />
+                        <ImageIcon className="h-4 w-4" />
                         <span className="hidden sm:inline">Banners</span>
                     </TabsTrigger>
                     <TabsTrigger value="categories" className="gap-2">

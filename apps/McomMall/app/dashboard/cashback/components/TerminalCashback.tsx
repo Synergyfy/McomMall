@@ -350,7 +350,7 @@ function BusinessDashboard({ config, isConfigLoading, isAdmin }: { config: any; 
           <div className="bg-slate-900 flex items-center justify-center p-6 min-h-[400px]">
             {selectedProof && (
               <div className="relative w-full h-[65vh]">
-                <img src={selectedProof} alt="Receipt Analysis" unoptimized className="absolute inset-0 w-full h-full object-contain" />
+                <img src={selectedProof} alt="Receipt Analysis" className="absolute inset-0 w-full h-full object-contain" />
               </div>
             )}
           </div>
@@ -858,7 +858,7 @@ function ClaimDetailsDialog({ claimId, onClose }: { claimId: string | null; onCl
               <div className="space-y-3 pt-2">
                 <Label className="text-[10px] font-bold text-slate-300 uppercase tracking-widest italic ml-1">Receipt Image</Label>
                 <div className="relative h-[260px] w-full bg-slate-50 rounded-2xl overflow-hidden border-2 border-slate-100 shadow-inner">
-                  <img src={claim.proofUrl} alt="Receipt Verification" unoptimized className="absolute inset-0 w-full h-full object-contain p-4" />
+                  <img src={claim.proofUrl} alt="Receipt Verification" className="absolute inset-0 w-full h-full object-contain p-4" />
                 </div>
               </div>
             )}

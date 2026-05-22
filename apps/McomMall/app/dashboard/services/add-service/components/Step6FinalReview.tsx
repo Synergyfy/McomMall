@@ -22,7 +22,7 @@ export function Step6FinalReview() {
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2 text-lg">
-            <img Icon />
+            <ImageIcon className="h-5 w-5 text-gray-500" />
             Media & Images <span className="text-red-500">*</span>
           </CardTitle>
           <CardDescription>Upload up to 5 high-quality images to showcase your service.</CardDescription>

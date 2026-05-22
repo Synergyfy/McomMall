@@ -70,7 +70,7 @@ function BannerDialog({ open, onOpenChange, banner, onSubmit, isLoading }: Banne
                     <form id="banner-form" onSubmit={handleSubmit} className="space-y-4 py-4">
                         <div className="space-y-2">
                             <Label>Banner Image</Label>
-                            <img Upload value={formData.imageUrl} onChange={(url) => setFormData({ ...formData, imageUrl: url })} />
+                            <ImageUpload value={formData.imageUrl} onChange={(url) => setFormData({ ...formData, imageUrl: url })} />
                         </div>
 
                         <div className="grid grid-cols-2 gap-4">

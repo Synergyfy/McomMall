@@ -115,11 +115,17 @@ const UploadBox: React.FC<UploadBoxProps> = ({
               key={index}
               className="relative w-20 h-20 sm:w-16 sm:h-16 md:w-20 md:h-20"
             >
-              <img src={imageUrls[index] || ''} alt={image.name} width={80} // Adjusted to fit within w-20 (20 * 4 height={80} // Adjusted to match width for square onError={() =>
+              <img
+                src={imageUrls[index] || ''}
+                alt={image.name}
+                width={80}
+                height={80}
+                onError={() =>
                   console.log(
                     `Image load error at index ${index}: ${image.name}`
                   )
-                } // Debug />
+                }
+              />
               <div
                 className="absolute inset-0  bg-opacity-0 hover:bg-opacity-30 flex items-center justify-center transition-opacity"
                 onClick={e => {
