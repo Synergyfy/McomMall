@@ -57,14 +57,14 @@ export default function UserNav({ align = 'end' }: UserNavProps) {
             </AvatarFallback>
           </Avatar>
           <div className="hidden sm:block text-left">
-            <div className="text-base font-semibold text-white">{userName}</div>
-            <div className="text-xs text-gray-400 group-hover:text-white">
+            <div className="text-base font-semibold text-gray-900">{userName}</div>
+            <div className="text-xs text-gray-500 group-hover:text-gray-900">
               {userRole === 'customer'
                 ? 'Customer'
                 : packageInfo?.planType}
             </div>
           </div>
-          <ChevronDown className="hidden h-4 w-4 sm:block ml-auto" />
+          <ChevronDown className="hidden h-4 w-4 sm:block ml-auto text-gray-700" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56 bg-white">
@@ -98,6 +98,11 @@ export default function UserNav({ align = 'end' }: UserNavProps) {
                     {newMessagesCount}
                   </Badge>
                 )}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/wallet" className="flex justify-between w-full">
+                Wallet
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />

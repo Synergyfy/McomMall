@@ -443,7 +443,23 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
                     </div>
                     <div className="grid gap-3">
                         <Label>Password</Label>
-                        <Input name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="Password" className={errors.password ? 'border-red-500' : ''} />
+                        <div className="relative">
+                           <Input 
+                            name="password" 
+                            type={showPassword ? 'text' : 'password'} 
+                            value={formData.password} 
+                            onChange={handleInputChange} 
+                            placeholder="Password" 
+                            className={errors.password ? 'border-red-500 pr-10' : 'pr-10'} 
+                          />
+                          <button
+                            type="button"
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                            onClick={() => setShowPassword(!showPassword)}
+                          >
+                            {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                          </button>
+                        </div>
                         {errors.password && <p className="text-red-500 text-sm">{errors.password}</p>}
                     </div>
                     <Button type="submit" className="w-full bg-orange-500 hover:bg-orange-600" disabled={loginPending}>
@@ -514,11 +530,43 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
 
                              <div className="grid gap-2">
                                 <Label>Password</Label>
-                                <Input name="password" type="password" value={formData.password} onChange={handleInputChange} placeholder="Password" className={errors.password ? 'border-red-500' : ''} />
+                                <div className="relative">
+                                    <Input 
+                                        name="password" 
+                                        type={showPassword ? 'text' : 'password'} 
+                                        value={formData.password} 
+                                        onChange={handleInputChange} 
+                                        placeholder="Password" 
+                                        className={errors.password ? 'border-red-500 pr-10' : 'pr-10'} 
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                        onClick={() => setShowPassword(!showPassword)}
+                                    >
+                                        {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </button>
+                                </div>
                              </div>
                              <div className="grid gap-2">
                                 <Label>Confirm Password</Label>
-                                <Input name="confirmPassword" type="password" value={formData.confirmPassword} onChange={handleInputChange} placeholder="Confirm Password" className={errors.confirmPassword ? 'border-red-500' : ''} />
+                                <div className="relative">
+                                    <Input 
+                                        name="confirmPassword" 
+                                        type={showConfirmPassword ? 'text' : 'password'} 
+                                        value={formData.confirmPassword} 
+                                        onChange={handleInputChange} 
+                                        placeholder="Confirm Password" 
+                                        className={errors.confirmPassword ? 'border-red-500 pr-10' : 'pr-10'} 
+                                    />
+                                    <button
+                                        type="button"
+                                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                                    </button>
+                                </div>
                                 {errors.confirmPassword && <p className="text-red-500 text-sm">{errors.confirmPassword}</p>}
                              </div>
 

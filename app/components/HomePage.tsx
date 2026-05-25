@@ -356,7 +356,7 @@ export default function HomePage() {
                             />
                             <div className="absolute top-4 left-4">
                               <span className="bg-white/90 backdrop-blur-sm text-gray-800 text-xs font-bold px-3 py-1 rounded-full shadow-sm">
-                                {ad.categories[0]?.name || 'Uncategorized'}
+                                {ad.categories?.[0]?.name || 'Uncategorized'}
                               </span>
                             </div>
                           </div>

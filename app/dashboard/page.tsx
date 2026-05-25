@@ -42,9 +42,10 @@ import RecentActivities from './component/RecentActivities';
 import EarningProgressionChart from './component/EarningProgressionChart';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
-
+import { MobileDashboardHub } from './component/MobileDashboardHub';
 
 // --- TYPE DEFINITIONS ---
+
 interface ListingPackage {
   name: string;
   description: string;
@@ -93,23 +94,31 @@ const DashboardPage: FC = () => {
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       {/* Header */}
       <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-3xl font-bold text-gray-800">
-          Hello {userName || 'User'} !
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+          Hello {userName || 'User'}!
         </h1>
-        <Breadcrumb className="mt-2 sm:mt-0">
-          <BreadcrumbList>
-            <BreadcrumbItem>
-              <BreadcrumbLink href="/">Home</BreadcrumbLink>
-            </BreadcrumbItem>
-            <BreadcrumbSeparator />
-            <BreadcrumbItem>
-              <BreadcrumbPage>Dashboard</BreadcrumbPage>
-            </BreadcrumbItem>
-          </BreadcrumbList>
-        </Breadcrumb>
+        <div className="hidden sm:block">
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbLink href="/">Home</BreadcrumbLink>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator />
+              <BreadcrumbItem>
+                <BreadcrumbPage>Dashboard</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </div>
       </header>
 
-      <main className="space-y-8">
+      {/* Mobile Hub View */}
+      <div className="block sm:hidden">
+        <MobileDashboardHub />
+      </div>
+
+      {/* Desktop Overview View */}
+      <main className="hidden sm:block space-y-8">
         {isLoadingStats ? (
           <p>Loading statistics...</p>
         ) : stats && userRole ? (
@@ -117,12 +126,12 @@ const DashboardPage: FC = () => {
             <StatsCards stats={stats} role={userRole as UserRole} />
             <div className="grid grid-cols-1 gap-8 lg:grid-cols-3 lg:items-start">
               <div className="lg:col-span-1 space-y-8">
-                 <RecentActivities
-                    activities={activities}
-                    isLoading={isLoadingActivities}
-                  />
+                <RecentActivities
+                  activities={activities}
+                  isLoading={isLoadingActivities}
+                />
               </div>
-              {userRole === UserRole.OWNER && (
+              {userRole === 'owner' && (
                 <div className="lg:col-span-2 space-y-8">
                   <ListingPackages pkg={listingPackage} />
                   <EarningProgressionChart />
