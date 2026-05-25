@@ -56,15 +56,15 @@ export default function UserNav({ align = 'end' }: UserNavProps) {
               {userName?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="hidden sm:flex flex-col items-start text-left mt-0.5">
-            <div className="text-sm font-semibold text-white leading-none mb-1.5">{userName}</div>
-            <div className="text-[9px] font-bold tracking-wider uppercase px-2 py-0.5 rounded-full border border-gray-600 bg-gray-800/80 text-gray-300 group-hover:border-orange-500/50 group-hover:text-orange-100 group-hover:bg-gray-800 transition-colors shadow-sm">
+          <div className="hidden sm:block text-left">
+            <div className="text-base font-semibold text-gray-900">{userName}</div>
+            <div className="text-xs text-gray-500 group-hover:text-gray-900">
               {userRole === 'customer'
                 ? 'Customer'
-                : packageInfo?.planType || 'Member'}
+                : packageInfo?.planType}
             </div>
           </div>
-          <ChevronDown className="hidden h-4 w-4 sm:block ml-auto" />
+          <ChevronDown className="hidden h-4 w-4 sm:block ml-auto text-gray-700" />
         </Button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align={align} className="w-56 bg-white">
@@ -98,6 +98,11 @@ export default function UserNav({ align = 'end' }: UserNavProps) {
                     {newMessagesCount}
                   </Badge>
                 )}
+              </Link>
+            </DropdownMenuItem>
+            <DropdownMenuItem asChild>
+              <Link href="/dashboard/wallet" className="flex justify-between w-full">
+                Wallet
               </Link>
             </DropdownMenuItem>
             <DropdownMenuSeparator />
