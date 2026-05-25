@@ -3,20 +3,21 @@
 'use client';
 
 import { useGetTrialStatus } from '@/service/payments/hooks';
-import HeaderTimer from '@/components/HeaderTimer';
+import TrialCountdownTimer from '@/components/TrialCountdownTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
-import ProtectedRoute from '@/components/ProtectedRoute';
-import AuthRedirect from '../../components/AuthRedirect';
-import { useState, useEffect, Suspense } from 'react';
-import Link from 'next/link';
-import { Menu, ChevronDown, Zap } from 'lucide-react';
-import { useSelector } from 'react-redux';
+import { useDispatch, useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import { useRouter, usePathname, useSearchParams } from 'next/navigation';
+import ProtectedRoute from '@/components/ProtectedRoute';
+import { useState } from 'react';
+import Link from 'next/link';
+import { Menu, Plus, Minus } from 'lucide-react';
 
 // Main Dashboard Menu Components
 import SideMenu from './component/SideMenu';
 import { MenuContent as SideMenuContent } from './component/MenuContent';
+import { ActivityTimerBadge } from './component/ActivityTimerBadge';
+import { MembershipBadge } from './component/MembershipBadge';
+import { BottomNav } from './component/BottomNav';
 
 // Top NavMenu Components
 import { NavMenu } from '@/components/NavMenu';
@@ -26,53 +27,8 @@ import { NavMenuContent } from './component/NavMenuContent';
 import { Button } from '@/components/ui/button';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import UserNav from '@/components/UserNav';
-import { useGetMyMembership } from '@/service/membership/hooks';
-
-
-function DashboardRedirect({
-  mounted,
-  userRole,
-  membership,
-  isMembershipLoading
-}: {
-  mounted: boolean;
-  userRole: string | null;
-  membership: any;
-  isMembershipLoading: boolean;
-}) {
-  const router = useRouter();
-  const searchParams = useSearchParams();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    if (mounted && !isMembershipLoading && userRole === 'owner') {
-      const hasActiveMembership = !!membership?.isActive;
-      // Check explicitly if tier is TRIAL
-      // Note: membership.tier might be populated, check type or name
-      const isTrial = membership?.tier?.type === 'TRIAL' || membership?.tier?.name?.toLowerCase().includes('trial');
-
-      const normalizedPath = pathname.toLowerCase();
-      const isSubscriptionFlow = normalizedPath.includes('/my-subscription');
-      const isSuccessRedirect = searchParams.get('success') === 'true';
-
-      // 1. If NO active membership (and not in subscription flow), redirect to buy one.
-      if (!hasActiveMembership && !isSubscriptionFlow && !isSuccessRedirect) {
-        router.push('/dashboard/my-subscription');
-        return;
-      }
-
-      // 2. If User is on TRIAL, and they land on the main dashboard, redirect them to see subscription options
-      // BUT they can navigate back to use the dashboard (so only redirect from root /dashboard)
-      if (isTrial && normalizedPath === '/dashboard' && !isSubscriptionFlow) {
-        // Verify if we should force this. The user said "take them... if they don't pay... make timer show".
-        // This implies a soft push.
-        router.push('/dashboard/my-subscription');
-      }
-    }
-  }, [mounted, userRole, membership, isMembershipLoading, pathname, router, searchParams]);
-
-  return null;
-}
+import AuthRedirect from '@/components/AuthRedirect';
+import { useEffect } from 'react';
 
 export default function DashboardLayout({
   children,
@@ -82,10 +38,9 @@ export default function DashboardLayout({
   const [mounted, setMounted] = useState(false);
   const [isSideMenuOpen, setIsSideMenuOpen] = useState(false);
   const [isQuickActionsOpen, setIsQuickActionsOpen] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { data: trialStatus } = useGetTrialStatus();
-
-  const { userRole, packageInfo } = useSelector((state: RootState) => state.auth);
-  const { data: membership, isLoading: isMembershipLoading } = useGetMyMembership();
+  const { userRole } = useSelector((state: RootState) => state.auth);
 
   useEffect(() => {
     setMounted(true);
@@ -96,52 +51,61 @@ export default function DashboardLayout({
   }
 
   return (
-    <Suspense fallback={<div className="flex items-center justify-center h-screen"><Zap className="w-8 h-8 text-orange-600 animate-pulse" /></div>}>
+    <>
       <AuthRedirect />
-      <DashboardRedirect
-        mounted={mounted}
-        userRole={userRole}
-        membership={membership}
-        isMembershipLoading={isMembershipLoading}
-      />
+      {trialStatus?.isActive && (
+        <TrialCountdownTimer trialStatus={trialStatus} />
+      )}
       <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
-        {/* ... existing section content ... */}
-        <div className="hidden md:block w-[19rem] p-5">
+        {/* --- DESKTOP SIDEBAR (Left) --- */}
+        <div className={`hidden md:block p-5 transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-[19rem]'}`}>
           <div className="flex flex-col h-full">
             <Link
               href="/"
-              className="flex items-center space-x-2 mb-5 h-[5rem]"
+              className={`flex items-center space-x-2 mb-5 h-[5rem] ${isSidebarCollapsed ? 'justify-center' : ''}`}
             >
-              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center">
+              <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
                 <span className="text-white font-bold text-sm">M</span>
               </div>
-              <div className="flex flex-col">
-                <span className="text-3xl font-semibold leading-tight">McomMall</span>
-              </div>
+              {!isSidebarCollapsed && (
+                <div className="flex flex-col">
+                  <span className="text-2xl font-semibold whitespace-nowrap">McomMall</span>
+                  <span className="text-[10px] font-medium uppercase bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full self-start">
+                    {userRole === 'owner' ? 'Business' : 'Customer'}
+                  </span>
+                </div>
+              )}
             </Link>
             <div className="flex-grow min-h-0 overflow-y-auto">
-              <SideMenu />
+              <SideMenu isCollapsed={isSidebarCollapsed} />
             </div>
           </div>
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col">
-          <header className="flex items-center justify-between w-full h-20 py-3 px-5 border-b bg-slate-800">
-            {/* --- LEFT SIDE: MOBILE MENU TRIGGER --- */}
+          <header className="flex items-center justify-between w-full h-20 py-3 px-5 border-b border-gray-200 bg-white shadow-sm">
+            {/* --- LEFT SIDE: MOBILE MENU TRIGGER & COLLAPSE TRIGGER --- */}
             <div className="flex items-center gap-4">
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex hover:bg-gray-100"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              >
+                <Menu className="h-5 w-5 text-gray-700" />
+              </Button>
               <div className="md:hidden">
                 <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
                   <SheetTrigger asChild>
                     <Button
-                      variant="outline"
+                      variant="ghost"
                       size="icon"
-                      className="border-0 shadow-none"
+                      className="hover:bg-gray-100"
                     >
-                      <Menu className="h-5 w-5" />
+                      <Menu className="h-5 w-5 text-gray-700" />
                     </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
+                  </SheetTrigger>                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
                     <div className="p-5 border-b shrink-0">
                       <Link href="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -160,9 +124,11 @@ export default function DashboardLayout({
                           className="flex w-full items-center justify-between px-2 py-3 text-sm font-semibold text-gray-500 uppercase bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
                         >
                           <span>Quick Actions</span>
-                          <ChevronDown
-                            className={`h-4 w-4 transition-transform ${isQuickActionsOpen ? 'rotate-180' : ''}`}
-                          />
+                          {isQuickActionsOpen ? (
+                            <Minus className="h-4 w-4 transition-transform" />
+                          ) : (
+                            <Plus className="h-4 w-4 transition-transform" />
+                          )}
                         </button>
                         {isQuickActionsOpen && (
                           <div className="mt-1 pl-1">
@@ -176,31 +142,25 @@ export default function DashboardLayout({
               </div>
             </div>
 
-            {/* --- RIGHT SIDE: User Nav & Timer --- */}
-            <div className="flex items-center gap-4">
-              {userRole === 'owner' && membership?.tier && (
-                <div className="hidden sm:flex items-center px-4 py-2 bg-white/5 backdrop-blur-xl border border-white/10 rounded-xl shadow-2xl mr-2 group hover:border-orange-500/30 transition-all">
-                  <div className="flex flex-col items-end">
-                    <span className="text-[12px] text-gray-400 uppercase font-black tracking-[0.2em] group-hover:text-orange-400 transition-colors">Current Membership</span>
-                    <span className="text-xl font-bold text-white group-hover:text-orange-500 transition-colors">{membership.tier.name}</span>
-                  </div>
-                  <div className="ml-3 p-1.5 bg-orange-500/20 rounded-lg group-hover:bg-orange-500/30 transition-colors">
-                    <Zap className="w-4 h-4 text-orange-500" />
-                  </div>
-                </div>
-              )}
-              <HeaderTimer />
-              {/* User Nav (Visible on all screens, Right Aligned) */}
+            {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav --- */}
+            <div className="flex items-center gap-2 sm:gap-4">
+              <div className="hidden sm:flex items-center gap-2 sm:gap-4">
+                <MembershipBadge />
+                <ActivityTimerBadge />
+              </div>
               <UserNav align="end" />
             </div>
           </header>
 
           {/* Page Content */}
-          <div className="sm:p-5 p-2 overflow-y-auto flex-1 min-h-0">
+          <div className="sm:p-5 p-2 pb-20 sm:pb-5 overflow-y-auto flex-1 min-h-0">
             <ProtectedRoute>{children}</ProtectedRoute>
           </div>
+          
+          {/* Bottom Navigation (Mobile Only) */}
+          <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
         </main>
       </section>
-    </Suspense>
+    </>
   );
 }
