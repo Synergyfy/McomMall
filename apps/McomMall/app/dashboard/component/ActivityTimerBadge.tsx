@@ -1,7 +1,7 @@
 'use client';
 
 import { FC, useState, useEffect, useRef } from 'react';
-import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hooks';
 import { Timer, Loader2 } from 'lucide-react';
 import Link from 'next/link';
 

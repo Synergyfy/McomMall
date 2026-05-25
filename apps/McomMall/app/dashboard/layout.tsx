@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useGetTrialStatus } from '@/service/payments/hook';
+import { useGetTrialStatus } from '@/service/payments/hooks';
 import TrialCountdownTimer from '@/components/TrialCountdownTimer';
 import { SubscriptionStatusEnum } from '@/service/payments/types';
 import { useDispatch, useSelector } from 'react-redux';
