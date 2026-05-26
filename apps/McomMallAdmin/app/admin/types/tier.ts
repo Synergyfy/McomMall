@@ -22,6 +22,7 @@ export interface TierFeatureFlags {
 export interface TierConfiguration {
     quotas: TierQuota;
     featureFlags: TierFeatureFlags;
+    disabledNavIds?: string[];
 }
 
 export enum TierType {
