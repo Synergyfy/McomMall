@@ -71,6 +71,42 @@ body {
   scrollbar-width: none; /* Firefox */
 }
 
+.glass {
+  background: rgba(255, 255, 255, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.glass-dark {
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.premium-shadow {
+  box-shadow: 0 20px 50px -12px rgba(15, 23, 42, 0.1);
+}
+
+.premium-shadow-hover {
+  transition: all 0.3s ease;
+}
+
+.premium-shadow-hover:hover {
+  box-shadow: 0 30px 60px -12px rgba(15, 23, 42, 0.2);
+  transform: translateY(-4px);
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+
+.animate-float {
+  animation: float 4s ease-in-out infinite;
+}
+
 :root {
   --radius: 0.625rem;
   --background: oklch(1 0 0);
