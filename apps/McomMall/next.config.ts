@@ -37,6 +37,16 @@ const nextConfig: NextConfig = {
         hostname: 'localhost',
         pathname: '/**',
       },
+      {
+        protocol: 'http',
+        hostname: '127.0.0.1',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'mcom-mall-api.vercel.app',
+        pathname: '/**',
+      },
     ],
   },
 };
