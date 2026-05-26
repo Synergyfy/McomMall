@@ -26,14 +26,20 @@ const ReviewsSkeleton = () => {
 // Main component for the reviews tab content
 export const ReviewsTabContent = ({
   businessId,
+  preloadedReviews,
 }: {
   businessId: string;
+  preloadedReviews?: Review[];
 }) => {
+  const queryId = preloadedReviews ? '' : businessId;
+
   const {
-    data: reviews,
+    data: fetchedReviews,
     isLoading,
     isError,
-  } = useGetReviewsForBusiness(businessId);
+  } = useGetReviewsForBusiness(queryId);
+
+  const reviews = preloadedReviews || fetchedReviews;
 
   if (isLoading) {
     return <ReviewsSkeleton />;
@@ -62,9 +68,10 @@ export const ReviewsTabContent = ({
       )}
       {reviews && reviews.length > 0 && (
         <div className="space-y-6">
-          {reviews.map(review => (
-            <ReviewCard key={review.id} review={review} />
-          ))}
+          {reviews.map((review, idx) => {
+            const key = 'id' in review ? (review as any).id : `${review.author_name}-${review.time || idx}`;
+            return <ReviewCard key={key} review={review} />;
+          })}
         </div>
       )}
     </div>

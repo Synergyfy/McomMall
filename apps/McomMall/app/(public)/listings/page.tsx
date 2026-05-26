@@ -41,6 +41,57 @@ const initialFilters: FilterState = {
   priceRange: [0, 1000],
 };
 
+async function fetchIpLocation(): Promise<{ lat: number; lng: number } | null> {
+  try {
+    const res = await fetch('https://ipapi.co/json/');
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.latitude === 'number' && typeof data.longitude === 'number') {
+        return { lat: data.latitude, lng: data.longitude };
+      }
+    }
+  } catch (e) {
+    console.warn('Failed to fetch from ipapi.co, trying fallback...', e);
+  }
+
+  try {
+    const res = await fetch('https://ip-api.com/json/');
+    if (res.ok) {
+      const data = await res.json();
+      if (typeof data.lat === 'number' && typeof data.lon === 'number') {
+        return { lat: data.lat, lng: data.lon };
+      }
+    }
+  } catch (e) {
+    console.error('Failed to fetch from ip-api.com', e);
+  }
+
+  return null;
+}
+
+const containerVariants = {
+  hidden: { opacity: 0 },
+  show: {
+    opacity: 1,
+    transition: {
+      staggerChildren: 0.08,
+    },
+  },
+};
+
+const itemVariants = {
+  hidden: { opacity: 0, y: 20 },
+  show: {
+    opacity: 1,
+    y: 0,
+    transition: {
+      type: 'spring',
+      stiffness: 90,
+      damping: 14,
+    },
+  },
+} as const;
+
 function ListingsPageContent() {
   const router = useRouter();
   const dispatch = useDispatch();
@@ -62,22 +113,46 @@ function ListingsPageContent() {
   const queryText = searchParams.get('queryText');
 
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
-    lat: 6.454075,
-    lng: 3.394673,
+    lat: 51.5074,
+    lng: -0.1278,
   });
 
   useEffect(() => {
-    if (navigator.geolocation) {
-      navigator.geolocation.getCurrentPosition(
-        position => {
-          setCoords({
-            lat: position.coords.latitude,
-            lng: position.coords.longitude,
-          });
-        },
-        () => { }
-      );
-    }
+    let active = true;
+
+    const getPreciseLocation = () => {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          position => {
+            if (!active) return;
+            setCoords({
+              lat: position.coords.latitude,
+              lng: position.coords.longitude,
+            });
+          },
+          async () => {
+            if (!active) return;
+            const ipCoords = await fetchIpLocation();
+            if (ipCoords && active) {
+              setCoords(ipCoords);
+            }
+          },
+          { timeout: 5000 }
+        );
+      } else {
+        fetchIpLocation().then(ipCoords => {
+          if (ipCoords && active) {
+            setCoords(ipCoords);
+          }
+        });
+      }
+    };
+
+    getPreciseLocation();
+
+    return () => {
+      active = false;
+    };
   }, []);
 
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
@@ -183,7 +258,7 @@ function ListingsPageContent() {
 
   if (isLoading)
     return (
-      <div className="flex h-screen bg-white overflow-x-hidden">
+      <div className="flex h-screen bg-slate-50 overflow-x-hidden">
         <div className="flex-1 min-w-0 p-4 overflow-y-auto">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {[...Array(4)].map((_, i) => (
@@ -199,7 +274,7 @@ function ListingsPageContent() {
 
   if (isSuccess)
     return (
-      <div className="flex h-screen bg-white overflow-x-hidden">
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100/50 overflow-x-hidden">
         <AnimatePresence>
           {filtersVisible && (
             <motion.div
@@ -219,44 +294,44 @@ function ListingsPageContent() {
         </AnimatePresence>
 
         <main className="flex-1 flex min-w-0 flex-col">
-          <div className="flex-shrink-0 p-4 border-b bg-white z-10">
-            <div className="flex flex-wrap items-center justify-between gap-4 mb-4">
-              <div className="flex items-center gap-2">
+          <div className="flex-shrink-0 p-6 border-b border-slate-200/50 bg-white/80 backdrop-blur-md sticky top-0 z-20 shadow-sm transition-all duration-300">
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
                 <Button
                   onClick={() => setFiltersVisible(!filtersVisible)}
-                  className="bg-red-500 text-white hover:bg-red-600"
+                  className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 border-none px-6 py-5 flex items-center justify-center gap-2"
                 >
-                  <SlidersHorizontal className="mr-2 h-4 w-4" />
+                  <SlidersHorizontal className="h-4 w-4" />
                   {filtersVisible ? 'Hide Filters' : 'Show Filters'}
                 </Button>
-                <div className="hidden md:flex items-center border rounded-md">
+                <div className="hidden md:flex items-center gap-1 bg-slate-100 p-1.5 rounded-2xl border border-slate-200/40">
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setLayout('grid')}
-                    className={layout === 'grid' ? 'bg-gray-100' : ''}
+                    className={`rounded-xl transition-all duration-300 ${layout === 'grid' ? 'bg-white text-orange-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     <LayoutGrid
-                      className={`h-5 w-5 ${layout === 'grid' ? 'text-red-500' : 'text-gray-400'}`}
+                      className="h-5 w-5"
                     />
                   </Button>
                   <Button
                     variant="ghost"
                     size="icon"
                     onClick={() => setLayout('list')}
-                    className={layout === 'list' ? 'bg-gray-100' : ''}
+                    className={`rounded-xl transition-all duration-300 ${layout === 'list' ? 'bg-white text-orange-500 shadow-sm' : 'text-slate-400 hover:text-slate-600'}`}
                   >
                     <List
-                      className={`h-5 w-5 ${layout === 'list' ? 'text-red-500' : 'text-gray-400'}`}
+                      className="h-5 w-5"
                     />
                   </Button>
                 </div>
               </div>
               <Select defaultValue="newest">
-                <SelectTrigger className="w-full sm:w-[180px]">
+                <SelectTrigger className="w-full sm:w-[180px] rounded-2xl border-slate-200 bg-white/50 backdrop-blur-sm">
                   <SelectValue placeholder="Sort by" />
                 </SelectTrigger>
-                <SelectContent>
+                <SelectContent className="rounded-2xl">
                   <SelectItem value="newest">Newest Listings</SelectItem>
                   <SelectItem value="popular">Most Popular</SelectItem>
                   <SelectItem value="rating">Highest Rated</SelectItem>
@@ -266,15 +341,15 @@ function ListingsPageContent() {
           </div>
 
           <div className="flex-1 flex overflow-hidden min-w-0">
-            <div className="flex-1 min-w-0 p-4 overflow-y-auto">
+            <div className="flex-1 min-w-0 p-6 overflow-y-auto">
               {combinedListings.length === 0 ? (
-                <div className="text-center">
-                  <h2 className="text-2xl font-semibold mb-4">No listings found</h2>
-                  <p className="text-gray-600 mb-6">
+                <div className="text-center py-16">
+                  <h2 className="text-2xl font-black mb-4 text-slate-800">No listings found</h2>
+                  <p className="text-slate-500 mb-8 max-w-sm mx-auto">
                     There are no listings that match your search criteria.
                   </p>
                   <Button
-                    className="bg-orange-600 text-white hover:bg-orange-700"
+                    className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-bold rounded-2xl shadow-md hover:shadow-lg transition-all duration-300 px-8 py-6"
                     onClick={handleAddNewListing}
                   >
                     Add New Listing
@@ -282,21 +357,28 @@ function ListingsPageContent() {
                 </div>
               ) : (
                 <>
-                  <div
+                  <motion.div
+                    variants={containerVariants}
+                    initial="hidden"
+                    animate="show"
                     className={`grid gap-6 w-full ${layout === 'grid'
                       ? `grid-cols-1 ${filtersVisible ? 'md:grid-cols-2' : 'md:grid-cols-2 lg:grid-cols-3'}`
                       : 'grid-cols-1'
                       }`}
                   >
                     {combinedListings.map(listing => (
-                      <ListingCard
+                      <motion.div
                         key={isGoogleResult(listing) ? listing.placeId : listing.id}
-                        listing={listing}
-                        layout={layout}
-                      />
+                        variants={itemVariants}
+                      >
+                        <ListingCard
+                          listing={listing}
+                          layout={layout}
+                        />
+                      </motion.div>
                     ))}
-                  </div>
-                  <div className="flex justify-center items-center mt-8 space-x-2">
+                  </motion.div>
+                  <div className="flex justify-center items-center mt-12 space-x-2">
                     {Array.from({ length: totalPages }, (_, i) => i + 1).map(page => (
                       <Button
                         key={page}
@@ -304,8 +386,8 @@ function ListingsPageContent() {
                         size="icon"
                         className={
                           currentPage === page
-                            ? 'bg-red-500 text-white hover:bg-red-600'
-                            : 'bg-white text-gray-700 border border-gray-300 hover:bg-gray-100'
+                            ? 'bg-gradient-to-r from-orange-500 to-red-500 text-white font-bold shadow-md'
+                            : 'bg-white text-slate-700 border border-slate-200 hover:bg-slate-50 rounded-xl transition-all'
                         }
                       >
                         {page}
@@ -315,7 +397,7 @@ function ListingsPageContent() {
                 </>
               )}
             </div>
-            <div className="w-1/3 max-w-[33%] h-screen sticky top-0 flex-shrink-0 hidden lg:block">
+            <div className="w-1/3 max-w-[33%] h-screen sticky top-0 flex-shrink-0 hidden lg:block border-l border-slate-200/50 shadow-inner">
               <MapComponent listings={listingsForMap} center={mapCenter} />
             </div>
           </div>

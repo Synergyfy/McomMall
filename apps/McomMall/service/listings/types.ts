@@ -70,6 +70,8 @@ export interface GooglePlaceResult {
   vicinity: string;
   formattedAddress?: string;
   formattedPhoneNumber?: string;
+  internationalPhoneNumber?: string;
+  website?: string;
 }
 
 export type GooglePlaceResults = GooglePlaceResult[];
