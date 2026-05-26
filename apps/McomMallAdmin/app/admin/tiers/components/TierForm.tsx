@@ -55,6 +55,7 @@ const tierSchema = z.object({
             allowCustomBranding: z.boolean(),
             allowGroupCreation: z.boolean(),
         }),
+        disabledNavIds: z.array(z.string()).optional(),
     }),
     isActive: z.boolean(),
     startDate: z.string().optional(),
@@ -90,7 +91,42 @@ const DEFAULT_CONFIGURATION = {
         allowCustomBranding: false,
         allowGroupCreation: false,
     },
+    disabledNavIds: [],
 };
+
+const AVAILABLE_NAVS = [
+    { id: 'nav-dashboard', label: 'Dashboard' },
+    { id: 'nav-activity-timer', label: 'Activity Timer' },
+    { id: 'nav-my-bookings', label: 'My Bookings' },
+    { id: 'nav-messages', label: 'Messages' },
+    { id: 'nav-wishlist', label: 'My Wishlist' },
+    { id: 'nav-coupon-voucher', label: 'Coupon-Voucher' },
+    { id: 'nav-support-tickets', label: 'Support Tickets' },
+    { id: 'nav-add-listing', label: 'Add Listing' },
+    { id: 'nav-my-listings', label: 'My Listings' },
+    { id: 'nav-reviews', label: 'Reviews' },
+    { id: 'nav-product', label: 'Product' },
+    { id: 'nav-add-product', label: 'Add Product' },
+    { id: 'nav-orders', label: 'Orders' },
+    { id: 'nav-service', label: 'Service' },
+    { id: 'nav-add-service', label: 'Add Service' },
+    { id: 'nav-bookings', label: 'Bookings' },
+    { id: 'nav-loyalty', label: 'Loyalty & Reward' },
+    { id: 'nav-gift-card', label: 'Gift Card' },
+    { id: 'nav-voucher', label: 'Voucher' },
+    { id: 'nav-coupons', label: 'Coupons' },
+    { id: 'nav-hotspot', label: 'Hotspot Campaigns' },
+    { id: 'nav-partnerships', label: 'Partnerships' },
+    { id: 'nav-group-circles', label: 'Group Circles' },
+    { id: 'nav-reward-history', label: 'Reward History' },
+    { id: 'nav-hist-gift-card', label: 'Gift Card History' },
+    { id: 'nav-my-vouchers', label: 'My Vouchers' },
+    { id: 'nav-my-coupons', label: 'My Coupons' },
+    { id: 'nav-my-profile', label: 'My Profile' },
+    { id: 'nav-my-subscription', label: 'My Subscription' },
+    { id: 'nav-wallet', label: 'Wallet' },
+    { id: 'nav-cashback', label: 'Cashback' },
+];
 
 type TierFormValues = z.infer<typeof tierSchema>;
 
@@ -143,6 +179,7 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                     ...DEFAULT_CONFIGURATION.featureFlags,
                     ...(initialConfig.featureFlags || {}),
                 },
+                disabledNavIds: initialConfig.disabledNavIds || [],
             };
 
             console.log('Resetting form with config:', mergedConfig); // Debugging
@@ -173,6 +210,7 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
         const mergedConfig = {
             quotas: { ...DEFAULT_CONFIGURATION.quotas, ...(config.quotas || {}) },
             featureFlags: { ...DEFAULT_CONFIGURATION.featureFlags, ...(config.featureFlags || {}) },
+            disabledNavIds: config.disabledNavIds || [],
         };
         values.configuration = mergedConfig;
 
@@ -184,11 +222,12 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
             <form id={formId} onSubmit={form.handleSubmit(handleSubmit)} className="flex-1 overflow-y-auto min-h-0 p-1">
                 <div className="pb-4">
                     <Tabs defaultValue="general" className="w-full">
-                        <TabsList className={`grid w-full mb-4 ${form.watch('type') === TierType.TRIAL ? 'grid-cols-3' : 'grid-cols-4'}`}>
+                        <TabsList className={`grid w-full mb-4 ${form.watch('type') === TierType.TRIAL ? 'grid-cols-4' : 'grid-cols-5'}`}>
                             <TabsTrigger value="general">General</TabsTrigger>
                             {form.watch('type') !== TierType.TRIAL && <TabsTrigger value="pricing">Pricing</TabsTrigger>}
                             <TabsTrigger value="quotas">Quotas</TabsTrigger>
                             <TabsTrigger value="features">Features</TabsTrigger>
+                            <TabsTrigger value="permissions">Permissions</TabsTrigger>
                         </TabsList>
 
                         {/* General Tab */}
@@ -683,6 +722,58 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
                                         </FormItem>
                                     )}
                                 />
+                            </div>
+                        </TabsContent>
+
+                        {/* Permissions Tab */}
+                        <TabsContent value="permissions" className="space-y-4">
+                            <div className="rounded-lg border p-4 space-y-4">
+                                <div>
+                                    <FormLabel className="text-base">Navigation Permissions</FormLabel>
+                                    <FormDescription>
+                                        Select which navigation items should be **locked** (hidden) for this tier.
+                                    </FormDescription>
+                                </div>
+
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto p-1">
+                                    {AVAILABLE_NAVS.map((nav) => (
+                                        <FormField
+                                            key={nav.id}
+                                            control={form.control}
+                                            name="configuration.disabledNavIds"
+                                            render={({ field }) => {
+                                                const value = field.value || [];
+                                                const isChecked = value.includes(nav.id);
+
+                                                return (
+                                                    <FormItem
+                                                        key={nav.id}
+                                                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 hover:bg-slate-50 transition-colors"
+                                                    >
+                                                        <FormControl>
+                                                            <Switch
+                                                                checked={isChecked}
+                                                                onCheckedChange={(checked) => {
+                                                                    return checked
+                                                                        ? field.onChange([...value, nav.id])
+                                                                        : field.onChange(value.filter((v) => v !== nav.id));
+                                                                }}
+                                                            />
+                                                        </FormControl>
+                                                        <div className="space-y-1 leading-none">
+                                                            <FormLabel className="text-sm font-medium">
+                                                                {nav.label}
+                                                            </FormLabel>
+                                                            <p className="text-[10px] text-muted-foreground font-mono">
+                                                                {nav.id}
+                                                            </p>
+                                                        </div>
+                                                    </FormItem>
+                                                );
+                                            }}
+                                        />
+                                    ))}
+                                </div>
                             </div>
                         </TabsContent>
                     </Tabs>

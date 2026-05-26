@@ -45,6 +45,8 @@ import {
     GraduationCap,
     Clock,
     MessageSquare,
+    PanelLeft,
+    Rocket,
 } from 'lucide-react';
 
 interface NavItem {
@@ -56,7 +58,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
-    { title: 'Tiers', href: '/admin/tiers', icon: Layers },
+    { title: 'Subscription', href: '/admin/tiers', icon: Layers },
     { title: 'Users', href: '/admin/users', icon: Users },
     { title: 'Businesses', href: '/admin/businesses', icon: Building2 },
     { title: 'Listings', href: '/admin/listings', icon: ListChecks },
@@ -85,6 +87,8 @@ const navItems: NavItem[] = [
     { title: 'Cashback', href: '/admin/cashback', icon: CreditCard },
     { title: 'Notifications', href: '/admin/notifications', icon: Bell },
     { title: 'Settings', href: '/admin/settings', icon: Settings },
+    { title: 'Onboarding', href: '/admin/settings/onboarding', icon: Rocket },
+    { title: 'Sidebar Config', href: '/admin/settings/business-sidebar', icon: PanelLeft },
     { title: 'Audit Log', href: '/admin/audit', icon: ScrollText },
     { title: 'Roles', href: '/admin/roles', icon: ShieldCheck },
     { title: 'Integrations', href: '/admin/integrations', icon: Plug },
@@ -244,5 +248,3 @@ export function AdminSidebar({ collapsed = false, onCollapsedChange }: AdminSide
         </TooltipProvider>
     );
 }
-
-// Add ScrollArea component if not exists
