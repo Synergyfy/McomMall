@@ -1,10 +1,8 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-
-import { useGetBusinessData } from '@/service/listings/hook';
-
-import { InHouseBusiness } from '@/service/listings/types';
+import { useState, useEffect, useRef, useMemo } from 'react';
+import { useGetBusinessData, useGetGoogleListing } from '@/service/listings/hook';
+import { InHouseBusiness, GooglePlaceResult } from '@/service/listings/types';
 
 import HeroSection from './redesign/HeroSection';
 
@@ -78,33 +76,124 @@ const NAV_ITEMS = [
 
 
 
+function normalizeGoogleListing(google: GooglePlaceResult): InHouseBusiness {
+  const API_URL =
+    process.env.NEXT_PUBLIC_API_BASE_URL ||
+    process.env.NEXT_PUBLIC_API_URL ||
+    'https://mcom-mall-api.vercel.app/api/v1';
+  const cleanApiUrl = API_URL.endsWith('/') ? API_URL.slice(0, -1) : API_URL;
+
+  let logoUrl = google.icon || '';
+  let bannerUrl = '';
+  const media: string[] = [];
+
+  if (google.photos && google.photos.length > 0) {
+    google.photos.forEach((photo, idx) => {
+      if (photo.photoReference) {
+        const photoUrl = `${cleanApiUrl}/google/google-business/photo/${photo.photoReference}`;
+        media.push(photoUrl);
+        if (idx === 0) {
+          bannerUrl = photoUrl;
+        }
+      }
+    });
+  }
+
+  const categories = (google.types || []).map((type, idx) => ({
+    id: `google-cat-${idx}`,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    name: type.charAt(0).toUpperCase() + type.slice(1).replace('_', ' '),
+    description: null,
+  }));
+
+  const location = {
+    id: google.placeId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    postcode: '',
+    addressLine1: google.vicinity || '',
+    addressLine2: null,
+    city: google.vicinity || '',
+    lat: google.geometry?.location?.lat || 0,
+    lng: google.geometry?.location?.lng || 0,
+    showPublicly: true,
+    deliveryRadiusKm: null,
+    servicePostcodes: [],
+    serviceModel: null,
+  };
+
+  return {
+    id: google.placeId,
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    listingType: ['SERVICE'], // Default Google listings to Service shape
+    businessName: google.name,
+    shortDescription: google.businessStatus || '',
+    about: `Welcome to ${google.name}. Located in ${google.vicinity || 'London'}, we offer top-tier customer experiences.`,
+    website: google.website || '',
+    businessPhone: google.formattedPhoneNumber || google.internationalPhoneNumber || '',
+    businessEmail: '',
+    logoUrl,
+    bannerUrl,
+    logoAltText: google.name,
+    bannerAltText: google.name,
+    media,
+    status: 'published',
+    isGoogleVerified: true,
+    isVerified: true,
+    isClaimed: false,
+    location,
+    categories,
+    socialLinks: [],
+    businessHours: [],
+    specialDays: [],
+    products: [],
+    campaigns: [],
+    user: {} as any,
+    giftCard: false,
+    voucher: false,
+    promotion: false,
+  };
+}
+
 export default function ClientListingDetail({
-
   placeId,
-
 }: ClientListingDetailProps) {
-
   const [activeSection, setActiveSection] = useState('about');
-
   const [isNavSticky, setIsNavSticky] = useState(false);
-
   const searchParams = useSearchParams();
-
   const navRef = useRef<HTMLDivElement>(null);
 
+  const source = searchParams.get('source');
+  const isUuid = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(placeId);
+  const isGoogle = source ? source !== 'in-house' : !isUuid;
 
-
+  // Retrieve in-house business if not Google place
   const {
-
-    data: listing,
-
-    isLoading,
-
+    data: inHouseData,
+    isLoading: inHouseLoading,
   } = useGetBusinessData({
-
     id: placeId,
-
+    enabled: !isGoogle,
   });
+
+  // Retrieve Google Place details if it is a Google listing
+  const {
+    data: googleData,
+    isLoading: googleLoading,
+  } = useGetGoogleListing({
+    placeId: isGoogle ? placeId : '',
+  });
+
+  const isLoading = isGoogle ? googleLoading : inHouseLoading;
+
+  const listing = useMemo(() => {
+    if (isGoogle) {
+      return googleData ? normalizeGoogleListing(googleData) : null;
+    }
+    return inHouseData || null;
+  }, [isGoogle, googleData, inHouseData]);
 
 
 
@@ -322,7 +411,10 @@ export default function ClientListingDetail({
                   <p className="text-gray-500 font-medium">See what our community has to say about their experience.</p>
                 </div>
                 <div className="bg-white p-8 rounded-[2.5rem] shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100">
-                  <ReviewsTabContent businessId={inHouseListing.id} />
+                  <ReviewsTabContent
+                    businessId={inHouseListing.id}
+                    preloadedReviews={isGoogle ? (googleData?.reviews || []) : undefined}
+                  />
                 </div>
               </section>
             )}

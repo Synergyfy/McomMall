@@ -93,10 +93,10 @@ export class ListingsGoogleController {
   }
 
   @Get('photo/:photoReference')
-  @ApiOperation({ summary: 'Retrieve a photo by its reference' })
-  @ApiResponse({ status: 200, description: 'Photo retrieved successfully' })
+  @ApiOperation({ summary: 'Retrieve a photo by its reference (redirects directly to Google CDN)' })
+  @ApiResponse({ status: 302, description: 'Redirected to Google Place Photo URL' })
   @ApiResponse({ status: 400, description: 'Invalid photo reference' })
-  @ApiResponse({ status: 500, description: 'Failed to load image' })
+  @ApiResponse({ status: 500, description: 'Failed to resolve photo URL' })
   async getPlacePhoto(
     @Param('photoReference') photoReference: string,
     @Res() res: Response,
@@ -107,33 +107,22 @@ export class ListingsGoogleController {
         return;
       }
 
-      const photoResponse = await this.googlePlacesService.getPhotoStream({
-        photo_reference: photoReference,
-      });
-
-      if (!photoResponse?.data) {
+      const apiKey = this.googlePlacesService['apiKey'];
+      if (!apiKey) {
         res
           .status(HttpStatus.INTERNAL_SERVER_ERROR)
-          .send('Invalid photo stream.');
+          .send('Server configuration error: Missing Google API Key.');
         return;
       }
 
-      const contentType = photoResponse.headers['content-type'] || 'image/jpeg';
-      res.set('Content-Type', contentType);
+      const photoUrl = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photoreference=${photoReference}&key=${apiKey}`;
 
-      photoResponse.data.on('error', (err) => {
-        if (!res.headersSent) {
-          res
-            .status(HttpStatus.INTERNAL_SERVER_ERROR)
-            .send('Failed to stream image.');
-        }
-      });
-
-      photoResponse.data.pipe(res);
+      // Set cache-control headers so the browser caches the redirect!
+      res.setHeader('Cache-Control', 'public, max-age=86400'); // Cache redirect for 1 day
+      res.redirect(HttpStatus.FOUND, photoUrl);
     } catch (error) {
-      const status = error?.response?.status ?? 500;
-      res.status(Number(status)).send({
-        message: 'Failed to load image.',
+      res.status(HttpStatus.INTERNAL_SERVER_ERROR).send({
+        message: 'Failed to resolve photo URL.',
         error: error?.message || 'Unknown error',
       });
     }
