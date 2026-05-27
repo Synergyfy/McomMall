@@ -58,8 +58,8 @@ export default function GetStartedPage() {
               <Sparkles className="w-4 h-4 text-orange-500" />
               Welcome to the Future of Commerce
             </span>
-            <h1 className="text-6xl md:text-8xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-orange-900 to-gray-800 drop-shadow-sm">
-              How will you <br className="hidden md:block" />
+            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-orange-900 to-gray-800 drop-shadow-sm">
+              How do you want to <br className="hidden md:block" />
               use <span className="text-orange-600 inline-block transform hover:scale-105 transition-transform duration-300 cursor-default filter drop-shadow-lg">McomMall</span>?
             </h1>
             <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
@@ -71,21 +71,21 @@ export default function GetStartedPage() {
           {/* Cards Container */}
           <motion.div
             variants={containerVariants}
-            className="grid grid-cols-1 md:grid-cols-3 gap-8 w-full max-w-[1400px]"
+            className="grid grid-cols-1 md:grid-cols-2 gap-8 w-full max-w-4xl"
           >
 
             {/* Shopper Card */}
-            <Link href="/customer" className="group w-full block h-full">
+            <Link href="/signin" className="group w-full block h-full">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
                   y: -12,
                   scale: 1.03,
-                  boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)', // Soft Orange shadow
+                  boxShadow: '0 25px 50px -12px rgba(249, 115, 22, 0.25)',
                   borderColor: 'rgba(251, 146, 60, 0.8)',
                   transition: { type: 'spring', stiffness: 300, damping: 20 }
                 }}
-                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-orange-100/50 shadow-xl shadow-orange-500/5 transition-all flex flex-col justify-between min-h-[420px]"
+                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-orange-100/50 shadow-xl shadow-orange-500/5 transition-all flex flex-col justify-between min-h-[380px]"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-orange-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -93,30 +93,30 @@ export default function GetStartedPage() {
                   <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-orange-100">
                     <ShoppingBag className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-orange-600 transition-colors">Shop & Discover</h3>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-orange-600 transition-colors">I am a Customer</h3>
                   <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
-                    Find unique products, enjoy secure transactions, and get the best deals from top-rated sellers worldwide.
+                    Shop for unique products, enjoy secure transactions, and get the best deals from top-rated sellers.
                   </p>
                 </div>
 
                 <div className="flex items-center text-orange-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Explore Benefits <ArrowRight className="ml-2 w-5 h-5" />
+                  Continue as Customer <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </motion.div>
             </Link>
 
             {/* Merchant Card */}
-            <Link href="/business" className="group w-full block h-full">
+            <Link href="/getstarted/business" className="group w-full block h-full">
               <motion.div
                 variants={itemVariants}
                 whileHover={{
                   y: -12,
                   scale: 1.03,
-                  boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)', // Red shadow
+                  boxShadow: '0 25px 50px -12px rgba(239, 68, 68, 0.25)',
                   borderColor: 'rgba(248, 113, 113, 0.8)',
                   transition: { type: 'spring', stiffness: 300, damping: 20 }
                 }}
-                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-red-100/50 shadow-xl shadow-red-500/5 transition-all flex flex-col justify-between min-h-[420px]"
+                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-red-100/50 shadow-xl shadow-red-500/5 transition-all flex flex-col justify-between min-h-[380px]"
               >
                 <div className="absolute inset-0 bg-gradient-to-br from-red-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
 
@@ -124,45 +124,14 @@ export default function GetStartedPage() {
                   <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-red-100">
                     <Store className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-red-600 transition-colors">Sell & Grow</h3>
+                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-red-600 transition-colors">I am a Business</h3>
                   <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
-                    Launch your store in minutes. Access powerful tools, analytics, and a global audience to scale your business.
+                    Launch your store in minutes. Access powerful tools to scale your business.
                   </p>
                 </div>
 
                 <div className="flex items-center text-red-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Explore Business Tools <ArrowRight className="ml-2 w-5 h-5" />
-                </div>
-              </motion.div>
-            </Link>
-
-            {/* Affiliate Card */}
-            <Link href="/affiliate" className="group w-full block h-full">
-              <motion.div
-                variants={itemVariants}
-                whileHover={{
-                  y: -12,
-                  scale: 1.03,
-                  boxShadow: '0 25px 50px -12px rgba(245, 158, 11, 0.25)', // Amber shadow
-                  borderColor: 'rgba(251, 191, 36, 0.8)',
-                  transition: { type: 'spring', stiffness: 300, damping: 20 }
-                }}
-                className="h-full relative overflow-hidden p-10 rounded-[2.5rem] bg-white border border-amber-100/50 shadow-xl shadow-amber-500/5 transition-all flex flex-col justify-between min-h-[420px]"
-              >
-                <div className="absolute inset-0 bg-gradient-to-br from-amber-50 via-transparent to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500 pointer-events-none" />
-
-                <div>
-                  <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-amber-500 to-yellow-600 flex items-center justify-center shadow-lg shadow-amber-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-amber-100">
-                    <Users className="w-8 h-8 text-white" />
-                  </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-amber-600 transition-colors">Promote & Earn</h3>
-                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
-                    Join our affiliate network. Share products you love and earn attractive commissions for every sale.
-                  </p>
-                </div>
-
-                <div className="flex items-center text-amber-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Join as Affiliate <ArrowRight className="ml-2 w-5 h-5" />
+                  Create Business Profile <ArrowRight className="ml-2 w-5 h-5" />
                 </div>
               </motion.div>
             </Link>

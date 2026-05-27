@@ -108,10 +108,10 @@ export default function MarketplaceSidebar({
   );
 
   return (
-    <div className={cn("bg-white p-4 rounded-lg border border-gray-100 shadow-sm", className)}>
-      <div className="flex items-center justify-between mb-4">
-        <h2 className="text-lg font-bold flex items-center gap-2">
-          <Filter className="w-5 h-5" /> Filters
+    <div className={cn("bg-transparent rounded-lg", className)}>
+      <div className="flex items-center justify-between mb-6 pb-2 border-b border-gray-100">
+        <h2 className="text-sm font-black uppercase tracking-widest text-gray-900 flex items-center gap-2">
+          <Filter className="w-4 h-4" /> Filters
         </h2>
         <Button
           variant="ghost"

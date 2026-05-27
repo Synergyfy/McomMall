@@ -129,14 +129,17 @@ export default function MarketplaceSection({ title, productIds = [], products: i
   };
 
   return (
-    <div className="mb-12">
-      <div className="flex items-center justify-between mb-4 md:mb-6">
-        <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
+    <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+      <div className="flex items-center justify-between p-4 border-b border-gray-50">
+        <div className="flex items-center gap-3">
+          <div className="w-1 h-6 bg-orange-500 rounded-full" />
+          <h2 className="text-lg md:text-xl font-bold text-gray-900">{title}</h2>
+        </div>
         <div className="flex gap-2">
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-8 w-8 border-gray-200"
+            className="rounded-full h-8 w-8 border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
             onClick={() => scroll('left')}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -144,7 +147,7 @@ export default function MarketplaceSection({ title, productIds = [], products: i
           <Button
             variant="outline"
             size="icon"
-            className="rounded-full h-8 w-8 border-gray-200"
+            className="rounded-full h-8 w-8 border-gray-200 hover:bg-orange-50 hover:text-orange-600 hover:border-orange-200"
             onClick={() => scroll('right')}
           >
             <ChevronRight className="h-4 w-4" />
@@ -153,23 +156,25 @@ export default function MarketplaceSection({ title, productIds = [], products: i
       </div>
 
       {isLoading ? (
-        <div className="flex items-center justify-center h-64 bg-gray-50 rounded-xl border border-dashed border-gray-200">
-          <Loader2 className="h-8 w-8 animate-spin text-gray-400" />
+        <div className="flex items-center justify-center h-64 bg-white">
+          <Loader2 className="h-8 w-8 animate-spin text-orange-500" />
         </div>
       ) : finalProducts.length > 0 ? (
-        <div
-          ref={scrollContainerRef}
-          className="flex gap-3 md:gap-6 overflow-x-auto pb-6 scrollbar-hide -mx-4 px-4 scroll-smooth"
-          style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
-        >
-          {finalProducts.map((product) => (
-            <div key={product.id} className="min-w-[170px] w-[170px] md:min-w-[300px] md:w-[300px]">
-              {renderItemCard(product)}
-            </div>
-          ))}
+        <div className="p-4">
+          <div
+            ref={scrollContainerRef}
+            className="flex gap-3 md:gap-4 overflow-x-auto scrollbar-hide scroll-smooth pb-2"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {finalProducts.map((product) => (
+              <div key={product.id} className="min-w-[160px] w-[160px] md:min-w-[200px] md:w-[200px] flex-shrink-0">
+                {renderItemCard(product)}
+              </div>
+            ))}
+          </div>
         </div>
       ) : (
-        <div className="text-gray-500 text-sm">No products found for this section.</div>
+        <div className="text-gray-500 text-sm p-4 text-center">No products found for this section.</div>
       )}
     </div>
   );
