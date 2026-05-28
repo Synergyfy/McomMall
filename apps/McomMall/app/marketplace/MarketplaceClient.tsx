@@ -15,7 +15,8 @@ import {
   Ticket,
   Briefcase,
   ShoppingBag,
-  LayoutDashboard
+  LayoutDashboard,
+  ArrowRight
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import MarketplaceSidebar, { MarketplaceFiltersState } from '@/components/marketplace/MarketplaceSidebar';
@@ -390,41 +391,45 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
     if (type === 'coupons') href = '/coupons';
 
     return (
-      <div className="mb-10">
-        <div className="flex items-center justify-between mb-2 md:mb-4">
-          <h2 className="text-xl md:text-2xl font-bold text-gray-900">{title}</h2>
-          <Button variant="ghost" className="text-primary hover:text-primary/80 hover:bg-primary/5" asChild>
-            <Link href={href}>
-              View All
-            </Link>
-          </Button>
+      <div className="mb-6 bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+        <div className="flex items-center justify-between p-4 border-b border-gray-50">
+          <div className="flex items-center gap-3">
+            <div className="w-1 h-6 bg-orange-500 rounded-full" />
+            <h2 className="text-lg md:text-xl font-bold text-gray-900">{title}</h2>
+          </div>
+          <Link href={href} className="text-orange-500 hover:text-orange-600 text-sm font-semibold flex items-center gap-1 group">
+            SEE ALL <ArrowRight className="w-4 h-4 group-hover:translate-x-1 transition-transform" />
+          </Link>
         </div>
-        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6">
-          {displayItems.slice(0, 4).map((item) => renderItemCard(item, 'grid'))}
+        <div className="p-4 bg-white">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-3 md:gap-4">
+            {displayItems.slice(0, 5).map((item) => renderItemCard(item, 'grid'))}
+          </div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="bg-gray-50 min-h-screen pt-28 pb-12">
-      <div className="container mx-auto px-4">
+    <div className="relative min-h-screen w-full bg-[#f1f1f2] text-gray-900 selection:bg-orange-500 selection:text-white font-sans pt-20 pb-12">
+
+      <div className="container relative z-10 mx-auto px-4">
 
         {/* 1. Hero Section */}
         {isPublicDataLoading && !publicData ? (
-          <div className="h-[400px] w-full flex items-center justify-center bg-white rounded-2xl shadow-sm mb-12">
+          <div className="h-[400px] w-full flex items-center justify-center bg-transparent rounded-2xl mb-12">
             <Loader2 className="h-8 w-8 animate-spin text-primary" />
           </div>
         ) : (
-          <div className="mb-12 grid grid-cols-1 lg:grid-cols-3 gap-6">
-            <div className="lg:col-span-2 relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl group bg-gray-200">
+          <div className="mb-4 w-full">
+            <div className="relative w-full h-[220px] md:h-[340px] rounded-2xl overflow-hidden shadow-lg group bg-gray-900">
               {heroSlides.length > 0 ? (
                 <>
                   <AnimatePresence mode="wait">
                     <motion.div
                       key={activeSlide}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
+                      initial={{ opacity: 0, scale: 1.05 }}
+                      animate={{ opacity: 1, scale: 1 }}
                       exit={{ opacity: 0 }}
                       transition={{ duration: 0.8 }}
                       className="absolute inset-0"
@@ -438,73 +443,110 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
                             className="object-cover"
                           />
                         )}
-                        <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-8">
-                          <h2 className="text-4xl font-bold text-white mb-2">{heroSlides[activeSlide].title}</h2>
-                          <p className="text-xl text-gray-200">{heroSlides[activeSlide].subTitle}</p>
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent flex flex-col justify-end p-6 md:p-10">
+                          <motion.h2 initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} className="text-2xl md:text-4xl font-black text-white mb-2 tracking-tight drop-shadow-lg">{heroSlides[activeSlide].title}</motion.h2>
+                          <motion.p initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} transition={{delay: 0.1}} className="text-sm md:text-lg text-gray-300 font-medium max-w-xl">{heroSlides[activeSlide].subTitle}</motion.p>
                           {heroSlides[activeSlide].link ? (
-                            <Button className="mt-4 w-fit bg-white text-black hover:bg-gray-100" asChild>
-                              <Link href={heroSlides[activeSlide].link || '#'}>
-                                {heroSlides[activeSlide].buttonText || 'Shop Now'}
-                              </Link>
-                            </Button>
+                            <motion.div initial={{y:20, opacity:0}} animate={{y:0, opacity:1}} transition={{delay: 0.2}}>
+                              <Button className="mt-4 w-fit bg-orange-500 text-white hover:bg-orange-600 rounded-full px-6 py-3 text-sm font-bold shadow-lg shadow-orange-500/25 transition-all hover:scale-105" asChild>
+                                <Link href={heroSlides[activeSlide].link || '#'}>
+                                  {heroSlides[activeSlide].buttonText || 'Shop Now'} <ArrowRight className="ml-2 w-5 h-5" />
+                                </Link>
+                              </Button>
+                            </motion.div>
                           ) : null}
                         </div>
                       </div>
                     </motion.div>
                   </AnimatePresence>
-                  <button onClick={(e) => { e.stopPropagation(); handlePrevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100">
-                    <ChevronLeft className="h-6 w-6" />
+                  <button onClick={(e) => { e.stopPropagation(); handlePrevSlide(); }} className="absolute left-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-black/60 text-white p-2.5 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100">
+                    <ChevronLeft className="h-5 w-5" />
                   </button>
-                  <button onClick={(e) => { e.stopPropagation(); handleNextSlide(); }} className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/30 hover:bg-black/50 text-white p-2 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100">
-                    <ChevronRight className="h-6 w-6" />
+                  <button onClick={(e) => { e.stopPropagation(); handleNextSlide(); }} className="absolute right-4 top-1/2 -translate-y-1/2 z-20 bg-black/40 hover:bg-black/60 text-white p-2.5 rounded-full backdrop-blur-sm transition-all opacity-0 group-hover:opacity-100">
+                    <ChevronRight className="h-5 w-5" />
                   </button>
+                  {/* Slide Indicators */}
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-20 flex items-center gap-2">
+                    {heroSlides.map((_, i) => (
+                      <button
+                        key={i}
+                        onClick={(e) => { e.stopPropagation(); setActiveSlide(i); }}
+                        className={`transition-all duration-300 rounded-full ${
+                          i === activeSlide ? 'w-8 h-2.5 bg-orange-500' : 'w-2.5 h-2.5 bg-white/50 hover:bg-white/80'
+                        }`}
+                      />
+                    ))}
+                  </div>
                 </>
               ) : (
                 <div className="flex items-center justify-center h-full text-gray-400">No active slides</div>
               )}
             </div>
-            <div className="relative h-[300px] md:h-[400px] rounded-2xl overflow-hidden shadow-xl bg-gray-100 group/sidebar">
-              {sidebarSlides.length > 0 ? (
-                <AnimatePresence mode="wait">
-                  <motion.div
-                    key={activeSidebarSlide}
-                    initial={{ opacity: 0, x: 20 }}
-                    animate={{ opacity: 1, x: 0 }}
-                    exit={{ opacity: 0, x: -20 }}
-                    transition={{ duration: 0.5 }}
-                    className="absolute inset-0"
-                  >
-                    {renderBanner(sidebarSlides[activeSidebarSlide], activeSidebarSlide)}
-                  </motion.div>
-                </AnimatePresence>
-              ) : (
-                <div className="w-full h-full flex items-center justify-center text-gray-400">No promotions</div>
-              )}
-            </div>
           </div>
         )}
 
-        {/* 1.5. Dynamic Sections (Flash Sale / Promo) - Always visible */}
-        {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
-          <MarketplaceSection
-            title={flashSaleConfig.title}
-            productIds={flashSaleConfig.productIds}
-            products={flashSaleConfig.products}
-          />
-        )}
-        {promoCarouselConfig?.isVisible && (promoCarouselConfig.products || promoCarouselConfig.productIds) && (
-          <MarketplaceSection
-            title={promoCarouselConfig.title}
-            productIds={promoCarouselConfig.productIds}
-            products={promoCarouselConfig.products}
-          />
-        )}
+        {/* Search & Category Navigation */}
+        <div className="mt-6 mb-4">
+          <div className="relative max-w-2xl mx-auto mb-5">
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400" />
+            <Input
+              placeholder="Search products, services, vouchers..."
+              className="pl-12 h-12 bg-white border-gray-200 rounded-full text-base focus-visible:ring-orange-500 shadow-sm"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+            />
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-hide justify-center flex-wrap">
+            {[
+              { key: 'all', label: 'All', icon: LayoutDashboard },
+              { key: 'products', label: 'Products', icon: ShoppingBag },
+              { key: 'services', label: 'Services', icon: Briefcase },
+              { key: 'vouchers', label: 'Vouchers', icon: Ticket },
+              { key: 'gift-cards', label: 'Gift Cards', icon: Gift },
+              { key: 'coupons', label: 'Coupons', icon: Tag },
+            ].map(({ key, label, icon: Icon }) => (
+              <button
+                key={key}
+                onClick={() => setListingType(key as ListingType)}
+                className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-semibold transition-all whitespace-nowrap ${
+                  listingType === key
+                    ? 'bg-orange-500 text-white shadow-md shadow-orange-500/25'
+                    : 'bg-white text-gray-600 hover:bg-gray-100 border border-gray-200'
+                }`}
+              >
+                <Icon className="w-4 h-4" />
+                {label}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        {/* Trust Strip */}
+        <div className="flex items-center justify-center gap-6 md:gap-10 py-3 mb-6 text-sm text-gray-500 bg-white rounded-xl px-4 shadow-sm border border-gray-100">
+          <div className="flex items-center gap-2">
+            <span className="text-base">🚚</span>
+            <span className="font-medium hidden sm:inline">Free Delivery</span>
+          </div>
+          <div className="hidden sm:flex items-center gap-2">
+            <span className="text-base">🛡️</span>
+            <span className="font-medium">Buyer Protection</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <span className="text-base">⭐</span>
+            <span className="font-medium hidden sm:inline">Quality Assured</span>
+          </div>
+          <div className="hidden md:flex items-center gap-2">
+            <span className="text-base">↩️</span>
+            <span className="font-medium">Easy Returns</span>
+          </div>
+        </div>
 
         {/* 2. Main Layout Split */}
-        <div className="flex flex-col lg:flex-row gap-8 mt-12">
+        <div className="flex flex-col lg:flex-row gap-8">
 
           {/* Left Sidebar */}
-          <aside className="hidden lg:block w-64 flex-shrink-0">
+          <aside className={`${listingType === 'all' ? 'hidden' : 'hidden lg:block'} w-64 flex-shrink-0`}>
             <div className="sticky top-28 space-y-8 max-h-[calc(100vh-8rem)] overflow-y-auto custom-scrollbar">
               {/* Category / Type Selector */}
               <div className="bg-white p-5 rounded-xl shadow-sm border border-gray-100">
@@ -646,8 +688,24 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
             {/* Content Logic */}
             {listingType === 'all' ? (
               // Dashboard View (Sections)
-              <div className="space-y-4">
-                {/* We can put a welcome or search here if needed */}
+              <div className="space-y-12">
+                {/* Dynamic Sections (Flash Sale / Promo) */}
+                {flashSaleConfig?.isVisible && (flashSaleConfig.products || flashSaleConfig.productIds) && (
+                  <MarketplaceSection
+                    title={flashSaleConfig.title}
+                    productIds={flashSaleConfig.productIds}
+                    products={flashSaleConfig.products}
+                  />
+                )}
+                {promoCarouselConfig?.isVisible && (promoCarouselConfig.products || promoCarouselConfig.productIds) && (
+                  <MarketplaceSection
+                    title={promoCarouselConfig.title}
+                    productIds={promoCarouselConfig.productIds}
+                    products={promoCarouselConfig.products}
+                  />
+                )}
+
+                {/* Main Sections */}
                 <SectionRow title="Featured Products" type="products" items={publicData?.products || []} />
                 <SectionRow title="Featured Services" type="services" items={publicData?.services || []} />
                 <SectionRow title="Newest Vouchers" type="vouchers" items={publicData?.vouchers || []} />
@@ -681,7 +739,7 @@ export default function MarketplaceClient({ initialPublicData, initialNewProduct
                 ) : displayItems.length > 0 ? (
                   <div className={
                     viewMode === 'grid'
-                      ? "grid grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 md:gap-6"
+                      ? "grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 gap-3 md:gap-4"
                       : "flex flex-col gap-4"
                   }>
                     {displayItems.map((item) => renderItemCard(item, viewMode))}

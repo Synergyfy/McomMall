@@ -121,7 +121,7 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
 
   // Grid View - Enforced Sizing
   return (
-    <div className="group bg-white rounded-xl border border-gray-100 hover:border-gray-200 hover:shadow-xl transition-all duration-300 overflow-hidden flex flex-col h-[340px] md:h-[400px] relative w-full">
+    <div className="group bg-white hover:shadow-[0_0_10px_rgba(0,0,0,0.1)] transition-all duration-200 overflow-hidden flex flex-col h-[320px] md:h-[380px] relative w-full border border-transparent hover:border-gray-200">
       {/* Image Container - Fixed Height */}
       <div className="relative h-[160px] md:h-[220px] w-full bg-gray-50 overflow-hidden flex-shrink-0">
         <Image
@@ -129,15 +129,15 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
           alt={product.title}
           fill
           className={cn(
-            "object-cover transition-transform duration-700 group-hover:scale-110",
+            "object-contain p-2 transition-transform duration-300 group-hover:scale-105",
             isOutOfStock && "grayscale opacity-70"
           )}
         />
 
         {/* Badges */}
-        <div className="absolute top-2 left-2 md:top-3 md:left-3 flex flex-col gap-1 md:gap-2 z-10">
+        <div className="absolute top-0 left-0 flex flex-col gap-1 z-10">
           {discountPercentage > 0 && (
-            <Badge className="bg-red-500 hover:bg-red-600 text-white border-0 shadow-sm text-[10px] md:text-xs px-1.5 py-0 md:px-2 md:py-0.5">
+            <Badge className="bg-orange-500 rounded-none text-white border-0 text-[10px] md:text-xs px-2 py-0.5 font-bold tracking-tight">
               -{discountPercentage}%
             </Badge>
           )}
@@ -182,10 +182,9 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
       </div>
 
       {/* Product Details - Flex Grow to fill height */}
-      <div className="p-2 md:p-4 flex flex-col flex-grow">
-        <div className="text-[10px] md:text-xs text-gray-500 mb-0.5 md:mb-1 font-medium uppercase tracking-wide truncate">{product.category}</div>
-        <Link href={productLink} onClick={handleProductClick} className="block mb-1 md:mb-2">
-          <h3 className="text-sm md:text-base font-bold text-gray-800 line-clamp-2 hover:text-primary transition-colors h-[2.5rem]" title={product.title}>
+      <div className="p-3 flex flex-col flex-grow bg-white">
+        <Link href={productLink} onClick={handleProductClick} className="block mb-1">
+          <h3 className="text-[13px] md:text-[15px] font-normal text-gray-800 line-clamp-2 hover:text-orange-500 transition-colors leading-tight h-[2.5rem]" title={product.title}>
             {product.title}
           </h3>
         </Link>
@@ -205,19 +204,17 @@ export default function ProductCard({ product, viewMode = 'grid' }: ProductCardP
         </div>
 
         {/* Price - Pushed to bottom */}
-        <div className="mt-auto flex items-center justify-between">
-          <div className="flex flex-col">
-            <span className="text-base md:text-lg font-bold text-gray-900">
-              {hasMultiplePrices && <span className="text-[10px] md:text-xs font-normal text-gray-500 mr-1">From</span>}
-              £{Number(product.discountedPrice || minPrice || 0).toFixed(2)}
-              {product.pricingModel === 'perHour' && <span className="text-[10px] md:text-sm font-normal text-gray-500"> / hr</span>}
+        <div className="mt-auto flex flex-col justify-end pt-1">
+          <span className="text-lg md:text-xl font-bold text-gray-900 tracking-tight">
+            {hasMultiplePrices && <span className="text-[10px] font-normal text-gray-500 mr-1 uppercase">From</span>}
+            £{Number(product.discountedPrice || minPrice || 0).toFixed(2)}
+            {product.pricingModel === 'perHour' && <span className="text-xs font-medium text-gray-500"> / hr</span>}
+          </span>
+          {product.discountedPrice && (
+            <span className="text-[11px] md:text-xs text-gray-400 line-through decoration-gray-400">
+              £{Number(minPrice || 0).toFixed(2)}
             </span>
-            {product.discountedPrice && (
-              <span className="text-[10px] md:text-xs text-gray-400 line-through">
-                £{Number(minPrice || 0).toFixed(2)}
-              </span>
-            )}
-          </div>
+          )}
         </div>
       </div>
     </div>
