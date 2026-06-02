@@ -15,9 +15,10 @@ export class PaymentProviderService {
   private ordersController: OrdersController;
 
   constructor(private configService: ConfigService) {
-    this.stripe = new Stripe(
-      this.configService.get<string>('STRIPE_SECRET_KEY'),
-    );
+    const stripeKey =
+      this.configService.get<string>('STRIPE_SECRET_KEY') ||
+      'stripe_secret_key_not_set_in_env_file';
+    this.stripe = new Stripe(stripeKey);
 
     const clientId = this.configService.get<string>('PAYPAL_CLIENT_ID');
     const clientSecret = this.configService.get<string>('PAYPAL_CLIENT_SECRET');

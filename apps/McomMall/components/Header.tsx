@@ -266,9 +266,7 @@ export default function Header() {
               </Button>
             </Link>
             {accessToken ? (
-              <div className="hidden md:block">
-                <UserNav />
-              </div>
+              <UserNav variant="light" />
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/getstarted">

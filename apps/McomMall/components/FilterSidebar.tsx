@@ -101,13 +101,7 @@ export default function FilterSidebar({
             </div>
           </div>
 
-          {/* Category */}
-          <CategoryFilterSidebar
-            initialCategory={category}
-            initialSubCategories={subCategories}
-            onCategoryChange={setCategory}
-            onSubCategoryChange={setSubCategories}
-          />
+
 
           {/* Location */}
           <div>
@@ -147,14 +141,17 @@ export default function FilterSidebar({
           </div>
         </div>
 
-        <div className="pt-6 mt-4 border-t">
+        {/* Sticky Bottom Apply Button - pushed up with padding and margin */}
+        <div className="pt-3 mt-4 border-t bg-gray-50 z-10 shrink-0 pb-8 mb-4">
           <Button
             onClick={handleApplyFilters}
-            className="w-full bg-red-500 text-base font-semibold text-white hover:bg-red-600 transition-colors"
+            className="w-full bg-red-500 hover:bg-red-600 text-white font-bold rounded-xl py-3.5 text-base shadow-md transition-colors border-none"
           >
             Apply Filters
           </Button>
         </div>
+
+
       </div>
     </aside>
   );
