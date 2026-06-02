@@ -29,6 +29,8 @@ import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
 import UserNav from '@/components/UserNav';
 import AuthRedirect from '@/components/AuthRedirect';
 import { useEffect } from 'react';
+import { GeoProvider } from '@/context/GeoContext';
+import GeographicDashboard from '@/components/dashboard/GeographicDashboard';
 
 export default function DashboardLayout({
   children,
@@ -51,7 +53,7 @@ export default function DashboardLayout({
   }
 
   return (
-    <>
+    <GeoProvider>
       <AuthRedirect />
       {trialStatus?.isActive && (
         <TrialCountdownTimer trialStatus={trialStatus} />
@@ -159,13 +161,17 @@ export default function DashboardLayout({
 
           {/* Page Content */}
           <div className="sm:p-5 p-2 pb-20 sm:pb-5 overflow-y-auto flex-1 min-h-0">
-            <ProtectedRoute>{children}</ProtectedRoute>
+            <ProtectedRoute>
+              <GeographicDashboard>
+                {children}
+              </GeographicDashboard>
+            </ProtectedRoute>
           </div>
           
           {/* Bottom Navigation (Mobile Only) */}
           <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
         </main>
       </section>
-    </>
+    </GeoProvider>
   );
 }

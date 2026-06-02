@@ -12,6 +12,9 @@
   "author": "",
   "license": "ISC",
   "packageManager": "pnpm@10.29.1",
+  "engines": {
+    "node": "20.x"
+  },
   "devDependencies": {
     "turbo": "^2.8.3"
   }
