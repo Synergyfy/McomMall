@@ -1,7 +1,7 @@
-import HomePage from '@/app/components/HomePage';
+import BusinessLandingPage from '@/app/components/BusinessLandingPage';
 
 export default function BusinessPage() {
     return (
-        <HomePage />
+        <BusinessLandingPage />
     );
 }
