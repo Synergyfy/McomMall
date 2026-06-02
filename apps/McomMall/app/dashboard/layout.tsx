@@ -85,16 +85,9 @@ export default function DashboardLayout({
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-1 flex flex-col">
           <header className="flex items-center justify-between w-full h-20 py-3 px-5 border-b border-gray-200 bg-white shadow-sm">
-            {/* --- LEFT SIDE: MOBILE MENU TRIGGER & COLLAPSE TRIGGER --- */}
-            <div className="flex items-center gap-4">
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden md:flex hover:bg-gray-100"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              >
-                <Menu className="h-5 w-5 text-gray-700" />
-              </Button>
+            {/* --- LEFT SIDE: Hamburger + Desktop collapse button --- */}
+            <div className="flex items-center gap-2">
+              {/* Mobile hamburger menu */}
               <div className="md:hidden">
                 <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
                   <SheetTrigger asChild>
@@ -105,7 +98,8 @@ export default function DashboardLayout({
                     >
                       <Menu className="h-5 w-5 text-gray-700" />
                     </Button>
-                  </SheetTrigger>                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
+                  </SheetTrigger>
+                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
                     <div className="p-5 border-b shrink-0">
                       <Link href="/" className="flex items-center space-x-2">
                         <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
@@ -140,14 +134,25 @@ export default function DashboardLayout({
                   </SheetContent>
                 </Sheet>
               </div>
+
+              {/* Desktop sidebar collapse toggle */}
+              <Button
+                variant="ghost"
+                size="icon"
+                className="hidden md:flex hover:bg-gray-100"
+                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+              >
+                <Menu className="h-5 w-5 text-gray-700" />
+              </Button>
             </div>
 
-            {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav --- */}
+            {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav (desktop only) --- */}
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="hidden sm:flex items-center gap-2 sm:gap-4">
                 <MembershipBadge />
                 <ActivityTimerBadge />
               </div>
+              {/* UserNav — compact avatar on mobile, full on desktop */}
               <UserNav align="end" />
             </div>
           </header>
