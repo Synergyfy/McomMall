@@ -384,7 +384,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         if (redirect) {
           router.push(redirect);
         } else {
-          router.push('/');
+          router.push('/dashboard');
         }
 
       } catch (error: unknown) {
@@ -413,7 +413,7 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
         });
         toast.success('Login successful');
         if (redirect) router.push(redirect);
-        else router.push('/');
+        else router.push('/dashboard');
     } catch (error: unknown) {
         const err = error as ErrorResponse;
         toast.error(err.message || 'Login failed');
