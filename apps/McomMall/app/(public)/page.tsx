@@ -1,10 +1,10 @@
 'use client';
-import HomePage from '@/app/components/HomePage';
+import RootLandingPage from '@/app/components/RootLandingPage';
 
 export default function Home() {
   return (
     <>
-      <HomePage />
+      <RootLandingPage />
     </>
   );
 }

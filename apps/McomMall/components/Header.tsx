@@ -41,7 +41,7 @@ export default function Header() {
   const logout = useLogout();
   const { data: membership } = useGetMyMembership();
 
-  if (pathname?.startsWith('/dashboard')) {
+  if (pathname?.startsWith('/dashboard') || pathname === '/') {
     return null;
   }
 
@@ -266,9 +266,7 @@ export default function Header() {
               </Button>
             </Link>
             {accessToken ? (
-              <div className="hidden md:block">
-                <UserNav />
-              </div>
+              <UserNav variant="light" />
             ) : (
               <div className="hidden sm:flex items-center space-x-2">
                 <Link href="/getstarted">

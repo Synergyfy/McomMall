@@ -32,7 +32,7 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
   const [openSubMenus, setOpenSubMenus] = useState<{ [key: string]: boolean }>(
     {}
   );
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
+  const [expandedSection, setExpandedSection] = useState<string | null>('Main');
 
   useEffect(() => {
     if (isCollapsed) {

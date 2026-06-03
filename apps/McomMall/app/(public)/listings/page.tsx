@@ -16,7 +16,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select';
-import { List, LayoutGrid, SlidersHorizontal } from 'lucide-react';
+import { List, LayoutGrid, SlidersHorizontal, MapPin } from 'lucide-react';
 import FilterSidebar, { type FilterState } from '@/components/FilterSidebar';
 import ListingCard from '@/components/listingCard';
 import ListingCardSkeleton from '@/components/ListingCardSkeleton';
@@ -112,47 +112,79 @@ function ListingsPageContent() {
   const searchParams = useSearchParams();
   const queryText = searchParams.get('queryText');
 
+  const [locationStatus, setLocationStatus] = useState<'checking' | 'prompt' | 'granted' | 'denied'>('checking');
   const [coords, setCoords] = useState<{ lat: number; lng: number }>({
     lat: 51.5074,
     lng: -0.1278,
   });
 
-  useEffect(() => {
-    let active = true;
-
-    const getPreciseLocation = () => {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          position => {
-            if (!active) return;
-            setCoords({
-              lat: position.coords.latitude,
-              lng: position.coords.longitude,
-            });
-          },
-          async () => {
-            if (!active) return;
-            const ipCoords = await fetchIpLocation();
-            if (ipCoords && active) {
+  const requestLocation = () => {
+    if (navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        position => {
+          setCoords({
+            lat: position.coords.latitude,
+            lng: position.coords.longitude,
+          });
+          setLocationStatus('granted');
+        },
+        () => {
+          fetchIpLocation().then(ipCoords => {
+            if (ipCoords) {
               setCoords(ipCoords);
+              setLocationStatus('granted');
+            } else {
+              setLocationStatus('denied');
             }
-          },
-          { timeout: 5000 }
-        );
-      } else {
-        fetchIpLocation().then(ipCoords => {
-          if (ipCoords && active) {
-            setCoords(ipCoords);
+          });
+        },
+        { timeout: 8000 }
+      );
+    } else {
+      fetchIpLocation().then(ipCoords => {
+        if (ipCoords) {
+          setCoords(ipCoords);
+          setLocationStatus('granted');
+        } else {
+          setLocationStatus('denied');
+        }
+      });
+    }
+  };
+
+  useEffect(() => {
+    if (!navigator.geolocation) {
+      setLocationStatus('denied');
+      return;
+    }
+
+    if (navigator.permissions && navigator.permissions.query) {
+      navigator.permissions.query({ name: 'geolocation' }).then(permissionStatus => {
+        if (permissionStatus.state === 'granted') {
+          setLocationStatus('granted');
+          requestLocation();
+        } else if (permissionStatus.state === 'denied') {
+          setLocationStatus('denied');
+        } else {
+          setLocationStatus('prompt');
+        }
+
+        permissionStatus.onchange = () => {
+          if (permissionStatus.state === 'granted') {
+            setLocationStatus('granted');
+            requestLocation();
+          } else if (permissionStatus.state === 'denied') {
+            setLocationStatus('denied');
+          } else {
+            setLocationStatus('prompt');
           }
-        });
-      }
-    };
-
-    getPreciseLocation();
-
-    return () => {
-      active = false;
-    };
+        };
+      }).catch(() => {
+        requestLocation();
+      });
+    } else {
+      requestLocation();
+    }
   }, []);
 
   const [layout, setLayout] = useState<'grid' | 'list'>('grid');
@@ -256,17 +288,85 @@ function ListingsPageContent() {
 
   const totalPages = Math.ceil((combinedListings?.length || 0) / listingsPerPage);
 
+  const renderLocationBlocker = () => {
+    if (locationStatus === 'granted' || locationStatus === 'checking') return null;
+
+    return (
+      <div className="absolute inset-0 z-35 flex justify-center items-start pt-24 px-4 bg-slate-900/10 pointer-events-auto">
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-white rounded-3xl p-6 max-w-sm w-full shadow-2xl border border-slate-100 text-center flex flex-col items-center z-40 mt-4"
+        >
+          <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-orange-500 to-red-600 flex items-center justify-center text-white shadow-lg shadow-orange-500/20 mb-4 shrink-0">
+            <MapPin className="w-8 h-8 animate-bounce" />
+          </div>
+
+          <h2 className="text-xl font-black text-slate-900 mb-2">
+            Location Access Required
+          </h2>
+          
+          <p className="text-slate-500 text-xs leading-relaxed mb-6">
+            Please allow location permission to browse local listings and check proximity perks.
+          </p>
+
+          {locationStatus === 'prompt' ? (
+            <Button
+              onClick={requestLocation}
+              className="w-full py-5 bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 text-white font-extrabold rounded-2xl shadow-md shadow-orange-500/20 hover:brightness-105 transition-all text-sm border-none"
+            >
+              Allow Location Access
+            </Button>
+          ) : (
+            <div className="w-full">
+              <div className="bg-red-50 text-red-800 text-xs font-semibold rounded-2xl p-3 mb-3 border border-red-100">
+                Location access blocked. Please enable it in browser settings.
+              </div>
+              <Button
+                onClick={requestLocation}
+                variant="outline"
+                className="w-full py-5 text-slate-700 font-bold border-slate-200 rounded-2xl hover:bg-slate-50 transition-all text-sm"
+              >
+                Retry Access Check
+              </Button>
+            </div>
+          )}
+        </motion.div>
+      </div>
+    );
+  };
+
+  if (locationStatus === 'checking') {
+    return (
+      <div className="flex h-screen items-center justify-center bg-slate-50 pt-16">
+        <div className="text-center">
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ duration: 1, repeat: Infinity, ease: 'linear' }}
+            className="w-10 h-10 border-4 border-orange-500 border-t-transparent rounded-full mx-auto mb-4 animate-spin"
+          />
+          <p className="text-slate-500 font-semibold">Checking location permissions...</p>
+        </div>
+      </div>
+    );
+  }
+
   if (isLoading)
     return (
-      <div className="flex h-screen bg-slate-50 overflow-x-hidden">
-        <div className="flex-1 min-w-0 p-4 overflow-y-auto">
+      <div className="flex h-screen bg-slate-50 overflow-x-hidden pt-16 relative">
+        {renderLocationBlocker()}
+        <div className={`flex-1 min-w-0 p-4 overflow-y-auto transition-all duration-300 ${
+          locationStatus !== 'granted' ? 'blur-sm pointer-events-none select-none' : ''
+        }`}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 w-full">
             {[...Array(4)].map((_, i) => (
               <ListingCardSkeleton key={i} />
             ))}
           </div>
         </div>
-        <div className="w-1/3 max-w-[33%] h-full flex-shrink-0 hidden lg:block">
+        <div className={`w-1/3 max-w-[33%] h-full flex-shrink-0 hidden lg:block transition-all duration-300 ${
+          locationStatus !== 'granted' ? 'blur-sm pointer-events-none select-none' : ''
+        }`}>
           <div className="bg-gray-200 w-full h-full animate-pulse" />
         </div>
       </div>
@@ -274,7 +374,8 @@ function ListingsPageContent() {
 
   if (isSuccess)
     return (
-      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100/50 overflow-x-hidden">
+      <div className="flex h-screen bg-gradient-to-br from-slate-50 via-slate-50 to-slate-100/50 overflow-x-hidden pt-16 relative">
+        {renderLocationBlocker()}
         <AnimatePresence>
           {filtersVisible && (
             <motion.div
@@ -282,7 +383,9 @@ function ListingsPageContent() {
               animate={{ x: 0, opacity: 1 }}
               exit={{ x: '-100%', opacity: 0 }}
               transition={{ duration: 0.3, ease: 'easeInOut' }}
-              className="fixed inset-0 z-40 md:relative md:w-80 md:h-full md:flex-shrink-0"
+              className={`fixed inset-0 z-40 md:relative md:w-80 md:h-full md:flex-shrink-0 transition-all duration-300 ${
+                locationStatus !== 'granted' ? 'blur-sm pointer-events-none select-none' : ''
+              }`}
             >
               <FilterSidebar
                 initialState={activeFilters}
@@ -293,7 +396,9 @@ function ListingsPageContent() {
           )}
         </AnimatePresence>
 
-        <main className="flex-1 flex min-w-0 flex-col">
+        <main className={`flex-1 flex min-w-0 flex-col transition-all duration-300 ${
+          locationStatus !== 'granted' ? 'blur-sm pointer-events-none select-none' : ''
+        }`}>
           <div className="flex-shrink-0 p-6 border-b border-slate-200/50 bg-white/80 backdrop-blur-md sticky top-0 z-20 shadow-sm transition-all duration-300">
             <div className="flex flex-wrap items-center justify-between gap-4">
               <div className="flex items-center gap-3">

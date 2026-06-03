@@ -46,32 +46,7 @@ const ScrollAnimatedSection = ({ children, className = "" }: { children: React.R
   );
 };
 
-const blogPosts = [
-  {
-    title: 'How To Find Best Food Restaurant In Adlin',
-    category: 'Listing',
-    date: '16 Nov, 2022',
-    image: 'https://images.unsplash.com/photo-1555939594-58d7cb561ad1?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Best Winter Collection In AdlinIn 2022',
-    category: 'Collection',
-    date: '16 Nov, 2022',
-    image: 'https://images.unsplash.com/photo-1572804013427-4d714e280592?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Best Watch Listed In 2022',
-    category: 'Listing',
-    date: '16 Nov, 2022',
-    image: 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=300&auto=format&fit=crop',
-  },
-  {
-    title: 'Best Racing Car Listed In 2022',
-    category: 'Listing',
-    date: '16 Nov, 2022',
-    image: 'https://images.unsplash.com/photo-1553440569-99424e1bf07c?q=80&w=300&auto=format&fit=crop',
-  },
-];
+// Removed consumer blog posts
 
 export default function HomePage() {
   const [currentCopyIndex, setCurrentCopyIndex] = useState(0);
@@ -276,54 +251,17 @@ export default function HomePage() {
                   </AnimatePresence>
                 </div>
 
-                {/* Creative Glass Search Box */}
+                {/* Business CTA */}
                 <motion.div
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ duration: 0.7, delay: 0.2 }}
                   className="w-full max-w-2xl"
                 >
-                  <div className="p-2 rounded-2xl border border-white/10 bg-slate-950/65 backdrop-blur-xl shadow-2xl shadow-black/60 focus-within:border-orange-500/40 focus-within:shadow-[0_0_30px_rgba(249,115,22,0.15)] transition-all">
-                    <div className="flex flex-col md:flex-row items-center gap-2">
-                      
-                      <div className="w-full flex-1 flex items-center px-4 py-3 gap-3">
-                        <Search className="text-orange-500" size={20} />
-                        <input
-                          type="text"
-                          placeholder="Search for restaurants, listings, services..."
-                          className="w-full bg-transparent focus:outline-none text-white placeholder:text-slate-400 text-sm md:text-base"
-                          value={searchQuery}
-                          onChange={e => setSearchQuery(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                        />
-                      </div>
-                      
-                      <div className="hidden md:block w-px h-8 bg-white/10" />
-                      
-                      <div className="w-full md:w-auto flex items-center px-4 py-3 gap-3">
-                        <MapPin className="text-orange-400" size={20} />
-                        <input
-                          type="text"
-                          placeholder="Location / City"
-                          className="w-full md:w-36 bg-transparent focus:outline-none text-white placeholder:text-slate-400 text-sm md:text-base"
-                          value={location}
-                          onChange={e => setLocation(e.target.value)}
-                          onKeyDown={handleKeyDown}
-                        />
-                      </div>
-
-                      <button
-                        className="bg-orange-500 hover:bg-orange-600 text-white font-bold py-3.5 px-8 rounded-xl w-full md:w-auto flex items-center justify-center gap-2 shadow-lg shadow-orange-500/25 transition-all cursor-pointer active:scale-95 text-xs md:text-sm uppercase tracking-wider"
-                        onClick={handleSearch}
-                      >
-                        <span>Search</span>
-                        <ArrowRight size={16} />
-                      </button>
-                    </div>
-                  </div>
-                  {searchError && (
-                    <p className="text-red-400 text-xs font-semibold mt-2 ml-2">{searchError}</p>
-                  )}
+                  <Link href="/getstarted/business" className="inline-flex items-center gap-3 bg-orange-500 hover:bg-orange-600 text-white font-bold py-4 px-8 rounded-xl shadow-lg shadow-orange-500/25 transition-all active:scale-95 text-sm md:text-base uppercase tracking-wider">
+                    <span>Create Merchant Account</span>
+                    <ArrowRight size={18} />
+                  </Link>
                 </motion.div>
 
                 {/* Sleek Trust Badges */}
@@ -903,121 +841,7 @@ export default function HomePage() {
           </div>
         </ScrollAnimatedSection>
 
-        {/* --- RECENT ESTABLISHMENTS GRID (Brand Identity White & Orange theme) --- */}
-        <ScrollAnimatedSection className="py-24 bg-white relative">
-          <div className="max-w-7xl mx-auto px-6">
-            
-            {/* Header Area */}
-            <div className="flex flex-col md:flex-row justify-between items-end mb-16 gap-6 border-b border-slate-100 pb-10">
-              <div className="space-y-3.5 text-left">
-                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-orange-200 bg-orange-500/10 text-orange-650 text-xs font-bold tracking-wide">
-                  <span className="flex h-1.5 w-1.5 rounded-full bg-orange-500 block" />
-                  <span>PLATFORM MERCHANTS</span>
-                </div>
-                <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">
-                  Recently Onboarded <span className="text-orange-500">Fine Establishments</span>
-                </h2>
-              </div>
-              <Link
-                href="/all-listings"
-                className="flex items-center gap-1.5 text-slate-500 font-bold hover:text-orange-500 transition-colors group text-sm pb-1.5"
-              >
-                Browse Marketplace <ArrowRight size={18} className="group-hover:translate-x-1.5 transition-transform" />
-              </Link>
-            </div>
-
-            {/* Listings Layout */}
-            <div className="relative">
-              <div className="flex overflow-x-auto pb-12 gap-6 hide-scrollbar scroll-smooth">
-                <AnimatePresence>
-                  {isLoading ? (
-                    [...Array(4)].map((_, i) => (
-                      <div
-                        key={i}
-                        className="min-w-[340px] h-[460px] bg-slate-50 border border-slate-100 animate-pulse rounded-3xl"
-                      />
-                    ))
-                  ) : isError ? (
-                    <p className="text-red-500 font-bold text-center w-full py-12">Failed to load establishments.</p>
-                  ) : (
-                    recentListings?.map((ad, index) => (
-                      <motion.div
-                        key={ad.id}
-                        initial={{ opacity: 0, x: 25 }}
-                        animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.08, ease: "easeOut" }}
-                        className="min-w-[340px] max-w-[340px] border border-slate-100 bg-white rounded-3xl overflow-hidden flex flex-col group hover:border-orange-500/35 shadow-xl transition-all duration-300 hover:-translate-y-1.5 shadow-slate-100/50"
-                      >
-                        {/* Custom Image Wrapper */}
-                        <div className="relative h-52 w-full overflow-hidden">
-                          <Image
-                            src={
-                              ad.logoUrl ||
-                              ad.bannerUrl ||
-                              (ad.media && ad.media.length > 0 ? ad.media[0] : '') ||
-                              'https://via.placeholder.com/400x300?text=Premium+Listing'
-                            }
-                            alt={ad.businessName}
-                            fill
-                            className="object-cover transition-transform duration-700 group-hover:scale-105"
-                            loading="lazy"
-                          />
-                          <div className="absolute top-4 left-4">
-                            <span className="px-3.5 py-1.5 rounded-full border border-slate-100 bg-white/90 backdrop-blur-md text-slate-800 text-[10px] font-black uppercase tracking-wider shadow-md">
-                              {ad.categories?.[0]?.name || 'Establishment'}
-                            </span>
-                          </div>
-                          <button className="absolute top-4 right-4 w-9 h-9 rounded-full border border-slate-100 bg-white/90 backdrop-blur-md flex items-center justify-center text-slate-400 hover:text-rose-500 transition-colors shadow-md active:scale-90 cursor-pointer">
-                            <Heart size={16} />
-                          </button>
-                        </div>
-
-                        {/* Details Area */}
-                        <div className="p-6 flex flex-col flex-grow justify-between text-left">
-                          <div className="space-y-3.5">
-                            <div className="space-y-1">
-                              <Link href={`/listings/${ad.id}`}>
-                                <h3 className="font-extrabold text-lg md:text-xl text-slate-900 hover:text-orange-500 transition-colors line-clamp-1">
-                                  {ad.businessName}
-                                </h3>
-                              </Link>
-                              
-                              <div className="flex items-center gap-1.5">
-                                {[...Array(5)].map((_, i) => <Star key={i} size={11} className="fill-orange-400 text-orange-400" />)}
-                                <span className="text-[9px] font-bold text-slate-400 ml-1">5.0 (24 REVIEWS)</span>
-                              </div>
-                            </div>
-
-                            <p className="text-slate-500 text-sm line-clamp-2 leading-relaxed font-normal">
-                              {ad.shortDescription || "Experience excellence with this premier local business offering top-tier services."}
-                            </p>
-                          </div>
-                          
-                          <div className="space-y-4 pt-5 mt-5 border-t border-slate-100">
-                            <div className="flex items-center text-slate-500 text-xs font-bold">
-                              <MapPin size={13} className="mr-2 text-orange-500" />
-                              <span className="truncate tracking-wide uppercase font-semibold">
-                                {ad.location?.city || 'LONDON'}, {ad.location?.postcode || 'W1'}
-                              </span>
-                            </div>
-                            
-                            <Link
-                              href={`/listings/${ad.id}`}
-                              className="block w-full py-3 rounded-xl border border-slate-200 bg-slate-50 hover:bg-slate-100 text-slate-800 font-bold text-xs tracking-widest text-center transition-all uppercase cursor-pointer active:scale-98"
-                            >
-                              Explore Details
-                            </Link>
-                          </div>
-                        </div>
-                      </motion.div>
-                    ))
-                  )}
-                </AnimatePresence>
-              </div>
-            </div>
-
-          </div>
-        </ScrollAnimatedSection>
+        {/* Removed Recent Establishments Grid */}
 
         {/* CORE PLATFORM FEATURES */}
         <McomFeatureSection />
@@ -1064,62 +888,7 @@ export default function HomePage() {
         </div>
       </main>
 
-      {/* --- BUSINESS BLOG POSTS --- */}
-      <ScrollAnimatedSection className="py-24 bg-slate-50 border-t border-slate-100">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col md:flex-row justify-between items-center mb-16 text-center md:text-left gap-6 border-b border-slate-200 pb-10">
-             <div className="space-y-2">
-                <h2 className="text-3xl md:text-5xl font-black text-slate-900 tracking-tight">Platform Insights</h2>
-                <p className="text-slate-500 text-sm md:text-base font-normal">Stay up to date with the latest B2B updates, merchant stories, and platform growth metrics.</p>
-             </div>
-             <Link href="/blog" className="py-3 px-8 rounded-full border-2 border-slate-900 font-bold hover:bg-slate-900 hover:text-white transition-all cursor-pointer">
-                Visit Blog
-             </Link>
-          </div>
-          
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {blogPosts.map((post, index) => (
-              <div
-                key={index}
-                className="bg-white border border-slate-200 rounded-3xl overflow-hidden group hover:border-orange-500/35 transition-all duration-300 shadow-xl shadow-slate-100 flex flex-col h-full justify-between"
-              >
-                <div className="space-y-4">
-                  <div className="relative h-52 w-full overflow-hidden">
-                    <Image
-                      src={post.image}
-                      alt={post.title}
-                      fill
-                      loading="lazy"
-                      className="object-cover transition-transform duration-750 group-hover:scale-105"
-                    />
-                    <div className="absolute bottom-4 left-4 px-3 py-1 border border-slate-100 bg-white/90 backdrop-blur-md text-slate-800 text-[9px] font-bold uppercase tracking-widest rounded-full">
-                      {post.date}
-                    </div>
-                  </div>
-                  
-                  <div className="p-6 space-y-2 text-left">
-                    <span className="text-orange-500 text-[10px] font-bold uppercase tracking-widest font-mono">
-                      {post.category}
-                    </span>
-                    <h3 className="font-extrabold text-base text-slate-900 group-hover:text-orange-500 transition-colors leading-snug line-clamp-2 h-12">
-                      {post.title}
-                    </h3>
-                  </div>
-                </div>
-
-                <div className="p-6 pt-0 mt-2 text-left">
-                  <Link
-                    href="#"
-                    className="inline-flex items-center gap-1 text-slate-500 font-bold text-xs uppercase tracking-widest hover:text-orange-500 transition-colors group-hover:gap-2 transition-all"
-                  >
-                    Read Story <ArrowRight size={13} />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </ScrollAnimatedSection>
+      {/* Removed Business Blog Posts */}
 
       <Footer />
 

@@ -6,6 +6,10 @@ import { RootState } from '@/service/store/store';
 import {
   MoreHorizontal,
   Diamond,
+  Building2,
+  MapPin,
+  Compass,
+  Globe,
 } from 'lucide-react';
 import {
   LineChart,
@@ -81,6 +85,8 @@ const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
   </Card>
 );
 
+import { useState, useEffect } from 'react';
+
 // --- MAIN PAGE COMPONENT ---
 const DashboardPage: FC = () => {
   const { userName, userRole } = useSelector((state: RootState) => state.auth);
@@ -90,12 +96,62 @@ const DashboardPage: FC = () => {
     isLoading: isLoadingActivities,
   } = useRecentActivities();
 
+  const [proximityTier, setProximityTier] = useState<string | null>(null);
+  const [proximityDistance, setProximityDistance] = useState<string | null>(null);
+
+  useEffect(() => {
+    const tier = localStorage.getItem('businessProximityTier');
+    const dist = localStorage.getItem('businessProximityDistance');
+    if (tier) setProximityTier(tier);
+    if (dist) setProximityDistance(dist);
+  }, []);
+
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">
       {/* Header */}
-      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8">
-        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800">
+      <header className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-8 gap-4">
+        <h1 className="text-2xl sm:text-3xl font-bold text-gray-800 flex flex-wrap items-center gap-3">
           Hello {userName || 'User'}!
+
+          {proximityTier && (
+            <span 
+              className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full text-xs font-bold text-white shadow-sm transition-all select-none animate-fade-in ${
+                proximityTier === 'high_street'
+                  ? 'bg-gradient-to-r from-yellow-400 via-amber-500 to-orange-500 shadow-amber-500/10'
+                  : proximityTier === 'hyper_local'
+                    ? 'bg-gradient-to-r from-orange-400 via-orange-500 to-red-500 shadow-orange-500/10'
+                    : proximityTier === 'nearby'
+                      ? 'bg-gradient-to-r from-orange-600 via-red-500 to-red-600 shadow-red-500/10'
+                      : 'bg-gradient-to-r from-red-600 via-red-700 to-orange-800 shadow-red-700/10'
+              }`}
+            >
+              {proximityTier === 'high_street' && (
+                <>
+                  <Building2 className="w-3.5 h-3.5" />
+                  High Street Verified
+                </>
+              )}
+              {proximityTier === 'hyper_local' && (
+                <>
+                  <MapPin className="w-3.5 h-3.5" />
+                  Hyper Local ({proximityDistance ? `${parseFloat(proximityDistance).toFixed(1)}m` : '<5m'})
+                </>
+              )}
+              {proximityTier === 'nearby' && (
+                <>
+                  <Compass className="w-3.5 h-3.5" />
+                  Nearby ({proximityDistance ? `${parseFloat(proximityDistance).toFixed(1)}m` : '5-10m'})
+                </>
+              )}
+              {proximityTier === 'national' && (
+                <>
+                  <Globe className="w-3.5 h-3.5" />
+                  National ({proximityDistance ? `${parseFloat(proximityDistance).toFixed(0)}m+` : '>10m'})
+                </>
+              )}
+              <span className="w-1.5 h-1.5 rounded-full bg-white/80 animate-pulse shrink-0" />
+            </span>
+          )}
         </h1>
         <div className="hidden sm:block">
           <Breadcrumb>

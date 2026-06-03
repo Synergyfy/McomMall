@@ -18,7 +18,8 @@ import {
   ChevronRight,
   ShieldCheck,
   Zap,
-  Globe
+  Globe,
+  MapPin
 } from 'lucide-react';
 
 const SLIDES = [
@@ -43,12 +44,12 @@ const SLIDES = [
 ];
 
 const SHORTCUTS = [
+  { title: "LocalMall", icon: MapPin, href: "/dashboard/localmall", color: "text-amber-600", bg: "bg-amber-100" },
   { title: "Listings", icon: PlusCircle, href: "/dashboard/my-listings", color: "text-blue-600", bg: "bg-blue-100" },
   { title: "Store", icon: ShoppingBag, href: "/dashboard/store", color: "text-orange-600", bg: "bg-orange-100" },
   { title: "Services", icon: Briefcase, href: "/dashboard/services", color: "text-purple-600", bg: "bg-purple-100" },
   { title: "Wallet", icon: Wallet, href: "/dashboard/wallet", color: "text-green-600", bg: "bg-green-100" },
   { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", color: "text-pink-600", bg: "bg-pink-100" },
-  { title: "Partners", icon: Users, href: "/dashboard/marketing/my-partners", color: "text-indigo-600", bg: "bg-indigo-100" },
   { title: "History", icon: History, href: "/dashboard/history/my-vouchers", color: "text-slate-600", bg: "bg-slate-100" },
   { title: "Settings", icon: Settings, href: "/dashboard/settings", color: "text-gray-600", bg: "bg-gray-100" },
 ];
