@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { mockGeocodePostcode, HighStreet } from '../mock-data/high-street-data';
+import { HighStreet } from '../mock-data/high-street-data';
 import { 
   findNearestHighStreet, 
   classifyBusiness, 
@@ -38,16 +38,31 @@ export function useGeoIntelligence() {
   useEffect(() => {
     if (typeof window !== 'undefined' && geoState.badge) {
       localStorage.setItem('mcom_geo_state', JSON.stringify(geoState));
+      
+      const mappedTier = {
+        'HIGH_STREET': 'high_street',
+        'HYPERLOCAL': 'hyper_local',
+        'NEARBY': 'nearby',
+        'REMOTE': 'national'
+      }[geoState.badge];
+      
+      if (mappedTier) {
+        localStorage.setItem('businessProximityTier', mappedTier);
+      }
+      if (geoState.distanceToHighStreet !== null && geoState.distanceToHighStreet !== undefined) {
+        localStorage.setItem('businessProximityDistance', geoState.distanceToHighStreet.toString());
+      }
     }
   }, [geoState]);
 
   useEffect(() => {
-    if (typeof window !== 'undefined' && !geoState.badge) {
+    if (typeof window !== 'undefined') {
       const raw = localStorage.getItem('businessOnboarding');
       if (raw) {
         try {
           const ob = JSON.parse(raw);
-          if (ob.postcode) {
+          const isMock = !geoState.nearestHighStreet || geoState.nearestHighStreet.id !== 'real_hs';
+          if (ob.postcode && (ob.postcode !== geoState.postcode || isMock)) {
             analyzeLocation(ob.postcode);
           }
         } catch (e) {
@@ -55,38 +70,62 @@ export function useGeoIntelligence() {
         }
       }
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [geoState.postcode, geoState.nearestHighStreet?.id]);
 
   const analyzeLocation = async (postcode: string) => {
     setGeoState(prev => ({ ...prev, isLoading: true, error: null }));
     
     try {
-      const geoResult = await mockGeocodePostcode(postcode);
+      const response = await fetch('/api/business/check-proximity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ postcode }),
+      });
+      if (!response.ok) {
+        throw new Error("Failed to connect to the proximity service.");
+      }
       
-      if (!geoResult) {
-        throw new Error("Could not find location for the provided postcode.");
+      const data = await response.json();
+      if (data.error) {
+        throw new Error(data.error);
       }
 
-      const { highStreet, distanceMiles } = findNearestHighStreet(
-        geoResult.latitude, 
-        geoResult.longitude
-      );
+      const tier = data.tier;
+      const distance = data.distance;
+      const nearestHighStreetName = data.nearestHighStreetName;
+      const lat = data.latitude;
+      const lon = data.longitude;
 
-      const badge = classifyBusiness(distanceMiles, highStreet.radiusMiles);
+      let badge: GeographicBadge = 'REMOTE';
+      if (tier === 'high_street') badge = 'HIGH_STREET';
+      else if (tier === 'hyper_local') badge = 'HYPERLOCAL';
+      else if (tier === 'nearby') badge = 'NEARBY';
+
+      const resolvedHighStreet = {
+        id: "real_hs",
+        name: nearestHighStreetName || "High Street",
+        latitude: lat || 51.5,
+        longitude: lon || -0.1,
+        radiusMiles: 0.5,
+        borough: "",
+        city: "",
+        country: "UK",
+        status: "active" as const,
+        economicPriority: "standard" as const
+      };
 
       setGeoState({
-        postcode: geoResult.postcode,
-        latitude: geoResult.latitude,
-        longitude: geoResult.longitude,
-        nearestHighStreet: highStreet,
-        distanceToHighStreet: distanceMiles,
+        postcode: data.postcode,
+        latitude: lat,
+        longitude: lon,
+        nearestHighStreet: resolvedHighStreet,
+        distanceToHighStreet: distance,
         badge,
         isLoading: false,
         error: null,
       });
 
-      return { badge, highStreet, distanceMiles, latitude: geoResult.latitude, longitude: geoResult.longitude };
+      return { badge, highStreet: resolvedHighStreet, distanceMiles: distance, latitude: lat, longitude: lon };
     } catch (err: any) {
       setGeoState(prev => ({ 
         ...prev, 

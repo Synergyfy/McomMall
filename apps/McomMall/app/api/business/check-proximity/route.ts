@@ -82,8 +82,11 @@ export async function POST(request: Request) {
     if (isNaN(userLat) || isNaN(userLon)) {
       return NextResponse.json({
         postcode: formattedPostcode,
+        latitude: null,
+        longitude: null,
         distance: 12.5,
         tier: 'national',
+        nearestHighStreetName: 'National',
         message: 'Could not resolve location. Defaulted to national tier.',
       });
     }
@@ -103,6 +106,8 @@ export async function POST(request: Request) {
     });
 
     let minDistance = 999999;
+    let closestHighStreetName = '';
+
     if (searchResponse.ok) {
       const searchData = await searchResponse.json();
       if (searchData && searchData.length > 0) {
@@ -113,6 +118,7 @@ export async function POST(request: Request) {
             const dist = getHaversineDistance(userLat, userLon, itemLat, itemLon);
             if (dist < minDistance) {
               minDistance = dist;
+              closestHighStreetName = item.display_name ? item.display_name.split(',')[0].trim() : '';
             }
           }
         }
@@ -137,6 +143,7 @@ export async function POST(request: Request) {
             const dist = getHaversineDistance(userLat, userLon, itemLat, itemLon);
             if (dist < minDistance) {
               minDistance = dist;
+              closestHighStreetName = item.display_name ? item.display_name.split(',')[0].trim() : '';
             }
           }
         }
@@ -165,8 +172,11 @@ export async function POST(request: Request) {
 
     return NextResponse.json({
       postcode: formattedPostcode,
+      latitude: userLat,
+      longitude: userLon,
       distance: parseFloat(minDistance.toFixed(2)),
       tier: tier,
+      nearestHighStreetName: closestHighStreetName || 'High Street',
       message: `Proximity verification successful. Distance: ${minDistance.toFixed(2)} miles.`,
     });
 
