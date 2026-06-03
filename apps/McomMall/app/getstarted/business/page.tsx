@@ -202,7 +202,7 @@ export default function BusinessOnboarding() {
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
-  const [otp, setOtp] = useState('');  const [otpResending, setOtpResending] = useState(false);
+  const [otp, setOtp] = useState(''); const [otpResending, setOtpResending] = useState(false);
 
   const [formData, setFormData] = useState({
     firstName: '',
@@ -287,7 +287,7 @@ export default function BusinessOnboarding() {
       postcode: suggestion.postcode,
     }));
     setShowSuggestions(false);
-    
+
     setIsCheckingProximity(true);
     try {
       const res = await fetch('/api/business/check-proximity', {
@@ -401,7 +401,12 @@ export default function BusinessOnboarding() {
         setCompletedSteps(next);
         setParticleTrigger((p) => p + 1);
 
-        localStorage.removeItem('businessOnboarding');
+        localStorage.setItem('businessOnboarding', JSON.stringify({
+          businessName: formData.businessName,
+          postcode: formData.postcode,
+          address: formData.address,
+          logo: formData.logo,
+        }));
         localStorage.removeItem('businessOnboardingStep');
         localStorage.removeItem('businessOnboardingCompleted');
 
@@ -428,6 +433,13 @@ export default function BusinessOnboarding() {
   const handleBack = () => {
     if (currentStep > 0) setCurrentStep((c) => c - 1);
   };
+
+  useEffect(() => {
+    if (currentStep === 1 && otp.length === 6 && !isSubmitting && !submitError) {
+      handleNext();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [otp]);
 
   if (!isClient) return null;
 
@@ -466,7 +478,7 @@ export default function BusinessOnboarding() {
           className="text-lg text-gray-500 mb-10 text-center max-w-md"
         >
           <span className="font-bold text-gray-700">{formData.businessName || 'Your business'}</span>{' '}
-          is successfully registered and ready to establish your storefront on McomMall.
+          is successfully registered and ready to establish your storefront on LocalMall.
         </motion.p>
 
         <motion.button
@@ -475,10 +487,10 @@ export default function BusinessOnboarding() {
           transition={{ delay: 0.9 }}
           whileHover={{ scale: 1.04 }}
           whileTap={{ scale: 0.96 }}
-          onClick={() => router.push('/dashboard')}
+          onClick={() => router.push('/getstarted/localmall')}
           className="px-10 py-4 bg-gradient-to-r from-orange-500 to-red-500 text-white text-lg font-bold rounded-2xl hover:from-orange-600 hover:to-red-600 transition-all shadow-xl shadow-orange-500/25 flex items-center gap-2"
         >
-          Enter Your Dashboard
+          Enter LocalMall
           <ChevronRight className="w-5 h-5" />
         </motion.button>
       </div>
@@ -506,7 +518,7 @@ export default function BusinessOnboarding() {
         transition={{ duration: 0.4 }}
       />
 
-      <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-20">
+      <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-32 sm:pb-20">
         {/* ─── Progress ────────────────────────────────── */}
         <div className="mb-8">
           <div className="flex items-center justify-between mb-2">
@@ -688,7 +700,10 @@ export default function BusinessOnboarding() {
                         inputMode="numeric"
                         maxLength={6}
                         value={otp}
-                        onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
+                        onChange={(e) => {
+                          setOtp(e.target.value.replace(/\D/g, '').slice(0, 6));
+                          if (submitError) setSubmitError(null);
+                        }}
                         onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                         className="h-16 rounded-xl border-gray-200 bg-white text-3xl text-center font-black tracking-[0.4em] placeholder:text-gray-200 placeholder:font-normal placeholder:tracking-normal focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                         placeholder="000000"
@@ -733,6 +748,7 @@ export default function BusinessOnboarding() {
                           onChange={(e) =>
                             setFormData({ ...formData, postcode: e.target.value.toUpperCase() })
                           }
+                          onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                           className="h-16 rounded-xl border-gray-200 bg-white text-3xl text-center font-black tracking-[0.2em] uppercase placeholder:text-gray-300 placeholder:font-normal placeholder:tracking-normal focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                           placeholder="AB12 3CD"
                           autoFocus
@@ -808,6 +824,7 @@ export default function BusinessOnboarding() {
                             type="text"
                             value={formData.firstName}
                             onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                             className="h-11 pl-9 rounded-xl border-gray-200 bg-white text-sm placeholder:text-gray-300 focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                             placeholder="Jane"
                             autoFocus
@@ -822,6 +839,7 @@ export default function BusinessOnboarding() {
                             type="text"
                             value={formData.lastName}
                             onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                             className="h-11 pl-9 rounded-xl border-gray-200 bg-white text-sm placeholder:text-gray-300 focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                             placeholder="Smith"
                           />
@@ -836,6 +854,7 @@ export default function BusinessOnboarding() {
                           type="tel"
                           value={formData.phoneNumber}
                           onChange={(e) => setFormData({ ...formData, phoneNumber: e.target.value })}
+                          onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                           className="h-11 pl-9 rounded-xl border-gray-200 bg-white text-sm placeholder:text-gray-300 focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                           placeholder="+44 7700 900000"
                         />
@@ -849,6 +868,7 @@ export default function BusinessOnboarding() {
                             type={showPassword ? 'text' : 'password'}
                             value={formData.password}
                             onChange={(e) => setFormData({ ...formData, password: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                             className="h-11 rounded-xl border-gray-200 bg-white text-sm placeholder:text-gray-300 focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0 pr-10"
                             placeholder="••••••••"
                           />
@@ -865,6 +885,7 @@ export default function BusinessOnboarding() {
                             type={showConfirmPassword ? 'text' : 'password'}
                             value={formData.confirmPassword}
                             onChange={(e) => setFormData({ ...formData, confirmPassword: e.target.value })}
+                            onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                             className="h-11 rounded-xl border-gray-200 bg-white text-sm placeholder:text-gray-300 focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0 pr-10"
                             placeholder="••••••••"
                           />
@@ -887,6 +908,7 @@ export default function BusinessOnboarding() {
                     <Input
                       value={formData.businessName}
                       onChange={(e) => setFormData({ ...formData, businessName: e.target.value })}
+                      onKeyDown={(e) => e.key === 'Enter' && handleNext()}
                       className="h-14 rounded-xl border-gray-200 bg-white text-xl font-bold text-center placeholder:text-gray-300 placeholder:font-normal focus-visible:ring-2 focus-visible:ring-orange-300 focus-visible:ring-offset-0"
                       placeholder="Your business name"
                       autoFocus
@@ -1009,48 +1031,49 @@ export default function BusinessOnboarding() {
         </div>
 
         {/* ─── Navigation ──────────────────────────────── */}
-        <div className="flex items-center justify-between mt-8">
-          <button
-            onClick={handleBack}
-            disabled={currentStep === 0}
-            aria-label="Go back"
-            className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all outline-none ${
-              currentStep === 0
-                ? 'text-gray-300 cursor-default'
-                : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 active:bg-gray-200'
-            }`}
-          >
-            <ChevronLeft className="w-4 h-4" />
-            Back
-          </button>
+        <div className="fixed bottom-4 left-4 right-4 p-4 rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200 shadow-2xl z-50 sm:static sm:bg-transparent sm:border-none sm:shadow-none sm:p-0 sm:mt-8">
+          <div className="max-w-2xl mx-auto flex items-center justify-between w-full">
+            <button
+              onClick={handleBack}
+              disabled={currentStep === 0}
+              aria-label="Go back"
+              className={`flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all outline-none ${currentStep === 0
+                  ? 'text-gray-300 cursor-default'
+                  : 'text-gray-500 hover:text-gray-700 hover:bg-gray-100 active:bg-gray-200'
+                }`}
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
 
-          <motion.button
-            whileHover={isSubmitting ? {} : { scale: 1.03 }}
-            whileTap={isSubmitting ? {} : { scale: 0.97 }}
-            onClick={handleNext}
-            disabled={isSubmitting}
-            className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base transition-all outline-none disabled:opacity-70 disabled:cursor-not-allowed"
-            style={{
-              backgroundColor: currentQuest.color,
-              boxShadow: isSubmitting ? 'none' : `0 8px 24px -4px ${currentQuest.color}44`,
-            }}
-          >
-            {isSubmitting ? (
-              <>
-                <motion.div
-                  animate={{ rotate: 360 }}
-                  transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
-                  className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
-                />
-                Registering...
-              </>
-            ) : (
-              <>
-                {currentStep === QUESTS.length - 1 ? 'Complete Setup' : 'Continue'}
-                <ChevronRight className="w-5 h-5" />
-              </>
-            )}
-          </motion.button>
+            <motion.button
+              whileHover={isSubmitting ? {} : { scale: 1.03 }}
+              whileTap={isSubmitting ? {} : { scale: 0.97 }}
+              onClick={handleNext}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base transition-all outline-none disabled:opacity-70 disabled:cursor-not-allowed"
+              style={{
+                backgroundColor: currentQuest.color,
+                boxShadow: isSubmitting ? 'none' : `0 8px 24px -4px ${currentQuest.color}44`,
+              }}
+            >
+              {isSubmitting ? (
+                <>
+                  <motion.div
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 0.8, repeat: Infinity, ease: 'linear' }}
+                    className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                  />
+                  Registering...
+                </>
+              ) : (
+                <>
+                  {currentStep === QUESTS.length - 1 ? 'Complete Setup' : 'Continue'}
+                  <ChevronRight className="w-5 h-5" />
+                </>
+              )}
+            </motion.button>
+          </div>
         </div>
       </div>
 
@@ -1073,50 +1096,48 @@ export default function BusinessOnboarding() {
               animate={{ scale: 1, y: 0, opacity: 1 }}
               exit={{ scale: 0.92, y: 20, opacity: 0 }}
               transition={{ type: 'spring', damping: 25, stiffness: 180 }}
-              className="bg-white rounded-3xl w-full max-w-lg overflow-hidden shadow-2xl relative z-10 border border-gray-100 flex flex-col"
+              className="bg-white rounded-3xl w-full max-w-lg max-h-[85dvh] overflow-y-auto shadow-2xl relative z-10 border border-gray-100 flex flex-col"
             >
               {/* Top decorative gradient bar */}
-              <div 
-                className={`h-2.5 bg-gradient-to-r ${
-                  proximityResult.tier === 'high_street'
+              <div
+                className={`h-2.5 bg-gradient-to-r ${proximityResult.tier === 'high_street'
                     ? 'from-yellow-400 via-amber-500 to-orange-500'
                     : proximityResult.tier === 'hyper_local'
                       ? 'from-orange-400 via-orange-500 to-red-500'
                       : proximityResult.tier === 'nearby'
                         ? 'from-orange-600 via-red-500 to-red-600'
                         : 'from-red-600 via-red-700 to-orange-850'
-                }`}
+                  }`}
               />
 
-              <div className="p-6 sm:p-8 flex-1 flex flex-col items-center text-center">
+              <div className="p-5 sm:p-8 flex-1 flex flex-col items-center text-center">
                 {/* Pulsing Icon */}
-                <div className="relative mb-6">
-                  <div 
-                    className={`w-20 h-20 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white shadow-xl ${
-                      proximityResult.tier === 'high_street'
+                <div className="relative mb-4">
+                  <div
+                    className={`w-16 h-16 rounded-2xl bg-gradient-to-br flex items-center justify-center text-white shadow-xl ${proximityResult.tier === 'high_street'
                         ? 'from-yellow-400 via-amber-500 to-orange-500 shadow-amber-500/30'
                         : proximityResult.tier === 'hyper_local'
                           ? 'from-orange-400 via-orange-500 to-red-500 shadow-orange-500/30'
                           : proximityResult.tier === 'nearby'
                             ? 'from-orange-600 via-red-500 to-red-600 shadow-red-500/30'
                             : 'from-red-600 via-red-700 to-orange-850 shadow-red-700/30'
-                    }`}
+                      }`}
                   >
-                    {proximityResult.tier === 'high_street' && <Building2 className="w-10 h-10 animate-pulse" />}
-                    {proximityResult.tier === 'hyper_local' && <MapPin className="w-10 h-10 animate-pulse" />}
-                    {proximityResult.tier === 'nearby' && <Compass className="w-10 h-10 animate-pulse" />}
-                    {proximityResult.tier === 'national' && <Globe className="w-10 h-10 animate-pulse" />}
+                    {proximityResult.tier === 'high_street' && <Building2 className="w-8 h-8 animate-pulse" />}
+                    {proximityResult.tier === 'hyper_local' && <MapPin className="w-8 h-8 animate-pulse" />}
+                    {proximityResult.tier === 'nearby' && <Compass className="w-8 h-8 animate-pulse" />}
+                    {proximityResult.tier === 'national' && <Globe className="w-8 h-8 animate-pulse" />}
                   </div>
                 </div>
 
                 {/* Title & Subtitle */}
-                <h3 className="text-2xl sm:text-3xl font-black text-gray-900 mb-2 tracking-tight">
+                <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-1 tracking-tight">
                   {proximityResult.tier === 'high_street' && 'High Street Verified!'}
                   {proximityResult.tier === 'hyper_local' && 'Hyper Local Verified!'}
                   {proximityResult.tier === 'nearby' && 'Nearby Location Verified!'}
                   {proximityResult.tier === 'national' && 'National Scope Verified!'}
                 </h3>
-                <p className="text-gray-500 text-sm sm:text-base px-2 mb-6">
+                <p className="text-gray-500 text-xs sm:text-sm px-2 mb-4">
                   {proximityResult.tier === 'high_street' && 'Congratulations! Your business is located directly on a High Street.'}
                   {proximityResult.tier === 'hyper_local' && `Awesome! Your business is within ${proximityResult.distance} miles of a High Street.`}
                   {proximityResult.tier === 'nearby' && `Great! Your business is nearby (${proximityResult.distance} miles to nearest High Street).`}
@@ -1124,7 +1145,7 @@ export default function BusinessOnboarding() {
                 </p>
 
                 {/* Verified Badge Details */}
-                <div className="w-full bg-gray-50 rounded-2xl p-4 sm:p-6 mb-8 text-left border border-gray-100">
+                <div className="w-full bg-gray-50 rounded-2xl p-4 sm:p-6 mb-4 text-left border border-gray-100">
                   <h4 className="font-extrabold text-xs text-gray-400 uppercase tracking-widest mb-3">
                     What you receive:
                   </h4>
@@ -1217,15 +1238,14 @@ export default function BusinessOnboarding() {
                   whileHover={{ scale: 1.02 }}
                   whileTap={{ scale: 0.98 }}
                   onClick={handleModalContinue}
-                  className={`w-full py-4 bg-gradient-to-r text-white text-base font-extrabold rounded-2xl hover:brightness-105 transition-all shadow-lg flex items-center justify-center gap-2 ${
-                    proximityResult.tier === 'high_street'
+                  className={`w-full py-4 bg-gradient-to-r text-white text-base font-extrabold rounded-2xl hover:brightness-105 transition-all shadow-lg flex items-center justify-center gap-2 ${proximityResult.tier === 'high_street'
                       ? 'from-yellow-400 via-amber-500 to-orange-500 shadow-amber-500/25'
                       : proximityResult.tier === 'hyper_local'
                         ? 'from-orange-400 via-orange-500 to-red-500 shadow-orange-500/25'
                         : proximityResult.tier === 'nearby'
                           ? 'from-orange-600 via-red-500 to-red-600 shadow-red-500/25'
                           : 'from-red-600 via-red-700 to-orange-850 shadow-red-700/25'
-                  }`}
+                    }`}
                 >
                   Continue Setup
                   <ChevronRight className="w-5 h-5" />

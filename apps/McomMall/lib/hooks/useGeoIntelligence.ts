@@ -41,6 +41,23 @@ export function useGeoIntelligence() {
     }
   }, [geoState]);
 
+  useEffect(() => {
+    if (typeof window !== 'undefined' && !geoState.badge) {
+      const raw = localStorage.getItem('businessOnboarding');
+      if (raw) {
+        try {
+          const ob = JSON.parse(raw);
+          if (ob.postcode) {
+            analyzeLocation(ob.postcode);
+          }
+        } catch (e) {
+          console.error(e);
+        }
+      }
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const analyzeLocation = async (postcode: string) => {
     setGeoState(prev => ({ ...prev, isLoading: true, error: null }));
     

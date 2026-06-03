@@ -9,7 +9,8 @@ import {
   ShoppingBag, 
   Settings, 
   Menu,
-  Heart
+  Heart,
+  MapPin
 } from 'lucide-react';
 
 interface BottomNavItemProps {
@@ -46,10 +47,10 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
         isActive={pathname === '/dashboard'} 
       />
       <BottomNavItem 
-        href="/dashboard/my-listings" 
-        icon={Heart} 
-        label="Listings" 
-        isActive={pathname.includes('/my-listings')} 
+        href="/dashboard/localmall" 
+        icon={MapPin} 
+        label="LocalMall" 
+        isActive={pathname.includes('/dashboard/localmall')} 
       />
       <div className="flex-1 flex justify-center">
         <Link href="/dashboard/add-listing" className="relative -top-4">

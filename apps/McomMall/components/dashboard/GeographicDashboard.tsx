@@ -21,11 +21,7 @@ export default function GeographicDashboard({ children }: { children: React.Reac
   }
 
   if (!badge) {
-    return (
-      <div className="flex items-center justify-center min-h-[60vh]">
-        <LocationOnboarding onComplete={() => {}} />
-      </div>
-    );
+    return <>{children}</>;
   }
 
   const renderWelcomeBanner = () => {
