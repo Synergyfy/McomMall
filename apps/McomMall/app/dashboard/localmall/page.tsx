@@ -178,7 +178,7 @@ export default function LocalMallPage() {
     <div className="min-h-[100dvh] bg-[#f8f7f5] font-sans flex flex-col" style={{ fontFamily: "'Inter', 'Outfit', sans-serif" }}>
 
       {/* ── Global Header ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-5 pt-20 pb-3.5 flex items-center justify-between">
+      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-5 pt-3.5 pb-3.5 flex items-center justify-between">
         <div className="flex items-center gap-3">
           <Link href="/dashboard" className="flex w-8 h-8 rounded-xl bg-gray-100 items-center justify-center mr-1 active:bg-gray-200 transition-colors">
             <ChevronLeft className="w-4 h-4 text-gray-600" />
