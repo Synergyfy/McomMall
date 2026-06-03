@@ -24,6 +24,7 @@ import {
   Coins,
   LifeBuoy,
   Zap,
+  MapPin,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -41,6 +42,7 @@ export interface MenuItem {
 // Export the menu item arrays
 export const mainMenuItems: MenuItem[] = [
   { title: 'Dashboard', href: '/dashboard', icon: LayoutDashboard },
+  { title: 'LocalMall', href: '/dashboard/localmall', icon: MapPin },
   {
     title: 'Activity Timer',
     href: '/dashboard/activity-timer',

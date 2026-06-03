@@ -1,0 +1,16 @@
+services:
+  postgres:
+    image: postgres:15
+    container_name: mcommall-postgres
+    environment:
+      POSTGRES_USER: user
+      POSTGRES_PASSWORD: password
+      POSTGRES_DB: dbname
+    ports:
+      - '5444:5432'
+    volumes:
+      - mcommall-pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+
+volumes:
+  mcommall-pgdata:
