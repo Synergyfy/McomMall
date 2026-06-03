@@ -1,20 +1,28 @@
 'use client';
 import React, { useState } from 'react';
+import { usePathname } from 'next/navigation';
+import dynamic from 'next/dynamic';
 import { useGeoContext } from '@/context/GeoContext';
 import GeoBadge from '../badges/GeoBadge';
 import { Store, Users, Megaphone, MapPin, X } from 'lucide-react';
 import { LocationOnboarding } from '../onboarding/LocationOnboarding';
-import NearbyDiscovery from '../marketplace/NearbyDiscovery';
 import { LocalCampaignsPanel } from '../campaigns/LocalCampaignsPanel';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
 
+const NearbyDiscovery = dynamic(() => import('../marketplace/NearbyDiscovery'), { ssr: false });
+
 export default function GeographicDashboard({ children }: { children: React.ReactNode }) {
+  const pathname = usePathname();
   const { badge, nearestHighStreet, distanceToHighStreet } = useGeoContext();
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isCampaignPanelOpen, setIsCampaignPanelOpen] = useState(false);
   
   const { userRole } = useSelector((state: RootState) => state.auth);
+
+  if (pathname === '/dashboard/localmall') {
+    return <>{children}</>;
+  }
 
   if (userRole !== 'owner') {
     return <>{children}</>;
@@ -122,7 +130,9 @@ export default function GeographicDashboard({ children }: { children: React.Reac
 
   return (
     <div className="flex flex-col relative">
-      {renderWelcomeBanner()}
+      <div className="hidden sm:block">
+        {renderWelcomeBanner()}
+      </div>
       {children}
 
       <LocalCampaignsPanel 

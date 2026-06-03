@@ -539,7 +539,7 @@ export default function BusinessOnboarding() {
         </div>
 
         {/* ─── Quest Map — connected icon nodes ────────── */}
-        <div className="flex items-center mb-14 px-1">
+        <div className="flex items-center mb-2 sm:mb-6 px-1">
           {QUESTS.map((quest, i) => {
             const NodeIcon = quest.Icon;
 
@@ -815,7 +815,7 @@ export default function BusinessOnboarding() {
                 {/* ─── Step 3: Personal Details ─────── */}
                 {currentStep === 3 && (
                   <div className="space-y-4">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">First Name</label>
                         <div className="relative">
@@ -860,7 +860,7 @@ export default function BusinessOnboarding() {
                         />
                       </div>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
                         <label className="block text-sm font-semibold text-gray-700 mb-1.5">Password</label>
                         <div className="relative">

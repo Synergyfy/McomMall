@@ -60,10 +60,10 @@ const TIER_CONFIG: Record<ProximityTier, TierConfig> = {
     description:
       'Your business is positioned inside an active local high street ecosystem.',
     features: [
-      { icon: Eye,      title: 'Premium Visibility',   desc: 'Top-tier discovery for local shoppers.'           },
-      { icon: Calendar, title: 'High Street Expos',    desc: 'Exclusive invites to physical local events.'      },
-      { icon: Star,     title: 'Featured Placement',   desc: 'Priority slot in the daily merchant feed.'        },
-      { icon: Bell,     title: 'Priority Campaigns',   desc: 'Early access to network-wide promotions.'         },
+      { icon: Eye, title: 'Premium Visibility', desc: 'Top-tier discovery for local shoppers.' },
+      { icon: Calendar, title: 'High Street Expos', desc: 'Exclusive invites to physical local events.' },
+      { icon: Star, title: 'Featured Placement', desc: 'Priority slot in the daily merchant feed.' },
+      { icon: Bell, title: 'Priority Campaigns', desc: 'Early access to network-wide promotions.' },
     ],
   },
   hyper_local: {
@@ -79,10 +79,10 @@ const TIER_CONFIG: Record<ProximityTier, TierConfig> = {
     description:
       'Your business is embedded in a hyper-local neighbourhood ecosystem.',
     features: [
-      { icon: MapPin,   title: 'Hyper-Local Discovery', desc: 'Found first by shoppers within 500 m.'         },
-      { icon: Users,    title: 'Community Deals',        desc: 'Exclusive offers to your neighbourhood.'       },
-      { icon: Calendar, title: 'Local Events',           desc: 'Priority access to area events and markets.'  },
-      { icon: Bell,     title: 'Neighbourhood Feed',     desc: 'Featured in the local community feed.'        },
+      { icon: MapPin, title: 'Hyper-Local Discovery', desc: 'Found first by shoppers within 500 m.' },
+      { icon: Users, title: 'Community Deals', desc: 'Exclusive offers to your neighbourhood.' },
+      { icon: Calendar, title: 'Local Events', desc: 'Priority access to area events and markets.' },
+      { icon: Bell, title: 'Neighbourhood Feed', desc: 'Featured in the local community feed.' },
     ],
   },
   nearby: {
@@ -98,10 +98,10 @@ const TIER_CONFIG: Record<ProximityTier, TierConfig> = {
     description:
       'Your business connects to a thriving nearby local commerce network.',
     features: [
-      { icon: Globe,    title: 'Area Reach',           desc: 'Connect with customers in a 10-mile radius.'    },
-      { icon: Star,     title: 'Nearby Offers',        desc: 'Publish deals to nearby shoppers.'              },
-      { icon: Calendar, title: 'Regional Events',      desc: 'Participate in regional expo events.'           },
-      { icon: Wifi,     title: 'Broadcast Campaigns',  desc: 'Send campaigns to the local network.'           },
+      { icon: Globe, title: 'Area Reach', desc: 'Connect with customers in a 10-mile radius.' },
+      { icon: Star, title: 'Nearby Offers', desc: 'Publish deals to nearby shoppers.' },
+      { icon: Calendar, title: 'Regional Events', desc: 'Participate in regional expo events.' },
+      { icon: Wifi, title: 'Broadcast Campaigns', desc: 'Send campaigns to the local network.' },
     ],
   },
   national: {
@@ -117,10 +117,10 @@ const TIER_CONFIG: Record<ProximityTier, TierConfig> = {
     description:
       'Your business joins a national network of verified commerce partners.',
     features: [
-      { icon: Globe,   title: 'National Exposure',   desc: 'Reach customers across the country.'            },
-      { icon: Shield,  title: 'Online Storefront',   desc: 'Full digital presence on McomMall.'             },
-      { icon: Wifi,    title: 'Digital Campaigns',   desc: 'Run targeted online marketing campaigns.'       },
-      { icon: Trophy,  title: 'Analytics Suite',     desc: 'Track performance with advanced analytics.'     },
+      { icon: Globe, title: 'National Exposure', desc: 'Reach customers across the country.' },
+      { icon: Shield, title: 'Online Storefront', desc: 'Full digital presence on McomMall.' },
+      { icon: Wifi, title: 'Digital Campaigns', desc: 'Run targeted online marketing campaigns.' },
+      { icon: Trophy, title: 'Analytics Suite', desc: 'Track performance with advanced analytics.' },
     ],
   },
 };
@@ -252,7 +252,7 @@ export default function LocalMallSetupPage() {
 
   const handleEnterLocalMall = () => {
     localStorage.setItem('localMallSetupComplete', 'true');
-    router.replace('/dashboard/localmall');
+    router.replace('/dashboard/localmall?signup=true');
   };
 
   // ── Derived ─────────────────────────────────────────────────────────────────
@@ -266,11 +266,11 @@ export default function LocalMallSetupPage() {
 
   const deals = [
     { business: `Coffee Craft ${areaLabel}`, deal: 'Free Muffin' },
-    { business: `Petals ${areaLabel}`,       deal: '15% Off Bloom' },
+    { business: `Petals ${areaLabel}`, deal: '15% Off Bloom' },
   ];
   const expo = {
     title: `${areaLabel} Weekend Expo`,
-    date:  'Starts Saturday, 10:00 AM',
+    date: 'Starts Saturday, 10:00 AM',
     location: 'at Rye Lane',
   };
 
@@ -474,28 +474,28 @@ export default function LocalMallSetupPage() {
                 />
                 <div className="relative w-full h-full pointer-events-none">
                   {/* Animated orange dots */}
-                  <MapDot x={28}  y={38}  delay={0}   />
-                  <MapDot x={70}  y={110} delay={0.3} />
-                  <MapDot x={115} y={55}  delay={0.6} />
-                  <MapDot x={160} y={90}  delay={0.9} />
-                  <MapDot x={210} y={35}  delay={0.4} />
+                  <MapDot x={28} y={38} delay={0} />
+                  <MapDot x={70} y={110} delay={0.3} />
+                  <MapDot x={115} y={55} delay={0.6} />
+                  <MapDot x={160} y={90} delay={0.9} />
+                  <MapDot x={210} y={35} delay={0.4} />
                   <MapDot x={195} y={130} delay={0.7} />
                 </div>
 
                 {/* Overlay card */}
                 <div className="absolute bottom-0 inset-x-0 bg-white/95 backdrop-blur-sm px-4 py-3.5 flex items-center justify-between border-t border-gray-100 z-10">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center">
-                        <Activity className="w-4 h-4 text-orange-500" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold text-gray-900 leading-none">14 Active Businesses</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Nearby</p>
-                      </div>
+                  <div className="flex items-center gap-3">
+                    <div className="w-9 h-9 bg-orange-50 rounded-xl flex items-center justify-center">
+                      <Activity className="w-4 h-4 text-orange-500" />
                     </div>
-                    <ChevronRight className="w-5 h-5 text-gray-400" />
+                    <div>
+                      <p className="text-sm font-bold text-gray-900 leading-none">14 Active Businesses</p>
+                      <p className="text-xs text-gray-400 mt-0.5">Nearby</p>
+                    </div>
                   </div>
+                  <ChevronRight className="w-5 h-5 text-gray-400" />
                 </div>
+              </div>
 
               {/* Nearby Rewards */}
               <div className="mx-5 mb-4 bg-white rounded-3xl p-5 shadow-sm border border-gray-100">

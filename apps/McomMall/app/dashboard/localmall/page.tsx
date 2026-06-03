@@ -4,6 +4,10 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import dynamic from 'next/dynamic';
+import { LocalCampaignsPanel } from '@/components/campaigns/LocalCampaignsPanel';
+
+const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDiscovery'), { ssr: false });
 import {
   Users,
   Star,
@@ -30,6 +34,7 @@ import {
   Coffee,
   Leaf,
   ChevronLeft,
+  X,
 } from 'lucide-react';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -40,9 +45,9 @@ type ProximityTier = 'high_street' | 'hyper_local' | 'nearby' | 'national';
 // ─── Tier colours ─────────────────────────────────────────────────────────────
 const TIER_META: Record<ProximityTier, { gradient: string; shadow: string; accent: string }> = {
   high_street: { gradient: 'from-yellow-400 via-amber-500 to-orange-500', shadow: 'rgba(245,158,11,0.4)', accent: '#d97706' },
-  hyper_local: { gradient: 'from-orange-400 via-orange-500 to-red-500',   shadow: 'rgba(249,115,22,0.4)',  accent: '#ea580c' },
-  nearby:      { gradient: 'from-orange-600 via-red-500 to-red-600',       shadow: 'rgba(234,88,12,0.4)',   accent: '#dc2626' },
-  national:    { gradient: 'from-red-600 via-red-700 to-orange-800',       shadow: 'rgba(185,28,28,0.4)',   accent: '#b91c1c' },
+  hyper_local: { gradient: 'from-orange-400 via-orange-500 to-red-500', shadow: 'rgba(249,115,22,0.4)', accent: '#ea580c' },
+  nearby: { gradient: 'from-orange-600 via-red-500 to-red-600', shadow: 'rgba(234,88,12,0.4)', accent: '#dc2626' },
+  national: { gradient: 'from-red-600 via-red-700 to-orange-800', shadow: 'rgba(185,28,28,0.4)', accent: '#b91c1c' },
 };
 
 // ─── Animated counter ────────────────────────────────────────────────────────
@@ -98,11 +103,11 @@ function StyledMap({ area, postcode }: { area: string; postcode: string }) {
 // ─── Avatar ───────────────────────────────────────────────────────────────────
 function Avatar({ logo, name }: { logo: string | null; name: string }) {
   return (
-    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-white shadow-md bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
+    <div className="w-8 h-8 rounded-full overflow-hidden border border-white shadow bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
       {logo
         // eslint-disable-next-line @next/next/no-img-element
         ? <img src={logo} alt="logo" className="w-full h-full object-cover" />
-        : <span className="text-white font-bold text-sm">{name?.[0]?.toUpperCase() || 'M'}</span>
+        : <span className="text-white font-bold text-xs">{name?.[0]?.toUpperCase() || 'M'}</span>
       }
     </div>
   );
@@ -120,6 +125,9 @@ export default function LocalMallPage() {
   const [businessName, setBusinessName] = useState('');
   const [logo, setLogo] = useState<string | null>(null);
   const [postcode, setPostcode] = useState('');
+  const [isSignupFlow, setIsSignupFlow] = useState(false);
+  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
+  const [isCampaignPanelOpen, setIsCampaignPanelOpen] = useState(false);
 
   const nodeCount = useCounter(1284, 1600);
   const sponsorPct = useCounter(65, 1200);
@@ -138,39 +146,44 @@ export default function LocalMallPage() {
     setBusinessName(ob.businessName || '');
     setPostcode(ob.postcode || '');
     if (ob.logo) setLogo(ob.logo);
+
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('signup') === 'true' || params.get('onboarding') === 'true') {
+      setIsSignupFlow(true);
+    }
   }, []);
 
   const meta = TIER_META[tier] ?? TIER_META.high_street;
 
   // ── Tab config ──────────────────────────────────────────────────────────────
   const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'network', label: 'Network', Icon: Users         },
-    { id: 'rewards', label: 'Rewards', Icon: Star          },
-    { id: 'map',     label: 'Map',     Icon: Map           },
-    { id: 'hub',     label: 'Hub',     Icon: LayoutDashboard },
+    { id: 'network', label: 'Network', Icon: Users },
+    { id: 'rewards', label: 'Rewards', Icon: Star },
+    { id: 'map', label: 'Map', Icon: Map },
+    { id: 'hub', label: 'Hub', Icon: LayoutDashboard },
   ];
 
   // ── Mock partnership data ────────────────────────────────────────────────────
   const partnerships = [
-    { pct: 96, name: `Artisan Coffee × Local Bakery`,     icon: Coffee },
-    { pct: 92, name: `Community Garden Logistics`,         icon: Leaf   },
+    { pct: 96, name: `Artisan Coffee × Local Bakery`, icon: Coffee },
+    { pct: 92, name: `Community Garden Logistics`, icon: Leaf },
   ];
 
   // ── Network connections (mock) ───────────────────────────────────────────────
   const networkMembers = [
-    { name: 'Green Bite Café',       tier: 'High Street', dist: '120m', color: '#d97706' },
+    { name: 'Green Bite Café', tier: 'High Street', dist: '120m', color: '#d97706' },
     { name: 'Petal & Bloom Florist', tier: 'Hyper Local', dist: '340m', color: '#ea580c' },
-    { name: 'Craft & Co Studio',     tier: 'High Street', dist: '510m', color: '#d97706' },
-    { name: 'NorthSide Barbers',     tier: 'Hyper Local', dist: '720m', color: '#ea580c' },
-    { name: 'Byte & Grind Tech',     tier: 'Nearby',      dist: '1.2km', color: '#dc2626' },
+    { name: 'Craft & Co Studio', tier: 'High Street', dist: '510m', color: '#d97706' },
+    { name: 'NorthSide Barbers', tier: 'Hyper Local', dist: '720m', color: '#ea580c' },
+    { name: 'Byte & Grind Tech', tier: 'Nearby', dist: '1.2km', color: '#dc2626' },
   ];
 
   // ── Rewards (mock) ───────────────────────────────────────────────────────────
   const rewardDeals = [
-    { business: `Coffee Craft ${area}`, deal: 'Free Muffin with any hot drink',  pts: 50,  icon: Coffee,  expires: '2d' },
-    { business: `Petals ${area}`,       deal: '15% Off Bloom Bouquet',            pts: 80,  icon: Leaf,    expires: '5d' },
-    { business: 'Artisan Books',        deal: 'Buy 2 Get 1 Free',                 pts: 120, icon: Package, expires: '3d' },
-    { business: `${area} Deli`,         deal: 'Free Side with Main',              pts: 60,  icon: Star,    expires: '1d' },
+    { business: `Coffee Craft ${area}`, deal: 'Free Muffin with any hot drink', pts: 50, icon: Coffee, expires: '2d' },
+    { business: `Petals ${area}`, deal: '15% Off Bloom Bouquet', pts: 80, icon: Leaf, expires: '5d' },
+    { business: 'Artisan Books', deal: 'Buy 2 Get 1 Free', pts: 120, icon: Package, expires: '3d' },
+    { business: `${area} Deli`, deal: 'Free Side with Main', pts: 60, icon: Star, expires: '1d' },
   ];
 
   // ────────────────────────────────────────────────────────────────────────────
@@ -178,18 +191,18 @@ export default function LocalMallPage() {
     <div className="min-h-[100dvh] bg-[#f8f7f5] font-sans flex flex-col" style={{ fontFamily: "'Inter', 'Outfit', sans-serif" }}>
 
       {/* ── Global Header ─────────────────────────────────────────────────── */}
-      <header className="sticky top-0 z-30 bg-white/95 backdrop-blur-md border-b border-gray-100 px-5 pt-20 pb-3.5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Link href="/dashboard" className="flex w-8 h-8 rounded-xl bg-gray-100 items-center justify-center mr-1 active:bg-gray-200 transition-colors">
-            <ChevronLeft className="w-4 h-4 text-gray-600" />
+      <header className="bg-white border-b border-gray-100 px-5 py-1.5 flex items-center justify-between">
+        <div className="flex items-center gap-2.5">
+          <Link href="/dashboard" className="hidden sm:flex w-7 h-7 rounded-lg bg-gray-100 items-center justify-center mr-0.5 active:bg-gray-200 transition-colors">
+            <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
           </Link>
           <Avatar logo={logo} name={businessName} />
           <div>
-            <p className="text-[10px] text-gray-400 font-semibold uppercase tracking-wider leading-none mb-0.5">LocalMall</p>
-            <p className="text-sm font-black text-gray-900 leading-tight">{area} LocalMall</p>
+            <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider leading-none mb-0.5">LocalMall</p>
+            <p className="text-xs font-bold text-gray-900 leading-tight">{area} LocalMall</p>
           </div>
         </div>
-        <Radio className="w-5 h-5 text-gray-400" />
+        <Radio className="w-4 h-4 text-gray-400 animate-pulse" />
       </header>
 
       {/* ── Content ───────────────────────────────────────────────────────── */}
@@ -214,6 +227,22 @@ export default function LocalMallPage() {
                 </p>
               </div>
 
+              {/* Action Buttons */}
+              <div className="flex gap-3">
+                <button 
+                  onClick={() => setIsMapModalOpen(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-2xl text-xs font-bold transition-colors shadow-sm"
+                >
+                  <MapPin className="w-4 h-4" /> View Radius Map
+                </button>
+                <button 
+                  onClick={() => setIsCampaignPanelOpen(true)}
+                  className="flex-1 flex items-center justify-center gap-2 bg-white text-orange-600 border border-orange-200 hover:bg-orange-50 py-3 rounded-2xl text-xs font-bold transition-colors shadow-sm"
+                >
+                  <Users className="w-4 h-4" /> Community Rewards
+                </button>
+              </div>
+
               {/* Live Activity Card */}
               <div className="relative bg-gray-900 rounded-3xl p-5 overflow-hidden shadow-xl">
                 {/* Glow */}
@@ -231,7 +260,7 @@ export default function LocalMallPage() {
                   </div>
                   <p className="text-4xl font-black text-white tabular-nums">
                     {nodeCount.toLocaleString()}
-                    <span className="text-lg font-bold text-gray-400 ml-2">nodes active</span>
+                    <span className="text-lg font-bold text-gray-400 ml-2">active businesses</span>
                   </p>
                 </div>
               </div>
@@ -299,9 +328,8 @@ export default function LocalMallPage() {
                     <button
                       key={t}
                       onClick={() => setCommunityTab(t)}
-                      className={`flex-1 py-3.5 text-[11px] font-bold capitalize transition-colors relative ${
-                        communityTab === t ? 'text-orange-500' : 'text-gray-400'
-                      }`}
+                      className={`flex-1 py-3.5 text-[11px] font-bold capitalize transition-colors relative ${communityTab === t ? 'text-orange-500' : 'text-gray-400'
+                        }`}
                     >
                       {t === 'community' ? 'Community' : t === 'sponsorship' ? 'Sponsorship' : 'Growth'}
                       {communityTab === t && (
@@ -414,12 +442,14 @@ export default function LocalMallPage() {
               </div>
 
               {/* Enter Dashboard */}
-              <Link href="/dashboard">
-                <div className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gray-900/20 active:bg-gray-800 transition-colors">
-                  Enter Dashboard
-                  <ArrowUpRight className="w-4 h-4" />
-                </div>
-              </Link>
+              {isSignupFlow && (
+                <Link href="/dashboard">
+                  <div className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gray-900/20 active:bg-gray-800 transition-colors">
+                    Enter Dashboard
+                    <ArrowUpRight className="w-4 h-4" />
+                  </div>
+                </Link>
+              )}
             </motion.div>
           )}
 
@@ -441,9 +471,9 @@ export default function LocalMallPage() {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3 mb-5">
                 {[
-                  { label: 'Active',    value: '14',   color: '#d97706' },
-                  { label: 'Verified',  value: '9',    color: '#ea580c' },
-                  { label: 'Partners',  value: '3',    color: '#dc2626' },
+                  { label: 'Active', value: '14', color: '#d97706' },
+                  { label: 'Verified', value: '9', color: '#ea580c' },
+                  { label: 'Partners', value: '3', color: '#dc2626' },
                 ].map((s) => (
                   <div key={s.label} className="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 text-center">
                     <p className="text-2xl font-black" style={{ color: s.color }}>{s.value}</p>
@@ -578,8 +608,8 @@ export default function LocalMallPage() {
                 <div className="space-y-2">
                   {[
                     { color: '#f97316', label: 'Active High Street Business' },
-                    { color: '#ea580c', label: 'Hyper-Local Business'        },
-                    { color: '#d97706', label: 'Nearby Business'             },
+                    { color: '#ea580c', label: 'Hyper-Local Business' },
+                    { color: '#d97706', label: 'Nearby Business' },
                   ].map((l) => (
                     <div key={l.label} className="flex items-center gap-2.5">
                       <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
@@ -593,7 +623,7 @@ export default function LocalMallPage() {
               <div className="grid grid-cols-2 gap-3 mt-3">
                 {[
                   { label: 'Businesses in view', value: '14', icon: Building2 },
-                  { label: 'New this week',       value: '+3', icon: TrendingUp },
+                  { label: 'New this week', value: '+3', icon: TrendingUp },
                 ].map((s) => {
                   const SIcon = s.icon;
                   return (
@@ -628,11 +658,10 @@ export default function LocalMallPage() {
                     className={`absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-full bg-gradient-to-r ${meta.gradient}`}
                   />
                 )}
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${
-                  isActive
+                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${isActive
                     ? 'bg-orange-50'
                     : 'bg-transparent'
-                }`}>
+                  }`}>
                   <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-orange-500' : 'text-gray-400'}`} />
                 </div>
                 <span className={`text-[10px] font-bold transition-colors ${isActive ? 'text-orange-500' : 'text-gray-400'}`}>
@@ -643,6 +672,34 @@ export default function LocalMallPage() {
           })}
         </div>
       </nav>
+
+      {/* Modals & Panels */}
+      <LocalCampaignsPanel 
+        isOpen={isCampaignPanelOpen} 
+        onOpenChange={setIsCampaignPanelOpen} 
+      />
+
+      {isMapModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
+          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-white">
+              <div>
+                <h3 className="text-xl font-bold text-gray-900">{area} Ecosystem</h3>
+                <p className="text-sm text-gray-500">Interactive geographic clustering map</p>
+              </div>
+              <button 
+                onClick={() => setIsMapModalOpen(false)}
+                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+              >
+                <X className="w-6 h-6" />
+              </button>
+            </div>
+            <div className="relative w-full">
+              <NearbyDiscovery />
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
