@@ -421,14 +421,17 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
   };
 
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <div className={`w-full max-w-md p-8 space-y-8 bg-white rounded-lg shadow-md transition-all duration-300`}>
+    <div className="flex justify-center pt-16 sm:pt-24 pb-16 min-h-screen bg-gray-50/50">
+      <div className="w-full max-w-md h-fit p-8 space-y-6 bg-white rounded-2xl shadow-xl border border-gray-150/10 transition-all duration-300">
         
         <div className="text-center">
-            <h1 className="text-2xl font-bold text-gray-900 mt-4">
-                {mode === 'login' ? 'Login' : 'Create Account'}
+            <div className="w-12 h-12 bg-orange-500 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg shadow-orange-500/20 transform rotate-45">
+              <span className="text-white font-black text-lg -rotate-45">M</span>
+            </div>
+            <h1 className="text-2xl font-black text-gray-900 tracking-tight">
+                {mode === 'login' ? 'Sign In to McomMall' : 'Create Your Account'}
             </h1>
-            {mode === 'register' && step === 'enter-otp' && <p className="text-sm text-gray-600">Enter OTP sent to {formData.email}</p>}
+            {mode === 'register' && step === 'enter-otp' && <p className="text-xs text-gray-400 mt-1">Enter OTP sent to {formData.email}</p>}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={mode === 'login' ? handleLoginSubmit : (e) => e.preventDefault()}>
