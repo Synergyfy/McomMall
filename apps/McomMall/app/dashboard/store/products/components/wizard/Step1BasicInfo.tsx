@@ -1,4 +1,5 @@
 import React, { useEffect } from 'react';
+import { useSearchParams, useRouter } from 'next/navigation';
 import { useGetCategories, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import {
   ChevronDown,
@@ -38,6 +39,9 @@ const detectGender = (name: string): "male" | "female" | "unisex" | "none" => {
 };
 
 export default function Step1BasicInfo({ formData, updateFormData, onNext, onCancel, userListings }: Step1Props) {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const isHybridFlow = searchParams.get('hybridFlow') === 'true';
   const { data: categories, isLoading: isLoadingCats } = useGetCategories();
   const { data: subCategories, isLoading: isLoadingSubs } = useGetSubCategoriesByCategory(formData.category);
 
@@ -94,7 +98,7 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
   };
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-8 pb-32">
       {/* Progress Bar */}
       <div className="w-full bg-white dark:bg-[#291e15] rounded-xl p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
         <div className="flex flex-col gap-4">
@@ -158,14 +162,14 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
 
             {/* Business Selection */}
             <div className="flex flex-col gap-2">
-              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="bussinessId">
+              <label className="text-sm font-semibold text-[#1c140d] dark:text-gray-200 flex items-center gap-2" htmlFor="businessId">
                 Select Business <span className="text-red-500">*</span>
               </label>
               <div className="relative">
                 <select
                   className="w-full appearance-none rounded-lg border-[#e8dbce] dark:border-[#4a3b2f] bg-[#fcfaf8] dark:bg-[#1c140d] text-[#1c140d] dark:text-white h-12 px-4 focus:ring-2 focus:ring-[#f48c25]/50 focus:border-[#f48c25] transition-all cursor-pointer border outline-none"
-                  id="bussinessId"
-                  value={formData.bussinessId || ''}
+                  id="businessId"
+                  value={formData.businessId || formData.bussinessId || ''}
                   onChange={handleChange}
                 >
                   <option disabled value="">Select a business...</option>
@@ -401,15 +405,37 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </form>
         </div>
 
-        {/* Footer Actions */}
-        <div className="px-6 py-4 md:px-8 md:py-6 bg-gray-50 dark:bg-black/20 border-t border-[#e8dbce] dark:border-[#4a3b2f] flex justify-end gap-4 items-center">
-          <button onClick={onCancel} className="px-6 py-3 rounded-lg text-[#9c7349] font-semibold text-sm hover:text-[#1c140d] dark:hover:text-white transition-colors">
-            Cancel
-          </button>
-          <button onClick={onNext} className="flex items-center gap-2 px-8 py-3 rounded-lg bg-[#f48c25] hover:bg-[#f48c25]/90 text-white font-bold text-sm shadow-md shadow-[#f48c25]/20 transition-all transform active:scale-95">
-            Next Step
-            <ArrowRight className="w-5 h-5" />
-          </button>
+        {/* Mobile-First Sticky Footer */}
+        <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+            <div className="flex items-center justify-between md:justify-end gap-4 max-w-5xl mx-auto">
+                <button
+                    onClick={onCancel}
+                    className="flex-1 md:flex-none px-6 py-3.5 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#1c140d] dark:text-white font-bold text-sm flex items-center justify-center gap-2"
+                    type="button"
+                >
+                    Back
+                </button>
+                {isHybridFlow && (
+                  <button
+                    onClick={() => {
+                      localStorage.setItem('hybridSkippedProducts', 'true');
+                      router.push('/dashboard/services/add-service?fromOnboarding=true&hybridFlow=true');
+                    }}
+                    className="flex-1 md:flex-none px-6 py-3.5 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-gray-500 hover:bg-gray-50 transition-colors font-bold text-sm flex items-center justify-center gap-2"
+                    type="button"
+                  >
+                    Skip for now
+                  </button>
+                )}
+                <button
+                    onClick={onNext}
+                    className="flex-[2] md:flex-none px-8 py-3.5 rounded-xl bg-[#f48c25] hover:bg-[#f48c25]/90 text-white font-bold text-sm shadow-lg shadow-[#f48c25]/20 flex items-center justify-center gap-2 transition-all transform active:scale-95"
+                    type="button"
+                >
+                    Next Step
+                    <ArrowRight size={18} />
+                </button>
+            </div>
         </div>
       </div>
     </div>

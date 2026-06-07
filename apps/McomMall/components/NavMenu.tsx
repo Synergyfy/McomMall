@@ -119,8 +119,8 @@ export const menuItems = [
     title: 'Listings',
     content: (
       <div className="w-64 p-4">
-        <ListItem href="/listings" title="Claim Listing">
-          Find and claim your business profile.
+        <ListItem href="/listings" title="Listing">
+          Listing
         </ListItem>
         <ListItem href="/dashboard/add-listing" title="Create New Listing">
           Add your business to our directory.

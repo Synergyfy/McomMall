@@ -17,8 +17,12 @@ import {
 } from '@/components/ui/tooltip';
 import AvailabilityEditor from './AvailabilityEditor';
 
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
+
 export function Step4Availability() {
   const { control } = useFormContext();
+  const [useDefaults, setUseDefaults] = React.useState(true);
 
   return (
     <div className="space-y-6 animate-in fade-in duration-500">
@@ -33,7 +37,19 @@ export function Step4Availability() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <FormField
+          <div className="flex items-center justify-between mb-6 p-4 border rounded-lg bg-orange-50/50 border-orange-100">
+            <div className="space-y-0.5 pr-4">
+              <Label className="text-base font-semibold">Use Default Business Hours</Label>
+              <p className="text-xs text-muted-foreground">Automatically apply the working hours and schedule from your business profile.</p>
+            </div>
+            <Switch 
+               checked={useDefaults} 
+               onCheckedChange={setUseDefaults} 
+            />
+          </div>
+
+          {!useDefaults && (
+            <FormField
             control={control}
             name="availability"
             render={({ field }) => (
@@ -59,6 +75,7 @@ export function Step4Availability() {
               </FormItem>
             )}
           />
+          )}
         </CardContent>
       </Card>
     </div>

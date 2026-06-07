@@ -464,7 +464,7 @@ export function Step1BasicInfo() {
                   </Tooltip>
                 </div>
                 <FormControl>
-                  <Input placeholder="e.g. Expert cleaning for busy homes" {...field} maxLength={150} />
+                  <Input placeholder="e.g. Expert cleaning for busy homes" {...field} maxLength={150} className="text-sm" />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -492,7 +492,7 @@ export function Step1BasicInfo() {
                 <FormControl>
                   <Textarea
                     placeholder="Describe your service in detail..."
-                    className="min-h-[120px] text-base"
+                    className="min-h-[120px] text-sm"
                     {...field}
                   />
                 </FormControl>

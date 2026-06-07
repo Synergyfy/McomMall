@@ -71,8 +71,8 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
-      <body className={`${opensans.variable} antialiased`}>
+    <html lang="en" suppressHydrationWarning>
+      <body className={`${opensans.variable} antialiased`} suppressHydrationWarning>
         <ClientProviders>
           <AuthInitializer>
             <ServiceWorkerRegistrar />

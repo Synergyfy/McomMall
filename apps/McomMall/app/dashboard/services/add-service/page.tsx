@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useState } from 'react';
-import { useRouter } from 'next/navigation';
+import React, { useState, Suspense } from 'react';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { useForm, FormProvider } from 'react-hook-form';
 import { ChevronRight, Save, ArrowLeft, ArrowRight, Store } from 'lucide-react';
 import { toast } from 'sonner';
@@ -12,7 +12,7 @@ import { Form } from '@/components/ui/form';
 import { useAddService } from '@/service/services/hook';
 import { CreateServiceDto } from '@/service/services/types';
 import { uploadFile } from '@/lib/upload';
-import { SuccessAnimationDialog } from '@/components/SuccessAnimationDialog';
+import { ProductStatusModal } from '../../store/products/components/wizard/lib/ProductStatusModal';
 import { useGetCategories, useGetSubCategoriesByCategory, useGetCategoriesBySector } from '@/service/taxonomy/hook';
 import { cn } from '@/lib/utils';
 
@@ -28,7 +28,7 @@ import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hoo
 
 type ServiceFormValues = any;
 
-const STEPS = [
+const ALL_STEPS = [
   { id: 1, name: 'Basic Info', label: '1' },
   { id: 2, name: 'Type & Area', label: '2' },
   { id: 3, name: 'Pricing', label: '3' },
@@ -39,12 +39,20 @@ const STEPS = [
   { id: 8, name: 'Review', label: '8' },
 ];
 
-export default function AddServicePage() {
+function AddServicePageContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const fromOnboarding = searchParams.get('fromOnboarding') === 'true';
+  const isHybridFlow = searchParams.get('hybridFlow') === 'true';
+
+  const STEPS = fromOnboarding 
+    ? ALL_STEPS.filter(s => s.id !== 2 && s.id !== 4).map((s, index) => ({ ...s, label: (index + 1).toString() }))
+    : ALL_STEPS;
   const [currentStep, setCurrentStep] = useState(1);
   const [showSuccessDialog, setShowSuccessDialog] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
   const [isNavigating, setIsNavigating] = useState(false);
+  const [createdServiceId, setCreatedServiceId] = useState<string | null>(null);
 
   const { mutate: addService, isPending: isAddingService } = useAddService();
   const { mutate: createPartnershipRequest } = useCreateCompositePartnershipRequest();
@@ -299,6 +307,7 @@ export default function AddServicePage() {
                   onError: (err) => toast.error('Service created, but partnership request failed: ' + err.message)
               });
           }
+          setCreatedServiceId(data.id);
           setShowSuccessDialog(true);
         },
         onError: (err: any) => {
@@ -317,7 +326,9 @@ export default function AddServicePage() {
     setIsNavigating(true);
 
     if (validateStep(currentStep)) {
-      setCurrentStep((prev) => Math.min(prev + 1, STEPS.length));
+      const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+      const nextIndex = Math.min(currentIndex + 1, STEPS.length - 1);
+      setCurrentStep(STEPS[nextIndex].id);
       setTimeout(() => setIsNavigating(false), 500);
     } else {
       setIsNavigating(false);
@@ -334,47 +345,64 @@ export default function AddServicePage() {
 
   const prevStep = () => {
     if (isNavigating || isUploading || isAddingService) return;
-    setCurrentStep((prev) => Math.max(prev - 1, 1));
+    const currentIndex = STEPS.findIndex(s => s.id === currentStep);
+    const prevIndex = Math.max(currentIndex - 1, 0);
+    setCurrentStep(STEPS[prevIndex].id);
   };
 
   return (
-    <div className="font-sans min-h-screen bg-gray-50/50">
-      <SuccessAnimationDialog
+    <div className="font-sans min-h-screen bg-gray-50/50 pb-24 sm:pb-32">
+      <ProductStatusModal
         isOpen={showSuccessDialog}
         onClose={() => {
           setShowSuccessDialog(false);
           router.push('/dashboard/services');
         }}
+        type="success"
         title="Service Published!"
-        description="Your service has been successfully created and is now live."
-        redirectPath="/dashboard/services"
-        buttonText="Go to My Services"
-        icon={<Store size={24} />}
-        nextStepText="You can now manage your service from the dashboard"
+        message="Your service has been successfully created and is now live."
+        primaryAction={{
+          label: 'View on LocalMall',
+          onClick: () => router.push(`/listings/${createdServiceId}`)
+        }}
+        secondaryAction={{
+          label: 'Add Another Service',
+          onClick: () => {
+            setShowSuccessDialog(false);
+            form.reset();
+            setCurrentStep(1);
+            setCreatedServiceId(null);
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+          }
+        }}
+        dashboardAction={{
+          label: 'Go to My Services',
+          onClick: () => router.push('/dashboard/services')
+        }}
       />
 
       <div className="max-w-5xl mx-auto px-4 py-8">
-        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-8 gap-4 bg-white p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
+        <header className="flex flex-col sm:flex-row justify-between sm:items-center mb-6 sm:mb-8 gap-4 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border-l-4 border-l-[#f48c25]">
           <div>
-            <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight">Add New Service</h1>
-            <p className="text-sm text-gray-500 mt-1 font-medium">
+            <h1 className="text-2xl sm:text-3xl font-extrabold text-gray-900 tracking-tight">Add New Service</h1>
+            <p className="text-xs sm:text-sm text-gray-500 mt-1 font-medium">
               Launch your next offering in just a few steps.
             </p>
           </div>
-          <div className="flex items-center text-sm font-bold bg-[#f48c25]/10 px-4 py-2 rounded-full text-[#f48c25]">
+          <div className="flex flex-wrap items-center text-xs sm:text-sm font-bold bg-[#f48c25]/10 px-3 py-2 rounded-xl sm:rounded-full text-[#f48c25] gap-1">
             <Link href="/dashboard" className="hover:underline transition-all">Home</Link>
-            <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 opacity-50 shrink-0" />
             <Link href="/dashboard/services" className="hover:underline transition-all">Services</Link>
-            <ChevronRight className="h-4 w-4 mx-1 opacity-50" />
-            <span className="text-gray-900">Add Service</span>
+            <ChevronRight className="h-3 w-3 sm:h-4 sm:w-4 opacity-50 shrink-0" />
+            <span className="text-gray-900 whitespace-nowrap">Add Service</span>
           </div>
         </header>
 
         {/* New Colorful Progress Bar */}
-        <div className="mb-10 bg-white p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
-          <div className="flex justify-between items-center mb-6">
-            <span className="text-[#f48c25] text-xs font-black uppercase tracking-[0.2em]">Step {currentStep} of {STEPS.length}</span>
-            <span className="text-gray-900 text-sm font-black">{STEPS.find(s => s.id === currentStep)?.name}</span>
+        <div className="mb-6 sm:mb-10 bg-white p-4 sm:p-6 rounded-2xl shadow-sm border border-[#f48c25]/10">
+          <div className="flex justify-between items-center mb-4 sm:mb-6">
+            <span className="text-[#f48c25] text-[10px] sm:text-xs font-black uppercase tracking-[0.2em]">Step {currentStep} of {STEPS.length}</span>
+            <span className="text-gray-900 text-xs sm:text-sm font-black">{STEPS.find(s => s.id === currentStep)?.name}</span>
           </div>
           
           <div className="flex justify-between items-center relative z-10 mb-2">
@@ -385,7 +413,7 @@ export default function AddServicePage() {
                 onClick={() => !isAddingService && !isUploading && !isNavigating && setCurrentStep(step.id)}
               >
                 <div
-                  className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${currentStep >= step.id
+                  className={`w-7 h-7 sm:w-12 sm:h-12 text-[10px] sm:text-base rounded-xl sm:rounded-2xl flex items-center justify-center font-black transition-all duration-300 ${currentStep >= step.id
                       ? 'bg-[#f48c25] text-white scale-110 shadow-lg shadow-[#f48c25]/30'
                       : 'bg-gray-100 text-gray-400 group-hover:bg-gray-200'
                     }`}
@@ -397,7 +425,7 @@ export default function AddServicePage() {
           </div>
           
           {/* Background Line */}
-          <div className="relative w-full h-2 bg-gray-100 rounded-full mt-6 overflow-hidden">
+          <div className="relative w-full h-1.5 sm:h-2 bg-gray-100 rounded-full mt-4 sm:mt-6 overflow-hidden">
             <div
               className="absolute top-0 left-0 h-full bg-[#f48c25] transition-all duration-700 ease-in-out"
               style={{ width: `${((currentStep - 1) / (STEPS.length - 1)) * 100}%` }}
@@ -423,9 +451,9 @@ export default function AddServicePage() {
                   e.preventDefault(); // Extra safety
                   form.handleSubmit(onSubmit)(e);
               }}
-              className="space-y-8"
+              className=""
             >
-              <div className="min-h-[400px]">
+              <div className="">
                 {currentStep === 1 && <Step1BasicInfo />}
                 {currentStep === 2 && <Step2ServiceType />}
                 {currentStep === 3 && <Step3Pricing />}
@@ -443,42 +471,76 @@ export default function AddServicePage() {
                 {currentStep === 8 && <Step7FinalReview />}
               </div>
 
-              <div className="flex justify-between pt-8 border-t border-gray-200">
-                <div className={cn("flex w-full justify-between", currentStep === 7 && "hidden")}>
-                    <Button
-                    type="button"
-                    variant="outline"
-                    onClick={prevStep}
-                    disabled={currentStep === 1 || isAddingService || isUploading || isNavigating}
-                    className="px-8 h-12 rounded-xl font-bold border-gray-300 hover:bg-gray-50 transition-all"
+              {/* Mobile-First Sticky Footer */}
+              <footer className={cn("fixed bottom-16 md:bottom-0 left-0 right-0 bg-white border-t border-gray-200 p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none", currentStep === 7 && "hidden")}>
+                <div className="max-w-5xl mx-auto flex flex-row gap-2 md:gap-4 justify-between items-center w-full">
+                    <button
+                      type="button"
+                      onClick={prevStep}
+                      disabled={currentStep === 1 || isAddingService || isUploading || isNavigating}
+                      className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 text-gray-700 font-semibold flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-gray-50 transition-colors"
                     >
-                    <ArrowLeft className="w-4 h-4 mr-2" /> Back
-                    </Button>
+                      <ArrowLeft size={16} className="hidden sm:block" />
+                      Back
+                    </button>
+
+                    <button
+                      type="button"
+                      className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-[#f48c25] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-orange-50 transition-colors"
+                    >
+                      Save Draft
+                    </button>
+
+                    {isHybridFlow && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const skippedProducts = localStorage.getItem('hybridSkippedProducts') === 'true';
+                          if (skippedProducts) {
+                             toast.error("You must add at least one product or service before proceeding to the dashboard!");
+                             return;
+                          }
+                          localStorage.setItem('hybridSkippedServices', 'true');
+                          router.push('/dashboard');
+                        }}
+                        className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-gray-200 bg-white text-gray-500 font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap hover:bg-gray-50 transition-colors"
+                      >
+                        Skip
+                      </button>
+                    )}
 
                     {currentStep < STEPS.length ? (
-                    <Button 
-                        type="button" 
-                        onClick={nextStep} 
-                        disabled={isAddingService || isUploading || isNavigating} 
-                        className="px-10 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
-                    >
-                        Next <ArrowRight className="w-4 h-4 ml-2" />
-                    </Button>
+                      <button 
+                          type="button" 
+                          onClick={nextStep} 
+                          disabled={isAddingService || isUploading || isNavigating} 
+                          className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                      >
+                          Continue <ArrowRight size={16} className="hidden sm:block" />
+                      </button>
                     ) : (
-                    <Button 
-                        type="submit" 
-                        disabled={isAddingService || isUploading || isNavigating} 
-                        className="px-14 h-12 rounded-xl font-black bg-[#f48c25] hover:bg-[#d4791c] text-white shadow-lg shadow-[#f48c25]/20 transition-all border-none"
-                    >
-                        {isUploading ? 'Uploading Media...' : isAddingService ? 'Publishing...' : <><Save className="w-4 h-4 mr-2" /> Publish Service</>}
-                    </Button>
+                      <button 
+                          type="submit" 
+                          disabled={isAddingService || isUploading || isNavigating} 
+                          className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap disabled:opacity-50 hover:bg-[#d4791c] transition-colors"
+                      >
+                          {isUploading ? 'Uploading...' : isAddingService ? 'Publishing...' : <><Save size={16} className="hidden sm:block" /> Publish</>}
+                      </button>
                     )}
                 </div>
-              </div>
+              </footer>
             </form>
           </Form>
         </FormProvider>
       </div>
     </div>
+  );
+}
+
+export default function AddServicePage() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-gray-50/50 flex items-center justify-center"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#f48c25]"></div></div>}>
+      <AddServicePageContent />
+    </Suspense>
   );
 }
