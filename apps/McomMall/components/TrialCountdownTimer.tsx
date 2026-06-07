@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
-  TimerIcon,
+  Clock,
   PlayIcon,
   PauseIcon,
   CheckCircleIcon,
@@ -23,6 +23,8 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from './ui/dropdown-menu';
+import { Popover, PopoverContent, PopoverTrigger } from './ui/popover';
+import Link from 'next/link';
 
 interface TrialCountdownTimerProps {
   trialStatus: TrialStatusResponse;
@@ -80,104 +82,107 @@ const TrialCountdownTimer: React.FC<TrialCountdownTimerProps> = ({
   const timeUnits = Object.entries(formattedTime);
 
   return (
-    <motion.div
-      layout
-      drag
-      dragMomentum={false}
-      initial={{ opacity: 0, y: -50 }}
-      animate={{ opacity: 1, y: 0 }}
-      transition={{ duration: 0.5, type: 'spring' }}
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-50 bg-orange-600 text-white p-4 rounded-lg shadow-lg flex flex-col items-center space-y-2 cursor-grab"
-      whileTap={{ cursor: 'grabbing' }}
-    >
-      <div className="flex items-center space-x-4">
-        <TimerIcon className="w-8 h-8 flex-shrink-0" />
-        <div className="flex items-center space-x-2">
-          <div className="flex flex-col items-center">
-            <span className="text-2xl font-bold">{formattedTime.days}</span>
-            <span className="text-xs uppercase">days left</span>
-          </div>
-          <AnimatePresence>
-            {isExpanded && (
-              <motion.div
-                className="flex items-center space-x-2"
-                initial={{ opacity: 0, width: 0 }}
-                animate={{ opacity: 1, width: 'auto' }}
-                exit={{ opacity: 0, width: 0 }}
-                transition={{ duration: 0.3 }}
-              >
-                {timeUnits.slice(1).map(([unit, value]) => (
-                  <div key={unit} className="flex flex-col items-center">
-                    <span className="text-2xl font-bold">{value}</span>
-                    <span className="text-xs uppercase">{unit}</span>
-                  </div>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+    <Popover>
+      <PopoverTrigger className="flex items-center justify-center w-8 h-8 rounded-full bg-orange-50 border border-orange-200 hover:bg-orange-100 transition-all shadow-sm group">
+        <Clock className={`w-4 h-4 ${timeLeft > 0 ? 'text-orange-600' : 'text-gray-400'} group-hover:scale-110 transition-transform`} />
+      </PopoverTrigger>
+      <PopoverContent className="w-auto p-4 border-[#e8dbce] dark:border-[#4a3b2e]" align="end">
+        <div className="bg-orange-600 text-white p-4 rounded-xl shadow-lg flex flex-col items-center space-y-4">
+          <div className="flex items-center space-x-4">
+            <Clock className="w-8 h-8 flex-shrink-0" />
+            <div className="flex items-center space-x-2">
+              <div className="flex flex-col items-center">
+                <span className="text-2xl font-bold">{formattedTime.days}</span>
+                <span className="text-xs uppercase">days left</span>
+              </div>
+              <AnimatePresence>
+                {isExpanded && (
+                  <motion.div
+                    className="flex items-center space-x-2"
+                    initial={{ opacity: 0, width: 0 }}
+                    animate={{ opacity: 1, width: 'auto' }}
+                    exit={{ opacity: 0, width: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    {timeUnits.slice(1).map(([unit, value]) => (
+                      <div key={unit} className="flex flex-col items-center">
+                        <span className="text-2xl font-bold">{value}</span>
+                        <span className="text-xs uppercase">{unit}</span>
+                      </div>
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
 
-        <div className="flex items-center space-x-2">
-          <Button
-            onClick={() => setIsExpanded(!isExpanded)}
-            variant="ghost"
-            size="icon"
-            className="rounded-full"
-          >
-            <ChevronsRightLeft className="w-6 h-6" />
-          </Button>
-
-          {isTrialPausable && (
             <div className="flex items-center space-x-2">
               <Button
-                onClick={() =>
-                  pauseOrPlay({
-                    action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
-                  })
-                }
-                disabled={isPending || (!isPaused && remainingPauses <= 0)}
+                onClick={() => setIsExpanded(!isExpanded)}
                 variant="ghost"
                 size="icon"
-                className="rounded-full"
+                className="rounded-full hover:bg-orange-700 hover:text-white"
               >
-                {isPaused ? (
-                  <PlayIcon className="w-6 h-6" />
-                ) : (
-                  <PauseIcon className="w-6 h-6" />
-                )}
+                <ChevronsRightLeft className="w-5 h-5" />
               </Button>
-              <div className="text-sm">
-                <p>{remainingPauses} Pauses Left</p>
-              </div>
+
+              {isTrialPausable && (
+                <div className="flex flex-col items-center ml-2 space-y-1">
+                  <Button
+                    onClick={() =>
+                      pauseOrPlay({
+                        action: isPaused ? TrialAction.RESUME : TrialAction.PAUSE,
+                      })
+                    }
+                    disabled={isPending || (!isPaused && remainingPauses <= 0)}
+                    variant="ghost"
+                    size="icon"
+                    className="rounded-full hover:bg-orange-700 hover:text-white h-8 w-8"
+                  >
+                    {isPaused ? (
+                      <PlayIcon className="w-5 h-5" />
+                    ) : (
+                      <PauseIcon className="w-5 h-5" />
+                    )}
+                  </Button>
+                  <div className="text-[10px] uppercase font-semibold">
+                    {remainingPauses} Pauses
+                  </div>
+                </div>
+              )}
             </div>
-          )}
+          </div>
+          <div className="w-full pt-2 border-t border-orange-500/50">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <p className="text-sm text-center cursor-pointer hover:text-orange-200 transition-colors">
+                  See your trial period tasks
+                </p>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="w-64 bg-gray-900 text-white border-gray-800">
+                {Object.entries(tasks).map(([key, completed]) => (
+                  <DropdownMenuItem
+                    key={key}
+                    className="flex items-center justify-between hover:bg-gray-800 focus:bg-gray-800"
+                  >
+                    <span>{taskLabels[key as keyof TrialTasks]}</span>
+                    {completed ? (
+                      <CheckCircleIcon className="w-5 h-5 text-green-500" />
+                    ) : (
+                      <XCircleIcon className="w-5 h-5 text-red-500" />
+                    )}
+                  </DropdownMenuItem>
+                ))}
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
         </div>
-      </div>
-      <div className="mt-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <p className="text-sm cursor-pointer hover:underline">
-              See your trial period tasks
-            </p>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent className="w-64 bg-gray-900 text-white">
-            {Object.entries(tasks).map(([key, completed]) => (
-              <DropdownMenuItem
-                key={key}
-                className="flex items-center justify-between"
-              >
-                <span>{taskLabels[key as keyof TrialTasks]}</span>
-                {completed ? (
-                  <CheckCircleIcon className="w-5 h-5 text-green-500" />
-                ) : (
-                  <XCircleIcon className="w-5 h-5 text-red-500" />
-                )}
-              </DropdownMenuItem>
-            ))}
-          </DropdownMenuContent>
-        </DropdownMenu>
-      </div>
-    </motion.div>
+        <div className="mt-3 flex justify-center">
+          <Link href="/dashboard/activity-timer">
+            <span className="text-xs font-semibold text-[#f48c25] hover:underline">View Timer Details</span>
+          </Link>
+        </div>
+      </PopoverContent>
+    </Popover>
   );
 };
 

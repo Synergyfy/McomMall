@@ -55,9 +55,13 @@ import { SupportTicketsModule } from './resources/support-tickets/support-ticket
 import { SeasonsModule } from './resources/seasons/seasons.module';
 import { DigitalValueModule } from './resources/digital-value/digital-value.module';
 import { ShippingModule } from './resources/shipping/shipping.module';
+import { LocalMallModule } from './resources/localmall/localmall.module';
+import { GoogleBusinessModule } from './resources/google-business/google-business.module';
 
 @Module({
   imports: [
+    GoogleBusinessModule,
+    LocalMallModule,
     DigitalValueModule,
     SupportTicketsModule,
     ActivityTimerModule,

@@ -28,6 +28,7 @@ import { Promotion } from '../../promotion/entities/promotion.entity';
 import { Service } from '../../services/entities/service.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { Offer } from '../../offer/entities/offer.entity';
+import { LocalMall } from '../../localmall/entities/localmall.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -221,4 +222,10 @@ export class Business extends AbstractBaseEntity {
     cascade: ['insert', 'update', 'remove'],
   })
   offers: Offer[];
+
+  @ManyToOne(() => LocalMall, (mall) => mall.businesses, { nullable: true, onDelete: 'SET NULL' })
+  localMall?: LocalMall;
+
+  @Column({ nullable: true })
+  localMallId?: string;
 }

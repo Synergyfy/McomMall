@@ -1,5 +1,7 @@
 "use client";
 
+import { Plus, Eye } from 'lucide-react';
+
 import React, { useState } from 'react';
 import Step1BasicInfo from '../components/wizard/Step1BasicInfo';
 import Step2MediaContent from '../components/wizard/Step2MediaContent';
@@ -21,10 +23,12 @@ import { useAddProduct } from '@/service/store/products/hook';
 import { useCreateCompositePartnershipRequest } from '@/service/partnerships/hooks';
 import { useEffect } from 'react';
 import { toast } from 'sonner';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
 export default function AddProductPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const isHybridFlow = searchParams.get('hybridFlow') === 'true';
   const { user } = useAuth();
   const { data: userListings } = useGetUserListings();
   const { mutate: addProduct, isPending } = useAddProduct();
@@ -69,7 +73,7 @@ export default function AddProductPage() {
       measurements: [],
       diagrams: { male: '', female: '', unisex: '' }
     },
-    bussinessId: '',
+    businessId: '',
     serviceProviderId: '',
     fulfillmentType: [] as string[],
     pickupInstructions: '',
@@ -98,10 +102,13 @@ export default function AddProductPage() {
   };
 
   useEffect(() => {
-    if (userListings?.data?.length === 1 && !formData.bussinessId) {
-      updateFormData({ bussinessId: userListings.data[0].id });
+    if (userListings?.data && userListings.data.length > 0 && !formData.businessId) {
+      const fromOnboarding = searchParams.get('fromOnboarding') === 'true';
+      if (userListings.data.length === 1 || fromOnboarding) {
+        updateFormData({ businessId: userListings.data[0].id });
+      }
     }
-  }, [userListings, formData.bussinessId]);
+  }, [userListings, formData.businessId, searchParams]);
 
 
   const handlePublish = () => {
@@ -162,6 +169,7 @@ export default function AddProductPage() {
 
     const payload: any = {
       ...formData,
+      businessId: formData.businessId,
       title: formData.productName,
       productName: formData.productName,
       description: formData.fullDesc,
@@ -231,12 +239,38 @@ export default function AddProductPage() {
   };
 
   const nextStep = () => {
+    if (step === 1) {
+      if (!formData.businessId) {
+        toast.error('Please select a business to continue.');
+        return;
+      }
+    }
+
     // Branching from Step 3
     if (step === 3) {
       if (formData.product_type !== 'physical') {
         setStep(7.5);
       } else {
-        setStep(4);
+        const business = userListings?.data?.find((b: any) => b.id === formData.businessId);
+        const modes = (business as any)?.sellingModes || (business as any)?.productSellerProfile?.sellingModes || [];
+        const types: ('shipping' | 'pickup')[] = [];
+        if (modes.includes('pickup') || modes.includes('inStorePickup') || modes.includes('in_store_pickup')) types.push('pickup');
+        if (modes.includes('uk_shipping') || modes.includes('local_delivery') || modes.includes('nationalShipping') || modes.includes('localDelivery')) types.push('shipping');
+        
+        if (types.length === 0) types.push('shipping', 'pickup');
+        
+        setFulfillmentType(types);
+        
+        // Auto-skip Step 4 if only one fulfillment type is configured/allowed for the business
+        if (types.length === 1) {
+          if (types[0] === 'pickup') {
+            setStep(5.1);
+          } else {
+            setStep(4.1);
+          }
+        } else {
+          setStep(4);
+        }
       }
       return;
     }
@@ -278,12 +312,19 @@ export default function AddProductPage() {
     }
 
     if (step === 5 || step === 7) {
+
       if (fulfillmentType.includes('pickup')) {
+
         setStep(5.1);
+
       } else {
+
         setStep(7.5);
+
       }
+
       return;
+
     }
 
     if (step === 5.1) {
@@ -300,43 +341,70 @@ export default function AddProductPage() {
   };
 
   const prevStep = () => {
+
     if (step === 8) {
+
       setStep(7.5);
+
       return;
+
     }
+
+
 
     if (step === 7.5) {
+
       if (formData.product_type !== 'physical') return setStep(3);
+
       if (fulfillmentType.includes('pickup')) return setStep(5.1);
+
       if (fulfillmentType.includes('shipping')) {
+
         if (shippingMethod === 'shipstation') return setStep(7);
+
         return setStep(5);
+
       }
-      return setStep(4);
+
+      return setStep(3);
+
     }
+
+
 
     if (step === 7) return setStep(6);
+
     if (step === 6) return setStep(5.5);
+
     if (step === 5.5) return setStep(4.2);
 
-    if (step === 4.1 || step === 5.1) return setStep(4);
-    if (step === 4.2) return setStep(4.1);
-    if (step === 5) return setStep(4.2);
-    if (step === 5.1) {
-      if (fulfillmentType.includes('shipping')) {
-        if (shippingMethod === 'shipstation') return setStep(7);
-        return setStep(5);
+
+
+    if (step === 4.1 || step === 5.1) {
+      const business = userListings?.data?.find((b: any) => b.id === formData.businessId);
+      const modes = (business as any)?.sellingModes || (business as any)?.productSellerProfile?.sellingModes || [];
+      const types: ('shipping' | 'pickup')[] = [];
+      if (modes.includes('pickup') || modes.includes('inStorePickup') || modes.includes('in_store_pickup')) types.push('pickup');
+      if (modes.includes('uk_shipping') || modes.includes('local_delivery') || modes.includes('nationalShipping') || modes.includes('localDelivery')) types.push('shipping');
+      
+      if (types.length === 1) {
+        return setStep(3);
       }
       return setStep(4);
     }
 
+    if (step === 4.2) return setStep(4.1);
+
+    if (step === 5) return setStep(4.2);
+
     setStep((prev) => prev - 1);
+
   };
 
   const renderStep = () => {
     switch (step) {
       case 1:
-        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => { }} userListings={userListings?.data || []} />;
+        return <Step1BasicInfo formData={formData} updateFormData={updateFormData} onNext={nextStep} onCancel={() => router.push('/dashboard/store/products')} userListings={userListings?.data || []} />;
       case 2:
         return <Step2MediaContent formData={formData} updateFormData={updateFormData} onNext={nextStep} onBack={prevStep} onSaveDraft={() => { }} />;
       case 3:
@@ -344,6 +412,8 @@ export default function AddProductPage() {
       case 4:
         return (
           <Step4aFulfillmentSelection
+            initialSelected={fulfillmentType}
+            allowedMethods={fulfillmentType}
             onSelect={(types: ('shipping' | 'pickup')[]) => {
               setFulfillmentType(types);
               if (types.includes('shipping')) {
@@ -399,21 +469,28 @@ export default function AddProductPage() {
         type="success"
         title="Product Added Successfully!"
         message={`${formData.productName} is now live and ready for customers.`}
-        primaryAction={{
-          label: "View Product",
+        primaryAction={isHybridFlow ? {
+          label: "Next: Add a Service",
+          icon: <Plus size={16} />,
           onClick: () => {
-            if (createdProductId) {
-              router.push(`/dashboard/product/${createdProductId}`);
-            }
+            localStorage.removeItem('hybridSkippedProducts');
+            setIsPublished(false);
+            router.push('/dashboard/services/add-service?fromOnboarding=true&hybridFlow=true');
           }
-        }}
-        secondaryAction={{
+        } : {
           label: "Add Another Product",
+          icon: <Plus size={16} />,
           onClick: () => {
             setIsPublished(false);
             setCreatedProductId(null);
             setStep(1);
-            // Reset form data if needed, but for now just go back to step 1
+          }
+        }}
+        secondaryAction={{
+          label: "See it live in the Local Mall",
+          icon: <Eye size={16} />,
+          onClick: () => {
+            router.push('/dashboard/localmall');
           }
         }}
         dashboardAction={{

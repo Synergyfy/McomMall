@@ -6,12 +6,26 @@ import { Store, Truck, CheckCircle2, ArrowRight, ArrowLeft } from 'lucide-react'
 interface Props {
   onSelect: (types: ('shipping' | 'pickup')[]) => void;
   onBack: () => void;
+  initialSelected?: ('shipping' | 'pickup')[];
+  allowedMethods?: ('shipping' | 'pickup')[];
 }
 
-export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) {
-  const [selectedMethods, setSelectedMethods] = useState<('shipping' | 'pickup')[]>(['pickup']);
+export default function Step4aFulfillmentSelection({ onSelect, onBack, initialSelected, allowedMethods }: Props) {
+  const [selectedMethods, setSelectedMethods] = useState<('shipping' | 'pickup')[]>(() => {
+    if (initialSelected && initialSelected.length > 0) {
+      const allowed = initialSelected.filter(m => !allowedMethods || allowedMethods.includes(m));
+      return allowed.length > 0 ? allowed : (allowedMethods && allowedMethods.length > 0 ? [allowedMethods[0]] : ['pickup']);
+    }
+    return allowedMethods && allowedMethods.length > 0 ? [allowedMethods[0]] : ['pickup'];
+  });
+
+  const isPickupAllowed = !allowedMethods || allowedMethods.includes('pickup');
+  const isShippingAllowed = !allowedMethods || allowedMethods.includes('shipping');
 
   const toggleMethod = (method: 'shipping' | 'pickup') => {
+    if (method === 'pickup' && !isPickupAllowed) return;
+    if (method === 'shipping' && !isShippingAllowed) return;
+
     setSelectedMethods(prev =>
       prev.includes(method)
         ? prev.filter(m => m !== method)
@@ -38,51 +52,61 @@ export default function Step4aFulfillmentSelection({ onSelect, onBack }: Props) 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6 mt-4">
         {/* Pickup Option (First) */}
         <div
-          onClick={() => toggleMethod('pickup')}
-          className={`relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 ${selectedMethods.includes('pickup')
-            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md'
-            : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50'
-            }`}
+          onClick={() => isPickupAllowed && toggleMethod('pickup')}
+          className={`relative rounded-2xl border-2 p-6 transition-all duration-300 ${
+            !isPickupAllowed
+              ? 'opacity-40 cursor-not-allowed border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-gray-900/50'
+              : selectedMethods.includes('pickup')
+                ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md cursor-pointer'
+                : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50 cursor-pointer'
+          }`}
         >
           <div className="flex flex-col items-center text-center gap-4">
-            <div className={`p-4 rounded-full ${selectedMethods.includes('pickup') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
+            <div className={`p-4 rounded-full ${!isPickupAllowed ? 'bg-gray-100 dark:bg-gray-800 text-gray-400' : selectedMethods.includes('pickup') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
               <Store size={32} />
             </div>
             <div>
               <h3 className="text-lg font-bold text-[#1c140d] dark:text-white">In-Store Pickup</h3>
               <p className="text-sm text-[#9c7349] dark:text-[#cba885] mt-2 leading-relaxed">
-                Customers collect items directly from your shop. Great for local traffic.
+                {isPickupAllowed
+                  ? 'Customers collect items directly from your shop. Great for local traffic.'
+                  : 'Not enabled for your business. You can enable this in store settings.'}
               </p>
             </div>
-            {selectedMethods.includes('pickup') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
+            {isPickupAllowed && selectedMethods.includes('pickup') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
           </div>
         </div>
 
         {/* Delivery Option (Second) */}
         <div
-          onClick={() => toggleMethod('shipping')}
-          className={`relative cursor-pointer rounded-2xl border-2 p-6 transition-all duration-300 ${selectedMethods.includes('shipping')
-            ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md'
-            : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50'
-            }`}
+          onClick={() => isShippingAllowed && toggleMethod('shipping')}
+          className={`relative rounded-2xl border-2 p-6 transition-all duration-300 ${
+            !isShippingAllowed
+              ? 'opacity-40 cursor-not-allowed border-gray-200 dark:border-gray-800 bg-gray-50 dark:bg-[#2d241b]'
+              : selectedMethods.includes('shipping')
+                ? 'border-[#f48c25] bg-[#fff8f1] dark:bg-[#f48c25]/5 shadow-md cursor-pointer'
+                : 'border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] hover:border-[#f48c25]/50 cursor-pointer'
+          }`}
         >
           <div className="flex flex-col items-center text-center gap-4">
-            <div className={`p-4 rounded-full ${selectedMethods.includes('shipping') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
+            <div className={`p-4 rounded-full ${!isShippingAllowed ? 'bg-gray-100 dark:bg-gray-800 text-gray-400' : selectedMethods.includes('shipping') ? 'bg-[#f48c25] text-white' : 'bg-[#f4ede7] dark:bg-[#3a2e26] text-[#9c7349]'}`}>
               <Truck size={32} />
             </div>
             <div>
               <h3 className="text-lg font-bold text-[#1c140d] dark:text-white">Delivery / Shipping</h3>
               <p className="text-sm text-[#9c7349] dark:text-[#cba885] mt-2 leading-relaxed">
-                Ship products to customers worldwide. Best for physical goods sent via carriers.
+                {isShippingAllowed
+                  ? 'Ship products to customers worldwide. Best for physical goods sent via carriers.'
+                  : 'Not enabled for your business. You can enable this in store settings.'}
               </p>
             </div>
-            {selectedMethods.includes('shipping') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
+            {isShippingAllowed && selectedMethods.includes('shipping') && <CheckCircle2 className="absolute top-4 right-4 text-[#f48c25]" size={24} />}
           </div>
         </div>
       </div>
 
       {/* Footer Navigation */}
-      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8">
+      <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 z-50">
         <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
           <button
             onClick={onBack}

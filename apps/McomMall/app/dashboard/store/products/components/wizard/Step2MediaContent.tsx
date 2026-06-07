@@ -326,22 +326,21 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
             </div>
 
             {/* Mobile-First Sticky Footer */}
-            <footer className="fixed bottom-0 left-0 right-0 bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] p-4 md:p-6 z-50">
-                <div className="max-w-5xl mx-auto flex flex-col sm:flex-row gap-3 justify-between items-center">
-                    <button onClick={onBack} className="w-full sm:w-auto px-6 py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] text-[#1c140d] dark:text-[#ece0d6] font-semibold flex justify-center items-center gap-2 order-2 sm:order-1">
-                        <ArrowLeft size={18} />
+            <footer className="fixed bottom-16 left-0 right-0 bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+                <div className="max-w-5xl mx-auto flex flex-row gap-2 md:gap-4 justify-between items-center w-full">
+                    <button onClick={onBack} className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] text-[#1c140d] dark:text-[#ece0d6] font-semibold flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap">
+                        <ArrowLeft size={16} className="hidden sm:block" />
                         Back
                     </button>
 
-                    <div className="w-full sm:w-auto flex flex-col sm:flex-row gap-2 order-1 sm:order-2">
-                        <button onClick={onSaveDraft} className="w-full sm:w-auto px-6 py-3 text-[#9c7349] dark:text-[#cba885] font-medium text-sm md:text-base">
-                            Save Draft
-                        </button>
-                        <button onClick={onNext} className="w-full sm:w-auto px-8 py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-2">
-                            Continue
-                            <ArrowRight size={18} />
-                        </button>
-                    </div>
+                    <button onClick={onSaveDraft} className="flex-1 md:flex-none md:ml-auto px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#9c7349] dark:text-[#cba885] font-semibold flex justify-center items-center text-[11px] sm:text-base whitespace-nowrap">
+                        Save Draft
+                    </button>
+
+                    <button onClick={onNext} className="flex-1 md:flex-none px-1 sm:px-8 py-2.5 sm:py-3 rounded-lg bg-[#f48c25] text-white font-bold shadow-lg shadow-[#f48c25]/20 flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap">
+                        Continue
+                        <ArrowRight size={16} className="hidden sm:block" />
+                    </button>
                 </div>
             </footer>
 

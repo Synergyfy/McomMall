@@ -214,7 +214,6 @@ export const useAddListing = () => {
     mutationFn: create,
     onSuccess: data => {
       toast.success(data.message || 'Listing created successfully!');
-      router.push('/dashboard/my-listings');
     },
     onError: (error: Error) => {
       toast.error(error.message);

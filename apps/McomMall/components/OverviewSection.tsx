@@ -161,9 +161,34 @@ export default function OverviewSection({
             Opening Hours
           </h3>
           <ul className="space-y-2">
-            {(listing as InHouseBusiness).businessHours
-              .sort((a, b) => DAY_MAP[a.dayOfWeek] - DAY_MAP[b.dayOfWeek])
-              .map(hour => (
+            {(() => {
+              const hours = (listing as InHouseBusiness).businessHours;
+              if (!hours || hours.length === 0) return null;
+
+              const isAll247 = hours.length === 7 && hours.every(h => h.is24h || (h.openTime === '00:00' && h.closeTime === '23:59'));
+              if (isAll247) {
+                return (
+                  <li className="flex justify-between items-center p-3 rounded-lg bg-orange-50 text-orange-800">
+                    <span className="font-semibold flex items-center gap-2"><Clock size={18} /> Always Open</span>
+                    <span className="font-bold">24/7</span>
+                  </li>
+                );
+              }
+
+              const isStandard = hours.length === 5 && hours.every(h => 
+                ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].includes(h.dayOfWeek) &&
+                h.openTime === '09:00' && h.closeTime === '17:00'
+              );
+              if (isStandard) {
+                return (
+                  <li className="flex justify-between items-center p-3 rounded-lg bg-blue-50 text-blue-800">
+                    <span className="font-semibold flex items-center gap-2"><Clock size={18} /> Standard Hours</span>
+                    <span className="font-bold">Mon-Fri, 9:00 AM - 5:00 PM</span>
+                  </li>
+                );
+              }
+
+              return hours.sort((a, b) => DAY_MAP[a.dayOfWeek] - DAY_MAP[b.dayOfWeek]).map(hour => (
                 <li
                   key={hour.id}
                   className={`flex justify-between p-3 rounded-lg ${DAY_MAP[hour.dayOfWeek] === today
@@ -186,7 +211,8 @@ export default function OverviewSection({
                       )}`}
                   </span>
                 </li>
-              ))}
+              ));
+            })()}
           </ul>
         </div>
       )}
