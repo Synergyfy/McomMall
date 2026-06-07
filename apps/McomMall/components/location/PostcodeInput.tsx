@@ -13,19 +13,22 @@ export function PostcodeInput({ onSelect }: { onSelect: (postcode: string) => vo
     }
     
     setIsSearching(true);
-    const timeout = setTimeout(() => {
-      // Mock suggestions
-      const mockSugs = [
-        input.toUpperCase() + ' 1AA',
-        input.toUpperCase() + ' 2BB',
-      ];
-      if (input.toUpperCase().replace(/\s+/g, '').startsWith('SE15')) {
-        mockSugs.unshift('SE15 5EW (Peckham)');
-      } else if (input.toUpperCase().replace(/\s+/g, '').startsWith('SW9')) {
-        mockSugs.unshift('SW9 8JD (Brixton)');
+    const timeout = setTimeout(async () => {
+      try {
+        const res = await fetch(`/api/business/search-address?postcode=${encodeURIComponent(input)}`);
+        if (res.ok) {
+          const data = await res.json();
+          const formatted = data.map((item: any) => {
+            const area = item.city || item.road || '';
+            return area ? `${item.postcode} (${area})` : item.postcode;
+          });
+          setSuggestions(formatted);
+        }
+      } catch (err) {
+        console.error('Error fetching address suggestions:', err);
+      } finally {
+        setIsSearching(false);
       }
-      setSuggestions(mockSugs);
-      setIsSearching(false);
     }, 400);
     
     return () => clearTimeout(timeout);

@@ -37,6 +37,7 @@ export function Step2ServiceType() {
   const deliveryMode = watch('deliveryConfig.mode');
   const businessId = watch('businessId');
   const enableTieredPackages = watch('enableTieredPackages');
+  const [useDefaults, setUseDefaults] = React.useState(true);
 
   const { data: listings } = useGetUserListings(1, 100);
   const selectedBusiness = React.useMemo(() => {
@@ -60,7 +61,20 @@ export function Step2ServiceType() {
           <CardDescription>Define where and how you provide this service.</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          <FormField
+          <div className="flex items-center justify-between p-4 border rounded-lg bg-orange-50/50 border-orange-100">
+            <div className="space-y-0.5 pr-4">
+              <Label className="text-base font-semibold">Use Default Business Settings</Label>
+              <p className="text-xs text-muted-foreground">Automatically apply the service area and delivery mode from your business profile.</p>
+            </div>
+            <Switch 
+               checked={useDefaults} 
+               onCheckedChange={setUseDefaults} 
+            />
+          </div>
+
+          {!useDefaults && (
+            <>
+              <FormField
             control={control}
             name="deliveryConfig.mode"
             render={({ field }) => (
@@ -181,6 +195,8 @@ export function Step2ServiceType() {
                 />
               </div>
             </div>
+          )}
+            </>
           )}
         </CardContent>
       </Card>

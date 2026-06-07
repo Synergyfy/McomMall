@@ -7,6 +7,7 @@ import { useRouter, usePathname } from 'next/navigation';
 import { Plus, Minus, ChevronDown, LogOut } from 'lucide-react';
 import { RootState } from '@/service/store/store';
 import { logout } from '@/service/store/authSlice';
+import { useGetUserListings } from '@/service/listings/hook';
 import {
   mainMenuItems,
   listingMenuItems,
@@ -33,6 +34,15 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
     {}
   );
   const [expandedSection, setExpandedSection] = useState<string | null>('Main');
+
+  const { data: listingsData } = useGetUserListings(1, 100);
+  const listings = listingsData?.data || [];
+  
+  const hasProducts = listings.some(l => l.listingType?.includes('RETAIL'));
+  const hasServices = listings.some(l => l.listingType?.includes('SERVICE'));
+  
+  const showProducts = listings.length === 0 || hasProducts;
+  const showServices = listings.length === 0 || hasServices;
 
   useEffect(() => {
     if (isCollapsed) {
@@ -173,8 +183,8 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
         {(isCollapsed || expandedSection === 'Main') && renderMenuItems(mainMenuItems)}
       </nav>
       {renderSection('Listing', listingMenuItems)}
-      {renderSection('Product', productMenuItems)}
-      {renderSection('Service', serviceMenuItems)}
+      {showProducts && renderSection('Product', productMenuItems)}
+      {showServices && renderSection('Service', serviceMenuItems)}
       {renderSection('Marketing', [...pluginMenuItems, ...marketingMenuItems])}
       {renderSection('My Purchases', historyMenuItems)}
       <nav className="mt-6">

@@ -420,7 +420,7 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                     )}
 
                     {/* Sticky Footer for Mobile */}
-                    <div className="fixed bottom-0 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8">
+                    <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
                         <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
                             <button
                                 onClick={onBack}

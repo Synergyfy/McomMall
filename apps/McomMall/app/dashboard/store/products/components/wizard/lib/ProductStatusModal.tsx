@@ -11,14 +11,17 @@ interface ProductStatusModalProps {
   primaryAction?: {
     label: string;
     onClick: () => void;
+    icon?: React.ReactNode;
   };
   secondaryAction?: {
     label: string;
     onClick: () => void;
+    icon?: React.ReactNode;
   };
   dashboardAction?: {
     label: string;
     onClick: () => void;
+    icon?: React.ReactNode;
   };
 }
 
@@ -87,7 +90,7 @@ export const ProductStatusModal = ({
                   : 'bg-red-500 hover:bg-red-600 shadow-red-500/20'
               }`}
             >
-              {isSuccess ? <Eye size={16} /> : null}
+              {primaryAction.icon || (isSuccess ? <Eye size={16} /> : null)}
               {primaryAction.label}
             </button>
           )}
@@ -97,7 +100,7 @@ export const ProductStatusModal = ({
               onClick={secondaryAction.onClick}
               className="w-full rounded-lg bg-white dark:bg-transparent px-4 py-3 text-sm font-bold text-[#f48c25] ring-1 ring-inset ring-[#f48c25] hover:bg-[#f48c25]/5 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <Plus size={16} />
+              {secondaryAction.icon || <Plus size={16} />}
               {secondaryAction.label}
             </button>
           )}
@@ -107,7 +110,7 @@ export const ProductStatusModal = ({
               onClick={dashboardAction.onClick}
               className="w-full rounded-lg bg-transparent px-4 py-2 text-xs font-bold text-[#9c7349] hover:text-[#f48c25] dark:hover:text-white hover:bg-[#f48c25]/5 transition-all duration-200 flex items-center justify-center gap-2"
             >
-              <LayoutDashboard size={14} />
+              {dashboardAction.icon || <LayoutDashboard size={14} />}
               {dashboardAction.label}
             </button>
           )}

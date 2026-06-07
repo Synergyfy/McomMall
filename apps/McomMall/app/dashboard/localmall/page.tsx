@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import dynamic from 'next/dynamic';
 import { LocalCampaignsPanel } from '@/components/campaigns/LocalCampaignsPanel';
+import api from '@/service/api';
 
 const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDiscovery'), { ssr: false });
 import {
@@ -113,6 +114,173 @@ function Avatar({ logo, name }: { logo: string | null; name: string }) {
   );
 }
 
+// ── Business Categorisation Helper ───────────────────────────────────────────
+function getBusinessCategory(name: string): 'tech' | 'food' | 'fashion' | 'wellness' | 'general' {
+  const lowercaseName = (name || '').toLowerCase();
+  if (
+    lowercaseName.includes('laptop') ||
+    lowercaseName.includes('computer') ||
+    lowercaseName.includes('pc') ||
+    lowercaseName.includes('tech') ||
+    lowercaseName.includes('phone') ||
+    lowercaseName.includes('mobile') ||
+    lowercaseName.includes('electronic') ||
+    lowercaseName.includes('gadget') ||
+    lowercaseName.includes('software') ||
+    lowercaseName.includes('it ') ||
+    lowercaseName.includes('system')
+  ) {
+    return 'tech';
+  }
+  if (
+    lowercaseName.includes('bakery') ||
+    lowercaseName.includes('bread') ||
+    lowercaseName.includes('cake') ||
+    lowercaseName.includes('coffee') ||
+    lowercaseName.includes('cafe') ||
+    lowercaseName.includes('deli') ||
+    lowercaseName.includes('food') ||
+    lowercaseName.includes('restaurant') ||
+    lowercaseName.includes('bistro') ||
+    lowercaseName.includes('kitchen') ||
+    lowercaseName.includes('wine') ||
+    lowercaseName.includes('bar') ||
+    lowercaseName.includes('diner') ||
+    lowercaseName.includes('sweet')
+  ) {
+    return 'food';
+  }
+  if (
+    lowercaseName.includes('clothing') ||
+    lowercaseName.includes('boutique') ||
+    lowercaseName.includes('fashion') ||
+    lowercaseName.includes('apparel') ||
+    lowercaseName.includes('shoes') ||
+    lowercaseName.includes('wear') ||
+    lowercaseName.includes('tailor') ||
+    lowercaseName.includes('style')
+  ) {
+    return 'fashion';
+  }
+  if (
+    lowercaseName.includes('salon') ||
+    lowercaseName.includes('barber') ||
+    lowercaseName.includes('hair') ||
+    lowercaseName.includes('spa') ||
+    lowercaseName.includes('beauty') ||
+    lowercaseName.includes('wellness') ||
+    lowercaseName.includes('nails') ||
+    lowercaseName.includes('yoga') ||
+    lowercaseName.includes('gym') ||
+    lowercaseName.includes('fitness') ||
+    lowercaseName.includes('therapy')
+  ) {
+    return 'wellness';
+  }
+  return 'general';
+}
+
+// ── Smart Partnership Recommendation System ──────────────────────────────────
+interface SmartPartner {
+  pct: number;
+  name: string;
+  icon: React.ComponentType<{ className?: string }>;
+  description: string;
+}
+
+function getSmartPartnerships(businessName: string, otherBusinesses: any[]): SmartPartner[] {
+  const currentCategory = getBusinessCategory(businessName);
+
+  if (!otherBusinesses || otherBusinesses.length === 0) {
+    // Category-specific mock templates
+    switch (currentCategory) {
+      case 'tech':
+        return [
+          { pct: 96, name: `${businessName || 'Laptop Sales'} × Local Tech Support`, icon: Zap, description: 'Tech Synergy' },
+          { pct: 92, name: `${businessName || 'Laptop Sales'} × Co-working Spaces`, icon: Users, description: 'Co-working Hub' },
+        ];
+      case 'food':
+        return [
+          { pct: 96, name: `${businessName || 'Coffee Shop'} × Local Bakery`, icon: Coffee, description: 'Menu Collaboration' },
+          { pct: 92, name: `Community Garden × ${businessName || 'Cafe'}`, icon: Leaf, description: 'Organic Supply' },
+        ];
+      case 'fashion':
+        return [
+          { pct: 96, name: `${businessName || 'Boutique'} × Local Tailor & Repairs`, icon: Award, description: 'Complementary Fit' },
+          { pct: 92, name: `${businessName || 'Boutique'} × Artisan Jewellery`, icon: Sparkles, description: 'Accessory Bundle' },
+        ];
+      case 'wellness':
+        return [
+          { pct: 96, name: `${businessName || 'Salons'} × Organic Skincare Shop`, icon: ShieldCheck, description: 'Product Synergy' },
+          { pct: 92, name: `Local Yoga Studio × ${businessName || 'Gym'}`, icon: Activity, description: 'Wellness Bundle' },
+        ];
+      default:
+        return [
+          { pct: 96, name: `${businessName || 'Artisan Coffee'} × Local Bakery`, icon: Coffee, description: 'Menu Collaboration' },
+          { pct: 92, name: `Community Garden × ${businessName || 'Local Logistics'}`, icon: Leaf, description: 'Supply Logistics' },
+        ];
+    }
+  }
+
+  // Dynamic matching based on actual other businesses in the mall
+  return otherBusinesses.map((b: any) => {
+    const otherCat = getBusinessCategory(b.businessName);
+    let pct = 70;
+    let matchIcon = Star;
+    let description = 'Ecosystem Member';
+
+    if (currentCategory === otherCat && currentCategory !== 'general') {
+      pct = 96;
+      matchIcon = Sparkles;
+      description = 'Direct Sector Synergy';
+    } else if (
+      (currentCategory === 'tech' && otherCat === 'general') ||
+      (currentCategory === 'food' && otherCat === 'general')
+    ) {
+      pct = 84;
+      matchIcon = Package;
+      description = 'Ecosystem Supplier';
+    } else if (currentCategory === 'food' && b.businessName.toLowerCase().includes('garden')) {
+      pct = 92;
+      matchIcon = Leaf;
+      description = 'Farm-to-Table Supply';
+    } else if (currentCategory === 'tech' && otherCat === 'food') {
+      pct = 76;
+      matchIcon = Coffee;
+      description = 'Remote Work Promo';
+    } else if (currentCategory === 'food' && otherCat === 'tech') {
+      pct = 76;
+      matchIcon = Zap;
+      description = 'Smart POS Partner';
+    } else {
+      pct = 54;
+      matchIcon = Users;
+      description = 'Local Foot Traffic';
+    }
+
+    return {
+      pct,
+      name: `${businessName || 'Your Business'} × ${b.businessName}`,
+      icon: matchIcon,
+      description
+    };
+  }).sort((a, b) => b.pct - a.pct).slice(0, 2);
+}
+
+function getIconForPartnership(description: string, name: string) {
+  const desc = (description || '').toLowerCase();
+  const nm = (name || '').toLowerCase();
+  if (desc.includes('tech') || nm.includes('tech') || nm.includes('support')) return Zap;
+  if (desc.includes('co-working') || desc.includes('hub')) return Users;
+  if (desc.includes('menu') || desc.includes('coffee') || nm.includes('coffee') || nm.includes('bakery')) return Coffee;
+  if (desc.includes('organic') || desc.includes('garden') || nm.includes('garden')) return Leaf;
+  if (desc.includes('fit') || desc.includes('tailor')) return Award;
+  if (desc.includes('accessory') || desc.includes('jewel') || desc.includes('synergy')) return Sparkles;
+  if (desc.includes('product') || desc.includes('skincare')) return ShieldCheck;
+  if (desc.includes('wellness') || desc.includes('yoga') || desc.includes('gym')) return Activity;
+  return Star;
+}
+
 // ═════════════════════════════════════════════════════════════════════════════
 // PAGE
 // ═════════════════════════════════════════════════════════════════════════════
@@ -128,8 +296,11 @@ export default function LocalMallPage() {
   const [isSignupFlow, setIsSignupFlow] = useState(false);
   const [isMapModalOpen, setIsMapModalOpen] = useState(false);
   const [isCampaignPanelOpen, setIsCampaignPanelOpen] = useState(false);
+  const [mallData, setMallData] = useState<any>(null);
+  const [partnerships, setPartnerships] = useState<any[]>([]);
 
-  const nodeCount = useCounter(1284, 1600);
+  const [targetNodeCount, setTargetNodeCount] = useState(1284);
+  const nodeCount = useCounter(targetNodeCount, 1600);
   const sponsorPct = useCounter(65, 1200);
 
   useEffect(() => {
@@ -144,14 +315,61 @@ export default function LocalMallPage() {
     const raw = localStorage.getItem('businessOnboarding');
     const ob = raw ? JSON.parse(raw) : {};
     setBusinessName(ob.businessName || '');
-    setPostcode(ob.postcode || '');
+    const pc = ob.postcode || '';
+    setPostcode(pc);
     if (ob.logo) setLogo(ob.logo);
 
     const params = new URLSearchParams(window.location.search);
     if (params.get('signup') === 'true' || params.get('onboarding') === 'true') {
       setIsSignupFlow(true);
     }
+
+    const fetchFeed = async () => {
+      try {
+        const url = pc 
+          ? `localmall/customer/feed?postcode=${encodeURIComponent(pc)}` 
+          : 'localmall/customer/feed';
+        const res = await api.get(url);
+        if (res.data) {
+          setMallData(res.data);
+          setTargetNodeCount(res.data.businesses?.length ?? 0);
+          if (res.data.borough) {
+            setArea(res.data.borough);
+          }
+        }
+      } catch (err) {
+        console.error('Error fetching LocalMall feed:', err);
+      }
+    };
+
+    fetchFeed();
   }, []);
+
+  useEffect(() => {
+    if (!businessName) return;
+
+    const fetchPartnerships = async () => {
+      try {
+        const res = await api.get('localmall/business/partnerships');
+        if (res.data && res.data.length > 0) {
+          const mapped = res.data.map((p: any) => ({
+            ...p,
+            icon: getIconForPartnership(p.description, p.name),
+          }));
+          setPartnerships(mapped);
+        } else {
+          const other = mallData?.businesses?.filter((b: any) => b.businessName !== businessName) || [];
+          setPartnerships(getSmartPartnerships(businessName, other));
+        }
+      } catch (err) {
+        console.error('Error fetching backend partnerships, falling back:', err);
+        const other = mallData?.businesses?.filter((b: any) => b.businessName !== businessName) || [];
+        setPartnerships(getSmartPartnerships(businessName, other));
+      }
+    };
+
+    fetchPartnerships();
+  }, [mallData, businessName]);
 
   const meta = TIER_META[tier] ?? TIER_META.high_street;
 
@@ -163,28 +381,26 @@ export default function LocalMallPage() {
     { id: 'hub', label: 'Hub', Icon: LayoutDashboard },
   ];
 
-  // ── Mock partnership data ────────────────────────────────────────────────────
-  const partnerships = [
-    { pct: 96, name: `Artisan Coffee × Local Bakery`, icon: Coffee },
-    { pct: 92, name: `Community Garden Logistics`, icon: Leaf },
-  ];
+  // ── Network connections ────────────────────────────────────────────────────────
+  const networkMembers: { name: string; tier: string; dist: string; color: string }[] = mallData?.businesses
+    ? (mallData.businesses.map((b: any, index: number) => ({
+        name: b.businessName,
+        tier: b.category || 'Store',
+        dist: b.address || 'Local',
+        color: index % 3 === 0 ? '#d97706' : index % 3 === 1 ? '#ea580c' : '#dc2626',
+      })) as { name: string; tier: string; dist: string; color: string }[])
+    : [];
 
-  // ── Network connections (mock) ───────────────────────────────────────────────
-  const networkMembers = [
-    { name: 'Green Bite Café', tier: 'High Street', dist: '120m', color: '#d97706' },
-    { name: 'Petal & Bloom Florist', tier: 'Hyper Local', dist: '340m', color: '#ea580c' },
-    { name: 'Craft & Co Studio', tier: 'High Street', dist: '510m', color: '#d97706' },
-    { name: 'NorthSide Barbers', tier: 'Hyper Local', dist: '720m', color: '#ea580c' },
-    { name: 'Byte & Grind Tech', tier: 'Nearby', dist: '1.2km', color: '#dc2626' },
-  ];
-
-  // ── Rewards (mock) ───────────────────────────────────────────────────────────
-  const rewardDeals = [
-    { business: `Coffee Craft ${area}`, deal: 'Free Muffin with any hot drink', pts: 50, icon: Coffee, expires: '2d' },
-    { business: `Petals ${area}`, deal: '15% Off Bloom Bouquet', pts: 80, icon: Leaf, expires: '5d' },
-    { business: 'Artisan Books', deal: 'Buy 2 Get 1 Free', pts: 120, icon: Package, expires: '3d' },
-    { business: `${area} Deli`, deal: 'Free Side with Main', pts: 60, icon: Star, expires: '1d' },
-  ];
+  // ── Rewards ───────────────────────────────────────────────────────────────────
+  const rewardDeals: { business: string; deal: string; pts: number; icon: any; expires: string }[] = mallData?.nearbyDeals
+    ? (mallData.nearbyDeals.map((d: any) => ({
+        business: d.business,
+        deal: d.deal,
+        pts: d.points || 50,
+        icon: Coffee,
+        expires: d.expires || '3d',
+      })) as { business: string; deal: string; pts: number; icon: any; expires: string }[])
+    : [];
 
   // ────────────────────────────────────────────────────────────────────────────
   return (
@@ -286,7 +502,9 @@ export default function LocalMallPage() {
                             <PIcon className="w-4 h-4 text-orange-600" />
                           </div>
                           <div>
-                            <p className="text-[10px] font-black text-orange-600 mb-0.5">{p.pct}% Match</p>
+                            <p className="text-[10px] font-black text-orange-600 mb-0.5">
+                              {p.pct}% Match{p.description ? ` • ${p.description}` : ''}
+                            </p>
                             <p className="text-xs font-bold text-gray-900">{p.name}</p>
                           </div>
                         </div>
@@ -484,35 +702,41 @@ export default function LocalMallPage() {
 
               {/* Member list */}
               <div className="space-y-2.5">
-                {networkMembers.map((m, i) => (
-                  <motion.div
-                    key={m.name}
-                    initial={{ x: 20, opacity: 0 }}
-                    animate={{ x: 0, opacity: 1 }}
-                    transition={{ delay: i * 0.07 }}
-                    className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
-                  >
-                    <div
-                      className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
-                      style={{ background: `linear-gradient(135deg, ${m.color}, ${m.color}bb)` }}
+                {networkMembers.length > 0 ? (
+                  networkMembers.map((m, i) => (
+                    <motion.div
+                      key={m.name}
+                      initial={{ x: 20, opacity: 0 }}
+                      animate={{ x: 0, opacity: 1 }}
+                      transition={{ delay: i * 0.07 }}
+                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
                     >
-                      {m.name[0]}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-sm font-bold text-gray-900 truncate">{m.name}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <span
-                          className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                          style={{ color: m.color, backgroundColor: `${m.color}15` }}
-                        >
-                          {m.tier}
-                        </span>
-                        <span className="text-[10px] text-gray-400">{m.dist} away</span>
+                      <div
+                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
+                        style={{ background: `linear-gradient(135deg, ${m.color}, ${m.color}bb)` }}
+                      >
+                        {m.name[0]}
                       </div>
-                    </div>
-                    <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-                  </motion.div>
-                ))}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-sm font-bold text-gray-900 truncate">{m.name}</p>
+                        <div className="flex items-center gap-2 mt-0.5">
+                          <span
+                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                            style={{ color: m.color, backgroundColor: `${m.color}15` }}
+                          >
+                            {m.tier}
+                          </span>
+                          <span className="text-[10px] text-gray-400">{m.dist} away</span>
+                        </div>
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
+                    </motion.div>
+                  ))
+                ) : (
+                  <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-gray-100">
+                    No other businesses found in this local mall ecosystem yet.
+                  </div>
+                )}
               </div>
             </motion.div>
           )}
@@ -538,7 +762,9 @@ export default function LocalMallPage() {
                 style={{ boxShadow: `0 16px 40px -10px ${meta.shadow}` }}
               >
                 <p className="text-[10px] font-black text-white/60 tracking-widest uppercase mb-2">Your Points Balance</p>
-                <p className="text-4xl font-black text-white tabular-nums">2,400</p>
+                <p className="text-4xl font-black text-white tabular-nums">
+                  {(mallData?.pointsBalance ?? 2400).toLocaleString()}
+                </p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <TrendingUp className="w-3.5 h-3.5 text-white/70" />
                   <p className="text-xs text-white/70 font-semibold">+320 pts this week</p>
@@ -547,37 +773,43 @@ export default function LocalMallPage() {
 
               {/* Deal cards */}
               <div className="space-y-3">
-                {rewardDeals.map((d, i) => {
-                  const DIcon = d.icon;
-                  return (
-                    <motion.div
-                      key={d.business}
-                      initial={{ x: 20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: i * 0.08 }}
-                      className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
-                    >
-                      <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-                        <DIcon className="w-6 h-6 text-orange-500" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-[10px] font-bold text-orange-500 mb-0.5 truncate">{d.business}</p>
-                        <p className="text-sm font-bold text-gray-900 leading-snug">{d.deal}</p>
-                        <div className="flex items-center gap-2 mt-1">
-                          <span className="text-[10px] text-gray-400 font-semibold">{d.pts} pts</span>
-                          <span className="text-[10px] text-gray-300">•</span>
-                          <span className="text-[10px] text-red-400 font-bold">Expires {d.expires}</span>
-                        </div>
-                      </div>
-                      <button
-                        className="shrink-0 px-3 py-1.5 rounded-xl text-white text-[11px] font-bold"
-                        style={{ background: `linear-gradient(135deg, ${meta.accent}, #ea580c)` }}
+                {rewardDeals.length > 0 ? (
+                  rewardDeals.map((d, i) => {
+                    const DIcon = d.icon;
+                    return (
+                      <motion.div
+                        key={d.business}
+                        initial={{ x: 20, opacity: 0 }}
+                        animate={{ x: 0, opacity: 1 }}
+                        transition={{ delay: i * 0.08 }}
+                        className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
                       >
-                        Claim
-                      </button>
-                    </motion.div>
-                  );
-                })}
+                        <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
+                          <DIcon className="w-6 h-6 text-orange-500" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-[10px] font-bold text-orange-500 mb-0.5 truncate">{d.business}</p>
+                          <p className="text-sm font-bold text-gray-900 leading-snug">{d.deal}</p>
+                          <div className="flex items-center gap-2 mt-1">
+                            <span className="text-[10px] text-gray-400 font-semibold">{d.pts} pts</span>
+                            <span className="text-[10px] text-gray-300">•</span>
+                            <span className="text-[10px] text-red-400 font-bold">Expires {d.expires}</span>
+                          </div>
+                        </div>
+                        <button
+                          className="shrink-0 px-3 py-1.5 rounded-xl text-white text-[11px] font-bold"
+                          style={{ background: `linear-gradient(135deg, ${meta.accent}, #ea580c)` }}
+                        >
+                          Claim
+                        </button>
+                      </motion.div>
+                    );
+                  })
+                ) : (
+                  <div className="bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
+                    No active community rewards or deals available at this time.
+                  </div>
+                )}
               </div>
             </motion.div>
           )}

@@ -440,31 +440,117 @@ export default function AboutSection({ listing }: AboutSectionProps) {
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
 
-            {listing.businessHours?.sort((a, b) => {
+            {(() => {
 
-              const dayOrder: Record<string, number> = { 'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6 };
+              const hours = listing.businessHours;
 
-              return dayOrder[a.dayOfWeek] - dayOrder[b.dayOfWeek];
+              if (!hours || hours.length === 0) return null;
 
-            }).map((hour) => (
+              
 
-              <div key={hour.id} className={`flex items-center justify-between p-4 rounded-2xl transition-all ${hour.dayOfWeek === todayString ? 'bg-orange-50 border border-orange-100' : 'hover:bg-gray-50'}`}>
+              const isAll247 = hours.length === 7 && hours.every(h => h.is24h || (h.openTime === '00:00' && h.closeTime === '23:59'));
 
-                <span className={`text-sm font-bold ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-600'}`}>
+              if (isAll247) {
 
-                  {daysOfWeek[Object.keys(DAY_MAP).find(k => DAY_MAP[Number(k)] === hour.dayOfWeek) as any]}
+                return (
 
-                </span>
+                  <div className="md:col-span-2 flex items-center justify-between p-6 bg-orange-50 border border-orange-100 rounded-2xl">
 
-                <span className={`text-sm font-black ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-900'}`}>
+                    <div className="flex items-center gap-4">
 
-                  {hour.is24h ? '24 Hours' : `${formatTime(hour.openTime)} - ${formatTime(hour.closeTime)}`}
+                      <div className="w-12 h-12 rounded-xl bg-[#f58220] text-white flex items-center justify-center shadow-lg shadow-orange-500/20">
 
-                </span>
+                        <Clock size={24} />
 
-              </div>
+                      </div>
 
-            ))}
+                      <div>
+
+                        <h4 className="text-lg font-black text-gray-900">Open 24/7</h4>
+
+                        <p className="text-sm font-medium text-gray-500">We are always open to serve you</p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                );
+
+              }
+
+
+
+              const isStandard = hours.length === 5 && hours.every(h => 
+
+                ['MONDAY', 'TUESDAY', 'WEDNESDAY', 'THURSDAY', 'FRIDAY'].includes(h.dayOfWeek) &&
+
+                h.openTime === '09:00' && h.closeTime === '17:00'
+
+              );
+
+              if (isStandard) {
+
+                return (
+
+                  <div className="md:col-span-2 flex items-center justify-between p-6 bg-blue-50 border border-blue-100 rounded-2xl">
+
+                    <div className="flex items-center gap-4">
+
+                      <div className="w-12 h-12 rounded-xl bg-blue-500 text-white flex items-center justify-center shadow-lg shadow-blue-500/20">
+
+                        <CalendarCheck size={24} />
+
+                      </div>
+
+                      <div>
+
+                        <h4 className="text-lg font-black text-gray-900">Standard Hours</h4>
+
+                        <p className="text-sm font-medium text-gray-500">Monday - Friday, 9:00 AM - 5:00 PM</p>
+
+                      </div>
+
+                    </div>
+
+                  </div>
+
+                );
+
+              }
+
+
+
+              // Custom Hours logic
+
+              return hours.sort((a, b) => {
+
+                const dayOrder: Record<string, number> = { 'SUNDAY': 0, 'MONDAY': 1, 'TUESDAY': 2, 'WEDNESDAY': 3, 'THURSDAY': 4, 'FRIDAY': 5, 'SATURDAY': 6 };
+
+                return dayOrder[a.dayOfWeek] - dayOrder[b.dayOfWeek];
+
+              }).map((hour) => (
+
+                <div key={hour.id} className={`flex items-center justify-between p-4 rounded-2xl transition-all ${hour.dayOfWeek === todayString ? 'bg-orange-50 border border-orange-100' : 'hover:bg-gray-50'}`}>
+
+                  <span className={`text-sm font-bold ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-600'}`}>
+
+                    {daysOfWeek[Object.keys(DAY_MAP).find(k => DAY_MAP[Number(k)] === hour.dayOfWeek) as any]}
+
+                  </span>
+
+                  <span className={`text-sm font-black ${hour.dayOfWeek === todayString ? 'text-[#f58220]' : 'text-gray-900'}`}>
+
+                    {hour.is24h ? '24 Hours' : `${formatTime(hour.openTime)} - ${formatTime(hour.closeTime)}`}
+
+                  </span>
+
+                </div>
+
+              ));
+
+            })()}
 
           </div>
 
