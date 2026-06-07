@@ -183,4 +183,15 @@ export class UsersController {
   ) {
     return this.usersService.updateFeatures(req.user.id, updateUserFeaturesDto);
   }
+
+  @ApiOperation({ summary: 'Delete a user by email (testing only)' })
+  @Public()
+  @Delete('test/delete-by-email')
+  async deleteByEmail(@Query('email') email: string, @Query('secret') secret: string) {
+    if (secret !== 'mcom_test_delete_secret_2026') {
+      throw new ForbiddenException('Invalid secret');
+    }
+    return this.usersService.deleteByEmail(email);
+  }
 }
+

@@ -9,10 +9,14 @@ import { JwtAuthGuard } from './common/guards/jwt-auth.guard';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { GlobalExceptionFilter } from './common/filters/global-exception.filter';
 import { CamelCaseInterceptor } from './interceptors/camel-case.interceptor';
+import { json, urlencoded } from 'express';
 
 // 1. Shared Configuration Function
 // This setup applies to both Local and Vercel environments
 async function configureApp(app: any) {
+  app.use(json({ limit: '50mb' }));
+  app.use(urlencoded({ limit: '50mb', extended: true }));
+
   app.enableCors({
     origin: true,
     credentials: true,
@@ -60,6 +64,7 @@ if (require.main === module) {
     const logger = new Logger('Bootstrap');
     const app = await NestFactory.create(AppModule, {
       logger: ['error', 'warn', 'log', 'debug', 'verbose'],
+      bodyParser: false,
     });
 
     await configureApp(app);
@@ -77,7 +82,7 @@ let cachedApp: any;
 
 export default async (req: any, res: any) => {
   if (!cachedApp) {
-    const app = await NestFactory.create(AppModule);
+    const app = await NestFactory.create(AppModule, { bodyParser: false });
     await configureApp(app);
     await app.init();
     cachedApp = app.getHttpAdapter().getInstance();

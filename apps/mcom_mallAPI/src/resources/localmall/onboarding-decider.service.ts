@@ -1,0 +1,135 @@
+import { Injectable, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { ActivatedRegion } from './entities/activated-region.entity';
+import { LocalMall } from './entities/localmall.entity';
+
+@Injectable()
+export class OnboardingDeciderService {
+  constructor(
+    @InjectRepository(ActivatedRegion)
+    private readonly activatedRegionRepository: Repository<ActivatedRegion>,
+    @InjectRepository(LocalMall)
+    private readonly localMallRepository: Repository<LocalMall>,
+  ) {}
+
+  async checkLocation(postcode: string): Promise<any> {
+    if (!postcode) {
+      throw new BadRequestException('Postcode is required');
+    }
+    const cleanPostcode = postcode.trim().toUpperCase();
+
+    // Basic UK Postcode regex check
+    const ukPostcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i;
+    if (!ukPostcodeRegex.test(cleanPostcode)) {
+      return {
+        postcode: cleanPostcode,
+        status: 'inactive',
+        message: 'We currently only support businesses within the United Kingdom. Please enter a valid UK postcode.',
+        options: {
+          allowWaitlist: false,
+          allowDigitalOnly: false,
+          emergingZone: false,
+        },
+      };
+    }
+
+    // 1. Resolve coordinates & borough dynamically using Nominatim
+    let lat = 0;
+    let lon = 0;
+    let borough = '';
+
+    try {
+      const response = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanPostcode)}&format=json&addressdetails=1&limit=1&countrycodes=gb`,
+        {
+          headers: {
+            'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',
+          },
+        }
+      );
+      if (response.ok) {
+        const data = await response.json();
+        if (data && data.length > 0) {
+          lat = parseFloat(data[0].lat);
+          lon = parseFloat(data[0].lon);
+          const addr = data[0].address || {};
+          borough = addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.city || '';
+          
+          // Clean up borough name if it contains prefix/suffix
+          if (borough) {
+            borough = borough
+              .replace(/London Borough of /i, '')
+              .replace(/Borough of /i, '')
+              .replace(/City of /i, '')
+              .trim();
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Nominatim lookup error:', err);
+    }
+
+    if (!borough || isNaN(lat) || isNaN(lon)) {
+      // Fallback for general unrecognized postcode: Option B Waitlist
+      return {
+        postcode: cleanPostcode,
+        status: 'inactive',
+        message: 'Your area is not fully activated yet.',
+        options: {
+          allowWaitlist: true,
+          allowDigitalOnly: true,
+          emergingZone: false,
+        },
+      };
+    }
+
+    // 2. Check if the resolved borough is active in our database
+    const activeRegion = await this.activatedRegionRepository.findOne({
+      where: { name: borough, isActive: true },
+    });
+
+    if (!activeRegion) {
+      // Region not active: Option B
+      return {
+        postcode: cleanPostcode,
+        resolvedArea: borough,
+        latitude: lat,
+        longitude: lon,
+        status: 'inactive',
+        message: `${borough} is not fully activated yet.`,
+        options: {
+          allowWaitlist: true,
+          allowDigitalOnly: true,
+          emergingZone: true,
+        },
+      };
+    }
+
+    // 3. Active: Option A - Join existing mall or create a new one dynamically
+    const mallName = `${borough} Local Mall`;
+    let localMall = await this.localMallRepository.findOne({
+      where: { name: mallName },
+    });
+
+    if (!localMall) {
+      localMall = this.localMallRepository.create({
+        name: mallName,
+        latitude: lat,
+        longitude: lon,
+      });
+      await this.localMallRepository.save(localMall);
+    }
+
+    return {
+      postcode: cleanPostcode,
+      resolvedArea: borough,
+      latitude: lat,
+      longitude: lon,
+      status: 'active',
+      localMallId: localMall.id,
+      localMallName: localMall.name,
+      message: `You are joining: ${localMall.name}`,
+    };
+  }
+}

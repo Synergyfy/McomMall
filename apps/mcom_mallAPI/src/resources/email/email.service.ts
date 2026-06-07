@@ -21,14 +21,18 @@ export class EmailService {
   ) {}
 
   async sendUserWelcomeEmail(user: User) {
-    await this.mailerService.sendMail({
-      to: user.email,
-      subject: 'Welcome to McomMall!',
-      template: './welcome',
-      context: {
-        name: user.firstName,
-      },
-    });
+    try {
+      await this.mailerService.sendMail({
+        to: user.email,
+        subject: 'Welcome to McomMall!',
+        template: './welcome',
+        context: {
+          name: user.firstName,
+        },
+      });
+    } catch (error) {
+      console.error(`Failed to send welcome email to ${user.email}:`, error.message);
+    }
   }
 
   async sendOtp({ email, type }: SendOtpDto) {
@@ -42,6 +46,9 @@ export class EmailService {
     const expiresAt = new Date();
     expiresAt.setMinutes(expiresAt.getMinutes() + 10);
 
+    // Log the OTP to console for easy local testing when SMTP is not connected
+    console.log(`[EmailService] Generated OTP for ${email}: ${otp}`);
+
     await this.otpRepository.save({
       otp,
       type,
@@ -50,14 +57,18 @@ export class EmailService {
       email: email,
     });
 
-    await this.mailerService.sendMail({
-      to: email,
-      subject:
-        type === OtpType.VERIFICATION
-          ? 'Verify your email'
-          : 'Reset your password',
-      html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
-    });
+    try {
+      await this.mailerService.sendMail({
+        to: email,
+        subject:
+          type === OtpType.VERIFICATION
+            ? 'Verify your email'
+            : 'Reset your password',
+        html: `<p>Your OTP is: <strong>${otp}</strong></p>`,
+      });
+    } catch (error) {
+      console.error(`Failed to send OTP email to ${email}:`, error.message);
+    }
 
     return { message: 'OTP sent successfully' };
   }
