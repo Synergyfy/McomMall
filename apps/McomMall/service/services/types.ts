@@ -140,6 +140,9 @@ export interface CreateServiceDto {
 
   hotspots?: Hotspot[];
   availability?: AvailabilityProfile;
+  isFeatured?: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
 }
 
 export interface UpdateServiceDto extends CreateServiceDto {
@@ -222,6 +225,8 @@ export interface Service {
   status?: string;
   duration?: number;
   isFeatured?: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
   business?: IBusiness;
   availability?: AvailabilityProfile;
   averageRating?: number;
