@@ -689,9 +689,9 @@ export default function LocalMallPage() {
               {/* Stats row */}
               <div className="grid grid-cols-3 gap-3 mb-5">
                 {[
-                  { label: 'Active', value: '14', color: '#d97706' },
-                  { label: 'Verified', value: '9', color: '#ea580c' },
-                  { label: 'Partners', value: '3', color: '#dc2626' },
+                  { label: 'Active', value: String(mallData?.businesses?.length || 0), color: '#d97706' },
+                  { label: 'Verified', value: String(mallData?.businesses?.filter((b: any) => b.isVerified || b.isClaimed).length || 0), color: '#ea580c' },
+                  { label: 'Partners', value: String(partnerships.length || 0), color: '#dc2626' },
                 ].map((s) => (
                   <div key={s.label} className="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 text-center">
                     <p className="text-2xl font-black" style={{ color: s.color }}>{s.value}</p>
