@@ -36,7 +36,7 @@ export class GoogleOAuthService {
       access_type: 'online',
       scope: ['https://www.googleapis.com/auth/business.manage'],
       state,
-      prompt: 'consent',
+      prompt: 'select_account consent',
     });
   }
 

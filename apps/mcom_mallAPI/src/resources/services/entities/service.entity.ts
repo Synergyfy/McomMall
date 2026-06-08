@@ -11,6 +11,7 @@ import { Business } from '../../listings/entities/listing.entity';
 import { BundledService } from './bundled-service.entity';
 import { ConfigurableAddon } from './configurable-addon.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { SpareCapacityOffer } from './spare-capacity-offer.entity';
 import { GuestPricingModel, PricingModel } from '../service.enum';
 import { Length, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -181,6 +182,9 @@ export class Service extends AbstractBaseEntity {
     cascade: true,
   })
   configurableAddons: ConfigurableAddon[];
+
+  @OneToMany(() => SpareCapacityOffer, (offer) => offer.service)
+  spareCapacityOffers: SpareCapacityOffer[];
 
   @DeleteDateColumn()
   deletedAt?: Date;
