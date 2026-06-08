@@ -371,7 +371,12 @@ function BusinessOnboardingInner() {
   };
 
   const handleGoogleStart = async () => {
-    if (!selectedPreviewBusiness?.googlePlaceId) return;
+    console.log("handleGoogleStart triggered. selectedPreviewBusiness:", selectedPreviewBusiness);
+    if (!selectedPreviewBusiness?.googlePlaceId) {
+      console.warn("Cannot start Google OAuth: googlePlaceId is missing.", selectedPreviewBusiness);
+      setSubmitError("Failed to start Google connection: No Google Place ID is associated with this business.");
+      return;
+    }
     setIsSubmitting(true);
     setSubmitError(null);
     try {
