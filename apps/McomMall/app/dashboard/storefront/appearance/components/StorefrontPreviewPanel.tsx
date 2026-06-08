@@ -161,7 +161,7 @@ export const StorefrontPreviewPanel: React.FC<StorefrontPreviewPanelProps> = ({
                   <div className="grid grid-cols-2 gap-2">
                     {/* Products */}
                     {featuredProducts.slice(0, 2).map((product) => {
-                      const img = product.media?.[0] || product.images?.[0];
+                      const img = product.media?.[0] || product.imageUrl;
                       return (
                         <div key={product.id} className={`p-2 rounded-xl border ${styles.border} ${styles.cardBg} space-y-1.5`}>
                           <div className="h-16 rounded-lg bg-gray-200 overflow-hidden relative">
@@ -251,7 +251,7 @@ export const StorefrontPreviewPanel: React.FC<StorefrontPreviewPanelProps> = ({
                 ) : (
                   <div className="flex gap-2 overflow-x-auto pb-2">
                     {featuredProducts.map((p) => {
-                      const img = p.media?.[0] || p.images?.[0];
+                      const img = p.media?.[0] || p.imageUrl;
                       return (
                         <div key={p.id} className={`w-28 p-1.5 rounded-lg border ${styles.border} ${styles.cardBg} flex-shrink-0 space-y-1`}>
                           <div className="h-12 rounded bg-gray-200 overflow-hidden">

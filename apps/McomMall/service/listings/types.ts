@@ -153,10 +153,14 @@ export interface UserListing {
   categories: Category[];
   isGoogleVerified: boolean;
   isVerified: boolean;
+  isClaimed: boolean;
+  googlePlaceId?: string;
   isRotatorEligible?: boolean;
   isPromotionEligible?: boolean;
   isFeatured?: boolean;
   location: Location;
+  socialLinks?: SocialLink[];
+  businessHours?: BusinessHour[];
 }
 
 // --- Enums as String Literal Types ---
