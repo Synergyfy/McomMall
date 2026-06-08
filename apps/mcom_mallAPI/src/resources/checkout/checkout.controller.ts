@@ -3,7 +3,7 @@ import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CheckoutService } from './checkout.service';
 import { ApplicableOffersDto } from './dto/applicable-offers.dto';
 import { Request } from 'express';
-import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { InitiateCheckoutDto } from './dto/initiate-checkout.dto';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
 import {
   ApiBearerAuth,
@@ -27,10 +27,10 @@ export class CheckoutController {
   })
   initiateCheckout(
     @Req() req: Request,
-    @Body() createCheckoutDto: CreateCheckoutDto,
+    @Body() initiateCheckoutDto: InitiateCheckoutDto,
   ) {
     const userId = req.user.id;
-    return this.checkoutService.initiateCheckout(userId, createCheckoutDto);
+    return this.checkoutService.initiateCheckout(userId, initiateCheckoutDto);
   }
 
   @Post('complete')

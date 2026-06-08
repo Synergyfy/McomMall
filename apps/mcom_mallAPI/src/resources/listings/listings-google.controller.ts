@@ -50,11 +50,13 @@ export class ListingsGoogleController {
     @Query('lat') lat: number,
     @Query('lng') lng: number,
     @Query('queryText') queryText: string,
+    @Query('radius') radius?: number,
   ) {
     return this.googlePlacesService.fetchGoogleBusinesses({
       lng,
       lat,
       queryText,
+      radius,
     });
   }
 

@@ -17,9 +17,12 @@ export class GooglePlacesService {
     lng: number;
     lat: number;
     queryText: string;
+    radius?: number;
   }) {
     let location = '6.454075,3.394673';
-    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?radius=1500&`;
+    // Default radius is 5000 meters (5 km)
+    const radiusMeters = query?.radius ? Math.round(query.radius * 1000) : 5000;
+    let url = `https://maps.googleapis.com/maps/api/place/textsearch/json?radius=${radiusMeters}&`;
 
     if (query) {
       const { lng, lat, queryText } = query;
@@ -33,7 +36,7 @@ export class GooglePlacesService {
       if (!queryText && lat && lng) {
         console.log('running here');
         location = `${lat},${lng}`;
-        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?radius=1500&`;
+        url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?radius=${radiusMeters}&`;
       }
       url = url + `location=${location}&`;
     }

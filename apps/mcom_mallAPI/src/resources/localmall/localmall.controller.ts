@@ -77,22 +77,24 @@ export class LocalMallController {
 
     const mallName = `${resolvedBorough} Local Mall`;
     
-    // Fetch businesses in this local mall with their active offers
+    // Fetch businesses in this local mall with their active offers and campaigns
     const mall = await this.localMallRepository.findOne({
       where: { name: mallName },
-      relations: ['businesses', 'businesses.location', 'businesses.category', 'businesses.offers'],
+      relations: ['businesses', 'businesses.location', 'businesses.category', 'businesses.offers', 'businesses.campaigns'],
     });
 
     const businesses = mall ? mall.businesses : [];
 
     const nearbyDeals = [];
+    const activeCampaigns = [];
     if (mall && mall.businesses) {
+      const now = new Date();
       for (const b of mall.businesses) {
         if (b.offers) {
           for (const offer of b.offers) {
             if (offer.isActive) {
               const daysLeft = offer.endDate 
-                ? Math.max(0, Math.ceil((new Date(offer.endDate).getTime() - new Date().getTime()) / (1000 * 3600 * 24)))
+                ? Math.max(0, Math.ceil((new Date(offer.endDate).getTime() - now.getTime()) / (1000 * 3600 * 24)))
                 : 3;
               nearbyDeals.push({
                 business: b.businessName,
@@ -103,8 +105,29 @@ export class LocalMallController {
             }
           }
         }
+        if (b.campaigns) {
+          for (const camp of b.campaigns) {
+            const isActive = new Date(camp.startDate) <= now && (!camp.endDate || new Date(camp.endDate) >= now);
+            if (isActive) {
+              const daysLeft = camp.endDate
+                ? Math.max(0, Math.ceil((new Date(camp.endDate).getTime() - now.getTime()) / (1000 * 3600 * 24)))
+                : 3;
+              activeCampaigns.push({
+                id: camp.id,
+                title: `${b.businessName} - ${camp.type.replace(/_/g, ' ')}`,
+                budget: camp.budget,
+                expires: `${daysLeft}d`,
+              });
+            }
+          }
+        }
       }
     }
+
+    // Count live active consumers in database (UserRole.CUSTOMER)
+    const consumerCount = await this.businessRepository.manager.count(User, {
+      where: { role: 'customer' as any },
+    });
 
     return {
       borough: resolvedBorough,
@@ -117,12 +140,12 @@ export class LocalMallController {
         logoUrl: b.logoUrl,
         category: b.category ? b.category.name : 'Store',
         address: b.location ? b.location.addressLine1 : '',
+        isClaimed: b.isClaimed,
+        isVerified: b.isVerified,
       })),
       pointsBalance: 2400,
-      activeCampaigns: [
-        { id: 1, title: `${resolvedBorough} Summer Shop Local`, reward: 'Double Points' },
-        { id: 2, title: `Rye Lane Weekend Food Expo`, reward: 'Free entry & voucher codes' }
-      ],
+      consumerCount,
+      activeCampaigns,
       nearbyDeals
     };
   }
