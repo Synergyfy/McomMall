@@ -15,7 +15,7 @@ import Cookies from 'js-cookie';
 import { useDispatch } from 'react-redux';
 import { setAuthTokens, setUserData, loadAuthFromCookies } from '@/service/store/authSlice';
 import { UserRole } from '@/service/auth/types';
-import api from '@/service/api';
+import api, { baseURL } from '@/service/api';
 import { useAddListing } from '@/service/listings/hook';
 import { useGetSectors, useGetCategoriesBySector, useGetSubCategoriesByCategory } from '@/service/taxonomy/hook';
 import { uploadFile } from '@/lib/upload';
@@ -314,6 +314,37 @@ export default function BusinessOnboarding() {
   const { data: googleCategories } = useGetCategoriesBySector(googleSectorId);
   const { data: googleSubcategories } = useGetSubCategoriesByCategory(googleCategoryId);
 
+  // Dynamic Search state for real Google Places queries
+  const [searchName, setSearchName] = useState('');
+  const [searchLoc, setSearchLoc] = useState('');
+  const [searchRadius, setSearchRadius] = useState(5);
+  const [categorySearchQuery, setCategorySearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<any[]>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [searchError, setSearchError] = useState<string | null>(null);
+
+  const extractPostcode = (address: string) => {
+    const match = address.match(/[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}/i);
+    return match ? match[0] : '';
+  };
+
+  const handleSearch = async () => {
+    if (!searchName.trim() && !searchLoc.trim()) return;
+    setIsSearching(true);
+    setSearchError(null);
+    try {
+      const queryText = `${searchName} ${searchLoc}`.trim();
+      const res = await api.get(`google/google-business?queryText=${encodeURIComponent(queryText)}&radius=${searchRadius}`);
+      const results = res.data?.results || [];
+      setSearchResults(results);
+    } catch (err: any) {
+      setSearchError('Failed to search businesses.');
+      console.error(err);
+    } finally {
+      setIsSearching(false);
+    }
+  };
+
   const handleGoogleStart = () => {
     setIsGoogleOnboarding(true);
     setGoogleMockAccountStep('picker');
@@ -330,17 +361,9 @@ export default function BusinessOnboarding() {
 
   const handleGoogleGrantPermissions = async () => {
     setShowGoogleMockPopup(false);
-    setIsSubmitting(true);
-    setSubmitError(null);
-    try {
-      const res = await api.get(`google-business/branches?email=${encodeURIComponent(googleEmail)}`);
-      setGoogleBranches(res.data);
-      setGoogleStep('branch_select');
-    } catch (err: any) {
-      setSubmitError('Failed to fetch Google Business storefront locations.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    // In the new flow, we proceed straight to the next page once authorized
+    setShowConnectGooglePage(false);
+    setShowBusinessTypePage(true);
   };
 
   const handleGoogleSelectBranch = async (branch: any) => {
@@ -1030,6 +1053,10 @@ export default function BusinessOnboarding() {
       { id: 'store', name: 'Store', icon: <Store className="w-8 h-8 mb-2 mx-auto" /> },
     ];
 
+    const filteredCategories = categoryList.filter(cat =>
+      cat.name.toLowerCase().includes(categorySearchQuery.toLowerCase())
+    );
+
     return (
       <div className="fixed top-16 inset-x-0 bottom-0 bg-gray-50 flex flex-col font-sans z-40 overflow-y-auto">
         {/* Top Bar */}
@@ -1041,11 +1068,15 @@ export default function BusinessOnboarding() {
               </div>
               <input
                 type="text"
-                defaultValue="Melbourne VIC, Australia"
+                value={searchLoc}
+                onChange={(e) => setSearchLoc(e.target.value)}
                 className="block w-full pl-11 pr-10 py-3 bg-white border-none rounded-xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-black font-medium shadow-sm"
                 placeholder="Search location..."
               />
-              <button className="absolute inset-y-0 right-0 pr-4 flex items-center">
+              <button 
+                onClick={() => setSearchLoc('')} 
+                className="absolute inset-y-0 right-0 pr-4 flex items-center"
+              >
                 <X className="h-5 w-5 text-gray-400 hover:text-gray-600" />
               </button>
             </div>
@@ -1056,13 +1087,14 @@ export default function BusinessOnboarding() {
               <div className="flex flex-col flex-1 w-full">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">Distance</span>
-                  <span className="text-xs font-bold text-gray-900">5 km</span>
+                  <span className="text-xs font-bold text-gray-900">{searchRadius} km</span>
                 </div>
                 <input 
                   type="range" 
                   min="1" 
                   max="50" 
-                  defaultValue="5"
+                  value={searchRadius}
+                  onChange={(e) => setSearchRadius(Number(e.target.value))}
                   className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
                 />
               </div>
@@ -1092,6 +1124,15 @@ export default function BusinessOnboarding() {
               </div>
               <input
                 type="text"
+                value={categorySearchQuery}
+                onChange={(e) => setCategorySearchQuery(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter' && categorySearchQuery.trim()) {
+                    setSearchName(categorySearchQuery);
+                    setShowGoogleCategoryPage(false);
+                    setShowFindClaimPage(true);
+                  }
+                }}
                 className="block w-full pl-11 pr-4 py-4 bg-white border border-gray-200 rounded-2xl text-gray-900 placeholder-gray-400 focus:ring-2 focus:ring-black shadow-sm text-lg"
                 placeholder="Find a category..."
               />
@@ -1099,10 +1140,11 @@ export default function BusinessOnboarding() {
           </div>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4">
-            {categoryList.map((cat) => (
+            {filteredCategories.map((cat) => (
               <button
                 key={cat.id}
                 onClick={() => {
+                  setSearchName(cat.name);
                   setShowGoogleCategoryPage(false);
                   setShowFindClaimPage(true);
                 }}
@@ -1114,6 +1156,22 @@ export default function BusinessOnboarding() {
                 <span className="font-bold text-gray-800 text-sm mt-1">{cat.name}</span>
               </button>
             ))}
+
+            {filteredCategories.length === 0 && (
+              <div className="col-span-full text-center py-12 bg-white rounded-3xl border border-dashed border-gray-200 p-8 shadow-sm">
+                <p className="text-gray-500 font-semibold mb-4 text-base">Can't find your category in our quick-list?</p>
+                <button
+                  onClick={() => {
+                    setSearchName(categorySearchQuery);
+                    setShowGoogleCategoryPage(false);
+                    setShowFindClaimPage(true);
+                  }}
+                  className="px-6 py-3 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold transition-all shadow-md active:scale-95"
+                >
+                  Search Google Maps for "{categorySearchQuery}"
+                </button>
+              </div>
+            )}
           </div>
 
         </div>
@@ -1160,28 +1218,57 @@ export default function BusinessOnboarding() {
                     <div className="space-y-2">
                       <div className="relative">
                         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm font-medium" placeholder="Business name or category" type="text" />
+                        <input 
+                          value={searchName}
+                          onChange={(e) => setSearchName(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm font-medium" 
+                          placeholder="Business name or category" 
+                          type="text" 
+                        />
                       </div>
                       <div className="relative">
                         <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-                        <input className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm font-medium" placeholder="Borough, postcode, or city" type="text" />
+                        <input 
+                          value={searchLoc}
+                          onChange={(e) => setSearchLoc(e.target.value)}
+                          onKeyDown={(e) => e.key === 'Enter' && handleSearch()}
+                          className="w-full pl-10 pr-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all text-sm font-medium" 
+                          placeholder="Borough, postcode, or city" 
+                          type="text" 
+                        />
                       </div>
+                      <button 
+                        onClick={handleSearch}
+                        className="w-full py-2.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs shadow-sm transition-all active:scale-[0.98]"
+                      >
+                        {isSearching ? 'Searching...' : 'Search Google Maps'}
+                      </button>
                     </div>
 
                     {/* Radius Slider */}
                     <div className="pt-2 pb-2">
                       <div className="flex justify-between items-center mb-2">
                         <label className="text-xs font-bold text-gray-400 uppercase tracking-wider">Search Radius</label>
-                        <span className="text-xs font-bold text-orange-600">5 miles</span>
+                        <span className="text-xs font-bold text-orange-600">{searchRadius} km</span>
                       </div>
-                      <input className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" max="50" min="1" type="range" defaultValue="5" />
+                      <input 
+                        value={searchRadius}
+                        onChange={(e) => setSearchRadius(Number(e.target.value))}
+                        className="w-full h-1.5 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-orange-500" 
+                        max="50" 
+                        min="1" 
+                        type="range" 
+                      />
                     </div>
                   </div>
                 </div>
 
             {/* View Toggle & Sort (Mobile Friendly) */}
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
-              <span className="text-xs font-bold text-gray-500">3 results found nearby</span>
+              <span className="text-xs font-bold text-gray-500">
+                {isSearching ? 'Searching...' : `${searchResults.length > 0 ? searchResults.length : 3} results found nearby`}
+              </span>
               <div className="flex p-1 bg-gray-200 rounded-lg">
                 <button onClick={() => setMapViewToggle('list')} className={`flex items-center gap-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${mapViewToggle === 'list' ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
                    List
@@ -1194,113 +1281,97 @@ export default function BusinessOnboarding() {
 
             {/* Results Scroll Area */}
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
-              {/* Business Card 1 */}
-              <div className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
-                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuLup_2kxtX6mJS-VcNrXwnsQsYDBvlAgISmW_YksxwZzLOLyP5JMMbKNcbh-5f5v-Mf6SjK8mNKExY7uxcbEAmTUtTKpm_Spog-jTXFGcpiqEOPorGy08-3L7HyBSPORJVurgvQGloT1TqrhgYKH2BCx0X2X45_nwNfkGYgm6UHRe2wCgHakXcl76eP-m8_bKkyDFcTcl9eRYYuQW9dh00Gd4bUmMhOS2vJlMpc0P8qglJPzEa5RJ9-u0" />
-                </div>
-                <div className="flex-grow flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors">The Indigo Kitchen</h3>
-                      <span className="bg-blue-50 text-blue-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-blue-200">Unclaimed</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500 mt-1 text-xs">
-                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                      <span className="font-bold">4.8</span>
-                      <span className="text-gray-400">• European • ££</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 font-medium">124 Baker St, Marylebone, NW1 6XE</p>
-                  </div>
-                  <button onClick={() => {
-                      setSelectedPreviewBusiness({
-                          googlePlaceId: 'mock_1',
-                          businessName: 'The Indigo Kitchen',
-                          address: '124 Baker St, Marylebone, NW1 6XE',
-                          postcode: 'NW1 6XE',
-                          googleCategoryId: 'gcid:restaurant',
-                          businessPhone: '+44 20 7123 4567',
-                          rating: '4.8',
-                          reviews: '1,240',
-                          type: 'Restaurant',
-                          website: 'www.theindigokitchen.com',
-                          hours: 'Open until 10:00 PM',
-                          heroImg: 'https://lh3.googleusercontent.com/aida/AP1WRLutMNpev6WcnuTHJrB_bqpvVksnnweIXoMjdO6KNT8TxkrbYE6021UuCvBuUVI8lXqmTJBgVXWeT5N8omu9J2hf8uxSA5rXsaw6ccNFI71nSEaWyYedCytp5RsinavFnREFp0Vna0lGekkHUTJ8TYHI93aZc3ZyNzEJwJRYEvFGAbCvcHIx17FSukahs-Ig1sF4YGnGBFgYemhJNIlY4txOLVQ0N-iug_bROOpMUbVOP1uKzvV5enuhHg',
-                          thumbImg: 'https://lh3.googleusercontent.com/aida/AP1WRLuqSbKkRpxnW4YEozQRIOMS_UJfqETepGIXrAzFxMnJ25SX7KgO-PYQ117n8E-b0_chZg3e6LljqRTEqrBlIvy2QiXqWNB8--Kqvmj37dKda3-RGjuf-pbl-1oeNDoL93HcelkE1TGrOOfFO8v8J_QWx4SXJ4DWWGTPfg7CuVCmuwz9l7qzilNjrsb2Zlt6n9OT0uwm86RmTIcAoER54ZIFfUA_fgfSaRJvk3d-3Dwd7Op-ugMCTmiUy9w'
-                      });
-                      setShowFindClaimPage(false);
-                      setShowBusinessPreviewPage(true);
-                  }} className="mt-2 text-orange-600 text-xs font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Claim this business <ChevronRight className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
+              {searchResults.length > 0 ? (
+                searchResults.map((result: any) => {
+                  const postcode = extractPostcode(result.formatted_address || result.vicinity || '');
+                  const photoRef = result.photos?.[0]?.photo_reference;
+                  const typeLabel = result.types?.[0] 
+                    ? result.types[0].replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) 
+                    : 'Business';
 
-              {/* Business Card 2 */}
-              <div className="group bg-gray-50 border border-gray-200 rounded-2xl p-3 flex gap-4 cursor-default opacity-75">
-                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-200 grayscale">
-                  <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuK5iw9CjRAO8IkIV6668oZMj0vmsDzM8bYVWe3F6rAWzf3s_oLKeTy8Ij-4K6AqUNT8Kd7Gy5miTU3qFev2Mte3NOgkItz1pC-4azY1HTIMyX2COhnDgG2yriThoU1Cp4zjsUNFE_k23pcUvfzdKSldEfwjseSlhdl-nYUBnoC0NgGcL_SZuLb_Gh8VOjR0hBo-BGNCvUTcGUbWZS-BEDj8yZF_w8kuod0XCx5Qp3TfP-oimam7AtYIw" />
-                </div>
-                <div className="flex-grow flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900">The Sharp Cut</h3>
-                      <span className="bg-green-50 text-green-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-green-200">Claimed</span>
-                    </div>
-                    <div className="flex items-center gap-1 text-gray-500 mt-1 text-xs">
-                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                      <span className="font-bold">4.6</span>
-                      <span className="text-gray-400">• Barber • £</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 font-medium">88 Marylebone High St, W1U 4QU</p>
-                  </div>
-                  <span className="mt-2 text-gray-400 text-xs font-medium italic flex items-center gap-1">
-                    <Check className="w-3.5 h-3.5" /> Owner verified profile
-                  </span>
-                </div>
-              </div>
+                  return (
+                    <div key={result.place_id} className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
+                      <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
+                        {photoRef ? (
+                          <img className="w-full h-full object-cover" src={`${baseURL}google/google-business/photo/${photoRef}`} alt={result.name} />
+                        ) : (
+                          <div className="w-full h-full flex items-center justify-center bg-gray-100 text-gray-400">
+                            <Store className="w-8 h-8" />
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex-grow flex flex-col justify-between">
+                        <div>
+                          <div className="flex justify-between items-start">
+                            <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors">{result.name}</h3>
+                            <span className="bg-blue-50 text-blue-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-blue-200">Unclaimed</span>
+                          </div>
+                          <div className="flex items-center gap-1 text-gray-500 mt-1 text-xs">
+                            <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
+                            <span className="font-bold">{result.rating || '0.0'}</span>
+                            <span className="text-gray-400">• {typeLabel}</span>
+                          </div>
+                          <p className="text-xs text-gray-500 mt-1 font-medium">{result.formatted_address || result.vicinity}</p>
+                        </div>
+                        <button onClick={async () => {
+                            setIsSearching(true);
+                            try {
+                              const detailsRes = await api.get(`google/google-business/${result.place_id}`);
+                              const placeDetails = detailsRes.data?.result || detailsRes.data || {};
+                              
+                              setSelectedPreviewBusiness({
+                                googlePlaceId: result.place_id,
+                                businessName: result.name,
+                                address: placeDetails.formatted_address || result.formatted_address || '',
+                                postcode: postcode || extractPostcode(placeDetails.formatted_address || ''),
+                                googleCategoryId: result.types?.[0] ? `gcid:${result.types[0]}` : 'gcid:unknown_or_generic_category',
+                                businessPhone: placeDetails.international_phone_number || placeDetails.formatted_phone_number || '',
+                                rating: String(result.rating || '4.0'),
+                                reviews: String(result.user_ratings_total || '0'),
+                                type: typeLabel,
+                                website: placeDetails.website || '',
+                                hours: placeDetails.opening_hours?.weekday_text?.[0] || (placeDetails.opening_hours?.open_now ? 'Open now' : 'Closed'),
+                                heroImg: photoRef ? `${baseURL}google/google-business/photo/${photoRef}` : '',
+                                thumbImg: photoRef ? `${baseURL}google/google-business/photo/${photoRef}` : ''
+                              });
+                              
+                              try {
+                                const mapRes = await api.get(`google-business/map-category?googleCategoryId=${encodeURIComponent(result.types?.[0] ? `gcid:${result.types[0]}` : '')}`);
+                                if (mapRes.data) {
+                                  setFormData((prev: any) => ({
+                                    ...prev,
+                                    sectorId: mapRes.data.sectorId || '',
+                                    categoryId: mapRes.data.categoryId || '',
+                                    subCategoryId: mapRes.data.subCategoryId || '',
+                                    businessName: result.name,
+                                    address: placeDetails.formatted_address || result.formatted_address || '',
+                                    postcode: postcode || extractPostcode(placeDetails.formatted_address || ''),
+                                    businessPhone: placeDetails.international_phone_number || placeDetails.formatted_phone_number || '',
+                                  }));
+                                }
+                              } catch (mapErr) {
+                                console.error('Failed to map category:', mapErr);
+                              }
 
-              {/* Business Card 3 */}
-              <div className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
-                <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
-                  <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLutn6skbucCV30sZ5CHUu6wZpL_k9GM7QLQB5psmgY4KRd7jRJYKVHXqBtupPC66urmKRGvDMfafj_y6FdgN4j4VkPtpMWDryiVBgYiHbMudA3rpIWuF9iRj99oWUI5yIbGXqkmoNA8nuekRqb4RBy9iQMSlBkadapLYMsvE6fc6yVQdVwqh34ZTGSlQj3br8NxlWHtD5lrlIWZSM_FpwLv-CKo0wdY3dwotlsXBmSH8WwmAa1J5BGkCw" />
-                </div>
-                <div className="flex-grow flex flex-col justify-between">
-                  <div>
-                    <div className="flex justify-between items-start">
-                      <h3 className="font-bold text-gray-900 group-hover:text-orange-600 transition-colors">Luxe Essentials</h3>
-                      <span className="bg-blue-50 text-blue-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase tracking-widest border border-blue-200">Unclaimed</span>
+                              setShowFindClaimPage(false);
+                              setShowBusinessPreviewPage(true);
+                            } catch (detailsErr) {
+                              console.error('Failed to fetch details:', detailsErr);
+                            } finally {
+                              setIsSearching(false);
+                            }
+                        }} className="mt-2 text-orange-600 text-xs font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform self-start">
+                          Claim this business <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
                     </div>
-                    <div className="flex items-center gap-1 text-gray-500 mt-1 text-xs">
-                      <Star className="w-3.5 h-3.5 text-yellow-500 fill-current" />
-                      <span className="font-bold">4.9</span>
-                      <span className="text-gray-400">• Retail • £££</span>
-                    </div>
-                    <p className="text-xs text-gray-500 mt-1 font-medium">12 George St, Marylebone, W1U 3PP</p>
-                  </div>
-                  <button onClick={() => {
-                      setSelectedPreviewBusiness({
-                          googlePlaceId: 'mock_3',
-                          businessName: 'Luxe Essentials',
-                          address: '12 George St, Marylebone, W1U 3PP',
-                          postcode: 'W1U 3PP',
-                          googleCategoryId: 'gcid:clothing_store',
-                          businessPhone: '+44 20 8989 1234',
-                          rating: '4.9',
-                          reviews: '850',
-                          type: 'Retail',
-                          website: 'www.luxe-essentials.com',
-                          hours: 'Open until 8:00 PM',
-                          heroImg: 'https://lh3.googleusercontent.com/aida/AP1WRLutn6skbucCV30sZ5CHUu6wZpL_k9GM7QLQB5psmgY4KRd7jRJYKVHXqBtupPC66urmKRGvDMfafj_y6FdgN4j4VkPtpMWDryiVBgYiHbMudA3rpIWuF9iRj99oWUI5yIbGXqkmoNA8nuekRqb4RBy9iQMSlBkadapLYMsvE6fc6yVQdVwqh34ZTGSlQj3br8NxlWHtD5lrlIWZSM_FpwLv-CKo0wdY3dwotlsXBmSH8WwmAa1J5BGkCw',
-                          thumbImg: 'https://lh3.googleusercontent.com/aida/AP1WRLutn6skbucCV30sZ5CHUu6wZpL_k9GM7QLQB5psmgY4KRd7jRJYKVHXqBtupPC66urmKRGvDMfafj_y6FdgN4j4VkPtpMWDryiVBgYiHbMudA3rpIWuF9iRj99oWUI5yIbGXqkmoNA8nuekRqb4RBy9iQMSlBkadapLYMsvE6fc6yVQdVwqh34ZTGSlQj3br8NxlWHtD5lrlIWZSM_FpwLv-CKo0wdY3dwotlsXBmSH8WwmAa1J5BGkCw'
-                      });
-                      setShowFindClaimPage(false);
-                      setShowBusinessPreviewPage(true);
-                  }} className="mt-2 text-orange-600 text-xs font-bold flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                    Claim this business <ChevronRight className="w-4 h-4" />
-                  </button>
+                  );
+                })
+              ) : (
+                <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center text-gray-500 text-xs font-semibold">
+                  Search for your business above to begin claiming it.
                 </div>
-              </div>
+              )}
 
               {/* Not seeing your business? */}
               <div className="mt-8 p-6 bg-orange-50/50 rounded-2xl border border-dashed border-orange-200 text-center">
@@ -1333,39 +1404,83 @@ export default function BusinessOnboarding() {
               <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuNzwxrl2iwl_GEfxnCkx5UFA1vsDwHDENTyV1udBmozSwamJtvjNaamIpmtnYhpfGY7Sm5yZSrIicyX_L7iwS_0SaEVl_t3mhgzYABbXLNu6yfBraa5hQp_0l9T2CCUVBmnFSj7A0JlrbTxh-z3NDK4HfsKVxjyPc1LN9lDT4zmAF-JwRcdaAtQEsrT4ClF-mvNPRbsGXHfR9sZ6gaDj7HrW1wgs-RggOWlLhHRHS2Ap3lphr5q4e0vkE" />
               
               {/* Map Pins */}
-              <div className="absolute top-[40%] left-[45%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group">
-                <div className="relative flex flex-col items-center">
-                  <div className="bg-orange-600 text-white p-2 rounded-full shadow-lg border-2 border-white animate-bounce shadow-orange-500/40">
-                    <Building2 className="w-4 h-4" />
+              {searchResults.length > 0 ? (
+                searchResults.map((result: any, index: number) => {
+                  // Scatter pins deterministically around the center area of the static map image
+                  const topOffsets = ['35%', '45%', '55%', '30%', '50%', '40%', '60%'];
+                  const leftOffsets = ['40%', '50%', '60%', '35%', '55%', '45%', '65%'];
+                  const top = topOffsets[index % topOffsets.length];
+                  const left = leftOffsets[index % leftOffsets.length];
+                  const typeLabel = result.types?.[0]
+                    ? result.types[0].replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())
+                    : 'Business';
+
+                  return (
+                    <div 
+                      key={result.place_id || index} 
+                      style={{ top, left }} 
+                      className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30"
+                    >
+                      <div className="relative flex flex-col items-center">
+                        <div className="bg-orange-600 text-white p-2 rounded-full shadow-lg border-2 border-white animate-bounce shadow-orange-500/40">
+                          <Building2 className="w-4 h-4" />
+                        </div>
+                        <div className="hidden group-hover:block absolute bottom-full mb-2 w-48 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-gray-200 shadow-xl z-50">
+                          <p className="text-xs font-bold text-gray-900">{result.name}</p>
+                          <p className="text-[10px] font-medium text-gray-500 mt-0.5">{result.rating || '0.0'} Rating • {typeLabel}</p>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })
+              ) : (
+                <>
+                  {/* Fallback mock pins before any query is performed */}
+                  <div className="absolute top-[40%] left-[45%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30">
+                    <div className="relative flex flex-col items-center">
+                      <div className="bg-orange-600 text-white p-2 rounded-full shadow-lg border-2 border-white animate-bounce shadow-orange-500/40">
+                        <Building2 className="w-4 h-4" />
+                      </div>
+                      <div className="hidden group-hover:block absolute bottom-full mb-2 w-48 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-gray-200 shadow-xl z-20">
+                        <p className="text-xs font-bold text-gray-900">The Indigo Kitchen</p>
+                        <p className="text-[10px] font-medium text-gray-500 mt-0.5">4.8 Rating • European</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="hidden group-hover:block absolute top-full mt-2 w-48 bg-white/90 backdrop-blur-md p-3 rounded-xl border border-gray-200 shadow-xl z-20">
-                    <p className="text-xs font-bold text-gray-900">The Indigo Kitchen</p>
-                    <p className="text-[10px] font-medium text-gray-500 mt-0.5">4.8 Rating • European</p>
+                  
+                  <div className="absolute top-[55%] left-[60%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer opacity-70 z-30">
+                    <div className="bg-gray-500 text-white p-2 rounded-full shadow-lg border-2 border-white">
+                      <Building2 className="w-4 h-4" />
+                    </div>
                   </div>
-                </div>
-              </div>
-              
-              <div className="absolute top-[55%] left-[60%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer opacity-70">
-                <div className="bg-gray-500 text-white p-2 rounded-full shadow-lg border-2 border-white">
-                  <Building2 className="w-4 h-4" />
-                </div>
-              </div>
-              
-              <div className="absolute top-[30%] left-[30%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group">
-                <div className="bg-orange-600 text-white p-2 rounded-full shadow-lg border-2 border-white shadow-orange-500/40">
-                  <Building2 className="w-4 h-4" />
-                </div>
-              </div>
+                  
+                  <div className="absolute top-[30%] left-[30%] transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30">
+                    <div className="bg-orange-600 text-white p-2 rounded-full shadow-lg border-2 border-white shadow-orange-500/40">
+                      <Building2 className="w-4 h-4" />
+                    </div>
+                  </div>
+                </>
+              )}
             </div>
             
             {/* Overlay Card (Contextual) */}
-            <div className="absolute top-6 left-6 w-72 bg-white/90 backdrop-blur-md p-5 rounded-2xl border border-gray-200 shadow-xl hidden lg:block">
+            <div className="absolute top-6 left-6 w-72 bg-white/90 backdrop-blur-md p-5 rounded-2xl border border-gray-200 shadow-xl hidden lg:block z-30">
               <div className="flex items-center gap-2 mb-2">
                 <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></div>
                 <span className="text-xs font-bold text-gray-900 uppercase tracking-wider">Live Search Area</span>
               </div>
               <p className="text-xs text-gray-600 leading-relaxed font-medium">
-                  We've found <strong className="text-gray-900">3 matches</strong> within 5 miles of your current selection. Drag the map or adjust the slider to expand.
+                {isSearching ? (
+                  <span>Searching for matching business profiles...</span>
+                ) : searchResults.length > 0 ? (
+                  <span>
+                    We've found <strong className="text-gray-900">{searchResults.length} matches</strong> within {searchRadius} km of your current selection. Drag the map or adjust the slider to expand.
+                  </span>
+                ) : (
+                  <span>
+                    No search results found. Try adjusting the search radius slider or your query parameters above.
+                  </span>
+                )}
               </p>
             </div>
           </section>
@@ -1658,9 +1773,8 @@ export default function BusinessOnboarding() {
           {/* Action Section */}
           <div className="mt-auto space-y-4">
             <button onClick={() => {
-                setShowConnectGooglePage(false);
-                setIsFinalizingStorefront(false);
-                setShowBuildingStorefrontPage(true);
+                setGoogleMockAccountStep('picker');
+                setShowGoogleMockPopup(true);
             }} className="w-full bg-white border border-gray-200 text-gray-900 h-14 rounded-xl flex items-center justify-center gap-3 px-6 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50 group">
               <svg height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
                 <path d="M19.6001 10.2272C19.6001 9.51813 19.5364 8.83631 19.4183 8.18176H10.0001V12.0499H15.3819C15.1501 13.2999 14.4455 14.359 13.3864 15.0681V17.5772H16.6183C18.5092 15.8363 19.6001 13.2727 19.6001 10.2272Z" fill="#4285F4"></path>
@@ -1821,10 +1935,51 @@ export default function BusinessOnboarding() {
             <p className="text-sm font-medium text-gray-500">We've suggested some categories based on your import.</p>
           </div>
 
-          {/* Search Bar */}
-          <div className="relative mb-8">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
-            <input className="w-full h-14 pl-12 pr-4 bg-white border border-gray-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-orange-500 focus:border-orange-500 outline-none transition-all shadow-sm" placeholder="Search other categories" type="text" />
+          {/* Search Bar & Grid replaced with database taxonomy selects */}
+          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4 mb-8">
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sector</label>
+              <select
+                value={formData.sectorId}
+                onChange={(e) => setFormData({ ...formData, sectorId: e.target.value, categoryId: '', subCategoryId: '' })}
+                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              >
+                <option value="">Select Sector</option>
+                {sectors?.map(s => (
+                  <option key={s.id} value={s.id}>{s.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Category</label>
+              <select
+                value={formData.categoryId}
+                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value, subCategoryId: '' })}
+                disabled={!formData.sectorId}
+                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50"
+              >
+                <option value="">Select Category</option>
+                {categories?.map(c => (
+                  <option key={c.id} value={c.id}>{c.name}</option>
+                ))}
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subcategory</label>
+              <select
+                value={formData.subCategoryId}
+                onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value })}
+                disabled={!formData.categoryId}
+                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50"
+              >
+                <option value="">Select Subcategory</option>
+                {subcategories?.map(sc => (
+                  <option key={sc.id} value={sc.id}>{sc.name}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           {/* Selection Grid */}
@@ -2374,15 +2529,69 @@ export default function BusinessOnboarding() {
   // Review Storefront Page (Step 13)
   // ═══════════════════════════════════════════════════════
   if (showReviewStorefrontPage) {
-    const handleConfirm = () => {
+    const handleConfirm = async () => {
       if (!termsAccepted) {
         setTermsError(true);
         setTimeout(() => setTermsError(false), 500);
         return;
       }
-      setShowReviewStorefrontPage(false);
-      setIsFinalizingStorefront(true);
-      setShowBuildingStorefrontPage(true);
+      
+      setIsSubmitting(true);
+      setSubmitError(null);
+      
+      try {
+        const res = await api.post('google-business/complete-onboarding', {
+          email: googleEmail || 'merchant.jane@gmail.com',
+          firstName: ownerFirstName || 'Jane',
+          lastName: ownerLastName || 'Smith',
+          businessType: formData.businessType || 'products',
+          googlePlaceId: selectedPreviewBusiness?.googlePlaceId || 'mock_1',
+          businessName: selectedPreviewBusiness?.businessName || formData.businessName,
+          businessPhone: selectedPreviewBusiness?.businessPhone || formData.businessPhone || '02071234567',
+          address: selectedPreviewBusiness?.address || formData.address,
+          postcode: selectedPreviewBusiness?.postcode || formData.postcode || 'NW1 6XE',
+          sectorId: formData.sectorId,
+          categoryId: formData.categoryId,
+          subCategoryId: formData.subCategoryId,
+          logoUrl: '',
+        });
+
+        const { auth, user, listing } = res.data;
+
+        api.defaults.headers.common['Authorization'] = `Bearer ${auth.accessToken}`;
+        dispatch(
+          setAuthTokens({
+            accessToken: auth.accessToken,
+            refreshToken: auth.refreshToken,
+          })
+        );
+        dispatch(
+          setUserData({
+            id: user?.id || 'mock_user_id',
+            userName: `${user?.firstName || 'Jane'} ${user?.lastName || 'Smith'}`,
+            userRole: user?.role || 'owner',
+            packageInfo: null,
+          })
+        );
+
+        localStorage.setItem('businessOnboarding', JSON.stringify({
+          businessName: listing.businessName,
+          postcode: selectedPreviewBusiness?.postcode || formData.postcode,
+          address: selectedPreviewBusiness?.address || formData.address,
+          logo: null,
+        }));
+        localStorage.setItem('businessArea', 'London');
+        localStorage.setItem('businessProximityTier', 'high_street');
+
+        setShowReviewStorefrontPage(false);
+        setIsFinalizingStorefront(true);
+        setShowBuildingStorefrontPage(true);
+      } catch (err: any) {
+        console.error('Failed complete-onboarding:', err);
+        setSubmitError(err?.response?.data?.message || err?.message || 'Failed to claim business storefront.');
+      } finally {
+        setIsSubmitting(false);
+      }
     };
 
     return (
@@ -2416,6 +2625,12 @@ export default function BusinessOnboarding() {
             <h2 className="text-3xl md:text-4xl font-black text-gray-900">Review Your Storefront</h2>
             <p className="text-sm font-medium text-gray-500 px-4 max-w-lg mx-auto">Ensure everything is perfect before launching your business to the community.</p>
           </header>
+
+          {submitError && (
+            <div className="p-4 bg-red-50 border border-red-200 rounded-2xl text-red-600 text-sm font-semibold mb-4">
+              {submitError}
+            </div>
+          )}
 
           {/* Asymmetric Bento-style Grid Summary */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
