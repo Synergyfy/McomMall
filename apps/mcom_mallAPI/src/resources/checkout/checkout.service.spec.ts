@@ -12,7 +12,7 @@ import { GiftCardService } from '../gift-card/gift-card.service';
 import { PaymentProviderService } from '../payments/services/payment-provider.service';
 import { ProductService } from '../product/product.service';
 import { CouponService } from '../coupon/coupon.service';
-import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { InitiateCheckoutDto } from './dto/initiate-checkout.dto';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { OrderStatus } from '../order/enums/order-status.enum';
 import { CompleteCheckoutDto } from './dto/complete-checkout.dto';
@@ -126,7 +126,7 @@ describe('CheckoutService', () => {
 
   describe('initiateCheckout', () => {
     it('should create a pending order and return payment intent if balance > 0', async () => {
-      const dto: CreateCheckoutDto = {
+      const dto: InitiateCheckoutDto = {
         items: [{ productId: 'prod-1', quantity: 2 }], // Total: 20
       };
       jest
@@ -150,7 +150,7 @@ describe('CheckoutService', () => {
     });
 
     it('should apply gift card and require no payment if it covers the total', async () => {
-      const dto: CreateCheckoutDto = {
+      const dto: InitiateCheckoutDto = {
         items: [{ productId: 'prod-1', quantity: 2 }], // Total: 20
         giftCardCode: 'GC123',
       };
@@ -175,7 +175,7 @@ describe('CheckoutService', () => {
     });
 
     it('should partially apply gift card and require payment for the rest', async () => {
-      const dto: CreateCheckoutDto = {
+      const dto: InitiateCheckoutDto = {
         items: [{ productId: 'prod-1', quantity: 3 }], // Total: 30
         giftCardCode: 'GC123',
       };
