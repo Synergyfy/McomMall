@@ -12,7 +12,7 @@ import { Product } from '../product/entities/product.entity';
 import { ProductService } from '../product/product.service';
 import { ApplicableOffersDto } from './dto/applicable-offers.dto';
 import { PromotionParticipant } from '../promotion/entities/promotion-participant.entity';
-import { CreateCheckoutDto } from './dto/create-checkout.dto';
+import { InitiateCheckoutDto } from './dto/initiate-checkout.dto';
 import { GiftCardService } from '../gift-card/gift-card.service';
 import { Order } from '../order/entities/order.entity';
 import { OrderItem } from '../order/entities/order-item.entity';
@@ -48,14 +48,14 @@ export class CheckoutService {
     private readonly couponService: CouponService,
   ) {}
 
-  async initiateCheckout(userId: string, createCheckoutDto: CreateCheckoutDto) {
+  async initiateCheckout(userId: string, initiateCheckoutDto: InitiateCheckoutDto) {
     const {
       items,
       giftCardCode,
       couponCode,
       shippingAddressId,
       carrierCode,
-    } = createCheckoutDto;
+    } = initiateCheckoutDto;
     const user = await this.userRepository.findOne({ where: { id: userId } });
     if (!user) throw new NotFoundException('User not found');
 

@@ -1,9 +1,10 @@
 'use client';
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from '@/components/ui/sheet';
 import { useGeoContext } from '@/context/GeoContext';
-import { Users, Crosshair, TrendingUp, Plus, Calendar } from 'lucide-react';
+import { Users, Crosshair, Plus, Calendar } from 'lucide-react';
 import GeoBadge from '../badges/GeoBadge';
+import api from '@/service/api';
 
 interface Props {
   isOpen: boolean;
@@ -11,7 +12,30 @@ interface Props {
 }
 
 export function LocalCampaignsPanel({ isOpen, onOpenChange }: Props) {
-  const { badge, nearestHighStreet } = useGeoContext();
+  const { badge, nearestHighStreet, postcode } = useGeoContext();
+  const [consumerCount, setConsumerCount] = useState<number>(0);
+  const [activeCampaigns, setActiveCampaigns] = useState<any[]>([]);
+
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const fetchData = async () => {
+      try {
+        const url = postcode 
+          ? `localmall/customer/feed?postcode=${encodeURIComponent(postcode)}` 
+          : 'localmall/customer/feed';
+        const res = await api.get(url);
+        if (res.data) {
+          setConsumerCount(res.data.consumerCount ?? 0);
+          setActiveCampaigns(res.data.activeCampaigns ?? []);
+        }
+      } catch (err) {
+        console.error('Error fetching campaign panel feed:', err);
+      }
+    };
+
+    fetchData();
+  }, [isOpen, postcode]);
 
   if (!badge || !nearestHighStreet) return null;
 
@@ -41,7 +65,7 @@ export function LocalCampaignsPanel({ isOpen, onOpenChange }: Props) {
                 <Users className="w-6 h-6 text-indigo-600" />
               </div>
               <div>
-                <p className="text-3xl font-bold text-gray-900">1,204</p>
+                <p className="text-3xl font-bold text-gray-900">{consumerCount.toLocaleString()}</p>
                 <p className="text-sm text-gray-500">Active consumers in a {nearestHighStreet.radiusMiles}mi radius</p>
               </div>
             </div>
@@ -61,27 +85,24 @@ export function LocalCampaignsPanel({ isOpen, onOpenChange }: Props) {
             <h4 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-4">High Street Hub Expos</h4>
             
             <div className="space-y-3">
-              <div className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm hover:border-amber-300 transition-colors cursor-pointer group">
-                <div className="flex justify-between items-start mb-2">
-                  <h5 className="font-bold text-gray-900 group-hover:text-amber-700 transition-colors">Summer Street Festival</h5>
-                  <span className="bg-amber-100 text-amber-800 text-[10px] font-bold px-2 py-1 rounded-full uppercase">Sponsored</span>
+              {activeCampaigns.length > 0 ? (
+                activeCampaigns.map((camp, i) => (
+                  <div key={camp.id || i} className="bg-white rounded-xl border border-amber-200 p-4 shadow-sm hover:border-amber-300 transition-colors cursor-pointer group">
+                    <div className="flex justify-between items-start mb-2">
+                      <h5 className="font-bold text-gray-900 group-hover:text-amber-700 transition-colors">{camp.title}</h5>
+                    </div>
+                    <p className="text-sm text-gray-500 mb-4">Budget: £{camp.budget?.toLocaleString()}</p>
+                    <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
+                      <span className="flex items-center gap-1"><Crosshair className="w-3 h-3" /> {nearestHighStreet.name}</span>
+                      <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Expires in {camp.expires}</span>
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="bg-white rounded-xl border border-gray-200 p-8 text-center text-gray-400 text-sm">
+                  No active community campaigns running in this local mall ecosystem yet.
                 </div>
-                <p className="text-sm text-gray-500 mb-4">Join 24 other local businesses in a joint geo-campaign targeting foot traffic.</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
-                  <span className="flex items-center gap-1"><Crosshair className="w-3 h-3" /> {nearestHighStreet.name}</span>
-                  <span className="flex items-center gap-1"><Calendar className="w-3 h-3" /> Starts in 2 days</span>
-                </div>
-              </div>
-
-              <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm hover:border-gray-300 transition-colors cursor-pointer group">
-                <div className="flex justify-between items-start mb-2">
-                  <h5 className="font-bold text-gray-900 group-hover:text-indigo-600 transition-colors">Weekend Flash Deals</h5>
-                </div>
-                <p className="text-sm text-gray-500 mb-4">A hyper-local push notification blast to users currently within 1 mile.</p>
-                <div className="flex items-center gap-4 text-xs text-gray-500 font-medium">
-                  <span className="flex items-center gap-1"><TrendingUp className="w-3 h-3" /> High Conversion Expected</span>
-                </div>
-              </div>
+              )}
             </div>
           </div>
         </div>

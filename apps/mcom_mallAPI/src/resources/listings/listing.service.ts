@@ -23,6 +23,7 @@ import { Product } from '../product/entities/product.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
 import { OnboardingDeciderService } from '../localmall/onboarding-decider.service';
+import { ActivatedRegion } from '../localmall/entities/activated-region.entity';
 import {
   CapabilityService,
   ActionType,
@@ -145,6 +146,7 @@ export class ListingsService {
       }
 
       let localMallId: string | undefined = undefined;
+      let resolvedArea: string | undefined = undefined;
       if (createBusinessDto.location && createBusinessDto.location.postcode) {
         try {
           const deciderResult = await this.onboardingDeciderService.checkLocation(
@@ -154,9 +156,8 @@ export class ListingsService {
             (businessData.location as any).latitude = deciderResult.latitude;
             (businessData.location as any).longitude = deciderResult.longitude;
             (businessData.location as any).resolvedArea = deciderResult.resolvedArea;
-            if (deciderResult.status === 'active') {
-              localMallId = deciderResult.localMallId;
-            }
+            resolvedArea = deciderResult.resolvedArea;
+            localMallId = deciderResult.localMallId;
           }
         } catch (e) {
           console.error('Failed resolving location details:', e);
@@ -175,6 +176,23 @@ export class ListingsService {
       });
 
       const savedBusiness = await queryRunner.manager.save(business);
+
+      // Update ActivatedRegion active status dynamically based on business counts in the local mall
+      if (localMallId && resolvedArea) {
+        try {
+          const count = await queryRunner.manager.count(Business, {
+            where: { localMallId },
+          });
+          const shouldBeActive = count > 1;
+          await queryRunner.manager.update(
+            ActivatedRegion,
+            { name: resolvedArea },
+            { isActive: shouldBeActive },
+          );
+        } catch (e) {
+          console.error('Failed dynamically activating region:', e);
+        }
+      }
       await this.activitiesService.create(
         user,
         'created',

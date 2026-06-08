@@ -50,46 +50,14 @@ export class ListingsGoogleController {
     @Query('lat') lat: number,
     @Query('lng') lng: number,
     @Query('queryText') queryText: string,
+    @Query('radius') radius?: number,
   ) {
     return this.googlePlacesService.fetchGoogleBusinesses({
       lng,
       lat,
       queryText,
+      radius,
     });
-  }
-
-  @Get(':placeId')
-  @ApiOperation({ summary: 'Get details of a specific Google Business' })
-  @ApiParam({ name: 'placeId', description: 'Google Place ID' })
-  @ApiResponse({
-    status: 200,
-    description: 'Returns detailed information about a Google Business.',
-    example: {
-      place_id: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
-      name: 'Google Sydney',
-      formatted_address: '48 Pirrama Road, Pyrmont NSW 2009, Australia',
-      formatted_phone_number: '(02) 9374 4000',
-      international_phone_number: '+61 2 9374 4000',
-      website: 'https://www.google.com.au/about/careers/locations/sydney/',
-      rating: 4.5,
-      opening_hours: {
-        open_now: true,
-        weekday_text: [
-          'Monday: 9:00 AM – 5:00 PM',
-          'Tuesday: 9:00 AM – 5:00 PM',
-        ],
-      },
-      photos: [
-        {
-          photo_reference: 'CnDnAAAA...',
-          height: 100,
-          width: 100,
-        },
-      ],
-    },
-  })
-  fetchGoogleBusiness(@Param('placeId') placeId: string) {
-    return this.googlePlacesService.fetchGoogleBusiness({ place_id: placeId });
   }
 
   @Get('photo/:photoReference')
@@ -126,5 +94,39 @@ export class ListingsGoogleController {
         error: error?.message || 'Unknown error',
       });
     }
+  }
+
+  @Get(':placeId')
+  @ApiOperation({ summary: 'Get details of a specific Google Business' })
+  @ApiParam({ name: 'placeId', description: 'Google Place ID' })
+  @ApiResponse({
+    status: 200,
+    description: 'Returns detailed information about a Google Business.',
+    example: {
+      place_id: 'ChIJN1t_tDeuEmsRUsoyG83frY4',
+      name: 'Google Sydney',
+      formatted_address: '48 Pirrama Road, Pyrmont NSW 2009, Australia',
+      formatted_phone_number: '(02) 9374 4000',
+      international_phone_number: '+61 2 9374 4000',
+      website: 'https://www.google.com.au/about/careers/locations/sydney/',
+      rating: 4.5,
+      opening_hours: {
+        open_now: true,
+        weekday_text: [
+          'Monday: 9:00 AM – 5:00 PM',
+          'Tuesday: 9:00 AM – 5:00 PM',
+        ],
+      },
+      photos: [
+        {
+          photo_reference: 'CnDnAAAA...',
+          height: 100,
+          width: 100,
+        },
+      ],
+    },
+  })
+  fetchGoogleBusiness(@Param('placeId') placeId: string) {
+    return this.googlePlacesService.fetchGoogleBusiness({ place_id: placeId });
   }
 }

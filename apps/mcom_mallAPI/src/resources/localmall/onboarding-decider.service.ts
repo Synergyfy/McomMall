@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { ActivatedRegion } from './entities/activated-region.entity';
 import { LocalMall } from './entities/localmall.entity';
+import { Business } from '../listings/entities/listing.entity';
 
 @Injectable()
 export class OnboardingDeciderService {
@@ -11,6 +12,8 @@ export class OnboardingDeciderService {
     private readonly activatedRegionRepository: Repository<ActivatedRegion>,
     @InjectRepository(LocalMall)
     private readonly localMallRepository: Repository<LocalMall>,
+    @InjectRepository(Business)
+    private readonly businessRepository: Repository<Business>,
   ) {}
 
   async checkLocation(postcode: string): Promise<any> {
@@ -84,29 +87,7 @@ export class OnboardingDeciderService {
       };
     }
 
-    // 2. Check if the resolved borough is active in our database
-    const activeRegion = await this.activatedRegionRepository.findOne({
-      where: { name: borough, isActive: true },
-    });
-
-    if (!activeRegion) {
-      // Region not active: Option B
-      return {
-        postcode: cleanPostcode,
-        resolvedArea: borough,
-        latitude: lat,
-        longitude: lon,
-        status: 'inactive',
-        message: `${borough} is not fully activated yet.`,
-        options: {
-          allowWaitlist: true,
-          allowDigitalOnly: true,
-          emergingZone: true,
-        },
-      };
-    }
-
-    // 3. Active: Option A - Join existing mall or create a new one dynamically
+    // 2. Find or create the local mall for this borough
     const mallName = `${borough} Local Mall`;
     let localMall = await this.localMallRepository.findOne({
       where: { name: mallName },
@@ -119,6 +100,55 @@ export class OnboardingDeciderService {
         longitude: lon,
       });
       await this.localMallRepository.save(localMall);
+    }
+
+    // 3. Count how many businesses are in this mall
+    const businessCount = await this.businessRepository.count({
+      where: { localMallId: localMall.id },
+    });
+
+    // 4. Find or create the ActivatedRegion record
+    let activeRegion = await this.activatedRegionRepository.findOne({
+      where: { name: borough },
+    });
+
+    const shouldBeActive = businessCount >= 1; // It becomes active if there is at least one existing business (so with the new registrant, it will be >= 2)
+
+    if (!activeRegion) {
+      activeRegion = this.activatedRegionRepository.create({
+        name: borough,
+        isActive: shouldBeActive,
+      });
+      try {
+        await this.activatedRegionRepository.save(activeRegion);
+      } catch (err) {
+        // Handle race condition if unique constraint fails
+        activeRegion = await this.activatedRegionRepository.findOne({
+          where: { name: borough },
+        });
+      }
+    } else if (activeRegion.isActive !== shouldBeActive) {
+      activeRegion.isActive = shouldBeActive;
+      await this.activatedRegionRepository.save(activeRegion);
+    }
+
+    if (!activeRegion.isActive) {
+      // Region not active (0 or 1 business currently)
+      return {
+        postcode: cleanPostcode,
+        resolvedArea: borough,
+        latitude: lat,
+        longitude: lon,
+        status: 'inactive',
+        localMallId: localMall.id,
+        localMallName: localMall.name,
+        message: `${borough} is not fully activated yet.`,
+        options: {
+          allowWaitlist: true,
+          allowDigitalOnly: true,
+          emergingZone: true,
+        },
+      };
     }
 
     return {
