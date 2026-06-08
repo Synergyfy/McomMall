@@ -20,6 +20,8 @@ import {
 } from './dto/create-service.dto';
 import { BundledService } from './entities/bundled-service.entity';
 import { ConfigurableAddon } from './entities/configurable-addon.entity';
+import { SpareCapacityOffer, SpareCapacityStatus } from './entities/spare-capacity-offer.entity';
+import { PublishSpareCapacityDto } from './dto/publish-spare-capacity.dto';
 import { ActivitiesService } from '../activities/activities.service';
 import { SearchServiceDto } from './dto/search-service.dto';
 import { PaginationDto } from '../../common/dto/pagination.dto';
@@ -44,6 +46,8 @@ export class ServicesService {
     private readonly bundledServiceRepository: Repository<BundledService>,
     @InjectRepository(ConfigurableAddon)
     private readonly configurableAddonRepository: Repository<ConfigurableAddon>,
+    @InjectRepository(SpareCapacityOffer)
+    private readonly spareCapacityOfferRepository: Repository<SpareCapacityOffer>,
     private readonly activitiesService: ActivitiesService,
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
@@ -517,8 +521,12 @@ export class ServicesService {
     return new PageDto(items, pageMetaDto);
   }
 
-  async publishSpareCapacity(dto: any, userId: string): Promise<any> {
-    const { serviceId, slots, discountPercent, headline, note } = dto;
+  async publishSpareCapacity(
+    dto: PublishSpareCapacityDto,
+    userId: string,
+  ): Promise<SpareCapacityOffer> {
+    const { serviceId, slots, discountPercent, headline, note, expiresAt, isLiveFeed } = dto;
+
     const service = await this.serviceRepository.findOne({
       where: { id: serviceId },
       relations: ['business', 'business.user'],
@@ -534,16 +542,47 @@ export class ServicesService {
       );
     }
 
-    const availability = service.availability || {};
-    availability.spareCapacityOffers = {
-      slots,
-      discountPercent,
+    // Compute the discounted price from the service's pricing
+    const basePrice =
+      Number(service.fixedPrice ?? service.pricePerHour ?? service.basePrice ?? 0);
+    const discountedPrice =
+      discountPercent > 0
+        ? parseFloat((basePrice * (1 - discountPercent / 100)).toFixed(2))
+        : basePrice;
+
+    // Default expiry: end of today (23:59:59) if not provided
+    const offerExpiry = expiresAt
+      ? new Date(expiresAt)
+      : (() => {
+          const endOfDay = new Date();
+          endOfDay.setHours(23, 59, 59, 999);
+          return endOfDay;
+        })();
+
+    // Deactivate any existing active spare capacity offers for this service
+    await this.spareCapacityOfferRepository.update(
+      { serviceId, status: SpareCapacityStatus.ACTIVE },
+      { status: SpareCapacityStatus.CANCELLED },
+    );
+
+    // Create the new offer record
+    const offer = this.spareCapacityOfferRepository.create({
+      serviceId,
       headline,
       note,
-      publishedAt: new Date().toISOString(),
-    };
-    service.availability = availability;
-    await this.serviceRepository.save(service);
+      discountPercent,
+      discountedPrice,
+      originalPrice: basePrice,
+      slots,
+      totalSlots: slots.length,
+      bookedSlots: 0,
+      expiresAt: offerExpiry,
+      status: SpareCapacityStatus.ACTIVE,
+      isLiveFeed: isLiveFeed ?? true,
+      boroughTag: service.business?.location?.city ?? null,
+    });
+
+    const savedOffer = await this.spareCapacityOfferRepository.save(offer);
 
     await this.activitiesService.create(
       service.business.user,
@@ -552,10 +591,6 @@ export class ServicesService {
       service.name,
     );
 
-    return {
-      success: true,
-      serviceId,
-      message: 'Spare capacity offer published successfully',
-    };
+    return savedOffer;
   }
 }

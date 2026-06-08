@@ -6,11 +6,9 @@ import { usePathname } from 'next/navigation';
 import { 
   LayoutDashboard, 
   PlusSquare, 
-  ShoppingBag, 
-  Settings, 
+  MapPin,
   Menu,
-  Heart,
-  MapPin
+  Store,
 } from 'lucide-react';
 
 interface BottomNavItemProps {
@@ -60,10 +58,10 @@ export const BottomNav: FC<BottomNavProps> = ({ onMenuClick }) => {
         </Link>
       </div>
       <BottomNavItem 
-        href="/dashboard/store" 
-        icon={ShoppingBag} 
-        label="Store" 
-        isActive={pathname.includes('/store')} 
+        href="/dashboard/storefront" 
+        icon={Store} 
+        label="Storefront" 
+        isActive={pathname.includes('/dashboard/storefront')} 
       />
       <button 
         onClick={onMenuClick}

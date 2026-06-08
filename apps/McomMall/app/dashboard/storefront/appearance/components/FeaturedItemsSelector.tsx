@@ -9,7 +9,7 @@ import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Star, AlertCircle, ShoppingBag, Wrench, Loader2 } from 'lucide-react';
-import { Product } from '@/service/listings/types';
+import { Product } from '@/service/store/products/types';
 import { Service } from '@/service/services/types';
 
 interface FeaturedItemsSelectorProps {
@@ -169,7 +169,7 @@ export const FeaturedItemsSelector: React.FC<FeaturedItemsSelectorProps> = ({
           ) : (
             <div className="grid gap-3">
               {services.map((service) => {
-                const img = service.media?.[0] || service.images?.[0];
+                const img = service.media?.[0];
                 return (
                   <div
                     key={service.id}
