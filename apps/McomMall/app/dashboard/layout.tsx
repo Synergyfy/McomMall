@@ -125,9 +125,6 @@ export default function DashboardLayout({
     <GeoProvider>
       <CustomerPointsProvider>
         <AuthRedirect />
-        {trialStatus?.isActive && (
-          <TrialCountdownTimer trialStatus={trialStatus} />
-        )}
         <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className={`hidden md:block p-5 transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-[19rem]'}`}>
@@ -222,10 +219,12 @@ export default function DashboardLayout({
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="hidden sm:flex items-center gap-2 sm:gap-4">
                 <MembershipBadge />
-                <ActivityTimerBadge />
               </div>
               
-              <div className="hidden sm:block">
+              <div className="flex items-center gap-2">
+                {trialStatus?.isActive && (
+                  <TrialCountdownTimer trialStatus={trialStatus} />
+                )}
                 <ProximityHeaderBadge />
               </div>
 

@@ -45,6 +45,8 @@ import { MobileDashboardHub } from './component/MobileDashboardHub';
 import { DashboardHome } from './component/customer/DashboardHome';
 import { useCustomerPoints } from '@/context/CustomerPointsContext';
 import { useRouter } from 'next/navigation';
+import { AlertCircle, PackagePlus, CalendarPlus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 // --- TYPE DEFINITIONS ---
 
@@ -84,14 +86,32 @@ const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
 );
 
 const DashboardPage: FC = () => {
-  const { userName, userRole } = useSelector((state: RootState) => state.auth);
   const router = useRouter();
+  const { userName, userRole } = useSelector((state: RootState) => state.auth);
   const { points, addPoints } = useCustomerPoints();
   const { data: stats, isLoading: isLoadingStats } = useGetStats<OwnerStatsDto | CustomerStatsDto>();
   const {
     data: activities,
     isLoading: isLoadingActivities,
   } = useRecentActivities();
+
+  const [skippedProducts, setSkippedProducts] = useState(false);
+  const [skippedServices, setSkippedServices] = useState(false);
+
+  useEffect(() => {
+    setSkippedProducts(localStorage.getItem('hybridSkippedProducts') === 'true');
+    setSkippedServices(localStorage.getItem('hybridSkippedServices') === 'true');
+  }, []);
+
+  const dismissReminder = (type: 'products' | 'services') => {
+    if (type === 'products') {
+      localStorage.removeItem('hybridSkippedProducts');
+      setSkippedProducts(false);
+    } else {
+      localStorage.removeItem('hybridSkippedServices');
+      setSkippedServices(false);
+    }
+  };
 
   if (userRole === 'customer' || userRole === UserRole.CUSTOMER) {
     return (
@@ -135,6 +155,57 @@ const DashboardPage: FC = () => {
           </Breadcrumb>
         </div>
       </header>
+
+      {/* Setup Reminders */}
+      {(skippedProducts || skippedServices) && (
+        <div className="mb-8 flex flex-col gap-4">
+          {skippedProducts && (
+            <div className="bg-gradient-to-r from-orange-50 to-red-50 border border-orange-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <PackagePlus size={100} />
+              </div>
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Finish Your Product Setup</h3>
+                  <p className="text-sm text-gray-600 mt-1">You skipped adding a product during onboarding. Get your first product live to start selling!</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 relative z-10 sm:ml-auto">
+                <Button variant="outline" className="border-orange-200 text-orange-700 hover:bg-orange-100" onClick={() => dismissReminder('products')}>Dismiss</Button>
+                <Button className="bg-orange-600 hover:bg-orange-700 text-white shadow-md shadow-orange-600/20" onClick={() => router.push('/dashboard/store/products/add-product')}>
+                  Add Product Now
+                </Button>
+              </div>
+            </div>
+          )}
+
+          {skippedServices && (
+            <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6 shadow-sm flex flex-col sm:flex-row sm:items-center justify-between gap-4 relative overflow-hidden">
+              <div className="absolute top-0 right-0 p-4 opacity-10 pointer-events-none">
+                <CalendarPlus size={100} />
+              </div>
+              <div className="flex items-start gap-4 relative z-10">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center text-blue-600 shrink-0">
+                  <AlertCircle size={24} />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-gray-900">Finish Your Service Setup</h3>
+                  <p className="text-sm text-gray-600 mt-1">You skipped adding a service during onboarding. Add your first service so customers can book you!</p>
+                </div>
+              </div>
+              <div className="flex items-center gap-3 relative z-10 sm:ml-auto">
+                <Button variant="outline" className="border-blue-200 text-blue-700 hover:bg-blue-100" onClick={() => dismissReminder('services')}>Dismiss</Button>
+                <Button className="bg-blue-600 hover:bg-blue-700 text-white shadow-md shadow-blue-600/20" onClick={() => router.push('/dashboard/services/add-service')}>
+                  Add Service Now
+                </Button>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* Mobile Hub View */}
       <div className="block sm:hidden">

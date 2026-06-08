@@ -18,6 +18,7 @@ import {
     TooltipContent,
     TooltipTrigger,
 } from '@/components/ui/tooltip';
+import { cn } from '@/lib/utils';
 
 interface AvailabilityEditorProps {
     value?: AvailabilityProfile;
@@ -102,29 +103,11 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
             <CardContent className="space-y-6">
 
                 {/* Global Settings */}
-                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-4">
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Label>Global Slot (min)</Label>
-                            <Tooltip>
-                                <TooltipTrigger asChild>
-                                    <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
-                                </TooltipTrigger>
-                                <TooltipContent>
-                                    Default duration for a single session. Can be overridden per day below.
-                                </TooltipContent>
-                            </Tooltip>
-                        </div>
-                        <Input
-                            type="number"
-                            min={1}
-                            value={profile.slotDuration}
-                            onChange={(e) => updateProfile({ ...profile, slotDuration: parseInt(e.target.value) || 0 })}
-                        />
-                    </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Label>Global Buffer (min)</Label>
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
+
+                    <div className="space-y-1 sm:space-y-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <Label className="text-xs sm:text-sm">Global Buffer</Label>
                             <Input
                                 type="number"
                                 min={0}
@@ -133,9 +116,9 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                             />
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Label>Global Max Bookings</Label>
+                    <div className="space-y-1 sm:space-y-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <Label className="text-xs sm:text-sm">Max Bookings</Label>
                             <Input
                                 type="number"
                                 min={1}
@@ -144,9 +127,9 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                             />
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Label>Global Staff/Booking</Label>
+                    <div className="space-y-1 sm:space-y-2">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <Label className="text-xs sm:text-sm">Staff/Booking</Label>
                             <Input
                                 type="number"
                                 min={1}
@@ -155,9 +138,9 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                             />
                         </div>
                     </div>
-                    <div className="space-y-2">
-                        <div className="flex items-center gap-2">
-                            <Label>Service Radius (km)</Label>
+                    <div className="space-y-1 sm:space-y-2 col-span-2 sm:col-span-1">
+                        <div className="flex items-center gap-1 sm:gap-2">
+                            <Label className="text-xs sm:text-sm">Radius (km)</Label>
                             <Input
                                 type="number"
                                 min={0}
@@ -184,9 +167,10 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                     </div>
 
                     {profile.schedule.map((day, index) => (
-                        <div key={day.day} className="flex flex-col md:grid md:grid-cols-[100px_1fr_1fr_100px_100px_100px_60px_auto] gap-4 items-center p-3 rounded-lg hover:bg-slate-50 border border-gray-100 md:border-transparent md:hover:border-slate-100 transition-colors">
-                            <div className="capitalize font-medium w-full md:w-auto flex justify-between md:block">
-                                {day.day}
+                        <div key={day.day} className={`flex flex-col md:grid md:grid-cols-[100px_1fr_1fr_100px_100px_100px_60px_auto] gap-3 sm:gap-4 items-center p-3 rounded-lg border transition-colors ${day.enabled ? 'bg-white border-gray-200 shadow-sm' : 'bg-gray-50 border-gray-100 opacity-75'}`}>
+                            {/* Header row on Mobile, normal cell on Desktop */}
+                            <div className="capitalize font-bold w-full md:w-auto flex justify-between items-center md:block">
+                                <span className={day.enabled ? "text-gray-900" : "text-gray-400"}>{day.day}</span>
                                 <div className="md:hidden">
                                     <Switch
                                         checked={day.enabled}
@@ -195,125 +179,135 @@ export default function AvailabilityEditor({ value, onChange }: AvailabilityEdit
                                 </div>
                             </div>
 
-                            <div className="flex gap-2 w-full md:w-auto">
-                                <div className="md:hidden w-16 text-sm text-gray-500">Hours:</div>
-                                <Input
-                                    type="time"
-                                    value={day.startTime}
-                                    onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
-                                    disabled={!day.enabled}
-                                    className="h-9"
-                                />
-                                <span className="self-center">-</span>
-                                <Input
-                                    type="time"
-                                    value={day.endTime}
-                                    onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
-                                    disabled={!day.enabled}
-                                    className="h-9"
-                                />
-                            </div>
-
-                            <div className="w-full md:w-auto flex justify-center">
-                                <Popover>
-                                    <PopoverTrigger asChild>
-                                        <Button
-                                            type="button"
-                                            variant={day.breaks?.length ? "secondary" : "ghost"}
-                                            size="sm"
+                            {/* Content rows - Hidden on mobile if disabled to save space */}
+                            <div className={cn("flex-col gap-3 w-full md:flex md:contents", !day.enabled ? "hidden md:contents" : "flex")}>
+                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                    <div className="md:hidden w-20 text-sm font-medium text-gray-500">Hours</div>
+                                    <div className="flex flex-1 gap-2 items-center">
+                                        <Input
+                                            type="time"
+                                            value={day.startTime}
+                                            onChange={(e) => handleScheduleChange(index, 'startTime', e.target.value)}
                                             disabled={!day.enabled}
-                                            className="h-9 w-full md:w-auto"
-                                        >
-                                            <Coffee className="w-4 h-4 mr-2" />
-                                            {day.breaks?.length ? `${day.breaks.length} Break(s)` : 'Add Break'}
-                                        </Button>
-                                    </PopoverTrigger>
-                                    <PopoverContent className="w-80">
-                                        <div className="space-y-4">
-                                            <h4 className="font-medium leading-none">Break Times</h4>
-                                            <p className="text-sm text-muted-foreground">Manage break intervals for {day.day}.</p>
+                                            className="h-9 flex-1 px-2"
+                                        />
+                                        <span className="text-gray-400">-</span>
+                                        <Input
+                                            type="time"
+                                            value={day.endTime}
+                                            onChange={(e) => handleScheduleChange(index, 'endTime', e.target.value)}
+                                            disabled={!day.enabled}
+                                            className="h-9 flex-1 px-2"
+                                        />
+                                    </div>
+                                </div>
 
-                                            <div className="space-y-2">
-                                                {day.breaks?.map((brk, bIdx) => (
-                                                    <div key={bIdx} className="flex items-center gap-2">
-                                                        <Input
-                                                            type="time"
-                                                            value={typeof brk === 'string' ? brk.split('-')[0] : brk.start}
-                                                            onChange={(e) => handleBreakChange(index, bIdx, 'start', e.target.value)}
-                                                            className="h-8"
-                                                        />
-                                                        <span>-</span>
-                                                        <Input
-                                                            type="time"
-                                                            value={typeof brk === 'string' ? brk.split('-')[1] : brk.end}
-                                                            onChange={(e) => handleBreakChange(index, bIdx, 'end', e.target.value)}
-                                                            className="h-8"
-                                                        />
-                                                        <Button
-                                                            type="button"
-                                                            variant="ghost"
-                                                            size="icon"
-                                                            className="h-8 w-8 text-destructive"
-                                                            onClick={() => handleBreakRemove(index, bIdx)}
-                                                        >
-                                                            <Trash2 className="w-4 h-4" />
-                                                        </Button>
+                                <div className="flex items-center gap-2 w-full md:w-auto md:justify-center">
+                                    <div className="md:hidden w-20 text-sm font-medium text-gray-500">Breaks</div>
+                                    <div className="flex-1 md:w-auto">
+                                        <Popover>
+                                            <PopoverTrigger asChild>
+                                                <Button
+                                                    type="button"
+                                                    variant={day.breaks?.length ? "secondary" : "outline"}
+                                                    size="sm"
+                                                    disabled={!day.enabled}
+                                                    className="h-9 w-full md:w-auto border-gray-200"
+                                                >
+                                                    <Coffee className="w-4 h-4 mr-2 text-[#f48c25]" />
+                                                    {day.breaks?.length ? `${day.breaks.length} Break(s)` : 'Add Break'}
+                                                </Button>
+                                            </PopoverTrigger>
+                                            <PopoverContent className="w-[calc(100vw-2rem)] sm:w-80 border-gray-200">
+                                                <div className="space-y-4">
+                                                    <h4 className="font-bold text-gray-900 leading-none">Break Times</h4>
+                                                    <p className="text-xs text-muted-foreground">Manage break intervals for {day.day}.</p>
+
+                                                    <div className="space-y-2">
+                                                        {day.breaks?.map((brk, bIdx) => (
+                                                            <div key={bIdx} className="flex items-center gap-2">
+                                                                <Input
+                                                                    type="time"
+                                                                    value={typeof brk === 'string' ? brk.split('-')[0] : brk.start}
+                                                                    onChange={(e) => handleBreakChange(index, bIdx, 'start', e.target.value)}
+                                                                    className="h-8"
+                                                                />
+                                                                <span className="text-gray-400">-</span>
+                                                                <Input
+                                                                    type="time"
+                                                                    value={typeof brk === 'string' ? brk.split('-')[1] : brk.end}
+                                                                    onChange={(e) => handleBreakChange(index, bIdx, 'end', e.target.value)}
+                                                                    className="h-8"
+                                                                />
+                                                                <Button
+                                                                    type="button"
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-red-500 hover:bg-red-50 hover:text-red-600"
+                                                                    onClick={() => handleBreakRemove(index, bIdx)}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ))}
+                                                        {(!day.breaks || day.breaks.length === 0) && (
+                                                            <p className="text-xs text-gray-400 italic">No breaks added.</p>
+                                                        )}
                                                     </div>
-                                                ))}
-                                                {(!day.breaks || day.breaks.length === 0) && (
-                                                    <p className="text-sm text-gray-400 italic">No breaks added.</p>
-                                                )}
-                                            </div>
 
-                                            <Button type="button" variant="outline" size="sm" onClick={() => handleBreakAdd(index)} className="w-full">
-                                                <Plus className="w-3 h-3 mr-2" /> Add Break
-                                            </Button>
-                                        </div>
-                                    </PopoverContent>
-                                </Popover>
+                                                    <Button type="button" variant="outline" size="sm" onClick={() => handleBreakAdd(index)} className="w-full text-[#f48c25] border-[#f48c25]/20 hover:bg-[#f48c25]/5">
+                                                        <Plus className="w-3 h-3 mr-2" /> Add Break
+                                                    </Button>
+                                                </div>
+                                            </PopoverContent>
+                                        </Popover>
+                                    </div>
+                                </div>
+
+                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                    <div className="md:hidden w-20 text-sm font-medium text-gray-500">Capacity</div>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        placeholder={profile.maxBookingsPerSlot.toString()}
+                                        value={day.maxBookings}
+                                        onChange={(e) => handleScheduleChange(index, 'maxBookings', parseInt(e.target.value) || undefined)}
+                                        disabled={!day.enabled}
+                                        className="h-9 flex-1"
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-2 w-full md:w-auto">
+                                    <div className="md:hidden w-20 text-sm font-medium text-gray-500">Staff</div>
+                                    <Input
+                                        type="number"
+                                        min={1}
+                                        placeholder={profile.staffPerBooking?.toString()}
+                                        value={day.staffPerBooking}
+                                        onChange={(e) => handleScheduleChange(index, 'staffPerBooking', parseInt(e.target.value) || undefined)}
+                                        disabled={!day.enabled}
+                                        className="h-9 flex-1"
+                                    />
+                                </div>
+
+                                <div className="hidden md:flex justify-center">
+                                    <Switch
+                                        checked={day.enabled}
+                                        onCheckedChange={(c) => handleScheduleChange(index, 'enabled', c)}
+                                    />
+                                </div>
+
+                                <div className="flex justify-end w-full md:w-auto mt-2 md:mt-0 pt-2 md:pt-0 border-t border-gray-100 md:border-0">
+                                    <button
+                                        type="button"
+                                        onClick={() => applyToAll(index)}
+                                        className="text-xs text-[#f48c25] hover:underline whitespace-nowrap font-bold"
+                                        title="Copy these hours, breaks, and capacity to all other days"
+                                    >
+                                        Apply to All
+                                    </button>
+                                </div>
                             </div>
-
-                            <div className="flex items-center gap-2 w-full md:w-auto">
-                                <div className="md:hidden w-16 text-sm text-gray-500">Max Bookings:</div>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    placeholder={profile.maxBookingsPerSlot.toString()}
-                                    value={day.maxBookings}
-                                    onChange={(e) => handleScheduleChange(index, 'maxBookings', parseInt(e.target.value) || undefined)}
-                                    disabled={!day.enabled}
-                                    className="h-9"
-                                />
-                            </div>
-
-                            <div className="flex items-center gap-2 w-full md:w-auto">
-                                <div className="md:hidden w-16 text-sm text-gray-500">Staff:</div>
-                                <Input
-                                    type="number"
-                                    min={1}
-                                    placeholder={profile.staffPerBooking?.toString()}
-                                    value={day.staffPerBooking}
-                                    onChange={(e) => handleScheduleChange(index, 'staffPerBooking', parseInt(e.target.value) || undefined)}
-                                    disabled={!day.enabled}
-                                    className="h-9"
-                                />
-                            </div>
-
-                            <div className="hidden md:flex justify-center">
-                                <Switch
-                                    checked={day.enabled}
-                                    onCheckedChange={(c) => handleScheduleChange(index, 'enabled', c)}
-                                />
-                            </div>
-
-                            <button
-                                type="button"
-                                onClick={() => applyToAll(index)}
-                                className="text-xs text-primary hover:underline whitespace-nowrap w-full md:w-auto text-right md:text-left mt-2 md:mt-0 font-bold"
-                                title="Copy these hours, breaks, and capacity to all other days"
-                            >
-                                Apply to All
-                            </button>
                         </div>
                     ))}
                 </div>

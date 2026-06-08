@@ -105,6 +105,32 @@ export function Step3Pricing() {
             )}
           />
 
+          <FormField
+            control={control}
+            name="availability.slotDuration"
+            render={({ field }) => (
+              <FormItem>
+                <div className="flex items-center gap-2 mb-2">
+                  <FormLabel className="text-base font-semibold">
+                    Service Duration (minutes) <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      How long does this specific service take to complete?
+                    </TooltipContent>
+                  </Tooltip>
+                </div>
+                <FormControl>
+                  <Input type="number" placeholder="60" {...field} value={field.value ?? ''} onChange={(e) => field.onChange(parseInt(e.target.value) || 0)} className="py-6" />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           {['fixed', 'perJob', 'perSession', 'subscription'].includes(pricingModel) && (
             <FormField
               control={control}

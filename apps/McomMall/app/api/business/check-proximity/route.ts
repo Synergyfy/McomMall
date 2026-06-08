@@ -22,20 +22,7 @@ export async function POST(request: Request) {
 
     const formattedPostcode = postcode.trim().toUpperCase();
 
-    // ─── Developer Testing Overrides ───────────────────
-    if (formattedPostcode.includes('MOCK_HIGH') || formattedPostcode === 'H000') {
-      return NextResponse.json({ postcode: formattedPostcode, distance: 0, tier: 'high_street', message: 'Mock override: High Street' });
-    }
-    if (formattedPostcode.includes('MOCK_HYPER') || formattedPostcode === 'L111') {
-      return NextResponse.json({ postcode: formattedPostcode, distance: 1.2, tier: 'hyper_local', message: 'Mock override: Hyper Local' });
-    }
-    if (formattedPostcode.includes('MOCK_NEAR') || formattedPostcode === 'N555') {
-      return NextResponse.json({ postcode: formattedPostcode, distance: 6.4, tier: 'nearby', message: 'Mock override: Nearby' });
-    }
-    if (formattedPostcode.includes('MOCK_NAT') || formattedPostcode === 'N999') {
-      return NextResponse.json({ postcode: formattedPostcode, distance: 15.2, tier: 'national', message: 'Mock override: National' });
-    }
-    // ───────────────────────────────────────────────────
+
 
     // Check if the address contains "High Street" or "Main Street" (case-insensitive)
     const isDirectHighStreet = 
@@ -57,7 +44,7 @@ export async function POST(request: Request) {
     let city = '';
 
     if (isNaN(userLat) || isNaN(userLon)) {
-      const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(formattedPostcode)}&format=json&addressdetails=1&limit=1`;
+      const geocodeUrl = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(formattedPostcode)}&format=json&addressdetails=1&limit=1&countrycodes=gb`;
       const response = await fetch(geocodeUrl, {
         headers: {
           'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',
@@ -94,9 +81,9 @@ export async function POST(request: Request) {
     // Query Nominatim for "High Street" in that city
     let searchUrl = '';
     if (city) {
-      searchUrl = `https://nominatim.openstreetmap.org/search?q=High+Street+${encodeURIComponent(city)}&format=json&limit=10`;
+      searchUrl = `https://nominatim.openstreetmap.org/search?q=High+Street+${encodeURIComponent(city)}&format=json&limit=10&countrycodes=gb`;
     } else {
-      searchUrl = `https://nominatim.openstreetmap.org/search?q=High+Street&format=json&limit=10`;
+      searchUrl = `https://nominatim.openstreetmap.org/search?q=High+Street&format=json&limit=10&countrycodes=gb`;
     }
 
     const searchResponse = await fetch(searchUrl, {
@@ -128,7 +115,7 @@ export async function POST(request: Request) {
     // If search failed, query with a bounding box around user coordinates
     if (minDistance === 999999) {
       const viewbox = `${userLon - 0.15},${userLat + 0.15},${userLon + 0.15},${userLat - 0.15}`;
-      const fallbackUrl = `https://nominatim.openstreetmap.org/search?q=High+Street&viewbox=${viewbox}&bounded=1&format=json&limit=10`;
+      const fallbackUrl = `https://nominatim.openstreetmap.org/search?q=High+Street&viewbox=${viewbox}&bounded=1&format=json&limit=10&countrycodes=gb`;
       const fallbackResponse = await fetch(fallbackUrl, {
         headers: {
           'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',

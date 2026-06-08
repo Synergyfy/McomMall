@@ -24,9 +24,11 @@ import { ActivitiesModule } from '../activities/activities.module';
 import { PromotionModule } from '../promotion/promotion.module';
 import { CapabilityModule } from '../capability/capability.module';
 import { ActivityTimerModule } from '../activity-timer/activity-timer.module';
+import { LocalMallModule } from '../localmall/localmall.module';
 
 @Module({
   imports: [
+    LocalMallModule,
     forwardRef(() => CapabilityModule),
     TypeOrmModule.forFeature([
       Business,

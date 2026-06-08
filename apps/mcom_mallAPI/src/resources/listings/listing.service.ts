@@ -22,6 +22,7 @@ import { Promotion } from '../promotion/entities/promotion.entity';
 import { Product } from '../product/entities/product.entity';
 import { PromotionScope } from '../promotion/promotion.enum';
 import { ListingPublicDto } from './dto/listing-public.dto';
+import { OnboardingDeciderService } from '../localmall/onboarding-decider.service';
 import {
   CapabilityService,
   ActionType,
@@ -47,6 +48,7 @@ export class ListingsService {
     @Inject(forwardRef(() => CapabilityService))
     private readonly capabilityService: CapabilityService,
     private readonly activityTimerService: ActivityTimerService,
+    private readonly onboardingDeciderService: OnboardingDeciderService,
   ) {}
 
   async create(
@@ -142,6 +144,25 @@ export class ListingsService {
         );
       }
 
+      let localMallId: string | undefined = undefined;
+      if (createBusinessDto.location && createBusinessDto.location.postcode) {
+        try {
+          const deciderResult = await this.onboardingDeciderService.checkLocation(
+            createBusinessDto.location.postcode,
+          );
+          if (deciderResult) {
+            (businessData.location as any).latitude = deciderResult.latitude;
+            (businessData.location as any).longitude = deciderResult.longitude;
+            (businessData.location as any).resolvedArea = deciderResult.resolvedArea;
+            if (deciderResult.status === 'active') {
+              localMallId = deciderResult.localMallId;
+            }
+          }
+        } catch (e) {
+          console.error('Failed resolving location details:', e);
+        }
+      }
+
       const business = this.businessRepository.create({
         ...businessData,
         isClaimed: true, // New businesses are claimed by default
@@ -150,6 +171,7 @@ export class ListingsService {
         sector,
         category,
         subCategory,
+        localMallId,
       });
 
       const savedBusiness = await queryRunner.manager.save(business);
@@ -182,7 +204,14 @@ export class ListingsService {
     const skip = (page - 1) * limit;
     const [data, total] = await this.businessRepository.findAndCount({
       where: { user: { id: userId } },
-      relations: ['sector', 'category', 'subCategory', 'location'],
+      relations: [
+        'sector',
+        'category',
+        'subCategory',
+        'location',
+        'productSellerProfile',
+        'serviceProviderProfile',
+      ],
       order: { created_at: 'DESC' },
       take: limit,
       skip: skip,

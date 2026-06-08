@@ -9,6 +9,15 @@ export class Location extends AbstractBaseEntity {
   @Column()
   postcode: string;
 
+  @Column('double precision', { nullable: true })
+  latitude?: number;
+
+  @Column('double precision', { nullable: true })
+  longitude?: number;
+
+  @Column({ nullable: true })
+  resolvedArea?: string;
+
   @Column()
   addressLine1: string;
 
