@@ -113,7 +113,7 @@ export const FeaturedItemsSelector: React.FC<FeaturedItemsSelectorProps> = ({
           ) : (
             <div className="grid gap-3">
               {products.map((product) => {
-                const img = product.media?.[0] || product.images?.[0];
+                const img = product.media?.[0] || product.imageUrl;
                 return (
                   <div
                     key={product.id}
