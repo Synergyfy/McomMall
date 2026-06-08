@@ -1,7 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import {
   IsArray,
-  IsNotEmpty,
   IsNumber,
   IsOptional,
   IsPositive,
@@ -26,7 +25,7 @@ class CheckoutItemDto {
   selectedVariants?: Record<string, string>;
 }
 
-export class CreateCheckoutDto {
+export class InitiateCheckoutDto {
   @ApiProperty({ type: [CheckoutItemDto] })
   @IsArray()
   @ValidateNested({ each: true })
