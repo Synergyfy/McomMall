@@ -34,12 +34,11 @@ export const PromoteProductModal: React.FC<PromoteProductModalProps> = ({
 
   const { mutateAsync: updateProduct, isPending } = useUpdateProduct();
 
-  // Sync with current product values when modal opens
   useEffect(() => {
     if (product) {
       setIsFeatured(product.isFeatured ?? false);
-      setIsRotatorEligible((product as any).isRotatorEligible ?? false);
-      setIsPromotionEligible((product as any).isPromotionEligible ?? false);
+      setIsRotatorEligible(product.isRotatorEligible ?? false);
+      setIsPromotionEligible(product.isPromotionEligible ?? false);
     }
   }, [product]);
 

@@ -390,6 +390,9 @@ export interface Product {
   bonusThreshold?: number;
   bonusAmount?: number;
   business?: InHouseBusiness;
+  isFeatured?: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
 }
 
 export type CampaignType = string;
