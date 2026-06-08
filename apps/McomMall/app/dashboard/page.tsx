@@ -42,6 +42,9 @@ import EarningProgressionChart from './component/EarningProgressionChart';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
 import { MobileDashboardHub } from './component/MobileDashboardHub';
+import { DashboardHome } from './component/customer/DashboardHome';
+import { useCustomerPoints } from '@/context/CustomerPointsContext';
+import { useRouter } from 'next/navigation';
 
 // --- TYPE DEFINITIONS ---
 
@@ -80,14 +83,36 @@ const ListingPackages: FC<{ pkg: ListingPackage }> = ({ pkg }) => (
   </Card>
 );
 
-// --- MAIN PAGE COMPONENT ---
 const DashboardPage: FC = () => {
   const { userName, userRole } = useSelector((state: RootState) => state.auth);
+  const router = useRouter();
+  const { points, addPoints } = useCustomerPoints();
   const { data: stats, isLoading: isLoadingStats } = useGetStats<OwnerStatsDto | CustomerStatsDto>();
   const {
     data: activities,
     isLoading: isLoadingActivities,
   } = useRecentActivities();
+
+  if (userRole === 'customer' || userRole === UserRole.CUSTOMER) {
+    return (
+      <DashboardHome
+        userName={userName || ''}
+        points={points}
+        stats={stats || null}
+        isLoadingStats={isLoadingStats}
+        activities={activities}
+        isLoadingActivities={isLoadingActivities}
+        onAddPoints={addPoints}
+        setActiveTab={(tab) => {
+          if (tab === 'home') router.push('/dashboard');
+          else if (tab === 'discover') router.push('/dashboard/discover');
+          else if (tab === 'rewards') router.push('/dashboard/rewards');
+          else if (tab === 'events') router.push('/dashboard/events');
+          else if (tab === 'profile') router.push('/dashboard/interests');
+        }}
+      />
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 sm:p-6 lg:p-8">

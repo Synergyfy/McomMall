@@ -31,6 +31,8 @@ import UserNav from '@/components/UserNav';
 import AuthRedirect from '@/components/AuthRedirect';
 import { GeoProvider, useGeoContext } from '@/context/GeoContext';
 import GeographicDashboard from '@/components/dashboard/GeographicDashboard';
+import { CustomerPointsProvider } from '@/context/CustomerPointsContext';
+import CustomerBottomNav from './component/customer/CustomerBottomNav';
 
 function ProximityHeaderBadge() {
   const geoContext = useGeoContext();
@@ -121,11 +123,12 @@ export default function DashboardLayout({
 
   return (
     <GeoProvider>
-      <AuthRedirect />
-      {trialStatus?.isActive && (
-        <TrialCountdownTimer trialStatus={trialStatus} />
-      )}
-      <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
+      <CustomerPointsProvider>
+        <AuthRedirect />
+        {trialStatus?.isActive && (
+          <TrialCountdownTimer trialStatus={trialStatus} />
+        )}
+        <section className="fixed inset-0 flex w-full h-full overflow-hidden bg-[#F6F6F6]">
         {/* --- DESKTOP SIDEBAR (Left) --- */}
         <div className={`hidden md:block p-5 transition-all duration-300 ${isSidebarCollapsed ? 'w-20' : 'w-[19rem]'}`}>
           <div className="flex flex-col h-full">
@@ -152,7 +155,7 @@ export default function DashboardLayout({
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="flex-grow flex flex-col min-h-0">
+        <main className="flex-grow flex flex-col min-h-0 w-full min-w-0 max-w-full overflow-x-hidden">
           <header className="flex items-center justify-between w-full h-14 py-2 px-4 border-b border-gray-200 bg-white shadow-sm transition-all duration-300">
             {/* --- LEFT SIDE: Hamburger + Desktop collapse button --- */}
             <div className="flex items-center gap-2">
@@ -222,7 +225,9 @@ export default function DashboardLayout({
                 <ActivityTimerBadge />
               </div>
               
-              <ProximityHeaderBadge />
+              <div className="hidden sm:block">
+                <ProximityHeaderBadge />
+              </div>
 
               {/* UserNav — compact avatar on mobile, full on desktop */}
               <UserNav align="end" />
@@ -230,7 +235,7 @@ export default function DashboardLayout({
           </header>
 
           {/* Page Content */}
-          <div className="sm:p-5 p-2 pb-20 sm:pb-5 overflow-y-auto flex-1 min-h-0">
+          <div className={`overflow-y-auto flex-1 min-h-0 w-full min-w-0 max-w-full overflow-x-hidden ${userRole === 'customer' ? 'p-4 pb-20 md:p-6 md:pb-6' : 'sm:p-5 p-2 pb-20 sm:pb-5'}`}>
             <ProtectedRoute>
               <GeographicDashboard>
                 {children}
@@ -239,9 +244,14 @@ export default function DashboardLayout({
           </div>
           
           {/* Bottom Navigation (Mobile Only) */}
-          <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
+          {userRole === 'customer' ? (
+            <CustomerBottomNav />
+          ) : (
+            <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
+          )}
         </main>
       </section>
+      </CustomerPointsProvider>
     </GeoProvider>
   );
 }

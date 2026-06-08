@@ -172,10 +172,10 @@ export const MenuContent = ({ onLinkClick, isCollapsed }: MenuContentProps) => {
         </div>
         {(isCollapsed || expandedSection === 'Main') && renderMenuItems(mainMenuItems)}
       </nav>
-      {renderSection('Listing', listingMenuItems)}
-      {renderSection('Product', productMenuItems)}
-      {renderSection('Service', serviceMenuItems)}
-      {renderSection('Marketing', [...pluginMenuItems, ...marketingMenuItems])}
+      {userRole !== 'customer' && renderSection('Listing', listingMenuItems)}
+      {userRole !== 'customer' && renderSection('Product', productMenuItems)}
+      {userRole !== 'customer' && renderSection('Service', serviceMenuItems)}
+      {userRole !== 'customer' && renderSection('Marketing', [...pluginMenuItems, ...marketingMenuItems])}
       {renderSection('My Purchases', historyMenuItems)}
       <nav className="mt-6">
         <div className="flex items-center justify-between px-2 mb-2 cursor-pointer group" onClick={() => toggleSection('Account')}>

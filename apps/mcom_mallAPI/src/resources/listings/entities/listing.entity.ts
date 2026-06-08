@@ -20,7 +20,7 @@ import { TaxonomySubcategory } from '../../taxonomy/entities/taxonomy-subcategor
 import { BusinessHour } from './business_hour.entity';
 import { SpecialDay } from './special_days.entity';
 import { ProductSellerProfile } from './product_seller_profiles.entity';
-import { ServiceProviderProfile } from './service_provider_profiles.entity';
+import { ServiceProviderProfile } from '../../service-provider-profile/entities/service-provider-profile.entity';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../product/entities/product.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
