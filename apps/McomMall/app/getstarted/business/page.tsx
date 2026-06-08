@@ -321,6 +321,7 @@ export default function BusinessOnboarding() {
   const [categorySearchQuery, setCategorySearchQuery] = useState('');
   const [searchResults, setSearchResults] = useState<any[]>([]);
   const [isSearching, setIsSearching] = useState(false);
+  const [hasSearched, setHasSearched] = useState(false);
   const [searchError, setSearchError] = useState<string | null>(null);
 
   const extractPostcode = (address: string) => {
@@ -332,6 +333,7 @@ export default function BusinessOnboarding() {
     if (!searchName.trim() && !searchLoc.trim()) return;
     setIsSearching(true);
     setSearchError(null);
+    setHasSearched(true);
     try {
       const queryText = `${searchName} ${searchLoc}`.trim();
       const res = await api.get(`google/google-business?queryText=${encodeURIComponent(queryText)}&radius=${searchRadius}`);
@@ -1267,7 +1269,7 @@ export default function BusinessOnboarding() {
             {/* View Toggle & Sort (Mobile Friendly) */}
             <div className="flex items-center justify-between px-4 py-2 bg-gray-50 border-b border-gray-200">
               <span className="text-xs font-bold text-gray-500">
-                {isSearching ? 'Searching...' : `${searchResults.length > 0 ? searchResults.length : 3} results found nearby`}
+                {isSearching ? 'Searching...' : `${hasSearched ? searchResults.length : 0} results found nearby`}
               </span>
               <div className="flex p-1 bg-gray-200 rounded-lg">
                 <button onClick={() => setMapViewToggle('list')} className={`flex items-center gap-1 px-3 py-1 rounded-md text-xs font-bold transition-all ${mapViewToggle === 'list' ? 'bg-white shadow-sm text-orange-600' : 'text-gray-500'}`}>
@@ -1369,7 +1371,9 @@ export default function BusinessOnboarding() {
                 })
               ) : (
                 <div className="bg-gray-50 border border-gray-100 rounded-2xl p-6 text-center text-gray-500 text-xs font-semibold">
-                  Search for your business above to begin claiming it.
+                  {hasSearched
+                    ? 'No businesses found. Try adjusting your search or expanding the radius.'
+                    : 'Search for your business above to begin claiming it.'}
                 </div>
               )}
 
@@ -1666,7 +1670,18 @@ export default function BusinessOnboarding() {
               </div>
               <div className="flex-grow">
                 <span className="font-bold text-gray-900 text-sm">Email Verification</span>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">to owner@indigo-kitchen.com</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  {selectedPreviewBusiness.website
+                    ? `to owner@${(() => {
+                        try {
+                          const url = selectedPreviewBusiness.website.startsWith('http') ? selectedPreviewBusiness.website : `https://${selectedPreviewBusiness.website}`;
+                          return new URL(url).hostname.replace('www.', '');
+                        } catch {
+                          return 'business.com';
+                        }
+                      })()}`
+                    : 'Send a verification code to your registered email'}
+                </p>
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-2 ${verifyMethod === 'email' ? 'border-orange-600 bg-orange-600' : 'border-gray-300'}`}>
                 {verifyMethod === 'email' && <div className="w-2 h-2 bg-white rounded-full"></div>}
@@ -1674,6 +1689,7 @@ export default function BusinessOnboarding() {
             </label>
 
             {/* Option 3: SMS */}
+            {selectedPreviewBusiness.businessPhone && (
             <label className={`relative flex items-center p-4 bg-white border ${verifyMethod === 'sms' ? 'border-orange-500 bg-orange-50/50' : 'border-gray-200'} rounded-2xl cursor-pointer hover:border-orange-300 transition-all active:scale-[0.98]`}>
               <input checked={verifyMethod === 'sms'} onChange={() => setVerifyMethod('sms')} className="hidden" name="verify_method" type="radio" value="sms" />
               <div className="flex-shrink-0 w-12 h-12 bg-gray-50 rounded-xl flex items-center justify-center mr-4">
@@ -1681,12 +1697,15 @@ export default function BusinessOnboarding() {
               </div>
               <div className="flex-grow">
                 <span className="font-bold text-gray-900 text-sm">SMS Verification</span>
-                <p className="text-xs text-gray-500 font-medium mt-0.5">to •••• ••• 45</p>
+                <p className="text-xs text-gray-500 font-medium mt-0.5">
+                  to •••• ••• {selectedPreviewBusiness.businessPhone.slice(-2)}
+                </p>
               </div>
               <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center ml-2 ${verifyMethod === 'sms' ? 'border-orange-600 bg-orange-600' : 'border-gray-300'}`}>
                 {verifyMethod === 'sms' && <div className="w-2 h-2 bg-white rounded-full"></div>}
               </div>
             </label>
+            )}
           </div>
 
           {/* Illustration / Decor */}
