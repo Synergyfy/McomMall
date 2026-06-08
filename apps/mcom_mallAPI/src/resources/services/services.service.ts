@@ -516,4 +516,46 @@ export class ServicesService {
 
     return new PageDto(items, pageMetaDto);
   }
+
+  async publishSpareCapacity(dto: any, userId: string): Promise<any> {
+    const { serviceId, slots, discountPercent, headline, note } = dto;
+    const service = await this.serviceRepository.findOne({
+      where: { id: serviceId },
+      relations: ['business', 'business.user'],
+    });
+
+    if (!service) {
+      throw new NotFoundException(`Service with ID ${serviceId} not found`);
+    }
+
+    if (service.business.user.id !== userId) {
+      throw new ForbiddenException(
+        'You are not authorized to publish spare capacity for this service',
+      );
+    }
+
+    const availability = service.availability || {};
+    availability.spareCapacityOffers = {
+      slots,
+      discountPercent,
+      headline,
+      note,
+      publishedAt: new Date().toISOString(),
+    };
+    service.availability = availability;
+    await this.serviceRepository.save(service);
+
+    await this.activitiesService.create(
+      service.business.user,
+      'published spare capacity',
+      'service',
+      service.name,
+    );
+
+    return {
+      success: true,
+      serviceId,
+      message: 'Spare capacity offer published successfully',
+    };
+  }
 }

@@ -151,9 +151,12 @@ export interface UserListing {
   bannerAltText: string;
   status: string;
   categories: Category[];
-  location: Location;
   isGoogleVerified: boolean;
   isVerified: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
+  isFeatured?: boolean;
+  location: Location;
 }
 
 // --- Enums as String Literal Types ---

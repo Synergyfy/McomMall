@@ -237,4 +237,11 @@ export class ServicesController {
       req.user.id,
     );
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Post('spare-capacity')
+  @ApiOperation({ summary: 'Publish spare capacity slots for a service' })
+  async publishSpareCapacity(@Body() dto: any, @Request() req) {
+    return this.servicesService.publishSpareCapacity(dto, req.user.id);
+  }
 }

@@ -18,8 +18,22 @@ import {
   MoreHorizontal,
   Trash2,
   Edit,
+  Copy,
+  Megaphone,
+  Zap,
+  Pause,
+  Play,
 } from 'lucide-react';
-import { useGetMyServices, useDeleteService } from '@/service/services/hook';
+import {
+  useGetMyServices,
+  useDeleteService,
+  useAddService,
+  useUpdateService,
+} from '@/service/services/hook';
+import { useQueryClient } from '@tanstack/react-query';
+import { toast } from 'sonner';
+import { SpareCapacityModal } from './components/SpareCapacityModal';
+import { PromoteServiceModal } from './components/PromoteServiceModal';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -70,9 +84,44 @@ export default function ServicesDashboard() {
   const [selectedService, setSelectedService] = React.useState<string | null>(
     null
   );
+  const [promoteService, setPromoteService] = React.useState<Service | null>(null);
+  const [showPromoteModal, setShowPromoteModal] = React.useState(false);
+  const [spareCapacityService, setSpareCapacityService] = React.useState<Service | null>(null);
+  const [showSpareCapacityModal, setShowSpareCapacityModal] = React.useState(false);
 
+  const queryClient = useQueryClient();
   const router = useRouter();
   const { mutate: deleteService, isPending: isDeleting } = useDeleteService();
+  const { mutateAsync: addService } = useAddService();
+  const { mutateAsync: updateService } = useUpdateService();
+
+  const handleDuplicate = async (service: Service) => {
+    try {
+      const { id, created_at, updated_at, deletedAt, business, ...rest } = service as any;
+      await addService({
+        ...rest,
+        name: `${service.name} (Copy)`,
+        isActive: false,
+        businessId: service.businessId,
+      });
+      queryClient.invalidateQueries({ queryKey: ['my-services'] });
+      toast.success('Service duplicated as inactive copy!');
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || 'Failed to duplicate service.');
+    }
+  };
+
+  const handleToggleActive = async (service: Service) => {
+    try {
+      await updateService({
+        id: service.id,
+        isActive: !service.isActive,
+      } as any);
+      toast.success(`Service ${!service.isActive ? 'activated' : 'paused'}!`);
+    } catch (e: any) {
+      toast.error(e.response?.data?.message || e.message || 'Failed to update service.');
+    }
+  };
 
   const handleDelete = () => {
     if (selectedService) {
@@ -308,6 +357,48 @@ export default function ServicesDashboard() {
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  onSelect={() => handleDuplicate(service)}
+                                >
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => handleToggleActive(service)}
+                                >
+                                  {service.isActive ? (
+                                    <>
+                                      <Pause className="mr-2 h-4 w-4" />
+                                      Pause
+                                    </>
+                                  ) : (
+                                    <>
+                                      <Play className="mr-2 h-4 w-4" />
+                                      Activate
+                                    </>
+                                  )}
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setPromoteService(service);
+                                    setShowPromoteModal(true);
+                                  }}
+                                  className="text-orange-600"
+                                >
+                                  <Megaphone className="mr-2 h-4 w-4" />
+                                  Promote
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setSpareCapacityService(service);
+                                    setShowSpareCapacityModal(true);
+                                  }}
+                                  className="text-teal-600"
+                                >
+                                  <Zap className="mr-2 h-4 w-4" />
+                                  Spare Capacity
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
                                   onSelect={() => {
                                     setSelectedService(service.id);
                                     setShowDeleteConfirmation(true);
@@ -339,6 +430,26 @@ export default function ServicesDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Spare Capacity Modal */}
+      <SpareCapacityModal
+        service={spareCapacityService}
+        open={showSpareCapacityModal}
+        onClose={() => {
+          setShowSpareCapacityModal(false);
+          setSpareCapacityService(null);
+        }}
+      />
+
+      {/* Promote Service Modal */}
+      <PromoteServiceModal
+        service={promoteService}
+        open={showPromoteModal}
+        onClose={() => {
+          setShowPromoteModal(false);
+          setPromoteService(null);
+        }}
+      />
     </>
   );
 }
