@@ -82,6 +82,29 @@ export const listingMenuItems: MenuItem[] = [
   { title: 'Reviews', href: '/dashboard/reviews', icon: UserStar },
 ];
 
+export const storefrontMenuItems: MenuItem[] = [
+  {
+    title: 'Storefront Hub',
+    href: '/dashboard/storefront',
+    icon: SquareDashedKanban,
+  },
+  {
+    title: 'Business Profile',
+    href: '/dashboard/storefront/profile',
+    icon: UserPen,
+  },
+  {
+    title: 'Appearance',
+    href: '/dashboard/storefront/appearance',
+    icon: Settings,
+  },
+  {
+    title: 'Verification',
+    href: '/dashboard/storefront/verification',
+    icon: Scan,
+  },
+];
+
 export const productMenuItems: MenuItem[] = [
   {
     title: 'Product',

@@ -116,6 +116,9 @@ export interface CreateProductDto {
   variantConfig?: any[];
   useVariantPricing?: boolean;
   sizeGuide?: SizeGuideConfig;
+  isFeatured?: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
 }
 
 import { Product } from '@/service/listings/types';

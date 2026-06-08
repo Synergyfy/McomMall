@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Upload, Check,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useCreateUser, useLogin, useSendOtp, useValidateOtp, useCheckEmail } from '@/service/auth/hook';
 import Cookies from 'js-cookie';
 import { useDispatch } from 'react-redux';
@@ -223,7 +224,7 @@ function ConfettiRain() {
 // ═══════════════════════════════════════════════════════════
 // Main Business Onboarding Component
 // ═══════════════════════════════════════════════════════════
-export default function BusinessOnboarding() {
+function BusinessOnboardingInner() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -267,7 +268,30 @@ export default function BusinessOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
+
+  // ── Handle OAuth popup callback ──────────────────────────────────────────
+  // When Google redirects back, the popup reloads this page with ?claim=...
+  // We detect that, notify the parent window, then close the popup.
+  useEffect(() => {
+    const claimStatus = searchParams.get('claim');
+    const claimPlaceId = searchParams.get('placeId');
+    if (!claimStatus) return;
+
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        {
+          type: 'GOOGLE_CLAIM_RESULT',
+          success: claimStatus === 'success',
+          placeId: claimPlaceId,
+        },
+        window.location.origin
+      );
+      window.close();
+    }
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
   
   const activeQuests = QUESTS.filter(q => {
     const isService = formData.businessType === 'services' || formData.businessType === 'both';
@@ -296,9 +320,8 @@ export default function BusinessOnboarding() {
   const [googleBranches, setGoogleBranches] = useState<any[]>([]);
   const [selectedGoogleBranch, setSelectedGoogleBranch] = useState<any>(null);
   const [googleMapping, setGoogleMapping] = useState<any>(null);
-  const [showGoogleMockPopup, setShowGoogleMockPopup] = useState(false);
-  const [googleMockAccountStep, setGoogleMockAccountStep] = useState<'picker' | 'permissions'>('picker');
   
+
   // Fail-Safe Edit Form state
   const [googlePhoneInput, setGooglePhoneInput] = useState('');
   const [googleSectorId, setGoogleSectorId] = useState('');
@@ -347,25 +370,65 @@ export default function BusinessOnboarding() {
     }
   };
 
-  const handleGoogleStart = () => {
-    setIsGoogleOnboarding(true);
-    setGoogleMockAccountStep('picker');
-    setShowGoogleMockPopup(true);
+  const handleGoogleStart = async () => {
+    if (!selectedPreviewBusiness?.googlePlaceId) return;
+    setIsSubmitting(true);
     setSubmitError(null);
-  };
+    try {
+      const returnUrl = `${window.location.origin}/getstarted/business`;
+      const res = await api.post('claim/start', {
+        placeId: selectedPreviewBusiness.googlePlaceId,
+        returnUrl,
+      });
+      const { authUrl } = res.data;
 
-  const handleGoogleSelectAccount = (email: string, fName: string, lName: string) => {
-    setGoogleEmail(email);
-    setOwnerFirstName(fName);
-    setOwnerLastName(lName);
-    setGoogleMockAccountStep('permissions');
-  };
+      // Open Google OAuth consent screen in a popup window
+      const popup = window.open(
+        authUrl,
+        'google_oauth',
+        'width=520,height=660,scrollbars=yes,resizable=yes'
+      );
 
-  const handleGoogleGrantPermissions = async () => {
-    setShowGoogleMockPopup(false);
-    // In the new flow, we proceed straight to the next page once authorized
-    setShowConnectGooglePage(false);
-    setShowBusinessTypePage(true);
+      if (!popup) {
+        // Blocked by browser — fall back to full redirect
+        window.location.href = authUrl;
+        return;
+      }
+
+      // Listen for the result sent back from the popup
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type !== 'GOOGLE_CLAIM_RESULT') return;
+        window.removeEventListener('message', handleMessage);
+        clearInterval(pollTimer);
+        setIsSubmitting(false);
+        if (event.data.success) {
+          setShowConnectGooglePage(false);
+          setShowBusinessTypePage(true);
+        } else {
+          setSubmitError(
+            'We could not verify your ownership of this business on Google. ' +
+            'Please try again or enter your details manually.'
+          );
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      // If the user closes the popup without completing, clean up
+      const pollTimer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollTimer);
+          window.removeEventListener('message', handleMessage);
+          setIsSubmitting(false);
+        }
+      }, 600);
+    } catch (err: any) {
+      setSubmitError(
+        err?.response?.data?.message ||
+        'Failed to connect to Google. Please ensure Google credentials are configured.'
+      );
+      setIsSubmitting(false);
+    }
   };
 
   const handleGoogleSelectBranch = async (branch: any) => {
@@ -1791,22 +1854,45 @@ export default function BusinessOnboarding() {
 
           {/* Action Section */}
           <div className="mt-auto space-y-4">
-            <button onClick={() => {
-                setGoogleMockAccountStep('picker');
-                setShowGoogleMockPopup(true);
-            }} className="w-full bg-white border border-gray-200 text-gray-900 h-14 rounded-xl flex items-center justify-center gap-3 px-6 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50 group">
-              <svg height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19.6001 10.2272C19.6001 9.51813 19.5364 8.83631 19.4183 8.18176H10.0001V12.0499H15.3819C15.1501 13.2999 14.4455 14.359 13.3864 15.0681V17.5772H16.6183C18.5092 15.8363 19.6001 13.2727 19.6001 10.2272Z" fill="#4285F4"></path>
-                <path d="M10.0001 20C12.7001 20 14.9637 19.1045 16.6183 17.5773L13.3864 15.0682C12.491 15.6682 11.3455 16.0227 10.0001 16.0227C7.38642 16.0227 5.17279 14.2545 4.38188 11.8727H1.04553V14.4591C2.69553 17.7364 6.08188 20 10.0001 20Z" fill="#34A853"></path>
-                <path d="M4.38188 11.8727C4.18188 11.2727 4.06824 10.6409 4.06824 9.99995C4.06824 9.35905 4.18188 8.72723 4.38188 8.12723V5.54087H1.04553C0.377353 6.88178 0 8.39541 0 9.99995C0 11.6045 0.377353 13.1181 1.04553 14.459L4.38188 11.8727Z" fill="#FBBC05"></path>
-                <path d="M10.0001 3.97727C11.4683 3.97727 12.7864 4.48182 13.8228 5.47273L16.691 2.60455C14.9592 0.990909 12.6955 0 10.0001 0C6.08188 0 2.69553 2.26364 1.04553 5.54091L4.38188 8.12727C5.17279 5.74545 7.38642 3.97727 10.0001 3.97727Z" fill="#EA4335"></path>
-              </svg>
-              <span className="font-bold text-sm tracking-tight text-gray-700 group-hover:text-gray-900 transition-colors">SIGN IN WITH GOOGLE</span>
+            {/* Error message */}
+            {submitError && (
+              <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                <p className="text-xs font-medium text-red-600 leading-relaxed">{submitError}</p>
+              </div>
+            )}
+
+            <button
+              onClick={handleGoogleStart}
+              disabled={isSubmitting}
+              className="w-full bg-white border border-gray-200 text-gray-900 h-14 rounded-xl flex items-center justify-center gap-3 px-6 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50 group disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-gray-500 animate-spin" />
+                  <span className="font-bold text-sm tracking-tight text-gray-600">Connecting to Google…</span>
+                </>
+              ) : (
+                <>
+                  <svg height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.6001 10.2272C19.6001 9.51813 19.5364 8.83631 19.4183 8.18176H10.0001V12.0499H15.3819C15.1501 13.2999 14.4455 14.359 13.3864 15.0681V17.5772H16.6183C18.5092 15.8363 19.6001 13.2727 19.6001 10.2272Z" fill="#4285F4" />
+                    <path d="M10.0001 20C12.7001 20 14.9637 19.1045 16.6183 17.5773L13.3864 15.0682C12.491 15.6682 11.3455 16.0227 10.0001 16.0227C7.38642 16.0227 5.17279 14.2545 4.38188 11.8727H1.04553V14.4591C2.69553 17.7364 6.08188 20 10.0001 20Z" fill="#34A853" />
+                    <path d="M4.38188 11.8727C4.18188 11.2727 4.06824 10.6409 4.06824 9.99995C4.06824 9.35905 4.18188 8.72723 4.38188 8.12723V5.54087H1.04553C0.377353 6.88178 0 8.39541 0 9.99995C0 11.6045 0.377353 13.1181 1.04553 14.459L4.38188 11.8727Z" fill="#FBBC05" />
+                    <path d="M10.0001 3.97727C11.4683 3.97727 12.7864 4.48182 13.8228 5.47273L16.691 2.60455C14.9592 0.990909 12.6955 0 10.0001 0C6.08188 0 2.69553 2.26364 1.04553 5.54091L4.38188 8.12727C5.17279 5.74545 7.38642 3.97727 10.0001 3.97727Z" fill="#EA4335" />
+                  </svg>
+                  <span className="font-bold text-sm tracking-tight text-gray-700 group-hover:text-gray-900 transition-colors">SIGN IN WITH GOOGLE</span>
+                </>
+              )}
             </button>
-            <button onClick={() => {
+
+            <button
+              onClick={() => {
+                setSubmitError(null);
                 setShowConnectGooglePage(false);
                 setCurrentStep(0);
-            }} className="w-full h-12 flex items-center justify-center text-gray-500 hover:text-orange-600 transition-colors active:scale-95 duration-100">
+              }}
+              className="w-full h-12 flex items-center justify-center text-gray-500 hover:text-orange-600 transition-colors active:scale-95 duration-100"
+            >
               <span className="font-bold text-[10px] tracking-widest uppercase">I'LL ENTER DETAILS MANUALLY</span>
             </button>
           </div>
@@ -4527,150 +4613,16 @@ export default function BusinessOnboarding() {
         )}
       </AnimatePresence>
 
-      {/* ─── Google Mock Account Picker Popup / Overlay ─── */}
-      <AnimatePresence>
-        {showGoogleMockPopup && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
-            {/* Dark glassmorphic overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
-              onClick={() => setShowGoogleMockPopup(false)}
-            />
 
-            {/* Popup window simulating Chrome window */}
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 15 }}
-              className="bg-[#f0f4f9] rounded-2xl w-full max-w-md shadow-2xl relative z-10 border border-gray-250/20 overflow-hidden flex flex-col font-sans"
-              style={{ minHeight: '420px' }}
-            >
-              {/* Chrome Mock Header */}
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 select-none">
-                <div className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 rounded-full bg-orange-500 flex items-center justify-center">
-                    <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-gray-500 tracking-wide">Sign in with Google</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleMockPopup(false)}
-                  className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Popup Content */}
-              <div className="flex-1 bg-white p-6 flex flex-col justify-between">
-                {googleMockAccountStep === 'picker' ? (
-                  <div className="space-y-6">
-                    {/* Google Logo */}
-                    <div className="flex justify-center">
-                      <svg className="w-14 h-14" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.87z" />
-                        <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.08 1.16-3.13 0-5.78-2.11-6.73-4.96H1.21v3.15C3.18 21.88 7.39 24 12 24z" />
-                        <path fill="#FBBC05" d="M5.27 14.24A7.18 7.18 0 0 1 5 12c0-.79.13-1.57.38-2.32V6.53H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.37l4.06-3.13z" />
-                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.22 0 12 0 7.39 0 3.18 2.12 1.21 5.37l4.06 3.15c.95-2.85 3.6-4.96 6.73-4.96z" />
-                      </svg>
-                    </div>
-
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-gray-900">Choose an account</h3>
-                      <p className="text-xs text-gray-500 mt-1">to continue to <span className="font-semibold text-orange-600">McomMall</span></p>
-                    </div>
-
-                    {/* Account options */}
-                    <div className="space-y-2.5 max-h-56 overflow-y-auto">
-                      {[
-                        { email: 'merchant.jane@gmail.com', name: 'Jane Smith', initials: 'JS', bg: 'bg-orange-500' },
-                        { email: 'shopowner.peckham@gmail.com', name: 'Mark Robinson', initials: 'MR', bg: 'bg-blue-500' },
-                        { email: 'guest.merchant@gmail.com', name: 'Guest Merchant', initials: 'GM', bg: 'bg-emerald-500' }
-                      ].map((acc) => (
-                        <button
-                          key={acc.email}
-                          type="button"
-                          onClick={() => {
-                            const names = acc.name.split(' ');
-                            handleGoogleSelectAccount(acc.email, names[0], names[1] || '');
-                          }}
-                          className="w-full p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-3 text-left cursor-pointer"
-                        >
-                          <div className={`w-9 h-9 rounded-full ${acc.bg} text-white flex items-center justify-center font-bold text-xs shadow-sm`}>
-                            {acc.initials}
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-900 leading-none">{acc.name}</p>
-                            <p className="text-[10px] text-gray-500 mt-1">{acc.email}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6 flex flex-col justify-between h-full">
-                    <div className="space-y-4">
-                      {/* App header in permissions */}
-                      <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                        <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center font-black text-xs text-white shadow-sm">
-                          M
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-900">McomMall wishes to access:</h4>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{googleEmail}</p>
-                        </div>
-                      </div>
-
-                      {/* Permissions checkboxes */}
-                      <div className="space-y-3.5 pt-2">
-                        {[
-                          'View and manage your Google Business Profile locations and branches',
-                          'View your primary email address and basic profile info'
-                        ].map((perm, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                              <Check className="w-3.5 h-3.5 text-green-600" strokeWidth={3} />
-                            </div>
-                            <span className="text-xs text-gray-600 leading-normal font-medium">{perm}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <p className="text-[10px] text-gray-400 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        By clicking "Allow", you agree to McomMall sharing your business listing info to publish your storefront. Read our Privacy Policy.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3 pt-4 border-t border-gray-100">
-                      <button
-                        type="button"
-                        onClick={() => setGoogleMockAccountStep('picker')}
-                        className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGoogleGrantPermissions}
-                        className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 cursor-pointer"
-                      >
-                        Allow
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
+  );
+}
+
+export default function BusinessOnboarding() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <BusinessOnboardingInner />
+    </Suspense>
   );
 }
 

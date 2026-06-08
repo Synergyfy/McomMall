@@ -157,6 +157,64 @@ export default function Step8Finalize({ formData, updateFormData, onBack, onPubl
                                     </label>
                                 </div>
 
+                                {/* ─── Promotion & Visibility Flags ─── */}
+                                <div className="rounded-lg border border-amber-200 bg-amber-50/40 dark:border-amber-900 dark:bg-amber-950/20 overflow-hidden">
+                                    <div className="px-4 pt-4 pb-2">
+                                        <p className="text-xs font-black text-amber-700 dark:text-amber-400 uppercase tracking-widest">Storefront & Platform Settings</p>
+                                        <p className="text-xs text-[#9c7349] mt-0.5">Control where this product appears across the platform.</p>
+                                    </div>
+                                    <div className="divide-y divide-amber-100 dark:divide-amber-900">
+                                        {/* Featured */}
+                                        <div className="flex items-center justify-between px-4 py-3">
+                                            <div>
+                                                <p className="text-sm font-bold text-[#1c140d] dark:text-white">⭐ Featured Product</p>
+                                                <p className="text-xs text-[#9c7349]">Pin at the top of your public storefront page.</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={!!formData.isFeatured}
+                                                    onChange={(e) => updateFormData({ isFeatured: e.target.checked })}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-amber-500"></div>
+                                            </label>
+                                        </div>
+                                        {/* Rotator Eligible */}
+                                        <div className="flex items-center justify-between px-4 py-3">
+                                            <div>
+                                                <p className="text-sm font-bold text-[#1c140d] dark:text-white">🔄 Local Mall Rotator</p>
+                                                <p className="text-xs text-[#9c7349]">Show in the Borough carousel and Local Mall discovery feed.</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={!!formData.isRotatorEligible}
+                                                    onChange={(e) => updateFormData({ isRotatorEligible: e.target.checked })}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-500"></div>
+                                            </label>
+                                        </div>
+                                        {/* Promotion Eligible */}
+                                        <div className="flex items-center justify-between px-4 py-3">
+                                            <div>
+                                                <p className="text-sm font-bold text-[#1c140d] dark:text-white">📣 Include in Campaigns</p>
+                                                <p className="text-xs text-[#9c7349]">Allow this product to be used in platform deals and promotions.</p>
+                                            </div>
+                                            <label className="relative inline-flex items-center cursor-pointer">
+                                                <input
+                                                    type="checkbox"
+                                                    className="sr-only peer"
+                                                    checked={!!formData.isPromotionEligible}
+                                                    onChange={(e) => updateFormData({ isPromotionEligible: e.target.checked })}
+                                                />
+                                                <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:start-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-orange-500"></div>
+                                            </label>
+                                        </div>
+                                    </div>
+                                </div>
+
                                 <div className="flex flex-col gap-2 p-4 rounded-lg border border-[#e5e7eb] dark:border-[#3d2e20] bg-[#f8f7f5] dark:bg-[#2a1f16]">
                                     <label className="font-bold text-[#1c140d] dark:text-white" htmlFor="purchaseNote">Purchase Note</label>
                                     <textarea
