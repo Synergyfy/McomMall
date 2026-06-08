@@ -1353,14 +1353,15 @@ function BusinessOnboardingInner() {
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {searchResults.length > 0 ? (
                 searchResults.map((result: any) => {
-                  const postcode = extractPostcode(result.formatted_address || result.vicinity || '');
-                  const photoRef = result.photos?.[0]?.photo_reference;
+                  const placeId = result.place_id || result.placeId;
+                  const postcode = extractPostcode(result.formatted_address || result.formattedAddress || result.vicinity || '');
+                  const photoRef = result.photos?.[0]?.photo_reference || result.photos?.[0]?.photoReference;
                   const typeLabel = result.types?.[0] 
                     ? result.types[0].replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) 
                     : 'Business';
 
                   return (
-                    <div key={result.place_id} className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
+                    <div key={placeId} className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
                       <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
                         {photoRef ? (
                           <img className="w-full h-full object-cover" src={`${baseURL}google/google-business/photo/${photoRef}`} alt={result.name} />
@@ -1386,11 +1387,12 @@ function BusinessOnboardingInner() {
                         <button onClick={async () => {
                             setIsSearching(true);
                             try {
-                              const detailsRes = await api.get(`google/google-business/${result.place_id}`);
+                              const placeId = result.place_id || result.placeId;
+                              const detailsRes = await api.get(`google/google-business/${placeId}`);
                               const placeDetails = detailsRes.data?.result || detailsRes.data || {};
                               
                               setSelectedPreviewBusiness({
-                                googlePlaceId: result.place_id,
+                                googlePlaceId: placeId,
                                 businessName: result.name,
                                 address: placeDetails.formatted_address || result.formatted_address || '',
                                 postcode: postcode || extractPostcode(placeDetails.formatted_address || ''),
@@ -1504,7 +1506,7 @@ function BusinessOnboardingInner() {
 
                   return (
                     <div 
-                      key={result.place_id || index} 
+                      key={result.place_id || result.placeId || index} 
                       style={{ top, left }} 
                       className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30"
                     >
@@ -1882,9 +1884,37 @@ function BusinessOnboardingInner() {
           <div className="mt-auto space-y-4">
             {/* Error message */}
             {submitError && (
-              <div className="flex items-start gap-2.5 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-                <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-                <p className="text-xs font-medium text-red-600 leading-relaxed">{submitError}</p>
+              <div className="flex flex-col gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-xs font-medium text-red-600 leading-relaxed">{submitError}</p>
+                </div>
+                {!selectedPreviewBusiness?.googlePlaceId && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmitError(null);
+                        setShowConnectGooglePage(false);
+                        setShowFindClaimPage(true);
+                      }}
+                      className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Go to Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmitError(null);
+                        setShowConnectGooglePage(false);
+                        setShowBusinessTypePage(true);
+                      }}
+                      className="text-xs bg-white border border-red-200 text-red-700 hover:bg-red-50 font-bold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Set Up Manually
+                    </button>
+                  </div>
+                )}
               </div>
             )}
 
