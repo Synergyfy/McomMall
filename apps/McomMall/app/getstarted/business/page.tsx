@@ -1467,8 +1467,23 @@ function BusinessOnboardingInner() {
 
           {/* Map Section (Desktop Right) */}
           <section className={`flex-grow relative bg-gray-100 ${mapViewToggle === 'map' ? 'block absolute inset-0 z-20' : 'hidden md:block'}`}>
-            <div className="absolute inset-0 grayscale-[0.2] opacity-90 contrast-[1.1]">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuNzwxrl2iwl_GEfxnCkx5UFA1vsDwHDENTyV1udBmozSwamJtvjNaamIpmtnYhpfGY7Sm5yZSrIicyX_L7iwS_0SaEVl_t3mhgzYABbXLNu6yfBraa5hQp_0l9T2CCUVBmnFSj7A0JlrbTxh-z3NDK4HfsKVxjyPc1LN9lDT4zmAF-JwRcdaAtQEsrT4ClF-mvNPRbsGXHfR9sZ6gaDj7HrW1wgs-RggOWlLhHRHS2Ap3lphr5q4e0vkE" />
+            <div className="absolute inset-0">
+              <div className="w-full h-full bg-[#f4f3f0] relative overflow-hidden">
+                {/* Abstract Street Grid Layout */}
+                <svg className="w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                  <defs>
+                    <pattern id="street-grid" width="80" height="80" patternUnits="userSpaceOnUse">
+                      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#d1cfc7" strokeWidth="2" />
+                      <path d="M 0 40 L 80 40" fill="none" stroke="#d1cfc7" strokeWidth="1" strokeDasharray="4,4" />
+                      <path d="M 40 0 L 40 80" fill="none" stroke="#d1cfc7" strokeWidth="1" strokeDasharray="4,4" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#street-grid)" />
+                  <path d="M-100,-100 L800,800" fill="none" stroke="#e3e1d9" strokeWidth="24" />
+                  <path d="M-200,300 C400,200 200,600 1000,500" fill="none" stroke="#cbdcf7" strokeWidth="40" />
+                  <path d="M0,500 L900,100" fill="none" stroke="#e8e6dd" strokeWidth="16" />
+                </svg>
+              </div>
               
               {/* Map Pins */}
               {searchResults.length > 0 ? (
@@ -1773,8 +1788,14 @@ function BusinessOnboardingInner() {
 
           {/* Illustration / Decor */}
           <div className="mt-12 flex justify-center pb-8">
-            <div className="relative w-full max-w-[280px] aspect-square rounded-full bg-orange-50 flex items-center justify-center overflow-hidden">
-              <img alt="Merchant verification background" className="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLuvGVk7sCqcQlnPFGngel4qvlTHhBtKI74UE4avJxYI2HDp7O4_xkiu4Ht88m6n4as5F7Rf2jKmt8K3xw5_d2b08qkIiFVsUUXoG4HtCW9uSd5-iZFmie5MdLKoBAmS7qAC_Lp1XjrV6Q4lhxbsf03ND0AaZBVGywBzYCNjjCVgsGLGBOu8ikuGIL8dwmZRt5EsLGZjhJCBJYQHzk8KgNbI3b1bHrpZtTFGNrJLFIy_moNZoXtQuqGYkeE" />
+            <div className="relative w-full max-w-[280px] aspect-square rounded-full bg-orange-50/50 border border-orange-100 flex items-center justify-center overflow-hidden">
+              {/* Security Illustration */}
+              <div className="relative z-10 flex flex-col items-center gap-2">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center shadow-lg shadow-orange-500/20 animate-pulse">
+                  <ShieldCheck className="w-10 h-10 text-white" />
+                </div>
+                <div className="w-12 h-1.5 rounded-full bg-orange-200/50 blur-[2px] mt-2"></div>
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-orange-100/50 to-transparent"></div>
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-gray-100">
                 <ShieldCheck className="text-green-500 w-4 h-4" />
@@ -2178,9 +2199,18 @@ function BusinessOnboardingInner() {
             {/* Map & Location Card (Bento-style layout) */}
             <div className="bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-gray-200">
               {/* Visual Map Area */}
-              <div className="h-48 w-full relative bg-gray-200 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLsDnUCjMAn7qZUdsI1NbJgUWbPXFEErGrx5Fyjca_jlpCwbiN8VH_GW1vKNg00vC6vzDN4j51SSfmURwAEtr390wkpMtDR0c2xsYBTCpxnp6SIDnrWubTRJR9eV1GHbgwSLWTumf-cDp6wKxNXgAGaIVn_tOyiOKeFkuv-NVsCp8UM-1EcCLJe8M6NeavxSfd9C_CeDDMb9fah1TlJ3W4GE-LI1lAPQId1qzT0OE2f85qmDjXmbMfmsIF4" alt="Map" />
+              <div className="h-48 w-full relative bg-[#f4f3f0] overflow-hidden">
+                <svg className="absolute inset-0 w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="bento-map" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d1cfc7" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#bento-map)" />
+                  <path d="M-50,80 L600,80" fill="none" stroke="#e3e1d9" strokeWidth="16" />
+                  <path d="M200,-50 L200,300" fill="none" stroke="#e3e1d9" strokeWidth="20" />
+                  <circle cx="200" cy="80" r="40" fill="#cbdcf7" fillOpacity="0.4" />
+                </svg>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
                 <div className="absolute bottom-4 left-4 bg-white px-3 py-1.5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 bg-orange-600 rounded-full animate-pulse"></span>
@@ -2226,25 +2256,21 @@ function BusinessOnboardingInner() {
               <div className="flex flex-col gap-3">
                 {/* Merchant Avatars */}
                 <div className="flex -space-x-3 overflow-hidden p-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvYewI3K94KKY1_DlRJEFb4o-Cnqrmgy7Boa2IEUNqdezwKQ0S2ECiIqsmwolVZcNF7gsrlUU6JhjrrPadA8q6NbPKDEUT2FeMkIvcUKyFimK0iOmGJFUp68DZx_ZcwMboy-rdCuM8n78ZB1lO9VeE__SggAi9qFH7fM9BtHNaWgoilxm0EsNWZbfslzJeuhWBZ_xCzZ3cD3Yy9M7DBMANyW1pixtf1EbKGjn5CXTxARBWOQdZ0dsTMTmU" alt="Merchant 1" 
+                  <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200 cursor-pointer hover:scale-105 transition-transform"
                     onClick={() => {
-                  setShowMembershipRoutingPage(false);
-                  setShowLocalNetworkPage(true);
-                }}/>
+                      setShowMembershipRoutingPage(false);
+                      setShowLocalNetworkPage(true);
+                    }}>
+                    <div className="w-full h-full flex items-center justify-center bg-amber-100 text-amber-700 font-bold text-sm">JS</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLs0-5yaoQfQA3Ic6zhkxVXA7EYP0MeokZ6-cI-KDFnp2wVP2furSsMhsQxfRMbj3vaYDbqMDU8WU8EuxnnLkm85kYyz4On3gvjeEhXxdYDpfSdnoVTrLWh-IDcQUuYTS0zUGAhIPV1tBS6PmyeMwhH5a3Fp0FmpB2UCID414GFD1_4tuIhaRGPYQXJmvdACqvYnDwfWymilAD2IT7H7xGT221kEgMn3DZinQLEU9keC_3hV8wjGPDNWO5s" alt="Merchant 2" />
+                    <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-sm">MR</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLudgDzpHvVrBEjQoKoOnkuWceMDHTmXvVQuSu7AtI9uAHsws1yO5IZcOHAzmcRQ9wrSGRVNhvgF2Kz5QReb944LeEFY-zmqR9HgITHtx-QYywvK3LMu7lHcH0Oi7bIMqh1odApyNLrx1qps3bCZ2H7JrYMSkxjtUxAQa-1lY9lu-nFoET84P_dLEXikmtniajfBpoaHPWbzIKHGgTkcukeT8Uhaz6Epp5ZgvPvaSOY48597QtVwlp2YraI" alt="Merchant 3" />
+                    <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold text-sm">LH</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuWJ-_1b8DfxUM4AxwNPgJxI8zHNAz11eHH7IaIzEcEbpe7sa2YwgrGpmeq-7p3Fxq3W2Y_hvYeo2JJaNB2yrlF2E3NE43NgTpDOZ3Cruk2ajrehYwRXV4vo1BhLj8x1ufiqyih52Ttki3Gu2QJGGm5ILrkvS-NNU72JTw-g0QCSbSsFzFKxg3w0Cxvmww5BYGdygcVtN9Eo-EHXjbWLcU2FhWhWKOh0tdbRfoYJMUgp5FXEXFw-RzBgZw" alt="Merchant 4" />
+                    <div className="w-full h-full flex items-center justify-center bg-purple-100 text-purple-700 font-bold text-sm">AK</div>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 border-2 border-white ring-2 ring-gray-100 text-xs font-black">
                     +38
@@ -2369,9 +2395,8 @@ function BusinessOnboardingInner() {
             </div>
 
             {/* Decorative Image */}
-            <div className="mt-4 rounded-2xl overflow-hidden relative h-48 bg-gray-100 border border-gray-200">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="w-full h-full object-cover mix-blend-multiply opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLs-n6vIGc4C_3c5SXGYzXCL0uxcQVVhFh2TdkWokH9T8M6WuYq6glzAkipCCnlmSabIEcfSvdOy5Ol7UiKn67DTwmtbkCVoxGCtdMlqLjJuY-rhIon5heLrx9ZNRaVoEbQmb6hXCnQ-1zk0JJ4r06JWoBS3X6i5ZZc8QucCz32Zn8sQ3JqE-73NEilRazt1Mp0Dx7JkakHH82q13iElmQEfSy7RJvVdiG2WgD-pD3QsLFPFhnA0WolFSWo" alt="Workspace" />
+            <div className="mt-4 rounded-2xl overflow-hidden relative h-48 bg-gradient-to-tr from-orange-600 to-amber-500 border border-gray-200">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/20 via-transparent to-transparent"></div>
               <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent flex flex-col justify-end p-6">
                 <p className="text-sm font-medium text-gray-200 italic">"Success is a journey of continuous growth and collaboration."</p>
               </div>
@@ -2419,10 +2444,28 @@ function BusinessOnboardingInner() {
           </div>
 
           {/* Visual Hero Element */}
-          <div className="w-full aspect-[16/9] mb-8 rounded-2xl overflow-hidden shadow-sm border border-gray-200 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-orange-600/20 to-transparent z-10"></div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsPkk1TptsiT6Gw6wQzYLumPo0dtdacIyPfbHOi0LA96BgDiiAzMRfXem8Qm3vuwwHHXskxl7nGklgHkVSOIPDEZ2VUVzu4B28BdkWsx1IffK709nqNJmXrWpknXdP1Xf0NCk6r58Yaiw4dg-MqMA3Tr8aLJczF0Z1QKRvKbrVMue8jZ35OgjcIlisDkb1Wojju901MyYSJ9I4QawgI0O5-tv5OD75WkDkd-wexocn6LJ_8UHG5jYXJVpY" alt="Merchant Interface" />
+          <div className="w-full aspect-[16/9] mb-8 rounded-2xl overflow-hidden shadow-sm border border-gray-200 relative bg-gradient-to-tr from-slate-900 to-slate-800 p-6 flex flex-col justify-between">
+            <div className="absolute inset-0 bg-gradient-to-t from-orange-600/10 to-transparent z-10 pointer-events-none"></div>
+            
+            {/* Custom Premium Merchant UI Mockup */}
+            <div className="flex justify-between items-start z-10 w-full">
+              <div className="space-y-1">
+                <div className="w-20 h-3 bg-white/10 rounded"></div>
+                <div className="w-28 h-5 bg-white/20 rounded"></div>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-white/15"></div>
+            </div>
+            
+            <div className="flex gap-4 z-10 w-full">
+              <div className="flex-grow h-20 bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col justify-between">
+                <div className="w-10 h-2.5 bg-white/15 rounded"></div>
+                <div className="w-16 h-4 bg-white/25 rounded"></div>
+              </div>
+              <div className="w-1/3 h-20 bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col justify-between">
+                <div className="w-8 h-2.5 bg-white/15 rounded"></div>
+                <div className="w-12 h-4 bg-white/25 rounded"></div>
+              </div>
+            </div>
           </div>
 
           {/* Header */}
@@ -2779,8 +2822,18 @@ function BusinessOnboardingInner() {
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Primary Hub</p>
                   <p className="text-sm font-bold text-gray-900">{formData.city || 'Richmond Borough'} / {formData.postcode || 'High Street'}</p>
                 </div>
-                <div className="h-32 w-full rounded-xl overflow-hidden relative shadow-inner">
-                  <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuTyrpX6dGrEKR9oKiIoEa2O1LEGc70eQ1BvTi7Ys9rD032rrjNNp8qhA-sGjNQoHUXCgd-60nRbgjVxQ10BMATMAYKgaTqDgtBVV5DuNMELX3WYnFWSqdKIr1P5LdX-k5VcCVuVlpECLzkHFqB3AG0nKkk-Oqr79YMkx9zeF75Gpyzs0Sc4vv3Ghix7tgWiDlgirDeoc0Roj8fVt9rqJmrZGzfyz5MADjtCBk4oMnRLg9sIxJF2vbhAQ" alt="Map Location" />
+                <div className="h-32 w-full rounded-xl overflow-hidden relative shadow-inner bg-[#f4f3f0] flex items-center justify-center">
+                  <svg className="absolute inset-0 w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <pattern id="local-placement-map" width="30" height="30" patternUnits="userSpaceOnUse">
+                        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#d1cfc7" strokeWidth="1" />
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#local-placement-map)" />
+                    <path d="M-20,40 L300,40" fill="none" stroke="#e3e1d9" strokeWidth="10" />
+                    <path d="M100,-20 L100,150" fill="none" stroke="#e3e1d9" strokeWidth="12" />
+                  </svg>
+                  <MapPin className="w-6 h-6 text-orange-600 animate-bounce relative z-10" />
                 </div>
               </div>
             </section>
@@ -4763,12 +4816,8 @@ function BuildingStorefrontPage({ onComplete }: { onComplete: () => void }) {
 
         {/* Visual Context Card */}
         <div className="mt-6 w-full">
-          <div className="relative h-32 rounded-xl overflow-hidden border border-gray-200">
-            <img 
-              alt="Storefront building preview" 
-              className="w-full h-full object-cover blur-[2px] opacity-40" 
-              src="https://lh3.googleusercontent.com/aida/AP1WRLvSYCNcXOMbmYlZsaqTqav0iat9-v22ogSKpghgsEOKK7Jx-pNvMp2VFGT-Y6CWKfiQEOEtmgS19oTTjqJA2zRq1wbX1YYFumJBpug2LhVU5rf98JhDU7v3Y88JWyfraRNF4YaSphkj4MIt2z2i8Jq7ZUd4K0dX9VEiOMYhfa-gOyoDSeVHDZs3uQZkuCV65cVyKPITadwvUNdigNgsY5Kyk5dIIt57LJ0zUHFfBxjAGHYfj9GyHW6iXg"
-            />
+          <div className="relative h-32 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-tr from-amber-500/10 via-orange-500/10 to-transparent flex items-center justify-center">
+            <Building2 className="w-12 h-12 text-orange-200/50" />
             <div className="absolute inset-0 bg-gradient-to-t from-orange-50/30 via-transparent to-transparent"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-lg">
@@ -5033,7 +5082,7 @@ function WelcomeChecklistPage({ onComplete }: { onComplete: () => void }) {
         {/* Footer Identity */}
         <section className="mt-6 text-center pt-6 border-t border-[#e2bfb0] opacity-70">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <img alt="Borough Identity" className="w-6 h-6 grayscale" src="https://lh3.googleusercontent.com/aida/AP1WRLsNGCalx_YeTu9oiZzALHRnAFyepU1IU7P6wwgysxcuWdMw09RqJK4ebfc9-HE7dZVjdKrcHV2o3lwb7wlEo2pux3RC-rfLqOZwO79YBd_VrVKoDscrxVHACUmFjkw-WCKz1-1PlnW6WYfCN7YwCQbjToGYLBi2tOfOOMbwc2kCKr8zZSJtaLcjYMvELVfVa-Ux6b1uK_Wh24IliD95yi-9wlHzeM-gPpRZ_zvtGw1yqKTDgXlWfWYrcNE" />
+            <Landmark className="w-4 h-4 text-[#a14000]/60" />
             <span className="font-bold text-[10px] text-[#5a4136] tracking-widest uppercase">Official High Street Merchant</span>
           </div>
           <p className="text-[10px] text-[#5a4136]">Powered by MCOMMALL Urban Connectivity Platform</p>
