@@ -1,7 +1,7 @@
 import { IsUrl } from 'class-validator';
 import { AbstractBaseEntity } from '../../../database/entities/base.entity';
 import { Column, Entity, ManyToOne } from 'typeorm';
-import { ServiceProviderProfile } from './service_provider_profiles.entity';
+import { BusinessServiceProviderProfile } from './service_provider_profiles.entity';
 
 @Entity('certifications')
 export class Certification extends AbstractBaseEntity {
@@ -12,6 +12,6 @@ export class Certification extends AbstractBaseEntity {
   @IsUrl()
   fileUrl: string; // URL to the uploaded PDF/JPG
 
-  @ManyToOne(() => ServiceProviderProfile, (profile) => profile.certifications)
-  serviceProviderProfile: ServiceProviderProfile;
+  @ManyToOne(() => BusinessServiceProviderProfile, (profile) => profile.certifications)
+  serviceProviderProfile: BusinessServiceProviderProfile;
 }

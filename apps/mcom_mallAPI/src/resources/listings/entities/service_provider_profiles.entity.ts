@@ -11,8 +11,8 @@ import {
 import { Business } from './listing.entity';
 import { Certification } from './certifications.entity';
 
-@Entity('service_provider_profiles')
-export class ServiceProviderProfile extends AbstractBaseEntity {
+@Entity('business_service_provider_profiles')
+export class BusinessServiceProviderProfile extends AbstractBaseEntity {
   @Column({ nullable: true })
   @IsOptional()
   @IsUrl()
