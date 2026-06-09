@@ -175,7 +175,7 @@ const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
     role === UserRole.OWNER ? OwnerStatsMap : CustomerStatsMap;
 
   return (
-    <div className="grid grid-cols-2 min-[360px]:grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
       {statsMap.map(({ key, label, icon: Icon, color, isCurrency }) => {
         const value = stats[key as keyof typeof stats];
         return (
