@@ -20,7 +20,7 @@ import { TaxonomySubcategory } from '../../taxonomy/entities/taxonomy-subcategor
 import { BusinessHour } from './business_hour.entity';
 import { SpecialDay } from './special_days.entity';
 import { ProductSellerProfile } from './product_seller_profiles.entity';
-import { ServiceProviderProfile } from './service_provider_profiles.entity';
+import { BusinessServiceProviderProfile } from './service_provider_profiles.entity';
 import { User } from '../../users/entities/user.entity';
 import { Product } from '../../product/entities/product.entity';
 import { Campaign } from '../../campaign/entities/campaign.entity';
@@ -185,12 +185,12 @@ export class Business extends AbstractBaseEntity {
   })
   productSellerProfile?: ProductSellerProfile;
 
-  @OneToOne(() => ServiceProviderProfile, (profile) => profile.business, {
+  @OneToOne(() => BusinessServiceProviderProfile, (profile) => profile.business, {
     cascade: ['insert', 'update', 'remove'],
     nullable: true,
     onDelete: 'CASCADE',
   })
-  serviceProviderProfile?: ServiceProviderProfile;
+  serviceProviderProfile?: BusinessServiceProviderProfile;
 
   @OneToMany(() => Product, (product) => product.business, {
     cascade: ['insert', 'update', 'remove'],
