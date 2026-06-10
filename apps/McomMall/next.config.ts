@@ -9,6 +9,7 @@ const withSerwist = withSerwistInit({
 
 const nextConfig: NextConfig = {
   /* config options here */
+  transpilePackages: ['react-map-gl', 'maplibre-gl'],
   images: {
     unoptimized: true,
     remotePatterns: [

@@ -25,8 +25,10 @@ interface Message {
 export default function ChatWidget() {
     const [isOpen, setIsOpen] = useState(false);
     const [inputValue, setInputValue] = useState('');
+    const [position, setPosition] = useState({ x: 0, y: 0 });
     
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const dragRef = useRef({ isDragging: false, startX: 0, startY: 0, startPosX: 0, startPosY: 0, hasMoved: false });
     const { accessToken } = useSelector((state: RootState) => state.auth);
 
     // Queries
@@ -93,8 +95,44 @@ export default function ChatWidget() {
     const isLoading = isTicketsLoading || (!!activeTicketBrief && isTicketLoading);
     const isSending = createTicketMutation.isPending || addMessageMutation.isPending;
 
+    const handlePointerDown = (e: React.PointerEvent) => {
+        const drag = dragRef.current;
+        drag.isDragging = true;
+        drag.startX = e.clientX;
+        drag.startY = e.clientY;
+        drag.startPosX = position.x;
+        drag.startPosY = position.y;
+        drag.hasMoved = false;
+        (e.target as HTMLElement).setPointerCapture(e.pointerId);
+    };
+
+    const handlePointerMove = (e: React.PointerEvent) => {
+        if (!dragRef.current.isDragging) return;
+        const dx = e.clientX - dragRef.current.startX;
+        const dy = e.clientY - dragRef.current.startY;
+        if (Math.abs(dx) > 3 || Math.abs(dy) > 3) {
+            dragRef.current.hasMoved = true;
+        }
+        setPosition({
+            x: dragRef.current.startPosX + dx,
+            y: dragRef.current.startPosY + dy,
+        });
+    };
+
+    const handlePointerUp = (e: React.PointerEvent) => {
+        if (!dragRef.current.isDragging) return;
+        const wasDrag = dragRef.current.hasMoved;
+        dragRef.current.isDragging = false;
+        if (!wasDrag) {
+            toggleChat();
+        }
+    };
+
     return (
-        <div className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end pointer-events-none">
+        <div
+            className="fixed bottom-6 right-6 z-[9999] flex flex-col items-end pointer-events-none"
+            style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
+        >
             <AnimatePresence>
                 {isOpen && (
                     <motion.div
@@ -192,10 +230,13 @@ export default function ChatWidget() {
 
             {/* Launcher Button */}
             <motion.button
-                onClick={toggleChat}
+                onPointerDown={handlePointerDown}
+                onPointerMove={handlePointerMove}
+                onPointerUp={handlePointerUp}
                 whileHover={{ scale: 1.1 }}
                 whileTap={{ scale: 0.9 }}
-                className="pointer-events-auto bg-[#f58220] text-white p-4 rounded-full shadow-lg hover:shadow-orange-500/30 transition-shadow relative group"
+                className="pointer-events-auto bg-[#f58220] text-white p-4 rounded-full shadow-lg hover:shadow-orange-500/30 transition-shadow relative group cursor-grab active:cursor-grabbing touch-none select-none"
+                style={{ touchAction: 'none' }}
             >
                 <AnimatePresence mode="wait">
                     {isOpen ? (
