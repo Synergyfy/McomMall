@@ -23,7 +23,8 @@ import {
   Zap,
   Globe,
   MapPin,
-  X
+  X,
+  BarChart2,
 } from 'lucide-react';
 
 const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDiscovery'), { ssr: false });
@@ -35,6 +36,7 @@ const SHORTCUTS = [
   { title: "Services", icon: Briefcase, href: "/dashboard/services", color: "text-purple-600", bg: "bg-purple-100" },
   { title: "Wallet", icon: Wallet, href: "/dashboard/wallet", color: "text-green-600", bg: "bg-green-100" },
   { title: "Messages", icon: MessageSquare, href: "/dashboard/messages", color: "text-pink-600", bg: "bg-pink-100" },
+  { title: "Engagement", icon: BarChart2, href: "/dashboard/engagement", color: "text-violet-600", bg: "bg-violet-100" },
   { title: "History", icon: History, href: "/dashboard/history/my-vouchers", color: "text-slate-600", bg: "bg-slate-100" },
   { title: "Settings", icon: Settings, href: "/dashboard/settings", color: "text-gray-600", bg: "bg-gray-100" },
 ];

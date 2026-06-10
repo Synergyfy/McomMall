@@ -4,6 +4,8 @@ import { Repository } from 'typeorm';
 import { ActivatedRegion } from './entities/activated-region.entity';
 import { LocalMall } from './entities/localmall.entity';
 import { Business } from '../listings/entities/listing.entity';
+import { Campaign } from '../campaign/entities/campaign.entity';
+import { User } from '../users/entities/user.entity';
 
 @Injectable()
 export class OnboardingDeciderService {
@@ -57,16 +59,27 @@ export class OnboardingDeciderService {
           lat = parseFloat(data[0].lat);
           lon = parseFloat(data[0].lon);
           const addr = data[0].address || {};
-          borough = addr.suburb || addr.neighbourhood || addr.city_district || addr.town || addr.city || '';
-          
+
+          // Priority: actual borough/district boundary first (city_district = London Borough),
+          // then city/town, then fall back to suburb/neighbourhood as a last resort.
+          // This ensures NW1 1AA → "Camden" (not "Regent's Park")
+          // and BT1 1AA → "Belfast" (city), not a suburb.
+          const rawBorough =
+            addr.city_district ||     // London Boroughs (e.g. "London Borough of Camden")
+            addr.county ||            // County-level (e.g. "Greater Manchester", "County Antrim")
+            addr.town ||              // Towns outside London (e.g. "Belfast", "Manchester")
+            addr.city ||              // Cities (e.g. "Edinburgh")
+            addr.suburb ||            // Suburban areas (last resort)
+            addr.neighbourhood ||     // Neighbourhoods (absolute last resort)
+            '';
+
           // Clean up borough name if it contains prefix/suffix
-          if (borough) {
-            borough = borough
-              .replace(/London Borough of /i, '')
-              .replace(/Borough of /i, '')
-              .replace(/City of /i, '')
-              .trim();
-          }
+          borough = rawBorough
+            .replace(/London Borough of /i, '')
+            .replace(/Borough of /i, '')
+            .replace(/City of /i, '')
+            .replace(/Royal Borough of /i, '')
+            .trim();
         }
       }
     } catch (err) {
@@ -107,6 +120,18 @@ export class OnboardingDeciderService {
       where: { localMallId: localMall.id },
     });
 
+    const activeCampaignsCount = await this.businessRepository.manager
+      .createQueryBuilder(Campaign, 'campaign')
+      .innerJoin('campaign.business', 'business')
+      .where('business.localMallId = :localMallId', { localMallId: localMall.id })
+      .andWhere('campaign.startDate <= :now', { now: new Date() })
+      .andWhere('(campaign.endDate IS NULL OR campaign.endDate >= :now)', { now: new Date() })
+      .getCount();
+
+    const consumerCount = await this.businessRepository.manager.count(User, {
+      where: { role: 'customer' as any },
+    });
+
     // 4. Find or create the ActivatedRegion record
     let activeRegion = await this.activatedRegionRepository.findOne({
       where: { name: borough },
@@ -142,6 +167,9 @@ export class OnboardingDeciderService {
         status: 'inactive',
         localMallId: localMall.id,
         localMallName: localMall.name,
+        businessCount,
+        activeCampaignsCount,
+        consumerCount,
         message: `${borough} is not fully activated yet.`,
         options: {
           allowWaitlist: true,
@@ -159,6 +187,9 @@ export class OnboardingDeciderService {
       status: 'active',
       localMallId: localMall.id,
       localMallName: localMall.name,
+      businessCount,
+      activeCampaignsCount,
+      consumerCount,
       message: `You are joining: ${localMall.name}`,
     };
   }

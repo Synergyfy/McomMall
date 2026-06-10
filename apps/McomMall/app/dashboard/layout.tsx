@@ -110,6 +110,7 @@ export default function DashboardLayout({
 
   const pathname = usePathname();
   const isLocalMall = pathname === '/dashboard/localmall';
+  const isEngagement = pathname.startsWith('/dashboard/engagement');
 
   useEffect(() => {
     setMounted(true);
@@ -151,83 +152,104 @@ export default function DashboardLayout({
         {/* --- MAIN CONTENT AREA --- */}
         <main className="flex-grow flex flex-col min-h-0">
           <header className="flex items-center justify-between w-full h-14 py-2 px-4 border-b border-gray-200 bg-white shadow-sm transition-all duration-300">
-            {/* --- LEFT SIDE: Hamburger + Desktop collapse button --- */}
-            <div className="flex items-center gap-2">
-              {/* Mobile hamburger menu */}
-              <div className="md:hidden">
-                <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
-                  <SheetTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="hover:bg-gray-100"
-                    >
-                      <Menu className="h-5 w-5 text-gray-700" />
-                    </Button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
-                    <div className="p-5 border-b shrink-0">
-                      <Link href="/" className="flex items-center space-x-2">
-                        <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
-                          <span className="text-white font-bold text-sm">M</span>
-                        </div>
-                        <span className="text-xl font-semibold">McomMall</span>
-                      </Link>
+            {isEngagement ? (
+              /* --- ENGAGEMENT HEADER --- */
+              <>
+                <div className="flex items-center gap-2">
+                  <Link href="/dashboard" className="flex items-center gap-2">
+                    <div className="w-8 h-8 bg-orange-500 rounded-full flex items-center justify-center shrink-0">
+                      <span className="text-white font-black text-sm">M</span>
                     </div>
-                    <div className="p-4 overflow-y-auto flex-1">
-                      <SideMenuContent
-                        onLinkClick={() => setIsSideMenuOpen(false)}
-                      />
-                      <div className="mt-4 border-t pt-4">
-                        <button
-                          onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
-                          className="flex w-full items-center justify-between px-2 py-3 text-sm font-semibold text-gray-500 uppercase bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                  </Link>
+                </div>
+                <div className="flex items-center gap-2">
+                  <ProximityHeaderBadge />
+                  <ActivityTimerBadge />
+                  <UserNav align="end" />
+                </div>
+              </>
+            ) : (
+              /* --- DEFAULT HEADER --- */
+              <>
+                {/* --- LEFT SIDE: Hamburger + Desktop collapse button --- */}
+                <div className="flex items-center gap-2">
+                  {/* Mobile hamburger menu */}
+                  <div className="md:hidden">
+                    <Sheet open={isSideMenuOpen} onOpenChange={setIsSideMenuOpen}>
+                      <SheetTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="hover:bg-gray-100"
                         >
-                          <span>Quick Actions</span>
-                          {isQuickActionsOpen ? (
-                            <Minus className="h-4 w-4 transition-transform" />
-                          ) : (
-                            <Plus className="h-4 w-4 transition-transform" />
-                          )}
-                        </button>
-                        {isQuickActionsOpen && (
-                          <div className="mt-1 pl-1">
-                            <NavMenuContent onLinkClick={() => setIsSideMenuOpen(false)} />
+                          <Menu className="h-5 w-5 text-gray-700" />
+                        </Button>
+                      </SheetTrigger>
+                      <SheetContent side="left" className="p-0 w-[18rem] flex flex-col h-full">
+                        <div className="p-5 border-b shrink-0">
+                          <Link href="/" className="flex items-center space-x-2">
+                            <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center">
+                              <span className="text-white font-bold text-sm">M</span>
+                            </div>
+                            <span className="text-xl font-semibold">McomMall</span>
+                          </Link>
+                        </div>
+                        <div className="p-4 overflow-y-auto flex-1">
+                          <SideMenuContent
+                            onLinkClick={() => setIsSideMenuOpen(false)}
+                          />
+                          <div className="mt-4 border-t pt-4">
+                            <button
+                              onClick={() => setIsQuickActionsOpen(!isQuickActionsOpen)}
+                              className="flex w-full items-center justify-between px-2 py-3 text-sm font-semibold text-gray-500 uppercase bg-gray-50 hover:bg-gray-100 rounded-lg transition-colors"
+                            >
+                              <span>Quick Actions</span>
+                              {isQuickActionsOpen ? (
+                                <Minus className="h-4 w-4 transition-transform" />
+                              ) : (
+                                <Plus className="h-4 w-4 transition-transform" />
+                              )}
+                            </button>
+                            {isQuickActionsOpen && (
+                              <div className="mt-1 pl-1">
+                                <NavMenuContent onLinkClick={() => setIsSideMenuOpen(false)} />
+                              </div>
+                            )}
                           </div>
-                        )}
-                      </div>
-                    </div>
-                  </SheetContent>
-                </Sheet>
-              </div>
+                        </div>
+                      </SheetContent>
+                    </Sheet>
+                  </div>
 
-              {/* Desktop sidebar collapse toggle */}
-              <Button
-                variant="ghost"
-                size="icon"
-                className="hidden md:flex hover:bg-gray-100"
-                onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
-              >
-                <Menu className="h-5 w-5 text-gray-700" />
-              </Button>
-            </div>
+                  {/* Desktop sidebar collapse toggle */}
+                  <Button
+                    variant="ghost"
+                    size="icon"
+                    className="hidden md:flex hover:bg-gray-100"
+                    onClick={() => setIsSidebarCollapsed(!isSidebarCollapsed)}
+                  >
+                    <Menu className="h-5 w-5 text-gray-700" />
+                  </Button>
+                </div>
 
-            {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav (desktop only) --- */}
-            <div className="flex items-center gap-2 sm:gap-4">
-              <div className="hidden sm:flex items-center gap-2 sm:gap-4">
-                <MembershipBadge />
-              </div>
-              
-              <div className="flex items-center gap-2">
-                {trialStatus?.isActive && (
-                  <TrialCountdownTimer trialStatus={trialStatus} />
-                )}
-                <ProximityHeaderBadge />
-              </div>
+                {/* --- RIGHT SIDE: Membership, Activity Timer & User Nav (desktop only) --- */}
+                <div className="flex items-center gap-2 sm:gap-4">
+                  <div className="hidden sm:flex items-center gap-2 sm:gap-4">
+                    <MembershipBadge />
+                  </div>
+                  
+                  <div className="flex items-center gap-2">
+                    {trialStatus?.isActive && (
+                      <TrialCountdownTimer trialStatus={trialStatus} />
+                    )}
+                    <ProximityHeaderBadge />
+                  </div>
 
-              {/* UserNav — compact avatar on mobile, full on desktop */}
-              <UserNav align="end" />
-            </div>
+                  {/* UserNav — compact avatar on mobile, full on desktop */}
+                  <UserNav align="end" />
+                </div>
+              </>
+            )}
           </header>
 
           {/* Page Content */}
