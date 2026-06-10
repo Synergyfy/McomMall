@@ -767,7 +767,9 @@ export default function LocalMallPage() {
                 </p>
                 <div className="flex items-center gap-1.5 mt-2">
                   <TrendingUp className="w-3.5 h-3.5 text-white/70" />
-                  <p className="text-xs text-white/70 font-semibold">+320 pts this week</p>
+                  <p className="text-xs text-white/70 font-semibold">
+                    +{mallData?.weeklyPointsEarned !== undefined ? mallData.weeklyPointsEarned : 320} pts this week
+                  </p>
                 </div>
               </div>
 

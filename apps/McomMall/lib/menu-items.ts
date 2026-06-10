@@ -25,6 +25,7 @@ import {
   LifeBuoy,
   Zap,
   MapPin,
+  BarChart2,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -144,6 +145,11 @@ export const serviceMenuItems: MenuItem[] = [
 ];
 
 export const marketingMenuItems: MenuItem[] = [
+  {
+    title: 'Engagement',
+    href: '/dashboard/engagement',
+    icon: BarChart2,
+  },
   {
     title: 'Partnerships',
     href: '/dashboard/marketing/partnerships',

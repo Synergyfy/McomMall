@@ -6,7 +6,7 @@ import {
   ChevronRight, ChevronLeft, Upload, Check,
   Shield, Crown, Compass, MapPin,
   Trophy, Building2, Globe, Eye, EyeOff, Image, AlertCircle, Phone, User,
-  Mail, ShieldCheck, X, Search, Star, Clock, ArrowRight, HelpCircle, Map, MessageSquare, RefreshCw, CheckCircle2, CloudDownload, ShoppingBag, Utensils, UtensilsCrossed, Umbrella, Wine, Coffee, Lightbulb, Bell, Package, Briefcase, ChevronUp, ChevronDown, Badge, Rocket, Fingerprint, Info, Heart, Gift, Megaphone, Gamepad2, Calendar, CalendarDays, Ticket, Store, BadgeCheck, Archive, Puzzle, Truck, Settings, Circle, LayoutDashboard, Share2, Award, UserPlus, Sparkles, Calculator, Plane, Palette, CreditCard, Croissant, Landmark
+  Mail, ShieldCheck, X, Search, Star, Clock, ArrowRight, HelpCircle, Map, MessageSquare, RefreshCw, CheckCircle2, CloudDownload, ShoppingBag, Utensils, UtensilsCrossed, Umbrella, Wine, Coffee, Lightbulb, Bell, Package, Briefcase, ChevronUp, ChevronDown, Badge, Rocket, Fingerprint, Info, Heart, Gift, Megaphone, Gamepad2, Calendar, CalendarDays, Ticket, Store, BadgeCheck, Archive, Puzzle, Truck, Settings, Circle, LayoutDashboard, Share2, Award, UserPlus, Sparkles, Calculator, Plane, Palette, CreditCard, Croissant, Landmark, Zap
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
@@ -51,6 +51,24 @@ const QUESTS = [
     color: '#d97706',
     colorLight: '#fffbeb',
     Icon: MapPin,
+  },
+  {
+    id: 'borough_detected',
+    title: 'Local Borough Detected',
+    flavor: "We've matched your postcode to a local business district.",
+    label: 'Verification',
+    color: '#a23f00',
+    colorLight: '#fff1eb',
+    Icon: MapPin,
+  },
+  {
+    id: 'high_street_activation',
+    title: 'High Street Activation',
+    flavor: 'Your business is joining the local digital ecosystem.',
+    label: 'Activation',
+    color: '#a23f00',
+    colorLight: '#fff1eb',
+    Icon: Zap,
   },
   {
     id: 'details',
@@ -221,6 +239,63 @@ function ConfettiRain() {
   );
 }
 
+const BOROUGH_DATA: Record<string, {
+  name: string;
+  mallName: string;
+  district: string;
+  detectedImage: string;
+  activationImage: string;
+  nearbyBusinesses: number;
+  activeCampaigns: number;
+  localShoppers: string;
+  networkBusinesses: string;
+}> = {
+  'Camden Borough': {
+    name: 'Camden Borough',
+    mallName: 'Camden High Street Mall',
+    district: 'NW1 District • Central London',
+    detectedImage: 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?w=800&q=80',
+    activationImage: 'https://images.unsplash.com/photo-1486325212027-8081e485255e?w=800&q=80',
+    nearbyBusinesses: 42,
+    activeCampaigns: 8,
+    localShoppers: '1.2k',
+    networkBusinesses: '248',
+  },
+  'Richmond Borough': {
+    name: 'Richmond Borough',
+    mallName: 'Richmond High Street Mall',
+    district: 'TW9 District • Greater London',
+    detectedImage: 'https://images.unsplash.com/photo-1555396273-367ea4eb4db5?w=800&q=80',
+    activationImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
+    nearbyBusinesses: 35,
+    activeCampaigns: 5,
+    localShoppers: '950',
+    networkBusinesses: '180',
+  },
+  'Islington Borough': {
+    name: 'Islington Borough',
+    mallName: 'Islington High Street Mall',
+    district: 'N1 District • North London',
+    detectedImage: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=800&q=80',
+    activationImage: 'https://images.unsplash.com/photo-1480074568708-e7b720bb3f09?w=800&q=80',
+    nearbyBusinesses: 51,
+    activeCampaigns: 12,
+    localShoppers: '1.8k',
+    networkBusinesses: '310',
+  },
+  'Westminster Borough': {
+    name: 'Westminster Borough',
+    mallName: 'Westminster High Street Mall',
+    district: 'SW1 District • Central London',
+    detectedImage: 'https://images.unsplash.com/photo-1534430480872-3498386e7856?w=800&q=80',
+    activationImage: 'https://images.unsplash.com/photo-1445116572660-236099ec97a0?w=800&q=80',
+    nearbyBusinesses: 64,
+    activeCampaigns: 15,
+    localShoppers: '2.4k',
+    networkBusinesses: '420',
+  }
+};
+
 // ═══════════════════════════════════════════════════════════
 // Main Business Onboarding Component
 // ═══════════════════════════════════════════════════════════
@@ -267,6 +342,66 @@ function BusinessOnboardingInner() {
 
   const [currentStep, setCurrentStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const coverInputRef = useRef<HTMLInputElement>(null);
+  const exteriorInputRef = useRef<HTMLInputElement>(null);
+  const gridInputRef = useRef<HTMLInputElement>(null);
+  const replaceIndexRef = useRef<number>(-1);
+
+  const handleCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setCoverFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setCoverImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleExteriorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      setExteriorFile(file);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        setExteriorImage(reader.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleGridUploadClick = (index: number) => {
+    replaceIndexRef.current = index;
+    gridInputRef.current?.click();
+  };
+
+  const handleGridFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const dataUrl = reader.result as string;
+      if (replaceIndexRef.current === -1) {
+        setGridImages(prev => [...prev, dataUrl]);
+        setGridFiles(prev => [...prev, file]);
+      } else {
+        const idx = replaceIndexRef.current;
+        setGridImages(prev => {
+          const next = [...prev];
+          next[idx] = dataUrl;
+          return next;
+        });
+        setGridFiles(prev => {
+          const next = [...prev];
+          next[idx] = file;
+          return next;
+        });
+      }
+    };
+    reader.readAsDataURL(file);
+  };
   const router = useRouter();
   const searchParams = useSearchParams();
   const dispatch = useDispatch();
@@ -293,14 +428,31 @@ function BusinessOnboardingInner() {
   }, []);
   // ─────────────────────────────────────────────────────────────────────────
   
-  const activeQuests = QUESTS.filter(q => {
-    const isService = formData.businessType === 'services' || formData.businessType === 'both';
-    
-    if (q.id === 'fulfillment' && formData.businessType === 'services') return false;
-    if ((q.id === 'booking_prefs' || q.id === 'appointment_struct' || q.id === 'service_zones') && !isService) return false;
-    
-    return true;
-  });
+  const activeQuests = (() => {
+    const filtered = QUESTS.filter(q => {
+      if (q.id === 'storefront') return false;
+
+      const isService = formData.businessType === 'services' || formData.businessType === 'both';
+      if (q.id === 'fulfillment' && formData.businessType === 'services') return false;
+      if ((q.id === 'booking_prefs' || q.id === 'appointment_struct' || q.id === 'service_zones') && !isService) return false;
+      
+      return true;
+    });
+
+    const list = [...filtered];
+    if (list.length > 0) {
+      list.splice(list.length - 1, 0, {
+        id: 'storefront',
+        title: 'Add Your Storefront',
+        flavor: "Don't worry about dimensions—auto-crop and auto-resize are active to ensure your store looks premium on all devices.",
+        label: 'Storefront',
+        color: '#a23f00',
+        colorLight: '#fff1eb',
+        Icon: Store,
+      });
+    }
+    return list;
+  })();
 
   const { mutateAsync: createUser } = useCreateUser();
   const { mutateAsync: login } = useLogin();
@@ -613,6 +765,9 @@ function BusinessOnboardingInner() {
     resolvedArea?: string;
     localMallName?: string;
     localMallId?: string;
+    businessCount?: number;
+    activeCampaignsCount?: number;
+    consumerCount?: number;
     message: string;
   } | null>(null);
   const [showProximityModal, setShowProximityModal] = useState(false);
@@ -654,6 +809,18 @@ function BusinessOnboardingInner() {
   const [verifyMethod, setVerifyMethod] = useState<'google' | 'email' | 'sms'>('google');
   const [selectedPreviewBusiness, setSelectedPreviewBusiness] = useState<any>(null);
   const [mapViewToggle, setMapViewToggle] = useState<'list' | 'map'>('list');
+
+  // ─── Manual Onboarding States ────────────────────────
+  const [showBoroughBrowser, setShowBoroughBrowser] = useState(false);
+  const [coverImage, setCoverImage] = useState<string | null>(null);
+  const [coverFile, setCoverFile] = useState<File | null>(null);
+  const [exteriorImage, setExteriorImage] = useState<string | null>(null);
+  const [exteriorFile, setExteriorFile] = useState<File | null>(null);
+  const [gridImages, setGridImages] = useState<string[]>([]);
+  const [gridFiles, setGridFiles] = useState<(File | null)[]>([]);
+  const [selectedBorough, setSelectedBorough] = useState<string>('Camden Borough');
+  const [boroughSearchQuery, setBoroughSearchQuery] = useState<string>('');
+
 
   // ─── Debounced address suggestion lookup ──────────────
   useEffect(() => {
@@ -703,6 +870,19 @@ function BusinessOnboardingInner() {
     }
   }, []);
 
+  useEffect(() => {
+    if (!isClient) return;
+    const currentQuestId = activeQuests[currentStep]?.id;
+    if (
+      (currentQuestId === 'borough_detected' || currentQuestId === 'high_street_activation') &&
+      formData.postcode &&
+      !proximityResult &&
+      !isCheckingProximity
+    ) {
+      runLocationCheck(formData.postcode).catch((err) => console.error(err));
+    }
+  }, [currentStep, formData.postcode, proximityResult, isClient]);
+
   // ─── Save to cache ───────────────────────────────────
   useEffect(() => {
     if (!isClient) return;
@@ -718,23 +898,21 @@ function BusinessOnboardingInner() {
   const currentQuest = activeQuests[currentStep] || activeQuests[0];
   const QuestIcon = currentQuest.Icon;
 
-  // ─── Handlers ────────────────────────────────────────
-  const handleSelectSuggestion = async (suggestion: any) => {
-    setFormData((prev) => ({
-      ...prev,
-      address: suggestion.displayName,
-      postcode: suggestion.postcode,
-    }));
-    setShowSuggestions(false);
-
+  const runLocationCheck = async (postcode: string) => {
     setIsCheckingProximity(true);
     try {
       const res = await api.post('localmall/onboarding/check-location', {
-        postcode: suggestion.postcode,
+        postcode,
       });
       const result = res.data;
       setProximityResult(result);
-      setShowProximityModal(true);
+      if (result.resolvedArea) {
+        const key = result.resolvedArea.includes('Borough')
+          ? result.resolvedArea
+          : `${result.resolvedArea} Borough`;
+        setSelectedBorough(key);
+      }
+      
       // Persist to local storage for the dashboard
       if (result.status === 'active') {
         localStorage.setItem('businessProximityTier', 'high_street');
@@ -745,10 +923,33 @@ function BusinessOnboardingInner() {
         localStorage.setItem('businessProximityTier', 'national');
         localStorage.setItem('businessArea', result.resolvedArea || 'Remote');
       }
-    } catch (err) {
+      return result;
+    } catch (err: any) {
       console.error('Error checking proximity:', err);
+      throw err;
     } finally {
       setIsCheckingProximity(false);
+    }
+  };
+
+  // ─── Handlers ────────────────────────────────────────
+  const handleSelectSuggestion = async (suggestion: any) => {
+    setFormData((prev) => ({
+      ...prev,
+      address: suggestion.displayName,
+      postcode: suggestion.postcode,
+    }));
+    setShowSuggestions(false);
+
+    try {
+      await runLocationCheck(suggestion.postcode);
+      const next = new Set(completedSteps);
+      next.add(currentStep);
+      setCompletedSteps(next);
+      setParticleTrigger((p) => p + 1);
+      setTimeout(() => setCurrentStep(currentStep + 1), 300);
+    } catch (err) {
+      console.error('Error in handleSelectSuggestion location check:', err);
     }
   };
 
@@ -807,6 +1008,38 @@ function BusinessOnboardingInner() {
       } catch (err: unknown) {
         const e = err as { message?: string };
         setSubmitError(e?.message || 'Invalid code. Please check and try again.');
+      } finally {
+        setIsSubmitting(false);
+      }
+      return;
+    }
+
+    // ── Step 2: Postcode Location Check ────────────────────
+    if (currentQuest.id === 'postcode') {
+      if (!formData.postcode || formData.postcode.trim().length < 3) {
+        setSubmitError('Please enter a valid UK postcode.');
+        return;
+      }
+      setIsSubmitting(true);
+      try {
+        const result = await runLocationCheck(formData.postcode);
+
+        // If the postcode check failed or is completely invalid (not UK)
+        if (result.status === 'inactive' && !result.options?.allowWaitlist && result.message) {
+          setSubmitError(result.message);
+          setIsSubmitting(false);
+          return;
+        }
+
+        const next = new Set(completedSteps);
+        if (!next.has(currentStep)) {
+          next.add(currentStep);
+          setCompletedSteps(next);
+          setParticleTrigger((p) => p + 1);
+        }
+        setTimeout(() => setCurrentStep((c) => c + 1), 300);
+      } catch (err: any) {
+        setSubmitError(err?.response?.data?.message || err?.message || 'Failed to verify postcode location. Please try again.');
       } finally {
         setIsSubmitting(false);
       }
@@ -873,6 +1106,30 @@ function BusinessOnboardingInner() {
           }
         }
 
+        let uploadedCoverUrl = '';
+        if (coverFile) {
+          try {
+            const uploadRes = await uploadFile(coverFile);
+            uploadedCoverUrl = uploadRes.secure_url;
+          } catch (uploadErr) {
+            setSubmitError('Cover image upload failed. Please try again.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
+        let uploadedExteriorUrl = '';
+        if (exteriorFile) {
+          try {
+            const uploadRes = await uploadFile(exteriorFile);
+            uploadedExteriorUrl = uploadRes.secure_url;
+          } catch (uploadErr) {
+            setSubmitError('Storefront exterior image upload failed. Please try again.');
+            setIsSubmitting(false);
+            return;
+          }
+        }
+
         const payload: any = {
           listingType: formData.businessType === 'both' ? ['product', 'service'] : formData.businessType === 'products' ? ['product'] : ['service'],
           businessName: formData.businessName,
@@ -882,7 +1139,7 @@ function BusinessOnboardingInner() {
           location: {
             postcode: formData.postcode,
             addressLine1: formData.address || 'Local Street Address',
-            city: localStorage.getItem('businessArea') || 'London',
+            city: selectedBorough || localStorage.getItem('businessArea') || 'London',
             showPublicly: true,
           },
           sectorId: formData.sectorId,
@@ -920,6 +1177,35 @@ function BusinessOnboardingInner() {
 
         if (uploadedLogoUrl) {
           payload.logoUrl = uploadedLogoUrl;
+        }
+
+        if (uploadedCoverUrl) {
+          payload.bannerUrl = uploadedCoverUrl;
+        }
+
+        const uploadedGridUrls: string[] = [];
+        for (const file of gridFiles) {
+          if (file) {
+            try {
+              const uploadRes = await uploadFile(file);
+              uploadedGridUrls.push(uploadRes.secure_url);
+            } catch (uploadErr) {
+              setSubmitError('One or more grid image uploads failed. Please try again.');
+              setIsSubmitting(false);
+              return;
+            }
+          }
+        }
+
+        const mediaArray: string[] = [];
+        if (uploadedExteriorUrl) {
+          mediaArray.push(uploadedExteriorUrl);
+        }
+        if (uploadedGridUrls.length > 0) {
+          mediaArray.push(...uploadedGridUrls);
+        }
+        if (mediaArray.length > 0) {
+          payload.media = mediaArray;
         }
 
         if (payload.listingType.includes('product')) {
@@ -3376,6 +3662,595 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (showWelcomeChecklistPage) {
     return <WelcomeChecklistPage onComplete={() => router.push('/dashboard')} />;
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Override: Select Your Borough browser overlay
+  // ═══════════════════════════════════════════════════════
+  if (showBoroughBrowser) {
+    const filteredBoroughs = Object.keys(BOROUGH_DATA).filter(key => {
+      const q = boroughSearchQuery.toLowerCase();
+      const b = BOROUGH_DATA[key];
+      return key.toLowerCase().includes(q) || 
+             b.mallName.toLowerCase().includes(q) || 
+             b.district.toLowerCase().includes(q);
+    });
+
+    return (
+      <div className="mcommall-onboarding bg-[#fff8f6] text-[#261812] min-h-screen flex flex-col font-sans pt-16">
+        <main className="flex-grow w-full max-w-2xl mx-auto px-margin-mobile py-stack-lg">
+          <button 
+            onClick={() => setShowBoroughBrowser(false)}
+            className="flex items-center gap-1.5 text-sm font-bold text-primary hover:opacity-80 transition-opacity active:scale-95 mb-6"
+          >
+            <span className="material-symbols-outlined">arrow_back</span> Back
+          </button>
+          <section className="text-center mb-stack-lg">
+            <h1 className="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-background mb-unit">Select Your Borough</h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant">Search or select a local business district to connect your storefront.</p>
+          </section>
+
+          {/* Search bar */}
+          <div className="w-full mb-8 relative">
+            <div className="relative flex items-center bg-white border border-[#e2bfb0] rounded-xl shadow-sm focus-within:border-primary transition-all">
+              <span className="material-symbols-outlined text-outline ml-4 absolute pointer-events-none">search</span>
+              <input 
+                type="text"
+                value={boroughSearchQuery}
+                onChange={(e) => setBoroughSearchQuery(e.target.value)}
+                placeholder="Search boroughs, districts or postcodes..."
+                className="w-full pl-12 pr-4 py-4 bg-transparent border-none rounded-xl text-on-surface placeholder-outline focus:ring-0 text-base"
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {filteredBoroughs.map(key => {
+              const b = BOROUGH_DATA[key];
+              return (
+                <div 
+                  key={key}
+                  onClick={async () => {
+                    setSelectedBorough(key);
+                    const defaultPostcodes: Record<string, string> = {
+                      'Camden Borough': 'NW1 1AA',
+                      'Richmond Borough': 'TW9 1EZ',
+                      'Islington Borough': 'N1 0QH',
+                      'Westminster Borough': 'SW1A 1AA',
+                    };
+                    const targetPostcode = defaultPostcodes[key] || formData.postcode;
+                    setFormData(prev => ({
+                      ...prev,
+                      postcode: targetPostcode,
+                      city: key,
+                    }));
+                    setShowBoroughBrowser(false);
+                    try {
+                      await runLocationCheck(targetPostcode);
+                    } catch (err) {
+                      console.error('Borough browser location check error:', err);
+                    }
+                  }}
+                  className="group cursor-pointer rounded-xl border border-outline-variant bg-white shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary overflow-hidden flex flex-col"
+                >
+                  <div className="h-32 w-full overflow-hidden relative">
+                    <img src={b.detectedImage} alt={b.name} className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                    <div className="absolute bottom-3 left-3 flex items-center gap-1.5 text-white">
+                      <span className="material-symbols-outlined text-[18px]" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                      <span className="font-title-md text-sm font-bold uppercase tracking-tight">{b.name}</span>
+                    </div>
+                  </div>
+                  <div className="p-4 flex flex-col justify-between flex-grow">
+                    <div>
+                      <h3 className="font-title-md text-base text-on-surface mb-1">{b.mallName}</h3>
+                      <p className="font-body-sm text-xs text-on-surface-variant flex items-center gap-1">
+                        <span className="material-symbols-outlined text-[12px]">map</span>
+                        {b.district}
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-3 border-t border-outline-variant/30 flex justify-between items-center text-xs text-outline">
+                      <span>{b.nearbyBusinesses} Nearby Businesses</span>
+                      <span className="text-primary font-bold flex items-center gap-0.5">Select <span className="material-symbols-outlined text-[14px]">chevron_right</span></span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Override: Loading/Verifying Screen
+  // ═══════════════════════════════════════════════════════
+  if (!isGoogleOnboarding && (currentQuest.id === 'borough_detected' || currentQuest.id === 'high_street_activation') && (isCheckingProximity || !proximityResult)) {
+    return (
+      <div className="mcommall-onboarding bg-[#fff8f6] text-[#261812] min-h-screen flex flex-col font-sans pt-16">
+        <main className="flex-grow flex flex-col items-center justify-center px-margin-mobile py-stack-lg max-w-[640px] mx-auto w-full">
+          <div className="flex flex-col items-center gap-4 text-center">
+            <motion.div
+              animate={{ rotate: 360 }}
+              transition={{ duration: 1.2, repeat: Infinity, ease: 'linear' }}
+              className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full mb-2"
+            />
+            <h2 className="font-title-md text-xl font-bold animate-pulse">Verifying High Street Proximity...</h2>
+            <p className="font-body-sm text-on-surface-variant max-w-[320px]">
+              Querying mapping network to dynamically calculate local active merchant count and borough stats.
+            </p>
+          </div>
+        </main>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Override: Local Borough Detected Screen (Step 2 Verification)
+  // ═══════════════════════════════════════════════════════
+  if (!isGoogleOnboarding && currentQuest.id === 'borough_detected') {
+    const resolvedName = proximityResult?.resolvedArea || selectedBorough.replace(' Borough', '');
+    const resolvedBoroughKey = resolvedName.endsWith('Borough') ? resolvedName : `${resolvedName} Borough`;
+
+    const data = BOROUGH_DATA[resolvedBoroughKey] || {
+      name: resolvedBoroughKey,
+      mallName: proximityResult?.localMallName || `${resolvedName} Local Mall`,
+      district: `${formData.postcode.split(' ')[0] || 'Local'} District • UK Network`,
+      detectedImage: 'https://images.unsplash.com/photo-1519501025264-65ba15a82390?w=800&q=80',
+      activationImage: 'https://images.unsplash.com/photo-1441986300917-64674bd600d8?w=800&q=80',
+      nearbyBusinesses: proximityResult?.businessCount || 0,
+      activeCampaigns: 0,
+      localShoppers: '0',
+      networkBusinesses: String(proximityResult?.businessCount || 0),
+    };
+
+    return (
+      <div className="mcommall-onboarding bg-background text-on-background min-h-screen flex flex-col font-sans pt-16">
+        <main className="flex-grow flex flex-col items-center px-margin-mobile py-stack-lg max-w-[640px] mx-auto w-full">
+          {/* Back button */}
+          <div className="w-full flex justify-start mb-4">
+            <button 
+              onClick={handleBack}
+              className="flex items-center gap-1.5 text-sm font-bold text-primary hover:opacity-80 transition-opacity active:scale-95"
+            >
+              <span className="material-symbols-outlined">arrow_back</span> Back
+            </button>
+          </div>
+          {/* Onboarding Progress */}
+          <div className="w-full mb-stack-lg">
+            <div className="flex justify-between items-center mb-unit">
+              <span className="font-label-md text-label-md text-secondary">STEP 2 OF 13</span>
+              <span className="font-label-md text-label-md text-outline">LOCATION VERIFICATION</span>
+            </div>
+            <div className="w-full h-1 bg-surface-container-highest rounded-full flex gap-1">
+              <div className="h-full w-[7.6%] bg-primary-container rounded-full"></div>
+              <div className="h-full w-[7.6%] bg-primary-container rounded-full"></div>
+              <div className="flex-grow bg-surface-container-highest rounded-full"></div>
+            </div>
+          </div>
+
+          {/* Header Section */}
+          <section className="text-center mb-stack-lg">
+            <h1 className="font-headline-lg-mobile text-headline-lg-mobile md:font-headline-lg md:text-headline-lg text-on-background mb-unit">Local Borough Detected</h1>
+            <p className="font-body-lg text-body-lg text-on-surface-variant">We've matched your postcode to a local business district.</p>
+          </section>
+
+          {/* Prominent District Card */}
+          <div className="w-full mb-stack-lg group">
+            <div className="relative overflow-hidden rounded-xl border border-outline-variant bg-surface shadow-sm transition-all duration-300 hover:shadow-md hover:border-primary">
+              <div className="h-48 w-full overflow-hidden relative">
+                <img 
+                  alt={data.name} 
+                  className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105" 
+                  src={data.detectedImage}
+                />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent"></div>
+                <div className="absolute bottom-4 left-4 flex items-center gap-2 text-white">
+                  <span className="material-symbols-outlined" style={{ fontVariationSettings: "'FILL' 1" }}>location_on</span>
+                  <span className="font-title-md text-title-md font-bold uppercase tracking-tight">{data.name}</span>
+                </div>
+              </div>
+              <div className="p-stack-md bg-white">
+                <div className="flex justify-between items-start mb-unit">
+                  <div>
+                    <h2 className="font-title-md text-title-md text-on-surface">{data.mallName}</h2>
+                    <p className="font-body-sm text-body-sm text-on-surface-variant flex items-center gap-1">
+                      <span className="material-symbols-outlined text-[14px]">map</span>
+                      {data.district}
+                    </p>
+                  </div>
+                  <span className="bg-tertiary-container text-on-tertiary-container px-3 py-1 rounded-full font-label-md text-label-md flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[16px] pulse-animation" style={{ fontVariationSettings: "'FILL' 1" }}>verified</span>
+                    Matched
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* District Pulse Bento Grid */}
+          <section className="w-full mb-stack-lg">
+            <h3 className="font-label-md text-label-md text-outline uppercase mb-stack-sm tracking-widest px-unit">District Pulse</h3>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="bg-surface-container-low p-stack-md rounded-xl border border-outline-variant/30 flex flex-col gap-unit">
+                <span className="material-symbols-outlined text-primary" style={{ fontVariationSettings: "'FILL' 0" }}>storefront</span>
+                <span className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{proximityResult?.businessCount ?? data.nearbyBusinesses}</span>
+                <span className="font-label-md text-label-md text-on-surface-variant">Nearby Businesses</span>
+              </div>
+              <div className="bg-surface-container-low p-stack-md rounded-xl border border-outline-variant/30 flex flex-col gap-unit">
+                <span className="material-symbols-outlined text-tertiary" style={{ fontVariationSettings: "'FILL' 0" }}>campaign</span>
+                <span className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{proximityResult?.activeCampaignsCount ?? data.activeCampaigns}</span>
+                <span className="font-label-md text-label-md text-on-surface-variant">Active Campaigns</span>
+              </div>
+              <div className="col-span-2 bg-primary-container/5 p-stack-md rounded-xl border border-primary-container/20 flex items-center justify-between">
+                <div className="flex flex-col gap-unit">
+                  <span className="font-title-md text-title-md text-primary font-bold">High Local Activity</span>
+                  <span className="font-body-sm text-body-sm text-on-surface-variant">Based on real-time transaction density</span>
+                </div>
+                <div className="flex items-end gap-1 h-8">
+                  <div className="w-2 bg-primary-container/30 h-1/2 rounded-t-sm"></div>
+                  <div className="w-2 bg-primary-container/50 h-3/4 rounded-t-sm"></div>
+                  <div className="w-2 bg-primary-container h-full rounded-t-sm pulse-animation"></div>
+                  <div className="w-2 bg-primary-container/70 h-2/3 rounded-t-sm"></div>
+                </div>
+              </div>
+              <div className="col-span-2 bg-surface-container-highest p-stack-md rounded-xl border border-outline-variant/30 flex items-center gap-4">
+                <div className="bg-white p-3 rounded-lg shadow-sm">
+                  <span className="material-symbols-outlined text-secondary" style={{ fontVariationSettings: "'FILL' 1" }}>groups</span>
+                </div>
+                <div className="flex flex-col">
+                  <span className="font-headline-lg-mobile text-headline-lg-mobile text-on-surface">{proximityResult?.consumerCount !== undefined ? (proximityResult.consumerCount >= 1000 ? `${(proximityResult.consumerCount / 1000).toFixed(1)}k` : String(proximityResult.consumerCount)) : data.localShoppers}</span>
+                  <span className="font-label-md text-label-md text-on-surface-variant uppercase tracking-wider">Local Shoppers Active</span>
+                </div>
+              </div>
+            </div>
+          </section>
+
+          {/* Action Section */}
+          <section className="w-full flex flex-col gap-stack-sm mt-auto pb-stack-lg">
+            <button 
+              onClick={handleNext}
+              className="w-full bg-primary-container text-on-primary-container font-title-md text-title-md py-4 rounded-xl font-bold shadow-lg shadow-primary-container/20 active:scale-[0.98] transition-all hover:opacity-90"
+            >
+              Confirm Borough
+            </button>
+            <div className="grid grid-cols-2 gap-stack-sm">
+              <button 
+                onClick={() => setCurrentStep(2)} // Go back to postcode lookup
+                className="flex items-center justify-center gap-2 border border-outline text-on-surface-variant font-label-md text-label-md py-3 rounded-xl hover:bg-surface-container transition-colors active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">edit_location</span>
+                Change Borough
+              </button>
+              <button 
+                onClick={() => setShowBoroughBrowser(true)}
+                className="flex items-center justify-center gap-2 border border-outline text-on-surface-variant font-label-md text-label-md py-3 rounded-xl hover:bg-surface-container transition-colors active:scale-95"
+              >
+                <span className="material-symbols-outlined text-[18px]">search</span>
+                Browse Boroughs
+              </button>
+            </div>
+            <p className="text-center font-body-sm text-body-sm text-outline mt-unit">
+              Not seeing your area? <a className="text-primary font-bold hover:underline" href="#">Request a new district</a>
+            </p>
+          </section>
+        </main>
+        
+        <footer className="mt-auto py-stack-md border-t border-outline-variant/30 text-center">
+          <p className="font-label-md text-label-md text-outline">© 2024 MCOMMALL Institutional Commerce Platform</p>
+        </footer>
+
+        <style dangerouslySetInnerHTML={{ __html: `
+          .pulse-animation {
+            animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+          }
+          @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: .5; }
+          }
+        ` }} />
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Override: High Street Activation Screen (Step 3)
+  // ═══════════════════════════════════════════════════════
+  if (!isGoogleOnboarding && currentQuest.id === 'high_street_activation') {
+    const resolvedName = proximityResult?.resolvedArea || selectedBorough.replace(' Borough', '');
+    const resolvedBoroughKey = resolvedName.endsWith('Borough') ? resolvedName : `${resolvedName} Borough`;
+
+    const data = BOROUGH_DATA[resolvedBoroughKey] || {
+      name: resolvedBoroughKey,
+      mallName: proximityResult?.localMallName || `${resolvedName} Local Mall`,
+      district: `${formData.postcode.split(' ')[0] || 'Local'} District • UK Network`,
+      detectedImage: 'https://lh3.googleusercontent.com/aida/AP1WRLvkPz8abWOBQa4SZlJlBySfIVn0p8f7AGbrVN_YFkjqzlkeQmpAjEIGQyi1C1ZSidbcCh9jJH6wt71bJcM9HmPi6Ui-rG6Wxcg-3W2YGLj-ye3ijX64eY30NtPxLcMOPXhkaUcwOWzVSNdzcEiyRZeToCMsM7bD70v6jYU-0r0FW_LQvAgpigJtDGoHKs0TWxqDFDsSGqRAscZta5LK3_7vsqe4YM1DKJJZvhnSHt0P3nihEPx_EDtm8l0',
+      activationImage: 'https://lh3.googleusercontent.com/aida/AP1WRLvg3NvL1p4joMKNfaz4IS3I3tO-155FkiTNsqwbY5oMySM0i27aQrRfneJXse53lmgvmF7eAlAEz_vv_vT0IAs0bktmQ_Kk2ubLr_f6sSbC-_Yi-Dcbxe1dD4vwpcn_OAFqnqLXQdDKwcuY-VY7W_rWz1g8ZStyrlqqIYe0gih_dlkVDGVbAl3qxNUug4DCcz74_je9C9CijEObaRqtOrOu-obk34tR_vk9JSuYqZVys7KvgMQEPqfqMxs',
+      nearbyBusinesses: proximityResult?.businessCount || 0,
+      activeCampaigns: 0,
+      localShoppers: '0',
+      networkBusinesses: String(proximityResult?.businessCount || 0),
+    };
+
+    return (
+      <div className="mcommall-onboarding bg-[#fff8f6] text-[#261812] flex flex-col min-h-screen font-sans pt-16">
+        <main className="flex-grow w-full max-w-2xl mx-auto px-margin-mobile py-stack-lg">
+          <div className="w-full flex justify-between items-center mb-6">
+            <button 
+              onClick={handleBack}
+              className="flex items-center gap-1.5 text-sm font-bold text-primary hover:opacity-80 transition-opacity active:scale-95"
+            >
+              <span className="material-symbols-outlined">arrow_back</span> Back
+            </button>
+            <div className="flex items-center gap-2">
+              <span className="font-label-md text-label-md text-on-surface-variant">Step 3 of 13</span>
+            </div>
+          </div>
+          {/* Hero Section */}
+          <div className="mb-stack-lg">
+            <h2 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-background mb-unit">High Street Activation</h2>
+            <p className="font-body-lg text-body-lg text-on-surface-variant">Your business is joining the {data.name} digital ecosystem.</p>
+          </div>
+
+          {/* Asymmetric Visual Area */}
+          <div className="grid grid-cols-12 gap-4 mb-stack-lg">
+            <div className="col-span-12 md:col-span-7 rounded-xl overflow-hidden relative h-48 md:h-64 shadow-sm border border-outline-variant">
+              <img 
+                alt={data.name} 
+                className="w-full h-full object-cover" 
+                src={data.activationImage}
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent flex flex-col justify-end p-stack-md">
+                <span className="text-white font-title-md text-title-md">{data.name}</span>
+                <span className="text-white/80 font-body-sm text-body-sm">Priority Merchant Zone</span>
+              </div>
+            </div>
+            <div className="col-span-12 md:col-span-5 bg-white/70 backdrop-blur-sm border border-[#d9c2bb]/50 rounded-xl p-stack-md flex flex-col justify-center items-center text-center shadow-sm">
+              <div className="w-12 h-12 rounded-full bg-primary-container/20 flex items-center justify-center text-primary-container mb-stack-sm">
+                <span className="material-symbols-outlined text-3xl">location_on</span>
+              </div>
+              <p className="font-title-md text-title-md text-on-background">Live Network</p>
+              <p className="font-label-md text-label-md text-on-surface-variant">{proximityResult?.businessCount ?? data.networkBusinesses} active merchants in this area</p>
+            </div>
+          </div>
+
+          {/* Status List Section */}
+          <div className="space-y-4 mb-stack-lg">
+            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-stack-md flex items-center justify-between transition-all hover:translate-y-[-2px] duration-200 cursor-pointer">
+              <div className="flex items-center gap-stack-md">
+                <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center border border-outline-variant">
+                  <span className="material-symbols-outlined text-primary">storefront</span>
+                </div>
+                <span className="font-title-md text-title-md text-on-background">Active High Street</span>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-md text-label-md">ACTIVE</span>
+            </div>
+            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-stack-md flex items-center justify-between transition-all hover:translate-y-[-2px] duration-200 cursor-pointer">
+              <div className="flex items-center gap-stack-md">
+                <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center border border-outline-variant">
+                  <span className="material-symbols-outlined text-primary">hub</span>
+                </div>
+                <span className="font-title-md text-title-md text-on-background">Virtual Hub Status</span>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-md text-label-md">LIVE</span>
+            </div>
+            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-stack-md flex items-center justify-between transition-all hover:translate-y-[-2px] duration-200 cursor-pointer opacity-70">
+              <div className="flex items-center gap-stack-md">
+                <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center border border-outline-variant">
+                  <span className="material-symbols-outlined text-on-surface-variant">location_city</span>
+                </div>
+                <span className="font-title-md text-title-md text-on-background">Physical Hub Status</span>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-surface-container-highest text-on-surface-variant font-label-md text-label-md">COMING SOON</span>
+            </div>
+            <div className="bg-surface-container-low border border-outline-variant rounded-xl p-stack-md flex items-center justify-between transition-all hover:translate-y-[-2px] duration-200 cursor-pointer">
+              <div className="flex items-center gap-stack-md">
+                <div className="w-10 h-10 rounded-lg bg-surface flex items-center justify-center border border-outline-variant">
+                  <span className="material-symbols-outlined text-primary">groups</span>
+                </div>
+                <span className="font-title-md text-title-md text-on-background">Community Group</span>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-tertiary-container text-on-tertiary-container font-label-md text-label-md">ACTIVE</span>
+            </div>
+          </div>
+
+          {/* Legend Section */}
+          <div className="bg-surface-container-lowest border border-outline-variant rounded-xl p-stack-md mb-stack-lg">
+            <h3 className="font-label-md text-label-md text-on-surface-variant uppercase mb-stack-sm tracking-wider">Status Legend</h3>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-md">
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-tertiary-container"></div>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">Active / Live</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-surface-container-highest"></div>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">Coming Soon</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-2 h-2 rounded-full bg-primary-fixed"></div>
+                <span className="font-body-sm text-body-sm text-on-surface-variant">Expansion Area</span>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        <footer className="w-full bg-surface border-t border-outline-variant p-margin-mobile">
+          <div className="max-w-2xl mx-auto flex flex-col md:flex-row gap-stack-md">
+            <button 
+              onClick={handleNext}
+              className="flex-1 order-1 md:order-2 bg-primary-container text-white py-4 rounded-xl font-title-md text-title-md shadow-sm active:scale-[0.98] transition-all hover:opacity-90"
+            >
+              Continue
+            </button>
+            <button className="flex-1 order-2 md:order-1 border border-primary text-primary py-4 rounded-xl font-title-md text-title-md active:scale-[0.98] transition-all hover:bg-primary/5">
+              Learn More
+            </button>
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // ═══════════════════════════════════════════════════════
+  // Override: Add Your Storefront Screen (Step 7 of 13)
+  // ═══════════════════════════════════════════════════════
+  if (!isGoogleOnboarding && currentQuest.id === 'storefront') {
+    return (
+      <div className="mcommall-onboarding bg-background text-on-background font-body-lg min-h-screen flex flex-col font-sans pt-16">
+        <main className="flex-grow pt-8 pb-32 px-margin-mobile md:px-0">
+          <div className="max-w-[640px] mx-auto">
+
+            <div className="mb-stack-lg">
+              <span className="font-label-md text-label-md text-on-surface-variant tracking-widest uppercase">Add Your Storefront</span>
+              <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mt-2">Add Your Storefront</h1>
+              <div className="mt-stack-md p-stack-md bg-tertiary-container/10 border border-tertiary/20 rounded-xl flex items-start gap-3 glass-card">
+                <span className="material-symbols-outlined text-tertiary">info</span>
+                <div>
+                  <p className="font-title-md text-body-sm text-on-surface">Precision Assets</p>
+                  <p className="font-body-sm text-body-sm text-on-surface-variant">Don't worry about dimensions—auto-crop and auto-resize are active to ensure your store looks premium on all devices.</p>
+                </div>
+              </div>
+            </div>
+
+            <section className="space-y-stack-lg">
+              <div>
+                <h2 className="font-title-md text-title-md mb-stack-sm">Branding &amp; Hero</h2>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-stack-md h-auto">
+                  {/* Brand Logo Upload */}
+                  <div 
+                    onClick={() => fileInputRef.current?.click()}
+                    className="md:col-span-1 aspect-square border-2 border-dashed border-[#8C7167] rounded-xl bg-surface-container-low flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors group overflow-hidden"
+                  >
+                    {formData.logo ? (
+                      <img src={formData.logo} alt="Logo Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <div className="w-16 h-16 rounded-full bg-white flex items-center justify-center border border-outline-variant shadow-sm group-hover:scale-105 transition-transform">
+                          <span className="material-symbols-outlined text-outline">add_a_photo</span>
+                        </div>
+                        <span className="font-label-md text-label-md text-outline mt-4">Brand Logo</span>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" ref={fileInputRef} onChange={handleLogoChange} accept="image/*" className="hidden" />
+
+                  {/* Cover Image Upload */}
+                  <div 
+                    onClick={() => coverInputRef.current?.click()}
+                    className="md:col-span-2 aspect-[16/9] border-2 border-dashed border-[#8C7167] rounded-xl bg-surface-container-low flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors group overflow-hidden"
+                  >
+                    {coverImage ? (
+                      <img src={coverImage} alt="Cover Preview" className="w-full h-full object-cover" />
+                    ) : (
+                      <>
+                        <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center border border-outline-variant shadow-sm group-hover:scale-105 transition-transform">
+                          <span className="material-symbols-outlined text-outline">wallpaper</span>
+                        </div>
+                        <span className="font-label-md text-label-md text-outline mt-4">Cover Image (Landscape)</span>
+                      </>
+                    )}
+                  </div>
+                  <input type="file" ref={coverInputRef} onChange={handleCoverChange} accept="image/*" className="hidden" />
+                </div>
+              </div>
+
+              {/* Physical Presence Exterior Upload */}
+              <div>
+                <h2 className="font-title-md text-title-md mb-stack-sm">Physical Presence</h2>
+                <div 
+                  onClick={() => exteriorInputRef.current?.click()}
+                  className="w-full aspect-[21/9] border-2 border-dashed border-[#8C7167] rounded-xl bg-surface-container-low flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors group overflow-hidden"
+                >
+                  {exteriorImage ? (
+                    <img src={exteriorImage} alt="Exterior Preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <>
+                      <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center border border-outline-variant shadow-sm group-hover:scale-105 transition-transform">
+                        <span className="material-symbols-outlined text-outline">storefront</span>
+                      </div>
+                      <span className="font-label-md text-label-md text-outline mt-4">Storefront Exterior Image</span>
+                    </>
+                  )}
+                </div>
+                <input type="file" ref={exteriorInputRef} onChange={handleExteriorChange} accept="image/*" className="hidden" />
+              </div>
+
+              {/* Product & Service Grid */}
+              <div>
+                <div className="flex justify-between items-end mb-stack-sm">
+                  <h2 className="font-title-md text-title-md">Product &amp; Service Grid</h2>
+                  <span className="font-label-md text-label-md text-on-surface-variant">{gridImages.length}/6 selected</span>
+                </div>
+                <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
+                  {/* Upload card */}
+                  <div 
+                    onClick={() => handleGridUploadClick(-1)}
+                    className="aspect-square border-2 border-dashed border-[#8C7167] rounded-xl bg-surface-container-low flex flex-col items-center justify-center cursor-pointer hover:bg-surface-container transition-colors group"
+                  >
+                    <span className="material-symbols-outlined text-outline text-display-lg">add</span>
+                    <span className="font-label-md text-label-md text-outline mt-2">Upload</span>
+                  </div>
+                  <input type="file" ref={gridInputRef} onChange={handleGridFileChange} accept="image/*" className="hidden" />
+
+                  {/* Synced preview items */}
+                  {gridImages.map((src, index) => (
+                    <div 
+                      key={index}
+                      onClick={() => handleGridUploadClick(index)}
+                      className="aspect-square rounded-xl overflow-hidden relative group cursor-pointer shadow-sm border border-outline-variant"
+                    >
+                      <img src={src} alt={`Preview ${index}`} className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110" />
+                      <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                        <span className="material-symbols-outlined text-white">edit</span>
+                      </div>
+                    </div>
+                  ))}
+
+                  {/* Empty placeholders to reach 6 total slots (including the upload button) */}
+                  {Array.from({ length: Math.max(0, 5 - gridImages.length) }).map((_, i) => (
+                    <div 
+                      key={i}
+                      className="aspect-square bg-surface-container-lowest border border-outline-variant rounded-xl flex items-center justify-center opacity-40"
+                    >
+                      <span className="material-symbols-outlined text-outline">image</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </section>
+          </div>
+        </main>
+
+        <div className="fixed bottom-4 left-4 right-4 p-4 rounded-2xl bg-white/90 backdrop-blur-md border border-gray-200 shadow-2xl z-55 sm:static sm:bg-transparent sm:border-none sm:shadow-none sm:p-0 sm:mt-8">
+          <div className="max-w-2xl mx-auto flex items-center justify-between w-full">
+            <button
+              onClick={handleBack}
+              aria-label="Go back"
+              className="flex items-center gap-1.5 text-sm font-semibold px-4 py-2.5 rounded-xl transition-all outline-none text-gray-500 hover:text-gray-700 hover:bg-gray-100 active:bg-gray-200 cursor-pointer"
+            >
+              <ChevronLeft className="w-4 h-4" />
+              Back
+            </button>
+
+            <motion.button
+              whileHover={isSubmitting ? {} : { scale: 1.03 }}
+              whileTap={isSubmitting ? {} : { scale: 0.97 }}
+              onClick={handleNext}
+              disabled={isSubmitting}
+              className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base transition-all outline-none disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
+              style={{
+                backgroundColor: currentQuest.color,
+                boxShadow: isSubmitting ? 'none' : `0 8px 24px -4px ${currentQuest.color}44`,
+              }}
+            >
+              Continue
+              <ChevronRight className="w-5 h-5" />
+            </motion.button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   // ═══════════════════════════════════════════════════════
