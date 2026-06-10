@@ -151,4 +151,10 @@ export class Product extends AbstractBaseEntity {
 
   @Column({ default: false })
   isFeatured: boolean;
+
+  @Column({ default: false })
+  isRotatorEligible: boolean;
+
+  @Column({ default: false })
+  isPromotionEligible: boolean;
 }

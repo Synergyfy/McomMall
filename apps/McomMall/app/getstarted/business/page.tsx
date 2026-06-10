@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, Suspense } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   ChevronRight, ChevronLeft, Upload, Check,
@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { Input } from '@/components/ui/input';
 import { useRouter } from 'next/navigation';
+import { useSearchParams } from 'next/navigation';
 import { useCreateUser, useLogin, useSendOtp, useValidateOtp, useCheckEmail } from '@/service/auth/hook';
 import Cookies from 'js-cookie';
 import { useDispatch } from 'react-redux';
@@ -223,7 +224,7 @@ function ConfettiRain() {
 // ═══════════════════════════════════════════════════════════
 // Main Business Onboarding Component
 // ═══════════════════════════════════════════════════════════
-export default function BusinessOnboarding() {
+function BusinessOnboardingInner() {
   const [formData, setFormData] = useState({
     firstName: '',
     lastName: '',
@@ -267,7 +268,30 @@ export default function BusinessOnboarding() {
   const [currentStep, setCurrentStep] = useState(0);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const router = useRouter();
+  const searchParams = useSearchParams();
   const dispatch = useDispatch();
+
+  // ── Handle OAuth popup callback ──────────────────────────────────────────
+  // When Google redirects back, the popup reloads this page with ?claim=...
+  // We detect that, notify the parent window, then close the popup.
+  useEffect(() => {
+    const claimStatus = searchParams.get('claim');
+    const claimPlaceId = searchParams.get('placeId');
+    if (!claimStatus) return;
+
+    if (window.opener && !window.opener.closed) {
+      window.opener.postMessage(
+        {
+          type: 'GOOGLE_CLAIM_RESULT',
+          success: claimStatus === 'success',
+          placeId: claimPlaceId,
+        },
+        window.location.origin
+      );
+      window.close();
+    }
+  }, []);
+  // ─────────────────────────────────────────────────────────────────────────
   
   const activeQuests = QUESTS.filter(q => {
     const isService = formData.businessType === 'services' || formData.businessType === 'both';
@@ -296,9 +320,8 @@ export default function BusinessOnboarding() {
   const [googleBranches, setGoogleBranches] = useState<any[]>([]);
   const [selectedGoogleBranch, setSelectedGoogleBranch] = useState<any>(null);
   const [googleMapping, setGoogleMapping] = useState<any>(null);
-  const [showGoogleMockPopup, setShowGoogleMockPopup] = useState(false);
-  const [googleMockAccountStep, setGoogleMockAccountStep] = useState<'picker' | 'permissions'>('picker');
   
+
   // Fail-Safe Edit Form state
   const [googlePhoneInput, setGooglePhoneInput] = useState('');
   const [googleSectorId, setGoogleSectorId] = useState('');
@@ -347,25 +370,70 @@ export default function BusinessOnboarding() {
     }
   };
 
-  const handleGoogleStart = () => {
-    setIsGoogleOnboarding(true);
-    setGoogleMockAccountStep('picker');
-    setShowGoogleMockPopup(true);
+  const handleGoogleStart = async () => {
+    console.log("handleGoogleStart triggered. selectedPreviewBusiness:", selectedPreviewBusiness);
+    if (!selectedPreviewBusiness?.googlePlaceId) {
+      console.warn("Cannot start Google OAuth: googlePlaceId is missing.", selectedPreviewBusiness);
+      setSubmitError("Failed to start Google connection: No Google Place ID is associated with this business.");
+      return;
+    }
+    setIsSubmitting(true);
     setSubmitError(null);
-  };
+    try {
+      const returnUrl = `${window.location.origin}/getstarted/business`;
+      const res = await api.post('claim/start', {
+        placeId: selectedPreviewBusiness.googlePlaceId,
+        returnUrl,
+      });
+      const { authUrl } = res.data;
 
-  const handleGoogleSelectAccount = (email: string, fName: string, lName: string) => {
-    setGoogleEmail(email);
-    setOwnerFirstName(fName);
-    setOwnerLastName(lName);
-    setGoogleMockAccountStep('permissions');
-  };
+      // Open Google OAuth consent screen in a popup window
+      const popup = window.open(
+        authUrl,
+        'google_oauth',
+        'width=520,height=660,scrollbars=yes,resizable=yes'
+      );
 
-  const handleGoogleGrantPermissions = async () => {
-    setShowGoogleMockPopup(false);
-    // In the new flow, we proceed straight to the next page once authorized
-    setShowConnectGooglePage(false);
-    setShowBusinessTypePage(true);
+      if (!popup) {
+        // Blocked by browser — fall back to full redirect
+        window.location.href = authUrl;
+        return;
+      }
+
+      // Listen for the result sent back from the popup
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+        if (event.data?.type !== 'GOOGLE_CLAIM_RESULT') return;
+        window.removeEventListener('message', handleMessage);
+        clearInterval(pollTimer);
+        setIsSubmitting(false);
+        if (event.data.success) {
+          setShowConnectGooglePage(false);
+          setShowBusinessTypePage(true);
+        } else {
+          setSubmitError(
+            'We could not verify your ownership of this business on Google. ' +
+            'Please try again or enter your details manually.'
+          );
+        }
+      };
+      window.addEventListener('message', handleMessage);
+
+      // If the user closes the popup without completing, clean up
+      const pollTimer = setInterval(() => {
+        if (popup.closed) {
+          clearInterval(pollTimer);
+          window.removeEventListener('message', handleMessage);
+          setIsSubmitting(false);
+        }
+      }, 600);
+    } catch (err: any) {
+      setSubmitError(
+        err?.response?.data?.message ||
+        'Failed to connect to Google. Please ensure Google credentials are configured.'
+      );
+      setIsSubmitting(false);
+    }
   };
 
   const handleGoogleSelectBranch = async (branch: any) => {
@@ -1285,14 +1353,15 @@ export default function BusinessOnboarding() {
             <div className="flex-grow overflow-y-auto p-4 space-y-4">
               {searchResults.length > 0 ? (
                 searchResults.map((result: any) => {
-                  const postcode = extractPostcode(result.formatted_address || result.vicinity || '');
-                  const photoRef = result.photos?.[0]?.photo_reference;
+                  const placeId = result.place_id || result.placeId;
+                  const postcode = extractPostcode(result.formatted_address || result.formattedAddress || result.vicinity || '');
+                  const photoRef = result.photos?.[0]?.photo_reference || result.photos?.[0]?.photoReference;
                   const typeLabel = result.types?.[0] 
                     ? result.types[0].replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase()) 
                     : 'Business';
 
                   return (
-                    <div key={result.place_id} className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
+                    <div key={placeId} className="group bg-white border border-gray-200 rounded-2xl p-3 flex gap-4 hover:border-orange-400 hover:shadow-lg hover:shadow-orange-500/10 transition-all cursor-pointer">
                       <div className="w-24 h-24 rounded-xl overflow-hidden flex-shrink-0 bg-gray-100">
                         {photoRef ? (
                           <img className="w-full h-full object-cover" src={`${baseURL}google/google-business/photo/${photoRef}`} alt={result.name} />
@@ -1318,11 +1387,12 @@ export default function BusinessOnboarding() {
                         <button onClick={async () => {
                             setIsSearching(true);
                             try {
-                              const detailsRes = await api.get(`google/google-business/${result.place_id}`);
+                              const placeId = result.place_id || result.placeId;
+                              const detailsRes = await api.get(`google/google-business/${placeId}`);
                               const placeDetails = detailsRes.data?.result || detailsRes.data || {};
                               
                               setSelectedPreviewBusiness({
-                                googlePlaceId: result.place_id,
+                                googlePlaceId: placeId,
                                 businessName: result.name,
                                 address: placeDetails.formatted_address || result.formatted_address || '',
                                 postcode: postcode || extractPostcode(placeDetails.formatted_address || ''),
@@ -1404,8 +1474,23 @@ export default function BusinessOnboarding() {
 
           {/* Map Section (Desktop Right) */}
           <section className={`flex-grow relative bg-gray-100 ${mapViewToggle === 'map' ? 'block absolute inset-0 z-20' : 'hidden md:block'}`}>
-            <div className="absolute inset-0 grayscale-[0.2] opacity-90 contrast-[1.1]">
-              <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuNzwxrl2iwl_GEfxnCkx5UFA1vsDwHDENTyV1udBmozSwamJtvjNaamIpmtnYhpfGY7Sm5yZSrIicyX_L7iwS_0SaEVl_t3mhgzYABbXLNu6yfBraa5hQp_0l9T2CCUVBmnFSj7A0JlrbTxh-z3NDK4HfsKVxjyPc1LN9lDT4zmAF-JwRcdaAtQEsrT4ClF-mvNPRbsGXHfR9sZ6gaDj7HrW1wgs-RggOWlLhHRHS2Ap3lphr5q4e0vkE" />
+            <div className="absolute inset-0">
+              <div className="w-full h-full bg-[#f4f3f0] relative overflow-hidden">
+                {/* Abstract Street Grid Layout */}
+                <svg className="w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg" width="100%" height="100%">
+                  <defs>
+                    <pattern id="street-grid" width="80" height="80" patternUnits="userSpaceOnUse">
+                      <path d="M 80 0 L 0 0 0 80" fill="none" stroke="#d1cfc7" strokeWidth="2" />
+                      <path d="M 0 40 L 80 40" fill="none" stroke="#d1cfc7" strokeWidth="1" strokeDasharray="4,4" />
+                      <path d="M 40 0 L 40 80" fill="none" stroke="#d1cfc7" strokeWidth="1" strokeDasharray="4,4" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#street-grid)" />
+                  <path d="M-100,-100 L800,800" fill="none" stroke="#e3e1d9" strokeWidth="24" />
+                  <path d="M-200,300 C400,200 200,600 1000,500" fill="none" stroke="#cbdcf7" strokeWidth="40" />
+                  <path d="M0,500 L900,100" fill="none" stroke="#e8e6dd" strokeWidth="16" />
+                </svg>
+              </div>
               
               {/* Map Pins */}
               {searchResults.length > 0 ? (
@@ -1421,7 +1506,7 @@ export default function BusinessOnboarding() {
 
                   return (
                     <div 
-                      key={result.place_id || index} 
+                      key={result.place_id || result.placeId || index} 
                       style={{ top, left }} 
                       className="absolute transform -translate-x-1/2 -translate-y-1/2 cursor-pointer group z-30"
                     >
@@ -1710,8 +1795,14 @@ export default function BusinessOnboarding() {
 
           {/* Illustration / Decor */}
           <div className="mt-12 flex justify-center pb-8">
-            <div className="relative w-full max-w-[280px] aspect-square rounded-full bg-orange-50 flex items-center justify-center overflow-hidden">
-              <img alt="Merchant verification background" className="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLuvGVk7sCqcQlnPFGngel4qvlTHhBtKI74UE4avJxYI2HDp7O4_xkiu4Ht88m6n4as5F7Rf2jKmt8K3xw5_d2b08qkIiFVsUUXoG4HtCW9uSd5-iZFmie5MdLKoBAmS7qAC_Lp1XjrV6Q4lhxbsf03ND0AaZBVGywBzYCNjjCVgsGLGBOu8ikuGIL8dwmZRt5EsLGZjhJCBJYQHzk8KgNbI3b1bHrpZtTFGNrJLFIy_moNZoXtQuqGYkeE" />
+            <div className="relative w-full max-w-[280px] aspect-square rounded-full bg-orange-50/50 border border-orange-100 flex items-center justify-center overflow-hidden">
+              {/* Security Illustration */}
+              <div className="relative z-10 flex flex-col items-center gap-2">
+                <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-orange-500 to-amber-400 flex items-center justify-center shadow-lg shadow-orange-500/20 animate-pulse">
+                  <ShieldCheck className="w-10 h-10 text-white" />
+                </div>
+                <div className="w-12 h-1.5 rounded-full bg-orange-200/50 blur-[2px] mt-2"></div>
+              </div>
               <div className="absolute inset-0 bg-gradient-to-t from-orange-100/50 to-transparent"></div>
               <div className="absolute bottom-6 left-1/2 -translate-x-1/2 bg-white px-4 py-2 rounded-full shadow-lg flex items-center gap-2 border border-gray-100">
                 <ShieldCheck className="text-green-500 w-4 h-4" />
@@ -1791,22 +1882,73 @@ export default function BusinessOnboarding() {
 
           {/* Action Section */}
           <div className="mt-auto space-y-4">
-            <button onClick={() => {
-                setGoogleMockAccountStep('picker');
-                setShowGoogleMockPopup(true);
-            }} className="w-full bg-white border border-gray-200 text-gray-900 h-14 rounded-xl flex items-center justify-center gap-3 px-6 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50 group">
-              <svg height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
-                <path d="M19.6001 10.2272C19.6001 9.51813 19.5364 8.83631 19.4183 8.18176H10.0001V12.0499H15.3819C15.1501 13.2999 14.4455 14.359 13.3864 15.0681V17.5772H16.6183C18.5092 15.8363 19.6001 13.2727 19.6001 10.2272Z" fill="#4285F4"></path>
-                <path d="M10.0001 20C12.7001 20 14.9637 19.1045 16.6183 17.5773L13.3864 15.0682C12.491 15.6682 11.3455 16.0227 10.0001 16.0227C7.38642 16.0227 5.17279 14.2545 4.38188 11.8727H1.04553V14.4591C2.69553 17.7364 6.08188 20 10.0001 20Z" fill="#34A853"></path>
-                <path d="M4.38188 11.8727C4.18188 11.2727 4.06824 10.6409 4.06824 9.99995C4.06824 9.35905 4.18188 8.72723 4.38188 8.12723V5.54087H1.04553C0.377353 6.88178 0 8.39541 0 9.99995C0 11.6045 0.377353 13.1181 1.04553 14.459L4.38188 11.8727Z" fill="#FBBC05"></path>
-                <path d="M10.0001 3.97727C11.4683 3.97727 12.7864 4.48182 13.8228 5.47273L16.691 2.60455C14.9592 0.990909 12.6955 0 10.0001 0C6.08188 0 2.69553 2.26364 1.04553 5.54091L4.38188 8.12727C5.17279 5.74545 7.38642 3.97727 10.0001 3.97727Z" fill="#EA4335"></path>
-              </svg>
-              <span className="font-bold text-sm tracking-tight text-gray-700 group-hover:text-gray-900 transition-colors">SIGN IN WITH GOOGLE</span>
+            {/* Error message */}
+            {submitError && (
+              <div className="flex flex-col gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <div className="flex items-start gap-2.5">
+                  <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+                  <p className="text-xs font-medium text-red-600 leading-relaxed">{submitError}</p>
+                </div>
+                {!selectedPreviewBusiness?.googlePlaceId && (
+                  <div className="flex gap-2 pt-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmitError(null);
+                        setShowConnectGooglePage(false);
+                        setShowFindClaimPage(true);
+                      }}
+                      className="text-xs bg-red-600 hover:bg-red-700 text-white font-bold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Go to Search
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSubmitError(null);
+                        setShowConnectGooglePage(false);
+                        setShowBusinessTypePage(true);
+                      }}
+                      className="text-xs bg-white border border-red-200 text-red-700 hover:bg-red-50 font-bold px-3 py-1.5 rounded-lg transition-colors"
+                    >
+                      Set Up Manually
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            <button
+              onClick={handleGoogleStart}
+              disabled={isSubmitting}
+              className="w-full bg-white border border-gray-200 text-gray-900 h-14 rounded-xl flex items-center justify-center gap-3 px-6 shadow-sm active:scale-[0.98] transition-all hover:bg-gray-50 group disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {isSubmitting ? (
+                <>
+                  <RefreshCw className="w-4 h-4 text-gray-500 animate-spin" />
+                  <span className="font-bold text-sm tracking-tight text-gray-600">Connecting to Google…</span>
+                </>
+              ) : (
+                <>
+                  <svg height="20" viewBox="0 0 20 20" width="20" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M19.6001 10.2272C19.6001 9.51813 19.5364 8.83631 19.4183 8.18176H10.0001V12.0499H15.3819C15.1501 13.2999 14.4455 14.359 13.3864 15.0681V17.5772H16.6183C18.5092 15.8363 19.6001 13.2727 19.6001 10.2272Z" fill="#4285F4" />
+                    <path d="M10.0001 20C12.7001 20 14.9637 19.1045 16.6183 17.5773L13.3864 15.0682C12.491 15.6682 11.3455 16.0227 10.0001 16.0227C7.38642 16.0227 5.17279 14.2545 4.38188 11.8727H1.04553V14.4591C2.69553 17.7364 6.08188 20 10.0001 20Z" fill="#34A853" />
+                    <path d="M4.38188 11.8727C4.18188 11.2727 4.06824 10.6409 4.06824 9.99995C4.06824 9.35905 4.18188 8.72723 4.38188 8.12723V5.54087H1.04553C0.377353 6.88178 0 8.39541 0 9.99995C0 11.6045 0.377353 13.1181 1.04553 14.459L4.38188 11.8727Z" fill="#FBBC05" />
+                    <path d="M10.0001 3.97727C11.4683 3.97727 12.7864 4.48182 13.8228 5.47273L16.691 2.60455C14.9592 0.990909 12.6955 0 10.0001 0C6.08188 0 2.69553 2.26364 1.04553 5.54091L4.38188 8.12727C5.17279 5.74545 7.38642 3.97727 10.0001 3.97727Z" fill="#EA4335" />
+                  </svg>
+                  <span className="font-bold text-sm tracking-tight text-gray-700 group-hover:text-gray-900 transition-colors">SIGN IN WITH GOOGLE</span>
+                </>
+              )}
             </button>
-            <button onClick={() => {
+
+            <button
+              onClick={() => {
+                setSubmitError(null);
                 setShowConnectGooglePage(false);
                 setCurrentStep(0);
-            }} className="w-full h-12 flex items-center justify-center text-gray-500 hover:text-orange-600 transition-colors active:scale-95 duration-100">
+              }}
+              className="w-full h-12 flex items-center justify-center text-gray-500 hover:text-orange-600 transition-colors active:scale-95 duration-100"
+            >
               <span className="font-bold text-[10px] tracking-widest uppercase">I'LL ENTER DETAILS MANUALLY</span>
             </button>
           </div>
@@ -2092,9 +2234,18 @@ export default function BusinessOnboarding() {
             {/* Map & Location Card (Bento-style layout) */}
             <div className="bg-white/80 backdrop-blur-md rounded-2xl overflow-hidden shadow-sm border border-gray-200">
               {/* Visual Map Area */}
-              <div className="h-48 w-full relative bg-gray-200 overflow-hidden">
-                {/* eslint-disable-next-line @next/next/no-img-element */}
-                <img className="w-full h-full object-cover opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLsDnUCjMAn7qZUdsI1NbJgUWbPXFEErGrx5Fyjca_jlpCwbiN8VH_GW1vKNg00vC6vzDN4j51SSfmURwAEtr390wkpMtDR0c2xsYBTCpxnp6SIDnrWubTRJR9eV1GHbgwSLWTumf-cDp6wKxNXgAGaIVn_tOyiOKeFkuv-NVsCp8UM-1EcCLJe8M6NeavxSfd9C_CeDDMb9fah1TlJ3W4GE-LI1lAPQId1qzT0OE2f85qmDjXmbMfmsIF4" alt="Map" />
+              <div className="h-48 w-full relative bg-[#f4f3f0] overflow-hidden">
+                <svg className="absolute inset-0 w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg">
+                  <defs>
+                    <pattern id="bento-map" width="40" height="40" patternUnits="userSpaceOnUse">
+                      <path d="M 40 0 L 0 0 0 40" fill="none" stroke="#d1cfc7" strokeWidth="1" />
+                    </pattern>
+                  </defs>
+                  <rect width="100%" height="100%" fill="url(#bento-map)" />
+                  <path d="M-50,80 L600,80" fill="none" stroke="#e3e1d9" strokeWidth="16" />
+                  <path d="M200,-50 L200,300" fill="none" stroke="#e3e1d9" strokeWidth="20" />
+                  <circle cx="200" cy="80" r="40" fill="#cbdcf7" fillOpacity="0.4" />
+                </svg>
                 <div className="absolute inset-0 bg-gradient-to-t from-white/60 to-transparent"></div>
                 <div className="absolute bottom-4 left-4 bg-white px-3 py-1.5 rounded-full shadow-lg border border-gray-100 flex items-center gap-2">
                   <span className="w-2.5 h-2.5 bg-orange-600 rounded-full animate-pulse"></span>
@@ -2140,25 +2291,21 @@ export default function BusinessOnboarding() {
               <div className="flex flex-col gap-3">
                 {/* Merchant Avatars */}
                 <div className="flex -space-x-3 overflow-hidden p-1">
-                  <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLvYewI3K94KKY1_DlRJEFb4o-Cnqrmgy7Boa2IEUNqdezwKQ0S2ECiIqsmwolVZcNF7gsrlUU6JhjrrPadA8q6NbPKDEUT2FeMkIvcUKyFimK0iOmGJFUp68DZx_ZcwMboy-rdCuM8n78ZB1lO9VeE__SggAi9qFH7fM9BtHNaWgoilxm0EsNWZbfslzJeuhWBZ_xCzZ3cD3Yy9M7DBMANyW1pixtf1EbKGjn5CXTxARBWOQdZ0dsTMTmU" alt="Merchant 1" 
+                  <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200 cursor-pointer hover:scale-105 transition-transform"
                     onClick={() => {
-                  setShowMembershipRoutingPage(false);
-                  setShowLocalNetworkPage(true);
-                }}/>
+                      setShowMembershipRoutingPage(false);
+                      setShowLocalNetworkPage(true);
+                    }}>
+                    <div className="w-full h-full flex items-center justify-center bg-amber-100 text-amber-700 font-bold text-sm">JS</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLs0-5yaoQfQA3Ic6zhkxVXA7EYP0MeokZ6-cI-KDFnp2wVP2furSsMhsQxfRMbj3vaYDbqMDU8WU8EuxnnLkm85kYyz4On3gvjeEhXxdYDpfSdnoVTrLWh-IDcQUuYTS0zUGAhIPV1tBS6PmyeMwhH5a3Fp0FmpB2UCID414GFD1_4tuIhaRGPYQXJmvdACqvYnDwfWymilAD2IT7H7xGT221kEgMn3DZinQLEU9keC_3hV8wjGPDNWO5s" alt="Merchant 2" />
+                    <div className="w-full h-full flex items-center justify-center bg-blue-100 text-blue-700 font-bold text-sm">MR</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLudgDzpHvVrBEjQoKoOnkuWceMDHTmXvVQuSu7AtI9uAHsws1yO5IZcOHAzmcRQ9wrSGRVNhvgF2Kz5QReb944LeEFY-zmqR9HgITHtx-QYywvK3LMu7lHcH0Oi7bIMqh1odApyNLrx1qps3bCZ2H7JrYMSkxjtUxAQa-1lY9lu-nFoET84P_dLEXikmtniajfBpoaHPWbzIKHGgTkcukeT8Uhaz6Epp5ZgvPvaSOY48597QtVwlp2YraI" alt="Merchant 3" />
+                    <div className="w-full h-full flex items-center justify-center bg-emerald-100 text-emerald-700 font-bold text-sm">LH</div>
                   </div>
                   <div className="w-12 h-12 rounded-full border-2 border-white ring-2 ring-gray-100 overflow-hidden bg-gray-200">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuWJ-_1b8DfxUM4AxwNPgJxI8zHNAz11eHH7IaIzEcEbpe7sa2YwgrGpmeq-7p3Fxq3W2Y_hvYeo2JJaNB2yrlF2E3NE43NgTpDOZ3Cruk2ajrehYwRXV4vo1BhLj8x1ufiqyih52Ttki3Gu2QJGGm5ILrkvS-NNU72JTw-g0QCSbSsFzFKxg3w0Cxvmww5BYGdygcVtN9Eo-EHXjbWLcU2FhWhWKOh0tdbRfoYJMUgp5FXEXFw-RzBgZw" alt="Merchant 4" />
+                    <div className="w-full h-full flex items-center justify-center bg-purple-100 text-purple-700 font-bold text-sm">AK</div>
                   </div>
                   <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 border-2 border-white ring-2 ring-gray-100 text-xs font-black">
                     +38
@@ -2283,9 +2430,8 @@ export default function BusinessOnboarding() {
             </div>
 
             {/* Decorative Image */}
-            <div className="mt-4 rounded-2xl overflow-hidden relative h-48 bg-gray-100 border border-gray-200">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img className="w-full h-full object-cover mix-blend-multiply opacity-80" src="https://lh3.googleusercontent.com/aida/AP1WRLs-n6vIGc4C_3c5SXGYzXCL0uxcQVVhFh2TdkWokH9T8M6WuYq6glzAkipCCnlmSabIEcfSvdOy5Ol7UiKn67DTwmtbkCVoxGCtdMlqLjJuY-rhIon5heLrx9ZNRaVoEbQmb6hXCnQ-1zk0JJ4r06JWoBS3X6i5ZZc8QucCz32Zn8sQ3JqE-73NEilRazt1Mp0Dx7JkakHH82q13iElmQEfSy7RJvVdiG2WgD-pD3QsLFPFhnA0WolFSWo" alt="Workspace" />
+            <div className="mt-4 rounded-2xl overflow-hidden relative h-48 bg-gradient-to-tr from-orange-600 to-amber-500 border border-gray-200">
+              <div className="absolute inset-0 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-amber-200/20 via-transparent to-transparent"></div>
               <div className="absolute inset-0 bg-gradient-to-t from-gray-900/80 to-transparent flex flex-col justify-end p-6">
                 <p className="text-sm font-medium text-gray-200 italic">"Success is a journey of continuous growth and collaboration."</p>
               </div>
@@ -2333,10 +2479,28 @@ export default function BusinessOnboarding() {
           </div>
 
           {/* Visual Hero Element */}
-          <div className="w-full aspect-[16/9] mb-8 rounded-2xl overflow-hidden shadow-sm border border-gray-200 relative">
-            <div className="absolute inset-0 bg-gradient-to-t from-orange-600/20 to-transparent z-10"></div>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLsPkk1TptsiT6Gw6wQzYLumPo0dtdacIyPfbHOi0LA96BgDiiAzMRfXem8Qm3vuwwHHXskxl7nGklgHkVSOIPDEZ2VUVzu4B28BdkWsx1IffK709nqNJmXrWpknXdP1Xf0NCk6r58Yaiw4dg-MqMA3Tr8aLJczF0Z1QKRvKbrVMue8jZ35OgjcIlisDkb1Wojju901MyYSJ9I4QawgI0O5-tv5OD75WkDkd-wexocn6LJ_8UHG5jYXJVpY" alt="Merchant Interface" />
+          <div className="w-full aspect-[16/9] mb-8 rounded-2xl overflow-hidden shadow-sm border border-gray-200 relative bg-gradient-to-tr from-slate-900 to-slate-800 p-6 flex flex-col justify-between">
+            <div className="absolute inset-0 bg-gradient-to-t from-orange-600/10 to-transparent z-10 pointer-events-none"></div>
+            
+            {/* Custom Premium Merchant UI Mockup */}
+            <div className="flex justify-between items-start z-10 w-full">
+              <div className="space-y-1">
+                <div className="w-20 h-3 bg-white/10 rounded"></div>
+                <div className="w-28 h-5 bg-white/20 rounded"></div>
+              </div>
+              <div className="w-6 h-6 rounded-full bg-white/15"></div>
+            </div>
+            
+            <div className="flex gap-4 z-10 w-full">
+              <div className="flex-grow h-20 bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col justify-between">
+                <div className="w-10 h-2.5 bg-white/15 rounded"></div>
+                <div className="w-16 h-4 bg-white/25 rounded"></div>
+              </div>
+              <div className="w-1/3 h-20 bg-white/5 rounded-xl border border-white/10 p-3 flex flex-col justify-between">
+                <div className="w-8 h-2.5 bg-white/15 rounded"></div>
+                <div className="w-12 h-4 bg-white/25 rounded"></div>
+              </div>
+            </div>
           </div>
 
           {/* Header */}
@@ -2693,8 +2857,18 @@ export default function BusinessOnboarding() {
                   <p className="text-[10px] font-bold text-gray-500 uppercase tracking-widest">Primary Hub</p>
                   <p className="text-sm font-bold text-gray-900">{formData.city || 'Richmond Borough'} / {formData.postcode || 'High Street'}</p>
                 </div>
-                <div className="h-32 w-full rounded-xl overflow-hidden relative shadow-inner">
-                  <img className="w-full h-full object-cover" src="https://lh3.googleusercontent.com/aida/AP1WRLuTyrpX6dGrEKR9oKiIoEa2O1LEGc70eQ1BvTi7Ys9rD032rrjNNp8qhA-sGjNQoHUXCgd-60nRbgjVxQ10BMATMAYKgaTqDgtBVV5DuNMELX3WYnFWSqdKIr1P5LdX-k5VcCVuVlpECLzkHFqB3AG0nKkk-Oqr79YMkx9zeF75Gpyzs0Sc4vv3Ghix7tgWiDlgirDeoc0Roj8fVt9rqJmrZGzfyz5MADjtCBk4oMnRLg9sIxJF2vbhAQ" alt="Map Location" />
+                <div className="h-32 w-full rounded-xl overflow-hidden relative shadow-inner bg-[#f4f3f0] flex items-center justify-center">
+                  <svg className="absolute inset-0 w-full h-full opacity-35" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                      <pattern id="local-placement-map" width="30" height="30" patternUnits="userSpaceOnUse">
+                        <path d="M 30 0 L 0 0 0 30" fill="none" stroke="#d1cfc7" strokeWidth="1" />
+                      </pattern>
+                    </defs>
+                    <rect width="100%" height="100%" fill="url(#local-placement-map)" />
+                    <path d="M-20,40 L300,40" fill="none" stroke="#e3e1d9" strokeWidth="10" />
+                    <path d="M100,-20 L100,150" fill="none" stroke="#e3e1d9" strokeWidth="12" />
+                  </svg>
+                  <MapPin className="w-6 h-6 text-orange-600 animate-bounce relative z-10" />
                 </div>
               </div>
             </section>
@@ -4527,150 +4701,16 @@ export default function BusinessOnboarding() {
         )}
       </AnimatePresence>
 
-      {/* ─── Google Mock Account Picker Popup / Overlay ─── */}
-      <AnimatePresence>
-        {showGoogleMockPopup && (
-          <div className="fixed inset-0 z-55 flex items-center justify-center p-4">
-            {/* Dark glassmorphic overlay */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="absolute inset-0 bg-black/55 backdrop-blur-sm"
-              onClick={() => setShowGoogleMockPopup(false)}
-            />
 
-            {/* Popup window simulating Chrome window */}
-            <motion.div
-              initial={{ scale: 0.94, opacity: 0, y: 15 }}
-              animate={{ scale: 1, opacity: 1, y: 0 }}
-              exit={{ scale: 0.94, opacity: 0, y: 15 }}
-              className="bg-[#f0f4f9] rounded-2xl w-full max-w-md shadow-2xl relative z-10 border border-gray-250/20 overflow-hidden flex flex-col font-sans"
-              style={{ minHeight: '420px' }}
-            >
-              {/* Chrome Mock Header */}
-              <div className="bg-white px-4 py-3 flex items-center justify-between border-b border-gray-100 select-none">
-                <div className="flex items-center gap-2">
-                  <div className="w-3.5 h-3.5 rounded-full bg-orange-500 flex items-center justify-center">
-                    <svg className="w-2.5 h-2.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth={3}>
-                      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-                    </svg>
-                  </div>
-                  <span className="text-[11px] font-semibold text-gray-500 tracking-wide">Sign in with Google</span>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setShowGoogleMockPopup(false)}
-                  className="p-1 text-gray-400 hover:text-red-500 rounded-full hover:bg-gray-100 transition-colors cursor-pointer"
-                >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              {/* Popup Content */}
-              <div className="flex-1 bg-white p-6 flex flex-col justify-between">
-                {googleMockAccountStep === 'picker' ? (
-                  <div className="space-y-6">
-                    {/* Google Logo */}
-                    <div className="flex justify-center">
-                      <svg className="w-14 h-14" viewBox="0 0 24 24">
-                        <path fill="#4285F4" d="M23.745 12.27c0-.7-.06-1.4-.19-2.07H12v4.51h6.6c-.29 1.53-1.14 2.82-2.4 3.68v3.05h3.88c2.27-2.09 3.66-5.17 3.66-8.87z" />
-                        <path fill="#34A853" d="M12 24c3.24 0 5.97-1.08 7.96-2.91l-3.88-3.05c-1.08.72-2.45 1.16-4.08 1.16-3.13 0-5.78-2.11-6.73-4.96H1.21v3.15C3.18 21.88 7.39 24 12 24z" />
-                        <path fill="#FBBC05" d="M5.27 14.24A7.18 7.18 0 0 1 5 12c0-.79.13-1.57.38-2.32V6.53H1.21A11.94 11.94 0 0 0 0 12c0 1.92.45 3.74 1.21 5.37l4.06-3.13z" />
-                        <path fill="#EA4335" d="M12 4.75c1.77 0 3.35.61 4.6 1.8l3.42-3.42C17.95 1.19 15.22 0 12 0 7.39 0 3.18 2.12 1.21 5.37l4.06 3.15c.95-2.85 3.6-4.96 6.73-4.96z" />
-                      </svg>
-                    </div>
-
-                    <div className="text-center">
-                      <h3 className="text-lg font-bold text-gray-900">Choose an account</h3>
-                      <p className="text-xs text-gray-500 mt-1">to continue to <span className="font-semibold text-orange-600">McomMall</span></p>
-                    </div>
-
-                    {/* Account options */}
-                    <div className="space-y-2.5 max-h-56 overflow-y-auto">
-                      {[
-                        { email: 'merchant.jane@gmail.com', name: 'Jane Smith', initials: 'JS', bg: 'bg-orange-500' },
-                        { email: 'shopowner.peckham@gmail.com', name: 'Mark Robinson', initials: 'MR', bg: 'bg-blue-500' },
-                        { email: 'guest.merchant@gmail.com', name: 'Guest Merchant', initials: 'GM', bg: 'bg-emerald-500' }
-                      ].map((acc) => (
-                        <button
-                          key={acc.email}
-                          type="button"
-                          onClick={() => {
-                            const names = acc.name.split(' ');
-                            handleGoogleSelectAccount(acc.email, names[0], names[1] || '');
-                          }}
-                          className="w-full p-3 border border-gray-100 rounded-xl hover:bg-gray-50 transition-colors flex items-center gap-3 text-left cursor-pointer"
-                        >
-                          <div className={`w-9 h-9 rounded-full ${acc.bg} text-white flex items-center justify-center font-bold text-xs shadow-sm`}>
-                            {acc.initials}
-                          </div>
-                          <div>
-                            <p className="text-xs font-bold text-gray-900 leading-none">{acc.name}</p>
-                            <p className="text-[10px] text-gray-500 mt-1">{acc.email}</p>
-                          </div>
-                        </button>
-                      ))}
-                    </div>
-                  </div>
-                ) : (
-                  <div className="space-y-6 flex flex-col justify-between h-full">
-                    <div className="space-y-4">
-                      {/* App header in permissions */}
-                      <div className="flex items-center gap-3 pb-3 border-b border-gray-100">
-                        <div className="w-8 h-8 rounded-lg bg-orange-500 flex items-center justify-center font-black text-xs text-white shadow-sm">
-                          M
-                        </div>
-                        <div>
-                          <h4 className="text-xs font-bold text-gray-900">McomMall wishes to access:</h4>
-                          <p className="text-[10px] text-gray-400 mt-0.5">{googleEmail}</p>
-                        </div>
-                      </div>
-
-                      {/* Permissions checkboxes */}
-                      <div className="space-y-3.5 pt-2">
-                        {[
-                          'View and manage your Google Business Profile locations and branches',
-                          'View your primary email address and basic profile info'
-                        ].map((perm, idx) => (
-                          <div key={idx} className="flex items-start gap-3">
-                            <div className="w-5 h-5 rounded-full bg-green-50 flex items-center justify-center shrink-0 mt-0.5">
-                              <Check className="w-3.5 h-3.5 text-green-600" strokeWidth={3} />
-                            </div>
-                            <span className="text-xs text-gray-600 leading-normal font-medium">{perm}</span>
-                          </div>
-                        ))}
-                      </div>
-
-                      <p className="text-[10px] text-gray-400 leading-relaxed bg-gray-50 p-3 rounded-xl border border-gray-100">
-                        By clicking "Allow", you agree to McomMall sharing your business listing info to publish your storefront. Read our Privacy Policy.
-                      </p>
-                    </div>
-
-                    <div className="flex gap-3 pt-4 border-t border-gray-100">
-                      <button
-                        type="button"
-                        onClick={() => setGoogleMockAccountStep('picker')}
-                        className="flex-1 py-2.5 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-xl text-xs font-bold transition-all cursor-pointer"
-                      >
-                        Cancel
-                      </button>
-                      <button
-                        type="button"
-                        onClick={handleGoogleGrantPermissions}
-                        className="flex-1 py-2.5 bg-orange-500 hover:bg-orange-600 text-white rounded-xl text-xs font-bold transition-all shadow-md shadow-orange-500/20 cursor-pointer"
-                      >
-                        Allow
-                      </button>
-                    </div>
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
+  );
+}
+
+export default function BusinessOnboarding() {
+  return (
+    <Suspense fallback={<div className="min-h-screen bg-white" />}>
+      <BusinessOnboardingInner />
+    </Suspense>
   );
 }
 
@@ -4811,12 +4851,8 @@ function BuildingStorefrontPage({ onComplete }: { onComplete: () => void }) {
 
         {/* Visual Context Card */}
         <div className="mt-6 w-full">
-          <div className="relative h-32 rounded-xl overflow-hidden border border-gray-200">
-            <img 
-              alt="Storefront building preview" 
-              className="w-full h-full object-cover blur-[2px] opacity-40" 
-              src="https://lh3.googleusercontent.com/aida/AP1WRLvSYCNcXOMbmYlZsaqTqav0iat9-v22ogSKpghgsEOKK7Jx-pNvMp2VFGT-Y6CWKfiQEOEtmgS19oTTjqJA2zRq1wbX1YYFumJBpug2LhVU5rf98JhDU7v3Y88JWyfraRNF4YaSphkj4MIt2z2i8Jq7ZUd4K0dX9VEiOMYhfa-gOyoDSeVHDZs3uQZkuCV65cVyKPITadwvUNdigNgsY5Kyk5dIIt57LJ0zUHFfBxjAGHYfj9GyHW6iXg"
-            />
+          <div className="relative h-32 rounded-xl overflow-hidden border border-gray-200 bg-gradient-to-tr from-amber-500/10 via-orange-500/10 to-transparent flex items-center justify-center">
+            <Building2 className="w-12 h-12 text-orange-200/50" />
             <div className="absolute inset-0 bg-gradient-to-t from-orange-50/30 via-transparent to-transparent"></div>
             <div className="absolute inset-0 flex items-center justify-center">
               <div className="flex items-center gap-2 bg-white/90 backdrop-blur-md px-4 py-2 rounded-full border border-white/20 shadow-lg">
@@ -5081,7 +5117,7 @@ function WelcomeChecklistPage({ onComplete }: { onComplete: () => void }) {
         {/* Footer Identity */}
         <section className="mt-6 text-center pt-6 border-t border-[#e2bfb0] opacity-70">
           <div className="flex items-center justify-center gap-2 mb-2">
-            <img alt="Borough Identity" className="w-6 h-6 grayscale" src="https://lh3.googleusercontent.com/aida/AP1WRLsNGCalx_YeTu9oiZzALHRnAFyepU1IU7P6wwgysxcuWdMw09RqJK4ebfc9-HE7dZVjdKrcHV2o3lwb7wlEo2pux3RC-rfLqOZwO79YBd_VrVKoDscrxVHACUmFjkw-WCKz1-1PlnW6WYfCN7YwCQbjToGYLBi2tOfOOMbwc2kCKr8zZSJtaLcjYMvELVfVa-Ux6b1uK_Wh24IliD95yi-9wlHzeM-gPpRZ_zvtGw1yqKTDgXlWfWYrcNE" />
+            <Landmark className="w-4 h-4 text-[#a14000]/60" />
             <span className="font-bold text-[10px] text-[#5a4136] tracking-widest uppercase">Official High Street Merchant</span>
           </div>
           <p className="text-[10px] text-[#5a4136]">Powered by MCOMMALL Urban Connectivity Platform</p>

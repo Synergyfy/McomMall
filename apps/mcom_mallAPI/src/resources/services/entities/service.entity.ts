@@ -11,6 +11,7 @@ import { Business } from '../../listings/entities/listing.entity';
 import { BundledService } from './bundled-service.entity';
 import { ConfigurableAddon } from './configurable-addon.entity';
 import { Review } from '../../reviews/entities/review.entity';
+import { SpareCapacityOffer } from './spare-capacity-offer.entity';
 import { GuestPricingModel, PricingModel } from '../service.enum';
 import { Length, IsOptional, IsUrl } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
@@ -154,6 +155,12 @@ export class Service extends AbstractBaseEntity {
   @Column({ default: false })
   isFeatured: boolean;
 
+  @Column({ default: false })
+  isRotatorEligible: boolean;
+
+  @Column({ default: false })
+  isPromotionEligible: boolean;
+
   @Column('decimal', { precision: 12, scale: 2, nullable: true })
   bookingFee?: number;
 
@@ -175,6 +182,9 @@ export class Service extends AbstractBaseEntity {
     cascade: true,
   })
   configurableAddons: ConfigurableAddon[];
+
+  @OneToMany(() => SpareCapacityOffer, (offer) => offer.service)
+  spareCapacityOffers: SpareCapacityOffer[];
 
   @DeleteDateColumn()
   deletedAt?: Date;

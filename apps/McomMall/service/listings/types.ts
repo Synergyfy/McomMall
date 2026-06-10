@@ -151,9 +151,16 @@ export interface UserListing {
   bannerAltText: string;
   status: string;
   categories: Category[];
-  location: Location;
   isGoogleVerified: boolean;
   isVerified: boolean;
+  isClaimed: boolean;
+  googlePlaceId?: string;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
+  isFeatured?: boolean;
+  location: Location;
+  socialLinks?: SocialLink[];
+  businessHours?: BusinessHour[];
 }
 
 // --- Enums as String Literal Types ---
@@ -387,6 +394,9 @@ export interface Product {
   bonusThreshold?: number;
   bonusAmount?: number;
   business?: InHouseBusiness;
+  isFeatured?: boolean;
+  isRotatorEligible?: boolean;
+  isPromotionEligible?: boolean;
 }
 
 export type CampaignType = string;

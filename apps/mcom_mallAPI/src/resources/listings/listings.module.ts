@@ -8,7 +8,7 @@ import { BusinessHour } from './entities/business_hour.entity';
 import { SpecialDay } from './entities/special_days.entity';
 import { ProductSellerProfile } from './entities/product_seller_profiles.entity';
 import { StorefrontLink } from './entities/storefront_links.entity';
-import { ServiceProviderProfile } from '../service-provider-profile/entities/service-provider-profile.entity';
+import { BusinessServiceProviderProfile } from './entities/service_provider_profiles.entity';
 import { Certification } from './entities/certifications.entity';
 import { User } from '../users/entities/user.entity';
 import { Sector } from '../taxonomy/entities/sector.entity';
@@ -41,7 +41,7 @@ import { LocalMallModule } from '../localmall/localmall.module';
       SpecialDay,
       ProductSellerProfile,
       StorefrontLink,
-      ServiceProviderProfile,
+      BusinessServiceProviderProfile,
       Certification,
       User, // Add User repository
     ]),

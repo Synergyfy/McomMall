@@ -29,10 +29,15 @@ import {
   Trash2,
   Edit,
   Eye,
+  Copy,
+  Megaphone,
+  Archive,
 } from 'lucide-react';
-import { useGetMyProducts, useDeleteProduct } from '@/service/store/products/hook';
+import { useGetMyProducts, useDeleteProduct, useAddProduct, useUpdateProduct } from '@/service/store/products/hook';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
+import { PromoteProductModal } from './components/PromoteProductModal';
+import { Product } from '@/service/listings/types';
 import {
   AlertDialog,
   AlertDialogAction,
@@ -97,9 +102,13 @@ export default function StoreDashboard() {
   const [selectedProduct, setSelectedProduct] = React.useState<string | null>(
     null
   );
+  const [promoteProduct, setPromoteProduct] = React.useState<Product | null>(null);
+  const [showPromoteModal, setShowPromoteModal] = React.useState(false);
 
   const router = useRouter();
   const { mutate: deleteProduct, isPending: isDeleting } = useDeleteProduct();
+  const { mutateAsync: addProduct } = useAddProduct();
+  const { mutateAsync: updateProduct } = useUpdateProduct();
 
   const handleDelete = () => {
     if (selectedProduct) {
@@ -109,6 +118,35 @@ export default function StoreDashboard() {
           setSelectedProduct(null);
         },
       });
+    }
+  };
+
+  const handleDuplicate = async (product: Product) => {
+    try {
+      const { id, createdAt, updatedAt, ...rest } = product as any;
+      await addProduct({
+        ...rest,
+        title: `${product.title} (Copy)`,
+        sku: `${product.sku || 'SKU'}-COPY-${Date.now()}`,
+        productStatus: 'draft',
+        businessId: product.business?.id || '',
+      });
+      const { toast } = await import('sonner');
+      toast.success('Product duplicated as draft!');
+    } catch (e: any) {
+      const { toast } = await import('sonner');
+      toast.error(e.message || 'Failed to duplicate product.');
+    }
+  };
+
+  const handleArchive = async (productId: string) => {
+    try {
+      await updateProduct({ id: productId, productStatus: 'archived' } as any);
+      const { toast } = await import('sonner');
+      toast.success('Product archived.');
+    } catch {
+      const { toast } = await import('sonner');
+      toast.error('Failed to archive product.');
     }
   };
 
@@ -606,6 +644,30 @@ export default function StoreDashboard() {
                                   Edit
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
+                                  onSelect={() => handleDuplicate(product as unknown as Product)}
+                                >
+                                  <Copy className="mr-2 h-4 w-4" />
+                                  Duplicate
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onSelect={() => {
+                                    setPromoteProduct(product as unknown as Product);
+                                    setShowPromoteModal(true);
+                                  }}
+                                  className="text-orange-600"
+                                >
+                                  <Megaphone className="mr-2 h-4 w-4" />
+                                  Promote
+                                </DropdownMenuItem>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  onSelect={() => handleArchive(product.id)}
+                                  className="text-gray-500"
+                                >
+                                  <Archive className="mr-2 h-4 w-4" />
+                                  Archive
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
                                   onSelect={() => {
                                     setSelectedProduct(product.id);
                                     setShowDeleteConfirmation(true);
@@ -637,6 +699,16 @@ export default function StoreDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Promote Modal */}
+      <PromoteProductModal
+        product={promoteProduct}
+        open={showPromoteModal}
+        onClose={() => {
+          setShowPromoteModal(false);
+          setPromoteProduct(null);
+        }}
+      />
     </>
   );
 }
