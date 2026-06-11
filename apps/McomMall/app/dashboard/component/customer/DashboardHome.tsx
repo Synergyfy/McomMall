@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useRouter } from 'next/navigation';
 import {
   MapPin, Search, Store, Gift, Calendar, Dices, Sparkles, Clock,
   Star, RotateCw, ChevronDown, Bell, QrCode, ChevronRight,
   Utensils, Dumbbell, Coffee, Layers, RefreshCw, Heart, Zap,
-  Map, Award, Ticket, Sun, Plus, CloudSun, Thermometer, Droplets
+  Map, Award, Ticket, Sun, Plus, CloudSun, Thermometer, Droplets,
+  Scan, Check, X, Trophy
 } from 'lucide-react';
 
 import StatsCards from '../StatsCards';
@@ -13,6 +15,10 @@ import RecentActivities from '../RecentActivities';
 import { CustomerStatsDto, OwnerStatsDto } from '@/service/stats/types';
 import { UserRole } from '@/service/auth/types';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
+import {
+  PROMOTIONS_MOCK_DATA,
+  type PromotionItem,
+} from '@/lib/mock-data/promotions-mock-data';
 
 interface DashboardHomeProps {
   userName: string;
@@ -22,7 +28,7 @@ interface DashboardHomeProps {
   activities: any;
   isLoadingActivities: boolean;
   onAddPoints: (amount: number) => void;
-  setActiveTab: (tab: 'home' | 'discover' | 'rewards' | 'events' | 'profile') => void;
+  setActiveTab: (tab: 'home' | 'discover' | 'promotions' | 'rewards' | 'events' | 'profile') => void;
 }
 
 const UK_LOCATIONS = [
@@ -127,11 +133,19 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
   onAddPoints,
   setActiveTab,
 }) => {
+  const router = useRouter();
   const [isRefreshing, setIsRefreshing] = useState(true);
   const [selectedBorough, setSelectedBorough] = useState('Camden Town');
   const [isBoroughOpen, setIsBoroughOpen] = useState(false);
   const [spinState, setSpinState] = useState<'ready' | 'spinning' | 'won'>('ready');
   const [spinResult, setSpinResult] = useState('');
+  const [showScanner, setShowScanner] = useState(false);
+  const [scannerStep, setScannerStep] = useState<'scan' | 'result' | 'error'>('scan');
+  const [scannedPromo, setScannedPromo] = useState<PromotionItem | null>(null);
+  const [scratchState, setScratchState] = useState<'ready' | 'revealed'>('ready');
+  const [scratchPrize, setScratchPrize] = useState('');
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
 
   useEffect(() => {
     const timer = setTimeout(() => setIsRefreshing(false), 3000);
@@ -159,6 +173,64 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
       el.scrollIntoView({ behavior: 'smooth' });
       el.classList.add('ring-4', 'ring-[#ff6900]/50');
       setTimeout(() => el.classList.remove('ring-4', 'ring-[#ff6900]/50'), 1500);
+    }
+  };
+
+  /* ====== QR SCANNER ====== */
+  useEffect(() => {
+    if (!showScanner) return;
+    setScannerStep('scan');
+    setScannedPromo(null);
+    let mounted = true;
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (!mounted || !scannerRef.current) return;
+        const scanner = new Html5Qrcode('qr-reader');
+        html5QrCodeRef.current = scanner;
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText: string) => {
+            const match = Object.values(PROMOTIONS_MOCK_DATA).find(
+              p => p.redeemCode === decodedText || p.id === decodedText || p.title.toLowerCase().replace(/\s+/g, '-') === decodedText.toLowerCase().replace(/\s+/g, '-')
+            );
+            if (match && mounted) {
+              scanner.stop().catch(() => {});
+              setScannedPromo(match);
+              setScannerStep('result');
+            }
+          },
+          () => {},
+        );
+      } catch {
+        if (mounted) setScannerStep('error');
+      }
+    };
+    if (showScanner) startScanner();
+    return () => { mounted = false; if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => {}); };
+  }, [showScanner]);
+
+  const simulateScan = useCallback(() => {
+    const promos = Object.values(PROMOTIONS_MOCK_DATA);
+    const randomPromo = promos[Math.floor(Math.random() * promos.length)];
+    setScannedPromo(randomPromo);
+    setScannerStep('result');
+  }, []);
+
+  const simulateError = useCallback(() => {
+    setScannerStep('error');
+  }, []);
+
+  const getPromoIcon = (icon: string, className = 'w-5 h-5') => {
+    switch (icon) {
+      case 'flash_on': return <Zap className={className} />;
+      case 'confirmation_number': return <Ticket className={className} />;
+      case 'workspace_premium': return <Award className={className} />;
+      case 'restaurant': return <Utensils className={className} />;
+      case 'local_cafe': return <Coffee className={className} />;
+      case 'shopping_bag': return <Store className={className} />;
+      default: return <Gift className={className} />;
     }
   };
 
@@ -309,8 +381,11 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
               key={label}
               className="flex-shrink-0 flex flex-col items-center gap-2 group"
               onClick={() => {
-                if (label === 'Discover') setActiveTab('discover');
+                if (label === 'Scan QR') setShowScanner(true);
                 if (label === 'Redeem') setActiveTab('rewards');
+                if (label === 'Book') router.push('/dashboard/my-bookings');
+                if (label === 'Map') router.push('/dashboard/promotions');
+                if (label === 'Trends') router.push('/dashboard/discover');
               }}
             >
               <div
@@ -323,6 +398,45 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
               </span>
             </button>
           ))}
+        </div>
+      </section>
+
+      {/* ── Promotions Widget ── */}
+      <section>
+        <div
+          onClick={() => setActiveTab('promotions')}
+          className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-[#a23f00] via-[#ff6904] to-[#ff9969] p-6 text-white shadow-xl cursor-pointer active:scale-[0.98] transition-transform"
+        >
+          <div className="absolute top-0 right-0 w-32 h-32 bg-white opacity-10 rounded-full -mr-16 -mt-16 blur-2xl pointer-events-none" />
+          <div className="absolute bottom-0 left-0 w-24 h-24 bg-white opacity-5 rounded-full -ml-12 -mb-12 blur-3xl pointer-events-none" />
+          <div className="relative z-10 flex items-center justify-between">
+            <div>
+              <span className="inline-block px-3 py-1 bg-white/20 backdrop-blur-md rounded-full text-[10px] font-bold mb-2">
+                Live Offers
+              </span>
+              <h3 className="text-lg font-extrabold leading-tight">Hot Deals Near You</h3>
+              <p className="text-sm text-white/80 mt-1">
+                Flash sales, daily deals &amp; more
+              </p>
+            </div>
+            <div className="flex items-center gap-2">
+              <div className="text-right">
+                <div className="text-3xl font-black">12</div>
+                <div className="text-[10px] font-medium opacity-80">active</div>
+              </div>
+            </div>
+          </div>
+          <div className="mt-4 flex items-center gap-2">
+            <span className="text-[10px] font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full flex items-center gap-1">
+              <Zap className="w-3 h-3" /> Flash
+            </span>
+            <span className="text-[10px] font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">
+              Nearby
+            </span>
+            <span className="text-[10px] font-bold bg-white/20 backdrop-blur-md px-3 py-1 rounded-full">
+              Borough
+            </span>
+          </div>
         </div>
       </section>
 
@@ -392,6 +506,110 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
             </div>
           </div>
           <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
+        </div>
+      </section>
+
+      {/* ── Games & Challenges ── */}
+      <section>
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="font-headline-md text-headline-md text-[#261812] flex items-center gap-2">
+            <Sparkles className="w-5 h-5 text-[#a14000]" />
+            Games & Challenges
+          </h2>
+          <span className="text-[10px] font-bold text-[#a14000] uppercase tracking-wider">Play & Earn</span>
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {/* ── Scratch Card ── */}
+          <div
+            onClick={() => {
+              if (scratchState === 'ready') {
+                const prizes = ['25 Bonus Points', '50 Bonus Points', 'Free Coffee Voucher', '10% Off Coupon', '100 Bonus Points', 'Try Again Tomorrow'];
+                const prize = prizes[Math.floor(Math.random() * prizes.length)];
+                setScratchPrize(prize);
+                setScratchState('revealed');
+                if (prize.includes('Points')) {
+                  const pts = parseInt(prize) || 25;
+                  onAddPoints(pts);
+                }
+              }
+            }}
+            className="rounded-2xl bg-white p-5 border border-[#e2bfb0]/30 shadow-sm cursor-pointer active:scale-[0.97] transition-transform relative overflow-hidden group"
+          >
+            {scratchState === 'ready' && (
+              <div className="text-center py-4">
+                <div className="w-16 h-16 mx-auto rounded-full bg-gradient-to-br from-[#ff6900] to-[#a14000] flex items-center justify-center shadow-lg mb-3">
+                  <span className="text-2xl font-black text-white">?</span>
+                </div>
+                <h3 className="text-sm font-extrabold text-[#261812] mb-1">Scratch & Win</h3>
+                <p className="text-[10px] text-[#5a4136] font-semibold">Tap to reveal your prize!</p>
+                <div className="mt-3 flex justify-center gap-1">
+                  {[1, 2, 3].map((i) => (
+                    <div key={i} className="w-2 h-2 rounded-full bg-[#ff9969] animate-pulse" style={{ animationDelay: `${i * 0.3}s` }} />
+                  ))}
+                </div>
+              </div>
+            )}
+            {scratchState === 'revealed' && (
+              <div className="text-center py-4 animate-in zoom-in-95 duration-300">
+                <div className="w-16 h-16 mx-auto rounded-full bg-emerald-100 flex items-center justify-center shadow-lg mb-3">
+                  <Gift className="w-7 h-7 text-emerald-600" />
+                </div>
+                <h3 className="text-sm font-extrabold text-[#261812] mb-1">You Won!</h3>
+                <p className="text-base font-black text-[#a14000]">{scratchPrize}</p>
+                <p className="text-[9px] text-[#5a4136] font-semibold mt-2">Come back tomorrow for another scratch!</p>
+              </div>
+            )}
+            <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000 pointer-events-none" />
+          </div>
+
+          {/* ── Shop & Earn Challenge ── */}
+          <div className="rounded-2xl bg-white p-5 border border-[#e2bfb0]/30 shadow-sm">
+            <div className="flex items-center justify-between mb-3">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-full bg-cyan-100 flex items-center justify-center">
+                  <Trophy className="w-4 h-4 text-cyan-700" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-extrabold text-[#261812]">Shop & Earn Challenge</h3>
+                  <p className="text-[9px] text-[#5a4136] font-semibold">Spend $200 across 3 stores this week</p>
+                </div>
+              </div>
+              <span className="text-[10px] font-bold text-cyan-700 bg-cyan-50 px-2 py-0.5 rounded-full">2/3</span>
+            </div>
+            <div className="space-y-2 mb-3">
+              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                </div>
+                <span>The Urban Bistro — $68.50</span>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
+                <div className="w-5 h-5 rounded-full bg-emerald-100 flex items-center justify-center">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                </div>
+                <span>Peak Performance — $52.00</span>
+              </div>
+              <div className="flex items-center gap-2 text-[10px] font-semibold text-[#5a4136]">
+                <div className="w-5 h-5 rounded-full bg-slate-100 flex items-center justify-center">
+                  <span className="text-slate-400 text-[9px] font-bold">3</span>
+                </div>
+                <span className="text-slate-400">One more store to go!</span>
+              </div>
+            </div>
+            <div className="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+              <div className="bg-gradient-to-r from-cyan-400 to-cyan-600 h-full rounded-full" style={{ width: '66%' }} />
+            </div>
+            <p className="text-[9px] text-[#5a4136] font-semibold mt-2 flex justify-between">
+              <span>$120.50 spent</span>
+              <span className="font-bold text-cyan-700">$200 goal</span>
+            </p>
+            <button
+              onClick={() => setActiveTab('discover')}
+              className="mt-3 w-full py-2 bg-gradient-to-r from-cyan-500 to-cyan-600 text-white rounded-xl text-[10px] font-bold active:scale-95 transition-transform shadow-md"
+            >
+              Find a Store to Shop
+            </button>
+          </div>
         </div>
       </section>
 
@@ -674,6 +892,100 @@ export const DashboardHome: React.FC<DashboardHomeProps> = ({
           ))}
         </div>
       </section>
+
+      {/* ── QR Scanner Modal ── */}
+      {showScanner && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setShowScanner(false)}>
+          <div className="bg-white rounded-3xl w-full max-w-sm shadow-2xl animate-in zoom-in-95 duration-200 overflow-hidden" onClick={e => e.stopPropagation()}>
+            {scannerStep === 'scan' && (
+              <div className="p-8 text-center space-y-6">
+                <div className="w-48 h-48 mx-auto relative">
+                  <div id="qr-reader" ref={scannerRef} className="w-full h-full" />
+                  <div className="absolute inset-0 border-2 border-[#a23f00] rounded-2xl pointer-events-none" />
+                  <div className="absolute inset-4 border-2 border-dashed border-[#ff9969]/50 rounded-xl pointer-events-none" />
+                  <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#a23f00] rounded-tl-2xl pointer-events-none" />
+                  <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#a23f00] rounded-tr-2xl pointer-events-none" />
+                  <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#a23f00] rounded-bl-2xl pointer-events-none" />
+                  <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#a23f00] rounded-br-2xl pointer-events-none" />
+                </div>
+                <p className="text-xs font-bold text-[#261812]">Point your camera at a QR code</p>
+                <p className="text-[10px] text-[#8e7164]">Scan a promotion QR from any MCOM Mall store or poster</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={simulateScan}
+                    className="flex-1 py-3 bg-[#a23f00] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
+                  >
+                    <Scan className="w-4 h-4" />
+                    Simulate
+                  </button>
+                  <button
+                    onClick={() => setShowScanner(false)}
+                    className="py-3 px-4 border border-[#e2bfb0]/30 rounded-2xl text-[10px] font-bold text-[#5a4136] hover:bg-[#ffeae1] active:scale-95 transition-all"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scannerStep === 'result' && scannedPromo && (
+              <div className="p-6 text-center space-y-5">
+                <div className="w-20 h-20 mx-auto bg-emerald-100 rounded-full flex items-center justify-center">
+                  <Check className="w-10 h-10 text-emerald-600" />
+                </div>
+                <h3 className="font-extrabold text-[#261812] text-base">Promotion Found!</h3>
+                <div className="bg-[#ffeae1] rounded-2xl p-4 text-left flex items-center gap-3">
+                  <div className="w-12 h-12 rounded-xl bg-[#f8ddd2] flex items-center justify-center shrink-0">
+                    {getPromoIcon(scannedPromo.badgeIcon, 'w-6 h-6')}
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-[#261812]">{scannedPromo.title}</p>
+                    <p className="text-[10px] text-[#5a4136]">{scannedPromo.businessName} · {scannedPromo.benefitValue}</p>
+                  </div>
+                </div>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => { setActiveTab('promotions'); setShowScanner(false); }}
+                    className="flex-1 py-3 bg-[#a23f00] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md"
+                  >
+                    View & Redeem
+                  </button>
+                  <button
+                    onClick={() => setShowScanner(false)}
+                    className="flex-1 py-3 border border-[#e2bfb0]/30 rounded-2xl text-[10px] font-bold text-[#5a4136] hover:bg-[#ffeae1] active:scale-95 transition-all"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {scannerStep === 'error' && (
+              <div className="p-6 text-center space-y-5">
+                <div className="w-20 h-20 mx-auto bg-red-100 rounded-full flex items-center justify-center">
+                  <X className="w-10 h-10 text-red-600" />
+                </div>
+                <h3 className="font-extrabold text-[#261812] text-base">Camera Unavailable</h3>
+                <p className="text-xs text-[#5a4136]">Could not access your camera. Please grant camera permissions or use the Simulate button.</p>
+                <div className="flex gap-2">
+                  <button
+                    onClick={simulateScan}
+                    className="flex-1 py-3 bg-[#a23f00] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md"
+                  >
+                    Simulate Scan
+                  </button>
+                  <button
+                    onClick={() => setShowScanner(false)}
+                    className="flex-1 py-3 border border-[#e2bfb0]/30 rounded-2xl text-[10px] font-bold text-[#5a4136]"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
