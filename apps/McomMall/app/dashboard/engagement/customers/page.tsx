@@ -1,7 +1,8 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, Suspense } from 'react';
 import Link from 'next/link';
+import { useSearchParams, useRouter } from 'next/navigation';
 import {
   Search,
   MessageSquare,
@@ -11,6 +12,8 @@ import {
   Filter,
   Plus,
   Award,
+  Users,
+  ChevronRight,
 } from 'lucide-react';
 
 const customersData = [
@@ -25,6 +28,7 @@ const customersData = [
     lastVisit: '2 days ago',
     avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLuGAbTCn-nss1lFG0a77XykmMW1WMjPV0nneYZpBq7yQ7QXR1GJUFbae9Y-Rb_6fAmkApRmY-T7YY4_JoeQR3y07jrjWFNTUR09-PErqcuNarqXB6tJnSql-pSBWJUcGT9VVXKrRypEkj7cg_lDhklDdzf9iX0agVTtrBXs15wHNjfJz16kXE5HQapPGTX065Pmlh0tKdIR-okzhkUvq1f2pmXo1mY3tmL5DKbSb8V_mA36Rb40SBAopA',
     category: 'loyalty',
+    segments: ['vip', 'frequent'],
   },
   {
     name: 'Marcus L.',
@@ -37,6 +41,7 @@ const customersData = [
     lastVisit: '5 days ago',
     avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLvIvMk_LTHXXrryrMaeWOOq35ElRxmVFRgzp9HuKQuUkEtRH8Ism6vqMguVt4bfsYOLjYCWE-02O-mMbKhiIRI7Ov2P3vGfC4VclDasSmtixpjG8JltbYJqWVHcy7E4d3A0I6RTFEPnAt7hnOU36BJCdlYV5zGWAIwt-yR7d4eroxUc8W60fg_WaHN-LXMAvvZuR9DRbJboe8tV4gY0sQVsB7RBj9buLPLH5VhVuQquKOFsOSe4iRRHS-o',
     category: 'nearby',
+    segments: ['frequent'],
   },
   {
     name: 'Elena V.',
@@ -46,9 +51,10 @@ const customersData = [
     engagementColor: 'text-[#ba1a1a]',
     points: 50,
     borough: 'Islington',
-    lastVisit: 'Today',
+    lastVisit: '3 months ago',
     avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLvaKZ7RgvIaEgHECvU3lwnRUOLum3ZkQ0l0GfkZG75ZWjmst5qEO1JretavID-GSeFxMEHxqVZo4oHpWlXiQ-Bfne6b0HjS6yLTYVTqRlv74lNMbQpRRS4MNVC5lXn58rCzL4LpeAPpCjl5b9peGn-IF-lfo5IZfveB3dr5jJe0vg63YpFJeqTaT2sLM2xI-jmy9ziDK8WqzXVFgUC7CeumcMQVD_DGuzex54iLWzsq7HmOfq69dpXxZZA',
     category: 'returning',
+    segments: ['inactive'],
   },
   {
     name: 'David K.',
@@ -61,12 +67,30 @@ const customersData = [
     lastVisit: '1 week ago',
     avatar: 'https://lh3.googleusercontent.com/aida/AP1WRLvjEFUjca-BkVsu6dm5DLqlsNiujdTU_EKKd0Zi7osm87kxzEKO3EW55-4jkPvD_i2gDrHFNBIcHS0nPAOwG8A61Kkl3XPnpKd4RxGW5_4OH0QyzPYvkxBtd3NutrLe17AmidRpS96twbWgEu83F-rWl1FCLBe7nuCY1AqevZZBZGJwO4KNJlLnO54fFx969UTvCb3EnSxPZDF6cO8_BEIjMjbaB3XWKrvxM7_ojpxyiQPcrNcMvwlEAjQ',
     category: 'borough',
+    segments: ['vip', 'high_spenders', 'frequent'],
   },
 ];
 
-export default function EngagementCustomersPage() {
+function SegmentDisplayNames(segment: string) {
+  switch (segment) {
+    case 'vip':
+      return 'VIP Customers';
+    case 'inactive':
+      return 'Inactive';
+    case 'high_spenders':
+      return 'High Spenders';
+    case 'frequent':
+      return 'Frequent';
+    default:
+      return segment;
+  }
+}
+
+function EngagementCustomersContent() {
   const [searchQuery, setSearchQuery] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
+  const searchParams = useSearchParams();
+  const segmentParam = searchParams.get('segment') || '';
 
   const filteredCustomers = customersData.filter((customer) => {
     // Search query filter
@@ -79,12 +103,64 @@ export default function EngagementCustomersPage() {
     const matchesFilter =
       activeFilter === 'all' || customer.category === activeFilter;
 
-    return matchesSearch && matchesFilter;
+    // Segment filter
+    const matchesSegment =
+      !segmentParam || (customer.segments && customer.segments.includes(segmentParam));
+
+    return matchesSearch && matchesFilter && matchesSegment;
   });
 
   return (
     <div className="-mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full overflow-x-hidden bg-[#fff8f5]">
       <div className="max-w-md mx-auto px-4 pt-5 pb-36 space-y-5">
+
+        {/* ── CUSTOMER SEGMENTS BANNER ── */}
+        <section className="bg-gradient-to-r from-[#a14000] to-[#ea580c] p-5 rounded-2xl shadow-[0_8px_20px_rgba(161,64,0,0.15)] text-white relative overflow-hidden flex flex-col justify-between" style={{ minHeight: '135px' }}>
+          <div className="absolute inset-0 opacity-10 pointer-events-none">
+            <svg width="100%" height="100%" xmlns="http://www.w3.org/2000/svg">
+              <defs>
+                <pattern id="gp-banner" width="40" height="40" patternUnits="userSpaceOnUse">
+                  <circle cx="20" cy="20" r="15" fill="none" stroke="white" strokeWidth="1" />
+                </pattern>
+              </defs>
+              <rect width="100%" height="100%" fill="url(#gp-banner)" />
+            </svg>
+          </div>
+          <div className="relative z-10">
+            <h3 className="font-bold text-base">Customer Segments</h3>
+            <p className="text-[11px] text-orange-100 mt-1 max-w-[280px]">
+              Optimize your reach by targeting specific customer behaviors.
+            </p>
+          </div>
+          <div className="relative z-10 pt-4 self-start">
+            <Link 
+              href="/dashboard/engagement/customers/segments" 
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white text-[#a14000] rounded-xl font-bold text-xs shadow-md hover:bg-orange-50 active:scale-95 transition-all"
+            >
+              <Users className="w-3.5 h-3.5" />
+              View Customer Segments
+              <ChevronRight className="w-3 h-3" />
+            </Link>
+          </div>
+        </section>
+
+        {/* ── ACTIVE SEGMENT BADGE ── */}
+        {segmentParam && (
+          <div className="bg-orange-50 border border-orange-200/60 rounded-xl px-4 py-3 flex items-center justify-between shadow-sm animate-fade-in">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-orange-600 animate-pulse"></span>
+              <p className="text-xs font-bold text-orange-950">
+                Segment: <span className="capitalize">{SegmentDisplayNames(segmentParam)}</span>
+              </p>
+            </div>
+            <Link 
+              href="/dashboard/engagement/customers" 
+              className="text-xs font-bold text-[#a14000] hover:underline"
+            >
+              Clear Filter
+            </Link>
+          </div>
+        )}
 
         {/* ── SEARCH & FILTER BAR ── */}
         <section className="bg-white p-4 rounded-xl shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#f7ece7] space-y-3">
@@ -100,11 +176,11 @@ export default function EngagementCustomersPage() {
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
             {[
-              { id: 'all', label: 'All Customers' },
-              { id: 'nearby', label: 'Nearby' },
+              { id: 'all',       label: 'All Customers' },
+              { id: 'nearby',    label: 'Nearby' },
               { id: 'returning', label: 'Returning' },
-              { id: 'loyalty', label: 'Loyalty' },
-              { id: 'borough', label: 'Borough' },
+              { id: 'loyalty',   label: 'Loyalty' },
+              { id: 'borough',   label: 'Borough' },
             ].map((chip) => {
               const isActive = activeFilter === chip.id;
               return (
@@ -121,6 +197,14 @@ export default function EngagementCustomersPage() {
                 </button>
               );
             })}
+            {/* Activity tab — navigates to the live activity feed */}
+            <Link
+              href="/dashboard/engagement/customers/activity"
+              className="px-3 py-1.5 rounded-full text-xs font-bold border border-[#00629f]/30 text-[#00629f] bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all flex items-center gap-1.5"
+            >
+              <span className="w-1.5 h-1.5 rounded-full bg-[#00629f] animate-pulse shrink-0" />
+              Activity
+            </Link>
           </div>
         </section>
 
@@ -180,7 +264,7 @@ export default function EngagementCustomersPage() {
 
                 {/* CTA Action Buttons */}
                 <div className="flex flex-col gap-2 pt-1">
-                  <button className="w-full py-2.5 bg-[#a14000] text-white rounded-xl font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(161,64,0,0.15)]">
+                  <button className="w-full py-2.5 bg-[#a14000] text-[#ffffff] rounded-xl font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(161,64,0,0.15)]">
                     <MessageSquare className="w-3.5 h-3.5" />
                     Send Message
                   </button>
@@ -249,5 +333,17 @@ function UsersIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
       <path d="M16 3.13a4 4 0 0 1 0 7.75" />
     </svg>
+  );
+}
+
+export default function EngagementCustomersPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-[#fff8f5] flex items-center justify-center">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[#a14000]" />
+      </div>
+    }>
+      <EngagementCustomersContent />
+    </Suspense>
   );
 }
