@@ -1,4 +1,5 @@
 "use client";
+import React from "react";
 import {
   DollarSign,
   ShoppingBag,
@@ -15,13 +16,12 @@ import {
   Handshake,
   Book,
 } from "lucide-react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   CustomerStatsDto,
   OwnerStatsDto,
 } from "@/service/stats/types";
 import { UserRole } from "@/service/auth/types";
-import { CURRENCY } from "@/lib/utils";
+import { formatCurrency } from "@/lib/utils";
 
 interface StatsCardsProps {
   stats: OwnerStatsDto | CustomerStatsDto;
@@ -33,7 +33,7 @@ const OwnerStatsMap = [
     key: "totalAmountEarnedFromProductOrders",
     label: "Product Sales",
     icon: DollarSign,
-    color: "text-green-500",
+    color: "text-emerald-500",
     isCurrency: true,
   },
   {
@@ -47,21 +47,21 @@ const OwnerStatsMap = [
     key: "totalAmountSpentForPromotions",
     label: "Promotion Spending",
     icon: Tag,
-    color: "text-red-500",
+    color: "text-rose-500",
     isCurrency: true,
   },
   {
     key: "totalOffersRedeemed",
     label: "Offers Redeemed",
     icon: Users,
-    color: "text-yellow-500",
+    color: "text-amber-500",
     isCurrency: false,
   },
   {
     key: "totalAmountSpentOnCoupon",
     label: "Coupon Spending",
     icon: Ticket,
-    color: "text-red-500",
+    color: "text-rose-500",
     isCurrency: true,
   },
   {
@@ -89,14 +89,14 @@ const OwnerStatsMap = [
     key: "totalAmountOfListing",
     label: "Total Listings",
     icon: List,
-    color: "text-gray-500",
+    color: "text-slate-500",
     isCurrency: false,
   },
   {
     key: "totalWalletBalance",
     label: "Wallet Balance",
     icon: Wallet,
-    color: "text-green-700",
+    color: "text-emerald-700",
     isCurrency: true,
   },
 ];
@@ -106,7 +106,7 @@ const CustomerStatsMap = [
     key: "totalAmountSpentOnProductOrdered",
     label: "Product Spending",
     icon: ShoppingBag,
-    color: "text-green-500",
+    color: "text-emerald-500",
     isCurrency: true,
   },
   {
@@ -127,21 +127,21 @@ const CustomerStatsMap = [
     key: "totalNumberOfPromotionsParticipating",
     label: "Promotions Joined",
     icon: Handshake,
-    color: "text-yellow-500",
+    color: "text-amber-500",
     isCurrency: false,
   },
   {
     key: "totalNumberOfPointsEarned",
     label: "Points Earned",
     icon: Star,
-    color: "text-green-500",
+    color: "text-emerald-500",
     isCurrency: false,
   },
   {
     key: "totalNumberOfPointsRedeemed",
     label: "Points Redeemed",
     icon: Star,
-    color: "text-red-500",
+    color: "text-rose-500",
     isCurrency: false,
   },
   {
@@ -160,27 +160,47 @@ const CustomerStatsMap = [
   },
 ];
 
+const formatStatValue = (value: number | undefined | null, isCurrency: boolean) => {
+  if (value === undefined || value === null) {
+    return isCurrency ? formatCurrency(0) : "0";
+  }
+  if (isCurrency) {
+    return formatCurrency(value);
+  }
+  return value.toLocaleString("en-US");
+};
+
 const StatsCards: React.FC<StatsCardsProps> = ({ stats, role }) => {
   const statsMap =
     role === UserRole.OWNER ? OwnerStatsMap : CustomerStatsMap;
 
   return (
-    <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+    <div className="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-4 gap-2.5 sm:gap-4 w-full">
       {statsMap.map(({ key, label, icon: Icon, color, isCurrency }) => {
         const value = stats[key as keyof typeof stats];
         return (
-          <Card key={key} className="hover:shadow-lg transition-shadow duration-300">
-            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-              <CardTitle className="text-sm font-medium">{label}</CardTitle>
-              <Icon className={`h-5 w-5 ${color}`} />
-            </CardHeader>
-            <CardContent>
-              <div className="text-2xl font-bold">
-                {isCurrency ? CURRENCY : ""}
-                {value}
+          <div 
+            key={key} 
+            className="hover:shadow-md hover:-translate-y-0.5 transition-all duration-300 p-3 sm:p-4 flex flex-col justify-between gap-3 border border-slate-100/80 bg-white shadow-sm h-full rounded-2xl"
+          >
+            <div className="flex flex-col gap-1.5 w-full min-w-0">
+              <div className="flex items-center justify-between gap-1 w-full">
+                <div className="p-1.5 rounded-lg bg-slate-50 shrink-0">
+                  <Icon className={`h-3.5 w-3.5 sm:h-4 sm:w-4 ${color}`} />
+                </div>
               </div>
-            </CardContent>
-          </Card>
+              <span 
+                className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-wider line-clamp-2 leading-tight" 
+                title={label}
+              >
+                {label}
+              </span>
+            </div>
+
+            <div className="text-sm min-[360px]:text-base sm:text-lg md:text-xl font-black text-slate-800 tracking-tight">
+              {formatStatValue(value as number, isCurrency)}
+            </div>
+          </div>
         );
       })}
     </div>
