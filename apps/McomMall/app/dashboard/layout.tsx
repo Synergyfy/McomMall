@@ -150,7 +150,7 @@ export default function DashboardLayout({
         </div>
 
         {/* --- MAIN CONTENT AREA --- */}
-        <main className="flex-grow flex flex-col min-h-0">
+        <main className="flex-grow flex flex-col min-w-0 min-h-0">
           <header className="flex items-center justify-between w-full h-14 py-2 px-4 border-b border-gray-200 bg-white shadow-sm transition-all duration-300">
             {isEngagement ? (
               /* --- ENGAGEMENT HEADER --- */
@@ -253,7 +253,7 @@ export default function DashboardLayout({
           </header>
 
           {/* Page Content */}
-          <div className="sm:p-5 p-2 pb-20 sm:pb-5 overflow-y-auto flex-1 min-h-0">
+          <div className="sm:p-5 p-2 pb-20 sm:pb-5 overflow-y-auto flex-1 min-w-0 min-h-0">
             <ProtectedRoute>
               <GeographicDashboard>
                 {children}
