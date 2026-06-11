@@ -8,6 +8,7 @@ import { Public } from '../../common/decorators/public.decorator';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard';
 import { CurrentUser } from '../../common/decorators/current-user.decorator';
 import { User } from '../users/entities/user.entity';
+import { PointTransaction } from '../transaction/entities/point-transaction.entity';
 
 @Controller('localmall')
 export class LocalMallController {
@@ -17,6 +18,10 @@ export class LocalMallController {
     private readonly localMallRepository: Repository<LocalMall>,
     @InjectRepository(Business)
     private readonly businessRepository: Repository<Business>,
+    @InjectRepository(User)
+    private readonly userRepository: Repository<User>,
+    @InjectRepository(PointTransaction)
+    private readonly pointTransactionRepository: Repository<PointTransaction>,
   ) {}
 
   @Public()
@@ -27,11 +32,13 @@ export class LocalMallController {
   }
 
   @Public()
+  @UseGuards(JwtAuthGuard)
   @Get('customer/feed')
   async getCustomerFeed(
     @Query('lat') lat?: string,
     @Query('lon') lon?: string,
     @Query('postcode') postcode?: string,
+    @CurrentUser() user?: User,
   ) {
     let resolvedBorough = 'Southwark'; // Default fallback
     let userLat = parseFloat(lat);
@@ -129,6 +136,28 @@ export class LocalMallController {
       where: { role: 'customer' as any },
     });
 
+    let pointsBalance = 2400;
+    let weeklyPointsEarned = 0;
+    if (user && user.id) {
+      const dbUser = await this.userRepository.findOne({ where: { id: user.id } });
+      if (dbUser) {
+        pointsBalance = dbUser.points;
+      }
+      
+      const oneWeekAgo = new Date();
+      oneWeekAgo.setDate(oneWeekAgo.getDate() - 7);
+      
+      const weeklyTransactionResult = await this.pointTransactionRepository
+        .createQueryBuilder('pt')
+        .select('SUM(pt.points)', 'total')
+        .where('pt.userId = :userId', { userId: user.id })
+        .andWhere('pt.points > 0') // only count earned points
+        .andWhere('pt.createdAt >= :oneWeekAgo', { oneWeekAgo })
+        .getRawOne();
+      
+      weeklyPointsEarned = weeklyTransactionResult?.total ? parseInt(weeklyTransactionResult.total) : 0;
+    }
+
     return {
       borough: resolvedBorough,
       mallName,
@@ -143,7 +172,8 @@ export class LocalMallController {
         isClaimed: b.isClaimed,
         isVerified: b.isVerified,
       })),
-      pointsBalance: 2400,
+      pointsBalance,
+      weeklyPointsEarned,
       consumerCount,
       activeCampaigns,
       nearbyDeals
