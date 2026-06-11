@@ -37,8 +37,8 @@ const promotions = [
 
 export default function EngagementLoyaltyPage() {
   return (
-    <div style={{ background: '#fff8f5', margin: '-20px -20px 0', minHeight: '100%' }}>
-      <div className="px-4 pt-5 pb-32 space-y-5">
+    <div className="-mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full overflow-x-hidden" style={{ background: '#fff8f5' }}>
+      <div className="max-w-md mx-auto px-4 pt-5 pb-32 space-y-5">
 
         {/* Header */}
         <div className="flex items-center justify-between">
@@ -136,9 +136,9 @@ export default function EngagementLoyaltyPage() {
 
         {/* Top Members */}
         <div>
-          <div className="flex justify-between items-center mb-3">
-            <h3 className="text-sm font-bold" style={{ color: '#1f1b18' }}>Top Members</h3>
-            <Link href="/dashboard/loyalty/members" className="text-xs font-semibold" style={{ color: '#ea580c' }}>Manage all</Link>
+          <div className="flex items-center justify-between gap-2 mb-3 min-w-0">
+            <h3 className="text-sm font-bold shrink-0" style={{ color: '#1f1b18' }}>Top Members</h3>
+            <Link href="/dashboard/loyalty/members" className="text-xs font-semibold shrink-0" style={{ color: '#ea580c' }}>Manage all</Link>
           </div>
           <div className="space-y-2">
             {members.map((m, i) => (

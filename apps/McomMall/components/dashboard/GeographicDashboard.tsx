@@ -129,7 +129,7 @@ export default function GeographicDashboard({ children }: { children: React.Reac
   };
 
   return (
-    <div className="flex flex-col relative">
+    <div className="flex flex-col relative w-full min-w-0">
       <div className="hidden sm:block">
         {renderWelcomeBanner()}
       </div>
