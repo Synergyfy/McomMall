@@ -272,10 +272,10 @@ export default function LoyaltyDashboardPage() {
             </Link>
 
             <Link 
-              href="/dashboard/loyalty/promotion"
+              href="/dashboard/engagement/loyalty?tab=campaigns"
               className="w-full p-3 bg-white hover:bg-gray-50/50 transition-colors rounded-2xl flex items-center gap-3 border border-[#f7ece7] group active:scale-[0.98]"
             >
-              <div className="w-9 h-9 rounded-full bg-blue-50 text-[#00629f] flex items-center justify-center shrink-0 group-hover:bg-[#00629f] group-hover:text-white transition-all">
+              <div className="w-9 h-9 rounded-full bg-orange-50 text-[#a14000] flex items-center justify-center shrink-0 group-hover:bg-[#a14000] group-hover:text-white transition-all">
                 <BarChart2 className="w-4 h-4" />
               </div>
               <div className="text-left">
@@ -285,7 +285,20 @@ export default function LoyaltyDashboardPage() {
             </Link>
 
             <Link 
-              href="/dashboard/loyalty/promotion/send-offer"
+              href="/dashboard/promotions"
+              className="w-full p-3 bg-white hover:bg-gray-50/50 transition-colors rounded-2xl flex items-center gap-3 border border-[#f7ece7] group active:scale-[0.98]"
+            >
+              <div className="w-9 h-9 rounded-full bg-blue-50 text-[#00629f] flex items-center justify-center shrink-0 group-hover:bg-[#00629f] group-hover:text-white transition-all">
+                <Megaphone className="w-4 h-4" />
+              </div>
+              <div className="text-left">
+                <p className="font-bold text-xs text-gray-800">Promotion Manager</p>
+                <p className="text-[10px] text-gray-400 mt-0.5">View and manage marketing promotions</p>
+              </div>
+            </Link>
+
+            <Link 
+              href="/dashboard/promotions/send-offer"
               className="w-full p-3 bg-white hover:bg-gray-50/50 transition-colors rounded-2xl flex items-center gap-3 border border-[#f7ece7] group active:scale-[0.98]"
             >
               <div className="w-9 h-9 rounded-full bg-purple-50 text-purple-600 flex items-center justify-center shrink-0 group-hover:bg-purple-600 group-hover:text-white transition-all">

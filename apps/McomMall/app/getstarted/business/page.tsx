@@ -5971,7 +5971,7 @@ function WelcomeChecklistPage({ onComplete }: { onComplete: () => void }) {
 
             {/* Item: Promotions */}
             <div 
-              onClick={() => router.push('/dashboard/loyalty/promotion/new')}
+              onClick={() => router.push('/dashboard/promotions/new')}
               className="bg-white p-4 rounded-xl border border-[#e2bfb0] shadow-sm flex flex-col gap-2 group hover:border-[#a14000] transition-colors cursor-pointer"
             >
               <div className="flex items-start gap-3">
