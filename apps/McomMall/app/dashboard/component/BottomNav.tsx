@@ -12,7 +12,7 @@ import {
   Users,
   Heart,
   MessageSquare,
-  BookOpen,
+  Star,
 } from 'lucide-react';
 
 // ─── Regular dashboard nav items ──────────────────────────────────────────────
@@ -40,7 +40,7 @@ const engagementTabs = [
   { label: 'Customers', icon: Users,           href: '/dashboard/engagement/customers' },
   { label: 'Loyalty',   icon: Heart,           href: '/dashboard/engagement/loyalty' },
   { label: 'Messages',  icon: MessageSquare,   href: '/dashboard/engagement/messages' },
-  { label: 'Reviews',   icon: BookOpen,        href: '/dashboard/engagement/reviews' },
+  { label: 'Reviews',   icon: Star,            href: '/dashboard/engagement/reviews' },
 ];
 
 // ─── Component ────────────────────────────────────────────────────────────────
