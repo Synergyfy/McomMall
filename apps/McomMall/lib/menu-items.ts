@@ -243,11 +243,15 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'Analytics', href: '/dashboard/loyalty/analytics' },
       // { title: 'Customer view', href: '/dashboard/loyalty/customer' },
       { title: 'Members', href: '/dashboard/loyalty/members' },
-      { title: 'Promotion', href: '/dashboard/loyalty/promotion' },
       { title: 'Time Bonus', href: '/dashboard/loyalty/time-bonus' },
       { title: 'Offers', href: '/dashboard/loyalty/offers' },
       // { title: 'Settings', href: '/dashboard/loyalty/settings' },
     ],
+  },
+  {
+    title: 'Promotion',
+    href: '/dashboard/promotions',
+    icon: Megaphone,
   },
   {
     title: 'Gift Card',

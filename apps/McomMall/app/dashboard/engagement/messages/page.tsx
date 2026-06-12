@@ -33,14 +33,14 @@ const QUICK_ACTIONS = [
     icon: Megaphone,
     color: 'text-[#a14000]',
     bg: 'bg-orange-50',
-    href: '/dashboard/loyalty/promotion',
+    href: '/dashboard/promotions',
   },
   {
     label: 'Send Offer',
     icon: Tag,
     color: 'text-amber-600',
     bg: 'bg-amber-50',
-    href: '/dashboard/loyalty/promotion/send-offer',
+    href: '/dashboard/promotions/send-offer',
   },
   {
     label: 'Send Alert',
@@ -255,7 +255,7 @@ export default function MessagesDashboardPage() {
           <div className="md:col-span-2 bg-white p-3.5 sm:p-5 rounded-xl border border-[#e2bfb0]/30 shadow-[0_2px_6px_rgba(161,64,0,0.02)] flex flex-col justify-between min-w-0">
             <div className="flex justify-between items-center mb-3 gap-2">
               <h3 className="font-bold text-xs sm:text-sm text-[#1f1b18] truncate">Recent Campaigns</h3>
-              <Link href="/dashboard/loyalty/promotion" className="text-[11px] font-bold text-[#a14000] flex items-center gap-0.5 hover:underline shrink-0">
+              <Link href="/dashboard/promotions" className="text-[11px] font-bold text-[#a14000] flex items-center gap-0.5 hover:underline shrink-0">
                 View History <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
@@ -388,7 +388,7 @@ export default function MessagesDashboardPage() {
 
             {/* Create New Promo Button Card */}
             <Link 
-              href="/dashboard/loyalty/promotion" 
+              href="/dashboard/promotions" 
               className="w-full max-w-sm mx-auto sm:max-w-none border-2 border-dashed border-[#e2bfb0]/40 rounded-xl flex flex-col items-center justify-center p-5 space-y-1.5 hover:border-[#a14000] hover:bg-orange-50/10 transition-all text-gray-400 hover:text-[#a14000] min-h-[160px]"
             >
               <Plus className="w-6 h-6 stroke-[1.5]" />

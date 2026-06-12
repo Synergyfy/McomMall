@@ -70,7 +70,7 @@ export default function SendTargetedOfferPage() {
 
   const handleSuccessClose = () => {
     setIsSuccess(false);
-    router.push('/dashboard/loyalty/promotion');
+    router.push('/dashboard/promotions');
   };
 
   const previewTitle = title || 'Weekend Flash Sale - 20% Off';
@@ -85,7 +85,7 @@ export default function SendTargetedOfferPage() {
         {/* ── BACK ── */}
         <div className="flex items-center">
           <Link
-            href="/dashboard/loyalty/promotion"
+            href="/dashboard/promotions"
             className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors"
           >
             <ChevronLeft className="w-4 h-4" /> Back to Campaigns
