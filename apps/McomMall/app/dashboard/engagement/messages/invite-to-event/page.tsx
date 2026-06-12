@@ -13,6 +13,7 @@ import {
   HelpCircle,
   Bookmark,
   Share2,
+  Info,
 } from 'lucide-react';
 
 export default function EventInvitationPage() {

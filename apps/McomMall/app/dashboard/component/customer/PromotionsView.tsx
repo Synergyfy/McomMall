@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useCallback, useMemo } from 'react';
+import React, { useState, useCallback, useMemo, useRef } from 'react';
 import {
   Star,
   Clock,
@@ -78,6 +78,66 @@ function getPromoIcon(icon: string, className = 'w-5 h-5') {
 
 function Heart({ className }: { className?: string }) {
   return <svg className={className} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>;
+}
+
+function parseExpiresAt(expiresAt: string): Date {
+  const now = new Date();
+  let match = expiresAt.match(/\+(\d+)(d|h|m)/);
+  if (match) {
+    const val = parseInt(match[1]);
+    const unit = match[2];
+    const ms = unit === 'd' ? val * 86400000 : unit === 'h' ? val * 3600000 : val * 60000;
+    return new Date(now.getTime() + ms);
+  }
+  match = expiresAt.match(/(\d+)h(\d+)m/);
+  if (match) {
+    return new Date(now.getTime() + parseInt(match[1]) * 3600000 + parseInt(match[2]) * 60000);
+  }
+  return new Date(now.getTime() + 3600000);
+}
+
+function CountdownTimer({ target }: { target: Date }) {
+  const [remaining, setRemaining] = React.useState('');
+  React.useEffect(() => {
+    const tick = () => {
+      const diff = target.getTime() - Date.now();
+      if (diff <= 0) { setRemaining('Expired'); return; }
+      const h = Math.floor(diff / 3600000);
+      const m = Math.floor((diff % 3600000) / 60000);
+      const s = Math.floor((diff % 60000) / 1000);
+      if (h > 0) setRemaining(`${h}h ${m}m ${s}s`);
+      else if (m > 0) setRemaining(`${m}m ${s}s`);
+      else setRemaining(`${s}s`);
+    };
+    tick();
+    const interval = setInterval(tick, 1000);
+    return () => clearInterval(interval);
+  }, [target]);
+  return <span>{remaining}</span>;
+}
+
+function ExpiryDisplay({ expiresAt, expiryText, isUrgent }: { expiresAt?: string; expiryText: string; isUrgent?: boolean }) {
+  const [targetDate, setTargetDate] = React.useState<Date | null>(null);
+  React.useEffect(() => {
+    if (expiresAt) {
+      setTargetDate(parseExpiresAt(expiresAt));
+    }
+  }, [expiresAt]);
+  if (targetDate) {
+    return <CountdownTimer target={targetDate} />;
+  }
+  return <span className={isUrgent ? 'text-[#ba1a1a]' : ''}>{expiryText}</span>;
+}
+
+function DistanceBadge({ distance }: { distance: string }) {
+  const d = parseFloat(distance);
+  const color = d <= 0.3 ? 'text-emerald-600 bg-emerald-50' : d <= 1 ? 'text-amber-600 bg-amber-50' : 'text-slate-600 bg-slate-50';
+  return (
+    <span className={cn('inline-flex items-center gap-1 text-[9px] font-bold px-2 py-0.5 rounded-full', color)}>
+      <MapPinned className="w-3 h-3" />
+      Within {distance}
+    </span>
+  );
 }
 
 function getTabIcon(tab: PromotionsTab, className = 'w-5 h-5') {
@@ -180,6 +240,39 @@ function TermsModal({ onClose, terms }: { onClose: () => void; terms: string }) 
 function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScanResult: (promo: PromotionItem) => void }) {
   const [step, setStep] = useState<'scan' | 'result' | 'error'>('scan');
   const [scannedPromo, setScannedPromo] = useState<PromotionItem | null>(null);
+  const scannerRef = useRef<HTMLDivElement>(null);
+  const html5QrCodeRef = useRef<any>(null);
+
+  React.useEffect(() => {
+    let mounted = true;
+    const startScanner = async () => {
+      try {
+        const { Html5Qrcode } = await import('html5-qrcode');
+        if (!mounted || !scannerRef.current) return;
+        const scanner = new Html5Qrcode('qr-reader');
+        html5QrCodeRef.current = scanner;
+        await scanner.start(
+          { facingMode: 'environment' },
+          { fps: 10, qrbox: { width: 250, height: 250 } },
+          (decodedText: string) => {
+            const match = Object.values(PROMOTIONS_MOCK_DATA).find(
+              p => p.redeemCode === decodedText || p.id === decodedText || p.title.toLowerCase().replace(/\s+/g, '-') === decodedText.toLowerCase().replace(/\s+/g, '-')
+            );
+            if (match && mounted) {
+              scanner.stop().catch(() => {});
+              setScannedPromo(match);
+              setStep('result');
+            }
+          },
+          () => {},
+        );
+      } catch {
+        if (mounted) setStep('error');
+      }
+    };
+    startScanner();
+    return () => { mounted = false; if (html5QrCodeRef.current) html5QrCodeRef.current.stop().catch(() => {}); };
+  }, []);
 
   const simulateScan = useCallback(() => {
     const promos = Object.values(PROMOTIONS_MOCK_DATA);
@@ -198,15 +291,13 @@ function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScan
         {step === 'scan' && (
           <div className="p-8 text-center space-y-6">
             <div className="w-48 h-48 mx-auto relative">
-              <div className="absolute inset-0 border-2 border-[#a23f00] rounded-2xl animate-pulse" />
-              <div className="absolute inset-4 border-2 border-dashed border-[#ff9969]/50 rounded-xl" />
-              <div className="absolute inset-0 flex items-center justify-center">
-                <Scan className="w-12 h-12 text-[#a23f00] opacity-50" />
-              </div>
-              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#a23f00] rounded-tl-2xl" />
-              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#a23f00] rounded-tr-2xl" />
-              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#a23f00] rounded-bl-2xl" />
-              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#a23f00] rounded-br-2xl" />
+              <div id="qr-reader" ref={scannerRef} className="w-full h-full" />
+              <div className="absolute inset-0 border-2 border-[#a23f00] rounded-2xl pointer-events-none" />
+              <div className="absolute inset-4 border-2 border-dashed border-[#ff9969]/50 rounded-xl pointer-events-none" />
+              <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-[#a23f00] rounded-tl-2xl pointer-events-none" />
+              <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-[#a23f00] rounded-tr-2xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-[#a23f00] rounded-bl-2xl pointer-events-none" />
+              <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-[#a23f00] rounded-br-2xl pointer-events-none" />
             </div>
             <p className="text-xs font-bold text-[#261812]">Point your camera at a QR code</p>
             <p className="text-[10px] text-[#8e7164]">Scan a promotion QR from any MCOM Mall store or poster</p>
@@ -216,10 +307,10 @@ function QrScannerModal({ onClose, onScanResult }: { onClose: () => void; onScan
                 className="flex-1 py-3 bg-[#a23f00] text-white rounded-2xl text-xs font-bold active:scale-95 transition-all shadow-md flex items-center justify-center gap-2"
               >
                 <Scan className="w-4 h-4" />
-                Simulate Scan
+                Simulate
               </button>
               <button
-                onClick={simulateError}
+                onClick={onClose}
                 className="py-3 px-4 border border-[#e2bfb0]/30 rounded-2xl text-[10px] font-bold text-[#5a4136] hover:bg-[#ffeae1] active:scale-95 transition-all"
               >
                 <X className="w-4 h-4" />
@@ -348,16 +439,67 @@ function UnlockRewardModal({
   );
 }
 
+function haversineKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a = Math.sin(dLat / 2) ** 2 + Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
 export const PromotionsView: React.FC = () => {
   const { userName } = useSelector((state: RootState) => state.auth);
+
+  const [userLocation, setUserLocation] = useState<{ lat: number; lng: number } | null>(null);
+  React.useEffect(() => {
+    if (typeof window !== 'undefined' && navigator.geolocation) {
+      navigator.geolocation.getCurrentPosition(
+        (pos) => setUserLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => { /* permission denied, use mock location */ },
+        { enableHighAccuracy: false, timeout: 5000 },
+      );
+    }
+  }, []);
 
   const [subView, setSubView] = useState<SubView>('dashboard');
   const [activeTab, setActiveTab] = useState<PromotionsTab>('all');
   const [selectedPromoId, setSelectedPromoId] = useState<string>('flash-1');
-  const [savedIds, setSavedIds] = useState<Record<string, boolean>>({});
-  const [redeemedIds, setRedeemedIds] = useState<string[]>([]);
-  const [joinedCampaignIds, setJoinedCampaignIds] = useState<string[]>([]);
-  const [unlockedPromoIds, setUnlockedPromoIds] = useState<string[]>([]);
+  const [savedIds, setSavedIds] = useState<Record<string, boolean>>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('promotions_saved');
+        return stored ? JSON.parse(stored) : {};
+      } catch { return {}; }
+    }
+    return {};
+  });
+  const [redeemedIds, setRedeemedIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('promotions_redeemed');
+        return stored ? JSON.parse(stored) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [joinedCampaignIds, setJoinedCampaignIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('promotions_joined');
+        return stored ? JSON.parse(stored) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
+  const [unlockedPromoIds, setUnlockedPromoIds] = useState<string[]>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const stored = localStorage.getItem('promotions_unlocked');
+        return stored ? JSON.parse(stored) : [];
+      } catch { return []; }
+    }
+    return [];
+  });
   const [toast, setToast] = useState<ToastState | null>(null);
   const [codeInput, setCodeInput] = useState('');
   const [codeResult, setCodeResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -366,6 +508,8 @@ export const PromotionsView: React.FC = () => {
   const [shareModalPromo, setShareModalPromo] = useState<PromotionItem | null>(null);
   const [termsModalPromo, setTermsModalPromo] = useState<PromotionItem | null>(null);
   const [showQrScanner, setShowQrScanner] = useState(false);
+  const [selectedBoroughFilter, setSelectedBoroughFilter] = useState<string>('all');
+  const [showNearbyMap, setShowNearbyMap] = useState(false);
   const [unlockModalPromo, setUnlockModalPromo] = useState<PromotionItem | null>(null);
 
   const showToast = useCallback((message: string, type: ToastState['type'] = 'success') => {
@@ -374,6 +518,21 @@ export const PromotionsView: React.FC = () => {
   }, []);
 
   const allPromotions = useMemo(() => Object.values(PROMOTIONS_MOCK_DATA), []);
+
+  const knownBoroughs = useMemo(() => {
+    const boroughs = new Set<string>();
+    allPromotions.forEach(p => { if (p.borough) boroughs.add(p.borough); });
+    return ['all', ...Array.from(boroughs)];
+  }, [allPromotions]);
+
+  const TYPE_ORDER: Record<PromotionTypeTag, number> = {
+    flash: 0,
+    daily: 1,
+    borough: 2,
+    nearby: 3,
+    seasonal: 4,
+    high_street: 5,
+  };
 
   const isExpiringText = useCallback((text: string): boolean => {
     const lower = text.toLowerCase();
@@ -401,19 +560,28 @@ export const PromotionsView: React.FC = () => {
   const getFilteredPromotions = useCallback((): PromotionItem[] => {
     switch (activeTab) {
       case 'all':
-        return allPromotions;
-      case 'nearby':
-        return allPromotions
-          .filter(p => p.promotionType === 'nearby' || p.distance)
-          .sort((a, b) => {
-            const aDist = parseFloat(a.distance ?? '99');
-            const bDist = parseFloat(b.distance ?? '99');
-            return aDist - bDist;
-          });
+        return [...allPromotions].sort((a, b) => {
+          const typeDiff = TYPE_ORDER[a.promotionType] - TYPE_ORDER[b.promotionType];
+          if (typeDiff !== 0) return typeDiff;
+          if (a.isUrgent && !b.isUrgent) return -1;
+          if (!a.isUrgent && b.isUrgent) return 1;
+          return 0;
+        });
+      case 'nearby': {
+        const nearby = allPromotions.filter(p => p.promotionType === 'nearby' || p.distance);
+        return nearby.sort((a, b) => {
+          const aDist = userLocation && a.lat && a.lng ? haversineKm(userLocation.lat, userLocation.lng, a.lat, a.lng) : parseFloat(a.distance ?? '99');
+          const bDist = userLocation && b.lat && b.lng ? haversineKm(userLocation.lat, userLocation.lng, b.lat, b.lng) : parseFloat(b.distance ?? '99');
+          return aDist - bDist;
+        });
+      }
       case 'flash':
         return allPromotions.filter(p => p.promotionType === 'flash');
       case 'borough':
-        return allPromotions.filter(p => p.promotionType === 'borough');
+        return allPromotions.filter(p =>
+          p.promotionType === 'borough' &&
+          (selectedBoroughFilter === 'all' || p.borough === selectedBoroughFilter)
+        );
       case 'saved':
         return allPromotions.filter(p => savedIds[p.id]);
       case 'expiring':
@@ -421,7 +589,7 @@ export const PromotionsView: React.FC = () => {
       default:
         return allPromotions;
     }
-  }, [activeTab, allPromotions, savedIds, getExpiringSorted, isExpiringText]);
+  }, [activeTab, allPromotions, savedIds, getExpiringSorted, isExpiringText, selectedBoroughFilter, userLocation]);
 
   const handleNavigateToDetails = useCallback((id: string) => {
     setSelectedPromoId(id);
@@ -431,9 +599,12 @@ export const PromotionsView: React.FC = () => {
   const toggleSaved = useCallback((id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     setSavedIds(prev => {
-      const isSaved = !prev[id];
-      showToast(isSaved ? 'Promotion saved!' : 'Removed from saved!', 'info');
-      return { ...prev, [id]: isSaved };
+      const next = { ...prev, [id]: !prev[id] };
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('promotions_saved', JSON.stringify(next));
+      }
+      showToast(next[id] ? 'Promotion saved!' : 'Removed from saved!', 'info');
+      return next;
     });
   }, [showToast]);
 
@@ -442,7 +613,13 @@ export const PromotionsView: React.FC = () => {
       showToast('Already redeemed!', 'info');
       return;
     }
-    setRedeemedIds(prev => [...prev, promo.id]);
+    setRedeemedIds(prev => {
+      const next = [...prev, promo.id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('promotions_redeemed', JSON.stringify(next));
+      }
+      return next;
+    });
     setScanConfirm(promo);
     showToast(`"${promo.title}" activated! Show at counter.`, 'success');
   }, [redeemedIds, showToast]);
@@ -452,7 +629,13 @@ export const PromotionsView: React.FC = () => {
       showToast('Already joined this campaign!', 'info');
       return;
     }
-    setJoinedCampaignIds(prev => [...prev, promo.id]);
+    setJoinedCampaignIds(prev => {
+      const next = [...prev, promo.id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('promotions_joined', JSON.stringify(next));
+      }
+      return next;
+    });
     showToast(`Joined "${promo.campaignName ?? promo.title}"!`, 'success');
   }, [joinedCampaignIds, showToast]);
 
@@ -461,7 +644,13 @@ export const PromotionsView: React.FC = () => {
       showToast('Reward already unlocked!', 'info');
       return;
     }
-    setUnlockedPromoIds(prev => [...prev, promo.id]);
+    setUnlockedPromoIds(prev => {
+      const next = [...prev, promo.id];
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('promotions_unlocked', JSON.stringify(next));
+      }
+      return next;
+    });
     setUnlockModalPromo(null);
     setScanConfirm(promo);
     showToast(`"${promo.unlockRewardDescription ?? promo.title}" unlocked!`, 'success');
@@ -547,6 +736,32 @@ export const PromotionsView: React.FC = () => {
               )}
             </button>
           </div>
+
+          {/* --- Seasonal Campaign Banner --- */}
+          <section className="mb-4 overflow-hidden">
+            <div className="flex gap-3 overflow-x-auto no-scrollbar -mx-4 px-4 pb-1">
+              {allPromotions.filter(p => p.promotionType === 'seasonal').map(promo => (
+                <div
+                  key={promo.id}
+                  onClick={() => { setSelectedPromoId(promo.id); setSubView('details'); }}
+                  className="flex-shrink-0 w-64 relative overflow-hidden rounded-2xl cursor-pointer group active:scale-[0.97] transition-transform"
+                >
+                  <div className="h-24 bg-gradient-to-br from-purple-600 via-purple-500 to-pink-500 p-4 flex flex-col justify-between">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-white opacity-10 rounded-full -mr-8 -mt-8 blur-xl pointer-events-none" />
+                    <span className="text-[8px] font-black uppercase tracking-widest text-white/80">
+                      {promo.campaignName || 'Seasonal'}
+                    </span>
+                    <div>
+                      <p className="text-sm font-extrabold text-white leading-tight">{promo.title}</p>
+                      <span className="inline-block mt-1 text-[10px] font-bold bg-white/20 backdrop-blur-sm px-2 py-0.5 rounded-full text-white">
+                        {promo.benefitValue}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
 
           {/* --- Stats Banner --- */}
           <section className="mb-5">
@@ -645,6 +860,70 @@ export const PromotionsView: React.FC = () => {
               </button>
             ))}
           </div>
+
+          {/* --- Borough Filter Chips --- */}
+          {activeTab === 'borough' && (
+            <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 no-scrollbar mt-3">
+              {knownBoroughs.map(b => (
+                <button
+                  key={b}
+                  onClick={() => setSelectedBoroughFilter(b)}
+                  className={cn(
+                    'flex-shrink-0 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all',
+                    selectedBoroughFilter === b
+                      ? 'bg-amber-600 text-white shadow-sm'
+                      : 'bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100',
+                  )}
+                >
+                  {b === 'all' ? 'All Boroughs' : b}
+                </button>
+              ))}
+            </div>
+          )}
+
+          {/* --- Nearby Map Toggle --- */}
+          {activeTab === 'nearby' && (
+            <div className="flex items-center justify-between mt-3 mb-1">
+              <span className="text-[10px] font-bold text-[#5a4136]">
+                {nearbyCount} offer{nearbyCount !== 1 ? 's' : ''} nearby
+              </span>
+              <button
+                onClick={() => setShowNearbyMap(!showNearbyMap)}
+                className={cn(
+                  'flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold transition-all',
+                  showNearbyMap ? 'bg-[#a23f00] text-white' : 'bg-[#ffeae1] text-[#5a4136]',
+                )}
+              >
+                <MapPinned className="w-3.5 h-3.5" />
+                {showNearbyMap ? 'List' : 'Map'}
+              </button>
+            </div>
+          )}
+          {activeTab === 'nearby' && showNearbyMap && (
+            <div className="bg-white rounded-2xl border border-[#e2bfb0]/30 overflow-hidden shadow-sm">
+              <div className="relative w-full h-64 bg-gradient-to-br from-emerald-50 to-emerald-100 flex items-center justify-center">
+                <div className="absolute inset-0 opacity-10">
+                  <div className="w-full h-full" style={{
+                    backgroundImage: 'radial-gradient(circle at 20% 50%, #a23f00 1px, transparent 1px), radial-gradient(circle at 50% 30%, #a23f00 1px, transparent 1px), radial-gradient(circle at 70% 60%, #a23f00 1px, transparent 1px), radial-gradient(circle at 30% 80%, #a23f00 1px, transparent 1px)',
+                    backgroundSize: '40px 40px, 60px 60px, 50px 50px, 45px 45px',
+                  }} />
+                </div>
+                <div className="relative z-10 text-center">
+                  <MapPinned className="w-8 h-8 text-[#a23f00] mx-auto mb-2" />
+                  <p className="text-xs font-bold text-[#261812]">Promotions Map</p>
+                  <p className="text-[10px] text-[#5a4136] mt-1">{filteredPromotions.length} pins loaded</p>
+                  <div className="flex flex-wrap gap-2 mt-3 justify-center">
+                    {filteredPromotions.slice(0, 5).map(p => (
+                      <div key={p.id} className="flex items-center gap-1 bg-white px-2 py-1 rounded-full shadow-sm border border-[#e2bfb0]/20">
+                        {getPromoIcon(p.badgeIcon, 'w-3 h-3')}
+                        <span className="text-[8px] font-bold text-[#261812]">{p.businessName}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* --- Tab Content --- */}
           <div className="mt-4 space-y-4">
@@ -1021,7 +1300,7 @@ function PromoCard({
             promo.isUrgent ? 'text-[#ba1a1a]' : 'text-[#8e7164]',
           )}>
             <Clock className="w-3.5 h-3.5" />
-            <span>{promo.expiryText}</span>
+            <ExpiryDisplay expiresAt={promo.expiresAt} expiryText={promo.expiryText} isUrgent={promo.isUrgent} />
           </div>
           <div className="flex gap-1.5">
             {isUnlockable && !isRedeemed && (
@@ -1125,7 +1404,7 @@ function ExpiringPromoCard({
             <div className="flex items-center gap-1.5">
               <Clock className={cn('w-3.5 h-3.5', isUrgent ? 'text-[#ba1a1a]' : 'text-[#8e7164]')} />
               <span className={cn('text-[11px] font-bold', isUrgent ? 'text-[#ba1a1a]' : 'text-[#5a4136]')}>
-                {promo.expiryText}
+                <ExpiryDisplay expiresAt={promo.expiresAt} expiryText={promo.expiryText} isUrgent={promo.isUrgent} />
               </span>
             </div>
           </div>
@@ -1193,12 +1472,7 @@ function NearbyPromoCard({
           </div>
           <p className="text-[10px] text-[#5a4136] mt-1 line-clamp-1">{promo.description}</p>
           <div className="flex items-center gap-2 mt-2 flex-wrap">
-            {promo.distance && (
-              <span className="inline-flex items-center gap-1 text-[9px] font-bold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-full">
-                <MapPinned className="w-3 h-3" />
-                {promo.distance}
-              </span>
-            )}
+            {promo.distance && <DistanceBadge distance={promo.distance} />}
             {promo.benefitValue && (
               <span className="text-[10px] font-bold text-[#a23f00]">{promo.benefitValue}</span>
             )}
@@ -1208,7 +1482,7 @@ function NearbyPromoCard({
       <div className="px-4 pb-4 flex items-center justify-between">
         <div className="flex items-center gap-1 text-[10px] font-bold text-[#8e7164]">
           <Clock className="w-3.5 h-3.5" />
-          <span>{promo.expiryText}</span>
+          <ExpiryDisplay expiresAt={promo.expiresAt} expiryText={promo.expiryText} />
         </div>
         {isRedeemed ? (
           <div className="bg-[#f8ddd2] text-[#5a4136] px-4 py-2 rounded-xl text-[10px] font-bold flex items-center gap-1">
@@ -1330,7 +1604,7 @@ function PromotionDetailsView({
               promo.isUrgent ? 'text-[#ba1a1a]' : 'text-[#5a4136]',
             )}>
               <Clock className="w-3 h-3" />
-              {promo.expiryText}
+              <ExpiryDisplay expiresAt={promo.expiresAt} expiryText={promo.expiryText} isUrgent={promo.isUrgent} />
             </p>
           </div>
         </div>

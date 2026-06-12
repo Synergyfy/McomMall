@@ -4294,8 +4294,37 @@ function BusinessOnboardingInner() {
           </div>
         </div>
 
-        {/* ─── Quest Map — connected icon nodes ────────── */}
-        <div className="flex items-center mb-2 sm:mb-6 px-1">
+        {/* ─── Sleek Segmented Progress Hairline for Mobile ─── */}
+        <div className="block sm:hidden space-y-2 mb-4">
+          <div className="flex gap-1 w-full">
+            {activeQuests.map((quest, i) => {
+              const isCompleted = completedSteps.has(i) || i < currentStep;
+              const isCurrent = i === currentStep;
+              return (
+                <div
+                  key={quest.id}
+                  className={`h-1 flex-1 rounded-full transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-[#ea580c]'
+                      : isCurrent
+                        ? 'bg-[#ea580c] animate-pulse'
+                        : 'bg-gray-200'
+                  }`}
+                  style={{
+                    backgroundColor: isCompleted ? quest.color : isCurrent ? quest.color : '#e5e7eb'
+                  }}
+                />
+              );
+            })}
+          </div>
+          <div className="flex justify-between items-center text-[11px] font-bold text-[#5a4136]">
+            <span>{currentQuest.title}</span>
+            <span className="text-[#a23f00] font-extrabold">{currentStep + 1} / {activeQuests.length}</span>
+          </div>
+        </div>
+
+        {/* ─── Quest Map — connected icon nodes (Desktop Only) ────────── */}
+        <div className="hidden sm:flex items-center mb-2 sm:mb-6 px-1">
           {activeQuests.map((quest, i) => {
             const NodeIcon = quest.Icon;
 

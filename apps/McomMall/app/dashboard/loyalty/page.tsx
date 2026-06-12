@@ -18,6 +18,7 @@ import {
   UserPlus,
   BarChart2,
   Send,
+  ChevronLeft,
 } from 'lucide-react';
 
 export default function LoyaltyDashboardPage() {
@@ -126,6 +127,16 @@ export default function LoyaltyDashboardPage() {
   return (
     <div className="-mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full overflow-x-hidden bg-[#fff8f5] text-[#1f1b18]">
       <div className="max-w-md mx-auto px-4 pt-5 pb-36 space-y-6">
+
+        {/* ── BACK BUTTON ── */}
+        <div className="flex items-center">
+          <Link
+            href="/dashboard/engagement"
+            className="flex items-center gap-1.5 text-xs font-bold text-gray-500 hover:text-gray-800 transition-colors"
+          >
+            <ChevronLeft className="w-4 h-4" /> Back to Engagement
+          </Link>
+        </div>
 
         {/* ── HEADER INTRO ── */}
         <section className="flex flex-col gap-3">
