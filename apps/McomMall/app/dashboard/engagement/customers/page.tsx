@@ -111,8 +111,14 @@ function EngagementCustomersContent() {
   });
 
   return (
-    <div className="-mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full overflow-x-hidden bg-[#fff8f5]">
-      <div className="max-w-md mx-auto px-4 pt-5 pb-36 space-y-5">
+    <div className="-mx-2 sm:-mx-5 -mt-2 sm:-mt-5 min-h-full overflow-x-hidden bg-[#fff8f5] pb-24">
+      <div className="max-w-md lg:max-w-7xl mx-auto px-4 pt-5 pb-36 space-y-6">
+
+        {/* ── DESKTOP HEADER ── */}
+        <div className="hidden lg:block pb-2 border-b border-[#e2bfb0]/20">
+          <h1 className="text-2xl font-bold text-[#a14000]">Customer Directory</h1>
+          <p className="text-xs text-gray-500 mt-0.5">Filter, segment, and message customers directly.</p>
+        </div>
 
         {/* ── CUSTOMER SEGMENTS BANNER ── */}
         <section className="bg-gradient-to-r from-[#a14000] to-[#ea580c] p-5 rounded-2xl shadow-[0_8px_20px_rgba(161,64,0,0.15)] text-white relative overflow-hidden flex flex-col justify-between" style={{ minHeight: '135px' }}>
@@ -203,18 +209,18 @@ function EngagementCustomersContent() {
               className="px-3 py-1.5 rounded-full text-xs font-bold border border-[#00629f]/30 text-[#00629f] bg-blue-50 hover:bg-blue-100 active:scale-95 transition-all flex items-center gap-1.5"
             >
               <span className="w-1.5 h-1.5 rounded-full bg-[#00629f] animate-pulse shrink-0" />
-              Activity
+              Activity Log
             </Link>
           </div>
         </section>
 
         {/* ── CUSTOMERS LIST/GRID ── */}
-        <section className="space-y-4">
+        <section className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filteredCustomers.length > 0 ? (
             filteredCustomers.map((customer) => (
               <div
                 key={customer.name}
-                className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#f7ece7] hover:border-orange-500/20 transition-all duration-300 space-y-4"
+                className="bg-white rounded-xl p-4 shadow-[0_4px_20px_rgba(0,0,0,0.03)] border border-[#f7ece7] hover:border-orange-500/20 transition-all duration-300 space-y-4 flex flex-col justify-between"
               >
                 {/* Wrap profile details in a Link */}
                 <Link href={`/dashboard/engagement/customers/${customer.name.toLowerCase().replace('.', '').replace(' ', '-')}`} className="block space-y-4 hover:opacity-95 transition-opacity">
@@ -263,7 +269,7 @@ function EngagementCustomersContent() {
                 </Link>
 
                 {/* CTA Action Buttons */}
-                <div className="flex flex-col gap-2 pt-1">
+                <div className="flex flex-col gap-2 pt-2 border-t border-[#ffeae1]/40">
                   <button className="w-full py-2.5 bg-[#a14000] text-[#ffffff] rounded-xl font-bold text-xs hover:opacity-90 active:scale-95 transition-all flex items-center justify-center gap-1.5 shadow-[0_4px_12px_rgba(161,64,0,0.15)]">
                     <MessageSquare className="w-3.5 h-3.5" />
                     Send Message
@@ -280,7 +286,7 @@ function EngagementCustomersContent() {
               </div>
             ))
           ) : (
-            <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-[#f7ece7]">
+            <div className="text-center py-12 bg-white rounded-xl shadow-sm border border-[#f7ece7] col-span-full">
               <UsersIcon className="w-12 h-12 text-gray-300 mx-auto mb-2" />
               <p className="text-sm font-bold text-gray-500">No customers found</p>
               <p className="text-xs text-gray-400 mt-1">Try resetting search query or filter chip.</p>
@@ -291,17 +297,17 @@ function EngagementCustomersContent() {
       </div>
 
       {/* ── BULK ACTIONS FLOATING BAR ── */}
-      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-md z-40">
-        <div className="bg-[#1f1b18] text-white rounded-full py-3 px-6 shadow-xl flex items-center justify-between">
+      <div className="fixed bottom-24 left-1/2 -translate-x-1/2 w-[calc(100%-32px)] max-w-lg z-40">
+        <div className="bg-[#1f1b18] text-white rounded-full py-3.5 px-6 shadow-xl flex items-center justify-between border border-[#e2bfb0]/20">
           <div className="flex items-center">
             <span className="font-bold text-xs text-orange-200">4 Selected</span>
           </div>
           <div className="flex gap-4">
-            <button className="flex items-center gap-1 text-[11px] font-bold text-gray-200 hover:text-white transition-colors">
+            <button className="flex items-center gap-1.5 text-[11px] font-bold text-gray-200 hover:text-white transition-colors">
               <Megaphone className="w-3.5 h-3.5 text-orange-400" />
               Send Promotion
             </button>
-            <button className="flex items-center gap-1 text-[11px] font-bold text-gray-200 hover:text-white transition-colors">
+            <button className="flex items-center gap-1.5 text-[11px] font-bold text-gray-200 hover:text-white transition-colors">
               <Share2 className="w-3.5 h-3.5 text-orange-400" />
               Export
             </button>
