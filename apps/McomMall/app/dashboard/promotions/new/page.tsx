@@ -1,7 +1,7 @@
 'use client';
 
 import * as React from 'react';
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useMemo } from 'react';
 import {
   FileText,
   Tag,
@@ -14,7 +14,7 @@ import {
   Calendar as CalendarIcon,
 } from 'lucide-react';
 import { motion } from 'framer-motion';
-import { useGetPromotionById, useUpdatePromotion } from '@/service/promotions/hook';
+import { useAddPromotion } from '@/service/promotions/hook';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Calendar } from '@/components/ui/calendar';
@@ -37,7 +37,7 @@ import {
   DialogTitle,
   DialogDescription,
 } from '@/components/ui/dialog';
-import { useRouter, useParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { useGetUserListings } from '@/service/listings/hook';
 import { InHouseBusiness, UserListing } from '@/service/listings/types';
 import {
@@ -88,14 +88,9 @@ interface FormErrors {
   minimumSpend?: string;
 }
 
-export default function PromotionEditForm() {
+export default function PromotionForm() {
   const router = useRouter();
-  const params = useParams();
-  const promotionId = params.id as string;
-
-  const { data: promotion, isLoading: isLoadingPromotion } = useGetPromotionById(promotionId);
-  const updatePromotion = useUpdatePromotion();
-
+  const createPromotion = useAddPromotion();
   const { data: listings, isLoading: isLoadingListings } =
     useGetUserListings();
   const { data: products, isLoading: isLoadingProducts } = useGetMyProducts();
@@ -123,28 +118,6 @@ export default function PromotionEditForm() {
     includedProductIds: [],
     excludedProductIds: [],
   });
-
-  useEffect(() => {
-    if (promotion) {
-      setFormData({
-        name: promotion.name || '',
-        description: promotion.description || '',
-        termsAndConditions: promotion.termsAndConditions || '',
-        isActive: promotion.isActive,
-        beginDate: promotion.beginDate ? new Date(promotion.beginDate) : undefined,
-        endDate: promotion.endDate ? new Date(promotion.endDate) : undefined,
-        promotionType: promotion.promotionType,
-        promotionScope: promotion.promotionScope || '',
-        multiplier: promotion.multiplier?.toString() || '',
-        bonusPoints: promotion.bonusPoints?.toString() || '',
-        limitPerCustomer: promotion.limitPerCustomer?.toString() || '',
-        minimumSpend: promotion.minimumSpend.toString(),
-        businessIds: promotion.businessIds || [],
-        includedProductIds: promotion.includedProducts?.map(p => p.id) || [],
-        excludedProductIds: promotion.excludedProducts?.map(p => p.id) || [],
-      });
-    }
-  }, [promotion]);
 
   const [errors, setErrors] = useState<FormErrors>({});
 
@@ -216,8 +189,7 @@ export default function PromotionEditForm() {
 
     if (Object.keys(validationErrors).length === 0) {
       try {
-        await updatePromotion.mutateAsync({
-          id: promotionId,
+        await createPromotion.mutateAsync({
           name: formData.name,
           description: formData.description,
           termsAndConditions: formData.termsAndConditions,
@@ -250,7 +222,7 @@ export default function PromotionEditForm() {
         });
         setIsSuccess(true);
       } catch (error) {
-        console.error('Failed to update promotion:', error);
+        console.error('Failed to create promotion:', error);
       }
     } else {
       console.log('Form has validation errors:', validationErrors);
@@ -270,17 +242,13 @@ export default function PromotionEditForm() {
     });
   };
 
-  if (isLoadingPromotion) {
-    return <div>Loading...</div>;
-  }
-
   return (
     <div className="bg-gray-50/50 min-h-screen p-4 sm:p-6 md:p-8">
       <div className="max-w-4xl mx-auto">
         <header className="mb-8">
           <div className="flex flex-col sm:flex-row items-start sm:items-center sm:justify-between">
             <h1 className="text-4xl font-bold text-gray-800 mb-2 sm:mb-0">
-              Edit Promotion
+              Create Promotion
             </h1>
             <div className="text-base text-gray-500 flex items-center space-x-1">
               <span>Home</span>
@@ -732,11 +700,11 @@ export default function PromotionEditForm() {
             <Button
               type="submit"
               className="bg-orange-600 text-white hover:bg-orange-700 px-8 py-3 w-full sm:w-auto text-lg"
-              disabled={updatePromotion.isPending}
+              disabled={createPromotion.isPending}
             >
-              {updatePromotion.isPending
-                ? 'Updating...'
-                : 'Update Promotion'}
+              {createPromotion.isPending
+                ? 'Creating...'
+                : 'Create Promotion'}
               <ArrowRight className="h-5 w-5 ml-2" />
             </Button>
           </div>
@@ -758,15 +726,15 @@ export default function PromotionEditForm() {
               <CheckCircle className="h-6 w-6 text-green-600" />
             </motion.div>
             <DialogTitle className="text-center">
-              Promotion Updated!
+              Promotion Created!
             </DialogTitle>
             <DialogDescription className="text-center">
-              The promotion has been updated successfully.
+              Your new promotion has been created successfully.
             </DialogDescription>
           </DialogHeader>
           <div className="mt-4 flex justify-center">
             <Button
-              onClick={() => router.push('/dashboard/loyalty/promotion')}
+              onClick={() => router.push('/dashboard/promotions')}
             >
               Go to Promotions
             </Button>
