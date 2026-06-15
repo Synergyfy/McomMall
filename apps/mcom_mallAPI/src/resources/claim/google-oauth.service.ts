@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 
-import { google, Auth } from 'googleapis';
+import { google } from 'googleapis';
 
 @Injectable()
 export class GoogleOAuthService {
@@ -39,7 +39,7 @@ export class GoogleOAuthService {
     });
   }
 
-  async getClientFromCode(code: string): Promise<Auth.OAuth2Client> {
+  async getClientFromCode(code: string): Promise<any> {
     const client = this.makeClient();
     const { tokens } = await client.getToken(code);
     client.setCredentials(tokens);
