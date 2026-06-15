@@ -1,34 +1,27 @@
 'use client';
 
-import { useState } from 'react';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Textarea } from '@/components/ui/textarea';
 import { Badge } from '@/components/ui/badge';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { Switch } from '@/components/ui/switch';
-import { Label } from '@/components/ui/label';
 import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
-} from '@/components/ui/table';
+    Select,
+    SelectContent,
+    SelectItem,
+    SelectTrigger,
+    SelectValue,
+} from '@/components/ui/select';
 import {
     Bell,
-    Mail,
-    MessageSquare,
-    Smartphone,
-    Settings,
-    History,
-    Search,
-    Plus,
-    CheckCircle2,
-    XCircle,
-    AlertCircle,
+    Megaphone,
+    Gift,
+    Calendar,
+    AlertTriangle,
+    Server,
     Send,
+    Clock,
+    Smartphone
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 
@@ -37,134 +30,176 @@ export default function NotificationsPage() {
         <div className="space-y-6">
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Notifications</h1>
-                    <p className="text-slate-500">Manage communication channels, templates and routing</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline">
-                        <History className="h-4 w-4 mr-2" />
-                        Sent Logs
-                    </Button>
-                    <Button className="bg-orange-500 hover:bg-orange-600">
-                        <Send className="h-4 w-4 mr-2" />
-                        Send Broadcast
-                    </Button>
+                    <h1 className="text-2xl font-bold text-slate-900">Notifications & Communication</h1>
+                    <p className="text-slate-500">Manage platform-wide communication and alerts</p>
                 </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                {/* Channel Status */}
-                <Card className="border-0 shadow-sm md:col-span-1">
-                    <CardHeader>
-                        <CardTitle className="text-lg">Delivery Channels</CardTitle>
-                        <CardDescription>Configure active notification routes</CardDescription>
-                    </CardHeader>
-                    <CardContent className="space-y-6">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-blue-100 text-blue-600">
-                                    <Mail className="h-5 w-5" />
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Communication Types Overview */}
+                <div className="lg:col-span-1 space-y-4">
+                    <Card className="border-0 shadow-sm bg-slate-900 text-white h-full">
+                        <CardHeader>
+                            <CardTitle className="flex items-center gap-2">
+                                <Bell className="h-5 w-5 text-blue-400" /> Communication Types
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">
+                                Active channels and recent usage
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-3">
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <Megaphone className="h-4 w-4 text-orange-400" />
+                                    <span className="font-medium text-sm">Borough Announcements</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-semibold">Email (SendGrid)</span>
-                                    <span className="text-xs text-emerald-600 flex items-center gap-1">
-                                        <CheckCircle2 className="h-3 w-3" /> Operational
-                                    </span>
-                                </div>
+                                <Badge className="bg-slate-700 hover:bg-slate-600">12 Active</Badge>
                             </div>
-                            <Switch checked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-purple-100 text-purple-600">
-                                    <Smartphone className="h-5 w-5" />
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <Smartphone className="h-4 w-4 text-blue-400" />
+                                    <span className="font-medium text-sm">Push Notifications</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-semibold">Push (Firebase)</span>
-                                    <span className="text-xs text-emerald-600 flex items-center gap-1">
-                                        <CheckCircle2 className="h-3 w-3" /> Operational
-                                    </span>
-                                </div>
+                                <Badge className="bg-slate-700 hover:bg-slate-600">145k Sent</Badge>
                             </div>
-                            <Switch checked />
-                        </div>
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-3">
-                                <div className="p-2 rounded-lg bg-amber-100 text-amber-600">
-                                    <MessageSquare className="h-5 w-5" />
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <Gift className="h-4 w-4 text-emerald-400" />
+                                    <span className="font-medium text-sm">Reward Alerts</span>
                                 </div>
-                                <div className="flex flex-col">
-                                    <span className="text-sm font-semibold">SMS (Twilio)</span>
-                                    <span className="text-xs text-amber-600 flex items-center gap-1">
-                                        <AlertCircle className="h-3 w-3" /> Low Balance
-                                    </span>
-                                </div>
+                                <Badge className="bg-slate-700 hover:bg-slate-600">Auto</Badge>
                             </div>
-                            <Switch checked />
-                        </div>
-                    </CardContent>
-                </Card>
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <Calendar className="h-4 w-4 text-purple-400" />
+                                    <span className="font-medium text-sm">Event Reminders</span>
+                                </div>
+                                <Badge className="bg-slate-700 hover:bg-slate-600">8 Scheduled</Badge>
+                            </div>
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <AlertTriangle className="h-4 w-4 text-red-400" />
+                                    <span className="font-medium text-sm">Emergency Notices</span>
+                                </div>
+                                <Badge className="bg-red-500 hover:bg-red-600 border-0">0 Active</Badge>
+                            </div>
+                            <div className="flex items-center justify-between bg-slate-800 p-3 rounded-lg border border-slate-700">
+                                <div className="flex items-center gap-3">
+                                    <Server className="h-4 w-4 text-slate-400" />
+                                    <span className="font-medium text-sm">Platform Updates</span>
+                                </div>
+                                <Badge className="bg-slate-700 hover:bg-slate-600">Drafting</Badge>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
 
-                {/* Templates and Logs */}
-                <Card className="border-0 shadow-sm md:col-span-2">
-                    <CardContent className="p-0">
-                        <Tabs defaultValue="templates" className="w-full">
-                            <TabsList className="w-full justify-start rounded-none border-b bg-transparent h-14 px-6">
-                                <TabsTrigger value="templates" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none h-full bg-transparent">
-                                    Templates
-                                </TabsTrigger>
-                                <TabsTrigger value="events" className="data-[state=active]:bg-transparent data-[state=active]:border-b-2 data-[state=active]:border-orange-500 rounded-none h-full bg-transparent">
-                                    Event Routing
-                                </TabsTrigger>
-                            </TabsList>
+                {/* Message Creator */}
+                <div className="lg:col-span-2 space-y-4">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader className="border-b border-slate-100 pb-4">
+                            <CardTitle>Message Creator</CardTitle>
+                            <CardDescription>Compose and schedule a new broadcast or alert</CardDescription>
+                        </CardHeader>
+                        <CardContent className="pt-6 space-y-4">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Message Title</label>
+                                    <Input placeholder="e.g. Summer Night Market is Live!" />
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Communication Type</label>
+                                    <Select defaultValue="borough">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select type..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="borough">Borough Announcement</SelectItem>
+                                            <SelectItem value="push">Push Notification</SelectItem>
+                                            <SelectItem value="reward">Reward Alert</SelectItem>
+                                            <SelectItem value="event">Event Reminder</SelectItem>
+                                            <SelectItem value="emergency">Emergency Notice</SelectItem>
+                                            <SelectItem value="platform">Platform Update</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
 
-                            <TabsContent value="templates" className="p-0 m-0">
-                                <div className="p-4 border-b">
-                                    <div className="relative">
-                                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                                        <Input placeholder="Search templates..." className="pl-10" />
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700">Message Body</label>
+                                <Textarea 
+                                    placeholder="Type your message here... (Max 250 characters for push notifications)" 
+                                    className="min-h-[120px] resize-none"
+                                />
+                                <p className="text-xs text-slate-400 text-right">0 / 250</p>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Audience Targeting</label>
+                                    <Select defaultValue="all">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select audience..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Users</SelectItem>
+                                            <SelectItem value="customers">Customers Only</SelectItem>
+                                            <SelectItem value="businesses">Businesses Only</SelectItem>
+                                            <SelectItem value="active">Active this week</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Borough</label>
+                                    <Select defaultValue="all">
+                                        <SelectTrigger>
+                                            <SelectValue placeholder="Select borough..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="all">All Boroughs (Global)</SelectItem>
+                                            <SelectItem value="camden">Camden</SelectItem>
+                                            <SelectItem value="hackney">Hackney</SelectItem>
+                                            <SelectItem value="southwark">Southwark</SelectItem>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4 pt-2">
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Call to Action (CTA) Button</label>
+                                    <div className="flex gap-2">
+                                        <Input placeholder="Button Text (e.g. View Deal)" className="w-1/2" />
+                                        <Input placeholder="Link URL" className="w-1/2" />
                                     </div>
                                 </div>
-                                <Table>
-                                    <TableHeader>
-                                        <TableRow className="bg-slate-50/50">
-                                            <TableHead>Template Name</TableHead>
-                                            <TableHead>Recipient Types</TableHead>
-                                            <TableHead>Channels</TableHead>
-                                            <TableHead className="text-right">Actions</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {[
-                                            { name: 'Welcome Email', target: 'Customer, Business', channels: ['Email'] },
-                                            { name: 'Order Confirmation', target: 'Customer', channels: ['Email', 'Push'] },
-                                            { name: 'Dispute Update', target: 'All Parties', channels: ['Email', 'Push', 'SMS'] },
-                                            { name: 'Payout Success', target: 'Business', channels: ['Email'] },
-                                            { name: 'Login Alert', target: 'All User', channels: ['Email', 'Push'] },
-                                        ].map((t, i) => (
-                                            <TableRow key={i}>
-                                                <TableCell className="font-medium text-slate-900">{t.name}</TableCell>
-                                                <TableCell className="text-sm text-slate-600">{t.target}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex gap-1">
-                                                        {t.channels.map(c => (
-                                                            <Badge key={c} variant="secondary" className="text-[10px] uppercase font-bold py-0">
-                                                                {c}
-                                                            </Badge>
-                                                        ))}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <Button variant="ghost" size="sm">Edit</Button>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                    </TableBody>
-                                </Table>
-                            </TabsContent>
-                        </Tabs>
-                    </CardContent>
-                </Card>
+                                <div className="space-y-2">
+                                    <label className="text-sm font-medium text-slate-700">Schedule</label>
+                                    <div className="flex gap-2">
+                                        <Button variant="outline" className="w-1/2 justify-start font-normal text-slate-600">
+                                            <Calendar className="mr-2 h-4 w-4" /> Today
+                                        </Button>
+                                        <Button variant="outline" className="w-1/2 justify-start font-normal text-slate-600">
+                                            <Clock className="mr-2 h-4 w-4" /> 12:00 PM
+                                        </Button>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex items-center justify-between pt-6 border-t border-slate-100">
+                                <Button variant="ghost" className="text-slate-500">Save as Draft</Button>
+                                <div className="flex gap-2">
+                                    <Button variant="outline">
+                                        <Clock className="h-4 w-4 mr-2" /> Schedule
+                                    </Button>
+                                    <Button className="bg-orange-500 hover:bg-orange-600">
+                                        <Send className="h-4 w-4 mr-2" /> Send Now
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
         </div>
     );

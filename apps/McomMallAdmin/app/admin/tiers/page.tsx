@@ -3,6 +3,7 @@
 import { useState, useEffect, Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 
+import { cn } from '@/lib/utils';
 import { useGetTiers, useCreateTier, useUpdateTier, useDeleteTier } from '@/service/tiers/hook';
 import { Tier, CreateTierInput, UpdateTierInput, TierType } from '@/app/admin/types/tier';
 import { Button } from '@/components/ui/button';
@@ -133,60 +134,91 @@ function TiersContent() {
 
             <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
                 {tiers?.map((tier) => (
-                    <Card key={tier.id} className="flex flex-col relative overflow-hidden group hover:shadow-lg transition-all duration-300">
-                        {tier.isActive ? (
-                            <div className="absolute top-0 right-0 p-4">
-                                <Badge variant="default" className="bg-emerald-500 hover:bg-emerald-600">Active</Badge>
-                            </div>
-                        ) : (
-                            <div className="absolute top-0 right-0 p-4">
-                                <Badge variant="secondary">Inactive</Badge>
-                            </div>
-                        )}
+                    <Card key={tier.id} className="flex flex-col relative overflow-hidden group hover:shadow-xl transition-all duration-300 border-0 shadow-sm">
+                        <div className={cn(
+                            "absolute top-0 left-0 w-full h-1.5",
+                            tier.type === TierType.TRIAL ? "bg-purple-500" :
+                                tier.type === TierType.SEASONAL ? "bg-blue-500" :
+                                    tier.name.toLowerCase().includes('platinum') ? "bg-slate-900" :
+                                        tier.name.toLowerCase().includes('gold') ? "bg-yellow-400" :
+                                            tier.name.toLowerCase().includes('silver') ? "bg-slate-400" :
+                                                "bg-amber-700"
+                        )} />
 
-                        <CardHeader>
-                            <CardTitle className="text-xl flex items-center gap-2">
-                                {tier.name}
-                                {tier.type === TierType.TRIAL && <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Trial</Badge>}
-                                {tier.type === TierType.SEASONAL && <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Seasonal</Badge>}
-                            </CardTitle>
-                            <CardDescription className="line-clamp-2 min-h-[40px]">
+                        <div className="absolute top-4 right-4 z-10">
+                            {tier.isActive ? (
+                                <Badge variant="secondary" className="bg-emerald-100 text-emerald-700 border-emerald-200 hover:bg-emerald-100">
+                                    Active
+                                </Badge>
+                            ) : (
+                                <Badge variant="secondary" className="bg-slate-100 text-slate-500 border-slate-200 hover:bg-slate-100">
+                                    Inactive
+                                </Badge>
+                            )}
+                        </div>
+
+                        <CardHeader className="pb-4">
+                            <div className="flex items-center gap-2 mb-1">
+                                <CardTitle className="text-2xl font-bold text-slate-900">
+                                    {tier.name}
+                                </CardTitle>
+                                {tier.type === TierType.TRIAL && (
+                                    <Badge variant="outline" className="text-purple-600 border-purple-200 bg-purple-50">Trial</Badge>
+                                )}
+                                {tier.type === TierType.SEASONAL && (
+                                    <Badge variant="outline" className="text-blue-600 border-blue-200 bg-blue-50">Seasonal</Badge>
+                                )}
+                            </div>
+                            <CardDescription className="text-slate-500 line-clamp-2 min-h-[40px] text-sm">
                                 {tier.description}
                             </CardDescription>
                         </CardHeader>
 
-                        <CardContent className="flex-1 space-y-4">
-                            <div className="flex items-baseline gap-1">
-                                <span className="text-3xl font-bold">£{tier.monthlyPrice}</span>
-                                <span className="text-slate-500">/month</span>
-                            </div>
-                            <div className="text-sm text-slate-500">
-                                or £{tier.annualPrice}/year
+                        <CardContent className="flex-1 space-y-6">
+                            <div className="bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center">
+                                <div className="flex items-baseline gap-1">
+                                    <span className="text-4xl font-black text-slate-900">£{tier.monthlyPrice}</span>
+                                    <span className="text-slate-500 font-medium">/mo</span>
+                                </div>
+                                <div className="text-xs text-slate-400 mt-1 font-medium">
+                                    or £{tier.annualPrice} billed annually
+                                </div>
                             </div>
 
-                            <div className="space-y-2 pt-4 border-t">
-                                <div className="text-sm font-medium">Key Limits:</div>
-                                <ul className="text-sm space-y-1 text-slate-600">
-                                    <li className="flex justify-between">
-                                        <span>Listings</span>
-                                        <span className="font-medium">{tier.configuration.quotas.maxListings}</span>
-                                    </li>
-                                    <li className="flex justify-between">
-                                        <span>Products/Services</span>
-                                        <span className="font-medium">
-                                            {tier.configuration.quotas.maxProducts} / {tier.configuration.quotas.maxServices}
-                                        </span>
-                                    </li>
-                                </ul>
+                            <div className="space-y-4">
+                                <div className="text-xs font-bold text-slate-400 uppercase tracking-wider">Plan Limits</div>
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-slate-500">Listings</p>
+                                        <p className="text-sm font-bold text-slate-900">{tier.configuration.quotas.maxListings}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-slate-500">Products</p>
+                                        <p className="text-sm font-bold text-slate-900">{tier.configuration.quotas.maxProducts}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-slate-500">Services</p>
+                                        <p className="text-sm font-bold text-slate-900">{tier.configuration.quotas.maxServices}</p>
+                                    </div>
+                                    <div className="space-y-1">
+                                        <p className="text-xs text-slate-500">Team Size</p>
+                                        <p className="text-sm font-bold text-slate-900">{tier.configuration.quotas.maxTeamMembers || 'Unlimited'}</p>
+                                    </div>
+                                </div>
                             </div>
                         </CardContent>
 
-                        <CardFooter className="flex justify-end gap-2 pt-4 border-t bg-slate-50/50">
-                            <Button variant="ghost" size="sm" onClick={() => handleEdit(tier)}>
-                                <Pencil className="h-4 w-4 mr-2" /> Edit
-                            </Button>
-                            <Button variant="ghost" size="sm" className="text-red-500 hover:text-red-600 hover:bg-red-50" onClick={() => handleDeleteClick(tier.id)}>
-                                <Trash2 className="h-4 w-4 mr-2" /> Delete
+                        <CardFooter className="flex justify-between items-center gap-2 pt-4 border-t bg-slate-50/30">
+                            <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={() => handleEdit(tier)} className="h-9 w-9 text-slate-500 hover:text-slate-900 hover:bg-white shadow-sm border border-transparent hover:border-slate-200 transition-all">
+                                    <Pencil className="h-4 w-4" />
+                                </Button>
+                                <Button variant="ghost" size="icon" className="h-9 w-9 text-red-500 hover:text-red-600 hover:bg-red-50 shadow-sm border border-transparent hover:border-red-100 transition-all" onClick={() => handleDeleteClick(tier.id)}>
+                                    <Trash2 className="h-4 w-4" />
+                                </Button>
+                            </div>
+                            <Button variant="outline" size="sm" onClick={() => handleEdit(tier)} className="text-xs font-semibold h-9 px-4 rounded-lg bg-white shadow-sm border-slate-200 hover:bg-slate-50 hover:text-slate-900 transition-all">
+                                Manage Plan
                             </Button>
                         </CardFooter>
                     </Card>
