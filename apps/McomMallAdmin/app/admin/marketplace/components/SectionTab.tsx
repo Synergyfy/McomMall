@@ -66,6 +66,11 @@ function SectionDialog({ open, onOpenChange, section, onSubmit, isLoading }: Sec
 
     const handleConfigChange = (value: string) => {
         setConfigJson(value);
+        if (!value.trim()) {
+            setFormData(prev => ({ ...prev, config: {} }));
+            setJsonError(null);
+            return;
+        }
         try {
             const parsed = JSON.parse(value);
             setFormData(prev => ({ ...prev, config: parsed }));

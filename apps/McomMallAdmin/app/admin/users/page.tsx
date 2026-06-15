@@ -1,18 +1,43 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
+import React, { useState, useMemo } from 'react';
+import { 
+    Search, 
+    Filter, 
+    MoreVertical, 
+    Eye, 
+    Edit3, 
+    Ban, 
+    CheckCircle2, 
+    ShieldAlert, 
+    Star, 
+    ArrowUpRight, 
+    ArrowDownRight,
+    Users,
+    Activity,
+    MapPin,
+    Contact,
+    History,
+    Gem,
+    Gift,
+    MessageSquare,
+    Gamepad2,
+    HeartPulse,
+    Award,
+    TrendingUp,
+    Download
+} from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import {
-    Table,
-    TableBody,
-    TableCell,
-    TableHead,
-    TableHeader,
-    TableRow,
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
+import { 
+    Table, 
+    TableBody, 
+    TableCell, 
+    TableHead, 
+    TableHeader, 
+    TableRow 
 } from '@/components/ui/table';
 import {
     DropdownMenu,
@@ -22,617 +47,536 @@ import {
     DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import {
-    Sheet,
-    SheetContent,
-    SheetDescription,
-    SheetHeader,
-    SheetTitle,
-} from '@/components/ui/sheet';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
-import { useGetUserStats, useGetAdminUsers } from '@/service/admin/hook';
-import { AdminUser } from '@/service/admin/types';
-import { CreateUserDialog } from './components/CreateUserDialog';
-import {
-    Search,
-    Filter,
-    MoreHorizontal,
-    Eye,
-    Edit,
-    Ban,
-    Trash2,
-    Mail,
-    Phone,
-    Calendar,
-    Wallet,
-    Shield,
-    Clock,
-    Download,
-    Plus,
-    RefreshCw,
-    CheckCircle,
-    XCircle,
-    AlertCircle,
-    UserPlus,
-    Users as UsersIcon,
-    UserCheck,
-    Loader2,
-    ChevronLeft,
-    ChevronRight,
-} from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Progress } from '@/components/ui/progress';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '@/components/ui/dialog';
+import { Textarea } from '@/components/ui/textarea';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Separator } from '@/components/ui/separator';
 
-// Status Badge Component
-function StatusBadge({ status }: { status: AdminUser['status'] }) {
-    const statusConfig = {
-        active: { label: 'Active', className: 'bg-emerald-100 text-emerald-700 border-emerald-200' },
-        suspended: { label: 'Suspended', className: 'bg-amber-100 text-amber-700 border-amber-200' },
-        banned: { label: 'Banned', className: 'bg-red-100 text-red-700 border-red-200' },
-        pending: { label: 'Pending', className: 'bg-blue-100 text-blue-700 border-blue-200' },
-    };
+// --- Mock Data ---
 
-    const config = statusConfig[status as keyof typeof statusConfig] || { label: status, className: 'bg-slate-100 text-slate-700 border-slate-200' };
+const mockCustomers = [
+    {
+        id: 'C8219',
+        name: 'Eleanor Vance',
+        email: 'eleanor.v@example.com',
+        borough: 'Camden',
+        membershipStatus: 'Premium',
+        rewardsPoints: 12450,
+        engagementScore: 94,
+        lastActivity: '2 hours ago',
+        loyaltyLevel: 'Platinum VIP',
+        avatar: 'EV',
+        status: 'Active'
+    },
+    {
+        id: 'C4421',
+        name: 'Marcus Thorne',
+        email: 'marcus.t@example.com',
+        borough: 'Westminster',
+        membershipStatus: 'Basic',
+        rewardsPoints: 840,
+        engagementScore: 42,
+        lastActivity: '1 day ago',
+        loyaltyLevel: 'Silver',
+        avatar: 'MT',
+        status: 'Active'
+    },
+    {
+        id: 'C9912',
+        name: 'Sophie Laurent',
+        email: 'sophie.l@example.com',
+        borough: 'Hackney',
+        membershipStatus: 'Elite',
+        rewardsPoints: 45200,
+        engagementScore: 98,
+        lastActivity: '15 mins ago',
+        loyaltyLevel: 'Diamond',
+        avatar: 'SL',
+        status: 'Active'
+    },
+    {
+        id: 'C1045',
+        name: 'David Chen',
+        email: 'david.c@example.com',
+        borough: 'Greenwich',
+        membershipStatus: 'Basic',
+        rewardsPoints: 120,
+        engagementScore: 12,
+        lastActivity: '3 weeks ago',
+        loyaltyLevel: 'Bronze',
+        avatar: 'DC',
+        status: 'Inactive'
+    },
+    {
+        id: 'C5532',
+        name: 'Amelia Pond',
+        email: 'amelia.p@example.com',
+        borough: 'Islington',
+        membershipStatus: 'Premium',
+        rewardsPoints: 8900,
+        engagementScore: 76,
+        lastActivity: '5 hours ago',
+        loyaltyLevel: 'Gold',
+        avatar: 'AP',
+        status: 'Flagged'
+    }
+];
 
-    return (
-        <Badge variant="outline" className={cn('font-medium', config.className)}>
-            {config.label}
-        </Badge>
-    );
-}
+const kpis = [
+    { title: 'Total Customers', value: '142.5k', trend: '+12%', trendType: 'up', icon: Users, color: 'text-blue-600', bg: 'bg-blue-50' },
+    { title: 'Active Users', value: '89.2k', trend: '+5%', trendType: 'up', icon: Activity, color: 'text-emerald-600', bg: 'bg-emerald-50' },
+    { title: 'Rewards Participation', value: '64%', trend: '+8%', trendType: 'up', icon: Gift, color: 'text-orange-600', bg: 'bg-orange-50' },
+    { title: 'Gamification Part.', value: '42%', trend: '+15%', trendType: 'up', icon: Gamepad2, color: 'text-indigo-600', bg: 'bg-indigo-50' },
+    { title: 'Borough Engagement', value: '78/100', trend: 'Stable', trendType: 'neutral', icon: HeartPulse, color: 'text-pink-600', bg: 'bg-pink-50' },
+    { title: 'Loyalty Retention', value: '92%', trend: '-1%', trendType: 'down', icon: Gem, color: 'text-amber-600', bg: 'bg-amber-50' },
+];
 
-// Account Type Badge
-function AccountTypeBadge({ type }: { type: AdminUser['accountType'] }) {
-    const typeConfig = {
-        customer: { label: 'Customer', className: 'bg-slate-100 text-slate-700' },
-        business: { label: 'Business', className: 'bg-purple-100 text-purple-700' },
-        admin: { label: 'Admin', className: 'bg-orange-100 text-orange-700' },
-    };
-
-    const config = typeConfig[type as keyof typeof typeConfig] || { label: type, className: 'bg-slate-100 text-slate-700' };
-
-    return (
-        <Badge variant="secondary" className={cn('font-medium', config.className)}>
-            {config.label}
-        </Badge>
-    );
-}
-
-// User Detail Sheet Component
-function UserDetailSheet({
-    user,
-    open,
-    onOpenChange,
-}: {
-    user: AdminUser | null;
-    open: boolean;
-    onOpenChange: (open: boolean) => void;
-}) {
-    if (!user) return null;
-
-    return (
-        <Sheet open={open} onOpenChange={onOpenChange}>
-            <SheetContent className="w-full sm:max-w-lg overflow-y-auto">
-                <SheetHeader className="pb-6">
-                    <div className="flex items-center gap-4">
-                        <Avatar className="h-16 w-16">
-                            <AvatarImage src={user.avatar} />
-                            <AvatarFallback className="text-lg bg-gradient-to-br from-orange-400 to-orange-600 text-white">
-                                {user.name.split(' ').map((n) => n[0]).join('')}
-                            </AvatarFallback>
-                        </Avatar>
-                        <div>
-                            <SheetTitle className="text-xl">{user.name}</SheetTitle>
-                            <SheetDescription className="flex items-center gap-2 mt-1">
-                                <AccountTypeBadge type={user.accountType} />
-                                <StatusBadge status={user.status} />
-                            </SheetDescription>
-                        </div>
-                    </div>
-                </SheetHeader>
-
-                <Tabs defaultValue="info" className="w-full">
-                    <TabsList className="w-full">
-                        <TabsTrigger value="info" className="flex-1">Info</TabsTrigger>
-                        <TabsTrigger value="activity" className="flex-1">Activity</TabsTrigger>
-                        <TabsTrigger value="actions" className="flex-1">Actions</TabsTrigger>
-                    </TabsList>
-
-                    <TabsContent value="info" className="space-y-6 pt-4">
-                        {/* Contact Information */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-semibold text-slate-900">Contact Information</h4>
-                            <div className="grid gap-3">
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Mail className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Email</p>
-                                        <p className="text-sm font-medium">{user.email}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Phone className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Phone</p>
-                                        <p className="text-sm font-medium">{user.phone}</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Account Details */}
-                        <div className="space-y-4">
-                            <h4 className="text-sm font-semibold text-slate-900">Account Details</h4>
-                            <div className="grid gap-3">
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Calendar className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Signup Date</p>
-                                        <p className="text-sm font-medium">{new Date(user.signupDate).toLocaleDateString()}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Clock className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Last Login</p>
-                                        <p className="text-sm font-medium">{new Date(user.lastLogin).toLocaleString()}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Wallet className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Wallet Balance</p>
-                                        <p className="text-sm font-medium">£{user.walletBalance.toFixed(2)}</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center gap-3 p-3 rounded-lg bg-slate-50">
-                                    <Shield className="h-4 w-4 text-slate-500" />
-                                    <div>
-                                        <p className="text-xs text-slate-500">Verification Status</p>
-                                        <p className="text-sm font-medium flex items-center gap-2">
-                                            {user.verified ? (
-                                                <>
-                                                    <CheckCircle className="h-4 w-4 text-emerald-500" />
-                                                    Verified
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <XCircle className="h-4 w-4 text-red-500" />
-                                                    Not Verified
-                                                </>
-                                            )}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Notes */}
-                        {user.notes && (
-                            <div className="space-y-4">
-                                <h4 className="text-sm font-semibold text-slate-900">Admin Notes</h4>
-                                <div className="p-3 rounded-lg bg-amber-50 border border-amber-200">
-                                    <p className="text-sm text-amber-800">{user.notes}</p>
-                                </div>
-                            </div>
-                        )}
-                    </TabsContent>
-
-                    <TabsContent value="activity" className="pt-4">
-                        <div className="space-y-4">
-                            <p className="text-sm text-slate-500">Recent activity for this user will be displayed here.</p>
-                            {/* Mock activity items */}
-                            <div className="space-y-3">
-                                {[
-                                    { action: 'Logged in', time: '2 hours ago' },
-                                    { action: 'Updated profile', time: '1 day ago' },
-                                    { action: 'Made a purchase', time: '3 days ago' },
-                                    { action: 'Submitted a review', time: '1 week ago' },
-                                ].map((item, i) => (
-                                    <div key={i} className="flex items-center justify-between p-3 rounded-lg bg-slate-50">
-                                        <span className="text-sm">{item.action}</span>
-                                        <span className="text-xs text-slate-500">{item.time}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </TabsContent>
-
-                    <TabsContent value="actions" className="pt-4">
-                        <div className="space-y-3">
-                            <Button className="w-full justify-start" variant="outline">
-                                <Mail className="h-4 w-4 mr-2" />
-                                Send Email
-                            </Button>
-                            <Button className="w-full justify-start" variant="outline">
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                Reset Password
-                            </Button>
-                            <Button className="w-full justify-start" variant="outline">
-                                <Shield className="h-4 w-4 mr-2" />
-                                Verify Identity
-                            </Button>
-                            <Button className="w-full justify-start" variant="outline">
-                                <Wallet className="h-4 w-4 mr-2" />
-                                Adjust Wallet Balance
-                            </Button>
-                            <div className="pt-4 border-t space-y-3">
-                                <Button className="w-full justify-start text-amber-600 hover:text-amber-700" variant="outline">
-                                    <AlertCircle className="h-4 w-4 mr-2" />
-                                    Suspend Account
-                                </Button>
-                                <Button className="w-full justify-start text-red-600 hover:text-red-700" variant="outline">
-                                    <Ban className="h-4 w-4 mr-2" />
-                                    Ban User
-                                </Button>
-                                <Button className="w-full justify-start text-red-600 hover:text-red-700" variant="outline">
-                                    <Trash2 className="h-4 w-4 mr-2" />
-                                    Delete Account
-                                </Button>
-                            </div>
-                        </div>
-                    </TabsContent>
-                </Tabs>
-            </SheetContent>
-        </Sheet>
-    );
-}
-
-export default function UsersPage() {
+export default function CustomerManagementDashboard() {
     const [searchQuery, setSearchQuery] = useState('');
-    const [statusFilter, setStatusFilter] = useState<string>('all');
-    const [typeFilter, setTypeFilter] = useState<string>('all');
-    const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
-    const [page, setPage] = useState(1);
-    const [limit, setLimit] = useState(10);
-    const [selectedUser, setSelectedUser] = useState<AdminUser | null>(null);
-    const [sheetOpen, setSheetOpen] = useState(false);
+    const [bulkMessageOpen, setBulkMessageOpen] = useState(false);
+    const [actionModal, setActionModal] = useState<{type: 'view' | 'suspend' | 'reward' | 'moderate' | 'contact', user: any} | null>(null);
 
-    // Queries
-    const { data: stats, isLoading: statsLoading } = useGetUserStats();
-    const { data: usersResponse, isLoading: usersLoading } = useGetAdminUsers({
-        search: searchQuery,
-        status: statusFilter === 'all' ? undefined : statusFilter,
-        type: typeFilter === 'all' ? undefined : typeFilter,
-        page,
-        limit,
-    });
-
-    const users = usersResponse?.data || [];
-    const totalPages = usersResponse?.totalPages || 1;
-
-    const handleViewUser = (user: AdminUser) => {
-        setSelectedUser(user);
-        setSheetOpen(true);
-    };
+    const filteredCustomers = useMemo(() => {
+        return mockCustomers.filter(c => 
+            c.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
+            c.id.toLowerCase().includes(searchQuery.toLowerCase())
+        );
+    }, [searchQuery]);
 
     return (
-        <div className="space-y-6">
+        <div className="p-8 space-y-8 bg-slate-50/50 min-h-screen">
             {/* Header */}
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Users</h1>
-                    <p className="text-slate-500">Manage platform users and accounts</p>
-                </div>
-                <div className="flex items-center gap-2">
-                    <Button variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export
-                    </Button>
-                    <Button
-                        size="sm"
-                        className="bg-orange-500 hover:bg-orange-600"
-                        onClick={() => setIsCreateDialogOpen(true)}
-                    >
-                        <Plus className="h-4 w-4 mr-2" />
-                        Add User
-                    </Button>
-                </div>
-            </div>
-
-            {/* Stats Cards */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                <Card className="border-0 shadow-sm relative overflow-hidden">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-100">
-                                <UsersIcon className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                                {statsLoading ? (
-                                    <div className="h-8 w-16 bg-slate-100 animate-pulse rounded" />
-                                ) : (
-                                    <p className="text-2xl font-bold">{stats?.total || 0}</p>
-                                )}
-                                <p className="text-xs text-slate-500">Total Users</p>
-                            </div>
+                    <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 bg-blue-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-600/20">
+                            <Users className="w-6 h-6 text-white" />
                         </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm relative overflow-hidden">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-emerald-100">
-                                <UserCheck className="h-5 w-5 text-emerald-600" />
-                            </div>
-                            <div>
-                                {statsLoading ? (
-                                    <div className="h-8 w-16 bg-slate-100 animate-pulse rounded" />
-                                ) : (
-                                    <p className="text-2xl font-bold">{stats?.active || 0}</p>
-                                )}
-                                <p className="text-xs text-slate-500">Active</p>
-                            </div>
+                        <div>
+                            <h1 className="text-3xl font-black text-slate-900 tracking-tight">Customer Management</h1>
+                            <p className="text-sm font-bold text-slate-500 mt-1">Community engagement, loyalty tracking, and participation metrics.</p>
                         </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm relative overflow-hidden">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-amber-100">
-                                <AlertCircle className="h-5 w-5 text-amber-600" />
-                            </div>
-                            <div>
-                                {statsLoading ? (
-                                    <div className="h-8 w-16 bg-slate-100 animate-pulse rounded" />
-                                ) : (
-                                    <p className="text-2xl font-bold">{stats?.suspended || 0}</p>
-                                )}
-                                <p className="text-xs text-slate-500">Suspended</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-                <Card className="border-0 shadow-sm relative overflow-hidden">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-100">
-                                <UserPlus className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <div>
-                                {statsLoading ? (
-                                    <div className="h-8 w-16 bg-slate-100 animate-pulse rounded" />
-                                ) : (
-                                    <p className="text-2xl font-bold">{stats?.pending || 0}</p>
-                                )}
-                                <p className="text-xs text-slate-500">Pending</p>
-                            </div>
-                        </div>
-                    </CardContent>
-                </Card>
-            </div>
-
-            {/* Filters */}
-            <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search by name or email..."
-                                value={searchQuery}
-                                onChange={(e) => {
-                                    setSearchQuery(e.target.value);
-                                    setPage(1);
-                                }}
-                                className="pl-10"
-                            />
-                        </div>
-                        <Select value={statusFilter} onValueChange={(val) => {
-                            setStatusFilter(val);
-                            setPage(1);
-                        }}>
-                            <SelectTrigger className="w-full sm:w-40">
-                                <SelectValue placeholder="Status" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Status</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="suspended">Suspended</SelectItem>
-                                <SelectItem value="banned">Banned</SelectItem>
-                                <SelectItem value="pending">Pending</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Select value={typeFilter} onValueChange={(val) => {
-                            setTypeFilter(val);
-                            setPage(1);
-                        }}>
-                            <SelectTrigger className="w-full sm:w-40">
-                                <SelectValue placeholder="Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="customer">Customer</SelectItem>
-                                <SelectItem value="business">Business</SelectItem>
-                                <SelectItem value="admin">Admin</SelectItem>
-                            </SelectContent>
-                        </Select>
                     </div>
-                </CardContent>
-            </Card>
+                </div>
+                <div className="flex items-center gap-3">
+                    <Button variant="outline" className="h-11 px-6 font-bold text-slate-700 border-slate-200 bg-white rounded-xl shadow-sm gap-2">
+                        <Download className="w-4 h-4" /> Export Data
+                    </Button>
+                    <Button className="h-11 px-6 font-black text-white bg-blue-600 hover:bg-blue-700 rounded-xl shadow-lg shadow-blue-200 gap-2" onClick={() => setBulkMessageOpen(true)}>
+                        <MessageSquare className="w-4 h-4" /> Bulk Message
+                    </Button>
+                </div>
+            </div>
 
-            {/* Users Table */}
-            <Card className="border-0 shadow-sm">
+            {/* KPI Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+                {kpis.map((kpi, idx) => (
+                    <Card key={idx} className="border-slate-200 shadow-sm hover:border-blue-200 transition-all group bg-white rounded-3xl overflow-hidden relative">
+                        <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:scale-150 transition-transform duration-500">
+                            <kpi.icon className="w-24 h-24" />
+                        </div>
+                        <CardContent className="p-6 space-y-6 relative z-10">
+                            <div className="flex items-center justify-between">
+                                <div className={cn("p-3 rounded-2xl transition-colors shadow-sm", kpi.bg, kpi.color)}>
+                                    <kpi.icon className="h-5 w-5" />
+                                </div>
+                                <div className={cn(
+                                    "flex items-center gap-1 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-widest",
+                                    kpi.trendType === 'up' ? "bg-emerald-50 text-emerald-600" : 
+                                    kpi.trendType === 'down' ? "bg-red-50 text-red-600" : "bg-slate-100 text-slate-500"
+                                )}>
+                                    {kpi.trendType === 'up' ? <ArrowUpRight className="h-3.5 w-3.5" /> : 
+                                     kpi.trendType === 'down' ? <ArrowDownRight className="h-3.5 w-3.5" /> : null}
+                                    {kpi.trend}
+                                </div>
+                            </div>
+                            <div>
+                                <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">{kpi.title}</p>
+                                <p className="text-3xl font-black text-slate-900 tracking-tighter">{kpi.value}</p>
+                            </div>
+                        </CardContent>
+                    </Card>
+                ))}
+            </div>
+
+            {/* Table Section */}
+            <Card className="border-slate-200 shadow-sm bg-white rounded-[2.5rem] overflow-hidden">
+                <CardHeader className="bg-slate-50/50 border-b border-slate-100 p-8">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+                        <div>
+                            <CardTitle className="text-xl font-black text-slate-900">User Directory</CardTitle>
+                            <CardDescription className="text-xs font-bold text-slate-500 mt-1">Manage all platform consumers and their engagement profiles.</CardDescription>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <div className="relative w-full sm:w-80">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                                <Input 
+                                    placeholder="Search by name, email, or ID..." 
+                                    className="pl-11 h-12 text-sm font-bold border-slate-200 shadow-sm bg-white rounded-xl focus:ring-2 focus:ring-blue-100 transition-all"
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                />
+                            </div>
+                            <Button variant="outline" className="h-12 px-6 text-sm font-bold text-slate-700 border-slate-200 bg-white gap-2 rounded-xl shadow-sm hover:bg-slate-50">
+                                <Filter className="w-4 h-4" /> Filter Segments
+                            </Button>
+                        </div>
+                    </div>
+                </CardHeader>
                 <CardContent className="p-0">
-                    <div className="relative overflow-x-auto">
-                        <Table>
-                            <TableHeader>
-                                <TableRow>
-                                    <TableHead>User</TableHead>
-                                    <TableHead>Type</TableHead>
-                                    <TableHead>Status</TableHead>
-                                    <TableHead>Wallet</TableHead>
-                                    <TableHead>Last Login</TableHead>
-                                    <TableHead className="text-right">Actions</TableHead>
-                                </TableRow>
-                            </TableHeader>
-                            <TableBody>
-                                {usersLoading ? (
-                                    Array(limit).fill(0).map((_, i) => (
-                                        <TableRow key={i}>
-                                            <TableCell>
-                                                <div className="flex items-center gap-3">
-                                                    <div className="h-10 w-10 rounded-full bg-slate-100 animate-pulse" />
-                                                    <div className="space-y-2">
-                                                        <div className="h-4 w-24 bg-slate-100 animate-pulse rounded" />
-                                                        <div className="h-3 w-32 bg-slate-100 animate-pulse rounded" />
-                                                    </div>
-                                                </div>
-                                            </TableCell>
-                                            <TableCell><div className="h-6 w-20 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-6 w-20 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-4 w-16 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell><div className="h-4 w-24 bg-slate-100 animate-pulse rounded" /></TableCell>
-                                            <TableCell className="text-right"><div className="h-8 w-8 bg-slate-100 animate-pulse rounded ml-auto" /></TableCell>
-                                        </TableRow>
-                                    ))
-                                ) : users.map((user) => (
-                                    <TableRow key={user.id} className="cursor-pointer hover:bg-slate-50" onClick={() => handleViewUser(user)}>
-                                        <TableCell>
-                                            <div className="flex items-center gap-3">
-                                                <Avatar className="h-10 w-10">
-                                                    <AvatarImage src={user.avatar} />
-                                                    <AvatarFallback className="bg-gradient-to-br from-slate-400 to-slate-500 text-white text-sm">
-                                                        {user.name.split(' ').map((n) => n[0]).join('')}
-                                                    </AvatarFallback>
-                                                </Avatar>
-                                                <div>
-                                                    <p className="font-medium text-slate-900">{user.name}</p>
-                                                    <p className="text-sm text-slate-500">{user.email}</p>
-                                                </div>
+                    <Table>
+                        <TableHeader>
+                            <TableRow className="bg-slate-50/30">
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 pl-8 h-14">Customer Name</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 h-14">Borough</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 text-center h-14">Membership</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 text-right h-14">Rewards Pts</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 text-center h-14">Engagement Score</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 h-14">Last Activity</TableHead>
+                                <TableHead className="font-black text-[10px] uppercase tracking-widest text-slate-400 text-center h-14">Loyalty Level</TableHead>
+                                <TableHead className="text-right pr-8 h-14"></TableHead>
+                            </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                            {filteredCustomers.map((c) => (
+                                <TableRow 
+                                    key={c.id} 
+                                    className="hover:bg-blue-50/30 cursor-pointer group transition-colors"
+                                >
+                                    <TableCell className="pl-8 py-5">
+                                        <div className="flex items-center gap-4">
+                                            <div className="w-12 h-12 rounded-2xl bg-blue-50 flex items-center justify-center text-[12px] font-black text-blue-600 shadow-sm group-hover:bg-blue-600 group-hover:text-white transition-all relative">
+                                                {c.avatar}
+                                                {c.status === 'Flagged' && (
+                                                    <span className="absolute -top-1 -right-1 w-3.5 h-3.5 bg-red-500 border-2 border-white rounded-full"></span>
+                                                )}
                                             </div>
-                                        </TableCell>
-                                        <TableCell>
-                                            <AccountTypeBadge type={user.accountType} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <StatusBadge status={user.status} />
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="font-medium">£{user.walletBalance.toFixed(2)}</span>
-                                        </TableCell>
-                                        <TableCell>
-                                            <span className="text-sm text-slate-500">
-                                                {new Date(user.lastLogin).toLocaleDateString()}
-                                            </span>
-                                        </TableCell>
-                                        <TableCell className="text-right" onClick={(e) => e.stopPropagation()}>
-                                            <DropdownMenu>
-                                                <DropdownMenuTrigger asChild>
-                                                    <Button variant="ghost" size="icon" className="h-8 w-8">
-                                                        <MoreHorizontal className="h-4 w-4" />
-                                                    </Button>
-                                                </DropdownMenuTrigger>
-                                                <DropdownMenuContent align="end">
-                                                    <DropdownMenuLabel>Actions</DropdownMenuLabel>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem onClick={() => handleViewUser(user)}>
-                                                        <Eye className="h-4 w-4 mr-2" />
-                                                        View Details
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Edit className="h-4 w-4 mr-2" />
-                                                        Edit User
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem>
-                                                        <Mail className="h-4 w-4 mr-2" />
-                                                        Send Email
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuSeparator />
-                                                    <DropdownMenuItem className="text-amber-600">
-                                                        <AlertCircle className="h-4 w-4 mr-2" />
-                                                        Suspend
-                                                    </DropdownMenuItem>
-                                                    <DropdownMenuItem className="text-red-600">
-                                                        <Ban className="h-4 w-4 mr-2" />
-                                                        Ban User
-                                                    </DropdownMenuItem>
-                                                </DropdownMenuContent>
-                                            </DropdownMenu>
-                                        </TableCell>
-                                    </TableRow>
-                                ))}
-                            </TableBody>
-                        </Table>
-                    </div>
-
-                    {!usersLoading && users.length === 0 && (
-                        <div className="p-8 text-center border-t">
-                            <UsersIcon className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900 mb-1">No users found</h3>
-                            <p className="text-slate-500">Try adjusting your search or filters</p>
-                        </div>
-                    )}
-
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between p-4 border-t bg-slate-50/50">
-                        <div className="text-sm text-slate-500">
-                            Showing <span className="font-medium">{(page - 1) * limit + 1}</span> to <span className="font-medium">{Math.min(page * limit, usersResponse?.total || 0)}</span> of <span className="font-medium">{usersResponse?.total || 0}</span> users
-                        </div>
-                        <div className="flex items-center gap-2">
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage(p => Math.max(1, p - 1))}
-                                disabled={page === 1 || usersLoading}
-                            >
-                                <ChevronLeft className="h-4 w-4 mr-1" />
-                                Previous
-                            </Button>
-                            <div className="flex items-center gap-1">
-                                {Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
-                                    let pageNum;
-                                    if (totalPages <= 5) pageNum = i + 1;
-                                    else if (page <= 3) pageNum = i + 1;
-                                    else if (page >= totalPages - 2) pageNum = totalPages - 4 + i;
-                                    else pageNum = page - 2 + i;
-
-                                    return (
-                                        <Button
-                                            key={pageNum}
-                                            variant={page === pageNum ? 'default' : 'outline'}
-                                            size="sm"
-                                            className={cn("w-8 h-8 p-0", page === pageNum && "bg-orange-500 hover:bg-orange-600")}
-                                            onClick={() => setPage(pageNum)}
-                                            disabled={usersLoading}
-                                        >
-                                            {pageNum}
-                                        </Button>
-                                    );
-                                })}
-                            </div>
-                            <Button
-                                variant="outline"
-                                size="sm"
-                                onClick={() => setPage(p => Math.min(totalPages, p + 1))}
-                                disabled={page === totalPages || usersLoading}
-                            >
-                                Next
-                                <ChevronRight className="h-4 w-4 ml-1" />
-                            </Button>
-                        </div>
-                    </div>
+                                            <div>
+                                                <p className="text-sm font-black text-slate-900 group-hover:text-blue-600 transition-colors">{c.name}</p>
+                                                <p className="text-[10px] font-bold text-slate-500 mt-0.5">{c.email} • {c.id}</p>
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-5 font-bold text-xs text-slate-600">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-3.5 h-3.5 text-slate-400" />
+                                            {c.borough}
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-center py-5">
+                                        <Badge variant="outline" className={cn(
+                                            "text-[9px] font-black uppercase tracking-widest border-none px-3 py-1",
+                                            c.membershipStatus === 'Elite' ? "bg-slate-900 text-white" :
+                                            c.membershipStatus === 'Premium' ? "bg-amber-100 text-amber-700" :
+                                            "bg-slate-100 text-slate-600"
+                                        )}>
+                                            {c.membershipStatus}
+                                        </Badge>
+                                    </TableCell>
+                                    <TableCell className="text-right py-5 text-sm font-black text-slate-900 tracking-tight">
+                                        {c.rewardsPoints.toLocaleString()}
+                                    </TableCell>
+                                    <TableCell className="text-center py-5">
+                                        <div className="flex flex-col items-center gap-1.5 w-full px-4">
+                                            <div className="flex items-center justify-between w-full text-[10px] font-black">
+                                                <span className={cn(
+                                                    c.engagementScore > 80 ? "text-emerald-600" :
+                                                    c.engagementScore > 40 ? "text-blue-600" : "text-slate-400"
+                                                )}>{c.engagementScore}/100</span>
+                                            </div>
+                                            <div className="h-1.5 w-full bg-slate-100 rounded-full overflow-hidden">
+                                                <div className={cn(
+                                                    "h-full rounded-full",
+                                                    c.engagementScore > 80 ? "bg-emerald-500" :
+                                                    c.engagementScore > 40 ? "bg-blue-500" : "bg-slate-300"
+                                                )} style={{ width: `${c.engagementScore}%` }} />
+                                            </div>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="py-5 text-xs font-bold text-slate-500">
+                                        {c.lastActivity}
+                                    </TableCell>
+                                    <TableCell className="text-center py-5">
+                                        <div className="flex items-center justify-center gap-2">
+                                            <Award className={cn(
+                                                "w-4 h-4",
+                                                c.loyaltyLevel === 'Diamond' ? "text-purple-500" :
+                                                c.loyaltyLevel === 'Platinum VIP' ? "text-slate-800" :
+                                                c.loyaltyLevel === 'Gold' ? "text-amber-500" :
+                                                c.loyaltyLevel === 'Silver' ? "text-slate-400" : "text-amber-800"
+                                            )} />
+                                            <span className="text-[10px] font-black text-slate-700 uppercase tracking-widest">{c.loyaltyLevel}</span>
+                                        </div>
+                                    </TableCell>
+                                    <TableCell className="text-right pr-8 py-5">
+                                        <DropdownMenu>
+                                            <DropdownMenuTrigger asChild onClick={(e) => e.stopPropagation()}>
+                                                <Button variant="ghost" size="icon" className="h-10 w-10 text-slate-400 hover:text-slate-900 hover:bg-slate-100 rounded-xl">
+                                                    <MoreVertical className="w-5 h-5" />
+                                                </Button>
+                                            </DropdownMenuTrigger>
+                                            <DropdownMenuContent align="end" className="w-56 p-2 rounded-2xl shadow-xl border-slate-100">
+                                                <DropdownMenuLabel className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 py-2">Customer Actions</DropdownMenuLabel>
+                                                <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer font-bold text-xs" onClick={(e) => { e.stopPropagation(); setActionModal({ type: 'view', user: c }); }}>
+                                                    <Eye className="w-4 h-4 text-slate-500" /> View Full Profile
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer font-bold text-xs text-blue-600" onClick={(e) => { e.stopPropagation(); setActionModal({ type: 'contact', user: c }); }}>
+                                                    <Contact className="w-4 h-4" /> Contact Customer
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer font-bold text-xs text-orange-600" onClick={(e) => { e.stopPropagation(); setActionModal({ type: 'reward', user: c }); }}>
+                                                    <Gift className="w-4 h-4" /> Issue Reward
+                                                </DropdownMenuItem>
+                                                <DropdownMenuSeparator className="my-2 bg-slate-100" />
+                                                <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer font-bold text-xs text-amber-600" onClick={(e) => { e.stopPropagation(); setActionModal({ type: 'moderate', user: c }); }}>
+                                                    <ShieldAlert className="w-4 h-4" /> Moderate Activity
+                                                </DropdownMenuItem>
+                                                <DropdownMenuItem className="gap-3 rounded-xl py-3 cursor-pointer font-bold text-xs text-red-600" onClick={(e) => { e.stopPropagation(); setActionModal({ type: 'suspend', user: c }); }}>
+                                                    <Ban className="w-4 h-4" /> Suspend Account
+                                                </DropdownMenuItem>
+                                            </DropdownMenuContent>
+                                        </DropdownMenu>
+                                    </TableCell>
+                                </TableRow>
+                            ))}
+                        </TableBody>
+                    </Table>
                 </CardContent>
             </Card>
 
-            {/* User Detail Sheet */}
-            <UserDetailSheet
-                user={selectedUser}
-                open={sheetOpen}
-                onOpenChange={setSheetOpen}
-            />
+            {/* ACTION MODALS */}
+            {/* View Profile Modal */}
+            <Dialog open={actionModal?.type === 'view'} onOpenChange={(open) => !open && setActionModal(null)}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-0 overflow-hidden sm:max-w-lg">
+                    {actionModal?.user && (
+                        <>
+                            <div className="bg-slate-900 p-8 text-white relative">
+                                <div className="absolute top-4 right-4 bg-white/10 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest backdrop-blur-md">
+                                    {actionModal.user.status}
+                                </div>
+                                <div className="flex items-center gap-5">
+                                    <div className="w-16 h-16 rounded-2xl bg-white/10 flex items-center justify-center text-xl font-black shadow-lg">
+                                        {actionModal.user.avatar}
+                                    </div>
+                                    <div>
+                                        <h2 className="text-2xl font-black tracking-tight">{actionModal.user.name}</h2>
+                                        <p className="text-xs font-bold text-slate-400 mt-1">{actionModal.user.email}</p>
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="p-6 bg-white space-y-6">
+                                <div className="grid grid-cols-2 gap-4">
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Rewards Points</p>
+                                        <p className="text-xl font-black text-slate-900">{actionModal.user.rewardsPoints.toLocaleString()}</p>
+                                    </div>
+                                    <div className="p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                        <p className="text-[10px] uppercase font-black text-slate-400 tracking-widest mb-1">Engagement</p>
+                                        <p className="text-xl font-black text-blue-600">{actionModal.user.engagementScore}/100</p>
+                                    </div>
+                                </div>
+                                <div className="space-y-3">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="font-bold text-slate-500">Borough</span>
+                                        <span className="font-black text-slate-900">{actionModal.user.borough}</span>
+                                    </div>
+                                    <Separator className="bg-slate-100" />
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="font-bold text-slate-500">Membership</span>
+                                        <span className="font-black text-slate-900">{actionModal.user.membershipStatus}</span>
+                                    </div>
+                                    <Separator className="bg-slate-100" />
+                                    <div className="flex items-center justify-between text-sm">
+                                        <span className="font-bold text-slate-500">Loyalty Level</span>
+                                        <span className="font-black text-slate-900">{actionModal.user.loyaltyLevel}</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <DialogFooter className="p-4 pt-0 border-t border-slate-100">
+                                <Button variant="ghost" onClick={() => setActionModal(null)} className="w-full rounded-xl font-bold">Close Profile</Button>
+                            </DialogFooter>
+                        </>
+                    )}
+                </DialogContent>
+            </Dialog>
 
-            {/* Create User Dialog */}
-            <CreateUserDialog
-                open={isCreateDialogOpen}
-                onOpenChange={setIsCreateDialogOpen}
-            />
+            {/* Suspend Modal */}
+            <Dialog open={actionModal?.type === 'suspend'} onOpenChange={(open) => !open && setActionModal(null)}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-6 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                                <Ban className="w-5 h-5 text-red-600" />
+                            </div>
+                            <DialogTitle className="text-xl font-black text-slate-900">Suspend Account</DialogTitle>
+                        </div>
+                        <DialogDescription className="font-bold text-slate-500">
+                            You are about to suspend {actionModal?.user?.name}'s account. This prevents them from earning rewards or making purchases.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 my-4">
+                        <Select defaultValue="tos">
+                            <SelectTrigger className="w-full rounded-xl h-12 border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="Reason for suspension" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="tos" className="font-bold cursor-pointer rounded-lg">Terms of Service Violation</SelectItem>
+                                <SelectItem value="fraud" className="font-bold cursor-pointer rounded-lg">Suspicious Payment Activity</SelectItem>
+                                <SelectItem value="harassment" className="font-bold cursor-pointer rounded-lg">Community Harassment</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Textarea placeholder="Internal notes (optional)" className="resize-none rounded-xl border-slate-200 text-sm font-bold placeholder:text-slate-400" />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setActionModal(null)} className="rounded-xl font-bold">Cancel</Button>
+                        <Button onClick={() => setActionModal(null)} className="rounded-xl bg-red-600 hover:bg-red-700 font-black text-white shadow-lg shadow-red-200">Confirm Suspension</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Reward Modal */}
+            <Dialog open={actionModal?.type === 'reward'} onOpenChange={(open) => !open && setActionModal(null)}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-6 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center">
+                                <Gift className="w-5 h-5 text-orange-600" />
+                            </div>
+                            <DialogTitle className="text-xl font-black text-slate-900">Issue Reward</DialogTitle>
+                        </div>
+                        <DialogDescription className="font-bold text-slate-500">
+                            Credit points or send a voucher directly to {actionModal?.user?.name}'s wallet.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 my-4">
+                        <Select defaultValue="points_1000">
+                            <SelectTrigger className="w-full rounded-xl h-12 border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="Select Reward" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="points_500" className="font-bold cursor-pointer rounded-lg">500 Points Credit</SelectItem>
+                                <SelectItem value="points_1000" className="font-bold cursor-pointer rounded-lg">1,000 Points Credit</SelectItem>
+                                <SelectItem value="voucher_10" className="font-bold cursor-pointer rounded-lg">£10 Generic Voucher</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Textarea placeholder="Message to user (optional)" defaultValue="Thank you for being a highly valued member of our community!" className="resize-none rounded-xl border-slate-200 text-sm font-bold placeholder:text-slate-400" />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setActionModal(null)} className="rounded-xl font-bold">Cancel</Button>
+                        <Button onClick={() => setActionModal(null)} className="rounded-xl bg-orange-600 hover:bg-orange-700 font-black text-white shadow-lg shadow-orange-200">Issue Reward</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Moderate Modal */}
+            <Dialog open={actionModal?.type === 'moderate'} onOpenChange={(open) => !open && setActionModal(null)}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-6 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center">
+                                <ShieldAlert className="w-5 h-5 text-amber-600" />
+                            </div>
+                            <DialogTitle className="text-xl font-black text-slate-900">Moderate Activity</DialogTitle>
+                        </div>
+                        <DialogDescription className="font-bold text-slate-500">
+                            Flag {actionModal?.user?.name}'s account for review or issue a formal warning.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 my-4">
+                        <Select defaultValue="warning">
+                            <SelectTrigger className="w-full rounded-xl h-12 border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="Action" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="warning" className="font-bold cursor-pointer rounded-lg">Issue Formal Warning</SelectItem>
+                                <SelectItem value="flag" className="font-bold cursor-pointer rounded-lg">Flag for Shadowban Review</SelectItem>
+                                <SelectItem value="reset" className="font-bold cursor-pointer rounded-lg">Reset Gamification Stats</SelectItem>
+                            </SelectContent>
+                        </Select>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setActionModal(null)} className="rounded-xl font-bold">Cancel</Button>
+                        <Button onClick={() => setActionModal(null)} className="rounded-xl bg-amber-600 hover:bg-amber-700 font-black text-white shadow-lg shadow-amber-200">Apply Moderation</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Contact Modal */}
+            <Dialog open={actionModal?.type === 'contact'} onOpenChange={(open) => !open && setActionModal(null)}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-6 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Contact className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <DialogTitle className="text-xl font-black text-slate-900">Contact Customer</DialogTitle>
+                        </div>
+                        <DialogDescription className="font-bold text-slate-500">
+                            Send a direct email or push notification to {actionModal?.user?.name}.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 my-4">
+                        <Select defaultValue="email">
+                            <SelectTrigger className="w-full rounded-xl h-12 border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="Delivery Method" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="email" className="font-bold cursor-pointer rounded-lg">Email ({actionModal?.user?.email})</SelectItem>
+                                <SelectItem value="push" className="font-bold cursor-pointer rounded-lg">Push Notification</SelectItem>
+                                <SelectItem value="sms" className="font-bold cursor-pointer rounded-lg">SMS (if verified)</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input placeholder="Subject" className="rounded-xl h-12 border-slate-200 font-bold placeholder:text-slate-400" />
+                        <Textarea placeholder="Type your message..." className="resize-none h-32 rounded-xl border-slate-200 text-sm font-bold placeholder:text-slate-400" />
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setActionModal(null)} className="rounded-xl font-bold">Cancel</Button>
+                        <Button onClick={() => setActionModal(null)} className="rounded-xl bg-blue-600 hover:bg-blue-700 font-black text-white shadow-lg shadow-blue-200">Send Message</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+
+            {/* Bulk Message Modal */}
+            <Dialog open={bulkMessageOpen} onOpenChange={setBulkMessageOpen}>
+                <DialogContent className="rounded-3xl border-slate-100 shadow-2xl p-6 sm:max-w-md">
+                    <DialogHeader>
+                        <div className="flex items-center gap-3 mb-2">
+                            <div className="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                                <Users className="w-5 h-5 text-blue-600" />
+                            </div>
+                            <DialogTitle className="text-xl font-black text-slate-900">Bulk Message Segment</DialogTitle>
+                        </div>
+                        <DialogDescription className="font-bold text-slate-500">
+                            Send a mass message to a specific customer segment or all active users.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 my-4">
+                        <Select defaultValue="all">
+                            <SelectTrigger className="w-full rounded-xl h-12 border-slate-200 font-bold text-slate-700">
+                                <SelectValue placeholder="Target Segment" />
+                            </SelectTrigger>
+                            <SelectContent className="rounded-xl border-slate-100 shadow-xl">
+                                <SelectItem value="all" className="font-bold cursor-pointer rounded-lg">All Active Users (89.2k)</SelectItem>
+                                <SelectItem value="premium" className="font-bold cursor-pointer rounded-lg">Premium & Elite Members (12.4k)</SelectItem>
+                                <SelectItem value="inactive" className="font-bold cursor-pointer rounded-lg">Inactive Users (30+ Days)</SelectItem>
+                                <SelectItem value="hackney" className="font-bold cursor-pointer rounded-lg">Hackney Borough Residents</SelectItem>
+                            </SelectContent>
+                        </Select>
+                        <Input placeholder="Campaign Subject" className="rounded-xl h-12 border-slate-200 font-bold placeholder:text-slate-400" />
+                        <Textarea placeholder="Type your broadcast message..." className="resize-none h-32 rounded-xl border-slate-200 text-sm font-bold placeholder:text-slate-400" />
+                        <div className="flex items-center gap-3 p-4 rounded-2xl bg-blue-50 border border-blue-100">
+                            <MessageSquare className="w-5 h-5 text-blue-600" />
+                            <p className="text-[10px] uppercase tracking-widest font-black text-blue-800">Messages will be sent as push notifications and emails based on user prefs.</p>
+                        </div>
+                    </div>
+                    <DialogFooter>
+                        <Button variant="ghost" onClick={() => setBulkMessageOpen(false)} className="rounded-xl font-bold">Cancel</Button>
+                        <Button onClick={() => setBulkMessageOpen(false)} className="rounded-xl bg-blue-600 hover:bg-blue-700 font-black text-white shadow-lg shadow-blue-200">Send Broadcast</Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </div>
     );
 }

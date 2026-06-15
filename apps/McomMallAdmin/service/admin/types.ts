@@ -56,6 +56,7 @@ export interface AdminBusiness {
     phone: string;
     createdAt: string;
     logo: string;
+    disabledNavIds?: string[];
 }
 
 export interface AdminBusinessStats {
@@ -101,6 +102,7 @@ export interface UpdateBusinessDto {
     bannerUrl?: string;
     status?: string;
     listingType?: string[];
+    disabledNavIds?: string[];
 }
 
 export interface BusinessDetail {

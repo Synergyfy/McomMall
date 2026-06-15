@@ -91,7 +91,12 @@ const authSlice = createSlice({
         state.userRole = userRole;
       }
       if (packageInfo) {
-        state.packageInfo = JSON.parse(packageInfo);
+        try {
+          state.packageInfo = JSON.parse(packageInfo);
+        } catch (e) {
+          console.error('Error parsing packageInfo:', e);
+          state.packageInfo = null;
+        }
       }
     },
   },
