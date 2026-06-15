@@ -1,20 +1,41 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { Reorder, useDragControls } from 'framer-motion';
 import {
   GripVertical, Save, Edit2, Check, X, ChevronDown, ChevronRight,
   LayoutDashboard, Timer, Calendar, MessageSquare, Heart, Gift, LifeBuoy,
   Plus, List, BookOpen, ShoppingBag, Settings as SettingsIcon,
   Scan, Zap, History, CreditCard, Wallet, Coins, LogOut, UserPen, Users,
-  SquareDashedKanban,
+  SquareDashedKanban, Search, Settings2, Building2, ShieldCheck,
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Switch } from '@/components/ui/switch';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+  DialogFooter,
+} from "@/components/ui/dialog";
+import {
+  Accordion,
+  AccordionContent,
+  AccordionItem,
+  AccordionTrigger,
+} from "@/components/ui/accordion";
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { useGetTiers, useUpdateTier } from '@/service/tiers/hook';
+import { useGetAdminBusinesses, useUpdateBusiness } from '@/service/admin/hook';
+import { AdminBusiness } from '@/service/admin/types';
+import { Tier } from '@/app/admin/types/tier';
 
 // Types
 type SubNavItem = {
@@ -173,6 +194,9 @@ const initialData: NavGroup[] = [
   }
 ];
 
+// Flatten all items for selection
+const ALL_FLAT_NAV_ITEMS = initialData.flatMap(group => group.items);
+
 function NavItemRow({
   item,
   onUpdateItem,
@@ -326,6 +350,223 @@ function NavItemRow({
   );
 }
 
+function SidebarPermissionsGrid({
+  disabledNavIds,
+  onToggle
+}: {
+  disabledNavIds: string[];
+  onToggle: (id: string, checked: boolean) => void;
+}) {
+  return (
+    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+      {ALL_FLAT_NAV_ITEMS.map((nav) => {
+        const isHidden = disabledNavIds.includes(nav.id);
+        return (
+          <div
+            key={nav.id}
+            className={cn(
+              "flex items-center justify-between p-3 rounded-lg border transition-all",
+              isHidden ? "bg-slate-50 border-slate-200 opacity-60" : "bg-white border-orange-100 shadow-sm"
+            )}
+          >
+            <div className="flex items-center gap-3 min-w-0">
+              <div className={cn("p-2 rounded-md", isHidden ? "bg-slate-200 text-slate-500" : "bg-orange-50 text-orange-600")}>
+                <nav.icon size={16} />
+              </div>
+              <div className="flex flex-col min-w-0">
+                <span className="text-sm font-medium text-slate-700 truncate">{nav.label}</span>
+                <span className="text-[10px] text-slate-400 font-mono">{nav.id}</span>
+              </div>
+            </div>
+            <Switch
+              checked={!isHidden}
+              onCheckedChange={(checked) => onToggle(nav.id, checked)}
+            />
+          </div>
+        );
+      })}
+    </div>
+  );
+}
+
+function TierConfigTab() {
+  const { data: tiers, isLoading } = useGetTiers();
+  const updateTierMutation = useUpdateTier();
+
+  if (isLoading) return <div className="p-8 text-center text-slate-500">Loading tiers...</div>;
+
+  const handleToggle = (tier: Tier, navId: string, checked: boolean) => {
+    const currentDisabled = tier.configuration.disabledNavIds || [];
+    const newDisabled = checked
+      ? currentDisabled.filter(id => id !== navId)
+      : [...currentDisabled, navId];
+
+    updateTierMutation.mutate({
+      id: tier.id,
+      data: {
+        configuration: {
+          ...tier.configuration,
+          disabledNavIds: newDisabled
+        }
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-4">
+      <Accordion type="multiple" className="space-y-4">
+        {tiers?.map((tier: Tier) => (
+          <AccordionItem
+            key={tier.id}
+            value={tier.id}
+            className="border border-slate-200 rounded-xl overflow-hidden bg-white shadow-sm"
+          >
+            <AccordionTrigger className="px-6 py-4 hover:no-underline hover:bg-slate-50/50 transition-all group">
+              <div className="flex items-center justify-between w-full pr-4 text-left">
+                <div className="flex items-center gap-4">
+                  <div className="w-10 h-10 rounded-full bg-orange-100 flex items-center justify-center shrink-0">
+                    <ShieldCheck className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div className="flex flex-col">
+                    <span className="font-bold text-slate-900 group-hover:text-orange-600 transition-colors">
+                      {tier.name}
+                    </span>
+                    <span className="text-xs text-slate-500 line-clamp-1">{tier.description}</span>
+                  </div>
+                </div>
+                <Badge variant="secondary" className="bg-slate-100 text-slate-600 border-slate-200">
+                  {tier.configuration.disabledNavIds?.length || 0} hidden
+                </Badge>
+              </div>
+            </AccordionTrigger>
+            <AccordionContent className="px-6 pb-6 pt-2 border-t border-slate-100">
+              <div className="pt-4">
+                <SidebarPermissionsGrid
+                  disabledNavIds={tier.configuration.disabledNavIds || []}
+                  onToggle={(id, checked) => handleToggle(tier, id, checked)}
+                />
+              </div>
+            </AccordionContent>
+          </AccordionItem>
+        ))}
+      </Accordion>
+    </div>
+  );
+}
+
+function BusinessConfigTab() {
+  const [searchTerm, setSearchTerm] = useState('');
+  const { data: businessRes, isLoading } = useGetAdminBusinesses({ search: searchTerm, limit: 10 });
+  const updateBusinessMutation = useUpdateBusiness();
+
+  const [selectedBusiness, setSelectedBusiness] = useState<AdminBusiness | null>(null);
+
+  const handleToggle = (business: AdminBusiness, navId: string, checked: boolean) => {
+    const currentDisabled = business.disabledNavIds || [];
+    const newDisabled = checked
+      ? currentDisabled.filter(id => id !== navId)
+      : [...currentDisabled, navId];
+
+    // Optimistically update local state for the modal
+    if (selectedBusiness?.id === business.id) {
+      setSelectedBusiness({ ...selectedBusiness, disabledNavIds: newDisabled });
+    }
+
+    updateBusinessMutation.mutate({
+      id: business.id,
+      data: {
+        disabledNavIds: newDisabled
+      }
+    });
+  };
+
+  return (
+    <div className="space-y-6">
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 h-4 w-4" />
+        <Input
+          placeholder="Search businesses by name, email or owner..."
+          className="pl-10 h-11 bg-white border-slate-200 focus-visible:ring-orange-500"
+          value={searchTerm}
+          onChange={(e) => setSearchTerm(e.target.value)}
+        />
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+        {isLoading ? (
+          <div className="col-span-full p-8 text-center text-slate-500">Searching businesses...</div>
+        ) : businessRes?.data.map((business: AdminBusiness) => (
+          <Card key={business.id} className="hover:border-orange-200 transition-colors group">
+            <CardContent className="p-4 flex items-center justify-between">
+              <div className="flex items-center gap-3 min-w-0">
+                <div className="w-10 h-10 rounded-full bg-slate-100 flex items-center justify-center shrink-0 overflow-hidden">
+                  {business.logo ? (
+                    <img src={business.logo} alt="" className="w-full h-full object-cover" />
+                  ) : (
+                    <Building2 className="text-slate-400 h-5 w-5" />
+                  )}
+                </div>
+                <div className="flex flex-col min-w-0">
+                  <span className="font-semibold text-slate-900 truncate">{business.name}</span>
+                  <span className="text-xs text-slate-500 truncate">{business.owner}</span>
+                </div>
+              </div>
+
+              <Dialog>
+                <DialogTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="gap-2 group-hover:border-orange-500 group-hover:text-orange-600 transition-all"
+                    onClick={() => setSelectedBusiness(business)}
+                  >
+                    <Settings2 className="h-4 w-4" />
+                    Configure
+                  </Button>
+                </DialogTrigger>
+                <DialogContent className="max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+                  <DialogHeader>
+                    <DialogTitle className="flex items-center gap-2">
+                      <Building2 className="h-5 w-5 text-orange-500" />
+                      Sidebar Config: {business.name}
+                    </DialogTitle>
+                    <DialogDescription>
+                      Customize the navigation specifically for this business. This will override their tier's default settings.
+                    </DialogDescription>
+                  </DialogHeader>
+
+                  <div className="flex-1 overflow-y-auto p-1 py-4">
+                    <SidebarPermissionsGrid
+                      disabledNavIds={selectedBusiness?.id === business.id ? (selectedBusiness.disabledNavIds || []) : (business.disabledNavIds || [])}
+                      onToggle={(navId, checked) => handleToggle(business, navId, checked)}
+                    />
+                  </div>
+
+                  <DialogFooter className="bg-slate-50 -mx-6 -mb-6 p-4 border-t border-slate-100">
+                    <div className="flex items-center justify-between w-full">
+                      <div className="flex items-center gap-2 text-xs text-slate-500">
+                        <Badge variant="outline" className="bg-white">
+                          {business.disabledNavIds?.length || 0} items disabled
+                        </Badge>
+                        <span>Last updated: {new Date().toLocaleDateString()}</span>
+                      </div>
+                      <DialogTrigger asChild>
+                        <Button className="bg-orange-500 hover:bg-orange-600 text-white font-semibold px-8">
+                          Done
+                        </Button>
+                      </DialogTrigger>
+                    </div>
+                  </DialogFooter>
+                </DialogContent>
+              </Dialog>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function BusinessSidebarManager() {
   const [groups, setGroups] = useState<NavGroup[]>(initialData);
   const [editingGroupId, setEditingGroupId] = useState<string | null>(null);
@@ -385,97 +626,111 @@ export default function BusinessSidebarManager() {
   const totalItems = groups.reduce((acc, g) => acc + g.items.length, 0);
 
   return (
-    <div className="space-y-6 max-w-4xl mx-auto">
+    <div className="space-y-6 max-w-6xl mx-auto pb-12">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">Sidebar Configuration</h1>
           <p className="text-slate-500 text-sm mt-1">
-            Manage the navigation structure of the Business Dashboard.
-            <span className="ml-2 text-slate-400">
-              {groups.length} sections · {totalItems} nav items
-            </span>
+            Manage the navigation structure and visibility across Tiers and Businesses.
           </p>
         </div>
-        <Button onClick={handleSaveAll} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold">
-          <Save className="h-4 w-4 mr-2" />
-          Save Layout
-        </Button>
       </div>
 
-      <Card className="border-slate-200/60 shadow-sm bg-white/50 backdrop-blur-xl">
-        <CardHeader className="pb-4 border-b border-slate-100">
-          <CardTitle className="text-lg">Navigation Structure</CardTitle>
-          <CardDescription>
-            Drag items to reorder. Use the pencil icon to rename sections, items, or sub-menus.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="pt-6 bg-slate-50/50 rounded-b-xl">
+      <Tabs defaultValue="global" className="w-full space-y-6">
+        <TabsList className="grid w-full grid-cols-3 h-12 p-1 bg-slate-100/50 backdrop-blur border border-slate-200 rounded-xl">
+          <TabsTrigger value="global" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
+            Global Layout
+          </TabsTrigger>
+          <TabsTrigger value="tiers" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
+            Tier Permissions
+          </TabsTrigger>
+          <TabsTrigger value="businesses" className="rounded-lg data-[state=active]:bg-white data-[state=active]:text-orange-600 data-[state=active]:shadow-sm transition-all">
+            Business Overrides
+          </TabsTrigger>
+        </TabsList>
 
-          <div className="space-y-8">
-            {groups.map((group) => (
-              <div key={group.id} className="bg-slate-100/50 rounded-xl p-4 md:p-6 border border-slate-200/50">
-
-                {/* Group Header */}
-                <div className="flex items-center justify-between mb-4">
-                  {editingGroupId === group.id ? (
-                    <div className="flex items-center gap-2">
-                      <Input
-                        value={editTitleValue}
-                        onChange={(e) => setEditTitleValue(e.target.value)}
-                        className="h-8 text-sm font-bold w-48 border-orange-200 focus-visible:ring-orange-500"
-                        autoFocus
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') saveTitle(group.id);
-                          if (e.key === 'Escape') cancelEditing();
-                        }}
-                      />
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => saveTitle(group.id)}>
-                        <Check size={16} />
-                      </Button>
-                      <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400 hover:text-slate-600" onClick={cancelEditing}>
-                        <X size={16} />
-                      </Button>
-                    </div>
-                  ) : (
-                    <div className="flex items-center gap-2 group/header">
-                      <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{group.title}</h3>
-                      <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-200 font-mono">
-                        {group.items.length}
-                      </Badge>
-                      <button
-                        onClick={() => startEditing(group)}
-                        className="text-slate-400 hover:text-orange-500 transition-all p-1"
-                      >
-                        <Edit2 size={12} />
-                      </button>
-                    </div>
-                  )}
-                </div>
-
-                {/* Reorderable List */}
-                <Reorder.Group
-                  axis="y"
-                  values={group.items}
-                  onReorder={(newItems) => handleReorder(group.id, newItems)}
-                  className="space-y-0"
-                >
-                  {group.items.map(item => (
-                    <NavItemRow
-                      key={item.id}
-                      item={item}
-                      onUpdateItem={handleUpdateItem}
-                      onUpdateSubItem={handleUpdateSubItem}
-                    />
-                  ))}
-                </Reorder.Group>
-
+        <TabsContent value="global" className="space-y-6">
+          <Card className="border-slate-200 shadow-sm bg-white/50 backdrop-blur-xl overflow-hidden">
+            <CardHeader className="pb-4 border-b border-slate-100 flex flex-row items-center justify-between">
+              <div>
+                <CardTitle className="text-lg">Navigation Structure</CardTitle>
+                <CardDescription>
+                  Drag items to reorder. Use the pencil icon to rename sections, items, or sub-menus.
+                </CardDescription>
               </div>
-            ))}
-          </div>
+              <Button onClick={handleSaveAll} className="bg-orange-500 hover:bg-orange-600 text-white font-semibold">
+                <Save className="h-4 w-4 mr-2" />
+                Save Layout
+              </Button>
+            </CardHeader>
+            <CardContent className="pt-6 bg-slate-50/50">
+              <div className="space-y-8">
+                {groups.map((group) => (
+                  <div key={group.id} className="bg-slate-100/50 rounded-xl p-4 md:p-6 border border-slate-200/50">
+                    <div className="flex items-center justify-between mb-4">
+                      {editingGroupId === group.id ? (
+                        <div className="flex items-center gap-2">
+                          <Input
+                            value={editTitleValue}
+                            onChange={(e) => setEditTitleValue(e.target.value)}
+                            className="h-8 text-sm font-bold w-48 border-orange-200 focus-visible:ring-orange-500"
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === 'Enter') saveTitle(group.id);
+                              if (e.key === 'Escape') cancelEditing();
+                            }}
+                          />
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-emerald-600" onClick={() => saveTitle(group.id)}>
+                            <Check size={16} />
+                          </Button>
+                          <Button size="icon" variant="ghost" className="h-8 w-8 text-slate-400" onClick={cancelEditing}>
+                            <X size={16} />
+                          </Button>
+                        </div>
+                      ) : (
+                        <div className="flex items-center gap-2 group/header">
+                          <h3 className="text-xs font-bold text-slate-400 uppercase tracking-wider">{group.title}</h3>
+                          <Badge variant="outline" className="text-[10px] text-slate-400 border-slate-200">
+                            {group.items.length}
+                          </Badge>
+                          <button onClick={() => startEditing(group)} className="text-slate-400 hover:text-orange-500 p-1">
+                            <Edit2 size={12} />
+                          </button>
+                        </div>
+                      )}
+                    </div>
 
-        </CardContent>
-      </Card>
+                    <Reorder.Group
+                      axis="y"
+                      values={group.items}
+                      onReorder={(newItems) => handleReorder(group.id, newItems)}
+                      className="space-y-0"
+                    >
+                      {group.items.map(item => (
+                        <NavItemRow
+                          key={item.id}
+                          item={item}
+                          onUpdateItem={handleUpdateItem}
+                          onUpdateSubItem={handleUpdateSubItem}
+                        />
+                      ))}
+                    </Reorder.Group>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+
+        <TabsContent value="tiers">
+          <TierConfigTab />
+        </TabsContent>
+
+        <TabsContent value="businesses">
+          <BusinessConfigTab />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 }

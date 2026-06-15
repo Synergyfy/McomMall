@@ -14,6 +14,8 @@ import {
 } from '@/components/ui/tooltip';
 import {
     LayoutDashboard,
+    Map,
+    MapPin,
     Layers,
     Users,
     Building2,
@@ -47,6 +49,7 @@ import {
     MessageSquare,
     PanelLeft,
     Rocket,
+    Percent,
 } from 'lucide-react';
 
 interface NavItem {
@@ -58,6 +61,8 @@ interface NavItem {
 
 const navItems: NavItem[] = [
     { title: 'Dashboard', href: '/admin', icon: LayoutDashboard },
+    { title: 'High Streets', href: '/admin/high-streets', icon: Map },
+    { title: 'Boroughs', href: '/admin/boroughs', icon: MapPin },
     { title: 'Subscription', href: '/admin/tiers', icon: Layers },
     { title: 'Users', href: '/admin/users', icon: Users },
     { title: 'Businesses', href: '/admin/businesses', icon: Building2 },
@@ -67,9 +72,12 @@ const navItems: NavItem[] = [
     { title: 'Bookings', href: '/admin/bookings', icon: Clock },
     { title: 'Transactions', href: '/admin/transactions', icon: CreditCard },
     { title: 'Terminal Cashback', href: '/admin/terminal-cashback', icon: QrCode },
-    { title: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
+    { title: 'Gamification', href: '/admin/gamification', icon: Award },
+    { title: 'QLinks', href: '/admin/qlinks', icon: QrCode },
+
     { title: 'Disputes', href: '/admin/disputes', icon: AlertTriangle },
-    { title: 'Marketing', href: '/admin/marketing', icon: Megaphone },
+    { title: 'Campaigns', href: '/admin/campaigns', icon: Megaphone },
+    { title: 'Promotions', href: '/admin/promotions', icon: Percent },
     { title: 'Coupons & Vouchers', href: '/admin/coupons-vouchers', icon: Ticket },
     { title: 'Loyalty Cashback', href: '/admin/campaign-cashback', icon: Gift },
     { title: 'Templates', href: '/admin/templates', icon: LayoutTemplate },
@@ -80,7 +88,17 @@ const navItems: NavItem[] = [
     { title: 'Content', href: '/admin/content', icon: FileText },
     { title: 'Reviews', href: '/admin/reviews', icon: MessageSquare },
     { title: 'Marketplace', href: '/admin/marketplace', icon: Store },
+    { title: 'Memberships', href: '/admin/memberships', icon: Users },
+    { title: 'Community', href: '/admin/community-activity', icon: Users },
     { title: 'Analytics', href: '/admin/analytics', icon: BarChart3 },
+    { title: 'Automations', href: '/admin/automations', icon: Rocket },
+    { title: 'Billing', href: '/admin/billing', icon: CreditCard },
+    { title: 'Data', href: '/admin/data', icon: Package },
+    { title: 'Expo Promo', href: '/admin/expo-promo', icon: Megaphone },
+    { title: 'History', href: '/admin/history', icon: ScrollText },
+    { title: 'Team', href: '/admin/team', icon: Users },
+    // { title: 'Verifications', href: '/admin/verifications', icon: ShieldCheck },
+    { title: 'Vouchers', href: '/admin/vouchers', icon: Ticket },
     { title: 'Support', href: '/admin/support', icon: HeadphonesIcon },
     { title: 'Partnerships', href: '/admin/partnerships', icon: Handshake },
     { title: 'Loyalty', href: '/admin/loyalty', icon: Heart },

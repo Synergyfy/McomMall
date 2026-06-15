@@ -9,6 +9,7 @@ export interface TierQuota {
     maxLoyaltyPrograms: number;
     maxImagesPerListing: number;
     featuredListingAllowance: number;
+    maxTeamMembers?: number;
 }
 
 export interface TierFeatureFlags {

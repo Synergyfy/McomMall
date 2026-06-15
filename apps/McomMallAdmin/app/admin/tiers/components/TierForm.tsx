@@ -18,7 +18,8 @@ import { Button } from '@/components/ui/button';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Tier, CreateTierInput, UpdateTierInput, TierType } from '@/app/admin/types/tier';
 import { useEffect } from 'react';
-import { Plus, Trash2 } from 'lucide-react';
+import { Plus, Trash2, Settings2, ChevronRight } from 'lucide-react';
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 
 const tierSchema = z.object({
     name: z.string().min(1, 'Name is required'),
@@ -727,52 +728,35 @@ export function TierForm({ formId, initialData, onSubmit }: TierFormProps) {
 
                         {/* Permissions Tab */}
                         <TabsContent value="permissions" className="space-y-4">
-                            <div className="rounded-lg border p-4 space-y-4">
+                            <Card className="border-dashed border-2 bg-slate-50/50">
+                                <CardHeader className="text-center pb-2">
+                                    <div className="mx-auto w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center mb-4">
+                                        <Settings2 className="h-6 w-6 text-orange-600" />
+                                    </div>
+                                    <CardTitle className="text-lg">Navigation Permissions Moved</CardTitle>
+                                    <CardDescription>
+                                        Manage navigation visibility for all tiers and businesses in the centralized sidebar settings.
+                                    </CardDescription>
+                                </CardHeader>
+                                <CardContent className="flex justify-center pb-6">
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        className="gap-2 border-orange-200 hover:bg-orange-50 hover:text-orange-600"
+                                        onClick={() => window.location.href = '/admin/settings/business-sidebar'}
+                                    >
+                                        Go to Sidebar Configuration
+                                        <ChevronRight className="h-4 w-4" />
+                                    </Button>
+                                </CardContent>
+                            </Card>
+
+                            <div className="rounded-lg border p-4 space-y-4 opacity-50 pointer-events-none grayscale">
                                 <div>
-                                    <FormLabel className="text-base">Navigation Permissions</FormLabel>
+                                    <FormLabel className="text-base">Navigation Permissions (Legacy)</FormLabel>
                                     <FormDescription>
-                                        Select which navigation items should be **locked** (hidden) for this tier.
+                                        This section is now managed centrally.
                                     </FormDescription>
-                                </div>
-
-                                <div className="grid grid-cols-1 md:grid-cols-2 gap-3 max-h-[400px] overflow-y-auto p-1">
-                                    {AVAILABLE_NAVS.map((nav) => (
-                                        <FormField
-                                            key={nav.id}
-                                            control={form.control}
-                                            name="configuration.disabledNavIds"
-                                            render={({ field }) => {
-                                                const value = field.value || [];
-                                                const isChecked = value.includes(nav.id);
-
-                                                return (
-                                                    <FormItem
-                                                        key={nav.id}
-                                                        className="flex flex-row items-start space-x-3 space-y-0 rounded-md border p-3 hover:bg-slate-50 transition-colors"
-                                                    >
-                                                        <FormControl>
-                                                            <Switch
-                                                                checked={isChecked}
-                                                                onCheckedChange={(checked) => {
-                                                                    return checked
-                                                                        ? field.onChange([...value, nav.id])
-                                                                        : field.onChange(value.filter((v) => v !== nav.id));
-                                                                }}
-                                                            />
-                                                        </FormControl>
-                                                        <div className="space-y-1 leading-none">
-                                                            <FormLabel className="text-sm font-medium">
-                                                                {nav.label}
-                                                            </FormLabel>
-                                                            <p className="text-[10px] text-muted-foreground font-mono">
-                                                                {nav.id}
-                                                            </p>
-                                                        </div>
-                                                    </FormItem>
-                                                );
-                                            }}
-                                        />
-                                    ))}
                                 </div>
                             </div>
                         </TabsContent>

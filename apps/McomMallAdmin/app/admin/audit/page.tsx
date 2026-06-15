@@ -1,11 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Badge } from '@/components/ui/badge';
-import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import {
     Table,
     TableBody,
@@ -15,246 +12,218 @@ import {
     TableRow,
 } from '@/components/ui/table';
 import {
-    Select,
-    SelectContent,
-    SelectItem,
-    SelectTrigger,
-    SelectValue,
-} from '@/components/ui/select';
-import { auditLogs } from '../data/mock-data';
-import { AuditLog } from '../types';
-import {
     Search,
-    Download,
-    Calendar,
-    User,
-    FileText,
-    CreditCard,
-    Building2,
-    ListChecks,
-    Tag,
-    Settings,
-    Filter,
-    Clock,
+    TrendingUp,
+    Store,
+    Activity,
+    Map,
+    Megaphone,
+    CheckCircle2,
+    AlertCircle,
+    ArrowRight
 } from 'lucide-react';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
-// Action Icon
-function ActionIcon({ targetType }: { targetType: AuditLog['targetType'] }) {
-    const icons = {
-        user: User,
-        business: Building2,
-        listing: ListChecks,
-        transaction: CreditCard,
-        coupon: Tag,
-        setting: Settings,
-    };
-
-    const colors = {
-        user: 'bg-purple-100 text-purple-600',
-        business: 'bg-blue-100 text-blue-600',
-        listing: 'bg-emerald-100 text-emerald-600',
-        transaction: 'bg-orange-100 text-orange-600',
-        coupon: 'bg-pink-100 text-pink-600',
-        setting: 'bg-slate-100 text-slate-600',
-    };
-
-    const Icon = icons[targetType];
-
-    return (
-        <div className={cn('p-2 rounded-lg', colors[targetType])}>
-            <Icon className="h-4 w-4" />
-        </div>
-    );
-}
-
-export default function AuditPage() {
-    const [searchQuery, setSearchQuery] = useState('');
-    const [typeFilter, setTypeFilter] = useState<string>('all');
-
-    // Filter logs
-    const filteredLogs = auditLogs.filter((log) => {
-        const matchesSearch =
-            log.action.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            log.adminName.toLowerCase().includes(searchQuery.toLowerCase()) ||
-            log.details.toLowerCase().includes(searchQuery.toLowerCase());
-        const matchesType = typeFilter === 'all' || log.targetType === typeFilter;
-        return matchesSearch && matchesType;
-    });
-
-    const formatTime = (timestamp: string) => {
-        const date = new Date(timestamp);
-        return date.toLocaleString();
-    };
-
+export default function AuditsVisibilityPage() {
     return (
         <div className="space-y-6">
-            {/* Header */}
             <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
                 <div>
-                    <h1 className="text-2xl font-bold text-slate-900">Audit Log</h1>
-                    <p className="text-slate-500">Track all admin actions and changes</p>
+                    <h1 className="text-2xl font-bold text-slate-900">Audits & Visibility</h1>
+                    <p className="text-slate-500">Monitor and improve business growth and discoverability</p>
                 </div>
-                <Button variant="outline">
-                    <Download className="h-4 w-4 mr-2" />
-                    Export Logs
-                </Button>
+                <div className="flex items-center gap-2">
+                    <Button className="bg-slate-900 hover:bg-slate-800">
+                        Run Global Audit
+                    </Button>
+                </div>
             </div>
 
-            {/* Stats */}
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+            {/* Visibility Overview Cards */}
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 <Card className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-blue-100">
-                                <FileText className="h-5 w-5 text-blue-600" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">{auditLogs.length}</p>
-                                <p className="text-xs text-slate-500">Total Logs</p>
-                            </div>
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-indigo-100 text-indigo-600">
+                            <Search className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">82/100</p>
+                            <p className="text-sm text-slate-500 font-medium leading-tight">Avg Visibility Score</p>
                         </div>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-purple-100">
-                                <User className="h-5 w-5 text-purple-600" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">3</p>
-                                <p className="text-xs text-slate-500">Active Admins</p>
-                            </div>
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-blue-100 text-blue-600">
+                            <Store className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">68%</p>
+                            <p className="text-sm text-slate-500 font-medium leading-tight">Storefront Completion</p>
                         </div>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-emerald-100">
-                                <Clock className="h-5 w-5 text-emerald-600" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">Today</p>
-                                <p className="text-xs text-slate-500">Last Activity</p>
-                            </div>
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-emerald-100 text-emerald-600">
+                            <Activity className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">4.8</p>
+                            <p className="text-sm text-slate-500 font-medium leading-tight">Engagement Rating</p>
                         </div>
                     </CardContent>
                 </Card>
                 <Card className="border-0 shadow-sm">
-                    <CardContent className="p-4">
-                        <div className="flex items-center gap-3">
-                            <div className="p-2 rounded-lg bg-orange-100">
-                                <Settings className="h-5 w-5 text-orange-600" />
-                            </div>
-                            <div>
-                                <p className="text-2xl font-bold">12</p>
-                                <p className="text-xs text-slate-500">Actions Today</p>
-                            </div>
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-amber-100 text-amber-600">
+                            <Map className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">Top 3</p>
+                            <p className="text-sm text-slate-500 font-medium leading-tight">Borough Ranking</p>
+                        </div>
+                    </CardContent>
+                </Card>
+                <Card className="border-0 shadow-sm">
+                    <CardContent className="p-4 flex items-center gap-4">
+                        <div className="p-3 rounded-xl bg-orange-100 text-orange-600">
+                            <Megaphone className="h-5 w-5" />
+                        </div>
+                        <div>
+                            <p className="text-2xl font-bold text-slate-900">+45%</p>
+                            <p className="text-sm text-slate-500 font-medium leading-tight">Campaign Perf.</p>
                         </div>
                     </CardContent>
                 </Card>
             </div>
 
-            {/* Filters */}
-            <Card className="border-0 shadow-sm">
-                <CardContent className="p-4">
-                    <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="relative flex-1">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                            <Input
-                                placeholder="Search actions, admins, or details..."
-                                value={searchQuery}
-                                onChange={(e) => setSearchQuery(e.target.value)}
-                                className="pl-10"
-                            />
-                        </div>
-                        <Select value={typeFilter} onValueChange={setTypeFilter}>
-                            <SelectTrigger className="w-full sm:w-48">
-                                <SelectValue placeholder="Target Type" />
-                            </SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="all">All Types</SelectItem>
-                                <SelectItem value="user">User</SelectItem>
-                                <SelectItem value="business">Business</SelectItem>
-                                <SelectItem value="listing">Listing</SelectItem>
-                                <SelectItem value="transaction">Transaction</SelectItem>
-                                <SelectItem value="coupon">Coupon</SelectItem>
-                                <SelectItem value="setting">Setting</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button variant="outline">
-                            <Calendar className="h-4 w-4 mr-2" />
-                            Date Range
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                {/* Storefront List */}
+                <div className="lg:col-span-2 space-y-4">
+                    <Card className="border-0 shadow-sm">
+                        <CardHeader>
+                            <div className="flex items-center justify-between">
+                                <div>
+                                    <CardTitle>Business Audits</CardTitle>
+                                    <CardDescription>Review storefront scores and send recommendations</CardDescription>
+                                </div>
+                                <div className="w-64">
+                                    <Input placeholder="Search businesses..." className="h-9" />
+                                </div>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="p-0">
+                            <Table>
+                                <TableHeader>
+                                    <TableRow className="bg-slate-50/50">
+                                        <TableHead>Business</TableHead>
+                                        <TableHead>Score</TableHead>
+                                        <TableHead>Completion</TableHead>
+                                        <TableHead>Issues</TableHead>
+                                        <TableHead className="text-right">Action</TableHead>
+                                    </TableRow>
+                                </TableHeader>
+                                <TableBody>
+                                    {[
+                                        { name: 'The Artisan Bakery', score: 92, completion: '100%', issues: 0, status: 'good' },
+                                        { name: 'Camden Coffee', score: 65, completion: '70%', issues: 2, status: 'warning' },
+                                        { name: 'Tech Repairs', score: 42, completion: '45%', issues: 5, status: 'critical' },
+                                        { name: 'Vintage Threads', score: 88, completion: '90%', issues: 1, status: 'good' },
+                                        { name: 'Local Grocer', score: 55, completion: '60%', issues: 3, status: 'warning' },
+                                    ].map((biz, i) => (
+                                        <TableRow key={i}>
+                                            <TableCell className="font-medium">{biz.name}</TableCell>
+                                            <TableCell>
+                                                <Badge variant="outline" className={cn(
+                                                    biz.score >= 80 ? 'text-emerald-600 border-emerald-200' :
+                                                    biz.score >= 60 ? 'text-amber-600 border-amber-200' :
+                                                    'text-red-600 border-red-200'
+                                                )}>
+                                                    {biz.score}/100
+                                                </Badge>
+                                            </TableCell>
+                                            <TableCell>{biz.completion}</TableCell>
+                                            <TableCell>
+                                                {biz.issues > 0 ? (
+                                                    <span className="flex items-center text-red-600 text-sm font-medium">
+                                                        <AlertCircle className="h-3 w-3 mr-1" /> {biz.issues} found
+                                                    </span>
+                                                ) : (
+                                                    <span className="flex items-center text-emerald-600 text-sm font-medium">
+                                                        <CheckCircle2 className="h-3 w-3 mr-1" /> All clear
+                                                    </span>
+                                                )}
+                                            </TableCell>
+                                            <TableCell className="text-right">
+                                                <Button variant="ghost" size="sm" className="text-indigo-600">
+                                                    Audit <ArrowRight className="h-4 w-4 ml-1" />
+                                                </Button>
+                                            </TableCell>
+                                        </TableRow>
+                                    ))}
+                                </TableBody>
+                            </Table>
+                        </CardContent>
+                    </Card>
+                </div>
 
-            {/* Audit Log Table */}
-            <Card className="border-0 shadow-sm">
-                <CardContent className="p-0">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead>Action</TableHead>
-                                <TableHead>Admin</TableHead>
-                                <TableHead>Target</TableHead>
-                                <TableHead>Details</TableHead>
-                                <TableHead>IP Address</TableHead>
-                                <TableHead>Timestamp</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredLogs.map((log) => (
-                                <TableRow key={log.id}>
-                                    <TableCell>
-                                        <div className="flex items-center gap-3">
-                                            <ActionIcon targetType={log.targetType} />
-                                            <span className="font-medium">{log.action}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <div className="flex items-center gap-2">
-                                            <Avatar className="h-7 w-7">
-                                                <AvatarFallback className="text-xs bg-gradient-to-br from-orange-400 to-orange-600 text-white">
-                                                    {log.adminName.split(' ').map((n) => n[0]).join('').slice(0, 2)}
-                                                </AvatarFallback>
-                                            </Avatar>
-                                            <span className="text-sm">{log.adminName}</span>
-                                        </div>
-                                    </TableCell>
-                                    <TableCell>
-                                        <Badge variant="secondary" className="capitalize">
-                                            {log.targetType}
-                                        </Badge>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm text-slate-600 max-w-xs truncate block">
-                                            {log.details}
-                                        </span>
-                                    </TableCell>
-                                    <TableCell>
-                                        <code className="text-xs text-slate-500">{log.ipAddress}</code>
-                                    </TableCell>
-                                    <TableCell>
-                                        <span className="text-sm text-slate-500">{formatTime(log.timestamp)}</span>
-                                    </TableCell>
-                                </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
+                {/* Audit Recommendations Panel */}
+                <div className="space-y-6">
+                    <Card className="border-0 shadow-sm bg-slate-900 text-white">
+                        <CardHeader>
+                            <CardTitle className="text-white flex items-center gap-2">
+                                <Search className="h-5 w-5 text-orange-500" /> Audit Recommendations
+                            </CardTitle>
+                            <CardDescription className="text-slate-400">
+                                Global suggestions to improve ecosystem visibility
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="space-y-4">
+                            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                                <p className="font-medium flex items-center gap-2 mb-1">
+                                    <Store className="h-4 w-4 text-emerald-400" /> Improve storefront images
+                                </p>
+                                <p className="text-sm text-slate-400">230 businesses have missing or low-quality images.</p>
+                                <Button variant="link" className="text-orange-400 p-0 h-auto text-sm mt-2">Send Notification →</Button>
+                            </div>
+                            
+                            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                                <p className="font-medium flex items-center gap-2 mb-1">
+                                    <Megaphone className="h-4 w-4 text-blue-400" /> Launch promotions
+                                </p>
+                                <p className="text-sm text-slate-400">15 boroughs are experiencing low mid-week traffic.</p>
+                                <Button variant="link" className="text-orange-400 p-0 h-auto text-sm mt-2">Suggest Campaign →</Button>
+                            </div>
 
-                    {filteredLogs.length === 0 && (
-                        <div className="p-8 text-center">
-                            <FileText className="h-12 w-12 mx-auto text-slate-300 mb-4" />
-                            <h3 className="text-lg font-medium text-slate-900 mb-1">No logs found</h3>
-                            <p className="text-slate-500">Try adjusting your search or filters</p>
-                        </div>
-                    )}
-                </CardContent>
-            </Card>
+                            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                                <p className="font-medium flex items-center gap-2 mb-1">
+                                    <Map className="h-4 w-4 text-purple-400" /> Join borough campaigns
+                                </p>
+                                <p className="text-sm text-slate-400">Camden High Street has an active campaign with low uptake.</p>
+                                <Button variant="link" className="text-orange-400 p-0 h-auto text-sm mt-2">Target Businesses →</Button>
+                            </div>
+
+                            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                                <p className="font-medium flex items-center gap-2 mb-1">
+                                    <TrendingUp className="h-4 w-4 text-amber-400" /> Improve reward participation
+                                </p>
+                                <p className="text-sm text-slate-400">Reward redemptions are down 12% globally.</p>
+                                <Button variant="link" className="text-orange-400 p-0 h-auto text-sm mt-2">Boost Rewards →</Button>
+                            </div>
+
+                            <div className="bg-slate-800 rounded-lg p-3 border border-slate-700">
+                                <p className="font-medium flex items-center gap-2 mb-1">
+                                    <Activity className="h-4 w-4 text-rose-400" /> Increase QR activity
+                                </p>
+                                <p className="text-sm text-slate-400">Physical QLink scans dropped in Southwark.</p>
+                                <Button variant="link" className="text-orange-400 p-0 h-auto text-sm mt-2">Audit Placements →</Button>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </div>
+            </div>
         </div>
     );
 }

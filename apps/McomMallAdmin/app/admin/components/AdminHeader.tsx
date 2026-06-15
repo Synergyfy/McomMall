@@ -1,9 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useState, useEffect } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Input } from '@/components/ui/input';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import {
@@ -15,10 +14,13 @@ import {
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
-    Sheet,
-    SheetContent,
-    SheetTrigger,
-} from '@/components/ui/sheet';
+    CommandDialog,
+    CommandEmpty,
+    CommandGroup,
+    CommandInput,
+    CommandItem,
+    CommandList,
+} from '@/components/ui/command';
 import {
     Search,
     Bell,
@@ -32,9 +34,9 @@ import {
     AlertCircle,
     CheckCircle,
     Clock,
-    X,
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { navItems } from '../data/navigation';
 
 interface Notification {
     id: string;
@@ -86,9 +88,22 @@ interface AdminHeaderProps {
 
 export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
     const pathname = usePathname();
-    const [searchValue, setSearchValue] = useState('');
+    const router = useRouter();
+    const [open, setOpen] = useState(false);
     const [notifications, setNotifications] = useState(mockNotifications);
     const [isDark, setIsDark] = useState(false);
+
+    useEffect(() => {
+        const down = (e: KeyboardEvent) => {
+            if (e.key === 'k' && (e.metaKey || e.ctrlKey)) {
+                e.preventDefault();
+                setOpen((open) => !open);
+            }
+        };
+
+        document.addEventListener('keydown', down);
+        return () => document.removeEventListener('keydown', down);
+    }, []);
 
     const unreadCount = notifications.filter((n) => !n.read).length;
 
@@ -120,6 +135,11 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
         }
     };
 
+    const runCommand = (command: () => void) => {
+        setOpen(false);
+        command();
+    };
+
     return (
         <header className="sticky top-0 z-40 flex h-16 items-center justify-between gap-4 border-b bg-white/80 backdrop-blur-lg px-4 md:px-6 shadow-sm">
             {/* Left Section */}
@@ -148,29 +168,52 @@ export function AdminHeader({ onMenuClick }: AdminHeaderProps) {
                 </div>
             </div>
 
-            {/* Center - Search */}
+            {/* Center - Search Trigger */}
             <div className="flex-1 max-w-md mx-4">
-                <div className="relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
-                    <Input
-                        type="search"
-                        placeholder="Search users, listings, transactions..."
-                        value={searchValue}
-                        onChange={(e) => setSearchValue(e.target.value)}
-                        className="pl-10 bg-slate-50 border-slate-200 focus:bg-white"
-                    />
-                    {searchValue && (
-                        <Button
-                            variant="ghost"
-                            size="icon"
-                            className="absolute right-1 top-1/2 -translate-y-1/2 h-7 w-7"
-                            onClick={() => setSearchValue('')}
-                        >
-                            <X className="h-3 w-3" />
-                        </Button>
-                    )}
-                </div>
+                <Button
+                    variant="outline"
+                    className="relative w-full justify-start text-sm text-muted-foreground sm:pr-12 bg-slate-50 border-slate-200 hover:bg-slate-100 transition-colors"
+                    onClick={() => setOpen(true)}
+                >
+                    <Search className="mr-2 h-4 w-4" />
+                    <span>Search admin pages...</span>
+                    <kbd className="pointer-events-none absolute right-1.5 top-1.5 hidden h-5 select-none items-center gap-1 rounded border bg-white px-1.5 font-mono text-[10px] font-medium opacity-100 sm:flex">
+                        <span className="text-xs">⌘</span>K
+                    </kbd>
+                </Button>
             </div>
+
+            {/* Search Dialog */}
+            <CommandDialog open={open} onOpenChange={setOpen}>
+                <CommandInput placeholder="Type a command or search..." />
+                <CommandList>
+                    <CommandEmpty>No results found.</CommandEmpty>
+                    <CommandGroup heading="Pages">
+                        {navItems.map((item) => (
+                            <CommandItem
+                                key={item.href}
+                                value={item.title}
+                                onSelect={() => {
+                                    runCommand(() => router.push(item.href));
+                                }}
+                                className="flex items-center gap-3 p-2 cursor-pointer group"
+                            >
+                                <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-slate-100 group-aria-selected:bg-orange-100 transition-colors">
+                                    <item.icon className="h-4 w-4 text-slate-600 group-aria-selected:text-orange-600" />
+                                </div>
+                                <div className="flex flex-col">
+                                    <span className="font-medium">{item.title}</span>
+                                    {item.description && (
+                                        <span className="text-xs text-muted-foreground line-clamp-1">
+                                            {item.description}
+                                        </span>
+                                    )}
+                                </div>
+                            </CommandItem>
+                        ))}
+                    </CommandGroup>
+                </CommandList>
+            </CommandDialog>
 
             {/* Right Section */}
             <div className="flex items-center gap-2">
