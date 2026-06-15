@@ -53,16 +53,16 @@ export default function GetStartedPage() {
         >
 
           {/* Header */}
-          <motion.div variants={itemVariants} className="text-center mb-20 max-w-4xl">
-            <span className="inline-flex items-center gap-2 px-4 py-2 mb-8 text-sm font-bold tracking-wide text-orange-600 uppercase bg-orange-100 border border-orange-200 rounded-full shadow-sm">
-              <Sparkles className="w-4 h-4 text-orange-500" />
+          <motion.div variants={itemVariants} className="text-center mb-12 max-w-4xl">
+            <span className="inline-flex items-center gap-2 px-3 py-1.5 mb-6 text-xs font-bold tracking-wide text-orange-600 uppercase bg-orange-100 border border-orange-200 rounded-full shadow-sm">
+              <Sparkles className="w-3.5 h-3.5 text-orange-500" />
               Welcome to the Future of Commerce
             </span>
-            <h1 className="text-5xl md:text-7xl font-black tracking-tighter mb-8 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-orange-900 to-gray-800 drop-shadow-sm">
+            <h1 className="text-3xl md:text-5xl font-black tracking-tighter mb-6 bg-clip-text text-transparent bg-gradient-to-br from-gray-900 via-orange-900 to-gray-800 drop-shadow-sm">
               How do you want to <br className="hidden md:block" />
               use <span className="text-orange-600 inline-block transform hover:scale-105 transition-transform duration-300 cursor-default filter drop-shadow-lg">McomMall</span>?
             </h1>
-            <p className="text-xl md:text-2xl text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
+            <p className="text-base md:text-lg text-gray-600 max-w-3xl mx-auto leading-relaxed font-medium">
               Join thousands of users building the next generation marketplace.
               Select your role to get started with a tailored experience.
             </p>
@@ -93,14 +93,14 @@ export default function GetStartedPage() {
                   <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-orange-500 to-red-500 flex items-center justify-center shadow-lg shadow-orange-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-orange-100">
                     <ShoppingBag className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-orange-600 transition-colors">I am a Customer</h3>
-                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 tracking-tight group-hover:text-orange-600 transition-colors">I am a Customer</h3>
+                  <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-6 font-medium group-hover:text-gray-600">
                     Shop for unique products, enjoy secure transactions, and get the best deals from top-rated sellers.
                   </p>
                 </div>
 
-                <div className="flex items-center text-orange-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Continue as Customer <ArrowRight className="ml-2 w-5 h-5" />
+                <div className="flex items-center text-orange-600 text-sm md:text-base font-bold group-hover:translate-x-2 transition-transform">
+                  Continue as Customer <ArrowRight className="ml-2 w-4 h-4" />
                 </div>
               </motion.div>
             </Link>
@@ -124,14 +124,14 @@ export default function GetStartedPage() {
                   <div className="w-16 h-16 mb-8 rounded-2xl bg-gradient-to-br from-red-500 to-orange-600 flex items-center justify-center shadow-lg shadow-red-500/20 group-hover:scale-110 transition-transform duration-300 ring-1 ring-red-100">
                     <Store className="w-8 h-8 text-white" />
                   </div>
-                  <h3 className="text-3xl font-bold text-gray-900 mb-4 tracking-tight group-hover:text-red-600 transition-colors">I am a Business</h3>
-                  <p className="text-gray-500 text-lg leading-relaxed mb-8 font-medium group-hover:text-gray-600">
+                  <h3 className="text-xl md:text-2xl font-bold text-gray-900 mb-2 tracking-tight group-hover:text-red-600 transition-colors">I am a Business</h3>
+                  <p className="text-gray-500 text-sm md:text-base leading-relaxed mb-6 font-medium group-hover:text-gray-600">
                     Launch your store in minutes. Access powerful tools to scale your business.
                   </p>
                 </div>
 
-                <div className="flex items-center text-red-600 text-lg font-bold group-hover:translate-x-2 transition-transform">
-                  Create Business Profile <ArrowRight className="ml-2 w-5 h-5" />
+                <div className="flex items-center text-red-600 text-sm md:text-base font-bold group-hover:translate-x-2 transition-transform">
+                  Create Business Profile <ArrowRight className="ml-2 w-4 h-4" />
                 </div>
               </motion.div>
             </Link>
@@ -139,8 +139,8 @@ export default function GetStartedPage() {
           </motion.div>
 
           {/* Footer Area */}
-          <motion.div variants={itemVariants} className="mt-24 text-center">
-            <p className="text-gray-500 mb-6 text-lg">
+          <motion.div variants={itemVariants} className="mt-16 text-center">
+            <p className="text-gray-500 mb-4 text-sm md:text-base">
               Already have an account?{' '}
               <Link href="/signin" className="text-orange-600 hover:text-orange-700 font-bold transition-colors">
                 Sign In

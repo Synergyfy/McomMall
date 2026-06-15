@@ -1,13 +1,46 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown } from 'lucide-react';
+import { useRouter } from 'next/navigation';
+import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
+const SLIDES = [
+  {
+    url: '/images/slide_boutique.png',
+    alt: 'Local Boutique Shopping'
+  },
+  {
+    url: '/images/slide_cafe.png',
+    alt: 'Local Cafe & Brews'
+  },
+  {
+    url: '/images/slide_shopping.png',
+    alt: 'Shopping Local Store'
+  }
+];
+
 export default function RootLandingPage() {
+  const router = useRouter();
   const [isVideoModalOpen, setIsVideoModalOpen] = useState(false);
+  const [currentSlide, setCurrentSlide] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
+    }, 4000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const handleSearchSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      router.push(`/search?q=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
 
   // Smooth scroll to selection section
   const scrollToSelection = () => {
@@ -27,9 +60,6 @@ export default function RootLandingPage() {
           </div>
           <span className="text-xl md:text-2xl font-black tracking-tight text-slate-800">MCOM</span>
         </div>
-        <Link href="/signin" className="text-sm md:text-base font-bold text-slate-500 hover:text-orange-500 transition-colors">
-          Login
-        </Link>
       </header>
 
       {/* Main Content */}
@@ -67,14 +97,25 @@ export default function RootLandingPage() {
           </div>
 
           {/* Image Area - Full width on mobile, half width on desktop */}
-          <div className="w-full md:w-1/2 lg:w-7/12 relative h-[350px] sm:h-[450px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-b-[2.5rem] md:rounded-3xl shadow-2xl md:shadow-slate-200/50 order-first md:order-last">
-            <Image
-              src="/images/root_landing_hero.png"
-              alt="McomMall High Street"
-              fill
-              className="object-cover"
-              priority
-            />
+          <div className="w-full md:w-1/2 lg:w-7/12 relative h-[350px] sm:h-[450px] md:h-[500px] lg:h-[600px] overflow-hidden rounded-b-[2.5rem] md:rounded-3xl shadow-2xl md:shadow-slate-200/50 order-first md:order-last bg-slate-100">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={currentSlide}
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                transition={{ duration: 0.8 }}
+                className="absolute inset-0 w-full h-full"
+              >
+                <Image
+                  src={SLIDES[currentSlide].url}
+                  alt={SLIDES[currentSlide].alt}
+                  fill
+                  className="object-cover"
+                  priority
+                />
+              </motion.div>
+            </AnimatePresence>
             {/* Mobile Gradient & Text - Hidden on md+ */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent md:hidden" />
             
@@ -88,12 +129,48 @@ export default function RootLandingPage() {
                   <MapPin size={12} className="text-orange-400" />
                   <span>Geographic Commerce Engine</span>
                 </div>
-                <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white leading-[1.1] mb-3 drop-shadow-sm">
+                <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-white leading-[1.1] mb-3 drop-shadow-sm">
                   Your Local Mall,<br />
                   <span className="text-transparent bg-clip-text bg-gradient-to-r from-orange-400 to-amber-300">Reimagined</span>
                 </h1>
               </motion.div>
             </div>
+          </div>
+        </div>
+
+        {/* Search & Login Section */}
+        <div className="w-full px-6 pb-8 max-w-lg mx-auto text-center z-10">
+          <form onSubmit={handleSearchSubmit} className="relative flex items-center mb-4 shadow-lg shadow-slate-100/50 rounded-xl">
+            <input
+              type="text"
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              placeholder="Search local shops, deals or events..."
+              className="w-full pl-12 pr-28 py-3 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-slate-800 font-medium text-xs md:text-sm transition-all"
+            />
+            <div className="absolute left-4 text-slate-400">
+              <Search size={18} />
+            </div>
+            <button
+              type="submit"
+              className="absolute right-2 px-4 py-2 bg-orange-500 hover:bg-orange-600 text-white rounded-lg font-bold text-[10px] sm:text-xs shadow-md transition-all active:scale-95"
+            >
+              Search
+            </button>
+          </form>
+          <div className="flex gap-4">
+            <button
+              onClick={() => router.push('/getstarted')}
+              className="flex-1 py-3 bg-orange-500 hover:bg-orange-600 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-orange-500/10 transition-all active:scale-95"
+            >
+              Get Started
+            </button>
+            <button
+              onClick={() => router.push('/signin')}
+              className="flex-1 py-3 bg-slate-900 hover:bg-slate-800 text-white rounded-xl font-bold text-xs sm:text-sm shadow-lg shadow-slate-900/10 transition-all active:scale-95"
+            >
+              Login
+            </button>
           </div>
         </div>
 
