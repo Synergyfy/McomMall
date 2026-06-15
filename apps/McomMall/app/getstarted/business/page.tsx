@@ -642,7 +642,7 @@ function BusinessOnboardingInner() {
       localStorage.setItem('businessProximityTier', 'high_street');
 
       // Sync form data
-      setFormData(prev => ({
+      setFormData((prev: any) => ({
         ...prev,
         email: googleEmail,
         firstName: ownerFirstName,
@@ -686,7 +686,7 @@ function BusinessOnboardingInner() {
       setLogoFile(file);
       const reader = new FileReader();
       reader.onloadend = () => {
-        setFormData((prev) => ({
+        setFormData((prev: any) => ({
           ...prev,
           logo: reader.result as string,
         }));
@@ -806,7 +806,7 @@ function BusinessOnboardingInner() {
       const cached = localStorage.getItem('businessOnboarding');
       const cachedStep = localStorage.getItem('businessOnboardingStep');
       const cachedCompleted = localStorage.getItem('businessOnboardingCompleted');
-      if (cached) setFormData(prev => ({ ...prev, ...JSON.parse(cached) }));
+      if (cached) setFormData((prev: any) => ({ ...prev, ...JSON.parse(cached) }));
       if (cachedStep) {
         const step = parseInt(cachedStep, 10);
         setCurrentStep(step);
@@ -884,7 +884,7 @@ function BusinessOnboardingInner() {
 
   // ─── Handlers ────────────────────────────────────────
   const handleSelectSuggestion = async (suggestion: any) => {
-    setFormData((prev) => ({
+    setFormData((prev: any) => ({
       ...prev,
       address: suggestion.displayName,
       postcode: suggestion.postcode,
@@ -3450,7 +3450,7 @@ function BusinessOnboardingInner() {
                       'Westminster Borough': 'SW1A 1AA',
                     };
                     const targetPostcode = defaultPostcodes[key] || formData.postcode;
-                    setFormData(prev => ({
+                    setFormData((prev: any) => ({
                       ...prev,
                       postcode: targetPostcode,
                       city: key,
