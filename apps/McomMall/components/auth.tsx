@@ -740,7 +740,6 @@ const Auth = ({ redirect }: { redirect: string | null }) => {
 
                     <div className="space-y-2 max-h-48 overflow-y-auto">
                       {[
-                        { email: 'merchant.jane@gmail.com', name: 'Jane Smith', initials: 'JS', bg: 'bg-orange-500' },
                         { email: 'shopowner.peckham@gmail.com', name: 'Mark Robinson', initials: 'MR', bg: 'bg-blue-500' },
                         { email: 'guest.merchant@gmail.com', name: 'Guest Merchant', initials: 'GM', bg: 'bg-emerald-500' }
                       ].map((acc) => (

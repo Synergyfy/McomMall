@@ -45,35 +45,15 @@ export class OnboardingDeciderService {
     let borough = '';
 
     try {
-      const response = await fetch(
-        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanPostcode)}&format=json&addressdetails=1&limit=1&countrycodes=gb`,
-        {
-          headers: {
-            'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',
-          },
-        }
+      const postcodeResponse = await fetch(
+        `https://api.postcodes.io/postcodes/${encodeURIComponent(cleanPostcode.replace(/\s+/g, ''))}`
       );
-      if (response.ok) {
-        const data = await response.json();
-        if (data && data.length > 0) {
-          lat = parseFloat(data[0].lat);
-          lon = parseFloat(data[0].lon);
-          const addr = data[0].address || {};
-
-          // Priority: actual borough/district boundary first (city_district = London Borough),
-          // then city/town, then fall back to suburb/neighbourhood as a last resort.
-          // This ensures NW1 1AA → "Camden" (not "Regent's Park")
-          // and BT1 1AA → "Belfast" (city), not a suburb.
-          const rawBorough =
-            addr.city_district ||     // London Boroughs (e.g. "London Borough of Camden")
-            addr.county ||            // County-level (e.g. "Greater Manchester", "County Antrim")
-            addr.town ||              // Towns outside London (e.g. "Belfast", "Manchester")
-            addr.city ||              // Cities (e.g. "Edinburgh")
-            addr.suburb ||            // Suburban areas (last resort)
-            addr.neighbourhood ||     // Neighbourhoods (absolute last resort)
-            '';
-
-          // Clean up borough name if it contains prefix/suffix
+      if (postcodeResponse.ok) {
+        const body = await postcodeResponse.json();
+        if (body && body.status === 200 && body.result) {
+          lat = body.result.latitude;
+          lon = body.result.longitude;
+          const rawBorough = body.result.admin_district || body.result.region || '';
           borough = rawBorough
             .replace(/London Borough of /i, '')
             .replace(/Borough of /i, '')
@@ -83,7 +63,45 @@ export class OnboardingDeciderService {
         }
       }
     } catch (err) {
-      console.error('Nominatim lookup error:', err);
+      console.error('Postcodes.io lookup error:', err);
+    }
+
+    // Fallback to Nominatim if Postcodes.io lookup failed or was unable to resolve a borough
+    if (!borough) {
+      try {
+        const response = await fetch(
+          `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(cleanPostcode)}&format=json&addressdetails=1&limit=1&countrycodes=gb`,
+          {
+            headers: {
+              'User-Agent': 'McomMall-Onboarding/1.0 (contact@mcommall.com)',
+            },
+          }
+        );
+        if (response.ok) {
+          const data = await response.json();
+          if (data && data.length > 0) {
+            lat = parseFloat(data[0].lat);
+            lon = parseFloat(data[0].lon);
+            const addr = data[0].address || {};
+            const rawBorough =
+              addr.city_district ||
+              addr.county ||
+              addr.town ||
+              addr.city ||
+              addr.suburb ||
+              addr.neighbourhood ||
+              '';
+            borough = rawBorough
+              .replace(/London Borough of /i, '')
+              .replace(/Borough of /i, '')
+              .replace(/City of /i, '')
+              .replace(/Royal Borough of /i, '')
+              .trim();
+          }
+        }
+      } catch (err) {
+        console.error('Nominatim lookup error:', err);
+      }
     }
 
     if (!borough || isNaN(lat) || isNaN(lon)) {
