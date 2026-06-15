@@ -73,22 +73,22 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
 
     return (
         <FormProvider {...methods}>
-            <div className="flex flex-col gap-6 pb-32 md:pb-10">
-                {/* Header Section */}
-                <div className="flex flex-col gap-4 px-2 md:px-0">
-                    <div className="flex flex-col gap-1">
-                        <h1 className="text-[#1c140d] dark:text-white text-2xl md:text-4xl font-black leading-tight">Pricing & Inventory</h1>
-                        <p className="text-[#9c7349] dark:text-[#cba885] text-sm md:text-base">Define pricing, stock, and shipping parameters.</p>
-                    </div>
-
-                    {/* Responsive Progress Bar */}
-                    <div className="flex flex-col gap-2 mt-2">
-                        <div className="flex justify-between items-center text-xs font-bold uppercase tracking-wider text-[#1c140d] dark:text-white">
-                            <span>Step 3 of 4</span>
-                            <span>75%</span>
+            <div className="flex flex-col gap-6 md:gap-8 pb-10 md:pb-16">
+                {/* Progress Bar */}
+                <div className="w-full bg-white dark:bg-[#291e15] rounded-xl p-4 md:p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
+                    <div className="flex flex-col gap-3 md:gap-4">
+                        <div className="flex justify-between items-end">
+                            <span className="text-[#f48c25] text-xs md:text-sm font-bold uppercase tracking-wider">Step 3 of 4</span>
+                            <span className="text-[#1c140d] dark:text-white text-xs md:text-sm font-semibold">Pricing & Inventory</span>
                         </div>
-                        <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-1.5 md:h-2 overflow-hidden">
-                            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '75%' }}></div>
+                        <div className="relative w-full h-1.5 md:h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+                            <div className="absolute top-0 left-0 h-full bg-[#f48c25] rounded-full" style={{ width: '75%' }}></div>
+                        </div>
+                        <div className="hidden sm:flex justify-between text-xs font-medium text-[#9c7349] mt-1">
+                            <div>1. Basic Info</div>
+                            <div>2. Media & Content</div>
+                            <div className="text-[#f48c25] font-bold">3. Pricing & Inventory</div>
+                            <div>4. Shipping</div>
                         </div>
                     </div>
                 </div>
@@ -419,8 +419,8 @@ export default function Step3PricingInventory({ formData, updateFormData, onNext
                         )
                     )}
 
-                    {/* Sticky Footer for Mobile */}
-                    <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+                    {/* Mobile-First Sticky-Free Footer */}
+                    <div className="relative p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 md:shadow-none w-full">
                         <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
                             <button
                                 onClick={onBack}

@@ -70,7 +70,8 @@ function getListingImageUrl(listing: GooglePlaceResult | InHouseBusiness): strin
     if (isGoogle) {
       categoryName = listing.types?.[0] || '';
     } else {
-      categoryName = (listing as InHouseBusiness).categories?.map(c => c.name).join(' ') || '';
+      const inHouse = listing as InHouseBusiness;
+      categoryName = inHouse.category?.name || inHouse.categories?.map(c => c.name).join(' ') || '';
     }
     const catLower = categoryName.toLowerCase();
 
@@ -105,7 +106,7 @@ export default function ListingCard({
   const finalImgUrl = getListingImageUrl(listing);
 
   const name = isGoogle ? listing.name : listing.businessName;
-  const category = (isGoogle ? listing.types?.[0] : (listing as InHouseBusiness).categories?.[0]?.name) || null;
+  const category = (isGoogle ? listing.types?.[0] : ((listing as InHouseBusiness).category?.name || (listing as InHouseBusiness).categories?.[0]?.name)) || null;
   const vicinity = isGoogle
     ? listing.formattedAddress || listing.vicinity
     : (listing as InHouseBusiness).location

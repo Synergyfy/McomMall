@@ -43,7 +43,20 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
   };
 
   return (
-    <div className="flex flex-col gap-6 md:gap-8 pb-32">
+    <div className="flex flex-col gap-6 md:gap-8 pb-10 md:pb-16">
+      {/* Progress Bar */}
+      <div className="w-full bg-white dark:bg-[#291e15] rounded-xl p-4 md:p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
+        <div className="flex flex-col gap-3 md:gap-4">
+          <div className="flex justify-between items-end">
+            <span className="text-[#f48c25] text-xs md:text-sm font-bold uppercase tracking-wider">Step 5 of 8</span>
+            <span className="text-[#1c140d] dark:text-white text-xs md:text-sm font-semibold">Pickup Configuration</span>
+          </div>
+          <div className="relative w-full h-1.5 md:h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+            <div className="absolute top-0 left-0 h-full bg-[#f48c25] rounded-full" style={{ width: '65%' }}></div>
+          </div>
+        </div>
+      </div>
+
       {/* Header & Progress */}
       <div className="flex flex-col gap-4">
         <div className="flex flex-col gap-1">
@@ -58,6 +71,7 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
                 onMouseLeave={() => setShowTooltip(false)}
                 onClick={() => setShowTooltip(!showTooltip)}
                 className="text-[#9c7349] hover:text-[#f48c25] transition-colors"
+                type="button"
               >
                 <HelpCircle size={20} />
               </button>
@@ -77,16 +91,6 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
               ? 'Manage where customers collect their orders.' 
               : 'Enter the details for your secondary pickup point.'}
           </p>
-        </div>
-        
-        <div className="flex flex-col gap-2">
-          <div className="flex justify-between items-center text-xs font-bold uppercase text-[#1c140d] dark:text-white">
-            <span>Step 5 of 8</span>
-            <span>65% Complete</span>
-          </div>
-          <div className="rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] h-2 overflow-hidden">
-            <div className="h-full bg-[#f48c25] rounded-full transition-all duration-500" style={{ width: '65%' }}></div>
-          </div>
         </div>
       </div>
 
@@ -239,17 +243,19 @@ export default function Step5aPickupConfiguration({ formData, updateFormData, on
       </div>
 
       {/* Footer Navigation */}
-      <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-12 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+      <div className="relative p-4 bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-12 w-full">
         <div className="flex items-center justify-between gap-4 max-w-5xl mx-auto">
           <button
             onClick={onBack}
             className="px-6 py-3.5 rounded-xl border border-[#e8dbce] dark:border-[#4a3b2e] bg-white dark:bg-[#2d241b] text-[#1c140d] dark:text-white font-bold text-sm flex items-center gap-2"
+            type="button"
           >
             <ArrowLeft size={18} /> Back
           </button>
           <button
             onClick={handleFinish}
             className="flex-1 md:flex-none px-12 py-3.5 rounded-xl bg-[#f48c25] text-white font-bold text-sm shadow-lg shadow-[#f48c25]/20 flex items-center justify-center gap-2 transition-all hover:brightness-110 active:scale-95"
+            type="button"
           >
             {view === 'manage' ? 'Save New Location' : 'Finish Pickup Setup'}
             <CheckCircle size={18} />

@@ -101,8 +101,8 @@ const BusinessProfilePage: React.FC = () => {
   }
 
   // Get description presets
-  const sectorId = listing.categories?.[0]?.id || '';
-  const categoryId = listing.categories?.[1]?.id || '';
+  const sectorId = listing.sector?.id || listing.sectorId || '';
+  const categoryId = listing.category?.id || listing.categoryId || '';
   const matchedPresetGroup = DESCRIPTION_PRESETS.find(
     (p) => p.sectorId === sectorId && p.categoryId === categoryId
   );

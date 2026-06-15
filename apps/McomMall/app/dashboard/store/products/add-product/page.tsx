@@ -110,6 +110,15 @@ export default function AddProductPage() {
     }
   }, [userListings, formData.businessId, searchParams]);
 
+  // Scroll to top of the dashboard main content container on step changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const scrollContainer = document.querySelector('main .overflow-y-auto');
+    if (scrollContainer) {
+      scrollContainer.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+  }, [step]);
+
 
   const handlePublish = () => {
     const variantConfig = formData.attributes.map((attr: any) => ({

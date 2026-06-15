@@ -5,9 +5,9 @@ import { useGetUserListings } from '@/service/listings/hook';
 import { useGetMyProducts } from '@/service/store/products/hook';
 import { useGetServicesByBusiness } from '@/service/services/hook';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
-import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
+import { Button } from '@/components/ui/button';
 import {
   Building2,
   CheckCircle2,
@@ -21,7 +21,11 @@ import {
   Percent,
   Plus,
   Rocket,
-  QrCode
+  QrCode,
+  Package,
+  Sparkles,
+  Ticket,
+  Zap
 } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 
@@ -88,16 +92,39 @@ const StorefrontHubPage: FC = () => {
   const completedCount = checklistItems.filter(item => item.done).length;
   const visibilityScore = Math.round((completedCount / checklistItems.length) * 100);
 
+  const getStatusConfig = (status: string) => {
+    const norm = (status || '').toLowerCase();
+    switch (norm) {
+      case 'published':
+        return { label: 'Published', className: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/20 dark:text-emerald-400 dark:border-emerald-900/30' };
+      case 'draft':
+        return { label: 'Draft (Pending Approval)', className: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/20 dark:text-amber-400 dark:border-amber-900/30' };
+      case 'archived':
+        return { label: 'Archived', className: 'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/20 dark:text-red-400 dark:border-red-900/30' };
+      default:
+        return { label: 'Active', className: 'bg-gray-50 text-gray-700 border-gray-200 dark:bg-gray-800/20 dark:text-gray-400 dark:border-gray-700/30' };
+    }
+  };
+  const statusCfg = getStatusConfig(listing.status);
+
   return (
-    <div className="min-h-screen bg-gray-50/50 p-4 sm:p-6 lg:p-8 space-y-8">
-      {/* Header */}
-      <header className="flex flex-col gap-2">
-        <h1 className="text-3xl font-extrabold text-gray-900 tracking-tight flex items-center gap-3">
-          <Store className="text-orange-500 w-8 h-8" />
-          Storefront Hub
-        </h1>
-        <p className="text-gray-500">Manage your business storefront, themes, and platform promotions.</p>
-      </header>
+    <div className="min-h-screen bg-transparent p-4 sm:p-6 lg:p-8 space-y-6">
+      {/* Premium Compact Header */}
+      <div className="bg-gradient-to-br from-orange-500 to-amber-600 p-5 sm:p-6 rounded-2xl flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-lg shadow-orange-500/15 border-none text-white">
+        <div className="flex items-start sm:items-center gap-3.5 min-w-0">
+          <div className="w-11 h-11 rounded-xl bg-white/20 backdrop-blur-sm flex items-center justify-center text-white shadow-inner shrink-0 mt-0.5 sm:mt-0">
+            <Store size={22} className="text-white" />
+          </div>
+          <div className="flex flex-col gap-1 min-w-0">
+            <h1 className="text-lg sm:text-2xl font-black tracking-tight text-white leading-tight">
+              Storefront Hub
+            </h1>
+            <p className="text-[11px] sm:text-sm text-orange-50 font-medium leading-relaxed opacity-95">
+              Manage your business storefront, themes, and platform promotions.
+            </p>
+          </div>
+        </div>
+      </div>
 
       {/* Grid: Identity Card + Setup Progress */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
@@ -136,11 +163,11 @@ const StorefrontHubPage: FC = () => {
                 </p>
 
                 <div className="pt-2 flex flex-wrap justify-center sm:justify-start gap-3">
-                  <Badge variant="outline" className="border-gray-200 text-gray-700 bg-gray-50">
-                    Status: {listing.status || 'Active'}
+                  <Badge variant="outline" className={`font-bold py-1 px-3 ${statusCfg.className}`}>
+                    Status: {statusCfg.label}
                   </Badge>
-                  <Badge variant="outline" className="border-orange-200 text-orange-700 bg-orange-50/50">
-                    Category: {listing.categories?.[0]?.name || 'N/A'}
+                  <Badge variant="outline" className="border-orange-200 text-orange-700 bg-orange-50/50 dark:bg-[#291e15] dark:text-orange-400 dark:border-orange-950/40 font-bold py-1 px-3">
+                    Category: {listing.category?.name || 'N/A'}
                   </Badge>
                 </div>
               </div>
@@ -181,39 +208,51 @@ const StorefrontHubPage: FC = () => {
       </div>
 
       {/* Quick Action Buttons */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <Button
-          variant="outline"
-          className="h-20 flex flex-col items-center justify-center gap-1 border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all text-gray-700"
-          onClick={() => router.push('/dashboard/store/products/add-product')}
-        >
-          <PlusCircle size={20} className="text-orange-500" />
-          <span className="text-xs font-bold uppercase tracking-wider">Add Product</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-20 flex flex-col items-center justify-center gap-1 border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all text-gray-700"
-          onClick={() => router.push('/dashboard/services/add-service')}
-        >
-          <PlusCircle size={20} className="text-orange-500" />
-          <span className="text-xs font-bold uppercase tracking-wider">Add Service</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-20 flex flex-col items-center justify-center gap-1 border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all text-gray-700"
-          onClick={() => router.push('/dashboard/vouchers')}
-        >
-          <Percent size={20} className="text-orange-500" />
-          <span className="text-xs font-bold uppercase tracking-wider">Create Voucher</span>
-        </Button>
-        <Button
-          variant="outline"
-          className="h-20 flex flex-col items-center justify-center gap-1 border-gray-200 hover:border-orange-500 hover:bg-orange-50/30 transition-all text-gray-700"
-          onClick={() => router.push('/dashboard/my-subscription')}
-        >
-          <Rocket size={20} className="text-orange-500" />
-          <span className="text-xs font-bold uppercase tracking-wider">Boost Storefront</span>
-        </Button>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        {[
+          {
+            title: 'Add Product',
+            desc: 'List physical or digital items',
+            icon: <Package className="w-5 h-5" />,
+            badgeBg: 'bg-orange-50 text-orange-600 dark:bg-[#3d2414] dark:text-orange-400',
+            route: '/dashboard/store/products/add-product',
+          },
+          {
+            title: 'Add Service',
+            desc: 'Configure bookings & offerings',
+            icon: <Sparkles className="w-5 h-5" />,
+            badgeBg: 'bg-indigo-50 text-indigo-600 dark:bg-[#1a1b35] dark:text-indigo-400',
+            route: '/dashboard/services/add-service',
+          },
+          {
+            title: 'Create Voucher',
+            desc: 'Set up promo codes & discounts',
+            icon: <Ticket className="w-5 h-5" />,
+            badgeBg: 'bg-emerald-50 text-emerald-600 dark:bg-[#122e1e] dark:text-emerald-400',
+            route: '/dashboard/vouchers',
+          },
+          {
+            title: 'Boost Storefront',
+            desc: 'Grow search visibility & reach',
+            icon: <Zap className="w-5 h-5" />,
+            badgeBg: 'bg-violet-50 text-violet-600 dark:bg-[#261638] dark:text-violet-400',
+            route: '/dashboard/my-subscription',
+          },
+        ].map((action, idx) => (
+          <button
+            key={idx}
+            onClick={() => router.push(action.route)}
+            className="flex items-center gap-4 p-4 rounded-2xl bg-white dark:bg-[#2d241b] border border-gray-200/60 dark:border-[#4a3b2e] hover:border-orange-500 dark:hover:border-orange-500 hover:shadow-md transition-all duration-300 text-left group"
+          >
+            <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-sm transition-transform group-hover:scale-105 ${action.badgeBg}`}>
+              {action.icon}
+            </div>
+            <div className="flex flex-col gap-0.5 min-w-0">
+              <span className="text-sm font-bold text-gray-950 dark:text-white line-clamp-1">{action.title}</span>
+              <span className="text-[11px] text-gray-400 dark:text-gray-400 font-medium line-clamp-1">{action.desc}</span>
+            </div>
+          </button>
+        ))}
       </div>
 
       {/* Dashboard Sub-pages Links */}
