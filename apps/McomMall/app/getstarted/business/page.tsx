@@ -53,22 +53,22 @@ const QUESTS = [
     Icon: MapPin,
   },
   {
-    id: 'borough_detected',
-    title: 'Local Borough Detected',
-    flavor: "We've matched your postcode to a local business district.",
-    label: 'Verification',
-    color: '#a23f00',
-    colorLight: '#fff1eb',
-    Icon: MapPin,
+    id: 'category',
+    title: 'Category Selection',
+    flavor: 'Select categories to power your positioning and partnership recommendations.',
+    label: 'Category',
+    color: '#f97316',
+    colorLight: '#ffedd5',
+    Icon: Compass,
   },
   {
-    id: 'high_street_activation',
-    title: 'High Street Activation',
-    flavor: 'Your business is joining the local digital ecosystem.',
-    label: 'Activation',
-    color: '#a23f00',
-    colorLight: '#fff1eb',
-    Icon: Zap,
+    id: 'business_type',
+    title: 'How Does Your Business Operate?',
+    flavor: 'Select the primary way you conduct your business to help us tailor your dashboard.',
+    label: 'Type',
+    color: '#ea580c',
+    colorLight: '#fff7ed',
+    Icon: Shield,
   },
   {
     id: 'details',
@@ -89,67 +89,40 @@ const QUESTS = [
     Icon: Crown,
   },
   {
-    id: 'business_type',
-    title: 'Select Business Type',
-    flavor: 'Choose whether you offer products, services, or both.',
-    label: 'Type',
-    color: '#ea580c',
-    colorLight: '#fff7ed',
-    Icon: Shield,
-  },
-  {
-    id: 'category',
-    title: 'Category Selection',
-    flavor: 'Select categories to power your positioning and partnership recommendations.',
-    label: 'Category',
-    color: '#f97316',
-    colorLight: '#ffedd5',
-    Icon: Compass,
-  },
-  {
     id: 'hours',
     title: 'Operating Hours',
     flavor: 'When are you open for business?',
     label: 'Hours',
     color: '#d97706',
     colorLight: '#fffbeb',
-    Icon: Globe, // Fallback icon
+    Icon: Clock,
   },
   {
-    id: 'booking_prefs',
-    title: 'Booking Preferences',
-    flavor: 'How do you want to accept bookings?',
-    label: 'Booking',
-    color: '#ea580c',
-    colorLight: '#fff7ed',
-    Icon: Shield, // Fallback icon
+    id: 'storefront',
+    title: 'Add Your Storefront',
+    flavor: "Don't worry about dimensions—auto-crop and auto-resize are active to ensure your store looks premium on all devices.",
+    label: 'Storefront',
+    color: '#a23f00',
+    colorLight: '#fff1eb',
+    Icon: Store,
   },
   {
-    id: 'appointment_struct',
-    title: 'Appointment Structure',
-    flavor: 'Set your buffer times and daily limits.',
-    label: 'Appointments',
-    color: '#f97316',
-    colorLight: '#ffedd5',
-    Icon: Compass, // Fallback icon
-  },
-  {
-    id: 'service_zones',
-    title: 'Service Zones',
-    flavor: 'Where do you offer your services?',
-    label: 'Zones',
-    color: '#d97706',
-    colorLight: '#fffbeb',
+    id: 'borough_detected',
+    title: 'Local Borough Detected',
+    flavor: "We've matched your postcode to a local business district.",
+    label: 'Verification',
+    color: '#a23f00',
+    colorLight: '#fff1eb',
     Icon: MapPin,
   },
   {
-    id: 'fulfillment',
-    title: 'Delivery & Pickup',
-    flavor: 'How do customers get your products?',
-    label: 'Fulfillment',
-    color: '#ea580c',
-    colorLight: '#fff7ed',
-    Icon: Shield, // Fallback icon
+    id: 'high_street_activation',
+    title: 'High Street Activation',
+    flavor: 'Your business is joining the local digital ecosystem.',
+    label: 'Activation',
+    color: '#a23f00',
+    colorLight: '#fff1eb',
+    Icon: Zap,
   },
 ];
 
@@ -315,6 +288,7 @@ function BusinessOnboardingInner() {
     postcode: '',
     city: '',
     businessType: 'products' as 'products' | 'services' | 'both',
+    businessOperation: '' as 'physical' | 'home' | 'mobile' | 'online' | '',
     sectorId: '',
     categoryId: '',
     subCategoryId: '',
@@ -428,31 +402,7 @@ function BusinessOnboardingInner() {
   }, []);
   // ─────────────────────────────────────────────────────────────────────────
   
-  const activeQuests = (() => {
-    const filtered = QUESTS.filter(q => {
-      if (q.id === 'storefront') return false;
-
-      const isService = formData.businessType === 'services' || formData.businessType === 'both';
-      if (q.id === 'fulfillment' && formData.businessType === 'services') return false;
-      if ((q.id === 'booking_prefs' || q.id === 'appointment_struct' || q.id === 'service_zones') && !isService) return false;
-      
-      return true;
-    });
-
-    const list = [...filtered];
-    if (list.length > 0) {
-      list.splice(list.length - 1, 0, {
-        id: 'storefront',
-        title: 'Add Your Storefront',
-        flavor: "Don't worry about dimensions—auto-crop and auto-resize are active to ensure your store looks premium on all devices.",
-        label: 'Storefront',
-        color: '#a23f00',
-        colorLight: '#fff1eb',
-        Icon: Store,
-      });
-    }
-    return list;
-  })();
+  const activeQuests = QUESTS;
 
   const { mutateAsync: createUser } = useCreateUser();
   const { mutateAsync: login } = useLogin();
@@ -2260,234 +2210,9 @@ function BusinessOnboardingInner() {
 
 
 
-  // ═══════════════════════════════════════════════════════
-  // Business Type Page (Step 7)
-  // ═══════════════════════════════════════════════════════
-  if (showBusinessTypePage) {
-    return (
-      <div className="bg-gray-50 min-h-screen flex flex-col font-sans overflow-x-hidden pt-14 pb-28">
-        {/* Header / TopAppBar */}
-        <nav className="flex justify-between items-center w-full px-4 h-14 z-50 bg-white fixed top-0 left-0 border-b border-gray-100 shadow-sm">
-          <button onClick={() => { setShowBusinessTypePage(false); setShowConnectGooglePage(true); }} aria-label="Go back" className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors">
-            <ChevronLeft className="w-6 h-6 text-orange-600" />
-          </button>
-          <div className="flex flex-col items-center">
-            <span className="font-bold text-[10px] text-gray-400 uppercase tracking-widest">Step 7 of 12</span>
-            <div className="w-32 h-1 bg-gray-200 rounded-full mt-1 overflow-hidden">
-              <div className="w-[58%] h-full bg-orange-600 transition-all duration-500"></div>
-            </div>
-          </div>
-          <button onClick={() => setShowComplete(true)} className="font-bold text-sm text-orange-600 px-3 py-1 rounded-lg hover:bg-orange-50 active:scale-95 transition-all">Save</button>
-        </nav>
 
-        {/* Main Content Canvas */}
-        <main className="flex-grow pt-8 px-6 max-w-[640px] mx-auto w-full">
-          {/* Hero Section */}
-          <header className="mb-8">
-            <h1 className="text-2xl font-black text-gray-900 mb-2">What do you offer?</h1>
-            <p className="text-sm font-medium text-gray-500">Choose the category that best describes your core business activities.</p>
-          </header>
 
-          {/* Selection Grid */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mt-12">
-            <button
-              onClick={() => setFormData({ ...formData, businessType: 'products' })}
-              className={`p-6 rounded-2xl border-2 text-center transition-all outline-none flex flex-col items-center justify-center min-h-[200px] shadow-sm active:scale-95 ${formData.businessType === 'products' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/30'}`}
-            >
-              <Building2 className={`w-12 h-12 mb-4 transition-colors ${formData.businessType === 'products' ? 'text-orange-600' : 'text-gray-400'}`} />
-              <div className="font-bold text-gray-900 text-lg mb-1">Products Only</div>
-              <div className="text-sm text-gray-500">Physical products storefront</div>
-            </button>
 
-            <button
-              onClick={() => setFormData({ ...formData, businessType: 'services' })}
-              className={`p-6 rounded-2xl border-2 text-center transition-all outline-none flex flex-col items-center justify-center min-h-[200px] shadow-sm active:scale-95 ${formData.businessType === 'services' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/30'}`}
-            >
-              <Globe className={`w-12 h-12 mb-4 transition-colors ${formData.businessType === 'services' ? 'text-orange-600' : 'text-gray-400'}`} />
-              <div className="font-bold text-gray-900 text-lg mb-1">Services Only</div>
-              <div className="text-sm text-gray-500">Booking / service provider</div>
-            </button>
-
-            <button
-              onClick={() => setFormData({ ...formData, businessType: 'both' })}
-              className={`p-6 rounded-2xl border-2 text-center transition-all outline-none flex flex-col items-center justify-center min-h-[200px] shadow-sm active:scale-95 ${formData.businessType === 'both' ? 'border-orange-500 bg-orange-50' : 'border-gray-200 bg-white hover:border-orange-200 hover:bg-orange-50/30'}`}
-            >
-              <Crown className={`w-12 h-12 mb-4 transition-colors ${formData.businessType === 'both' ? 'text-orange-600' : 'text-gray-400'}`} />
-              <div className="font-bold text-gray-900 text-lg mb-1">Both</div>
-              <div className="text-sm text-gray-500">Products and service bookings</div>
-            </button>
-          </div>
-        </main>
-
-        {/* Sticky Footer Button */}
-        <footer className="fixed bottom-0 left-0 w-full p-4 bg-white border-t border-gray-100 shadow-[0_-10px_30px_rgba(0,0,0,0.05)] z-40">
-          <div className="max-w-[640px] mx-auto">
-            <button 
-              disabled={!formData.businessType}
-              onClick={() => {
-                setShowBusinessTypePage(false);
-                setShowBusinessCategoryPage(true);
-              }}
-              className={`w-full h-14 rounded-xl font-bold text-sm flex items-center justify-center transition-all duration-300 ${formData.businessType ? 'bg-gray-900 text-white hover:bg-black active:scale-95 shadow-xl' : 'bg-gray-100 text-gray-400 cursor-not-allowed'}`}
-            >
-              Continue
-            </button>
-          </div>
-        </footer>
-      </div>
-    );
-  }
-
-  // ═══════════════════════════════════════════════════════
-  // Business Category Page (Step 8)
-  // ═══════════════════════════════════════════════════════
-  if (showBusinessCategoryPage) {
-    const toggleCategory = (cat: string) => {
-      setSelectedCategories(prev => prev.includes(cat) ? prev.filter(c => c !== cat) : [...prev, cat]);
-    };
-
-    return (
-      <div className="bg-gray-50 text-gray-900 min-h-screen flex flex-col items-center pb-32">
-        {/* Top AppBar */}
-        <header className="flex justify-between items-center w-full px-4 h-14 z-50 bg-white fixed top-0 left-0 border-b border-gray-100">
-          <div className="flex items-center gap-4">
-            <button onClick={() => { setShowBusinessCategoryPage(false); setShowBusinessTypePage(true); }} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors">
-              <ChevronLeft className="w-6 h-6 text-orange-600" />
-            </button>
-            <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
-          </div>
-          <div className="flex items-center">
-            <button className="w-10 h-10 flex items-center justify-center rounded-full hover:bg-gray-100 transition-colors">
-               <Bell className="w-5 h-5 text-gray-500" />
-            </button>
-          </div>
-        </header>
-
-        {/* Main Content Canvas */}
-        <main className="flex-grow w-full max-w-[640px] px-6 pt-24 pb-12">
-          {/* Onboarding Stepper */}
-          <div className="w-full mb-8">
-            <div className="flex justify-between items-center mb-2">
-              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-widest">STEP 8 OF 12</span>
-              <button className="text-orange-600 text-[10px] font-bold uppercase tracking-wider hover:text-orange-700 transition-colors">Save and Exit</button>
-            </div>
-            <div className="h-1 w-full bg-gray-200 rounded-full overflow-hidden">
-              <div className="h-full bg-orange-500 w-[66%] transition-all duration-500"></div>
-            </div>
-          </div>
-
-          {/* Heading Section */}
-          <div className="mb-8">
-            <h2 className="text-2xl font-black text-gray-900 mb-2">Select Your Category</h2>
-            <p className="text-sm font-medium text-gray-500">We've suggested some categories based on your import.</p>
-          </div>
-
-          {/* Search Bar & Grid replaced with database taxonomy selects */}
-          <div className="bg-white p-6 rounded-2xl border border-gray-200 shadow-sm space-y-4 mb-8">
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Sector</label>
-              <select
-                value={formData.sectorId}
-                onChange={(e) => setFormData({ ...formData, sectorId: e.target.value, categoryId: '', subCategoryId: '' })}
-                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-              >
-                <option value="">Select Sector</option>
-                {sectors?.map(s => (
-                  <option key={s.id} value={s.id}>{s.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Category</label>
-              <select
-                value={formData.categoryId}
-                onChange={(e) => setFormData({ ...formData, categoryId: e.target.value, subCategoryId: '' })}
-                disabled={!formData.sectorId}
-                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50"
-              >
-                <option value="">Select Category</option>
-                {categories?.map(c => (
-                  <option key={c.id} value={c.id}>{c.name}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-gray-500 uppercase tracking-wider mb-2">Subcategory</label>
-              <select
-                value={formData.subCategoryId}
-                onChange={(e) => setFormData({ ...formData, subCategoryId: e.target.value })}
-                disabled={!formData.categoryId}
-                className="w-full h-12 px-3 rounded-xl border border-gray-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 disabled:bg-gray-50"
-              >
-                <option value="">Select Subcategory</option>
-                {subcategories?.map(sc => (
-                  <option key={sc.id} value={sc.id}>{sc.name}</option>
-                ))}
-              </select>
-            </div>
-          </div>
-
-          {/* Selection Grid */}
-          <div className="grid grid-cols-2 gap-4">
-            {/* Restaurant */}
-            <button onClick={() => toggleCategory('Restaurant')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Restaurant') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <Utensils className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Restaurant') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Restaurant') ? 'text-orange-700' : 'text-gray-700'}`}>Restaurant</span>
-            </button>
-            {/* Italian */}
-            <button onClick={() => toggleCategory('Italian')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Italian') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <UtensilsCrossed className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Italian') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Italian') ? 'text-orange-700' : 'text-gray-700'}`}>Italian</span>
-            </button>
-            {/* Fine Dining */}
-            <button onClick={() => toggleCategory('Fine Dining')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Fine Dining') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <Star className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Fine Dining') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Fine Dining') ? 'text-orange-700' : 'text-gray-700'}`}>Fine Dining</span>
-            </button>
-            {/* Bistro */}
-            <button onClick={() => toggleCategory('Bistro')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Bistro') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <Umbrella className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Bistro') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Bistro') ? 'text-orange-700' : 'text-gray-700'}`}>Bistro</span>
-            </button>
-            {/* Wine Bar */}
-            <button onClick={() => toggleCategory('Wine Bar')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Wine Bar') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <Wine className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Wine Bar') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Wine Bar') ? 'text-orange-700' : 'text-gray-700'}`}>Wine Bar</span>
-            </button>
-            {/* Cafe */}
-            <button onClick={() => toggleCategory('Cafe')} className={`group flex flex-col items-center justify-center p-4 rounded-xl transition-all active:scale-95 text-center border-2 ${selectedCategories.includes('Cafe') ? 'bg-orange-50 border-orange-500 shadow-sm' : 'bg-white border-gray-100 hover:border-gray-200'}`}>
-              <Coffee className={`mb-2 w-7 h-7 transition-colors ${selectedCategories.includes('Cafe') ? 'text-orange-600' : 'text-gray-400 group-hover:text-gray-500'}`} />
-              <span className={`text-sm font-bold transition-colors ${selectedCategories.includes('Cafe') ? 'text-orange-700' : 'text-gray-700'}`}>Cafe</span>
-            </button>
-          </div>
-
-          {/* Hint Card */}
-          <div className="mt-8 p-4 bg-orange-50 border border-orange-200 rounded-xl flex gap-4 items-start shadow-sm">
-            <Lightbulb className="w-5 h-5 text-orange-600 shrink-0 mt-0.5" />
-            <p className="text-xs font-medium text-orange-900 leading-relaxed">
-              Selecting accurate categories helps local customers find you more easily during search and improves your store's visibility in the MCOMMALL community.
-            </p>
-          </div>
-        </main>
-
-        {/* Fixed Action Button / Bottom Footer */}
-        <div className="fixed bottom-0 left-0 w-full p-4 bg-white/90 backdrop-blur-md border-t border-gray-100 z-40 flex justify-center">
-          <button 
-            onClick={() => {
-              setShowBusinessCategoryPage(false);
-              setShowLocalNetworkPage(true);
-            }}
-            className="w-full max-w-[640px] bg-gray-900 hover:bg-black text-white font-bold text-sm py-4 rounded-xl shadow-xl active:scale-95 transition-all duration-100 flex items-center justify-center gap-2"
-          >
-            Continue
-            <ArrowRight className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
-  }
 
   // ═══════════════════════════════════════════════════════
   // Local Network Page (Step 9)
@@ -2496,15 +2221,15 @@ function BusinessOnboardingInner() {
     return (
       <div className="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans pb-32">
         {/* Top AppBar */}
-        <header className="flex justify-between items-center w-full px-4 h-14 z-50 bg-white fixed top-0 left-0 border-b border-gray-100 shadow-sm">
+        <header className="bg-white flex justify-between items-center w-full px-4 h-14 z-50 fixed top-0 left-0 border-b border-gray-100 shadow-sm">
           <div className="flex items-center gap-4">
-            <button onClick={() => { setShowLocalNetworkPage(false); setShowBusinessCategoryPage(true); }} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors">
+            <button onClick={() => { setShowLocalNetworkPage(false); setShowBoroughBrowser(true); }} className="hover:bg-gray-100 p-2 rounded-full transition-colors active:scale-95">
               <ChevronLeft className="w-6 h-6 text-orange-600" />
             </button>
             <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
           </div>
-          <div className="flex items-center">
-             <span className="text-xs font-bold text-gray-400 uppercase tracking-widest">Step 9 of 12</span>
+          <div className="flex items-center text-xs font-bold text-gray-400 uppercase tracking-widest pr-2">
+             Step 9 of 12
           </div>
         </header>
 
@@ -2613,7 +2338,7 @@ function BusinessOnboardingInner() {
             {/* Action Buttons */}
             <div className="flex items-center justify-between gap-4">
               <button 
-                onClick={() => { setShowLocalNetworkPage(false); setShowBusinessCategoryPage(true); }}
+                onClick={() => { setShowLocalNetworkPage(false); setShowBoroughBrowser(true); }}
                 className="px-6 py-3.5 rounded-xl border border-gray-200 font-bold text-gray-600 hover:bg-gray-50 transition-colors active:scale-95 text-sm"
               >
                 Back
@@ -2642,12 +2367,14 @@ function BusinessOnboardingInner() {
     return (
       <div className="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans pb-32">
         {/* Top AppBar */}
-        <header className="flex justify-between items-center w-full px-4 h-14 z-50 bg-white fixed top-0 left-0 border-b border-gray-100 shadow-sm">
-          <button onClick={() => { setShowMembershipRoutingPage(false); setShowLocalNetworkPage(true); }} className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors">
-            <ChevronLeft className="w-6 h-6 text-gray-500" />
-          </button>
-          <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
-          <button className="flex items-center justify-center w-10 h-10 rounded-full hover:bg-gray-100 transition-colors">
+        <header className="bg-white flex justify-between items-center w-full px-4 h-14 z-50 fixed top-0 left-0 border-b border-gray-100 shadow-sm">
+          <div className="flex items-center gap-4">
+            <button onClick={() => { setShowMembershipRoutingPage(false); setShowLocalNetworkPage(true); }} className="hover:bg-gray-100 p-2 rounded-full transition-colors active:scale-95">
+              <ChevronLeft className="w-6 h-6 text-orange-600" />
+            </button>
+            <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
+          </div>
+          <button onClick={() => router.push('/dashboard')} className="hover:bg-gray-100 p-2 rounded-full transition-colors active:scale-95">
             <X className="w-6 h-6 text-gray-500" />
           </button>
         </header>
@@ -2743,10 +2470,12 @@ function BusinessOnboardingInner() {
       <div className="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans pb-32">
         {/* Top Navigation Bar */}
         <header className="bg-white flex justify-between items-center w-full px-4 h-14 z-50 fixed top-0 border-b border-gray-100 shadow-sm">
-          <button onClick={() => { setShowLinkAccountPage(false); setShowMembershipRoutingPage(true); }} className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={() => { setShowLinkAccountPage(false); setShowMembershipRoutingPage(true); }} className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
+          </div>
           <button className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
             <Bell className="w-5 h-5" />
           </button>
@@ -2855,10 +2584,12 @@ function BusinessOnboardingInner() {
       <div className="bg-gray-50 text-gray-900 min-h-screen flex flex-col font-sans pb-32">
         {/* Top Navigation Bar */}
         <header className="bg-white flex justify-between items-center w-full px-4 h-14 z-50 fixed top-0 border-b border-gray-100 shadow-sm">
-          <button onClick={() => { setShowMembershipSelectionPage(false); setShowMembershipRoutingPage(true); }} className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
-            <ChevronLeft className="w-6 h-6" />
-          </button>
-          <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
+          <div className="flex items-center gap-4">
+            <button onClick={() => { setShowMembershipSelectionPage(false); setShowMembershipRoutingPage(true); }} className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
+              <ChevronLeft className="w-6 h-6" />
+            </button>
+            <h1 className="text-xl font-black text-orange-600 tracking-tight">MCOMMALL</h1>
+          </div>
           <button className="text-orange-600 hover:bg-gray-100 p-2 rounded-full active:scale-95 duration-100">
             <Bell className="w-5 h-5" />
           </button>
@@ -3725,6 +3456,7 @@ function BusinessOnboardingInner() {
                       city: key,
                     }));
                     setShowBoroughBrowser(false);
+                    setShowLocalNetworkPage(true);
                     try {
                       await runLocationCheck(targetPostcode);
                     } catch (err) {
@@ -4078,7 +3810,9 @@ function BusinessOnboardingInner() {
         <footer className="w-full bg-surface border-t border-outline-variant p-margin-mobile">
           <div className="max-w-2xl mx-auto flex flex-col md:flex-row gap-stack-md">
             <button 
-              onClick={handleNext}
+              onClick={() => {
+                setShowBoroughBrowser(true);
+              }}
               className="flex-1 order-1 md:order-2 bg-primary-container text-white py-4 rounded-xl font-title-md text-title-md shadow-sm active:scale-[0.98] transition-all hover:opacity-90"
             >
               Continue
@@ -4102,8 +3836,8 @@ function BusinessOnboardingInner() {
           <div className="max-w-[640px] mx-auto">
 
             <div className="mb-stack-lg">
-              <span className="font-label-md text-label-md text-on-surface-variant tracking-widest uppercase">Add Your Storefront</span>
-              <h1 className="font-headline-lg-mobile md:font-headline-lg text-headline-lg-mobile md:text-headline-lg text-on-surface mt-2">Add Your Storefront</h1>
+              <span className="hidden md:inline-block font-label-md text-label-md text-on-surface-variant tracking-widest uppercase mb-1">Add Your Storefront</span>
+              <h1 className="text-3xl md:text-5xl font-black text-on-surface leading-tight tracking-tight">Add Your Storefront</h1>
               <div className="mt-stack-md p-stack-md bg-tertiary-container/10 border border-tertiary/20 rounded-xl flex items-start gap-3 glass-card">
                 <span className="material-symbols-outlined text-tertiary">info</span>
                 <div>
@@ -5015,60 +4749,132 @@ function BusinessOnboardingInner() {
 
                 {/* ─── Step 5: Business Type Selection ─── */}
                 {currentQuest.id === 'business_type' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    <motion.button
-                      whileHover={{ y: -3 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setFormData({ ...formData, businessType: 'products' })}
-                      className="p-5 rounded-xl border-2 text-left transition-colors outline-none flex flex-col items-center text-center justify-center"
-                      style={{
-                        borderColor: formData.businessType === 'products' ? currentQuest.color : '#e5e7eb',
-                        backgroundColor: formData.businessType === 'products' ? currentQuest.colorLight : '#fff',
-                      }}
-                    >
-                      <Building2
-                        className="w-8 h-8 mb-2"
-                        style={{ color: formData.businessType === 'products' ? currentQuest.color : '#9ca3af' }}
-                      />
-                      <div className="font-bold text-gray-900 text-sm">Products Only</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">Physical products storefront</div>
-                    </motion.button>
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4 w-full">
+                      {/* Option: Physical Store */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, businessOperation: 'physical', businessType: 'products' })}
+                        className={`group relative flex flex-col items-start p-6 bg-white border rounded-2xl text-left transition-all duration-200 ${
+                          formData.businessOperation === 'physical'
+                            ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                            : 'border-gray-200 hover:border-orange-300'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${
+                          formData.businessOperation === 'physical'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white'
+                        }`}>
+                          <Store className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">Physical Store</h3>
+                        <p className="text-xs text-gray-505 mt-1 leading-relaxed">Brick-and-mortar retail space or showroom for customers.</p>
+                        <div className={`absolute top-4 right-4 transition-all duration-200 ${
+                          formData.businessOperation === 'physical'
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-50'
+                        }`}>
+                          <CheckCircle2 className="w-6 h-6 text-orange-600" />
+                        </div>
+                      </button>
 
-                    <motion.button
-                      whileHover={{ y: -3 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setFormData({ ...formData, businessType: 'services' })}
-                      className="p-5 rounded-xl border-2 text-left transition-colors outline-none flex flex-col items-center text-center justify-center"
-                      style={{
-                        borderColor: formData.businessType === 'services' ? currentQuest.color : '#e5e7eb',
-                        backgroundColor: formData.businessType === 'services' ? currentQuest.colorLight : '#fff',
-                      }}
-                    >
-                      <Globe
-                        className="w-8 h-8 mb-2"
-                        style={{ color: formData.businessType === 'services' ? currentQuest.color : '#9ca3af' }}
-                      />
-                      <div className="font-bold text-gray-900 text-sm">Services Only</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">Booking / service provider</div>
-                    </motion.button>
+                      {/* Option: Home Business */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, businessOperation: 'home', businessType: 'both' })}
+                        className={`group relative flex flex-col items-start p-6 bg-white border rounded-2xl text-left transition-all duration-200 ${
+                          formData.businessOperation === 'home'
+                            ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                            : 'border-gray-200 hover:border-orange-300'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${
+                          formData.businessOperation === 'home'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white'
+                        }`}>
+                          <Building2 className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">Home Business</h3>
+                        <p className="text-xs text-gray-505 mt-1 leading-relaxed">Operated from a private residence with or without visitors.</p>
+                        <div className={`absolute top-4 right-4 transition-all duration-200 ${
+                          formData.businessOperation === 'home'
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-50'
+                        }`}>
+                          <CheckCircle2 className="w-6 h-6 text-orange-600" />
+                        </div>
+                      </button>
 
-                    <motion.button
-                      whileHover={{ y: -3 }}
-                      whileTap={{ scale: 0.97 }}
-                      onClick={() => setFormData({ ...formData, businessType: 'both' })}
-                      className="p-5 rounded-xl border-2 text-left transition-colors outline-none flex flex-col items-center text-center justify-center"
-                      style={{
-                        borderColor: formData.businessType === 'both' ? currentQuest.color : '#e5e7eb',
-                        backgroundColor: formData.businessType === 'both' ? currentQuest.colorLight : '#fff',
-                      }}
-                    >
-                      <Crown
-                        className="w-8 h-8 mb-2"
-                        style={{ color: formData.businessType === 'both' ? currentQuest.color : '#9ca3af' }}
-                      />
-                      <div className="font-bold text-gray-900 text-sm">Both</div>
-                      <div className="text-[11px] text-gray-400 mt-0.5">Products and service bookings</div>
-                    </motion.button>
+                      {/* Option: Mobile Business */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, businessOperation: 'mobile', businessType: 'services' })}
+                        className={`group relative flex flex-col items-start p-6 bg-white border rounded-2xl text-left transition-all duration-200 ${
+                          formData.businessOperation === 'mobile'
+                            ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                            : 'border-gray-200 hover:border-orange-300'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${
+                          formData.businessOperation === 'mobile'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white'
+                        }`}>
+                          <Truck className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">Mobile Business</h3>
+                        <p className="text-xs text-gray-505 mt-1 leading-relaxed">Services provided at client locations or on-the-go.</p>
+                        <div className={`absolute top-4 right-4 transition-all duration-200 ${
+                          formData.businessOperation === 'mobile'
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-50'
+                        }`}>
+                          <CheckCircle2 className="w-6 h-6 text-orange-600" />
+                        </div>
+                      </button>
+
+                      {/* Option: Online Business */}
+                      <button
+                        type="button"
+                        onClick={() => setFormData({ ...formData, businessOperation: 'online', businessType: 'products' })}
+                        className={`group relative flex flex-col items-start p-6 bg-white border rounded-2xl text-left transition-all duration-200 ${
+                          formData.businessOperation === 'online'
+                            ? 'border-orange-500 bg-orange-50/50 shadow-sm'
+                            : 'border-gray-200 hover:border-orange-300'
+                        }`}
+                      >
+                        <div className={`w-12 h-12 rounded-full flex items-center justify-center mb-4 transition-colors ${
+                          formData.businessOperation === 'online'
+                            ? 'bg-orange-600 text-white'
+                            : 'bg-orange-100 text-orange-600 group-hover:bg-orange-600 group-hover:text-white'
+                        }`}>
+                          <Globe className="w-6 h-6" />
+                        </div>
+                        <h3 className="font-bold text-gray-900 text-base">Online Business</h3>
+                        <p className="text-xs text-gray-550 mt-1 leading-relaxed">E-commerce, digital services, or remote operations.</p>
+                        <div className={`absolute top-4 right-4 transition-all duration-200 ${
+                          formData.businessOperation === 'online'
+                            ? 'opacity-100 scale-100'
+                            : 'opacity-0 scale-50'
+                        }`}>
+                          <CheckCircle2 className="w-6 h-6 text-orange-600" />
+                        </div>
+                      </button>
+                    </div>
+
+                    {/* Additional Context Illustration Card */}
+                    <div className="w-full bg-[#fff1eb] rounded-2xl p-5 flex items-start sm:items-center gap-4 border border-[#e2bfb0]/30 shadow-sm">
+                      <div className="flex-shrink-0 w-16 h-16 rounded-xl overflow-hidden shadow-inner border border-white">
+                        <img className="w-full h-full object-cover" alt="Merchant Tip Visual" src="https://lh3.googleusercontent.com/aida/AP1WRLuT-cyMk_5SJq4_a0IypGgxzxzf7ZCVGltAtELjippWSQEUd2rpwXQU_HINozI_SURzix0SJeEEH9T0LbAylYcLQ7BRkAg5ZQQp2cQ4ccljRzYxBERWKRaihouLxzvffrR7Tmv_welD8NB9nUgZuLnvMpq09tg7p_8CIlFL6iRRgryg1AEsc98zZoSfWJV-iBd1LIOaLJ8_AZUPcuYzNeTyV4AhUc10JNtLL3N9NHPZ26nmp5NQxWnYXWQ"/>
+                      </div>
+                      <div>
+                        <p className="text-xs text-gray-600 leading-relaxed font-medium">
+                          <strong className="text-orange-950 font-bold">Tip:</strong> You can change this later in your profile settings. This selection helps us automate your tax and shipping defaults.
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 )}
 
@@ -5455,7 +5261,11 @@ function BusinessOnboardingInner() {
               onClick={isGoogleOnboarding 
                 ? (googleStep === 'fail_safe_form' ? handleGoogleFailSafeSubmit : handleGoogleCompleteClaim) 
                 : handleNext}
-              disabled={isSubmitting || (isGoogleOnboarding && googleStep === 'branch_select')}
+              disabled={
+                isSubmitting || 
+                (isGoogleOnboarding && googleStep === 'branch_select') ||
+                (!isGoogleOnboarding && currentQuest.id === 'business_type' && !formData.businessOperation)
+              }
               className="flex items-center gap-2 px-8 py-3.5 rounded-xl text-white font-bold text-base transition-all outline-none disabled:opacity-75 disabled:cursor-not-allowed cursor-pointer"
               style={{
                 backgroundColor: isGoogleOnboarding ? '#ea580c' : currentQuest.color,
@@ -5856,9 +5666,11 @@ function WelcomeChecklistPage({ onComplete }: { onComplete: () => void }) {
         </div>
         <button 
           onClick={() => router.push('/dashboard')}
-          className="text-sm font-medium text-gray-500 hover:bg-orange-50 transition-colors px-3 py-2 rounded-lg"
+          className="text-sm font-medium text-gray-500 hover:bg-orange-50 transition-colors p-2 sm:px-3 sm:py-2 rounded-lg flex items-center gap-1"
+          aria-label="Save & Exit"
         >
-          Save & Exit
+          <span className="hidden sm:inline">Save & Exit</span>
+          <X className="w-5 h-5 sm:hidden" />
         </button>
       </header>
 

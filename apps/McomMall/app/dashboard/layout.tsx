@@ -265,10 +265,12 @@ export default function DashboardLayout({
           </div>
           
           {/* Bottom Navigation (Mobile Only) */}
-          {userRole === 'customer' ? (
-            <CustomerBottomNav />
-          ) : (
-            <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
+          {!(pathname.includes('/add-product') || pathname.includes('/add-service') || pathname.includes('/add-listing') || pathname.includes('/events/new')) && (
+            userRole === 'customer' ? (
+              <CustomerBottomNav />
+            ) : (
+              <BottomNav onMenuClick={() => setIsSideMenuOpen(true)} />
+            )
           )}
         </main>
       </section>

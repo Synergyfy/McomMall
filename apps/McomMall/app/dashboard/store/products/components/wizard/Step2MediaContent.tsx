@@ -91,7 +91,7 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
     };
 
     return (
-        <div className="flex flex-col gap-6 md:gap-8 pb-32">
+        <div className="flex flex-col gap-6 md:gap-8 pb-10 md:pb-16">
             {/* Progress Bar - Simplified for Mobile */}
             <div className="flex flex-col gap-3">
                 <div className="flex justify-between items-center">
@@ -101,11 +101,11 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 <div className="w-full h-1.5 md:h-2 rounded-full bg-[#e8dbce] dark:bg-[#4a3b2e] overflow-hidden">
                     <div className="h-full rounded-full bg-[#f48c25] transition-all duration-500 ease-out" style={{ width: '50%' }}></div>
                 </div>
-                <div className="flex justify-between text-[10px] md:text-xs font-medium text-[#9c7349] dark:text-[#cba885]">
-                    <span className="hidden xs:inline">Basic Info</span>
+                <div className="hidden sm:flex justify-between text-xs font-medium text-[#9c7349] dark:text-[#cba885]">
+                    <span>Basic Info</span>
                     <span className="text-[#f48c25] font-bold">Media & Content</span>
-                    <span className="hidden xs:inline">Pricing</span>
-                    <span className="hidden xs:inline">Shipping</span>
+                    <span>Pricing</span>
+                    <span>Shipping</span>
                 </div>
             </div>
 
@@ -325,8 +325,8 @@ export default function Step2MediaContent({ formData, updateFormData, onNext, on
                 )}
             </div>
 
-            {/* Mobile-First Sticky Footer */}
-            <footer className="fixed bottom-16 left-0 right-0 bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] p-3 md:p-6 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+            {/* Mobile-First Sticky-Free Footer */}
+            <footer className="relative bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] p-3 md:p-6 md:border-none md:p-0 md:mt-8 md:shadow-none w-full">
                 <div className="max-w-5xl mx-auto flex flex-row gap-2 md:gap-4 justify-between items-center w-full">
                     <button onClick={onBack} className="flex-1 md:flex-none px-1 sm:px-6 py-2.5 sm:py-3 rounded-lg border border-[#e8dbce] dark:border-[#4a3b2e] text-[#1c140d] dark:text-[#ece0d6] font-semibold flex justify-center items-center gap-1 sm:gap-2 text-[11px] sm:text-base whitespace-nowrap">
                         <ArrowLeft size={16} className="hidden sm:block" />

@@ -41,7 +41,11 @@ export default function Header() {
   const logout = useLogout();
   const { data: membership } = useGetMyMembership();
 
-  if (pathname?.startsWith('/dashboard') || pathname === '/') {
+  if (
+    pathname?.startsWith('/dashboard') ||
+    pathname?.startsWith('/getstarted') ||
+    pathname === '/'
+  ) {
     return null;
   }
 

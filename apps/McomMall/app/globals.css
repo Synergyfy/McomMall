@@ -1,5 +1,6 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap');
 @import url('https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700&family=Source+Sans+3:wght@400;600&family=Geist:wght@400;500;600&display=swap');
 
 @import 'tailwindcss';
 
@@ -73,12 +74,42 @@
   --color-on-surface-variant: var(--on-surface-variant, #5a4136);
   --color-on-background: var(--on-background, #261812);
 
+  /* Promotions Dashboard Theme Mappings */
+  --color-secondary-fixed: var(--secondary-fixed, #e5e2e1);
+  --color-inverse-on-surface: var(--inverse-on-surface, #eaf1ff);
+  --color-on-secondary-fixed: var(--on-secondary-fixed, #1c1b1b);
+  --color-secondary-fixed-dim: var(--secondary-fixed-dim, #c8c6c5);
+  --color-error-container: var(--error-container, #ffdad6);
+  --color-surface-dim: var(--surface-dim, #cbdbf5);
+  --color-inverse-surface: var(--inverse-surface, #213145);
+  --color-on-tertiary-container: var(--on-tertiary-container, #353029);
+  --color-on-primary-fixed: var(--on-primary-fixed, #351000);
+  --color-surface-bright: var(--surface-bright, #f8f9ff);
+  --color-on-secondary-fixed-variant: var(--on-secondary-fixed-variant, #474746);
+  --color-on-primary-fixed-variant: var(--on-primary-fixed-variant, #7b2f00);
+  --color-on-tertiary-fixed: var(--on-tertiary-fixed, #1f1b15);
+  --color-on-tertiary-fixed-variant: var(--on-tertiary-fixed-variant, #4b463f);
+  --color-on-tertiary: var(--on-tertiary, #ffffff);
+  --color-on-secondary: var(--on-secondary, #ffffff);
+  --color-on-secondary-container: var(--on-secondary-container, #636262);
+  --color-tertiary-fixed-dim: var(--tertiary-fixed-dim, #cec5bc);
+  --color-inverse-primary: var(--inverse-primary, #ffb694);
+  --color-surface-tint: var(--surface-tint, #a14000);
+  --color-tertiary-fixed: var(--tertiary-fixed, #eae1d7);
+
   --spacing-margin-mobile: 16px;
   --spacing-margin-desktop: 32px;
   --spacing-stack-sm: 8px;
   --spacing-stack-md: 16px;
   --spacing-stack-lg: 24px;
   --spacing-unit: 16px;
+
+  /* Promotions Dashboard Spacing */
+  --spacing-base: var(--spacing-base-val, 4px);
+  --spacing-section-gap: var(--spacing-section-gap-val, 3rem);
+  --spacing-grid-gutter: var(--spacing-grid-gutter-val, 1.5rem);
+  --spacing-container-padding-sm: var(--spacing-container-padding-sm-val, 1rem);
+  --spacing-container-padding-md: var(--spacing-container-padding-md-val, 2rem);
 
   --text-display-lg: 2.25rem;
   --text-headline-lg: 2rem;
@@ -381,5 +412,126 @@ body {
 
 .animate-refresh-bounce {
   animation: refresh-bounce 0.6s infinite alternate;
+}
+
+/* Scoped variables for Promotions Dashboard to match HTML Page 1 UI/UX */
+.promotions-dashboard {
+  --secondary-fixed: #e5e2e1;
+  --inverse-on-surface: #eaf1ff;
+  --outline-variant: #e2bfb0;
+  --on-error-container: #93000a;
+  --surface-tint: #a14000;
+  --on-secondary-fixed: #1c1b1b;
+  --secondary-fixed-dim: #c8c6c5;
+  --error-container: #ffdad6;
+  --surface-dim: #cbdbf5;
+  --inverse-surface: #213145;
+  --on-tertiary-container: #353029;
+  --on-primary-fixed: #351000;
+  --on-background: #0b1c30;
+  --surface-container: #e5eeff;
+  --surface-container-highest: #d3e4fe;
+  --surface-container-low: #eff4ff;
+  --tertiary-container: #9f978e;
+  --surface-bright: #f8f9ff;
+  --on-secondary-fixed-variant: #474746;
+  --error: #ba1a1a;
+  --on-error: #ffffff;
+  --on-primary-fixed-variant: #7b2f00;
+  --tertiary: #645d56;
+  --on-surface: #0b1c30;
+  --primary: #a14000;
+  --on-tertiary-fixed: #1f1b15;
+  --surface: #f8f9ff;
+  --on-primary-container: #571f00;
+  --primary-fixed-dim: #ffb694;
+  --primary-container: #ff6900;
+  --tertiary-fixed: #eae1d7;
+  --on-surface-variant: #5a4136;
+  --on-primary: #ffffff;
+  --surface-container-lowest: #ffffff;
+  --surface-container-high: #dce9ff;
+  --surface-variant: #d3e4fe;
+  --inverse-primary: #ffb694;
+  --secondary-container: #e2dfde;
+  --primary-fixed: #ffdbcc;
+  --background: #f8f9ff;
+  --on-tertiary-fixed-variant: #4b463f;
+  --outline: #8e7164;
+  --on-tertiary: #ffffff;
+  --on-secondary: #ffffff;
+  --on-secondary-container: #636262;
+  --tertiary-fixed-dim: #cec5bc;
+  --secondary: #5f5e5e;
+
+  /* Custom Spacing values */
+  --spacing-base-val: 4px;
+  --spacing-section-gap-val: 3rem;
+  --spacing-grid-gutter-val: 1.5rem;
+  --spacing-container-padding-sm-val: 1rem;
+  --spacing-container-padding-md-val: 2rem;
+
+  font-family: 'Source Sans 3', sans-serif !important;
+}
+
+.promotions-dashboard .font-body-md,
+.promotions-dashboard .text-body-md {
+  font-family: 'Source Sans 3', sans-serif !important;
+  font-size: 16px !important;
+  line-height: 24px !important;
+  font-weight: 400 !important;
+}
+.promotions-dashboard .font-label-md,
+.promotions-dashboard .text-label-md {
+  font-family: 'Geist', sans-serif !important;
+  font-size: 14px !important;
+  line-height: 20px !important;
+  letter-spacing: 0.01em !important;
+  font-weight: 500 !important;
+}
+.promotions-dashboard .font-title-md,
+.promotions-dashboard .text-title-md {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 20px !important;
+  line-height: 28px !important;
+  font-weight: 600 !important;
+}
+.promotions-dashboard .font-headline-lg-mobile,
+.promotions-dashboard .text-headline-lg-mobile {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 24px !important;
+  line-height: 32px !important;
+  font-weight: 700 !important;
+}
+.promotions-dashboard .font-stat-lg,
+.promotions-dashboard .text-stat-lg {
+  font-family: 'Geist', sans-serif !important;
+  font-size: 36px !important;
+  line-height: 44px !important;
+  letter-spacing: -0.03em !important;
+  font-weight: 600 !important;
+}
+.promotions-dashboard .font-display-lg,
+.promotions-dashboard .text-display-lg {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 48px !important;
+  line-height: 56px !important;
+  letter-spacing: -0.02em !important;
+  font-weight: 700 !important;
+}
+.promotions-dashboard .font-headline-lg,
+.promotions-dashboard .text-headline-lg {
+  font-family: 'Montserrat', sans-serif !important;
+  font-size: 32px !important;
+  line-height: 40px !important;
+  font-weight: 700 !important;
+}
+
+.promotions-dashboard .bento-card {
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.promotions-dashboard .bento-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.05);
 }
 

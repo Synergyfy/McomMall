@@ -75,10 +75,14 @@ const transformApiDataToFormData = (
   const hasService = apiData.listingType.includes('SERVICE');
 
   if (hasProduct) {
+    const primaryCatId = apiData.category?.id || apiData.categoryId || apiData.categories?.[0]?.id || '';
+    const subCatId = apiData.subCategory?.id || apiData.subCategoryId || apiData.categories?.[1]?.id || '';
+    const subCats = apiData.categories?.slice(2).map(c => c.id) || [];
+
     formData.productData = {
-      primaryCategory: apiData.categories[0]?.id || '',
-      subCategory: apiData.categories[1]?.id || '',
-      subCategories: apiData.categories.slice(2).map(c => c.id),
+      primaryCategory: primaryCatId,
+      subCategory: subCatId,
+      subCategories: subCats,
       showAddressPublicly: apiData.location.showPublicly,
       deliveryArea: {
         type: apiData.location.deliveryRadiusKm ? 'radius' : 'postcodes',
@@ -109,10 +113,14 @@ const transformApiDataToFormData = (
   }
 
   if (hasService) {
+    const primaryCatId = apiData.category?.id || apiData.categoryId || apiData.categories?.[0]?.id || '';
+    const tradeCatId = apiData.subCategory?.id || apiData.subCategoryId || apiData.categories?.[1]?.id || primaryCatId;
+    const subCats = apiData.categories?.slice(2).map(c => c.id) || [];
+
     formData.serviceData = {
-      primaryCategory: apiData.categories[0]?.id || '',
-      tradeCategory: apiData.categories[1]?.id || apiData.categories[0]?.id || '',
-      subCategories: apiData.categories.slice(2).map(c => c.id),
+      primaryCategory: primaryCatId,
+      tradeCategory: tradeCatId,
+      subCategories: subCats,
       serviceLocation: {
         atBusinessLocation: apiData.location.serviceModel !== 'travel_to_customer',
         customerTravels: apiData.location.serviceModel !== 'at_location',

@@ -11,8 +11,8 @@ export async function GET(request: Request) {
 
     const formattedPostcode = postcode.trim().toUpperCase();
 
-    // Basic UK Postcode regex check
-    const ukPostcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]? ?[0-9][A-Z]{2}$/i;
+    // Basic UK Postcode regex check (supporting full postcodes or outward postcode prefixes e.g. BT1, NW1)
+    const ukPostcodeRegex = /^[A-Z]{1,2}[0-9][A-Z0-9]?( ?[0-9][A-Z]{2})?$/i;
     if (!ukPostcodeRegex.test(formattedPostcode)) {
       return NextResponse.json([]); // Return empty suggestions for invalid postcode
     }

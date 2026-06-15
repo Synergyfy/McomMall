@@ -3,16 +3,15 @@
 import React from 'react';
 import { useSelector } from 'react-redux';
 import { RootState } from '@/service/store/store';
-import { redirect } from 'next/navigation';
 import { EventsView } from '../component/customer/EventsView';
+import { EventsManager } from './components/events-manager';
 
 export default function EventsPage() {
   const { userRole } = useSelector((state: RootState) => state.auth);
 
-  // Redirect owner or other roles away from customer-only events page
-  if (userRole && userRole !== 'customer') {
-    redirect('/dashboard');
+  if (userRole === 'customer' || userRole === 'CUSTOMER') {
+    return <EventsView />;
   }
 
-  return <EventsView />;
+  return <EventsManager />;
 }
