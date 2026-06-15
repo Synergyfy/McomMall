@@ -113,6 +113,19 @@ export class ListingsService {
       const { sectorId, categoryId, subCategoryId, ...businessData } =
         createBusinessDto;
 
+      const isUuid = (val: string) =>
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(val || '');
+
+      if (!sectorId || !isUuid(sectorId)) {
+        throw new BadRequestException('Invalid Sector ID');
+      }
+      if (!categoryId || !isUuid(categoryId)) {
+        throw new BadRequestException('Invalid Category ID');
+      }
+      if (!subCategoryId || !isUuid(subCategoryId)) {
+        throw new BadRequestException('Invalid SubCategory ID');
+      }
+
       // Validate Taxonomy Hierarchy
       const sector = await this.sectorRepository.findOne({
         where: { id: sectorId },

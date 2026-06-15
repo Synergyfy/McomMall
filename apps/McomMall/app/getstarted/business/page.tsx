@@ -721,6 +721,7 @@ function BusinessOnboardingInner() {
     message: string;
   } | null>(null);
   const [showProximityModal, setShowProximityModal] = useState(false);
+  const [showActivationLearnMore, setShowActivationLearnMore] = useState(false);
   const [showInitialPrompt, setShowInitialPrompt] = useState(true);
   const [showGoogleCategoryPage, setShowGoogleCategoryPage] = useState(false);
   const [showFindClaimPage, setShowFindClaimPage] = useState(false);
@@ -994,6 +995,42 @@ function BusinessOnboardingInner() {
         setIsSubmitting(false);
       }
       return;
+    }
+
+    // ── Category Step Validation ───────────────────────────
+    if (currentQuest.id === 'category') {
+      if (!formData.sectorId || !formData.categoryId || !formData.subCategoryId) {
+        setSubmitError('Please select your sector, category, and subcategory.');
+        return;
+      }
+    }
+
+    // ── Details Step Validation ────────────────────────────
+    if (currentQuest.id === 'details') {
+      if (!formData.firstName.trim() || !formData.lastName.trim()) {
+        setSubmitError('Please enter your first name and last name.');
+        return;
+      }
+      if (!formData.password) {
+        setSubmitError('Please enter a password.');
+        return;
+      }
+      if (formData.password.length < 8) {
+        setSubmitError('Password must be at least 8 characters long.');
+        return;
+      }
+      if (formData.password !== formData.confirmPassword) {
+        setSubmitError('Passwords do not match.');
+        return;
+      }
+    }
+
+    // ── Profile Step Validation ────────────────────────────
+    if (currentQuest.id === 'profile') {
+      if (!formData.businessName.trim()) {
+        setSubmitError('Please enter your business name.');
+        return;
+      }
     }
 
     // ── Final step: register + auto-login + create profile ──────────────────
@@ -2741,19 +2778,21 @@ function BusinessOnboardingInner() {
       
       try {
         const res = await api.post('google-business/complete-onboarding', {
-          email: googleEmail || 'merchant.jane@gmail.com',
-          firstName: ownerFirstName || 'Jane',
-          lastName: ownerLastName || 'Smith',
+          email: googleEmail || formData.email,
+          firstName: ownerFirstName || formData.firstName,
+          lastName: ownerLastName || formData.lastName,
           businessType: formData.businessType || 'products',
-          googlePlaceId: selectedPreviewBusiness?.googlePlaceId || 'mock_1',
+          googlePlaceId: selectedPreviewBusiness?.googlePlaceId,
           businessName: selectedPreviewBusiness?.businessName || formData.businessName,
-          businessPhone: selectedPreviewBusiness?.businessPhone || formData.businessPhone || '02071234567',
+          businessPhone: selectedPreviewBusiness?.businessPhone || formData.businessPhone,
           address: selectedPreviewBusiness?.address || formData.address,
-          postcode: selectedPreviewBusiness?.postcode || formData.postcode || 'NW1 6XE',
+          postcode: selectedPreviewBusiness?.postcode || formData.postcode,
           sectorId: formData.sectorId,
           categoryId: formData.categoryId,
           subCategoryId: formData.subCategoryId,
           logoUrl: '',
+          password: formData.password,
+          shortDescription: selectedPreviewBusiness?.shortDescription || formData.shortDescription,
         });
 
         const { auth, user, listing } = res.data;
@@ -2768,7 +2807,7 @@ function BusinessOnboardingInner() {
         dispatch(
           setUserData({
             id: user?.id || 'mock_user_id',
-            userName: `${user?.firstName || 'Jane'} ${user?.lastName || 'Smith'}`,
+            userName: `${user?.firstName || formData.firstName || 'Merchant'} ${user?.lastName || formData.lastName || 'User'}`,
             userRole: user?.role || 'owner',
             packageInfo: null,
           })
@@ -3817,11 +3856,93 @@ function BusinessOnboardingInner() {
             >
               Continue
             </button>
-            <button className="flex-1 order-2 md:order-1 border border-primary text-primary py-4 rounded-xl font-title-md text-title-md active:scale-[0.98] transition-all hover:bg-primary/5">
+            <button 
+              onClick={() => setShowActivationLearnMore(true)}
+              className="flex-1 order-2 md:order-1 border border-primary text-primary py-4 rounded-xl font-title-md text-title-md active:scale-[0.98] transition-all hover:bg-primary/5"
+            >
               Learn More
             </button>
           </div>
         </footer>
+
+        <AnimatePresence>
+          {showActivationLearnMore && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+              {/* Glassmorphic backdrop */}
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                onClick={() => setShowActivationLearnMore(false)}
+                className="absolute inset-0 backdrop-blur-md bg-orange-950/25"
+              />
+
+              {/* Modal Container */}
+              <motion.div
+                initial={{ scale: 0.92, y: 20, opacity: 0 }}
+                animate={{ scale: 1, y: 0, opacity: 1 }}
+                exit={{ scale: 0.92, y: 20, opacity: 0 }}
+                transition={{ type: 'spring', damping: 25, stiffness: 180 }}
+                className="bg-white rounded-3xl w-full max-w-lg max-h-[85dvh] overflow-y-auto shadow-2xl relative z-10 border border-gray-100 flex flex-col"
+              >
+                {/* Decorative bar */}
+                <div className="h-2.5 bg-gradient-to-r from-orange-500 to-red-500 shadow-orange-500/30" />
+
+                <div className="p-6 sm:p-8 flex-1 flex flex-col items-center">
+                  <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-600 mb-4 shrink-0">
+                    <span className="material-symbols-outlined text-2xl">info</span>
+                  </div>
+
+                  <h3 className="text-xl sm:text-2xl font-black text-gray-900 mb-2 tracking-tight text-center">
+                    High Street Activation
+                  </h3>
+                  <p className="text-gray-500 text-sm text-center mb-6">
+                    By validating your postcode, your store is integrated into your local borough's digital business network.
+                  </p>
+
+                  <div className="w-full space-y-4 mb-6 text-left">
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-orange-50 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3.5 h-3.5 text-orange-600" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-800">Active High Street Listing</h4>
+                        <p className="text-xs text-gray-500">Your store will appear in the local borough's active directory, making you easily discoverable to nearby shoppers.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-orange-50 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3.5 h-3.5 text-orange-600" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-800">Virtual Hub Integration</h4>
+                        <p className="text-xs text-gray-500">Gain access to digital co-promotions, local business collaborations, and district-wide marketing campaigns.</p>
+                      </div>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <div className="w-5 h-5 rounded-full bg-orange-50 flex items-center justify-center shrink-0 mt-0.5">
+                        <Check className="w-3.5 h-3.5 text-orange-600" strokeWidth={3} />
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-gray-800">Community Engagement</h4>
+                        <p className="text-xs text-gray-500">Connect with local merchant association groups, consumer feedback channels, and digital neighborhood forums.</p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <button
+                    onClick={() => setShowActivationLearnMore(false)}
+                    className="w-full bg-[#ea580c] text-white py-3.5 rounded-xl font-bold hover:bg-[#d94e02] transition-colors shadow-lg shadow-orange-500/10 active:scale-95"
+                  >
+                    Got It
+                  </button>
+                </div>
+              </motion.div>
+            </div>
+          )}
+        </AnimatePresence>
       </div>
     );
   }
@@ -4009,25 +4130,6 @@ function BusinessOnboardingInner() {
       />
 
       <div className="relative z-10 max-w-2xl mx-auto px-4 sm:px-6 pt-8 pb-32 sm:pb-20">
-        {/* ─── Progress ────────────────────────────────── */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-2">
-            <span className="text-sm font-semibold text-gray-600">
-              Step {currentStep + 1} of {activeQuests.length}
-            </span>
-            <span className="text-xs text-gray-400">
-              {Math.round((completedSteps.size / activeQuests.length) * 100)}% complete
-            </span>
-          </div>
-          <div className="h-1.5 bg-gray-100 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full bg-gradient-to-r from-orange-500 to-red-500"
-              animate={{ width: `${((currentStep + 1) / activeQuests.length) * 100}%` }}
-              transition={{ duration: 0.5, ease: 'easeOut' }}
-            />
-          </div>
-        </div>
-
         {/* ─── Sleek Segmented Progress Hairline for Mobile ─── */}
         <div className="block sm:hidden space-y-2 mb-4">
           <div className="flex gap-1 w-full">
