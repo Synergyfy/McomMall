@@ -98,15 +98,15 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
   };
 
   return (
-    <div className="flex flex-col gap-8 pb-32">
+    <div className="flex flex-col gap-6 md:gap-8 pb-10 md:pb-16">
       {/* Progress Bar */}
-      <div className="w-full bg-white dark:bg-[#291e15] rounded-xl p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
-        <div className="flex flex-col gap-4">
+      <div className="w-full bg-white dark:bg-[#291e15] rounded-xl p-4 md:p-6 shadow-sm border border-[#e8dbce] dark:border-[#4a3b2f]">
+        <div className="flex flex-col gap-3 md:gap-4">
           <div className="flex justify-between items-end">
-            <span className="text-[#f48c25] text-sm font-bold uppercase tracking-wider">Step 1 of 4</span>
-            <span className="text-[#1c140d] dark:text-white text-sm font-semibold">Basic Information</span>
+            <span className="text-[#f48c25] text-xs md:text-sm font-bold uppercase tracking-wider">Step 1 of 4</span>
+            <span className="text-[#1c140d] dark:text-white text-xs md:text-sm font-semibold">Basic Information</span>
           </div>
-          <div className="relative w-full h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
+          <div className="relative w-full h-1.5 md:h-2 bg-gray-100 dark:bg-gray-800 rounded-full overflow-hidden">
             <div className="absolute top-0 left-0 h-full bg-[#f48c25] rounded-full" style={{ width: '25%' }}></div>
           </div>
           <div className="hidden sm:flex justify-between text-xs font-medium text-[#9c7349] mt-1">
@@ -405,8 +405,8 @@ export default function Step1BasicInfo({ formData, updateFormData, onNext, onCan
           </form>
         </div>
 
-        {/* Mobile-First Sticky Footer */}
-        <div className="fixed bottom-16 left-0 right-0 p-4 bg-white dark:bg-[#1c140d] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 z-50 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] md:shadow-none">
+        {/* Mobile-First Sticky-Free Footer */}
+        <div className="relative p-4 bg-white dark:bg-[#2d241b] border-t border-[#e8dbce] dark:border-[#4a3b2e] md:relative md:bg-transparent md:border-none md:p-0 md:mt-8 md:shadow-none w-full">
             <div className="flex items-center justify-between md:justify-end gap-4 max-w-5xl mx-auto">
                 <button
                     onClick={onCancel}

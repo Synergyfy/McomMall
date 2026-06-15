@@ -254,6 +254,11 @@ export const pluginMenuItems: MenuItem[] = [
     icon: Megaphone,
   },
   {
+    title: 'Events',
+    href: '/dashboard/events',
+    icon: Calendar,
+  },
+  {
     title: 'Gift Card',
     href: '/dashboard/gift-card',
     icon: Settings,

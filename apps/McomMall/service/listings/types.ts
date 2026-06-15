@@ -151,6 +151,12 @@ export interface UserListing {
   bannerAltText: string;
   status: string;
   categories: Category[];
+  category?: Category;
+  subCategory?: Category;
+  categoryId?: string;
+  subCategoryId?: string;
+  sector?: any;
+  sectorId?: string;
   isGoogleVerified: boolean;
   isVerified: boolean;
   isClaimed: boolean;
@@ -439,6 +445,12 @@ export interface InHouseBusiness {
   isClaimed: boolean;
   location: Location;
   categories: Category[];
+  category?: Category;
+  subCategory?: Category;
+  categoryId?: string;
+  subCategoryId?: string;
+  sector?: any;
+  sectorId?: string;
   socialLinks: SocialLink[];
   businessHours: BusinessHour[];
   specialDays: SpecialDay[];
