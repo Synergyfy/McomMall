@@ -64,7 +64,9 @@ function normalizePlaceResult(place: any): any {
 
 @Injectable()
 export class GooglePlacesService {
-  private readonly apiKey = process.env.GOOGLE_API_KEY;
+  private get apiKey(): string {
+    return this.configService.get<string>('GOOGLE_API_KEY') || process.env.GOOGLE_API_KEY || '';
+  }
   constructor(
     private readonly httpService: HttpService,
     private readonly configService: ConfigService,
