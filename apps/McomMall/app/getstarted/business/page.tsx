@@ -744,6 +744,7 @@ function BusinessOnboardingInner() {
   const [termsError, setTermsError] = useState(false);
   const [lockedFeatureAttempt, setLockedFeatureAttempt] = useState<string | null>(null);
   const [cobrandedTab, setCobrandedTab] = useState<'standard' | 'pro' | 'plus'>('standard');
+  const [selectedPlan, setSelectedPlan] = useState<'payg' | 'standard' | 'pro' | 'plus'>('standard');
   const [quickSetupToggles, setQuickSetupToggles] = useState({
     loyalty: true,
     rewards: true,
@@ -1983,8 +1984,8 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (showVerifyOwnershipPage && selectedPreviewBusiness) {
     return (
-      <div className="bg-white min-h-screen flex flex-col font-sans overflow-x-hidden pb-40 pt-16">
-        <main className="flex-grow flex flex-col px-6 pt-8 max-w-xl mx-auto w-full">
+      <div className="bg-white min-h-screen flex flex-col font-sans overflow-x-hidden pb-40 pt-6 md:pt-16">
+        <main className="flex-grow flex flex-col px-6 pt-4 md:pt-8 max-w-xl mx-auto w-full">
           {/* Back button */}
           <div className="flex justify-start mb-6">
             <button 
@@ -2271,7 +2272,7 @@ function BusinessOnboardingInner() {
         </header>
 
         {/* Main Content Canvas */}
-        <main className="flex-grow pt-24 pb-12 px-6 flex justify-center w-full">
+        <main className="flex-grow pt-18 md:pt-24 pb-12 px-6 flex justify-center w-full">
           <div className="w-full max-w-[640px] flex flex-col gap-8">
             {/* Title Section */}
             <section className="text-center md:text-left">
@@ -2417,7 +2418,7 @@ function BusinessOnboardingInner() {
         </header>
 
         {/* Main Content Canvas */}
-        <main className="flex-grow pt-24 pb-12 px-6 flex justify-center w-full">
+        <main className="flex-grow pt-18 md:pt-24 pb-12 px-6 flex justify-center w-full">
           <div className="w-full max-w-[640px] flex flex-col gap-8">
             {/* Onboarding Progress Stepper */}
             <div className="w-full">
@@ -2518,7 +2519,7 @@ function BusinessOnboardingInner() {
           </button>
         </header>
 
-        <main className="flex-1 flex flex-col items-center justify-start px-6 pt-24 pb-10 max-w-[640px] mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-start px-6 pt-18 md:pt-24 pb-10 max-w-[640px] mx-auto w-full">
           {/* Onboarding Progress Section */}
           <div className="w-full mb-8">
             <div className="flex justify-between items-end mb-2">
@@ -2637,7 +2638,7 @@ function BusinessOnboardingInner() {
           <div className="h-full bg-orange-600 w-[91.6%] transition-all duration-700 ease-out"></div>
         </div>
 
-        <main className="flex-1 flex flex-col items-center justify-start px-6 pt-24 pb-10 max-w-[1024px] mx-auto w-full">
+        <main className="flex-1 flex flex-col items-center justify-start px-6 pt-18 md:pt-24 pb-10 max-w-[1024px] mx-auto w-full">
           {/* Header Section */}
           <section className="mb-8 w-full text-center">
             <p className="text-[10px] font-bold text-orange-600 uppercase tracking-widest mb-2">Step 11 of 12</p>
@@ -2676,7 +2677,7 @@ function BusinessOnboardingInner() {
                 ))}
               </ul>
               <button 
-                onClick={() => { setShowMembershipSelectionPage(false); setShowQuickSetupPage(true); }}
+                onClick={() => { setSelectedPlan('payg'); setShowMembershipSelectionPage(false); setShowQuickSetupPage(true); }}
                 className="w-full py-4 bg-gray-100 text-gray-900 hover:bg-gray-200 rounded-xl font-bold text-sm transition-all active:scale-95"
               >
                 Select PAYG
@@ -2744,7 +2745,7 @@ function BusinessOnboardingInner() {
                 ))}
               </ul>
               <button 
-                onClick={() => { setShowMembershipSelectionPage(false); setShowQuickSetupPage(true); }}
+                onClick={() => { setSelectedPlan(cobrandedTab); setShowMembershipSelectionPage(false); setShowQuickSetupPage(true); }}
                 className="w-full py-4 bg-orange-600 text-white hover:bg-orange-700 rounded-xl font-bold text-sm shadow-md transition-all active:scale-95 flex items-center justify-center gap-2"
               >
                 Select {cobrandedTab === 'standard' ? 'Standard' : cobrandedTab === 'pro' ? 'Pro' : 'Plus'}
@@ -2793,6 +2794,7 @@ function BusinessOnboardingInner() {
           logoUrl: '',
           password: formData.password,
           shortDescription: selectedPreviewBusiness?.shortDescription || formData.shortDescription,
+          selectedPlan: selectedPlan,
         });
 
         const { auth, user, listing } = res.data;
@@ -2858,7 +2860,7 @@ function BusinessOnboardingInner() {
           </div>
         </div>
 
-        <main className="max-w-[800px] mx-auto px-4 pt-8 space-y-6 w-full flex-grow">
+        <main className="max-w-[800px] mx-auto px-4 pt-4 md:pt-8 space-y-6 w-full flex-grow">
           {/* Title & Intro */}
           <header className="text-center space-y-2 mb-8">
             <h2 className="text-3xl md:text-4xl font-black text-gray-900">Review Your Storefront</h2>
@@ -2885,7 +2887,7 @@ function BusinessOnboardingInner() {
                     <p className="text-xs font-medium text-gray-500">The core identity of your brand.</p>
                   </div>
                 </div>
-                <button className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
+                <button onClick={() => { setShowReviewStorefrontPage(false); setCurrentStep(6); }} className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
               </div>
               <div className="grid grid-cols-2 gap-4 pt-2">
                 <div>
@@ -2906,7 +2908,7 @@ function BusinessOnboardingInner() {
                   <MapPin className="w-5 h-5 text-orange-600" />
                   <h3 className="text-lg font-bold text-gray-900">Local Placement</h3>
                 </div>
-                <button className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
+                <button onClick={() => { setShowReviewStorefrontPage(false); setCurrentStep(2); }} className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
               </div>
               <div className="flex flex-col gap-3">
                 <div className="bg-orange-50/50 rounded-xl p-3 border border-orange-100/50">
@@ -2936,7 +2938,7 @@ function BusinessOnboardingInner() {
                   <BadgeCheck className="w-5 h-5 text-blue-600" />
                   <h3 className="text-lg font-bold text-gray-900">Membership</h3>
                 </div>
-                <button className="text-blue-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
+                <button onClick={() => { setShowReviewStorefrontPage(false); setShowMembershipSelectionPage(true); }} className="text-blue-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
               </div>
               <div className="space-y-4">
                 <div className="flex flex-col">
@@ -2963,17 +2965,21 @@ function BusinessOnboardingInner() {
                   <Archive className="w-5 h-5 text-orange-600" />
                   <h3 className="text-lg font-bold text-gray-900">Inventory</h3>
                 </div>
-                <button className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
+                <button onClick={() => { setShowReviewStorefrontPage(false); setShowBusinessTypePage(true); }} className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
               </div>
               <div className="flex gap-4 h-full items-center">
-                <div className="flex-1 text-center border-r border-gray-100 py-2">
-                  <p className="text-4xl font-black text-orange-600">24</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Products</p>
-                </div>
-                <div className="flex-1 text-center py-2">
-                  <p className="text-4xl font-black text-orange-600">08</p>
-                  <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Services</p>
-                </div>
+                {(formData.businessType === 'products' || formData.businessType === 'both') && (
+                  <div className="flex-1 text-center border-r border-gray-100 py-2 last:border-r-0">
+                    <p className="text-4xl font-black text-orange-600">00</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Products (Pending)</p>
+                  </div>
+                )}
+                {(formData.businessType === 'services' || formData.businessType === 'both') && (
+                  <div className="flex-1 text-center py-2">
+                    <p className="text-4xl font-black text-orange-600">00</p>
+                    <p className="text-[10px] font-bold text-gray-400 uppercase tracking-widest mt-1">Services (Pending)</p>
+                  </div>
+                )}
               </div>
             </section>
 
@@ -2984,21 +2990,28 @@ function BusinessOnboardingInner() {
                   <Puzzle className="w-5 h-5 text-orange-600" />
                   <h3 className="text-lg font-bold text-gray-900">Features</h3>
                 </div>
-                <button className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
+                <button onClick={() => { setShowReviewStorefrontPage(false); setShowQuickSetupPage(true); }} className="text-orange-600 font-bold text-[10px] uppercase tracking-widest hover:underline">EDIT</button>
               </div>
               <div className="flex flex-wrap gap-2 mt-2">
-                <span className="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border border-orange-200">
-                  <Heart className="w-3.5 h-3.5" /> Loyalty
-                </span>
-                <span className="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border border-orange-200">
-                  <Gift className="w-3.5 h-3.5" /> Rewards
-                </span>
-                <span className="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border border-orange-200">
-                  <Truck className="w-3.5 h-3.5" /> Delivery
-                </span>
-                <span className="bg-gray-100 text-gray-500 px-3 py-1.5 rounded-full text-xs font-bold border border-gray-200">
-                  +2 more
-                </span>
+                {Object.entries(quickSetupToggles).filter(([_, enabled]) => enabled).map(([key, _]) => {
+                  const map: Record<string, { label: string; Icon: React.ComponentType<any> }> = {
+                    loyalty: { label: 'Loyalty', Icon: Heart },
+                    rewards: { label: 'Rewards', Icon: Gift },
+                    promotions: { label: 'Promotions', Icon: Megaphone },
+                    gamification: { label: 'Gamification', Icon: Gamepad2 },
+                    bookings: { label: 'Bookings', Icon: Calendar },
+                    events: { label: 'Events', Icon: CalendarDays },
+                    vouchers: { label: 'Vouchers', Icon: Ticket },
+                  };
+                  const item = map[key];
+                  if (!item) return null;
+                  const { label, Icon } = item;
+                  return (
+                    <span key={key} className="bg-orange-100 text-orange-800 px-3 py-1.5 rounded-full text-xs font-bold flex items-center gap-1.5 border border-orange-200">
+                      <Icon className="w-3.5 h-3.5" /> {label}
+                    </span>
+                  );
+                })}
               </div>
             </section>
           </div>
@@ -3117,7 +3130,7 @@ function BusinessOnboardingInner() {
           </div>
         </header>
 
-        <main className="max-w-[1280px] mx-auto px-6 pt-24 pb-32 w-full flex-grow flex justify-center">
+        <main className="max-w-[1280px] mx-auto px-6 pt-18 md:pt-24 pb-32 w-full flex-grow flex justify-center">
           <div className="w-full max-w-[640px]">
             {/* Onboarding Stepper */}
             <div className="w-full mb-8">
@@ -3447,8 +3460,8 @@ function BusinessOnboardingInner() {
     });
 
     return (
-      <div className="mcommall-onboarding bg-[#fff8f6] text-[#261812] min-h-screen flex flex-col font-sans pt-16">
-        <main className="flex-grow w-full max-w-2xl mx-auto px-margin-mobile py-stack-lg">
+      <div className="mcommall-onboarding bg-[#fff8f6] text-[#261812] min-h-screen flex flex-col font-sans pt-4 md:pt-16">
+        <main className="flex-grow w-full max-w-2xl mx-auto px-margin-mobile py-4 md:py-stack-lg">
           <button 
             onClick={() => setShowBoroughBrowser(false)}
             className="flex items-center gap-1.5 text-sm font-bold text-primary hover:opacity-80 transition-opacity active:scale-95 mb-6"
@@ -3577,8 +3590,8 @@ function BusinessOnboardingInner() {
     };
 
     return (
-      <div className="mcommall-onboarding bg-background text-on-background min-h-screen flex flex-col font-sans pt-16">
-        <main className="flex-grow flex flex-col items-center px-margin-mobile py-stack-lg max-w-[640px] mx-auto w-full">
+      <div className="mcommall-onboarding bg-background text-on-background min-h-screen flex flex-col font-sans pt-4 md:pt-16">
+        <main className="flex-grow flex flex-col items-center px-margin-mobile py-4 md:py-stack-lg max-w-[640px] mx-auto w-full">
           {/* Back button */}
           <div className="w-full flex justify-start mb-4">
             <button 
@@ -3952,8 +3965,8 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (!isGoogleOnboarding && currentQuest.id === 'storefront') {
     return (
-      <div className="mcommall-onboarding bg-background text-on-background font-body-lg min-h-screen flex flex-col font-sans pt-16">
-        <main className="flex-grow pt-8 pb-32 px-margin-mobile md:px-0">
+      <div className="mcommall-onboarding bg-background text-on-background font-body-lg min-h-screen flex flex-col font-sans pt-4 md:pt-16">
+        <main className="flex-grow pt-4 md:pt-8 pb-32 px-margin-mobile md:px-0">
           <div className="max-w-[640px] mx-auto">
 
             <div className="mb-stack-lg">
