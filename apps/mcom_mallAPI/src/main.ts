@@ -18,7 +18,11 @@ async function configureApp(app: any) {
   app.use(urlencoded({ limit: '50mb', extended: true }));
 
   app.enableCors({
-    origin: true,
+    origin: [
+      'https://mcommall.vercel.app',
+      'http://localhost:3000',
+      'http://localhost:3001',
+    ],
     credentials: true,
   });
 

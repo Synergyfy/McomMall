@@ -1273,7 +1273,7 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (showInitialPrompt) {
     return (
-      <div className="min-h-screen bg-[#fafafa] flex flex-col relative overflow-y-auto overflow-x-hidden font-sans pt-16">
+      <div className="min-h-screen bg-[#fafafa] flex flex-col relative overflow-y-auto overflow-x-hidden font-sans pt-6">
         {/* Subtle dot grid background */}
         <div
           className="absolute inset-0 opacity-30 pointer-events-none"
@@ -1401,7 +1401,7 @@ function BusinessOnboardingInner() {
     );
 
     return (
-      <div className="fixed top-16 inset-x-0 bottom-0 bg-gray-50 flex flex-col font-sans z-40 overflow-y-auto">
+      <div className="fixed top-0 inset-x-0 bottom-0 bg-gray-50 flex flex-col font-sans z-40 overflow-y-auto">
         {/* Top Bar */}
         <div className="bg-gradient-to-r from-orange-500 to-red-500 w-full py-4 px-4 sm:px-6 md:px-8 shadow-md z-10 sticky top-0">
           <div className="w-full mx-auto flex flex-col sm:flex-row items-center gap-4">
@@ -1527,14 +1527,14 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (showFindClaimPage) {
     return (
-      <div className="fixed top-16 inset-x-0 bottom-0 bg-white flex flex-col font-sans z-40">
+      <div className="fixed top-0 inset-x-0 bottom-0 bg-white flex flex-col font-sans z-40">
         <main className="flex-grow flex flex-col md:flex-row overflow-hidden relative">
           {/* Sidebar Search and Results */}
           <div className={`relative flex flex-col z-30 h-full transition-all duration-300 ease-in-out flex-shrink-0 ${isSidebarCollapsed ? 'w-0' : 'w-full md:w-[400px] lg:w-[480px]'} ${mapViewToggle === 'map' ? 'hidden md:flex' : 'flex'}`}>
             <aside className={`w-full h-full bg-white border-r border-gray-200 flex flex-col shadow-sm overflow-hidden transition-opacity duration-300 ${isSidebarCollapsed ? 'opacity-0' : 'opacity-100'}`}>
               <div className="w-full md:w-[400px] lg:w-[480px] h-full flex flex-col flex-shrink-0">
                 {/* Search Header */}
-                <div className="p-4 pt-8 md:pt-4 border-b border-gray-100 flex-shrink-0 transition-all duration-300 relative z-20">
+                <div className="p-4 pt-3 md:pt-3 border-b border-gray-100 flex-shrink-0 transition-all duration-300 relative z-20">
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-start gap-2">
                       <button onClick={() => { setShowFindClaimPage(false); setShowInitialPrompt(true); }} className="p-2 -ml-2 rounded-full hover:bg-gray-100 text-gray-500 transition-colors shrink-0">
@@ -1863,7 +1863,7 @@ function BusinessOnboardingInner() {
   // ═══════════════════════════════════════════════════════
   if (showBusinessPreviewPage && selectedPreviewBusiness) {
     return (
-      <div className="bg-gray-50 min-h-screen flex flex-col font-sans overflow-x-hidden pt-16 pb-12">
+      <div className="bg-gray-50 min-h-screen flex flex-col font-sans overflow-x-hidden pt-6 pb-12">
         {/* Hero Section */}
         <div className="relative w-full h-64 overflow-hidden">
           {/* Floating Back Button */}
