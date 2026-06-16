@@ -4,7 +4,7 @@ import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
-import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown } from 'lucide-react';
+import { Search, ShoppingBag, Store, Flower2, Utensils, Coffee, Scissors, Wheat, Play, X, Sparkles, MapPin, ArrowDown, ChevronLeft, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 
 const SLIDES = [
@@ -31,9 +31,9 @@ export default function RootLandingPage() {
   useEffect(() => {
     const timer = setInterval(() => {
       setCurrentSlide((prev) => (prev + 1) % SLIDES.length);
-    }, 4000);
+    }, 8000);
     return () => clearInterval(timer);
-  }, []);
+  }, [currentSlide]);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -116,6 +116,37 @@ export default function RootLandingPage() {
                 />
               </motion.div>
             </AnimatePresence>
+
+            {/* Slide Indicators (Dots at the top) */}
+            <div className="absolute top-4 left-1/2 -translate-x-1/2 z-20 flex gap-2 bg-black/20 backdrop-blur-md px-3 py-1.5 rounded-full border border-white/10">
+              {SLIDES.map((_, index) => (
+                <button
+                  key={index}
+                  onClick={() => setCurrentSlide(index)}
+                  className={`w-2 h-2 rounded-full transition-all duration-300 ${
+                    currentSlide === index ? 'bg-orange-500 w-4' : 'bg-white/60 hover:bg-white'
+                  }`}
+                  aria-label={`Go to slide ${index + 1}`}
+                />
+              ))}
+            </div>
+
+            {/* Navigation Arrows */}
+            <button
+              onClick={() => setCurrentSlide((prev) => (prev - 1 + SLIDES.length) % SLIDES.length)}
+              className="absolute left-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-orange-500 text-white flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 border border-white/10 backdrop-blur-md"
+              aria-label="Previous slide"
+            >
+              <ChevronLeft size={18} className="sm:w-5 sm:h-5" />
+            </button>
+            <button
+              onClick={() => setCurrentSlide((prev) => (prev + 1) % SLIDES.length)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 z-20 w-9 h-9 sm:w-10 sm:h-10 rounded-full bg-black/20 hover:bg-orange-500 text-white flex items-center justify-center transition-all duration-300 hover:scale-105 active:scale-95 border border-white/10 backdrop-blur-md"
+              aria-label="Next slide"
+            >
+              <ChevronRight size={18} className="sm:w-5 sm:h-5" />
+            </button>
+
             {/* Mobile Gradient & Text - Hidden on md+ */}
             <div className="absolute inset-0 bg-gradient-to-t from-slate-950 via-slate-900/40 to-transparent md:hidden" />
             
