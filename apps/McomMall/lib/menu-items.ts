@@ -26,6 +26,8 @@ import {
   Zap,
   MapPin,
   BarChart2,
+  Trophy,
+  Wrench,
 } from 'lucide-react';
 
 export interface SubMenuItem {
@@ -103,6 +105,31 @@ export const storefrontMenuItems: MenuItem[] = [
     title: 'Verification',
     href: '/dashboard/storefront/verification',
     icon: Scan,
+  },
+  {
+    title: 'Visibility Settings',
+    href: '/dashboard/storefront/visibility',
+    icon: Zap,
+  },
+  {
+    title: 'Readiness Score',
+    href: '/dashboard/storefront/readiness',
+    icon: Trophy,
+  },
+  {
+    title: 'Borough Campaigns',
+    href: '/dashboard/storefront/boroughs',
+    icon: Megaphone,
+  },
+  {
+    title: 'Interest Signals',
+    href: '/dashboard/storefront/signals',
+    icon: BarChart2,
+  },
+  {
+    title: 'Claim Campaigns',
+    href: '/dashboard/storefront/activations',
+    icon: List,
   },
 ];
 
@@ -235,6 +262,36 @@ export const accountMenuItems: MenuItem[] = [
 
 export const pluginMenuItems: MenuItem[] = [
   {
+    title: 'Business Tools',
+    href: '/dashboard/tools',
+    icon: Wrench,
+    subMenu: [
+      { title: 'Overview', href: '/dashboard/tools' },
+      { title: 'Excess Stock', href: '/dashboard/tools/excess-stock' },
+      { title: 'Capacity Manager', href: '/dashboard/tools/capacity' },
+      { title: 'Campaigns', href: '/dashboard/tools/campaigns' },
+      { title: 'Push Alerts', href: '/dashboard/tools/alerts' },
+    ],
+  },
+  {
+    title: 'QR Engine',
+    href: '/dashboard/qr',
+    icon: Scan,
+    subMenu: [
+      { title: 'QR Dashboard', href: '/dashboard/qr' },
+      { title: 'Create QR', href: '/dashboard/qr/new' },
+    ],
+  },
+  {
+    title: 'Marketing Automations',
+    href: '/dashboard/automations',
+    icon: Zap,
+    subMenu: [
+      { title: 'Dashboard', href: '/dashboard/automations' },
+      { title: 'Flow Builder', href: '/dashboard/automations/new' },
+    ],
+  },
+  {
     title: 'Loyalty & Reward',
     href: '/dashboard/loyalty',
     icon: Settings,
@@ -251,6 +308,11 @@ export const pluginMenuItems: MenuItem[] = [
   {
     title: 'Promotion',
     href: '/dashboard/promotions',
+    icon: Megaphone,
+  },
+  {
+    title: 'Rotator Campaigns',
+    href: '/dashboard/promotions/rotators',
     icon: Megaphone,
   },
   {
@@ -278,9 +340,10 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/vouchers',
     icon: Settings,
     subMenu: [
+      { title: 'Dashboard', href: '/dashboard/vouchers' },
+      { title: 'Create Campaign', href: '/dashboard/vouchers/new' },
+      { title: 'Redemption Log', href: '/dashboard/vouchers/sold' },
       { title: 'Analytics', href: '/dashboard/vouchers/analytics' },
-      { title: 'Voucher Products', href: '/dashboard/vouchers/products' },
-      { title: 'Sold Vouchers', href: '/dashboard/vouchers/sold' },
     ],
   },
   {
@@ -288,10 +351,11 @@ export const pluginMenuItems: MenuItem[] = [
     href: '/dashboard/coupons',
     icon: Settings,
     subMenu: [
-      { title: 'Analytics', href: '/dashboard/coupons/analytics' },
-      { title: 'Coupon Products', href: '/dashboard/coupons/products' },
-      { title: 'Sold Coupons', href: '/dashboard/coupons/sold' },
+      { title: 'Dashboard', href: '/dashboard/coupons' },
+      { title: 'Create Campaign', href: '/dashboard/coupons/new' },
+      { title: 'Redemption Log', href: '/dashboard/coupons/sold' },
       { title: 'Redeem Coupon', href: '/dashboard/coupons/redeem' },
+      { title: 'Analytics', href: '/dashboard/coupons/analytics' },
     ],
   },
   {
@@ -302,5 +366,10 @@ export const pluginMenuItems: MenuItem[] = [
       { title: 'All Campaigns', href: '/dashboard/hotspot-editor' },
       { title: 'New Campaign', href: '/dashboard/hotspot-editor/new' },
     ],
+  },
+  {
+    title: 'Gamification Hub',
+    href: '/dashboard/gamification',
+    icon: Trophy,
   },
 ];
