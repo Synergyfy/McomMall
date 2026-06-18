@@ -360,4 +360,74 @@ export class StatsService {
 
     return chartData;
   }
+
+  async getReports(user: User, period: 'weekly' | 'monthly') {
+    const days = period === 'weekly' ? 7 : 30;
+
+    // Use user ID characters to generate deterministic random-like values for simulation
+    const seedNum = user.id.split('-').map(p => parseInt(p, 16) || 0).reduce((a, b) => a + b, 0) || 42;
+
+    const trafficTrends = [];
+    let totalCustomers = 0;
+    let totalPassersby = 0;
+
+    const now = new Date();
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date(now);
+      date.setDate(now.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+
+      // Seeded random daily metrics
+      const dayFactor = (date.getDay() + 1) * 1.2; // weekend boost
+      const randFactor1 = ((seedNum + i) % 100) / 100;
+      const randFactor2 = ((seedNum * i + 17) % 100) / 100;
+
+      const passersby = Math.round((450 + randFactor1 * 350) * dayFactor);
+      const customers = Math.round((45 + randFactor2 * 50) * dayFactor * 1.1);
+
+      trafficTrends.push({
+        date: dateStr,
+        passersby,
+        customers,
+      });
+
+      totalCustomers += customers;
+      totalPassersby += passersby;
+    }
+
+    const conversionRate = totalPassersby > 0 ? Number(((totalCustomers / totalPassersby) * 100).toFixed(1)) : 0;
+
+    // Borough rank based on seed
+    const boroughRank = (seedNum % 25) + 3; // Rank 3 to 28
+    const boroughRankChange = (seedNum % 3) - 1; // -1, 0, or 1 change
+
+    return {
+      period,
+      trafficTrends,
+      metrics: {
+        totalCustomers,
+        totalPassersby,
+        conversionRate,
+        boroughRank,
+        boroughRankChange,
+        activeCampaigns: 2,
+        monthlyReach: totalPassersby,
+        engagementRate: Number((conversionRate * 1.4).toFixed(1)),
+      },
+      suggestedActions: [
+        {
+          id: 'action-1',
+          title: 'Activate Loyalty Vouchers',
+          description: 'Merchant stores in your borough using loyalty vouchers experience a 22% footfall conversion lift.',
+          actionLink: '/dashboard/membership-audits/vouchers',
+        },
+        {
+          id: 'action-2',
+          title: 'Complete Google Place Verification',
+          description: 'Verification increases local mapping impressions by up to 30%.',
+          actionLink: '/dashboard/membership-audits/audits',
+        }
+      ]
+    };
+  }
 }

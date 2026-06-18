@@ -63,6 +63,7 @@ export const mapApiTierToTier = (apiTier: ApiTier): Tier => {
     updated_at: apiTier.updatedAt || mockDate,
     deleted_at: apiTier.deletedAt || null,
     name: apiTier.name,
+    description: apiTier.description || '',
     type: 'standard',
     color_code: colorCode,
     fixed_price: 0,
