@@ -57,9 +57,23 @@ import { DigitalValueModule } from './resources/digital-value/digital-value.modu
 import { ShippingModule } from './resources/shipping/shipping.module';
 import { LocalMallModule } from './resources/localmall/localmall.module';
 import { GoogleBusinessModule } from './resources/google-business/google-business.module';
+import { EventsModule } from './resources/events/events.module';
+import { RotatorsModule } from './resources/rotators/rotators.module';
+import { GamificationModule } from './resources/gamification/gamification.module';
+import { QrCodesModule } from './resources/qr-codes/qr-codes.module';
+import { InterestSignalsModule } from './resources/interest-signals/interest-signals.module';
+import { AutomationsModule } from './resources/automations/automations.module';
+import { VisibilityModule } from './resources/visibility/visibility.module';
 
 @Module({
   imports: [
+    QrCodesModule,
+    InterestSignalsModule,
+    AutomationsModule,
+    VisibilityModule,
+    EventsModule,
+    RotatorsModule,
+    GamificationModule,
     GoogleBusinessModule,
     LocalMallModule,
     DigitalValueModule,

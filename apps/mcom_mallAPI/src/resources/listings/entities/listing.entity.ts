@@ -29,6 +29,9 @@ import { Service } from '../../services/entities/service.entity';
 import { Review } from '../../reviews/entities/review.entity';
 import { Offer } from '../../offer/entities/offer.entity';
 import { LocalMall } from '../../localmall/entities/localmall.entity';
+import { Event } from '../../events/entities/event.entity';
+import { Rotator } from '../../rotators/entities/rotator.entity';
+import { Gamification } from '../../gamification/entities/gamification.entity';
 
 @Entity('businesses')
 export class Business extends AbstractBaseEntity {
@@ -228,4 +231,13 @@ export class Business extends AbstractBaseEntity {
 
   @Column({ nullable: true })
   localMallId?: string;
+
+  @OneToMany(() => Event, (event) => event.business)
+  events: Event[];
+
+  @OneToMany(() => Rotator, (rotator) => rotator.business)
+  rotators: Rotator[];
+
+  @OneToMany(() => Gamification, (gamification) => gamification.business)
+  gamifications: Gamification[];
 }

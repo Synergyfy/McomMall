@@ -17,6 +17,13 @@ export interface VoucherProduct {
   textColor?: string;
   media?: string[] | null;
   user?: any;
+  voucherType?: string;
+  valueType?: string;
+  value?: number;
+  rules?: string;
+  expiryDate?: string | null;
+  distributionChannels?: string[];
+  status?: string;
 }
 
 export interface InitiateVoucherPurchaseDto {
@@ -75,6 +82,13 @@ export interface CreateVoucherProductDto {
   allowReloading?: boolean;
   backgroundImage?: any;
   textColor?: string;
+  voucherType?: string;
+  valueType?: string;
+  value?: number;
+  rules?: string;
+  expiryDate?: string | null;
+  distributionChannels?: string[];
+  status?: string;
 }
 
 export type UpdateVoucherProductDto = Partial<CreateVoucherProductDto>;
