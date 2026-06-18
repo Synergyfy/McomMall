@@ -1,9 +1,9 @@
 'use client';
 
-import * as React from 'react';
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
+import api from '@/service/api';
 import {
   Calendar,
   Clock,
@@ -51,6 +51,42 @@ export function EventsManager() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState<TabType>('upcoming');
   const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
+  
+  const [events, setEvents] = useState<EventItem[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isLiveModalOpen, setIsLiveModalOpen] = useState(false);
+
+  const fetchEvents = useCallback(async () => {
+    try {
+      const response = await api.get('/events/my-events');
+      const data = response.data?.data || response.data || [];
+      
+      const mapped = data.map((item: any) => ({
+        id: item.id,
+        title: item.title,
+        type: item.selectedTemplate || 'custom',
+        typeLabel: item.status === 'live' ? 'Live Now' : (item.status === 'upcoming' ? 'Active Soon' : item.status),
+        image: item.imageUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuC8GDhDR_b3s6TweTs8QAkcULmJVj1z_7y1n_7WImqA3b-BNWNGWRq6c93cLhiJq3C4XrvIOEPO_BtDMWLCJQNxRY5qZvVdCwZqcVi7wV1onojwy6QUrKOP3Xdsc1Ioe5g1iZfgYVokbiFkr0nOPzSkMzFYa6hMz7nQQAahtCQnNsLe8qJeAaLA-UJcwaUV_cBqkh6nuLOniLVAA_TJHS68mQyGh4NHx8LBNVTbnTBOB3T8F4TdWAonc5EGEz5zm9kCDBc5DZ4itOM',
+        date: item.date,
+        time: item.time,
+        location: item.location,
+        description: item.description,
+        registrations: `0/${item.capacity}`,
+        capacity: item.capacity,
+        status: item.status,
+        attendees: []
+      }));
+      setEvents(mapped);
+    } catch (err) {
+      console.error('Error fetching events:', err);
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchEvents();
+  }, [fetchEvents]);
 
   // Default Events Mock List
   const defaultEvents: EventItem[] = [
@@ -140,17 +176,18 @@ export function EventsManager() {
 
   // Filter events based on active tab
   const filteredEvents = useMemo(() => {
-    return defaultEvents.filter(event => {
-      if (activeTab === 'upcoming') return event.type === 'upcoming' || event.type === 'active';
-      if (activeTab === 'active') return event.type === 'active' || event.type === 'live';
-      if (activeTab === 'past') return event.type === 'past';
-      if (activeTab === 'drafts') return event.type === 'drafts';
-      if (activeTab === 'borough') return event.type === 'borough';
-      if (activeTab === 'expo') return event.type === 'expo';
-      if (activeTab === 'live') return event.type === 'live';
+    const list = events.length > 0 ? events : defaultEvents;
+    return list.filter(event => {
+      if (activeTab === 'upcoming') return event.type === 'upcoming' || event.type === 'active' || event.status === 'upcoming';
+      if (activeTab === 'active') return event.type === 'active' || event.type === 'live' || event.status === 'active';
+      if (activeTab === 'past') return event.type === 'past' || event.status === 'past';
+      if (activeTab === 'drafts') return event.type === 'drafts' || event.status === 'draft';
+      if (activeTab === 'borough') return event.type === 'borough' || event.status === 'expo';
+      if (activeTab === 'expo') return event.type === 'expo' || event.status === 'expo';
+      if (activeTab === 'live') return event.type === 'live' || event.status === 'live';
       return true;
     });
-  }, [activeTab]);
+  }, [activeTab, events]);
 
   return (
     <div className="w-full min-h-full bg-transparent text-gray-900 p-3 sm:p-6 lg:p-8 space-y-6 max-w-7xl mx-auto">
@@ -172,7 +209,7 @@ export function EventsManager() {
             Create Event
           </Button>
           <Button
-            onClick={() => toast.info('Live Streaming Setup coming soon!')}
+            onClick={() => setIsLiveModalOpen(true)}
             variant="outline"
             className="flex items-center gap-2 border border-orange-200 text-orange-600 hover:bg-orange-50 font-bold rounded-xl py-5 text-xs shrink-0 bg-white"
           >
@@ -289,122 +326,151 @@ export function EventsManager() {
                     exit={{ opacity: 0, y: -15 }}
                     transition={{ duration: 0.25 }}
                     onClick={() => setSelectedEventId(isSelected ? null : event.id)}
-                    className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md border transition-all cursor-pointer flex flex-col sm:flex-row h-auto sm:h-52 ${
+                    className={`bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md border transition-all cursor-pointer flex flex-col h-auto ${
                       isSelected ? 'border-orange-500 ring-1 ring-orange-500/20' : 'border-gray-200/60'
                     }`}
                   >
-                    {/* Event Image Banner */}
-                    <div className="sm:w-52 h-44 sm:h-full relative overflow-hidden shrink-0 bg-gray-100">
-                      <img 
-                        className="w-full h-full object-cover" 
-                        src={event.image} 
-                        alt={event.title} 
-                      />
-                      
-                      {/* Event Status Tag */}
-                      <div className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
-                        event.status === 'live'
-                          ? 'bg-red-500 text-white flex items-center gap-1 shadow-md shadow-red-500/20'
-                          : event.status === 'expo'
-                            ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
-                            : event.status === 'active'
-                              ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
-                              : 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
-                      }`}>
-                        {event.status === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
-                        {event.typeLabel}
-                      </div>
-                    </div>
-
-                    {/* Event Context & Content */}
-                    <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
-                      <div>
-                        <div className="flex justify-between items-start mb-2 gap-2">
-                          <h4 className="text-base font-black text-gray-900 leading-snug truncate">{event.title}</h4>
-                          <button 
-                            onClick={(e) => {
-                              e.stopPropagation();
-                              toast.info('Event context actions menu');
-                            }}
-                            className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
-                          >
-                            <MoreVertical size={16} />
-                          </button>
-                        </div>
+                    <div className="flex flex-col sm:flex-row h-auto sm:h-52">
+                      {/* Event Image Banner */}
+                      <div className="sm:w-52 h-44 sm:h-full relative overflow-hidden shrink-0 bg-gray-100">
+                        <img 
+                          className="w-full h-full object-cover" 
+                          src={event.image} 
+                          alt={event.title} 
+                        />
                         
-                        <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-500 text-xs font-semibold mb-3">
-                          <div className="flex items-center gap-1">
-                            <Calendar size={13} className="text-gray-400" />
-                            <span>{event.date}</span>
+                        {/* Event Status Tag */}
+                        <div className={`absolute top-3.5 left-3.5 px-3 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${
+                          event.status === 'live'
+                            ? 'bg-red-500 text-white flex items-center gap-1 shadow-md shadow-red-500/20'
+                            : event.status === 'expo'
+                              ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/20'
+                              : event.status === 'active'
+                                ? 'bg-emerald-500 text-white shadow-md shadow-emerald-500/20'
+                                : 'bg-orange-500 text-white shadow-md shadow-orange-500/20'
+                        }`}>
+                          {event.status === 'live' && <span className="w-1.5 h-1.5 rounded-full bg-white animate-pulse" />}
+                          {event.typeLabel}
+                        </div>
+                      </div>
+
+                      {/* Event Context & Content */}
+                      <div className="flex-1 p-5 flex flex-col justify-between min-w-0">
+                        <div>
+                          <div className="flex justify-between items-start mb-2 gap-2">
+                            <h4 className="text-base font-black text-gray-900 leading-snug truncate">{event.title}</h4>
+                            <button 
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toast.info('Event context actions menu');
+                              }}
+                              className="text-gray-400 hover:text-gray-600 p-1 rounded-lg hover:bg-gray-50 transition-colors"
+                            >
+                              <MoreVertical size={16} />
+                            </button>
                           </div>
-                          <div className="flex items-center gap-1">
-                            <Clock size={13} className="text-gray-400" />
-                            <span>{event.time}</span>
-                          </div>
-                          {event.location && (
+                          
+                          <div className="flex flex-wrap items-center gap-x-4 gap-y-2 text-gray-500 text-xs font-semibold mb-3">
                             <div className="flex items-center gap-1">
-                              <MapPin size={13} className="text-gray-400" />
-                              <span className="truncate max-w-[150px]">{event.location}</span>
+                              <Calendar size={13} className="text-gray-400" />
+                              <span>{event.date}</span>
                             </div>
+                            <div className="flex items-center gap-1">
+                              <Clock size={13} className="text-gray-400" />
+                              <span>{event.time}</span>
+                            </div>
+                            {event.location && (
+                              <div className="flex items-center gap-1">
+                                <MapPin size={13} className="text-gray-400" />
+                                <span className="truncate max-w-[150px]">{event.location}</span>
+                              </div>
+                            )}
+                          </div>
+                          
+                          {event.description && (
+                            <p className="text-xs text-gray-500 font-medium leading-relaxed line-clamp-2">{event.description}</p>
                           )}
                         </div>
-                        
-                        {event.description && (
-                          <p className="text-xs text-gray-500 font-medium leading-relaxed line-clamp-2">{event.description}</p>
-                        )}
-                      </div>
 
-                      <div className="flex items-end justify-between gap-4 mt-4 border-t border-gray-100/80 pt-3">
-                        {event.attendees && event.attendees.length > 0 ? (
-                          <div className="flex items-center gap-2">
-                            <div className="flex -space-x-1.5">
-                              {event.attendees.map((avatar, aIdx) => (
-                                <img
-                                  key={aIdx}
-                                  className="w-7 h-7 rounded-full border-2 border-white object-cover"
-                                  src={avatar}
-                                  alt="Attendee"
-                                />
-                              ))}
-                              <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
-                                +242
-                              </div>
-                            </div>
-                          </div>
-                        ) : (
-                          <div className="flex flex-col">
-                            <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Status</span>
-                            <span className="bg-gray-100 px-2.5 py-0.5 rounded-lg text-[10px] text-gray-600 font-bold mt-1 self-start">
-                              {event.status === 'live' ? 'Streaming Active' : 'Registration Open'}
-                            </span>
-                          </div>
-                        )}
-
-                        <div className="text-right shrink-0">
-                          {event.status === 'live' ? (
-                            <div className="flex items-center gap-3">
-                              <div className="flex items-center gap-0.5 text-red-500 font-bold text-xs">
-                                <Eye size={13} />
-                                <span>{event.viewers}</span>
-                              </div>
-                              <div className="flex items-center gap-0.5 text-gray-400 font-semibold text-xs">
-                                <Heart size={13} className="fill-gray-100" />
-                                <span>{event.favorites}</span>
+                        <div className="flex items-end justify-between gap-4 mt-4 border-t border-gray-100/80 pt-3">
+                          {event.attendees && event.attendees.length > 0 ? (
+                            <div className="flex items-center gap-2">
+                              <div className="flex -space-x-1.5">
+                                {event.attendees.map((avatar, aIdx) => (
+                                  <img
+                                    key={aIdx}
+                                    className="w-7 h-7 rounded-full border-2 border-white object-cover"
+                                    src={avatar}
+                                    alt="Attendee"
+                                  />
+                                ))}
+                                <div className="w-7 h-7 rounded-full bg-gray-100 border-2 border-white flex items-center justify-center text-[9px] font-bold text-gray-500">
+                                  +242
+                                </div>
                               </div>
                             </div>
                           ) : (
-                            <>
-                              <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                                {event.status === 'expo' ? 'Interest' : 'Registrations'}
-                              </p>
-                              <p className="text-sm font-black text-orange-600 mt-0.5">
-                                {event.registrations || event.interest}
-                              </p>
-                            </>
+                            <div className="flex flex-col">
+                              <span className="text-[10px] font-bold text-gray-400 uppercase tracking-wide">Status</span>
+                              <span className="bg-gray-100 px-2.5 py-0.5 rounded-lg text-[10px] text-gray-600 font-bold mt-1 self-start">
+                                {event.status === 'live' ? 'Streaming Active' : 'Registration Open'}
+                              </span>
+                            </div>
                           )}
+
+                          <div className="text-right shrink-0">
+                            {event.status === 'live' ? (
+                              <div className="flex items-center gap-3">
+                                <div className="flex items-center gap-0.5 text-red-500 font-bold text-xs">
+                                  <Eye size={13} />
+                                  <span>{event.viewers}</span>
+                                </div>
+                                <div className="flex items-center gap-0.5 text-gray-400 font-semibold text-xs">
+                                  <Heart size={13} className="fill-gray-100" />
+                                  <span>{event.favorites}</span>
+                                </div>
+                              </div>
+                            ) : (
+                              <>
+                                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                                  {event.status === 'expo' ? 'Interest' : 'Registrations'}
+                                </p>
+                                <p className="text-sm font-black text-orange-600 mt-0.5">
+                                  {event.registrations || event.interest}
+                                </p>
+                              </>
+                            )}
+                          </div>
                         </div>
                       </div>
                     </div>
+
+                    {/* Action Drawer */}
+                    {isSelected && (
+                      <div 
+                        className="bg-orange-50/50 border-t border-orange-100 p-4 flex flex-wrap gap-3 justify-end items-center" 
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <span className="text-xs text-gray-500 mr-auto font-medium pl-2">
+                          Actions for this event:
+                        </span>
+                        <Button
+                          onClick={() => router.push(`/dashboard/events/${event.id}/performance`)}
+                          variant="outline"
+                          className="flex items-center gap-1.5 border border-orange-200 text-orange-600 hover:bg-orange-50 font-bold rounded-xl text-xs py-2 px-4 bg-white"
+                        >
+                          <TrendingUp size={14} />
+                          View Performance
+                        </Button>
+                        <Button
+                          onClick={() => router.push(`/dashboard/events/${event.id}/live`)}
+                          className="flex items-center gap-1.5 bg-orange-600 hover:bg-orange-700 text-white rounded-xl font-bold text-xs py-2 px-4 shadow-sm"
+                        >
+                          <Radio size={14} />
+                          Go Live Control
+                        </Button>
+                      </div>
+                    )}
                   </motion.div>
                 );
               })
@@ -515,6 +581,81 @@ export function EventsManager() {
         </div>
 
       </div>
+
+      {/* --- Live Session Selector Modal --- */}
+      {isLiveModalOpen && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/60 backdrop-blur-md animate-in fade-in duration-300">
+          <div className="bg-white rounded-3xl w-full max-w-md shadow-2xl p-6 sm:p-8 space-y-5 animate-in zoom-in-95 duration-300">
+            <div className="flex justify-between items-start">
+              <div>
+                <h3 className="text-lg font-black text-[#0b1c30] flex items-center gap-2">
+                  <Radio className="text-orange-500 animate-pulse" size={20} />
+                  Start Live Session
+                </h3>
+                <p className="text-xs text-gray-500 mt-1">
+                  Select an event from the list below to enter the Live Control Room.
+                </p>
+              </div>
+              <button
+                onClick={() => setIsLiveModalOpen(false)}
+                className="text-gray-400 hover:text-gray-600 text-sm font-bold p-1 hover:bg-gray-100 rounded-full transition-colors"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="max-h-60 overflow-y-auto space-y-2.5 pr-1 no-scrollbar">
+              {events.filter(e => e.status === 'upcoming' || e.status === 'active' || e.status === 'live').length > 0 ? (
+                events
+                  .filter(e => e.status === 'upcoming' || e.status === 'active' || e.status === 'live')
+                  .map((event) => (
+                    <button
+                      key={event.id}
+                      onClick={() => {
+                        setIsLiveModalOpen(false);
+                        router.push(`/dashboard/events/${event.id}/live`);
+                      }}
+                      className="w-full flex items-center gap-3 p-3 bg-slate-50 hover:bg-orange-50/50 border border-slate-200/60 hover:border-orange-200/80 rounded-xl text-left transition-all group active:scale-[0.99]"
+                    >
+                      <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 bg-slate-100">
+                        <img className="w-full h-full object-cover" src={event.image} alt={event.title} />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <h4 className="text-xs font-bold text-gray-900 truncate group-hover:text-orange-600 transition-colors">
+                          {event.title}
+                        </h4>
+                        <p className="text-[10px] text-gray-500 font-semibold mt-0.5">
+                          {event.date} • {event.time}
+                        </p>
+                      </div>
+                      <span className={`text-[9px] font-bold px-2 py-0.5 rounded uppercase ${
+                        event.status === 'live'
+                          ? 'bg-red-100 text-red-600'
+                          : 'bg-orange-100 text-orange-600'
+                      }`}>
+                        {event.status}
+                      </span>
+                    </button>
+                  ))
+              ) : (
+                <div className="py-6 text-center text-slate-500 space-y-3">
+                  <Calendar className="w-8 h-8 text-slate-300 mx-auto" />
+                  <p className="text-xs font-semibold text-gray-500">No active or upcoming events found.</p>
+                  <Button
+                    onClick={() => {
+                      setIsLiveModalOpen(false);
+                      router.push('/dashboard/events/new');
+                    }}
+                    className="bg-orange-600 hover:bg-orange-700 text-white text-[10px] font-bold py-1.5 px-3 rounded-lg shadow-sm"
+                  >
+                    + Create Event
+                  </Button>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
     </div>
   );

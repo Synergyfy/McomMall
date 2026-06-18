@@ -106,4 +106,32 @@ export class VoucherProduct {
   @Expose()
   @Column({ default: false })
   allowReloading: boolean;
+
+  @Expose()
+  @Column({ type: 'varchar', length: 50, default: 'gift_voucher' })
+  voucherType: string;
+
+  @Expose()
+  @Column({ type: 'varchar', length: 20, default: 'percentage' })
+  valueType: string;
+
+  @Expose()
+  @Column({ type: 'decimal', precision: 10, scale: 2, default: 0.00 })
+  value: number;
+
+  @Expose()
+  @Column({ type: 'text', nullable: true })
+  rules: string | null;
+
+  @Expose()
+  @Column({ type: 'timestamp', nullable: true })
+  expiryDate: Date | null;
+
+  @Expose()
+  @Column({ type: 'simple-array', nullable: true })
+  distributionChannels: string[] | null;
+
+  @Expose()
+  @Column({ type: 'varchar', length: 20, default: 'active' })
+  status: string;
 }

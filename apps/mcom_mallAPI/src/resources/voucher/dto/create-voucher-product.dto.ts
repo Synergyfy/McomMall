@@ -123,4 +123,39 @@ export class CreateVoucherProductDto {
   @IsNumber()
   @IsOptional()
   bonusAmount?: number;
+
+  @ApiProperty({ description: 'The voucher type, e.g. gift_voucher or discount_code.', required: false })
+  @IsString()
+  @IsOptional()
+  voucherType?: string;
+
+  @ApiProperty({ description: 'The value type: percentage or currency.', required: false })
+  @IsString()
+  @IsOptional()
+  valueType?: string;
+
+  @ApiProperty({ description: 'The absolute numeric value of the voucher.', required: false })
+  @IsNumber()
+  @IsOptional()
+  value?: number;
+
+  @ApiProperty({ description: 'Usage and redemption rules details.', required: false })
+  @IsString()
+  @IsOptional()
+  rules?: string;
+
+  @ApiProperty({ description: 'The explicit expiry date of the voucher campaign.', required: false })
+  @IsOptional()
+  expiryDate?: string;
+
+  @ApiProperty({ description: 'List of distribution channels configured.', required: false, type: [String] })
+  @IsArray()
+  @IsString({ each: true })
+  @IsOptional()
+  distributionChannels?: string[];
+
+  @ApiProperty({ description: 'Campaign status.', required: false })
+  @IsString()
+  @IsOptional()
+  status?: string;
 }

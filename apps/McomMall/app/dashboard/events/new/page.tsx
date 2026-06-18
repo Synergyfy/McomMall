@@ -32,6 +32,8 @@ import {
   Compass
 } from 'lucide-react';
 import { toast } from 'sonner';
+import api from '@/service/api';
+import { getVoucherProducts } from '@/service/vouchers';
 
 // --- Types ---
 type EventType =
@@ -157,6 +159,13 @@ const TEMPLATES: TemplateItem[] = [
     trending: true,
   },
   {
+    id: 'pizza-competition',
+    title: 'Pizza Competition',
+    description: 'A culinary showdown for local pizzaiolos. Features live polling, public tasting votes, and reward claims.',
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC4oRRl6ZZLBzEwFWFUtNAK39ZuxSW3YwJ8nP06PV2qrRRIGIFzdPaV6DvKUIlYeFIxB6jD50Fs-KnM00uYMjlz4yI5CeY_VfI7_DkvQpZ-lhjVMXjVdvDd8MwasQFP2qenlo_glJdq-N26hBrk1PVtqUfp65AsxqlxLQyh3cQsLX9reL1GpAX6b9_aVL2uQsAwM7hdAHJOfsEdPq8C_0PwbBnIbOmdQYOVr3GKs2SMYKCvKEh1Jq8G592RK74BUEHLO1CHgfLqSgc',
+    trending: true,
+  },
+  {
     id: 'hair-workshop',
     title: 'Hair Workshop',
     description: 'Designed for salons and educators. Includes built-in ticket tiers and equipment checklist integration.',
@@ -167,6 +176,12 @@ const TEMPLATES: TemplateItem[] = [
     title: 'Chef Demo',
     description: 'Ideal for restaurants and kitchenware stores. Optimized for video embeds and live streaming countdowns.',
     image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuBE0fCqMkTa7uOskGp9_e7jvC-fsxd4NnZhjgbb0rauQ1zaFuSSCjB9JBPvIWVu1-JVrJFKUhwHAcLfAgGYNfyhW7RFo8leI55U3I0FipJrbITPGX03x1v3JfZsAm3KcSyinSPaUGoSD6BxlA_FuaUZXhNK7nRhFWxD_MaA1MdpbQuBylTWHrWfCKBpoNMeLjnrsxCY2MGRMVtKmtyrKuAJv2FrI6tJEct9RMs2ziXGxmxVadSBMg4ufWkjO9_FC-y1uNyKfqcm0k4',
+  },
+  {
+    id: 'beauty-demo',
+    title: 'Beauty Demo & Skincare Clinic',
+    description: 'Live beauty routines, makeup masterclasses, and customized skincare consultations.',
+    image: 'https://lh3.googleusercontent.com/aida-public/AB6AXuC8GDhDR_b3s6TweTs8QAkcULmJVj1z_7y1n_7WImqA3b-BNWNGWRq6c93cLhiJq3C4XrvIOEPO_BtDMWLCJQNxRY5qZvVdCwZqcVi7wV1onojwy6QUrKOP3Xdsc1Ioe5g1iZfgYVokbiFkr0nOPzSkMzFYa6hMz7nQQAahtCQnNsLe8qJeAaLA-UJcwaUV_cBqkh6nuLOniLVAA_TJHS68mQyGh4NHx8LBNVTbnTBOB3T8F4TdWAonc5EGEz5zm9kCDBc5DZ4itOM',
   },
   {
     id: 'fashion-showcase',
@@ -205,11 +220,35 @@ export default function NewEventWizardPage() {
   const [entryType, setEntryType] = useState<'free' | 'paid' | 'points' | 'invite'>('free');
   const [entryPrice, setEntryPrice] = useState('');
   const [entryPoints, setEntryPoints] = useState('');
+  const [borough, setBorough] = useState('Southwark');
+  const [highStreet, setHighStreet] = useState('Peckham High Street');
+  const [customHighStreet, setCustomHighStreet] = useState('');
 
   // Promotion Fields
   const [promoteRotator, setPromoteRotator] = useState(true);
   const [promoteQR, setPromoteQR] = useState(true);
   const [promoteAlert, setPromoteAlert] = useState(false);
+  const [associateVoucher, setAssociateVoucher] = useState(false);
+  const [voucherProductId, setVoucherProductId] = useState('');
+  const [createCountdown, setCreateCountdown] = useState(false);
+  const [countdownTime, setCountdownTime] = useState('24');
+
+  // Dynamic Data States
+  const [voucherProducts, setVoucherProducts] = useState<any[]>([]);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Fetch Voucher templates
+  useEffect(() => {
+    const fetchVouchers = async () => {
+      try {
+        const response = await getVoucherProducts();
+        setVoucherProducts(response || []);
+      } catch (err) {
+        console.error('Error fetching voucher products:', err);
+      }
+    };
+    fetchVouchers();
+  }, []);
 
   // Status Modals
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
@@ -244,13 +283,54 @@ export default function NewEventWizardPage() {
     setStep(3);
   };
 
-  const handleLaunchEvent = () => {
-    if (!title || !date || !time || (venueType === 'in-person' && !location) || (venueType === 'online' && !location)) {
+  const handleLaunchEvent = async () => {
+    const finalHighStreet = (borough !== 'Other' && highStreet === 'Other') ? customHighStreet : highStreet;
+
+    if (!title || !date || !time || !location || !borough || !finalHighStreet) {
       toast.error('Please fill out all required fields on the details step.');
       setStep(3);
       return;
     }
-    setIsSuccessModalOpen(true);
+
+    setIsSubmitting(true);
+    try {
+      const payload = {
+        title,
+        description,
+        date,
+        time,
+        capacity: parseInt(capacity) || 100,
+        venueType,
+        location,
+        borough,
+        highStreet: finalHighStreet,
+        entryType,
+        entryPrice: entryType === 'paid' ? parseFloat(entryPrice) || 0 : undefined,
+        entryPoints: entryType === 'points' ? parseInt(entryPoints) || 0 : undefined,
+        selectedTemplate,
+        promoteRotator,
+        promoteQR,
+        promoteAlert,
+        associateVoucher,
+        voucherProductId: associateVoucher && voucherProductId ? voucherProductId : undefined,
+        createCountdown,
+        countdownTime: createCountdown ? countdownTime : undefined,
+        status: 'upcoming',
+        imageUrl: selectedTemplate && selectedTemplate !== 'custom' 
+          ? TEMPLATES.find(t => t.id === selectedTemplate)?.image 
+          : 'https://lh3.googleusercontent.com/aida-public/AB6AXuC8GDhDR_b3s6TweTs8QAkcULmJVj1z_7y1n_7WImqA3b-BNWNGWRq6c93cLhiJq3C4XrvIOEPO_BtDMWLCJQNxRY5qZvVdCwZqcVi7wV1onojwy6QUrKOP3Xdsc1Ioe5g1iZfgYVokbiFkr0nOPzSkMzFYa6hMz7nQQAahtCQnNsLe8qJeAaLA-UJcwaUV_cBqkh6nuLOniLVAA_TJHS68mQyGh4NHx8LBNVTbnTBOB3T8F4TdWAonc5EGEz5zm9kCDBc5DZ4itOM'
+      };
+
+      const response = await api.post('/events', payload);
+      if (response.data) {
+        setIsSuccessModalOpen(true);
+      }
+    } catch (err: any) {
+      console.error('Error creating event:', err);
+      toast.error(err.response?.data?.message || 'Failed to create event. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   return (
@@ -614,6 +694,71 @@ export default function NewEventWizardPage() {
                 </div>
               </div>
 
+              {/* Borough & High Street Selection */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    Borough <span className="text-red-500">*</span>
+                  </label>
+                  <select
+                    value={borough}
+                    onChange={(e) => {
+                      const b = e.target.value;
+                      setBorough(b);
+                      if (b === 'Southwark') setHighStreet('Peckham High Street');
+                      else if (b === 'Lambeth') setHighStreet('Brixton High Street');
+                      else if (b === 'Camden') setHighStreet('Camden High Street');
+                      else setHighStreet('');
+                    }}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6900]/20 focus:border-[#ff6900] bg-white"
+                  >
+                    <option value="Southwark">Southwark</option>
+                    <option value="Lambeth">Lambeth</option>
+                    <option value="Camden">Camden</option>
+                    <option value="Other">Other / Custom</option>
+                  </select>
+                </div>
+
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
+                    High Street <span className="text-red-500">*</span>
+                  </label>
+                  {borough === 'Other' ? (
+                    <input
+                      type="text"
+                      placeholder="e.g. Oxford Street"
+                      value={highStreet}
+                      onChange={(e) => setHighStreet(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6900]/20 focus:border-[#ff6900]"
+                    />
+                  ) : (
+                    <select
+                      value={highStreet}
+                      onChange={(e) => setHighStreet(e.target.value)}
+                      className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6900]/20 focus:border-[#ff6900] bg-white"
+                    >
+                      {borough === 'Southwark' && <option value="Peckham High Street">Peckham High Street</option>}
+                      {borough === 'Lambeth' && <option value="Brixton High Street">Brixton High Street</option>}
+                      {borough === 'Camden' && <option value="Camden High Street">Camden High Street</option>}
+                      <option value="Other">Other / Custom</option>
+                    </select>
+                  )}
+                </div>
+              </div>
+
+              {borough !== 'Other' && highStreet === 'Other' && (
+                <div className="flex flex-col gap-2">
+                  <label className="text-xs font-semibold text-slate-600">Custom High Street Name</label>
+                  <input
+                    type="text"
+                    placeholder="Enter custom high street name..."
+                    value={customHighStreet}
+                    onChange={(e) => setCustomHighStreet(e.target.value)}
+                    className="w-full rounded-xl border border-slate-200 px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-[#ff6900]/20 focus:border-[#ff6900]"
+                  />
+                </div>
+              )}
+
               {/* Entry Type */}
               <div className="space-y-3">
                 <label className="text-xs font-bold uppercase tracking-wider text-slate-500">
@@ -683,8 +828,9 @@ export default function NewEventWizardPage() {
               <button
                 type="button"
                 onClick={() => {
-                  if (!title || !date || !time || !location) {
-                    toast.error('Please fill out all required fields.');
+                  const finalHighStreet = (borough !== 'Other' && highStreet === 'Other') ? customHighStreet : highStreet;
+                  if (!title || !date || !time || !location || !borough || !finalHighStreet) {
+                    toast.error('Please fill out all required fields including Borough and High Street.');
                     return;
                   }
                   setStep(4);
@@ -772,6 +918,15 @@ export default function NewEventWizardPage() {
                     <p className="font-bold text-slate-800">{capacity} max</p>
                   </div>
                 </div>
+                <div className="flex items-center gap-2 col-span-2 border-t pt-2 mt-1">
+                  <div className="w-8 h-8 rounded-lg bg-slate-100 flex items-center justify-center text-slate-500">
+                    <Compass size={15} />
+                  </div>
+                  <div>
+                    <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Borough & High Street</p>
+                    <p className="font-bold text-slate-800">{borough} · {highStreet === 'Other' ? customHighStreet : highStreet}</p>
+                  </div>
+                </div>
               </div>
 
               <div className="pt-3 border-t border-slate-100 flex justify-between items-center text-xs">
@@ -846,6 +1001,84 @@ export default function NewEventWizardPage() {
                   </div>
                   <Bell className={`shrink-0 ${promoteAlert ? 'text-[#ff6900]' : 'text-slate-400'}`} size={20} />
                 </div>
+
+                {/* Option 4: Associate Vouchers */}
+                <div
+                  className={`flex flex-col gap-4 p-4 rounded-2xl border transition-all ${associateVoucher ? 'border-[#ff6900] bg-orange-50/5 ring-1 ring-[#ff6900]/10' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <div 
+                    onClick={() => setAssociateVoucher(!associateVoucher)}
+                    className="flex items-start gap-4 cursor-pointer"
+                  >
+                    <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${associateVoucher ? 'bg-[#ff6900] border-[#ff6900] text-white' : 'border-slate-300'}`}>
+                      {associateVoucher && <Check size={12} className="stroke-[3]" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-800">Associate Vouchers with Event</p>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Distribute shopping vouchers automatically to customers who successfully check in.
+                      </p>
+                    </div>
+                    <Gift className={`shrink-0 ${associateVoucher ? 'text-[#ff6900]' : 'text-slate-400'}`} size={20} />
+                  </div>
+
+                  {associateVoucher && (
+                    <div className="pl-9 pr-4 pb-2 flex flex-col gap-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Select Voucher Template</label>
+                      <select
+                        value={voucherProductId}
+                        onChange={(e) => setVoucherProductId(e.target.value)}
+                        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#ff6900] focus:border-[#ff6900] bg-white text-slate-700"
+                      >
+                        <option value="">-- Choose a Voucher Template --</option>
+                        {voucherProducts.map((vp) => (
+                          <option key={vp.id} value={vp.id}>{vp.name} (£{vp.fixedAmounts?.[0] || '10'})</option>
+                        ))}
+                      </select>
+                      {voucherProducts.length === 0 && (
+                        <p className="text-[10px] text-gray-400">No voucher templates found. You can create one in the Vouchers tab first.</p>
+                      )}
+                    </div>
+                  )}
+                </div>
+
+                {/* Option 5: Create Countdown */}
+                <div
+                  className={`flex flex-col gap-4 p-4 rounded-2xl border transition-all ${createCountdown ? 'border-[#ff6900] bg-orange-50/5 ring-1 ring-[#ff6900]/10' : 'border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+                >
+                  <div 
+                    onClick={() => setCreateCountdown(!createCountdown)}
+                    className="flex items-start gap-4 cursor-pointer"
+                  >
+                    <div className={`mt-0.5 w-5 h-5 rounded-md border flex items-center justify-center transition-colors ${createCountdown ? 'bg-[#ff6900] border-[#ff6900] text-white' : 'border-slate-300'}`}>
+                      {createCountdown && <Check size={12} className="stroke-[3]" />}
+                    </div>
+                    <div className="flex-1">
+                      <p className="text-xs font-bold text-slate-800">Launch Active Live Countdown</p>
+                      <p className="text-[11px] text-gray-500 mt-1">
+                        Display a countdown timer on the event preview page to build anticipation.
+                      </p>
+                    </div>
+                    <Clock className={`shrink-0 ${createCountdown ? 'text-[#ff6900]' : 'text-slate-400'}`} size={20} />
+                  </div>
+
+                  {createCountdown && (
+                    <div className="pl-9 pr-4 pb-2 flex flex-col gap-2">
+                      <label className="text-[10px] font-bold text-slate-500 uppercase">Countdown Duration (Hours before start)</label>
+                      <select
+                        value={countdownTime}
+                        onChange={(e) => setCountdownTime(e.target.value)}
+                        className="w-48 rounded-xl border border-slate-200 px-3 py-2 text-xs focus:outline-none focus:ring-1 focus:ring-[#ff6900] focus:border-[#ff6900] bg-white text-slate-700"
+                      >
+                        <option value="1">1 Hour</option>
+                        <option value="3">3 Hours</option>
+                        <option value="12">12 Hours</option>
+                        <option value="24">24 Hours</option>
+                        <option value="48">48 Hours</option>
+                      </select>
+                    </div>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -862,9 +1095,10 @@ export default function NewEventWizardPage() {
               <button
                 type="button"
                 onClick={handleLaunchEvent}
-                className="px-8 py-3.5 bg-[#ff6900] hover:bg-[#ff6900]/90 text-white font-black text-sm rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all active:scale-95"
+                disabled={isSubmitting}
+                className="px-8 py-3.5 bg-[#ff6900] hover:bg-[#ff6900]/90 text-white font-black text-sm rounded-xl shadow-lg shadow-orange-500/20 flex items-center gap-2 transition-all active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
               >
-                Launch Experience
+                {isSubmitting ? 'Launching...' : 'Launch Experience'}
                 <Rocket size={16} />
               </button>
             </div>
@@ -900,7 +1134,7 @@ export default function NewEventWizardPage() {
               </div>
               <div>
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Borough Reach</p>
-                <p className="font-bold text-slate-800 mt-0.5">Greenwich Village</p>
+                <p className="font-bold text-slate-800 mt-0.5">{borough}</p>
               </div>
               <div className="col-span-2 border-t pt-2 mt-1">
                 <p className="text-[9px] font-bold text-gray-400 uppercase tracking-wide">Launch Promotions</p>
@@ -908,10 +1142,12 @@ export default function NewEventWizardPage() {
                   {[
                     promoteRotator && 'Rotator Feed',
                     promoteQR && 'Check-in QR Code',
-                    promoteAlert && 'Shopper alerts'
+                    promoteAlert && 'Shopper alerts',
+                    associateVoucher && 'Vouchers',
+                    createCountdown && 'Countdown'
                   ]
                     .filter(Boolean)
-                    .join(' · ')}
+                    .join(' · ') || 'None'}
                 </p>
               </div>
             </div>
