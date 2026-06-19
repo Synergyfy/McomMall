@@ -23,7 +23,10 @@ import {
   Info, 
   Lightbulb,
   ArrowRight,
-  ChevronRight
+  ChevronRight,
+  Store,
+  DollarSign,
+  Ticket
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -132,6 +135,100 @@ export default function ReportsDashboard() {
                   </>
                 )}
               </span>
+            </div>
+          </div>
+
+          {/* Performance Categories conforming to PRD 18 */}
+          <div className="space-y-4">
+            <h4 className="text-sm font-bold text-gray-800 uppercase tracking-wider">Performance Categories</h4>
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {/* Category 1: Storefront Performance */}
+              <div className="bg-white border border-gray-250 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Storefront Performance</span>
+                  <Store className="w-4 h-4 text-[#ff6900]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Total Views</span>
+                    <span className="font-bold text-gray-800">1,840 views</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Completeness</span>
+                    <span className="font-bold text-[#ff6900]">78%</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Avg View Time</span>
+                    <span className="font-bold text-gray-800">45s</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 2: Promotion Results */}
+              <div className="bg-white border border-gray-250 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Promotion Results</span>
+                  <Ticket className="w-4 h-4 text-[#ff6900]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Stamps Claimed</span>
+                    <span className="font-bold text-gray-800">142 claimed</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Vouchers Redeemed</span>
+                    <span className="font-bold text-gray-800">58 redeemed</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Click-through Rate</span>
+                    <span className="font-bold text-emerald-600">4.8% CTR</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 3: Engagement Results */}
+              <div className="bg-white border border-gray-250 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Engagement Results</span>
+                  <Users className="w-4 h-4 text-[#ff6900]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Review Rating</span>
+                    <span className="font-bold text-gray-800">4.8 ★</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Repeat Customer Rate</span>
+                    <span className="font-bold text-gray-800">22% repeat</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Loyalty Enrollees</span>
+                    <span className="font-bold text-gray-800">324</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Category 4: Sales Activity */}
+              <div className="bg-white border border-gray-250 rounded-2xl p-5 shadow-sm space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-xs font-bold text-gray-700 uppercase tracking-wider">Sales Activity</span>
+                  <DollarSign className="w-4 h-4 text-[#ff6900]" />
+                </div>
+                <div className="space-y-2">
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Revenue Lift</span>
+                    <span className="font-bold text-emerald-600">+18.5% lift</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Voucher Sales Vol</span>
+                    <span className="font-bold text-gray-800">£1,240.00</span>
+                  </div>
+                  <div className="flex justify-between text-xs">
+                    <span className="text-gray-400">Cashback Issued</span>
+                    <span className="font-bold text-gray-800">£45.00</span>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
 

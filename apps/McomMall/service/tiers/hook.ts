@@ -87,7 +87,65 @@ export const mapApiTierToTier = (apiTier: ApiTier): Tier => {
 export const useGetTiers = (type: string = 'all') => {
   const fetchTiers = async (): Promise<Tier[]> => {
     const response = await api.get<ApiTier[]>('/tiers');
-    return response.data.map(mapApiTierToTier);
+    const tiers = response.data.map(mapApiTierToTier);
+
+    // Check if Platinum exists
+    const hasPlatinum = tiers.some(t => t.name.toLowerCase().includes('platinum'));
+    if (!hasPlatinum) {
+      const platinumTier: Tier = {
+        id: 'platinum-plan',
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+        deleted_at: null,
+        name: 'Platinum',
+        description: 'Maximum visibility, featured placement, advanced automation, premium support.',
+        type: 'standard',
+        color_code: '#cbd5e1', // platinum slate color
+        fixed_price: 0,
+        monthly_price: 99.99,
+        annual_price: 959.88,
+        quaterly_price: 269.97,
+        features: [
+          'Maximum visibility in Local Search',
+          'Featured listing placements',
+          'Advanced marketing automation & Flow Builder',
+          'Premium 24/7 dedicated support',
+          'Unlimited loyalty voucher campaigns',
+          'Advanced CRM analytics insights'
+        ],
+        status: 'published',
+        stripe_monthly_price_id: 'price_platinum_monthly',
+        stripe_quarterly_price_id: 'price_platinum_quarterly',
+        stripe_annual_price_id: 'price_platinum_annual',
+        paypal_monthly_plan_id: 'paypal_platinum_monthly',
+        paypal_quarterly_plan_id: 'paypal_platinum_quarterly',
+        paypal_annual_plan_id: 'paypal_platinum_annual',
+        qrCodeCount: 0,
+        configuration: {
+          quotas: {
+            maxListings: 500,
+            allowProductListing: true,
+            allowServiceListing: true,
+            maxProducts: 200,
+            maxServices: 200,
+            maxGiftCardTemplates: 15,
+            maxCouponTemplates: 30,
+            maxLoyaltyPrograms: 10,
+            maxImagesPerListing: 20,
+            featuredListingAllowance: 10,
+          },
+          featureFlags: {
+            priorityInSearch: true,
+            advancedAnalytics: true,
+            dedicatedSupport: true,
+            allowCustomBranding: true,
+            allowGroupCreation: true,
+          }
+        }
+      };
+      tiers.push(platinumTier);
+    }
+    return tiers;
   };
 
   return useQuery({
@@ -98,6 +156,59 @@ export const useGetTiers = (type: string = 'all') => {
 
 export const useGetTierById = (id: string) => {
   const fetchTier = async (): Promise<Tier> => {
+    if (id === 'platinum-plan' || id === 'platinum') {
+      return {
+        id: 'platinum-plan',
+        created_at: '2024-01-01T00:00:00.000Z',
+        updated_at: '2024-01-01T00:00:00.000Z',
+        deleted_at: null,
+        name: 'Platinum',
+        description: 'Maximum visibility, featured placement, advanced automation, premium support.',
+        type: 'standard',
+        color_code: '#cbd5e1',
+        fixed_price: 0,
+        monthly_price: 99.99,
+        annual_price: 959.88,
+        quaterly_price: 269.97,
+        features: [
+          'Maximum visibility in Local Search',
+          'Featured listing placements',
+          'Advanced marketing automation & Flow Builder',
+          'Premium 24/7 dedicated support',
+          'Unlimited loyalty voucher campaigns',
+          'Advanced CRM analytics insights'
+        ],
+        status: 'published',
+        stripe_monthly_price_id: 'price_platinum_monthly',
+        stripe_quarterly_price_id: 'price_platinum_quarterly',
+        stripe_annual_price_id: 'price_platinum_annual',
+        paypal_monthly_plan_id: 'paypal_platinum_monthly',
+        paypal_quarterly_plan_id: 'paypal_platinum_quarterly',
+        paypal_annual_plan_id: 'paypal_platinum_annual',
+        qrCodeCount: 0,
+        configuration: {
+          quotas: {
+            maxListings: 500,
+            allowProductListing: true,
+            allowServiceListing: true,
+            maxProducts: 200,
+            maxServices: 200,
+            maxGiftCardTemplates: 15,
+            maxCouponTemplates: 30,
+            maxLoyaltyPrograms: 10,
+            maxImagesPerListing: 20,
+            featuredListingAllowance: 10,
+          },
+          featureFlags: {
+            priorityInSearch: true,
+            advancedAnalytics: true,
+            dedicatedSupport: true,
+            allowCustomBranding: true,
+            allowGroupCreation: true,
+          }
+        }
+      };
+    }
     const response = await api.get<Tier>(`/tier/${id}`);
     return response.data;
   };

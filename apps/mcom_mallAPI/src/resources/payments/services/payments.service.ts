@@ -288,4 +288,11 @@ export class PaymentsService {
 
     return { status: SubscriptionStatusEnum.INACTIVE };
   }
+
+  async getPaymentHistory(userId: string): Promise<PaymentHistory[]> {
+    return this.paymentHistoryRepository.find({
+      where: { user: { id: userId } },
+      order: { created_at: 'DESC' },
+    });
+  }
 }

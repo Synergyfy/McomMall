@@ -65,3 +65,15 @@ export const useGetCustomerStats = () => {
     queryFn: getCustomerStats,
   });
 };
+
+// Change user password
+const changePassword = async (payload: any): Promise<any> => {
+  const { data } = await api.post('/users/change-password', payload);
+  return data;
+};
+
+export const useChangePassword = () => {
+  return useMutation({
+    mutationFn: changePassword,
+  });
+};

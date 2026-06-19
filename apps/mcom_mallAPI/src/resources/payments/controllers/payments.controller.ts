@@ -46,4 +46,10 @@ export class PaymentsController {
     const userId = req.user.id;
     return this.paymentsService.getSubscriptionStatus(userId);
   }
+
+  @Get('/history')
+  getPaymentHistory(@Req() req) {
+    const userId = req.user.id;
+    return this.paymentsService.getPaymentHistory(userId);
+  }
 }

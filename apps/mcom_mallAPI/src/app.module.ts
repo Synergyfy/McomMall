@@ -65,6 +65,7 @@ import { QrCodesModule } from './resources/qr-codes/qr-codes.module';
 import { InterestSignalsModule } from './resources/interest-signals/interest-signals.module';
 import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
+import { TeamModule } from './resources/team/team.module';
 
 @Module({
   imports: [
@@ -89,6 +90,7 @@ import { VisibilityModule } from './resources/visibility/visibility.module';
     GroupCirclesModule,
     MembershipModule,
     AuditsModule,
+    TeamModule,
     ServiceProviderProfileModule,
     PartnershipModule,
     AdminModule,

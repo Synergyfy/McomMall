@@ -21,6 +21,7 @@ import SubscriptionSummary from './SubscriptionSummary';
 import PaymentForm from '@/app/(public)/checkout/components/PaymentForm';
 import { SuccessDialog } from '@/components/ui/SuccessDialog';
 import { PaymentMethod } from '@/service/bookings/types';
+import { Button } from '@/components/ui/button';
 
 interface PricingCheckoutClientProps {
   planName: string;
@@ -188,15 +189,82 @@ export default function PricingCheckoutClient({
           Secure Checkout
         </h1>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-16">
-          <div className="bg-white rounded-xl shadow-lg p-8">
-            <SubscriptionSummary
-              planName={planName}
-              planPrice={planPrice}
-              isTrial={isTrial}
-              isPayg={isPayg}
-              paygOption={getPaygOption(planName)}
-              totalPrice={totalPrice}
-            />
+          <div className="bg-white rounded-xl shadow-lg p-8 flex flex-col justify-between">
+            <div>
+              <SubscriptionSummary
+                planName={planName}
+                planPrice={planPrice}
+                isTrial={isTrial}
+                isPayg={isPayg}
+                paygOption={getPaygOption(planName)}
+                totalPrice={totalPrice}
+              />
+
+              {/* Billing Details & Promos */}
+              <div className="mt-8 pt-8 border-t border-gray-150 space-y-6">
+                <div>
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Billing Details</h3>
+                  <div className="space-y-3">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Billing Name</label>
+                      <input 
+                        type="text" 
+                        placeholder="e.g. Acme Corp Ltd" 
+                        className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#ff6900]" 
+                      />
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Billing Address</label>
+                        <input 
+                          type="text" 
+                          placeholder="10 Downing St" 
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#ff6900]" 
+                        />
+                      </div>
+                      <div>
+                        <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Postcode</label>
+                        <input 
+                          type="text" 
+                          placeholder="SW1A 2AA" 
+                          className="w-full bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#ff6900]" 
+                        />
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="border-t border-gray-100 pt-6">
+                  <h3 className="text-sm font-bold text-gray-700 uppercase tracking-wider mb-3">Promo Code & Voucher Credits</h3>
+                  <div className="space-y-4">
+                    <div>
+                      <label className="text-[10px] uppercase font-bold text-gray-400 block mb-1">Promo Code</label>
+                      <div className="flex gap-2">
+                        <input 
+                          type="text" 
+                          placeholder="MCOM20" 
+                          className="flex-1 bg-gray-50 border border-gray-200 rounded-xl px-3.5 py-2.5 text-xs text-gray-800 focus:outline-none focus:border-[#ff6900]" 
+                        />
+                        <Button className="bg-gray-100 hover:bg-gray-200 text-gray-800 text-xs px-4 rounded-xl border border-gray-200 h-9">
+                          Apply
+                        </Button>
+                      </div>
+                    </div>
+
+                    <div className="bg-[#fcf8f6] border border-orange-100 rounded-xl p-4 flex justify-between items-center">
+                      <div>
+                        <h4 className="font-bold text-xs text-gray-855">Apply Voucher Credits</h4>
+                        <p className="text-[10px] text-gray-500 mt-0.5">Available: $1,240.00 credit balance</p>
+                      </div>
+                      <label className="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" className="sr-only peer" />
+                        <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-[#ff6900]"></div>
+                      </label>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
           <div className="bg-white rounded-xl shadow-lg p-8">
             <PaymentForm

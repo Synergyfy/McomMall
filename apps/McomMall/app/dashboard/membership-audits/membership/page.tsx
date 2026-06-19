@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import { useGetMyMembership } from '@/service/membership/hooks';
 import { useGetTiers } from '@/service/tiers/hook';
 import PricingCheckoutClient from '@/app/pricing/components/PricingCheckoutClient';
@@ -14,7 +15,10 @@ import {
   Percent, 
   ChevronRight, 
   Check, 
-  Calendar
+  Calendar,
+  TrendingUp,
+  Layers,
+  RefreshCw
 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 
@@ -128,6 +132,187 @@ export default function MembershipTiersDashboard() {
         </div>
       )}
 
+      {/* Quick Action Buttons */}
+      <div className="bg-white border border-gray-200 rounded-2xl p-6 shadow-sm">
+        <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-4">Membership Actions</h4>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          {/* Upgrade Plan */}
+          <button 
+            onClick={() => document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' })}
+            className="flex flex-col items-start p-5 rounded-xl border border-gray-150 hover:border-[#ff6900]/40 hover:bg-[#fcf8f6]/30 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 text-[#ff6900] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <TrendingUp className="w-5 h-5" />
+            </div>
+            <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">Upgrade Plan</h5>
+            <p className="text-xs text-gray-400 mt-1">Explore higher tiers to boost storefront footfall and search priority</p>
+          </button>
+
+          {/* Compare Plans */}
+          <button 
+            onClick={() => document.getElementById('comparison-table')?.scrollIntoView({ behavior: 'smooth' })}
+            className="flex flex-col items-start p-5 rounded-xl border border-gray-150 hover:border-[#ff6900]/40 hover:bg-[#fcf8f6]/30 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 text-[#ff6900] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <Layers className="w-5 h-5" />
+            </div>
+            <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">Compare Plans</h5>
+            <p className="text-xs text-gray-400 mt-1">Compare features, limits, and pricing side-by-side</p>
+          </button>
+
+          {/* Renew Membership */}
+          <button 
+            onClick={() => {
+              if (activeMembership && activeMembership.tier) {
+                setSelectedTier({ tier: activeMembership.tier, cycle: activeMembership.planType === 'annual' ? 'annual' : 'monthly' });
+              } else {
+                document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' });
+              }
+            }}
+            className="flex flex-col items-start p-5 rounded-xl border border-gray-150 hover:border-[#ff6900]/40 hover:bg-[#fcf8f6]/30 transition-all text-left group"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 text-[#ff6900] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <RefreshCw className="w-5 h-5" />
+            </div>
+            <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">Renew Membership</h5>
+            <p className="text-xs text-gray-400 mt-1">Extend your current plan cycle or manage your active subscription</p>
+          </button>
+
+          {/* Contact Support */}
+          <Link 
+            href="/dashboard/support-tickets"
+            className="flex flex-col items-start p-5 rounded-xl border border-gray-150 hover:border-[#ff6900]/40 hover:bg-[#fcf8f6]/30 transition-all text-left group w-full"
+          >
+            <div className="w-10 h-10 rounded-lg bg-orange-50 text-[#ff6900] flex items-center justify-center mb-3 group-hover:scale-105 transition-transform">
+              <HelpCircle className="w-5 h-5" />
+            </div>
+            <h5 className="font-bold text-sm text-gray-800 group-hover:text-[#ff6900] transition-colors">Contact Support</h5>
+            <p className="text-xs text-gray-400 mt-1">Talk to our customer service and billing team</p>
+          </Link>
+        </div>
+      </div>
+
+      {/* Current Features vs Locked Features */}
+      {activeMembership ? (
+        <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm">
+          <h4 className="text-lg font-bold text-gray-900 mb-6">Your Plan Privileges</h4>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+            {/* Active Features */}
+            <div className="space-y-4">
+              <h5 className="text-sm font-bold text-emerald-600 flex items-center gap-1.5 uppercase tracking-wider">
+                <CheckCircle2 className="w-5 h-5" />
+                Active Benefits
+              </h5>
+              <div className="space-y-2">
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Storefront Access</span>
+                  <span className="text-emerald-600 font-bold">Included</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Promotions Access</span>
+                  <span className="text-emerald-600 font-bold">Included</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Campaign Access</span>
+                  <span className="text-emerald-600 font-bold">Up to {activeMembership.tier?.configuration?.quotas?.maxActiveCampaigns || 3} campaigns</span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Gamification Access</span>
+                  <span className="text-emerald-600 font-bold">
+                    {activeMembership.tier?.name.toLowerCase().includes('gold') || activeMembership.tier?.name.toLowerCase().includes('platinum') ? 'Full access' : 'Standard'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Rotator Access</span>
+                  <span className="text-emerald-600 font-bold">
+                    {activeMembership.tier?.configuration?.featureFlags?.priorityInSearch ? 'Priority rotator' : 'Standard rotator'}
+                  </span>
+                </div>
+                <div className="flex justify-between py-2 border-b border-gray-100 text-xs">
+                  <span className="font-semibold text-gray-700">Borough Visibility</span>
+                  <span className="text-emerald-600 font-bold">
+                    {activeMembership.tier?.name.toLowerCase().includes('gold') || activeMembership.tier?.name.toLowerCase().includes('platinum') ? 'Extended Reach' : 'Local Proximity'}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Locked Features / Upgrades */}
+            <div className="space-y-4">
+              <h5 className="text-sm font-bold text-amber-600 flex items-center gap-1.5 uppercase tracking-wider">
+                <HelpCircle className="w-5 h-5" />
+                Locked Features (Upgrade to unlock)
+              </h5>
+              <div className="space-y-3">
+                {(!activeMembership.tier?.name.toLowerCase().includes('gold') && !activeMembership.tier?.name.toLowerCase().includes('platinum')) && (
+                  <div className="flex justify-between items-center bg-amber-50/30 border border-amber-100 p-3 rounded-xl">
+                    <div>
+                      <h6 className="font-bold text-xs text-gray-800">Advanced Analytics CRM</h6>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Realtime customer conversion and journey details.</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="bg-[#ff6900] hover:bg-[#a14000] text-white text-[10px] py-1.5 px-3 h-8 rounded-lg font-bold"
+                    >
+                      Upgrade
+                    </Button>
+                  </div>
+                )}
+
+                {!activeMembership.tier?.name.toLowerCase().includes('platinum') && (
+                  <div className="flex justify-between items-center bg-amber-50/30 border border-amber-100 p-3 rounded-xl">
+                    <div>
+                      <h6 className="font-bold text-xs text-gray-800">Featured Placement & Max Priority</h6>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Top search index rotator slots & billboard promotions.</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="bg-[#ff6900] hover:bg-[#a14000] text-white text-[10px] py-1.5 px-3 h-8 rounded-lg font-bold"
+                    >
+                      Upgrade
+                    </Button>
+                  </div>
+                )}
+
+                {activeMembership.tier?.name.toLowerCase().includes('bronze') && (
+                  <div className="flex justify-between items-center bg-amber-50/30 border border-amber-100 p-3 rounded-xl">
+                    <div>
+                      <h6 className="font-bold text-xs text-gray-800">Custom Branding styling</h6>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Tailor background cards and color codes for storefronts.</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="bg-[#ff6900] hover:bg-[#a14000] text-white text-[10px] py-1.5 px-3 h-8 rounded-lg font-bold"
+                    >
+                      Upgrade
+                    </Button>
+                  </div>
+                )}
+
+                {(!activeMembership.tier?.name.toLowerCase().includes('gold') && !activeMembership.tier?.name.toLowerCase().includes('platinum')) && (
+                  <div className="flex justify-between items-center bg-amber-50/30 border border-amber-100 p-3 rounded-xl">
+                    <div>
+                      <h6 className="font-bold text-xs text-gray-800">Flow Builder & QR Engine automations</h6>
+                      <p className="text-[10px] text-gray-500 mt-0.5">Automate stamp distribution on user check-in scan events.</p>
+                    </div>
+                    <Button 
+                      size="sm" 
+                      onClick={() => document.getElementById('tiers-container')?.scrollIntoView({ behavior: 'smooth' })}
+                      className="bg-[#ff6900] hover:bg-[#a14000] text-white text-[10px] py-1.5 px-3 h-8 rounded-lg font-bold"
+                    >
+                      Upgrade
+                    </Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        </div>
+      ) : null}
+
       {/* Cycle Toggle selector */}
       <div className="text-center space-y-4">
         <h3 className="text-2xl font-black text-gray-900">Select Your Membership Plan</h3>
@@ -223,7 +408,7 @@ export default function MembershipTiersDashboard() {
       </div>
 
       {/* Tiers Comparison Table */}
-      <div className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm overflow-hidden">
+      <div id="comparison-table" className="bg-white border border-gray-200 rounded-3xl p-6 shadow-sm overflow-hidden">
         <h4 className="text-lg font-bold text-gray-900 mb-6">Compare Plans Side-by-Side</h4>
         <div className="overflow-x-auto min-w-full">
           <table className="w-full text-left text-xs border-collapse">
@@ -235,41 +420,78 @@ export default function MembershipTiersDashboard() {
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-150">
+            <tbody className="divide-y divide-gray-150 text-gray-600">
               <tr className="hover:bg-gray-50/50">
-                <td className="py-4 font-semibold text-gray-700">Priority rotators in Local Search</td>
-                <td className="py-4 px-4 text-center text-gray-400">None</td>
-                <td className="py-4 px-4 text-center text-gray-500">Bronze priority</td>
-                <td className="py-4 px-4 text-center text-orange-600 font-bold">Silver priority</td>
-                <td className="py-4 px-4 text-center text-orange-600 font-black">Top Priority</td>
+                <td className="py-4 font-semibold text-gray-700">Visibility & Search Priority</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "Standard";
+                  if (name.includes('bronze')) text = "Bronze Boost";
+                  else if (name.includes('silver')) text = "Silver Priority";
+                  else if (name.includes('gold')) text = "High Gold Priority";
+                  else if (name.includes('platinum')) text = "Maximum Placement Rotator";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
               </tr>
               <tr className="hover:bg-gray-50/50">
-                <td className="py-4 font-semibold text-gray-700">Digital Storefront Custom Branding</td>
-                <td className="py-4 px-4 text-center text-gray-400">Basic styling</td>
-                <td className="py-4 px-4 text-center text-gray-500">Custom colors</td>
-                <td className="py-4 px-4 text-center text-center"><Check className="w-4 h-4 text-[#ff6900] mx-auto" /></td>
-                <td className="py-4 px-4 text-center text-center"><Check className="w-4 h-4 text-[#ff6900] mx-auto" /></td>
+                <td className="py-4 font-semibold text-gray-700">Campaigns Limit</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "1 active campaign";
+                  if (name.includes('bronze')) text = "3 active campaigns";
+                  else if (name.includes('silver')) text = "10 active campaigns";
+                  else if (name.includes('gold')) text = "25 active campaigns";
+                  else if (name.includes('platinum')) text = "Unlimited campaigns";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
               </tr>
               <tr className="hover:bg-gray-50/50">
-                <td className="py-4 font-semibold text-gray-700">Loyalty Vouchers Campaigns Limit</td>
-                <td className="py-4 px-4 text-center text-gray-400">1 standard campaign</td>
-                <td className="py-4 px-4 text-center text-gray-500">3 campaigns</td>
-                <td className="py-4 px-4 text-center text-gray-800 font-bold">10 campaigns</td>
-                <td className="py-4 px-4 text-center text-gray-950 font-black">Unlimited</td>
+                <td className="py-4 font-semibold text-gray-700">Reward Stamp Cards & Coupons</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "1 active program";
+                  if (name.includes('bronze')) text = "3 active programs";
+                  else if (name.includes('silver')) text = "10 active programs";
+                  else if (name.includes('gold')) text = "Unlimited programs";
+                  else if (name.includes('platinum')) text = "Unlimited + Advanced Loyalty";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
               </tr>
               <tr className="hover:bg-gray-50/50">
-                <td className="py-4 font-semibold text-gray-700">Storefront Health Audits</td>
-                <td className="py-4 px-4 text-center text-gray-500">Short audits</td>
-                <td className="py-4 px-4 text-center text-gray-500">Short audits</td>
-                <td className="py-4 px-4 text-center text-center"><Check className="w-4 h-4 text-[#ff6900] mx-auto" /></td>
-                <td className="py-4 px-4 text-center text-center"><Check className="w-4 h-4 text-[#ff6900] mx-auto" /></td>
+                <td className="py-4 font-semibold text-gray-700">Marketing Automation</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "None";
+                  if (name.includes('bronze')) text = "Basic";
+                  else if (name.includes('silver')) text = "Flow Templates";
+                  else if (name.includes('gold')) text = "Flow Builder access";
+                  else if (name.includes('platinum')) text = "Advanced CRM Automations";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
               </tr>
               <tr className="hover:bg-gray-50/50">
-                <td className="py-4 font-semibold text-gray-700">Customer Analytics Insights</td>
-                <td className="py-4 px-4 text-center text-gray-400">Monthly reports</td>
-                <td className="py-4 px-4 text-center text-gray-400">Weekly reports</td>
-                <td className="py-4 px-4 text-center text-gray-850 font-bold">Realtime + weekly</td>
-                <td className="py-4 px-4 text-center text-gray-950 font-black">Advanced CRM access</td>
+                <td className="py-4 font-semibold text-gray-700">Featured High-Street Placement</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "None";
+                  if (name.includes('bronze')) text = "None";
+                  else if (name.includes('silver')) text = "2 active slots";
+                  else if (name.includes('gold')) text = "5 active slots";
+                  else if (name.includes('platinum')) text = "10 Featured Placements";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
+              </tr>
+              <tr className="hover:bg-gray-50/50">
+                <td className="py-4 font-semibold text-gray-700">Support Levels</td>
+                {sortedTiers.map(t => {
+                  const name = t.name.toLowerCase();
+                  let text = "Email support";
+                  if (name.includes('bronze')) text = "Priority tickets";
+                  else if (name.includes('silver')) text = "Priority tickets & chat";
+                  else if (name.includes('gold')) text = "Dedicated agent support";
+                  else if (name.includes('platinum')) text = "24/7 Premium Support (1-hr SLA)";
+                  return <td key={t.id} className="py-4 px-4 text-center font-medium text-gray-800">{text}</td>;
+                })}
               </tr>
             </tbody>
           </table>
