@@ -37,6 +37,7 @@ import { ExchangeModule } from './resources/exchange/exchange.module';
 import { PartnershipModule } from './resources/partnership/partnership.module';
 import { ServiceProviderProfileModule } from './resources/service-provider-profile/service-provider-profile.module';
 import { MembershipModule } from './resources/membership/membership.module';
+import { AuditsModule } from './resources/audits/audits.module';
 import { GroupCirclesModule } from './resources/group-circles/group-circles.module';
 import { SearchModule } from './resources/search/search.module';
 import { DisputeModule } from './resources/dispute/dispute.module';
@@ -64,6 +65,7 @@ import { QrCodesModule } from './resources/qr-codes/qr-codes.module';
 import { InterestSignalsModule } from './resources/interest-signals/interest-signals.module';
 import { AutomationsModule } from './resources/automations/automations.module';
 import { VisibilityModule } from './resources/visibility/visibility.module';
+import { TeamModule } from './resources/team/team.module';
 
 @Module({
   imports: [
@@ -87,6 +89,8 @@ import { VisibilityModule } from './resources/visibility/visibility.module';
     SearchModule,
     GroupCirclesModule,
     MembershipModule,
+    AuditsModule,
+    TeamModule,
     ServiceProviderProfileModule,
     PartnershipModule,
     AdminModule,

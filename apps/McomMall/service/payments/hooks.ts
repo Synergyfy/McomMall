@@ -199,3 +199,27 @@ export const usePauseOrPlay = () => {
 
   return mutation;
 };
+
+export const useGetPaymentHistory = () => {
+  const fetch = async (): Promise<any[]> => {
+    try {
+      const response = await api.get('/payments/history');
+      return response.data;
+    } catch (error: unknown) {
+      const err = error as ErrorResponse;
+      throw new Error(
+        err.response?.data?.message ||
+        err.message ||
+        'Failed to fetch payment history'
+      );
+    }
+  };
+
+  const query = useQuery({
+    queryFn: fetch,
+    queryKey: ['FETCH_PAYMENT_HISTORY'],
+    enabled: true,
+  });
+
+  return query;
+};

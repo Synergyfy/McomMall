@@ -20,4 +20,13 @@ export class StatsController {
   getSalesChart(@CurrentUser() user: User, @Query() query: SalesChartQueryDto) {
     return this.statsService.getSalesChart(user, query);
   }
+
+  @UseGuards(JwtAuthGuard)
+  @Get('reports')
+  getReports(
+    @CurrentUser() user: User,
+    @Query('period') period?: 'weekly' | 'monthly',
+  ) {
+    return this.statsService.getReports(user, period || 'weekly');
+  }
 }

@@ -5,6 +5,7 @@ import {
 } from '@nestjs/common';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 import { User } from './entities/user.entity';
 import { Brackets, DataSource, IsNull, Not, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -310,6 +311,35 @@ export class UsersService {
     }
 
     return this.userRepository.save(user);
+  }
+
+  async changePassword(userId: string, dto: ChangePasswordDto) {
+    const user = await this.userRepository.findOne({
+      where: { id: userId },
+      select: ['id', 'password'],
+    });
+
+    if (!user) {
+      throw new NotFoundException(`User not found`);
+    }
+
+    const isCurrentPasswordCorrect = await this.hashService.comparePassword(
+      dto.currentPassword,
+      user.password,
+    );
+
+    if (!isCurrentPasswordCorrect) {
+      throw new BadRequestException('Incorrect current password');
+    }
+
+    if (dto.newPassword !== dto.confirmPassword) {
+      throw new BadRequestException('Passwords do not match');
+    }
+
+    user.password = await this.hashService.hashPassword(dto.newPassword);
+    await this.userRepository.save(user);
+
+    return { message: 'Password updated successfully' };
   }
 
   async searchOwnersWithServiceProfiles(

@@ -12,6 +12,7 @@ import {
   Settings,
   LucideIcon,
   UserPen,
+  Award,
   Heart,
   LogOut,
   Megaphone,
@@ -251,16 +252,29 @@ export const accountMenuItems: MenuItem[] = [
   { title: 'My Profile', href: '/dashboard/my-profile', icon: UserPen },
   {
     title: 'My Subscription',
-    href: '/dashboard/my-subscription',
+    href: '/dashboard/membership-audits/membership',
     icon: CreditCard,
   },
   { title: 'Wallet', href: '/dashboard/wallet', icon: Wallet },
   { title: 'Cashback', href: '/dashboard/cashback', icon: Coins },
+  { title: 'Settings', href: '/dashboard/settings', icon: Settings },
 
   { title: 'Logout', href: '/', icon: LogOut },
 ];
 
 export const pluginMenuItems: MenuItem[] = [
+  {
+    title: 'Membership & Audits',
+    href: '/dashboard/membership-audits',
+    icon: Award,
+    subMenu: [
+      { title: 'Overview', href: '/dashboard/membership-audits' },
+      { title: 'Membership', href: '/dashboard/membership-audits/membership' },
+      { title: 'Audits', href: '/dashboard/membership-audits/audits' },
+      { title: 'Vouchers & Credits', href: '/dashboard/membership-audits/vouchers' },
+      { title: 'Reports', href: '/dashboard/membership-audits/reports' },
+    ],
+  },
   {
     title: 'Business Tools',
     href: '/dashboard/tools',
