@@ -31,6 +31,7 @@ import { QueryRedeemedOffersDto } from './dto/query-redeemed-offers.dto';
 import { SearchOwnerDto } from './dto/search-owner.dto';
 import { User } from './entities/user.entity';
 import { UpdateUserFeaturesDto } from './dto/update-user-features.dto';
+import { ChangePasswordDto } from './dto/change-password.dto';
 
 @ApiTags('users')
 @ApiBearerAuth()
@@ -182,6 +183,17 @@ export class UsersController {
     @Body() updateUserFeaturesDto: UpdateUserFeaturesDto,
   ) {
     return this.usersService.updateFeatures(req.user.id, updateUserFeaturesDto);
+  }
+
+  @ApiOperation({ summary: 'Change user password' })
+  @ApiResponse({ status: 200, description: 'Password changed successfully.' })
+  @ApiResponse({ status: 400, description: 'Bad request.' })
+  @Post('change-password')
+  changePassword(
+    @Req() req,
+    @Body() changePasswordDto: ChangePasswordDto,
+  ) {
+    return this.usersService.changePassword(req.user.id, changePasswordDto);
   }
 
   @ApiOperation({ summary: 'Delete a user by email (testing only)' })
