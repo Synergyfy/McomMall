@@ -81,7 +81,7 @@ export default function SettingsHubPage() {
   // Fallback defaults if no listing profile exists yet
   const displayBusinessName = listing?.businessName || 'My Business';
   const displayLogo = listing?.logoUrl || 'https://lh3.googleusercontent.com/aida-public/AB6AXuBCT-HaLvjePg65iRrx4YYbgRF58m0nK-2Kz-Q6WSxtWRQjJY5o8OxqWiNpqmNeLE-stCUd77MWrqpWiGy3NR0IKqiPK0r_twbSS87xb-d2jbOnINzoBzQULSvX2kwE9z1p-EVnJIk305OYCYb7mY1vPKTEbbcCNKiHSC3IVsPY38hFxI1Jrdmf4Pqu1YhvkMh4yE4vrRgAINTGJ5VlHoX-lL6hVPjkK_dKnM2xPozkML99obkSeM821-0Jh5ZbxTvEC-3dlf2Hksrf';
-  const displayStatus = listing?.isActive ? 'Active' : 'Pending Setup';
+  const displayStatus = listing?.status?.toLowerCase() === 'published' ? 'Active' : 'Pending Setup';
 
   return (
     <div className="space-y-6">
