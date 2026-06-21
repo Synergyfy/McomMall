@@ -1,939 +1,266 @@
 'use client';
 
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
+import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
-import Link from 'next/link';
-import dynamic from 'next/dynamic';
-import { LocalCampaignsPanel } from '@/components/campaigns/LocalCampaignsPanel';
 import api from '@/service/api';
+import { LocalMallShell } from './components/LocalMallShell';
+import { LocalMallTab } from './components/shared/LocalMallBottomNav';
 
-const NearbyDiscovery = dynamic(() => import('@/components/marketplace/NearbyDiscovery'), { ssr: false });
-import {
-  Users,
-  Star,
-  Map,
-  LayoutDashboard,
-  Activity,
-  Zap,
-  ChevronRight,
-  Building2,
-  Globe,
-  Radio,
-  Sparkles,
-  TrendingUp,
-  Bell,
-  BarChart3,
-  Award,
-  ArrowUpRight,
-  CircleDot,
-  ShieldCheck,
-  Percent,
-  MessageSquare,
-  MapPin,
-  Package,
-  Coffee,
-  Leaf,
-  ChevronLeft,
-  X,
-} from 'lucide-react';
+// Import Screen Modules
+import { HomeScreen } from './components/screens/HomeScreen';
+import { StatusScreen } from './components/screens/StatusScreen';
+import { BoroughScreen, SublocationScreen } from './components/screens/LocationSetupScreens';
+import { 
+  HighStreetScreen, 
+  MapScreen, 
+  ClusterScreen, 
+  BoroughFeedScreen, 
+  RankingsScreen 
+} from './components/screens/HighStreetScreens';
+import { 
+  DiscoverScreen, 
+  BusinessProfileScreen, 
+  CommunityScreen, 
+  InterestScreen 
+} from './components/screens/DiscoveryScreens';
+import { 
+  PartnershipsScreen, 
+  PartnerMatchesScreen, 
+  RequestPartnerScreen, 
+  ShareExchangeScreen, 
+  CampaignBuilderScreen 
+} from './components/screens/PartnershipScreens';
+import { 
+  VisibilitySettingsScreen, 
+  AudienceSettingsScreen, 
+  RotatorSettingsScreen, 
+  BoostVisibilityScreen 
+} from './components/screens/VisibilityScreens';
+import { 
+  ExpoHubScreen, 
+  VirtualBoothSetupScreen, 
+  EventDemoManagementScreen 
+} from './components/screens/ExpoScreens';
+import { 
+  SearchFilterScreen, 
+  SystemNoticeScreen, 
+  NotificationsCenterScreen, 
+  MessagesCenterScreen, 
+  MessageTemplatesScreen, 
+  ScheduledMessagesScreen 
+} from './components/screens/OverlayScreens';
+import { 
+  HubParticipationScreen, 
+  AccountManagerSupportScreen 
+} from './components/screens/SupportScreens';
 
-// ─── Types ────────────────────────────────────────────────────────────────────
-type Tab = 'hub' | 'network' | 'rewards' | 'map';
-type CommunitySubTab = 'community' | 'sponsorship' | 'growth';
-type ProximityTier = 'high_street' | 'hyper_local' | 'nearby' | 'national';
-
-// ─── Tier colours ─────────────────────────────────────────────────────────────
-const TIER_META: Record<ProximityTier, { gradient: string; shadow: string; accent: string }> = {
-  high_street: { gradient: 'from-yellow-400 via-amber-500 to-orange-500', shadow: 'rgba(245,158,11,0.4)', accent: '#d97706' },
-  hyper_local: { gradient: 'from-orange-400 via-orange-500 to-red-500', shadow: 'rgba(249,115,22,0.4)', accent: '#ea580c' },
-  nearby: { gradient: 'from-orange-600 via-red-500 to-red-600', shadow: 'rgba(234,88,12,0.4)', accent: '#dc2626' },
-  national: { gradient: 'from-red-600 via-red-700 to-orange-800', shadow: 'rgba(185,28,28,0.4)', accent: '#b91c1c' },
-};
-
-// ─── Animated counter ────────────────────────────────────────────────────────
-function useCounter(target: number, duration = 1400) {
-  const [val, setVal] = useState(0);
-  useEffect(() => {
-    let start: number | null = null;
-    const step = (ts: number) => {
-      if (!start) start = ts;
-      const progress = Math.min((ts - start) / duration, 1);
-      setVal(Math.floor(progress * target));
-      if (progress < 1) requestAnimationFrame(step);
-    };
-    const raf = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(raf);
-  }, [target, duration]);
-  return val;
-}
-
-// ─── Stylised Map Background ──────────────────────────────────────────────────
-function StyledMap({ area, postcode }: { area: string; postcode: string }) {
-  return (
-    <div className="relative w-full h-full bg-[#e9e3db] overflow-hidden rounded-3xl border border-gray-250/20">
-      <iframe
-        title="Live Interactive Map"
-        src={`https://maps.google.com/maps?q=${encodeURIComponent(postcode || area)}&t=&z=15&ie=UTF8&iwloc=&output=embed`}
-        className="w-full h-full border-0 absolute inset-0 filter grayscale-[10%] contrast-[95%]"
-        loading="lazy"
-      />
-      <div className="absolute inset-0 pointer-events-none">
-        {/* Animated dots */}
-        {[[60, 50], [110, 100], [170, 60], [230, 120], [80, 160], [280, 80]].map(([x, y], i) => (
-          <motion.div
-            key={i}
-            className="absolute w-3 h-3 bg-orange-500 rounded-full"
-            style={{ left: x, top: y }}
-            animate={{ scale: [0.8, 1.4, 0.8], opacity: [0.6, 1, 0.6] }}
-            transition={{ delay: i * 0.3, duration: 2.5, repeat: Infinity, ease: 'easeInOut' }}
-          />
-        ))}
-      </div>
-
-      {/* Area label */}
-      <div className="absolute bottom-4 left-1/2 -translate-x-1/2 z-10">
-        <div className="bg-white/95 backdrop-blur px-4 py-1.5 rounded-full shadow border border-white/90">
-          <p className="text-[10px] font-black text-gray-700 tracking-widest uppercase">{area} Zone</p>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// ─── Avatar ───────────────────────────────────────────────────────────────────
-function Avatar({ logo, name }: { logo: string | null; name: string }) {
-  return (
-    <div className="w-8 h-8 rounded-full overflow-hidden border border-white shadow bg-gradient-to-br from-amber-400 to-orange-500 flex items-center justify-center shrink-0">
-      {logo
-        // eslint-disable-next-line @next/next/no-img-element
-        ? <img src={logo} alt="logo" className="w-full h-full object-cover" />
-        : <span className="text-white font-bold text-xs">{name?.[0]?.toUpperCase() || 'M'}</span>
-      }
-    </div>
-  );
-}
-
-// ── Business Categorisation Helper ───────────────────────────────────────────
-function getBusinessCategory(name: string): 'tech' | 'food' | 'fashion' | 'wellness' | 'general' {
-  const lowercaseName = (name || '').toLowerCase();
-  if (
-    lowercaseName.includes('laptop') ||
-    lowercaseName.includes('computer') ||
-    lowercaseName.includes('pc') ||
-    lowercaseName.includes('tech') ||
-    lowercaseName.includes('phone') ||
-    lowercaseName.includes('mobile') ||
-    lowercaseName.includes('electronic') ||
-    lowercaseName.includes('gadget') ||
-    lowercaseName.includes('software') ||
-    lowercaseName.includes('it ') ||
-    lowercaseName.includes('system')
-  ) {
-    return 'tech';
-  }
-  if (
-    lowercaseName.includes('bakery') ||
-    lowercaseName.includes('bread') ||
-    lowercaseName.includes('cake') ||
-    lowercaseName.includes('coffee') ||
-    lowercaseName.includes('cafe') ||
-    lowercaseName.includes('deli') ||
-    lowercaseName.includes('food') ||
-    lowercaseName.includes('restaurant') ||
-    lowercaseName.includes('bistro') ||
-    lowercaseName.includes('kitchen') ||
-    lowercaseName.includes('wine') ||
-    lowercaseName.includes('bar') ||
-    lowercaseName.includes('diner') ||
-    lowercaseName.includes('sweet')
-  ) {
-    return 'food';
-  }
-  if (
-    lowercaseName.includes('clothing') ||
-    lowercaseName.includes('boutique') ||
-    lowercaseName.includes('fashion') ||
-    lowercaseName.includes('apparel') ||
-    lowercaseName.includes('shoes') ||
-    lowercaseName.includes('wear') ||
-    lowercaseName.includes('tailor') ||
-    lowercaseName.includes('style')
-  ) {
-    return 'fashion';
-  }
-  if (
-    lowercaseName.includes('salon') ||
-    lowercaseName.includes('barber') ||
-    lowercaseName.includes('hair') ||
-    lowercaseName.includes('spa') ||
-    lowercaseName.includes('beauty') ||
-    lowercaseName.includes('wellness') ||
-    lowercaseName.includes('nails') ||
-    lowercaseName.includes('yoga') ||
-    lowercaseName.includes('gym') ||
-    lowercaseName.includes('fitness') ||
-    lowercaseName.includes('therapy')
-  ) {
-    return 'wellness';
-  }
-  return 'general';
-}
-
-// ── Smart Partnership Recommendation System ──────────────────────────────────
-interface SmartPartner {
-  pct: number;
-  name: string;
-  icon: React.ComponentType<{ className?: string }>;
-  description: string;
-}
-
-function getSmartPartnerships(businessName: string, otherBusinesses: any[]): SmartPartner[] {
-  const currentCategory = getBusinessCategory(businessName);
-
-  if (!otherBusinesses || otherBusinesses.length === 0) {
-    // Category-specific mock templates
-    switch (currentCategory) {
-      case 'tech':
-        return [
-          { pct: 96, name: `${businessName || 'Laptop Sales'} × Local Tech Support`, icon: Zap, description: 'Tech Synergy' },
-          { pct: 92, name: `${businessName || 'Laptop Sales'} × Co-working Spaces`, icon: Users, description: 'Co-working Hub' },
-        ];
-      case 'food':
-        return [
-          { pct: 96, name: `${businessName || 'Coffee Shop'} × Local Bakery`, icon: Coffee, description: 'Menu Collaboration' },
-          { pct: 92, name: `Community Garden × ${businessName || 'Cafe'}`, icon: Leaf, description: 'Organic Supply' },
-        ];
-      case 'fashion':
-        return [
-          { pct: 96, name: `${businessName || 'Boutique'} × Local Tailor & Repairs`, icon: Award, description: 'Complementary Fit' },
-          { pct: 92, name: `${businessName || 'Boutique'} × Artisan Jewellery`, icon: Sparkles, description: 'Accessory Bundle' },
-        ];
-      case 'wellness':
-        return [
-          { pct: 96, name: `${businessName || 'Salons'} × Organic Skincare Shop`, icon: ShieldCheck, description: 'Product Synergy' },
-          { pct: 92, name: `Local Yoga Studio × ${businessName || 'Gym'}`, icon: Activity, description: 'Wellness Bundle' },
-        ];
-      default:
-        return [
-          { pct: 96, name: `${businessName || 'Artisan Coffee'} × Local Bakery`, icon: Coffee, description: 'Menu Collaboration' },
-          { pct: 92, name: `Community Garden × ${businessName || 'Local Logistics'}`, icon: Leaf, description: 'Supply Logistics' },
-        ];
-    }
-  }
-
-  // Dynamic matching based on actual other businesses in the mall
-  return otherBusinesses.map((b: any) => {
-    const otherCat = getBusinessCategory(b.businessName);
-    let pct = 70;
-    let matchIcon = Star;
-    let description = 'Ecosystem Member';
-
-    if (currentCategory === otherCat && currentCategory !== 'general') {
-      pct = 96;
-      matchIcon = Sparkles;
-      description = 'Direct Sector Synergy';
-    } else if (
-      (currentCategory === 'tech' && otherCat === 'general') ||
-      (currentCategory === 'food' && otherCat === 'general')
-    ) {
-      pct = 84;
-      matchIcon = Package;
-      description = 'Ecosystem Supplier';
-    } else if (currentCategory === 'food' && b.businessName.toLowerCase().includes('garden')) {
-      pct = 92;
-      matchIcon = Leaf;
-      description = 'Farm-to-Table Supply';
-    } else if (currentCategory === 'tech' && otherCat === 'food') {
-      pct = 76;
-      matchIcon = Coffee;
-      description = 'Remote Work Promo';
-    } else if (currentCategory === 'food' && otherCat === 'tech') {
-      pct = 76;
-      matchIcon = Zap;
-      description = 'Smart POS Partner';
-    } else {
-      pct = 54;
-      matchIcon = Users;
-      description = 'Local Foot Traffic';
-    }
-
-    return {
-      pct,
-      name: `${businessName || 'Your Business'} × ${b.businessName}`,
-      icon: matchIcon,
-      description
-    };
-  }).sort((a, b) => b.pct - a.pct).slice(0, 2);
-}
-
-function getIconForPartnership(description: string, name: string) {
-  const desc = (description || '').toLowerCase();
-  const nm = (name || '').toLowerCase();
-  if (desc.includes('tech') || nm.includes('tech') || nm.includes('support')) return Zap;
-  if (desc.includes('co-working') || desc.includes('hub')) return Users;
-  if (desc.includes('menu') || desc.includes('coffee') || nm.includes('coffee') || nm.includes('bakery')) return Coffee;
-  if (desc.includes('organic') || desc.includes('garden') || nm.includes('garden')) return Leaf;
-  if (desc.includes('fit') || desc.includes('tailor')) return Award;
-  if (desc.includes('accessory') || desc.includes('jewel') || desc.includes('synergy')) return Sparkles;
-  if (desc.includes('product') || desc.includes('skincare')) return ShieldCheck;
-  if (desc.includes('wellness') || desc.includes('yoga') || desc.includes('gym')) return Activity;
-  return Star;
-}
-
-// ═════════════════════════════════════════════════════════════════════════════
-// PAGE
-// ═════════════════════════════════════════════════════════════════════════════
 export default function LocalMallPage() {
   const router = useRouter();
-  const [activeTab, setActiveTab] = useState<Tab>('hub');
-  const [communityTab, setCommunityTab] = useState<CommunitySubTab>('community');
-  const [area, setArea] = useState('Local');
-  const [tier, setTier] = useState<ProximityTier>('high_street');
-  const [businessName, setBusinessName] = useState('');
-  const [logo, setLogo] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<LocalMallTab>('home');
+  const [screenStack, setScreenStack] = useState<string[]>(['home']);
+  const [businessName, setBusinessName] = useState('My Business Storefront');
+  const [boroughName, setBoroughName] = useState('Greenwich');
   const [postcode, setPostcode] = useState('');
-  const [isSignupFlow, setIsSignupFlow] = useState(false);
-  const [isMapModalOpen, setIsMapModalOpen] = useState(false);
-  const [isCampaignPanelOpen, setIsCampaignPanelOpen] = useState(false);
   const [mallData, setMallData] = useState<any>(null);
-  const [partnerships, setPartnerships] = useState<any[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const [targetNodeCount, setTargetNodeCount] = useState(1284);
-  const nodeCount = useCounter(targetNodeCount, 1600);
-  const sponsorPct = useCounter(65, 1200);
+  const fetchEcosystemData = async (resolvedPostcode?: string) => {
+    try {
+      const pc = resolvedPostcode || postcode || localStorage.getItem('businessPostcode') || '';
+      const url = pc 
+        ? `localmall/customer/feed?postcode=${encodeURIComponent(pc)}` 
+        : 'localmall/customer/feed';
+      
+      const res = await api.get(url);
+      if (res.data) {
+        setMallData(res.data);
+        if (res.data.borough) {
+          setBoroughName(res.data.borough);
+        }
+      }
+    } catch (err) {
+      console.error('Error fetching LocalMall feed ecosystem data:', err);
+    }
+  };
 
   useEffect(() => {
-    const storedArea = localStorage.getItem('businessArea') || 'Local';
-    const cleanedArea = storedArea
-      .replace(/London Borough of /i, '')
-      .replace(/Borough of /i, '')
-      .replace(/City of /i, '')
-      .trim();
-    setArea(cleanedArea);
-    setTier((localStorage.getItem('businessProximityTier') as ProximityTier) || 'high_street');
-    const raw = localStorage.getItem('businessOnboarding');
-    const ob = raw ? JSON.parse(raw) : {};
-    setBusinessName(ob.businessName || '');
-    const pc = ob.postcode || '';
-    setPostcode(pc);
-    if (ob.logo) setLogo(ob.logo);
-
-    const params = new URLSearchParams(window.location.search);
-    if (params.get('signup') === 'true' || params.get('onboarding') === 'true') {
-      setIsSignupFlow(true);
-    }
-
-    const fetchFeed = async () => {
+    const loadProfile = async () => {
       try {
-        const url = pc 
-          ? `localmall/customer/feed?postcode=${encodeURIComponent(pc)}` 
-          : 'localmall/customer/feed';
-        const res = await api.get(url);
+        const res = await api.get('businesses/my-profile');
         if (res.data) {
-          setMallData(res.data);
-          setTargetNodeCount(res.data.businesses?.length ?? 0);
-          if (res.data.borough) {
-            setArea(res.data.borough);
+          setBusinessName(res.data.businessName || 'My Business Storefront');
+          if (res.data.location?.postcode) {
+            setPostcode(res.data.location.postcode);
+            localStorage.setItem('businessPostcode', res.data.location.postcode);
+            fetchEcosystemData(res.data.location.postcode);
+            return;
           }
         }
       } catch (err) {
-        console.error('Error fetching LocalMall feed:', err);
+        console.error('Error loading business profile details:', err);
       }
+      
+      // Fallback if profile fails
+      const storedPostcode = localStorage.getItem('businessPostcode') || '';
+      if (storedPostcode) {
+        setPostcode(storedPostcode);
+      }
+      fetchEcosystemData(storedPostcode);
     };
 
-    fetchFeed();
+    loadProfile().finally(() => setLoading(false));
   }, []);
 
-  useEffect(() => {
-    if (!businessName) return;
+  const handleNavigate = (screen: string) => {
+    setScreenStack((prev) => [...prev, screen]);
+  };
 
-    const fetchPartnerships = async () => {
-      try {
-        const res = await api.get('localmall/business/partnerships');
-        if (res.data && res.data.length > 0) {
-          const mapped = res.data.map((p: any) => ({
-            ...p,
-            icon: getIconForPartnership(p.description, p.name),
-          }));
-          setPartnerships(mapped);
-        } else {
-          const other = mallData?.businesses?.filter((b: any) => b.businessName !== businessName) || [];
-          setPartnerships(getSmartPartnerships(businessName, other));
-        }
-      } catch (err) {
-        console.error('Error fetching backend partnerships, falling back:', err);
-        const other = mallData?.businesses?.filter((b: any) => b.businessName !== businessName) || [];
-        setPartnerships(getSmartPartnerships(businessName, other));
-      }
-    };
+  const handleBack = () => {
+    if (screenStack.length > 1) {
+      setScreenStack((prev) => prev.slice(0, -1));
+    } else {
+      router.push('/dashboard');
+    }
+  };
 
-    fetchPartnerships();
-  }, [mallData, businessName]);
+  const handleTabChange = (tab: LocalMallTab) => {
+    setActiveTab(tab);
+    setScreenStack([tab]);
+  };
 
-  const meta = TIER_META[tier] ?? TIER_META.high_street;
+  const handlePostcodeResolved = (newPostcode: string, newBorough: string) => {
+    setPostcode(newPostcode);
+    setBoroughName(newBorough);
+    fetchEcosystemData(newPostcode);
+  };
 
-  // ── Tab config ──────────────────────────────────────────────────────────────
-  const TABS: { id: Tab; label: string; Icon: React.ComponentType<{ className?: string }> }[] = [
-    { id: 'network', label: 'Network', Icon: Users },
-    { id: 'rewards', label: 'Rewards', Icon: Star },
-    { id: 'map', label: 'Map', Icon: Map },
-    { id: 'hub', label: 'Hub', Icon: LayoutDashboard },
-  ];
+  const renderActiveScreen = () => {
+    const currentScreen = screenStack[screenStack.length - 1];
 
-  // ── Network connections ────────────────────────────────────────────────────────
-  const networkMembers: { name: string; tier: string; dist: string; color: string }[] = mallData?.businesses
-    ? (mallData.businesses.map((b: any, index: number) => ({
-        name: b.businessName,
-        tier: b.category || 'Store',
-        dist: b.address || 'Local',
-        color: index % 3 === 0 ? '#d97706' : index % 3 === 1 ? '#ea580c' : '#dc2626',
-      })) as { name: string; tier: string; dist: string; color: string }[])
-    : [];
+    if (currentScreen.startsWith('profile:')) {
+      const bizId = currentScreen.split(':')[1];
+      return <BusinessProfileScreen onNavigate={handleNavigate} businessId={bizId} />;
+    }
 
-  // ── Rewards ───────────────────────────────────────────────────────────────────
-  const rewardDeals: { business: string; deal: string; pts: number; icon: any; expires: string }[] = mallData?.nearbyDeals
-    ? (mallData.nearbyDeals.map((d: any) => ({
-        business: d.business,
-        deal: d.deal,
-        pts: d.points || 50,
-        icon: Coffee,
-        expires: d.expires || '3d',
-      })) as { business: string; deal: string; pts: number; icon: any; expires: string }[])
-    : [];
+    switch (currentScreen) {
+      // Home & Entry Screens
+      case 'home':
+        return (
+          <HomeScreen 
+            onNavigate={handleNavigate} 
+            mallData={mallData} 
+            businessName={businessName} 
+            boroughName={boroughName} 
+          />
+        );
+      case 'status':
+        return <StatusScreen onNavigate={handleNavigate} businessName={businessName} mallData={mallData} />;
+      case 'borough':
+        return (
+          <BoroughScreen 
+            onNavigate={handleNavigate} 
+            onPostcodeResolved={handlePostcodeResolved} 
+            businessName={businessName} 
+          />
+        );
+      case 'sublocation':
+        return <SublocationScreen onNavigate={handleNavigate} businessName={businessName} />;
+      
+      // High Street Views
+      case 'highstreet':
+        return <HighStreetScreen onNavigate={handleNavigate} mallData={mallData} boroughName={boroughName} />;
+      case 'map':
+        return <MapScreen onNavigate={handleNavigate} mallData={mallData} boroughName={boroughName} />;
+      case 'clusters':
+        return <ClusterScreen onNavigate={handleNavigate} mallData={mallData} />;
+      case 'feed':
+        return <BoroughFeedScreen onNavigate={handleNavigate} boroughName={boroughName} />;
+      case 'rankings':
+        return <RankingsScreen onNavigate={handleNavigate} mallData={mallData} />;
 
-  // ────────────────────────────────────────────────────────────────────────────
+      // Partnerships & B2B
+      case 'partnerships':
+        return <PartnershipsScreen onNavigate={handleNavigate} businessName={businessName} />;
+      case 'partner-matches':
+        return <PartnerMatchesScreen onNavigate={handleNavigate} />;
+      case 'request-partner':
+        return <RequestPartnerScreen onNavigate={handleNavigate} />;
+      case 'share-exchange':
+        return <ShareExchangeScreen onNavigate={handleNavigate} />;
+      case 'campaign-builder':
+        return <CampaignBuilderScreen onNavigate={handleNavigate} />;
+      
+      // Visibility Settings
+      case 'visibility':
+        return <VisibilitySettingsScreen onNavigate={handleNavigate} businessName={businessName} />;
+      case 'audience':
+        return <AudienceSettingsScreen onNavigate={handleNavigate} />;
+      case 'rotator':
+        return <RotatorSettingsScreen onNavigate={handleNavigate} />;
+      case 'boost':
+        return <BoostVisibilityScreen onNavigate={handleNavigate} />;
+
+      // Discovery & Community
+      case 'community':
+        return <CommunityScreen onNavigate={handleNavigate} mallData={mallData} />;
+      case 'discover':
+        return <DiscoverScreen onNavigate={handleNavigate} mallData={mallData} />;
+      case 'interest':
+        return <InterestScreen onNavigate={handleNavigate} />;
+
+      // Expo Hub
+      case 'expo':
+        return <ExpoHubScreen onNavigate={handleNavigate} />;
+      case 'booth-setup':
+        return <VirtualBoothSetupScreen onNavigate={handleNavigate} />;
+      case 'event-demo':
+        return <EventDemoManagementScreen onNavigate={handleNavigate} />;
+
+      // Support & Tiers
+      case 'hub-participation':
+        return <HubParticipationScreen onNavigate={handleNavigate} mallData={mallData} />;
+      case 'support':
+        return <AccountManagerSupportScreen onNavigate={handleNavigate} boroughName={boroughName} />;
+
+      // Global Header/Notifications Triggers
+      case 'notifications':
+        return <NotificationsCenterScreen onNavigate={handleNavigate} />;
+      case 'messages':
+        return <MessagesCenterScreen onNavigate={handleNavigate} />;
+      case 'message-templates':
+        return <MessageTemplatesScreen onNavigate={handleNavigate} />;
+      case 'scheduled-messages':
+        return <ScheduledMessagesScreen onNavigate={handleNavigate} />;
+      case 'search':
+        return <SearchFilterScreen onNavigate={handleNavigate} mallData={mallData} />;
+      case 'notice':
+        return <SystemNoticeScreen onNavigate={handleNavigate} />;
+
+      default:
+        return (
+          <HomeScreen 
+            onNavigate={handleNavigate} 
+            mallData={mallData} 
+            businessName={businessName} 
+            boroughName={boroughName} 
+          />
+        );
+    }
+  };
+
   return (
-    <div className="min-h-[100dvh] bg-[#f8f7f5] font-sans flex flex-col" style={{ fontFamily: "'Inter', 'Outfit', sans-serif" }}>
-
-      {/* ── Global Header ─────────────────────────────────────────────────── */}
-      <header className="bg-white border-b border-gray-100 px-5 py-1.5 flex items-center justify-between">
-        <div className="flex items-center gap-2.5">
-          <Link href="/dashboard" className="hidden sm:flex w-7 h-7 rounded-lg bg-gray-100 items-center justify-center mr-0.5 active:bg-gray-200 transition-colors">
-            <ChevronLeft className="w-3.5 h-3.5 text-gray-600" />
-          </Link>
-          <Avatar logo={logo} name={businessName} />
-          <div>
-            <p className="text-[9px] text-gray-400 font-semibold uppercase tracking-wider leading-none mb-0.5">LocalMall</p>
-            <p className="text-xs font-bold text-gray-900 leading-tight">{area} LocalMall</p>
-          </div>
-        </div>
-        <Radio className="w-4 h-4 text-gray-400 animate-pulse" />
-      </header>
-
-      {/* ── Content ───────────────────────────────────────────────────────── */}
-      <main className="flex-1 overflow-y-auto pb-24">
-        <AnimatePresence mode="wait">
-
-          {/* ══ HUB TAB ═══════════════════════════════════════════════════ */}
-          {activeTab === 'hub' && (
-            <motion.div
-              key="hub"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="px-5 pt-6 space-y-5 pb-4"
-            >
-              {/* Title */}
-              <div>
-                <h1 className="text-2xl font-black text-gray-900 tracking-tight">Your LocalMall Hub</h1>
-                <p className="text-xs text-gray-400 mt-1 leading-relaxed">
-                  Optimise your community impact with real-time ecosystem intelligence.
-                </p>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex gap-3">
-                <button 
-                  onClick={() => setIsMapModalOpen(true)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-orange-500 hover:bg-orange-600 text-white py-3 rounded-2xl text-xs font-bold transition-colors shadow-sm"
-                >
-                  <MapPin className="w-4 h-4" /> View Radius Map
-                </button>
-                <button 
-                  onClick={() => setIsCampaignPanelOpen(true)}
-                  className="flex-1 flex items-center justify-center gap-2 bg-white text-orange-600 border border-orange-200 hover:bg-orange-50 py-3 rounded-2xl text-xs font-bold transition-colors shadow-sm"
-                >
-                  <Users className="w-4 h-4" /> Community Rewards
-                </button>
-              </div>
-
-              {/* Live Activity Card */}
-              <div className="relative bg-gray-900 rounded-3xl p-5 overflow-hidden shadow-xl">
-                {/* Glow */}
-                <div className={`absolute -top-10 -right-10 w-40 h-40 rounded-full bg-gradient-to-br ${meta.gradient} opacity-20 blur-2xl`} />
-                <div className="relative">
-                  <div className="flex items-center justify-between mb-4">
-                    <div className="flex items-center gap-2">
-                      <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse" />
-                      <p className="text-[10px] font-black tracking-[0.2em] text-gray-400 uppercase">Live Activity</p>
-                    </div>
-                    <div className="flex items-center gap-1.5 bg-green-500/20 border border-green-500/30 rounded-full px-2.5 py-1">
-                      <ShieldCheck className="w-3 h-3 text-green-400" />
-                      <span className="text-[10px] font-bold text-green-400">Ecosystem Healthy</span>
-                    </div>
-                  </div>
-                  <p className="text-4xl font-black text-white tabular-nums">
-                    {nodeCount.toLocaleString()}
-                    <span className="text-lg font-bold text-gray-400 ml-2">active businesses</span>
-                  </p>
-                </div>
-              </div>
-
-              {/* AI Partnership Recommendations */}
-              <div className="bg-white rounded-3xl p-5 shadow-sm border border-gray-100">
-                <div className="flex items-center gap-2 mb-4">
-                  <div className="w-8 h-8 rounded-xl bg-orange-50 flex items-center justify-center">
-                    <Sparkles className="w-4 h-4 text-orange-500" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-gray-900">AI Partnership Recommendations</p>
-                    <p className="text-[11px] text-gray-400">Predictive matches based on your business profile.</p>
-                  </div>
-                </div>
-                <div className="space-y-2.5">
-                  {partnerships.map((p, i) => {
-                    const PIcon = p.icon;
-                    return (
-                      <div key={i} className="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 active:bg-gray-100 transition-colors cursor-pointer">
-                        <div className="flex items-center gap-3">
-                          <div className="w-8 h-8 bg-orange-100 rounded-xl flex items-center justify-center">
-                            <PIcon className="w-4 h-4 text-orange-600" />
-                          </div>
-                          <div>
-                            <p className="text-[10px] font-black text-orange-600 mb-0.5">
-                              {p.pct}% Match{p.description ? ` • ${p.description}` : ''}
-                            </p>
-                            <p className="text-xs font-bold text-gray-900">{p.name}</p>
-                          </div>
-                        </div>
-                        <ChevronRight className="w-4 h-4 text-gray-400 shrink-0" />
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* Hyperlocal Opportunity Alerts */}
-              <div
-                className={`rounded-3xl p-5 bg-gradient-to-br ${meta.gradient} shadow-xl`}
-                style={{ boxShadow: `0 16px 40px -10px ${meta.shadow}` }}
-              >
-                <div className="flex items-start gap-3 mb-4">
-                  <div className="w-9 h-9 bg-white/20 rounded-xl flex items-center justify-center shrink-0">
-                    <Bell className="w-5 h-5 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-black text-white">Hyperlocal Opportunity Alerts</p>
-                    <p className="text-xs text-white/70 mt-0.5">Immediate needs detected in your sector.</p>
-                  </div>
-                </div>
-                <div className="bg-white/15 backdrop-blur rounded-2xl p-4 mb-4">
-                  <p className="text-[9px] font-black text-white/60 tracking-widest uppercase mb-1">Trending Demand</p>
-                  <p className="text-lg font-black text-white">Zero-Waste Packaging</p>
-                </div>
-                <button className="w-full py-2.5 bg-white/20 backdrop-blur border border-white/30 rounded-xl text-white text-xs font-bold tracking-wide hover:bg-white/30 transition-colors">
-                  Review All Alerts
-                </button>
-              </div>
-
-              {/* Community / Sponsorship / Growth Tabs */}
-              <div className="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden">
-                {/* Sub-tab bar */}
-                <div className="flex border-b border-gray-100">
-                  {(['community', 'sponsorship', 'growth'] as CommunitySubTab[]).map((t) => (
-                    <button
-                      key={t}
-                      onClick={() => setCommunityTab(t)}
-                      className={`flex-1 py-3.5 text-[11px] font-bold capitalize transition-colors relative ${communityTab === t ? 'text-orange-500' : 'text-gray-400'
-                        }`}
-                    >
-                      {t === 'community' ? 'Community' : t === 'sponsorship' ? 'Sponsorship' : 'Growth'}
-                      {communityTab === t && (
-                        <motion.div
-                          layoutId="sub-tab-indicator"
-                          className="absolute bottom-0 left-2 right-2 h-0.5 bg-orange-500 rounded-full"
-                        />
-                      )}
-                    </button>
-                  ))}
-                </div>
-
-                {/* Sub-tab content */}
-                <AnimatePresence mode="wait">
-                  {communityTab === 'community' && (
-                    <motion.div
-                      key="community"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="p-5"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-                          <Users className="w-5 h-5 text-orange-500" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-gray-900 mb-0.5">Active Collaborations</p>
-                          <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                            You are participating in 4 community initiatives this month.
-                          </p>
-                          {/* Avatar stack */}
-                          <div className="flex -space-x-2">
-                            {['#f97316', '#ea580c', '#d97706'].map((c, i) => (
-                              <div
-                                key={i}
-                                className="w-7 h-7 rounded-full border-2 border-white flex items-center justify-center text-white text-[10px] font-bold"
-                                style={{ backgroundColor: c }}
-                              >
-                                {String.fromCharCode(65 + i)}
-                              </div>
-                            ))}
-                            <div className="w-7 h-7 rounded-full border-2 border-white bg-gray-100 flex items-center justify-center">
-                              <span className="text-[9px] font-bold text-gray-500">+2</span>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                  {communityTab === 'sponsorship' && (
-                    <motion.div
-                      key="sponsorship"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="p-5"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-                          <Award className="w-5 h-5 text-orange-500" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-gray-900 mb-0.5">Sponsorship Reach</p>
-                          <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                            Your brand exposure is up 12% in the North District.
-                          </p>
-                          <div className="w-full bg-gray-100 rounded-full h-2 overflow-hidden">
-                            <motion.div
-                              className={`h-full bg-gradient-to-r ${meta.gradient} rounded-full`}
-                              initial={{ width: 0 }}
-                              animate={{ width: `${sponsorPct}%` }}
-                              transition={{ duration: 1.2, ease: 'easeOut' }}
-                            />
-                          </div>
-                          <p className="text-[10px] text-gray-400 mt-1.5 font-semibold">{sponsorPct}% of Target Reached</p>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                  {communityTab === 'growth' && (
-                    <motion.div
-                      key="growth"
-                      initial={{ opacity: 0, y: 8 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="p-5"
-                    >
-                      <div className="flex items-start gap-4">
-                        <div className="w-11 h-11 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-                          <BarChart3 className="w-5 h-5 text-orange-500" />
-                        </div>
-                        <div className="flex-1">
-                          <p className="text-sm font-bold text-gray-900 mb-0.5">Growth Analytics</p>
-                          <p className="text-xs text-gray-400 mb-3 leading-relaxed">
-                            Unlock advanced heatmaps for customer footfall in your area.
-                          </p>
-                          <button className="flex items-center gap-1.5 text-xs font-bold" style={{ color: meta.accent }}>
-                            Upgrade Pro
-                            <Zap className="w-3.5 h-3.5" />
-                          </button>
-                        </div>
-                      </div>
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </div>
-
-              {/* Enter Dashboard */}
-              {isSignupFlow && (
-                <Link href="/dashboard">
-                  <div className="w-full py-4 rounded-2xl bg-gray-900 text-white font-bold text-sm flex items-center justify-center gap-2 shadow-lg shadow-gray-900/20 active:bg-gray-800 transition-colors">
-                    Enter Dashboard
-                    <ArrowUpRight className="w-4 h-4" />
-                  </div>
-                </Link>
-              )}
-            </motion.div>
-          )}
-
-          {/* ══ NETWORK TAB ═══════════════════════════════════════════════ */}
-          {activeTab === 'network' && (
-            <motion.div
-              key="network"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="px-5 pt-6 pb-4"
-            >
-              <div className="mb-5">
-                <h2 className="text-xl font-black text-gray-900">Local Network</h2>
-                <p className="text-xs text-gray-400 mt-1">Verified businesses in your {area} ecosystem.</p>
-              </div>
-
-              {/* Stats row */}
-              <div className="grid grid-cols-3 gap-3 mb-5">
-                {[
-                  { label: 'Active', value: String(mallData?.businesses?.length || 0), color: '#d97706' },
-                  { label: 'Verified', value: String(mallData?.businesses?.filter((b: any) => b.isVerified || b.isClaimed).length || 0), color: '#ea580c' },
-                  { label: 'Partners', value: String(partnerships.length || 0), color: '#dc2626' },
-                ].map((s) => (
-                  <div key={s.label} className="bg-white rounded-2xl p-3.5 shadow-sm border border-gray-100 text-center">
-                    <p className="text-2xl font-black" style={{ color: s.color }}>{s.value}</p>
-                    <p className="text-[10px] font-semibold text-gray-400 mt-0.5">{s.label}</p>
-                  </div>
-                ))}
-              </div>
-
-              {/* Member list */}
-              <div className="space-y-2.5">
-                {networkMembers.length > 0 ? (
-                  networkMembers.map((m, i) => (
-                    <motion.div
-                      key={m.name}
-                      initial={{ x: 20, opacity: 0 }}
-                      animate={{ x: 0, opacity: 1 }}
-                      transition={{ delay: i * 0.07 }}
-                      className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
-                    >
-                      <div
-                        className="w-10 h-10 rounded-xl flex items-center justify-center text-white font-black text-sm shrink-0"
-                        style={{ background: `linear-gradient(135deg, ${m.color}, ${m.color}bb)` }}
-                      >
-                        {m.name[0]}
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-bold text-gray-900 truncate">{m.name}</p>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full"
-                            style={{ color: m.color, backgroundColor: `${m.color}15` }}
-                          >
-                            {m.tier}
-                          </span>
-                          <span className="text-[10px] text-gray-400">{m.dist} away</span>
-                        </div>
-                      </div>
-                      <ChevronRight className="w-4 h-4 text-gray-300 shrink-0" />
-                    </motion.div>
-                  ))
-                ) : (
-                  <div className="bg-white rounded-2xl p-8 text-center text-gray-400 border border-gray-100">
-                    No other businesses found in this local mall ecosystem yet.
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ══ REWARDS TAB ═══════════════════════════════════════════════ */}
-          {activeTab === 'rewards' && (
-            <motion.div
-              key="rewards"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="px-5 pt-6 pb-4"
-            >
-              <div className="mb-5">
-                <h2 className="text-xl font-black text-gray-900">Nearby Rewards</h2>
-                <p className="text-xs text-gray-400 mt-1">Exclusive deals for {area} LocalMall members.</p>
-              </div>
-
-              {/* Points balance card */}
-              <div
-                className={`rounded-3xl p-5 bg-gradient-to-br ${meta.gradient} mb-5 shadow-xl`}
-                style={{ boxShadow: `0 16px 40px -10px ${meta.shadow}` }}
-              >
-                <p className="text-[10px] font-black text-white/60 tracking-widest uppercase mb-2">Your Points Balance</p>
-                <p className="text-4xl font-black text-white tabular-nums">
-                  {(mallData?.pointsBalance ?? 2400).toLocaleString()}
-                </p>
-                <div className="flex items-center gap-1.5 mt-2">
-                  <TrendingUp className="w-3.5 h-3.5 text-white/70" />
-                  <p className="text-xs text-white/70 font-semibold">
-                    +{mallData?.weeklyPointsEarned !== undefined ? mallData.weeklyPointsEarned : 320} pts this week
-                  </p>
-                </div>
-              </div>
-
-              {/* Deal cards */}
-              <div className="space-y-3">
-                {rewardDeals.length > 0 ? (
-                  rewardDeals.map((d, i) => {
-                    const DIcon = d.icon;
-                    return (
-                      <motion.div
-                        key={d.business}
-                        initial={{ x: 20, opacity: 0 }}
-                        animate={{ x: 0, opacity: 1 }}
-                        transition={{ delay: i * 0.08 }}
-                        className="bg-white rounded-3xl p-4 shadow-sm border border-gray-100 flex items-center gap-4"
-                      >
-                        <div className="w-12 h-12 bg-orange-50 rounded-2xl flex items-center justify-center shrink-0">
-                          <DIcon className="w-6 h-6 text-orange-500" />
-                        </div>
-                        <div className="flex-1 min-w-0">
-                          <p className="text-[10px] font-bold text-orange-500 mb-0.5 truncate">{d.business}</p>
-                          <p className="text-sm font-bold text-gray-900 leading-snug">{d.deal}</p>
-                          <div className="flex items-center gap-2 mt-1">
-                            <span className="text-[10px] text-gray-400 font-semibold">{d.pts} pts</span>
-                            <span className="text-[10px] text-gray-300">•</span>
-                            <span className="text-[10px] text-red-400 font-bold">Expires {d.expires}</span>
-                          </div>
-                        </div>
-                        <button
-                          className="shrink-0 px-3 py-1.5 rounded-xl text-white text-[11px] font-bold"
-                          style={{ background: `linear-gradient(135deg, ${meta.accent}, #ea580c)` }}
-                        >
-                          Claim
-                        </button>
-                      </motion.div>
-                    );
-                  })
-                ) : (
-                  <div className="bg-white rounded-3xl p-8 text-center text-gray-400 border border-gray-100">
-                    No active community rewards or deals available at this time.
-                  </div>
-                )}
-              </div>
-            </motion.div>
-          )}
-
-          {/* ══ MAP TAB ═══════════════════════════════════════════════════ */}
-          {activeTab === 'map' && (
-            <motion.div
-              key="map"
-              initial={{ opacity: 0, y: 16 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -16 }}
-              transition={{ duration: 0.3 }}
-              className="px-5 pt-6 pb-4"
-            >
-              <div className="mb-4">
-                <h2 className="text-xl font-black text-gray-900">{area} Live Map</h2>
-                <p className="text-xs text-gray-400 mt-1">Real-time activity in your local ecosystem.</p>
-              </div>
-
-              {/* Map */}
-              <div className="rounded-3xl overflow-hidden shadow-lg" style={{ height: 320 }}>
-                <StyledMap area={area} postcode={postcode} />
-              </div>
-
-              {/* Legend */}
-              <div className="mt-4 bg-white rounded-3xl p-4 shadow-sm border border-gray-100">
-                <p className="text-xs font-bold text-gray-600 mb-3">Map Legend</p>
-                <div className="space-y-2">
-                  {[
-                    { color: '#f97316', label: 'Active High Street Business' },
-                    { color: '#ea580c', label: 'Hyper-Local Business' },
-                    { color: '#d97706', label: 'Nearby Business' },
-                  ].map((l) => (
-                    <div key={l.label} className="flex items-center gap-2.5">
-                      <div className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: l.color }} />
-                      <p className="text-xs text-gray-500">{l.label}</p>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              {/* Quick stats */}
-              <div className="grid grid-cols-2 gap-3 mt-3">
-                {[
-                  { label: 'Businesses in view', value: '14', icon: Building2 },
-                  { label: 'New this week', value: '+3', icon: TrendingUp },
-                ].map((s) => {
-                  const SIcon = s.icon;
-                  return (
-                    <div key={s.label} className="bg-white rounded-2xl p-4 shadow-sm border border-gray-100">
-                      <SIcon className="w-4 h-4 text-orange-500 mb-2" />
-                      <p className="text-xl font-black text-gray-900">{s.value}</p>
-                      <p className="text-[10px] text-gray-400 font-semibold mt-0.5">{s.label}</p>
-                    </div>
-                  );
-                })}
-              </div>
-            </motion.div>
-          )}
-
-        </AnimatePresence>
-      </main>
-
-      {/* ── Bottom Navigation ─────────────────────────────────────────────── */}
-      <nav className="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-gray-100 pb-safe">
-        <div className="grid grid-cols-4 py-2">
-          {TABS.map(({ id, label, Icon }) => {
-            const isActive = activeTab === id;
-            return (
-              <button
-                key={id}
-                onClick={() => setActiveTab(id)}
-                className="flex flex-col items-center gap-1 pt-2 pb-1 relative"
-              >
-                {isActive && (
-                  <motion.div
-                    layoutId="bottom-nav-pill"
-                    className={`absolute -top-2 left-1/2 -translate-x-1/2 w-10 h-0.5 rounded-full bg-gradient-to-r ${meta.gradient}`}
-                  />
-                )}
-                <div className={`w-9 h-9 rounded-xl flex items-center justify-center transition-colors ${isActive
-                    ? 'bg-orange-50'
-                    : 'bg-transparent'
-                  }`}>
-                  <Icon className={`w-5 h-5 transition-colors ${isActive ? 'text-orange-500' : 'text-gray-400'}`} />
-                </div>
-                <span className={`text-[10px] font-bold transition-colors ${isActive ? 'text-orange-500' : 'text-gray-400'}`}>
-                  {label}
-                </span>
-              </button>
-            );
-          })}
-        </div>
-      </nav>
-
-      {/* Modals & Panels */}
-      <LocalCampaignsPanel 
-        isOpen={isCampaignPanelOpen} 
-        onOpenChange={setIsCampaignPanelOpen} 
-      />
-
-      {isMapModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white rounded-2xl shadow-2xl w-full max-w-5xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
-            <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-white">
-              <div>
-                <h3 className="text-xl font-bold text-gray-900">{area} Ecosystem</h3>
-                <p className="text-sm text-gray-500">Interactive geographic clustering map</p>
-              </div>
-              <button 
-                onClick={() => setIsMapModalOpen(false)}
-                className="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-              >
-                <X className="w-6 h-6" />
-              </button>
-            </div>
-            <div className="relative w-full">
-              <NearbyDiscovery />
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
+    <LocalMallShell
+      businessName={businessName}
+      boroughName={boroughName}
+      activeTab={activeTab}
+      onTabChange={handleTabChange}
+      screenStack={screenStack}
+      onBack={handleBack}
+      onNotificationsClick={() => handleNavigate('notifications')}
+      onSearchClick={() => handleNavigate('search')}
+      onStatusClick={() => handleNavigate('status')}
+    >
+      {renderActiveScreen()}
+    </LocalMallShell>
   );
 }
